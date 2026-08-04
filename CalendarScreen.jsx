@@ -188,7 +188,10 @@ export default function CalendarScreen() {
     console.log('[auth] кнопка "Войти через Google" нажата');
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { queryParams: { prompt: 'select_account' } },
+      options: {
+        queryParams: { prompt: 'select_account' },
+        redirectTo: window.location.origin,
+      },
     });
     if (error) console.error('[auth] ошибка от Supabase:', error);
     else console.log('[auth] signInWithOAuth вызван, редирект-URL:', data?.url);
