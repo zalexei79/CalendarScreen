@@ -119,6 +119,13 @@ const MONTHS = [
 ];
 
 const DEFAULT_ASSET_TAGS = ['BTCUSD', 'ETHUSD', 'XAUUSD', 'EURUSD', 'NDX100'];
+const INSTRUMENT_INFO = {
+  BTCUSD: { icon: '₿', label: 'Bitcoin / US Dollar' },
+  ETHUSD: { icon: 'Ξ', label: 'Ethereum / US Dollar' },
+  XAUUSD: { icon: '🥇', label: 'Gold / US Dollar' },
+  EURUSD: { icon: '€', label: 'Euro / US Dollar' },
+  NDX100: { icon: '📈', label: 'Nasdaq 100' },
+};
 const EXCHANGES = ['Bybit', 'Binance', 'OKX', 'MT4/MT5', 'cTrader'];
 const PLATFORMS = ['Manual', ...EXCHANGES];
 const RECENT_INSTRUMENTS_STORAGE_KEY = 'atj_recent_instruments';
@@ -377,6 +384,8 @@ export default function CalendarScreen() {
 
   const selectedCell = cells.find((c) => c.key === selectedKey);
   const targetDateKey = selectedCell ? selectedCell.key : keyFromDate(today);
+  const todayKey = keyFromDate(today);
+  const isFutureSelected = targetDateKey > todayKey;
   const targetDateLabel = parseDateKeyLocal(targetDateKey).toLocaleDateString('ru-RU', {
     day: 'numeric',
     month: 'long',
@@ -390,8 +399,17 @@ export default function CalendarScreen() {
       handleGoogleLogin();
       return;
     }
+    if (isFutureSelected) return; // нельзя добавлять сделки на будущее
     setModalDateKey(targetDateKey);
-    setForm({ instrument: '', direction: 'LONG', sign: 'plus', pnl: '', time: currentTimeHHMM(), comment: '', platform: 'Manual' });
+    setForm({
+      instrument: recentInstruments[0] || '',
+      direction: 'LONG',
+      sign: 'plus',
+      pnl: '',
+      time: currentTimeHHMM(),
+      comment: '',
+      platform: 'Manual',
+    });
     setFormError('');
     setModalOpen(true);
     requestAnimationFrame(() => setModalVisible(true));
@@ -503,6 +521,11 @@ export default function CalendarScreen() {
       setFormError('Войдите через Google, чтобы сохранять сделки.');
       return;
     }
+    const dateKey = modalDateKey || targetDateKey;
+    if (dateKey > todayKey) {
+      setFormError('Нельзя добавить сделку на будущую дату.');
+      return;
+    }
 
     const instrument = form.instrument.trim().toUpperCase();
     if (!instrument) {
@@ -520,7 +543,6 @@ export default function CalendarScreen() {
     }
 
     const signedPnl = form.sign === 'minus' ? -Math.abs(magnitude) : Math.abs(magnitude);
-    const dateKey = modalDateKey || targetDateKey;
     const time = form.time || currentTimeHHMM();
     const comment = form.comment.trim();
 
@@ -879,7 +901,9 @@ export default function CalendarScreen() {
             <div className="text-right">
               <button
                 onClick={openModal}
-                className="flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600 transition-colors"
+                disabled={isFutureSelected}
+                title={isFutureSelected ? 'Нельзя добавить сделку на будущую дату' : undefined}
+                className="flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-zinc-900"
               >
                 <Plus className="h-4 w-4" />
                 Добавить сделку вручную
@@ -1006,6 +1030,21 @@ export default function CalendarScreen() {
                 <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
                   Инструмент
                 </label>
+
+                {(() => {
+                  const key = form.instrument.trim().toUpperCase();
+                  const info = INSTRUMENT_INFO[key];
+                  return (
+                    <div className="flex items-center gap-3 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2.5 mb-2">
+                      <span className="text-xl leading-none">{info?.icon || '＋'}</span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-zinc-100 truncate">{key || 'Не выбран'}</p>
+                        {info && <p className="text-xs text-zinc-500 truncate">{info.label}</p>}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {quickAssetTags.map((tag) => (
                     <button
@@ -1069,15 +1108,31 @@ export default function CalendarScreen() {
                   <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
                     Результат, $
                   </label>
-                  <div className="flex items-stretch rounded-md border border-zinc-700 bg-zinc-950 overflow-hidden focus-within:border-amber-400/60 focus-within:ring-1 focus-within:ring-amber-400/40">
+                  <div className="flex items-stretch gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, sign: 'plus' }))}
+                      aria-label="Прибыль"
+                      title="Прибыль"
+                      className={[
+                        'shrink-0 w-8 rounded-md border font-data text-sm font-semibold transition-colors',
+                        form.sign === 'plus'
+                          ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-400'
+                          : 'border-zinc-700 bg-zinc-950 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
+                      ].join(' ')}
+                    >
+                      +
+                    </button>
                     <button
                       type="button"
                       onClick={() => setForm((f) => ({ ...f, sign: 'minus' }))}
                       aria-label="Убыток"
                       title="Убыток"
                       className={[
-                        'shrink-0 w-9 flex items-center justify-center font-data text-base font-semibold transition-colors',
-                        form.sign === 'minus' ? 'bg-red-500/10 text-red-400' : 'text-zinc-500 hover:text-zinc-300',
+                        'shrink-0 w-8 rounded-md border font-data text-sm font-semibold transition-colors',
+                        form.sign === 'minus'
+                          ? 'border-red-400/60 bg-red-500/10 text-red-400'
+                          : 'border-zinc-700 bg-zinc-950 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
                       ].join(' ')}
                     >
                       −
@@ -1088,21 +1143,9 @@ export default function CalendarScreen() {
                       step="any"
                       value={form.pnl}
                       onChange={(e) => { setForm((f) => ({ ...f, pnl: e.target.value })); setFormError(''); }}
-                      className="w-full min-w-0 bg-transparent border-0 px-2 py-2 text-sm text-zinc-100 font-data text-center focus:outline-none"
+                      className="w-full min-w-0 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
                       placeholder="150"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setForm((f) => ({ ...f, sign: 'plus' }))}
-                      aria-label="Прибыль"
-                      title="Прибыль"
-                      className={[
-                        'shrink-0 w-9 flex items-center justify-center font-data text-base font-semibold transition-colors',
-                        form.sign === 'plus' ? 'bg-emerald-500/10 text-emerald-400' : 'text-zinc-500 hover:text-zinc-300',
-                      ].join(' ')}
-                    >
-                      +
-                    </button>
                   </div>
                 </div>
                 <div>
