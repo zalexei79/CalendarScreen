@@ -364,7 +364,7 @@ export default function CalendarScreen() {
       .flatMap(([dateKey, arr]) => arr.map((t) => ({ ...t, dateKey })))
       .filter((t) => t.dateKey >= effectiveFrom && t.dateKey <= effectiveTo)
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
-      .sort((a, b) => (a.dateKey === b.dateKey ? a.time.localeCompare(b.time) : a.dateKey.localeCompare(b.dateKey)));
+      .sort((a, b) => (a.dateKey === b.dateKey ? b.time.localeCompare(a.time) : b.dateKey.localeCompare(a.dateKey)));
   }, [manualTrades, effectiveFrom, effectiveTo, platformFilter]);
 
   const periodStats = useMemo(() => {
@@ -703,7 +703,7 @@ export default function CalendarScreen() {
             {user ? (
               <div className="flex items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 pl-2.5 pr-1.5 py-1.5">
                 <span className="font-data text-[11px] tracking-wide text-zinc-300">
-                  {user.user_metadata?.nickname || user.user_metadata?.full_name || user.email}
+                  <span className="max-w-[110px] truncate">{user.user_metadata?.nickname || user.user_metadata?.full_name || user.email}</span>
                 </span>
                 <button
                   onClick={handleGoogleLogout}
@@ -737,7 +737,7 @@ export default function CalendarScreen() {
             </button>
 
             {periodMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-[calc(100vw-1.5rem)] max-w-80 rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl z-30 p-3">
+              <div className="fixed inset-x-0 bottom-0 sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80 max-h-[75vh] sm:max-h-none overflow-y-auto rounded-t-2xl sm:rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl z-30 p-4 sm:p-3">
                 <p className="font-data text-[10px] tracking-widest text-zinc-500 uppercase mb-1.5">Период</p>
                 <div className="flex flex-col gap-1 mb-3">
                   {PERIOD_PRESETS.map((p) => (
@@ -1029,7 +1029,6 @@ export default function CalendarScreen() {
                   onChange={(e) => { setForm((f) => ({ ...f, instrument: e.target.value })); setFormError(''); }}
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
                   placeholder="Например, XAUUSD"
-                  autoFocus
                 />
               </div>
 
@@ -1065,36 +1064,20 @@ export default function CalendarScreen() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-[3fr_2fr] gap-3">
                 <div>
                   <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
                     Результат, $
                   </label>
-                  <div className="flex items-stretch gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setForm((f) => ({ ...f, sign: 'plus' }))}
-                      aria-label="Прибыль"
-                      title="Прибыль"
-                      className={[
-                        'shrink-0 w-8 rounded-md border font-data text-sm font-semibold transition-colors',
-                        form.sign === 'plus'
-                          ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-400'
-                          : 'border-zinc-700 bg-zinc-950 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
-                      ].join(' ')}
-                    >
-                      +
-                    </button>
+                  <div className="flex items-stretch rounded-md border border-zinc-700 bg-zinc-950 overflow-hidden focus-within:border-amber-400/60 focus-within:ring-1 focus-within:ring-amber-400/40">
                     <button
                       type="button"
                       onClick={() => setForm((f) => ({ ...f, sign: 'minus' }))}
                       aria-label="Убыток"
                       title="Убыток"
                       className={[
-                        'shrink-0 w-8 rounded-md border font-data text-sm font-semibold transition-colors',
-                        form.sign === 'minus'
-                          ? 'border-red-400/60 bg-red-500/10 text-red-400'
-                          : 'border-zinc-700 bg-zinc-950 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
+                        'shrink-0 w-9 flex items-center justify-center font-data text-base font-semibold transition-colors',
+                        form.sign === 'minus' ? 'bg-red-500/10 text-red-400' : 'text-zinc-500 hover:text-zinc-300',
                       ].join(' ')}
                     >
                       −
@@ -1105,9 +1088,21 @@ export default function CalendarScreen() {
                       step="any"
                       value={form.pnl}
                       onChange={(e) => { setForm((f) => ({ ...f, pnl: e.target.value })); setFormError(''); }}
-                      className="w-full min-w-0 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
+                      className="w-full min-w-0 bg-transparent border-0 px-2 py-2 text-sm text-zinc-100 font-data text-center focus:outline-none"
                       placeholder="150"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, sign: 'plus' }))}
+                      aria-label="Прибыль"
+                      title="Прибыль"
+                      className={[
+                        'shrink-0 w-9 flex items-center justify-center font-data text-base font-semibold transition-colors',
+                        form.sign === 'plus' ? 'bg-emerald-500/10 text-emerald-400' : 'text-zinc-500 hover:text-zinc-300',
+                      ].join(' ')}
+                    >
+                      +
+                    </button>
                   </div>
                 </div>
                 <div>
@@ -1120,7 +1115,7 @@ export default function CalendarScreen() {
                     value={form.time}
                     onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* not supported in this browser */ } }}
                     onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
-                    className="w-full h-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
+                    className="w-full h-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
                   />
                 </div>
               </div>
