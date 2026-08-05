@@ -129,6 +129,8 @@ const INSTRUMENT_INFO = {
 const EXCHANGES = ['Bybit', 'Binance', 'OKX', 'MT4/MT5', 'cTrader'];
 const PLATFORMS = ['Manual', ...EXCHANGES];
 const RECENT_INSTRUMENTS_STORAGE_KEY = 'atj_recent_instruments';
+const CUSTOM_TAGS_STORAGE_KEY = 'atj_custom_instrument_tags';
+const MAX_CUSTOM_TAGS = 6;
 
 export default function CalendarScreen() {
   const today = useMemo(() => new Date(), []);
@@ -240,6 +242,10 @@ export default function CalendarScreen() {
   const [selectedKey, setSelectedKey] = useState(null);
   const [manualTrades, setManualTrades] = useState({}); // { [dateKey]: Trade[] } — real, user-saved trades only
   const [recentInstruments, setRecentInstruments] = useState([]); // most-recently-used instrument symbols
+  const [customTags, setCustomTags] = useState([]); // user-added instrument tags, max MAX_CUSTOM_TAGS
+  const [addingCustomTag, setAddingCustomTag] = useState(false);
+  const [customTagInput, setCustomTagInput] = useState('');
+  const dragTagIndex = useRef(null);
 
   // load this user's trades from Supabase whenever they log in; clear on logout
   useEffect(() => {
@@ -481,6 +487,8 @@ export default function CalendarScreen() {
       if (typeof window !== 'undefined') {
         const stored = window.localStorage.getItem(RECENT_INSTRUMENTS_STORAGE_KEY);
         if (stored) setRecentInstruments(JSON.parse(stored));
+        const storedCustom = window.localStorage.getItem(CUSTOM_TAGS_STORAGE_KEY);
+        if (storedCustom) setCustomTags(JSON.parse(storedCustom));
       }
     } catch {
       // ignore malformed/unavailable storage
@@ -496,6 +504,37 @@ export default function CalendarScreen() {
       // ignore storage write failures (e.g. private mode)
     }
   }, [recentInstruments]);
+
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(CUSTOM_TAGS_STORAGE_KEY, JSON.stringify(customTags));
+      }
+    } catch {
+      // ignore storage write failures
+    }
+  }, [customTags]);
+
+  function addCustomTag(raw) {
+    const tag = raw.trim().toUpperCase();
+    if (!tag) return;
+    if (DEFAULT_ASSET_TAGS.includes(tag) || customTags.includes(tag)) return;
+    if (customTags.length >= MAX_CUSTOM_TAGS) return;
+    setCustomTags((prev) => [...prev, tag]);
+  }
+
+  function removeCustomTag(tag) {
+    setCustomTags((prev) => prev.filter((t) => t !== tag));
+  }
+
+  function reorderCustomTag(fromIndex, toIndex) {
+    setCustomTags((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  }
 
   // Quick-pick tags: the 3 most recently used instruments first, then the
   // default popular assets — deduplicated so nothing appears twice.
@@ -643,7 +682,7 @@ export default function CalendarScreen() {
       {/* HEADER */}
       <header className="px-3 sm:px-8 pt-4 sm:pt-8 pb-4 border-b border-zinc-800">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={goToPrevMonth}
               aria-label="Предыдущий месяц"
@@ -1045,7 +1084,7 @@ export default function CalendarScreen() {
                   );
                 })()}
 
-                <div className="flex flex-wrap gap-1.5 mb-2">
+                <div className="flex flex-wrap items-center gap-1.5 mb-2">
                   {quickAssetTags.map((tag) => (
                     <button
                       key={tag}
@@ -1061,6 +1100,65 @@ export default function CalendarScreen() {
                       {tag}
                     </button>
                   ))}
+
+                  {customTags.filter((t) => !quickAssetTags.includes(t)).map((tag) => (
+                    <span
+                      key={tag}
+                      draggable
+                      onDragStart={() => { dragTagIndex.current = customTags.indexOf(tag); }}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={() => {
+                        const dropIndex = customTags.indexOf(tag);
+                        if (dragTagIndex.current !== null && dragTagIndex.current !== dropIndex) reorderCustomTag(dragTagIndex.current, dropIndex);
+                        dragTagIndex.current = null;
+                      }}
+                      className={[
+                        'flex items-center gap-1 rounded-full border pl-2.5 pr-1 py-1 font-data text-[11px] tracking-wide cursor-grab transition-colors',
+                        form.instrument.trim().toUpperCase() === tag
+                          ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                          : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
+                      ].join(' ')}
+                    >
+                      <button type="button" onClick={() => { setForm((f) => ({ ...f, instrument: tag })); setFormError(''); }}>
+                        {tag}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeCustomTag(tag)}
+                        className="text-zinc-600 hover:text-red-400 transition-colors"
+                        aria-label={`Удалить ${tag}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+
+                  {addingCustomTag ? (
+                    <input
+                      type="text"
+                      autoFocus
+                      value={customTagInput}
+                      onChange={(e) => setCustomTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') { addCustomTag(customTagInput); setCustomTagInput(''); setAddingCustomTag(false); }
+                        if (e.key === 'Escape') { setCustomTagInput(''); setAddingCustomTag(false); }
+                      }}
+                      onBlur={() => { if (customTagInput.trim()) addCustomTag(customTagInput); setCustomTagInput(''); setAddingCustomTag(false); }}
+                      placeholder="TICKER"
+                      className="w-20 rounded-full border border-amber-400/60 bg-zinc-950 px-2.5 py-1 font-data text-[11px] tracking-wide text-zinc-100 focus:outline-none"
+                    />
+                  ) : (
+                    customTags.length < MAX_CUSTOM_TAGS && (
+                      <button
+                        type="button"
+                        onClick={() => setAddingCustomTag(true)}
+                        title="Добавить свой инструмент"
+                        className="flex items-center justify-center h-6 w-6 rounded-full border border-dashed border-zinc-700 text-zinc-500 hover:text-amber-400 hover:border-amber-400/60 transition-colors"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    )
+                  )}
                 </div>
                 <input
                   type="text"
@@ -1227,7 +1325,13 @@ export default function CalendarScreen() {
             </button>
 
             <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">Подключить площадку</p>
-            <h2 className="font-display text-lg font-semibold text-zinc-50 mb-4">Источник сделок</h2>
+            <h2 className="font-display text-lg font-semibold text-zinc-50 mb-3">Источник сделок</h2>
+
+            <div className="rounded-md border border-amber-400/30 bg-amber-400/5 px-3 py-2 mb-4">
+              <p className="text-xs text-amber-400/90 leading-relaxed">
+                Раздел в разработке — подключение бирж и импорт CSV пока не сохраняют данные по-настоящему.
+              </p>
+            </div>
 
             {/* tabs */}
             <div className="flex gap-1 rounded-md border border-zinc-800 bg-zinc-950 p-1 mb-4">
