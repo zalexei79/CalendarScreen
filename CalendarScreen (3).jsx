@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Inbox, TrendingUp, TrendingDown, Sparkles, Plus, X, Trash2,
   Calendar, ChevronDown, ChevronLeft, ChevronRight, Link2, KeyRound, UploadCloud, FileText,
-  LogIn, LogOut,
+  LogIn, LogOut, CheckCircle2, RefreshCw,
 } from 'lucide-react';
 import { supabase } from './src/supabaseClient';
 
@@ -144,6 +144,44 @@ export default function CalendarScreen() {
   const [nicknameModalVisible, setNicknameModalVisible] = useState(false);
   const [nicknameInput, setNicknameInput] = useState('');
 
+  // --- cTrader connection state ------------------------------------------
+  const [ctraderConnected, setCtraderConnected] = useState(false);
+  const [ctraderLoading, setCtraderLoading] = useState(false);
+
+  async function checkCtraderStatus(userId) {
+    const { data } = await supabase.from('ctrader_tokens').select('id').eq('user_id', userId).maybeSingle();
+    setCtraderConnected(!!data);
+  }
+
+  async function handleCtraderCallback(code) {
+    setCtraderLoading(true);
+    try {
+      const redirectUri = window.location.origin + '/';
+      const { data, error } = await supabase.functions.invoke('ctrader-auth', {
+        body: { code, redirectUri },
+      });
+      if (error || data?.error) throw new Error(error?.message || data?.error);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setCtraderConnected(true);
+    } catch (err) {
+      console.error('[ctrader] ошибка подключения:', err);
+      setFormError('');
+      alert('Не удалось подключить cTrader: ' + err.message);
+    } finally {
+      setCtraderLoading(false);
+    }
+  }
+
+  function handleConnectCtrader() {
+    if (!user) {
+      handleGoogleLogin();
+      return;
+    }
+    const clientId = import.meta.env.VITE_CTRADER_CLIENT_ID;
+    const redirectUri = encodeURIComponent(window.location.origin + '/');
+    window.location.href = `https://connect.spotware.com/apps/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=trading`;
+  }
+
   useEffect(() => {
     async function init() {
       // Google возвращает нас на страницу с токенами в hash (#access_token=...).
@@ -161,13 +199,25 @@ export default function CalendarScreen() {
 
       const { data, error } = await supabase.auth.getSession();
       console.log('[auth] getSession →', data.session ? 'сессия найдена' : 'сессии нет', error || '');
-      setUser(data.session?.user ?? null);
+      const currentUser = data.session?.user ?? null;
+      setUser(currentUser);
+
+      // cTrader вернул нас с ?code=... в адресе — обмениваем на токены
+      const code = new URLSearchParams(window.location.search).get('code');
+      if (code && currentUser) {
+        handleCtraderCallback(code);
+      } else if (currentUser) {
+        checkCtraderStatus(currentUser.id);
+      }
     }
     init();
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('[auth] событие:', event, session ? session.user.email : '(нет пользователя)');
-      setUser(session?.user ?? null);
+      const activeUser = session?.user ?? null;
+      setUser(activeUser);
+      if (activeUser) checkCtraderStatus(activeUser.id);
+      else setCtraderConnected(false);
     });
     return () => listener.subscription.unsubscribe();
   }, []);
@@ -428,7 +478,7 @@ export default function CalendarScreen() {
   }
 
   function openConnectModal() {
-    setConnectTab('api');
+    setConnectTab('ctrader');
     setApiForm({ exchange: 'Bybit', key: '', secret: '' });
     setCsvFile(null);
     setConnectOpen(true);
@@ -758,6 +808,7 @@ export default function CalendarScreen() {
             >
               <Link2 className="h-3.5 w-3.5" />
               Площадка
+              {ctraderConnected && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />}
             </button>
 
             {/* Google login — informational, doesn't gate the calendar */}
@@ -1329,12 +1380,22 @@ export default function CalendarScreen() {
 
             <div className="rounded-md border border-amber-400/30 bg-amber-400/5 px-3 py-2 mb-4">
               <p className="text-xs text-amber-400/90 leading-relaxed">
-                Раздел в разработке — подключение бирж и импорт CSV пока не сохраняют данные по-настоящему.
+                cTrader подключается по-настоящему. API-ключи бирж и импорт CSV — пока в разработке, данные не сохраняют.
               </p>
             </div>
 
             {/* tabs */}
             <div className="flex gap-1 rounded-md border border-zinc-800 bg-zinc-950 p-1 mb-4">
+              <button
+                onClick={() => setConnectTab('ctrader')}
+                className={[
+                  'flex-1 flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium transition-colors',
+                  connectTab === 'ctrader' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300',
+                ].join(' ')}
+              >
+                <Link2 className="h-3.5 w-3.5" />
+                cTrader
+              </button>
               <button
                 onClick={() => setConnectTab('api')}
                 className={[
@@ -1357,7 +1418,28 @@ export default function CalendarScreen() {
               </button>
             </div>
 
-            {connectTab === 'api' ? (
+            {connectTab === 'ctrader' ? (
+              <div className="flex flex-col gap-4">
+                <p className="text-xs text-zinc-500 leading-relaxed">
+                  Подключите свой аккаунт cTrader через Spotware — это разрешит приложению видеть ваши сделки.
+                </p>
+                {ctraderConnected ? (
+                  <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-emerald-400 text-sm">
+                    <CheckCircle2 className="h-4 w-4" />
+                    cTrader подключён
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleConnectCtrader}
+                    disabled={ctraderLoading}
+                    className="w-full flex items-center justify-center gap-2 rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-300 disabled:opacity-50 transition-colors"
+                  >
+                    {ctraderLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                    {ctraderLoading ? 'Подключение...' : 'Подключить cTrader'}
+                  </button>
+                )}
+              </div>
+            ) : connectTab === 'api' ? (
               <div className="flex flex-col gap-4">
                 <div>
                   <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
