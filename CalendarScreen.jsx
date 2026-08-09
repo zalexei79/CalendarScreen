@@ -62,6 +62,10 @@ function formatMoney(n) {
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
 }
 
+function formatSignedShort(n) {
+  return `${n >= 0 ? '+' : '-'}$${formatMoney(n)}`;
+}
+
 function formatDateLabel(dateKey) {
   return parseDateKeyLocal(dateKey).toLocaleDateString('ru-RU', {
     day: 'numeric',
@@ -437,6 +441,54 @@ export default function CalendarScreen() {
     const winrate = count ? Math.round((wins / count) * 100) : 0;
     return { count, pnl, winrate };
   }, [periodTrades]);
+
+  // free, rule-based analysis — no AI call, just arithmetic over periodTrades
+  const basicAnalysis = useMemo(() => {
+    if (periodTrades.length === 0) return null;
+
+    const byDay = {};
+    for (const t of periodTrades) {
+      byDay[t.dateKey] = (byDay[t.dateKey] || 0) + t.pnl;
+    }
+    const dayEntries = Object.entries(byDay);
+    const bestDay = dayEntries.reduce((a, b) => (b[1] > a[1] ? b : a));
+    const worstDay = dayEntries.reduce((a, b) => (b[1] < a[1] ? b : a));
+
+    const bestTrade = periodTrades.reduce((a, b) => (b.pnl > a.pnl ? b : a));
+    const worstTrade = periodTrades.reduce((a, b) => (b.pnl < a.pnl ? b : a));
+
+    const byInstrument = {};
+    for (const t of periodTrades) byInstrument[t.instrument] = (byInstrument[t.instrument] || 0) + 1;
+    const topInstrument = Object.entries(byInstrument).sort((a, b) => b[1] - a[1])[0];
+
+    const avgPnl = periodStats.pnl / periodTrades.length;
+
+    // longest consecutive-loss streak, walking chronologically
+    const chronological = [...periodTrades].sort((a, b) =>
+      a.dateKey === b.dateKey ? a.time.localeCompare(b.time) : a.dateKey.localeCompare(b.dateKey)
+    );
+    let longestLossStreak = 0;
+    let current = 0;
+    for (const t of chronological) {
+      if (t.pnl < 0) { current += 1; longestLossStreak = Math.max(longestLossStreak, current); }
+      else current = 0;
+    }
+
+    return { bestDay, worstDay, bestTrade, worstTrade, topInstrument, avgPnl, longestLossStreak };
+  }, [periodTrades, periodStats]);
+
+  const [analysisOpen, setAnalysisOpen] = useState(false);
+  const [analysisVisible, setAnalysisVisible] = useState(false);
+
+  function openAnalysis() {
+    setAnalysisOpen(true);
+    requestAnimationFrame(() => setAnalysisVisible(true));
+  }
+
+  function closeAnalysis() {
+    setAnalysisVisible(false);
+    setTimeout(() => setAnalysisOpen(false), 180);
+  }
 
   const selectedCell = cells.find((c) => c.key === selectedKey);
   const targetDateKey = selectedCell ? selectedCell.key : keyFromDate(today);
@@ -1006,17 +1058,27 @@ export default function CalendarScreen() {
           </div>
 
           {/* compact single-line stats bar, right above the trade list */}
-          <div className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900 px-4 py-2 font-data text-xs text-zinc-400">
-            <span>Сделок: <span className="text-zinc-100 font-medium">{periodStats.count}</span></span>
-            <span className="text-zinc-700">•</span>
-            <span>
-              PnL:{' '}
-              <span className={`font-medium ${periodStats.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {periodStats.pnl >= 0 ? '+' : '-'}${formatMoney(periodStats.pnl)}
+          <div className="flex items-center justify-between gap-2 rounded-md border border-zinc-800 bg-zinc-900 px-4 py-2 font-data text-xs text-zinc-400">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span>Сделок: <span className="text-zinc-100 font-medium">{periodStats.count}</span></span>
+              <span className="text-zinc-700">•</span>
+              <span>
+                PnL:{' '}
+                <span className={`font-medium ${periodStats.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {periodStats.pnl >= 0 ? '+' : '-'}${formatMoney(periodStats.pnl)}
+                </span>
               </span>
-            </span>
-            <span className="text-zinc-700">•</span>
-            <span>Winrate: <span className="text-zinc-100 font-medium">{periodStats.winrate}%</span></span>
+              <span className="text-zinc-700">•</span>
+              <span>Winrate: <span className="text-zinc-100 font-medium">{periodStats.winrate}%</span></span>
+            </div>
+            <button
+              onClick={openAnalysis}
+              disabled={periodStats.count === 0}
+              className="flex items-center gap-1 rounded-md border border-amber-400/30 bg-amber-400/5 px-2.5 py-1 text-amber-400 hover:bg-amber-400/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Анализ
+            </button>
           </div>
 
           {periodStats.count > 0 && (
@@ -1542,7 +1604,81 @@ export default function CalendarScreen() {
         </div>
       )}
 
-      {/* NICKNAME MODAL — shown once after a fresh Google login */}
+      {/* ANALYSIS MODAL — free basic stats now, paid deep AI analysis coming later */}
+      {analysisOpen && (
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${
+            analysisVisible ? 'opacity-100' : 'opacity-0'
+          }`}
+          onMouseDown={handleBackdropMouseDown}
+          onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) closeAnalysis(); }}
+        >
+          <div
+            className={`relative w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl transition-all duration-200 ${
+              analysisVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+            }`}
+          >
+            <button
+              onClick={closeAnalysis}
+              className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-200 transition-colors"
+              aria-label="Закрыть"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">Анализ периода</p>
+            <h2 className="font-display text-lg font-semibold text-zinc-50 mb-1">
+              {effectiveFrom === effectiveTo ? effectiveFrom : `${effectiveFrom} — ${effectiveTo}`}
+            </h2>
+            <p className="text-xs text-zinc-500 mb-4">{periodStats.count} сделок в выборке</p>
+
+            {basicAnalysis && (
+              <div className="flex flex-col gap-2.5 text-sm mb-4">
+                <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
+                  <span className="text-zinc-500">Лучший день</span>
+                  <span className="text-emerald-400 font-data">
+                    {formatDateLabel(basicAnalysis.bestDay[0])} · {formatSignedShort(basicAnalysis.bestDay[1])}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
+                  <span className="text-zinc-500">Худший день</span>
+                  <span className="text-red-400 font-data">
+                    {formatDateLabel(basicAnalysis.worstDay[0])} · {formatSignedShort(basicAnalysis.worstDay[1])}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
+                  <span className="text-zinc-500">Частый инструмент</span>
+                  <span className="text-zinc-200 font-data">{basicAnalysis.topInstrument[0]} ({basicAnalysis.topInstrument[1]})</span>
+                </div>
+                <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
+                  <span className="text-zinc-500">Средний результат сделки</span>
+                  <span className={`font-data ${basicAnalysis.avgPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {formatSignedShort(basicAnalysis.avgPnl)}
+                  </span>
+                </div>
+                {basicAnalysis.longestLossStreak >= 2 && (
+                  <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
+                    <span className="text-zinc-500">Серия убытков подряд</span>
+                    <span className="text-red-400 font-data">{basicAnalysis.longestLossStreak}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="rounded-md border border-dashed border-zinc-700 px-3 py-3 flex items-start gap-2.5">
+              <Sparkles className="h-4 w-4 text-zinc-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-zinc-400 font-medium mb-0.5">Глубокий AI-анализ — скоро</p>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Разбор эмоциональных паттернов, конкретных ошибок по каждой сделке и персональные рекомендации — по подписке.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       {nicknameModalOpen && (
         <div
           className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${
