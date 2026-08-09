@@ -73,21 +73,6 @@ function formatDateLabel(dateKey) {
   });
 }
 
-function getInsight(seedKey, pnl) {
-  const winInsights = [
-    'Сделки шли по тренду, стопы соблюдались — дисциплина выше средней за период.',
-    'Хорошее соотношение риск/прибыль: большинство входов совпало с ключевыми уровнями.',
-  ];
-  const lossInsights = [
-    'Один вход против тренда увеличил просадку — стоит пересмотреть фильтр по тренду.',
-    'Ранний выход из прибыльной позиции снизил итоговый результат периода.',
-  ];
-  let hash = 0;
-  for (let i = 0; i < seedKey.length; i++) hash = (hash * 13 + seedKey.charCodeAt(i)) % 1000;
-  const arr = pnl >= 0 ? winInsights : lossInsights;
-  return arr[hash % arr.length];
-}
-
 const PERIOD_PRESETS = ['Сегодня', 'Текущая неделя', 'Текущий месяц', 'Вся история'];
 
 function getPresetRange(preset, today) {
@@ -442,29 +427,43 @@ export default function CalendarScreen() {
     return { count, pnl, winrate };
   }, [periodTrades]);
 
-  // free, rule-based analysis — no AI call, just arithmetic over periodTrades
+  // free, rule-based analysis — no AI call, just arithmetic. Has its own
+  // period, defaulting to whatever's currently selected when opened.
+  const [analysisFrom, setAnalysisFrom] = useState(effectiveFrom);
+  const [analysisTo, setAnalysisTo] = useState(effectiveTo);
+  const [analysisPreset, setAnalysisPreset] = useState('Текущий период');
+
+  const analysisTrades = useMemo(() => {
+    return Object.entries(manualTrades)
+      .flatMap(([dateKey, arr]) => arr.map((t) => ({ ...t, dateKey })))
+      .filter((t) => t.dateKey >= analysisFrom && t.dateKey <= analysisTo)
+      .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter);
+  }, [manualTrades, analysisFrom, analysisTo, platformFilter]);
+
+  const analysisStats = useMemo(() => {
+    const count = analysisTrades.length;
+    const pnl = analysisTrades.reduce((sum, t) => sum + t.pnl, 0);
+    const wins = analysisTrades.filter((t) => t.pnl >= 0).length;
+    const winrate = count ? Math.round((wins / count) * 100) : 0;
+    return { count, pnl, winrate };
+  }, [analysisTrades]);
+
   const basicAnalysis = useMemo(() => {
-    if (periodTrades.length === 0) return null;
+    if (analysisTrades.length === 0) return null;
 
     const byDay = {};
-    for (const t of periodTrades) {
-      byDay[t.dateKey] = (byDay[t.dateKey] || 0) + t.pnl;
-    }
+    for (const t of analysisTrades) byDay[t.dateKey] = (byDay[t.dateKey] || 0) + t.pnl;
     const dayEntries = Object.entries(byDay);
     const bestDay = dayEntries.reduce((a, b) => (b[1] > a[1] ? b : a));
     const worstDay = dayEntries.reduce((a, b) => (b[1] < a[1] ? b : a));
 
-    const bestTrade = periodTrades.reduce((a, b) => (b.pnl > a.pnl ? b : a));
-    const worstTrade = periodTrades.reduce((a, b) => (b.pnl < a.pnl ? b : a));
-
     const byInstrument = {};
-    for (const t of periodTrades) byInstrument[t.instrument] = (byInstrument[t.instrument] || 0) + 1;
+    for (const t of analysisTrades) byInstrument[t.instrument] = (byInstrument[t.instrument] || 0) + 1;
     const topInstrument = Object.entries(byInstrument).sort((a, b) => b[1] - a[1])[0];
 
-    const avgPnl = periodStats.pnl / periodTrades.length;
+    const avgPnl = analysisStats.pnl / analysisTrades.length;
 
-    // longest consecutive-loss streak, walking chronologically
-    const chronological = [...periodTrades].sort((a, b) =>
+    const chronological = [...analysisTrades].sort((a, b) =>
       a.dateKey === b.dateKey ? a.time.localeCompare(b.time) : a.dateKey.localeCompare(b.dateKey)
     );
     let longestLossStreak = 0;
@@ -474,13 +473,16 @@ export default function CalendarScreen() {
       else current = 0;
     }
 
-    return { bestDay, worstDay, bestTrade, worstTrade, topInstrument, avgPnl, longestLossStreak };
-  }, [periodTrades, periodStats]);
+    return { bestDay, worstDay, topInstrument, avgPnl, longestLossStreak };
+  }, [analysisTrades, analysisStats]);
 
   const [analysisOpen, setAnalysisOpen] = useState(false);
   const [analysisVisible, setAnalysisVisible] = useState(false);
 
   function openAnalysis() {
+    setAnalysisFrom(effectiveFrom);
+    setAnalysisTo(effectiveTo);
+    setAnalysisPreset('Текущий период');
     setAnalysisOpen(true);
     requestAnimationFrame(() => setAnalysisVisible(true));
   }
@@ -488,6 +490,13 @@ export default function CalendarScreen() {
   function closeAnalysis() {
     setAnalysisVisible(false);
     setTimeout(() => setAnalysisOpen(false), 180);
+  }
+
+  function handleAnalysisPreset(preset) {
+    setAnalysisPreset(preset);
+    const range = getPresetRange(preset, today);
+    setAnalysisFrom(range.from);
+    setAnalysisTo(range.to);
   }
 
   const selectedCell = cells.find((c) => c.key === selectedKey);
@@ -499,8 +508,6 @@ export default function CalendarScreen() {
     month: 'long',
     year: 'numeric',
   });
-
-  const insight = periodStats.count > 0 ? getInsight(`${dateFrom}_${dateTo}_${platformFilter}`, periodStats.pnl) : '';
 
   function openModal() {
     if (!user) {
@@ -1081,16 +1088,6 @@ export default function CalendarScreen() {
             </button>
           </div>
 
-          {periodStats.count > 0 && (
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 flex gap-3">
-              <Sparkles className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1">AI Insight</p>
-                <p className="text-sm text-zinc-300 leading-relaxed">{insight}</p>
-              </div>
-            </div>
-          )}
-
           {periodTrades.length > 0 ? (
             <div className="rounded-lg border border-zinc-800 bg-zinc-900 divide-y divide-zinc-800 flex-1 overflow-y-auto">
               {periodTrades.map((trade) => (
@@ -1627,10 +1624,32 @@ export default function CalendarScreen() {
             </button>
 
             <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">Анализ периода</p>
-            <h2 className="font-display text-lg font-semibold text-zinc-50 mb-1">
-              {effectiveFrom === effectiveTo ? effectiveFrom : `${effectiveFrom} — ${effectiveTo}`}
+            <h2 className="font-display text-lg font-semibold text-zinc-50 mb-3">
+              {analysisFrom === '0000-01-01'
+                ? 'Вся история'
+                : analysisFrom === analysisTo
+                ? analysisFrom
+                : `${analysisFrom} — ${analysisTo}`}
             </h2>
-            <p className="text-xs text-zinc-500 mb-4">{periodStats.count} сделок в выборке</p>
+
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {['Текущий период', ...PERIOD_PRESETS].map((p) => (
+                <button
+                  key={p}
+                  onClick={() => (p === 'Текущий период' ? openAnalysis() : handleAnalysisPreset(p))}
+                  className={[
+                    'rounded-full border px-2.5 py-1 font-data text-[11px] tracking-wide transition-colors',
+                    analysisPreset === p
+                      ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                      : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
+                  ].join(' ')}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            <p className="text-xs text-zinc-500 mb-4">{analysisStats.count} сделок в выборке</p>
 
             {basicAnalysis && (
               <div className="flex flex-col gap-2.5 text-sm mb-4">
