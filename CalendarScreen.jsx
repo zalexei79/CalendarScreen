@@ -279,7 +279,27 @@ export default function CalendarScreen() {
   }
 
   const [selectedKey, setSelectedKey] = useState(null);
-  const [calendarExpanded, setCalendarExpanded] = useState(false);
+  const suppressNextHistoryPush = useRef(false);
+
+  // native "back" support: opening a day pushes a history entry, so the
+  // system back button/swipe closes the day first instead of leaving the site
+  useEffect(() => {
+    if (selectedKey && !suppressNextHistoryPush.current) {
+      window.history.pushState({ calendarDay: selectedKey }, '');
+    }
+    suppressNextHistoryPush.current = false;
+  }, [selectedKey]);
+
+  useEffect(() => {
+    function onPopState() {
+      suppressNextHistoryPush.current = true;
+      setSelectedKey(null);
+    }
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const [calendarExpanded, setCalendarExpanded] = useState(true);
   const [manualTrades, setManualTrades] = useState({}); // { [dateKey]: Trade[] } — real, user-saved trades only
   const [recentInstruments, setRecentInstruments] = useState([]); // most-recently-used instrument symbols
   const [customTags, setCustomTags] = useState([]); // user-added instrument tags, max MAX_CUSTOM_TAGS
@@ -865,7 +885,7 @@ export default function CalendarScreen() {
             <div className="ml-2 flex items-center rounded-md border border-zinc-800 bg-zinc-900 font-data text-[11px] tracking-wide overflow-hidden">
               <button
                 onClick={openConnectModal}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-zinc-400 hover:text-amber-400 transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-400/10 text-amber-400 hover:bg-amber-400/20 transition-colors"
               >
                 <Link2 className="h-3.5 w-3.5" />
                 Площадка
@@ -1008,7 +1028,8 @@ export default function CalendarScreen() {
                 onClick={() => setSelectedKey(isSelected ? null : cell.key)}
                 className={[
                   'relative rounded-md border flex flex-col justify-between text-left transition-all duration-150',
-                  calendarExpanded ? 'p-2 sm:p-4' : 'p-1 sm:p-2',
+                  calendarExpanded ? 'min-h-[64px] sm:min-h-[110px]' : '',
+                  calendarExpanded ? 'p-1.5 sm:p-4' : 'p-1 sm:p-2',
                   cell.inMonth ? 'bg-zinc-900' : 'bg-zinc-950',
                   cell.inMonth ? 'border-zinc-800' : 'border-zinc-900',
                   !cell.inMonth ? 'opacity-40' : '',
@@ -1022,11 +1043,11 @@ export default function CalendarScreen() {
                 {cell.isToday && (
                   <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-amber-400" />
                 )}
-                <span className={`font-data ${calendarExpanded ? 'text-sm sm:text-base' : 'text-xs'} ${cell.inMonth ? 'text-zinc-400' : 'text-zinc-700'}`}>
+                <span className={`font-data ${calendarExpanded ? 'text-xs sm:text-base' : 'text-xs'} ${cell.inMonth ? 'text-zinc-400' : 'text-zinc-700'}`}>
                   {cell.date.getDate()}
                 </span>
                 {cell.inMonth && hasTrades && (
-                  <span className={`font-data ${calendarExpanded ? 'text-base sm:text-xl' : 'text-sm'} font-medium ${isProfit ? 'text-emerald-400' : 'text-red-400'}`}>
+                  <span className={`font-data ${calendarExpanded ? 'text-xs sm:text-xl' : 'text-sm'} font-medium whitespace-nowrap ${isProfit ? 'text-emerald-400' : 'text-red-400'}`}>
                     {isProfit ? '+' : '-'}${formatMoney(pnl)}
                   </span>
                 )}
