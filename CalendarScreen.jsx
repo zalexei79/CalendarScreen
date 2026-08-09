@@ -1021,7 +1021,10 @@ export default function CalendarScreen() {
             const hasTrades = tradesForDayFiltered(cell.key).length > 0;
             const pnl = totalPnlForDay(cell.key);
             const isProfit = pnl >= 0;
-            const inPeriodRange = periodMenuOpen && cell.key >= dateFrom && cell.key <= dateTo;
+            const pnlText = `${isProfit ? '+' : '-'}$${formatMoney(pnl)}`;
+            const pnlSizeClass =
+              pnlText.length > 9 ? 'text-[9px] sm:text-xs' : pnlText.length > 6 ? 'text-[10px] sm:text-sm' : calendarExpanded ? 'text-xs sm:text-xl' : 'text-sm';
+            const inPeriodRange = (periodMenuOpen || periodPreset === 'Вся история') && cell.key >= dateFrom && cell.key <= dateTo;
             return (
               <button
                 key={cell.key}
@@ -1047,8 +1050,8 @@ export default function CalendarScreen() {
                   {cell.date.getDate()}
                 </span>
                 {cell.inMonth && hasTrades && (
-                  <span className={`font-data ${calendarExpanded ? 'text-xs sm:text-xl' : 'text-sm'} font-medium whitespace-nowrap ${isProfit ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {isProfit ? '+' : '-'}${formatMoney(pnl)}
+                  <span className={`font-data ${pnlSizeClass} font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-full block ${isProfit ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {pnlText}
                   </span>
                 )}
               </button>
