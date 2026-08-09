@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Inbox, TrendingUp, TrendingDown, Sparkles, Plus, X, Trash2,
   Calendar, ChevronDown, ChevronLeft, ChevronRight, Link2, KeyRound, UploadCloud, FileText,
-  LogIn, LogOut, CheckCircle2, RefreshCw,
+  LogIn, LogOut, CheckCircle2, RefreshCw, Maximize2, Minimize2,
 } from 'lucide-react';
 import { supabase } from './src/supabaseClient';
 
@@ -279,6 +279,7 @@ export default function CalendarScreen() {
   }
 
   const [selectedKey, setSelectedKey] = useState(null);
+  const [calendarExpanded, setCalendarExpanded] = useState(false);
   const [manualTrades, setManualTrades] = useState({}); // { [dateKey]: Trade[] } — real, user-saved trades only
   const [recentInstruments, setRecentInstruments] = useState([]); // most-recently-used instrument symbols
   const [customTags, setCustomTags] = useState([]); // user-added instrument tags, max MAX_CUSTOM_TAGS
@@ -860,40 +861,43 @@ export default function CalendarScreen() {
               <ChevronRight className="h-4 w-4" />
             </button>
 
-            {/* compact platform connect entry point */}
-            <button
-              onClick={openConnectModal}
-              className="ml-2 flex items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 font-data text-[11px] tracking-wide text-zinc-400 hover:text-amber-400 hover:border-zinc-600 transition-colors"
-            >
-              <Link2 className="h-3.5 w-3.5" />
-              Площадка
-              {ctraderConnected && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />}
-            </button>
-
-            {/* Google login — informational, doesn't gate the calendar */}
-            {user ? (
-              <div className="flex items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 pl-2.5 pr-1.5 py-1.5">
-                <span className="font-data text-[11px] tracking-wide text-zinc-300">
-                  <span className="max-w-[110px] truncate">{user.user_metadata?.nickname || user.user_metadata?.full_name || user.email}</span>
-                </span>
-                <button
-                  onClick={handleGoogleLogout}
-                  title="Выйти из аккаунта"
-                  className="flex items-center gap-1 text-zinc-500 hover:text-red-400 transition-colors border-l border-zinc-800 pl-2 ml-0.5"
-                >
-                  <LogOut className="h-3.5 w-3.5" />
-                  <span className="font-data text-[11px]">Выйти</span>
-                </button>
-              </div>
-            ) : (
+            {/* account pill: platform + login, merged into one seamless container */}
+            <div className="ml-2 flex items-center rounded-md border border-zinc-800 bg-zinc-900 font-data text-[11px] tracking-wide overflow-hidden">
               <button
-                onClick={handleGoogleLogin}
-                className="flex items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 font-data text-[11px] tracking-wide text-zinc-400 hover:text-amber-400 hover:border-zinc-600 transition-colors"
+                onClick={openConnectModal}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-zinc-400 hover:text-amber-400 transition-colors"
               >
-                <LogIn className="h-3.5 w-3.5" />
-                Войти через Google
+                <Link2 className="h-3.5 w-3.5" />
+                Площадка
+                {ctraderConnected && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />}
               </button>
-            )}
+
+              <span className="h-4 w-px bg-zinc-800" />
+
+              {user ? (
+                <div className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5">
+                  <span className="max-w-[110px] truncate text-zinc-300">
+                    {user.user_metadata?.nickname || user.user_metadata?.full_name || user.email}
+                  </span>
+                  <button
+                    onClick={handleGoogleLogout}
+                    title="Выйти из аккаунта"
+                    className="flex items-center gap-1 text-zinc-500 hover:text-red-400 transition-colors border-l border-zinc-800 pl-2 ml-0.5"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    Выйти
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleGoogleLogin}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-zinc-400 hover:text-amber-400 transition-colors"
+                >
+                  <LogIn className="h-3.5 w-3.5" />
+                  Войти через Google
+                </button>
+              )}
+            </div>
           </div>
 
           {/* compact period picker — replaces the old preset select + two date inputs */}
@@ -965,11 +969,19 @@ export default function CalendarScreen() {
         </div>
       </header>
 
-      {/* CALENDAR — top half */}
+      {/* CALENDAR — top half (or nearly full screen when expanded) */}
       <section
-        className="flex-[1.1] px-3 sm:px-8 py-4 sm:py-6 border-b border-zinc-800"
+        className={`${calendarExpanded ? 'flex-[3]' : 'flex-[1.1]'} px-3 sm:px-8 py-4 sm:py-6 border-b border-zinc-800 relative transition-all duration-200`}
         onClick={(e) => { if (e.target === e.currentTarget) setSelectedKey(null); }}
       >
+        <button
+          onClick={() => setCalendarExpanded((v) => !v)}
+          title={calendarExpanded ? 'Свернуть календарь' : 'Развернуть календарь'}
+          className="absolute top-3 left-3 sm:top-5 sm:left-6 z-10 rounded-md border border-zinc-800 bg-zinc-900 p-1.5 text-zinc-500 hover:text-amber-400 hover:border-zinc-600 transition-colors"
+        >
+          {calendarExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+        </button>
+
         <div
           className="grid grid-cols-7 gap-1 sm:gap-2 mb-2"
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedKey(null); }}
@@ -995,7 +1007,8 @@ export default function CalendarScreen() {
                 key={cell.key}
                 onClick={() => setSelectedKey(isSelected ? null : cell.key)}
                 className={[
-                  'relative rounded-md border p-1 sm:p-2 flex flex-col justify-between text-left transition-all duration-150',
+                  'relative rounded-md border flex flex-col justify-between text-left transition-all duration-150',
+                  calendarExpanded ? 'p-2 sm:p-4' : 'p-1 sm:p-2',
                   cell.inMonth ? 'bg-zinc-900' : 'bg-zinc-950',
                   cell.inMonth ? 'border-zinc-800' : 'border-zinc-900',
                   !cell.inMonth ? 'opacity-40' : '',
@@ -1009,11 +1022,11 @@ export default function CalendarScreen() {
                 {cell.isToday && (
                   <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-amber-400" />
                 )}
-                <span className={`font-data text-xs ${cell.inMonth ? 'text-zinc-400' : 'text-zinc-700'}`}>
+                <span className={`font-data ${calendarExpanded ? 'text-sm sm:text-base' : 'text-xs'} ${cell.inMonth ? 'text-zinc-400' : 'text-zinc-700'}`}>
                   {cell.date.getDate()}
                 </span>
                 {cell.inMonth && hasTrades && (
-                  <span className={`font-data text-sm font-medium ${isProfit ? 'text-emerald-400' : 'text-red-400'}`}>
+                  <span className={`font-data ${calendarExpanded ? 'text-base sm:text-xl' : 'text-sm'} font-medium ${isProfit ? 'text-emerald-400' : 'text-red-400'}`}>
                     {isProfit ? '+' : '-'}${formatMoney(pnl)}
                   </span>
                 )}
@@ -1023,7 +1036,8 @@ export default function CalendarScreen() {
         </div>
       </section>
 
-      {/* TRADE PANEL — bottom half, driven by the period filter */}
+      {/* TRADE PANEL — hidden in expanded calendar mode until a day is picked */}
+      {(!calendarExpanded || selectedKey) && (
       <section className="flex-1 px-3 sm:px-8 py-4 sm:py-6 overflow-y-auto">
         <div className="max-w-3xl mx-auto h-full flex flex-col gap-4">
           <div className="flex items-center justify-between">
@@ -1059,15 +1073,26 @@ export default function CalendarScreen() {
               </div>
             </div>
             <div className="text-right">
-              <button
-                onClick={openModal}
-                disabled={isFutureSelected}
-                title={isFutureSelected ? 'Нельзя добавить сделку на будущую дату' : undefined}
-                className="flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-zinc-900"
-              >
-                <Plus className="h-4 w-4" />
-                Добавить сделку вручную
-              </button>
+              <div className="inline-flex items-center rounded-md border border-zinc-700 bg-zinc-900 overflow-hidden">
+                <button
+                  onClick={openAnalysis}
+                  disabled={periodStats.count === 0}
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm text-amber-400 hover:bg-amber-400/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Анализ
+                </button>
+                <span className="h-5 w-px bg-zinc-700" />
+                <button
+                  onClick={openModal}
+                  disabled={isFutureSelected}
+                  title={isFutureSelected ? 'Нельзя добавить сделку на будущую дату' : undefined}
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Plus className="h-4 w-4" />
+                  Добавить сделку
+                </button>
+              </div>
               {/* always the strictly selected calendar date, or today if none selected */}
               <p className="font-data text-[10px] text-zinc-600 mt-1">
                 на {targetDateLabel}{!selectedCell && ' (сегодня)'}
@@ -1076,27 +1101,17 @@ export default function CalendarScreen() {
           </div>
 
           {/* compact single-line stats bar, right above the trade list */}
-          <div className="flex items-center justify-between gap-2 rounded-md border border-zinc-800 bg-zinc-900 px-4 py-2 font-data text-xs text-zinc-400">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span>Сделок: <span className="text-zinc-100 font-medium">{periodStats.count}</span></span>
-              <span className="text-zinc-700">•</span>
-              <span>
-                PnL:{' '}
-                <span className={`font-medium ${periodStats.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {periodStats.pnl >= 0 ? '+' : '-'}${formatMoney(periodStats.pnl)}
-                </span>
+          <div className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900 px-4 py-2 font-data text-xs text-zinc-400">
+            <span>Сделок: <span className="text-zinc-100 font-medium">{periodStats.count}</span></span>
+            <span className="text-zinc-700">•</span>
+            <span>
+              PnL:{' '}
+              <span className={`font-medium ${periodStats.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {periodStats.pnl >= 0 ? '+' : '-'}${formatMoney(periodStats.pnl)}
               </span>
-              <span className="text-zinc-700">•</span>
-              <span>Winrate: <span className="text-zinc-100 font-medium">{periodStats.winrate}%</span></span>
-            </div>
-            <button
-              onClick={openAnalysis}
-              disabled={periodStats.count === 0}
-              className="flex items-center gap-1 rounded-md border border-amber-400/30 bg-amber-400/5 px-2.5 py-1 text-amber-400 hover:bg-amber-400/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              Анализ
-            </button>
+            </span>
+            <span className="text-zinc-700">•</span>
+            <span>Winrate: <span className="text-zinc-100 font-medium">{periodStats.winrate}%</span></span>
           </div>
 
           {periodTrades.length > 0 ? (
@@ -1156,6 +1171,7 @@ export default function CalendarScreen() {
           )}
         </div>
       </section>
+      )}
 
       {/* ADD TRADE MODAL */}
       {modalOpen && (
