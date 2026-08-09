@@ -989,6 +989,7 @@ export default function CalendarScreen() {
             const hasTrades = tradesForDayFiltered(cell.key).length > 0;
             const pnl = totalPnlForDay(cell.key);
             const isProfit = pnl >= 0;
+            const inPeriodRange = periodMenuOpen && cell.key >= dateFrom && cell.key <= dateTo;
             return (
               <button
                 key={cell.key}
@@ -1000,6 +1001,8 @@ export default function CalendarScreen() {
                   !cell.inMonth ? 'opacity-40' : '',
                   isSelected
                     ? 'border-amber-400 ring-2 ring-amber-400/60 bg-zinc-800 scale-[1.03] shadow-lg shadow-amber-500/10 z-10'
+                    : inPeriodRange
+                    ? 'border-sky-400/50 bg-sky-400/10'
                     : 'hover:border-zinc-600 hover:bg-zinc-800/60',
                 ].join(' ')}
               >
@@ -1026,10 +1029,18 @@ export default function CalendarScreen() {
           <div className="flex items-center justify-between">
             <div>
               <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">
-                {effectiveFrom === effectiveTo ? effectiveFrom : `${effectiveFrom} — ${effectiveTo}`}
+                {effectiveFrom === '0000-01-01'
+                  ? 'Вся история'
+                  : effectiveFrom === effectiveTo
+                  ? effectiveFrom
+                  : `${effectiveFrom} — ${effectiveTo}`}
               </p>
               <p className="text-[11px] text-zinc-500 mb-0.5">
-                {effectiveFrom === effectiveTo ? 'Общий результат дня' : 'Общий результат за период'}
+                {effectiveFrom === '0000-01-01'
+                  ? 'История за всё время'
+                  : effectiveFrom === effectiveTo
+                  ? 'Общий результат дня'
+                  : 'Общий результат за период'}
               </p>
               <div className="flex items-center gap-2">
                 {periodStats.count > 0 &&
