@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Inbox, TrendingUp, TrendingDown, Sparkles, Plus, X, Trash2,
   Calendar, ChevronDown, ChevronLeft, ChevronRight, Link2, KeyRound, UploadCloud, FileText,
-  LogIn, LogOut, CheckCircle2, RefreshCw, Maximize2, Minimize2,
+  LogIn, LogOut, CheckCircle2, RefreshCw, Maximize2, Minimize2, History,
 } from 'lucide-react';
 import { supabase } from './src/supabaseClient';
 
@@ -772,8 +772,39 @@ export default function CalendarScreen() {
     setViewYear(y);
     setViewMonth(m - 1);
     setSelectedKey(dateKey);
+    setHistoryOpen(false);
   }
 
+  // --- History browser: independent period, lists trades, click → jump to day
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyVisible, setHistoryVisible] = useState(false);
+  const [historyFrom, setHistoryFrom] = useState('0000-01-01');
+  const [historyTo, setHistoryTo] = useState('9999-12-31');
+  const [historyPreset, setHistoryPreset] = useState('Вся история');
+
+  const historyTrades = useMemo(() => {
+    return Object.entries(manualTrades)
+      .flatMap(([dateKey, arr]) => arr.map((t) => ({ ...t, dateKey })))
+      .filter((t) => t.dateKey >= historyFrom && t.dateKey <= historyTo)
+      .sort((a, b) => (a.dateKey === b.dateKey ? b.time.localeCompare(a.time) : b.dateKey.localeCompare(a.dateKey)));
+  }, [manualTrades, historyFrom, historyTo]);
+
+  function openHistory() {
+    setHistoryOpen(true);
+    requestAnimationFrame(() => setHistoryVisible(true));
+  }
+
+  function closeHistory() {
+    setHistoryVisible(false);
+    setTimeout(() => setHistoryOpen(false), 180);
+  }
+
+  function handleHistoryPreset(preset) {
+    setHistoryPreset(preset);
+    const range = getPresetRange(preset, today);
+    setHistoryFrom(range.from);
+    setHistoryTo(range.to);
+  }
 
   // --- Platform connect: API keys (stub — wire to your backend) -------------
   function handleSaveApiKeys() {
@@ -1060,26 +1091,14 @@ export default function CalendarScreen() {
         </div>
       </section>
 
-      {/* TRADE PANEL — hidden in expanded calendar mode until a day is picked */}
-      {(!calendarExpanded || selectedKey) && (
-      <section className="flex-1 px-3 sm:px-8 py-4 sm:py-6 overflow-y-auto">
-        <div className="max-w-3xl mx-auto h-full flex flex-col gap-4">
+      {/* DAY VIEW — fullscreen overlay, only when a specific day is selected */}
+      {selectedKey && (
+      <div className="fixed inset-0 z-40 bg-zinc-950 overflow-y-auto">
+        <div className="max-w-3xl mx-auto px-3 sm:px-8 py-4 sm:py-8 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">
-                {effectiveFrom === '0000-01-01'
-                  ? 'Вся история'
-                  : effectiveFrom === effectiveTo
-                  ? effectiveFrom
-                  : `${effectiveFrom} — ${effectiveTo}`}
-              </p>
-              <p className="text-[11px] text-zinc-500 mb-0.5">
-                {effectiveFrom === '0000-01-01'
-                  ? 'История за всё время'
-                  : effectiveFrom === effectiveTo
-                  ? 'Общий результат дня'
-                  : 'Общий результат за период'}
-              </p>
+              <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">{selectedKey}</p>
+              <p className="text-[11px] text-zinc-500 mb-0.5">Общий результат дня</p>
               <div className="flex items-center gap-2">
                 {periodStats.count > 0 &&
                   (periodStats.pnl >= 0 ? (
@@ -1096,35 +1115,36 @@ export default function CalendarScreen() {
                 </span>
               </div>
             </div>
-            <div className="text-right">
-              <div className="inline-flex items-center rounded-md border border-zinc-700 bg-zinc-900 overflow-hidden">
-                <button
-                  onClick={openAnalysis}
-                  disabled={periodStats.count === 0}
-                  className="flex items-center gap-1.5 px-3 py-2 text-sm text-amber-400 hover:bg-amber-400/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Анализ
-                </button>
-                <span className="h-5 w-px bg-zinc-700" />
-                <button
-                  onClick={openModal}
-                  disabled={isFutureSelected}
-                  title={isFutureSelected ? 'Нельзя добавить сделку на будущую дату' : undefined}
-                  className="flex items-center gap-1.5 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Plus className="h-4 w-4" />
-                  Добавить сделку
-                </button>
-              </div>
-              {/* always the strictly selected calendar date, or today if none selected */}
-              <p className="font-data text-[10px] text-zinc-600 mt-1">
-                на {targetDateLabel}{!selectedCell && ' (сегодня)'}
-              </p>
-            </div>
+            <button
+              onClick={() => setSelectedKey(null)}
+              className="rounded-md border border-zinc-800 bg-zinc-900 p-2 text-zinc-400 hover:text-zinc-100 hover:border-zinc-600 transition-colors"
+              aria-label="Закрыть"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
 
-          {/* compact single-line stats bar, right above the trade list */}
+          <div className="inline-flex items-center self-start rounded-md border border-zinc-700 bg-zinc-900 overflow-hidden">
+            <button
+              onClick={openAnalysis}
+              disabled={periodStats.count === 0}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm text-amber-400 hover:bg-amber-400/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <Sparkles className="h-4 w-4" />
+              Анализ
+            </button>
+            <span className="h-5 w-px bg-zinc-700" />
+            <button
+              onClick={openModal}
+              disabled={isFutureSelected}
+              title={isFutureSelected ? 'Нельзя добавить сделку на будущую дату' : undefined}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Plus className="h-4 w-4" />
+              Добавить сделку
+            </button>
+          </div>
+
           <div className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900 px-4 py-2 font-data text-xs text-zinc-400">
             <span>Сделок: <span className="text-zinc-100 font-medium">{periodStats.count}</span></span>
             <span className="text-zinc-700">•</span>
@@ -1139,16 +1159,11 @@ export default function CalendarScreen() {
           </div>
 
           {periodTrades.length > 0 ? (
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900 divide-y divide-zinc-800 flex-1 overflow-y-auto">
+            <div className="rounded-lg border border-zinc-800 bg-zinc-900 divide-y divide-zinc-800">
               {periodTrades.map((trade) => (
-                <div
-                  key={trade.id}
-                  onClick={() => jumpToTradeDate(trade.dateKey)}
-                  className="px-4 py-3 group cursor-pointer hover:bg-zinc-800/60 transition-colors"
-                >
+                <div key={trade.id} className="px-4 py-3 group">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <span className="font-data text-xs text-zinc-500 w-16">{formatDateLabel(trade.dateKey)}</span>
                       <span className="font-data text-xs text-zinc-500 w-12">{trade.time}</span>
                       <span className="text-sm text-zinc-200 font-medium">{trade.instrument}</span>
                       <span
@@ -1168,7 +1183,7 @@ export default function CalendarScreen() {
                         {trade.pnl >= 0 ? '+' : '-'}${formatMoney(trade.pnl)}
                       </span>
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleDeleteTrade(trade.dateKey, trade.id); }}
+                        onClick={() => handleDeleteTrade(trade.dateKey, trade.id)}
                         className="text-zinc-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
                         aria-label="Удалить сделку"
                         title="Удалить сделку"
@@ -1177,24 +1192,107 @@ export default function CalendarScreen() {
                       </button>
                     </div>
                   </div>
-                  {trade.comment && (
-                    <p className="text-xs text-zinc-500 mt-1.5 pl-[7.5rem] leading-relaxed">{trade.comment}</p>
-                  )}
+                  {trade.comment && <p className="text-xs text-zinc-500 mt-1.5 pl-16 leading-relaxed">{trade.comment}</p>}
                 </div>
               ))}
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex items-center justify-center py-16">
               <div className="text-center max-w-sm border border-dashed border-zinc-800 rounded-xl px-10 py-10">
                 <Inbox className="h-8 w-8 text-zinc-700 mx-auto mb-4" />
-                <p className="text-zinc-500 text-sm">
-                  Нет сохранённых сделок за выбранный период
-                </p>
+                <p className="text-zinc-500 text-sm">Сделок за этот день пока нет</p>
               </div>
             </div>
           )}
         </div>
-      </section>
+      </div>
+      )}
+
+      {/* bottom "История" entry point — search/browse all saved trades */}
+      <div className="fixed bottom-4 inset-x-0 flex justify-center z-30 pointer-events-none">
+        <button
+          onClick={openHistory}
+          className="pointer-events-auto flex items-center gap-2 rounded-full border border-zinc-700 bg-zinc-900/95 backdrop-blur px-4 py-2.5 text-sm text-zinc-200 shadow-xl hover:border-amber-400/60 hover:text-amber-400 transition-colors"
+        >
+          <History className="h-4 w-4" />
+          История
+        </button>
+      </div>
+
+      {/* HISTORY MODAL — pick a preset/date or browse everything, click a trade to jump to its day */}
+      {historyOpen && (
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${
+            historyVisible ? 'opacity-100' : 'opacity-0'
+          }`}
+          onMouseDown={handleBackdropMouseDown}
+          onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) closeHistory(); }}
+        >
+          <div
+            className={`relative w-full max-w-md max-h-[80vh] flex flex-col rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl transition-all duration-200 ${
+              historyVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+            }`}
+          >
+            <button
+              onClick={closeHistory}
+              className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-200 transition-colors"
+              aria-label="Закрыть"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">История сделок</p>
+            <h2 className="font-display text-lg font-semibold text-zinc-50 mb-3">
+              {historyFrom === '0000-01-01' ? 'Вся история' : historyFrom === historyTo ? historyFrom : `${historyFrom} — ${historyTo}`}
+            </h2>
+
+            <div className="flex flex-wrap items-center gap-1.5 mb-4">
+              {PERIOD_PRESETS.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => handleHistoryPreset(p)}
+                  className={[
+                    'rounded-full border px-2.5 py-1 font-data text-[11px] tracking-wide transition-colors',
+                    historyPreset === p
+                      ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                      : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
+                  ].join(' ')}
+                >
+                  {p}
+                </button>
+              ))}
+              <input
+                type="date"
+                onChange={(e) => e.target.value && jumpToTradeDate(e.target.value)}
+                className="rounded-full border border-zinc-700 bg-zinc-950 px-2.5 py-1 font-data text-[11px] text-zinc-300 focus:outline-none focus:border-amber-400/60"
+              />
+            </div>
+
+            <p className="text-xs text-zinc-500 mb-2">{historyTrades.length} сделок</p>
+
+            {historyTrades.length > 0 ? (
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900 divide-y divide-zinc-800 overflow-y-auto">
+                {historyTrades.map((trade) => (
+                  <button
+                    key={trade.id}
+                    onClick={() => jumpToTradeDate(trade.dateKey)}
+                    className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-zinc-800/60 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="font-data text-xs text-zinc-500 w-14 shrink-0">{formatDateLabel(trade.dateKey)}</span>
+                      <span className="text-sm text-zinc-200 font-medium truncate">{trade.instrument}</span>
+                    </div>
+                    <span className={`font-data text-sm font-medium shrink-0 ${trade.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {trade.pnl >= 0 ? '+' : '-'}${formatMoney(trade.pnl)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-600 text-center py-6">Нет сделок за выбранный период</p>
+            )}
+          </div>
+        </div>
       )}
 
       {/* ADD TRADE MODAL */}
