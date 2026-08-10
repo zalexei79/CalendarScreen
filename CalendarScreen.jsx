@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Inbox, TrendingUp, TrendingDown, Sparkles, Plus, X, Trash2,
   Calendar, ChevronDown, ChevronLeft, ChevronRight, Link2, KeyRound, UploadCloud, FileText,
-  LogIn, LogOut, CheckCircle2, RefreshCw, Maximize2, Minimize2, History,
+  LogIn, LogOut, CheckCircle2, RefreshCw, History,
 } from 'lucide-react';
 import { supabase } from './src/supabaseClient';
 
@@ -64,6 +64,14 @@ function formatMoney(n) {
 
 function formatSignedShort(n) {
   return `${n >= 0 ? '+' : '-'}$${formatMoney(n)}`;
+}
+
+function formatMoneyShort(n) {
+  const abs = Math.abs(n);
+  const [divisor, suffix] = abs >= 1e9 ? [1e9, 'б'] : abs >= 1e6 ? [1e6, 'м'] : abs >= 1e3 ? [1e3, 'к'] : [1, ''];
+  const value = abs / divisor;
+  const rounded = Math.round(value * 10) / 10;
+  return (Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)) + suffix;
 }
 
 function formatDateLabel(dateKey) {
@@ -299,7 +307,7 @@ export default function CalendarScreen() {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
-  const [calendarExpanded, setCalendarExpanded] = useState(true);
+
   const [manualTrades, setManualTrades] = useState({}); // { [dateKey]: Trade[] } — real, user-saved trades only
   const [recentInstruments, setRecentInstruments] = useState([]); // most-recently-used instrument symbols
   const [customTags, setCustomTags] = useState([]); // user-added instrument tags, max MAX_CUSTOM_TAGS
@@ -1020,19 +1028,11 @@ export default function CalendarScreen() {
         </div>
       </header>
 
-      {/* CALENDAR — top half (or nearly full screen when expanded) */}
+      {/* CALENDAR — the main view of the whole app */}
       <section
-        className={`${calendarExpanded ? 'flex-[3]' : 'flex-[1.1]'} px-3 sm:px-8 py-4 sm:py-6 border-b border-zinc-800 relative transition-all duration-200`}
+        className="flex-1 px-3 sm:px-8 py-4 sm:py-6 border-b border-zinc-800 relative"
         onClick={(e) => { if (e.target === e.currentTarget) setSelectedKey(null); }}
       >
-        <button
-          onClick={() => setCalendarExpanded((v) => !v)}
-          title={calendarExpanded ? 'Свернуть календарь' : 'Развернуть календарь'}
-          className="absolute top-3 left-3 sm:top-5 sm:left-6 z-10 rounded-md border border-zinc-800 bg-zinc-900 p-1.5 text-zinc-500 hover:text-amber-400 hover:border-zinc-600 transition-colors"
-        >
-          {calendarExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-        </button>
-
         <div
           className="grid grid-cols-7 gap-1 sm:gap-2 mb-2"
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedKey(null); }}
@@ -1052,9 +1052,7 @@ export default function CalendarScreen() {
             const hasTrades = tradesForDayFiltered(cell.key).length > 0;
             const pnl = totalPnlForDay(cell.key);
             const isProfit = pnl >= 0;
-            const pnlText = `${isProfit ? '+' : '-'}$${formatMoney(pnl)}`;
-            const pnlSizeClass =
-              pnlText.length > 9 ? 'text-[9px] sm:text-xs' : pnlText.length > 6 ? 'text-[10px] sm:text-sm' : calendarExpanded ? 'text-xs sm:text-xl' : 'text-sm';
+            const pnlText = `${isProfit ? '+' : '-'}$${formatMoneyShort(pnl)}`;
             const inPeriodRange = (periodMenuOpen || periodPreset === 'Вся история') && cell.key >= dateFrom && cell.key <= dateTo;
             return (
               <button
@@ -1062,8 +1060,7 @@ export default function CalendarScreen() {
                 onClick={() => setSelectedKey(isSelected ? null : cell.key)}
                 className={[
                   'relative rounded-md border flex flex-col justify-between text-left transition-all duration-150',
-                  calendarExpanded ? 'min-h-[64px] sm:min-h-[110px]' : '',
-                  calendarExpanded ? 'p-1.5 sm:p-4' : 'p-1 sm:p-2',
+                  'min-h-[64px] sm:min-h-[110px] p-1.5 sm:p-4',
                   cell.inMonth ? 'bg-zinc-900' : 'bg-zinc-950',
                   cell.inMonth ? 'border-zinc-800' : 'border-zinc-900',
                   !cell.inMonth ? 'opacity-40' : '',
@@ -1077,11 +1074,11 @@ export default function CalendarScreen() {
                 {cell.isToday && (
                   <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-amber-400" />
                 )}
-                <span className={`font-data ${calendarExpanded ? 'text-xs sm:text-base' : 'text-xs'} ${cell.inMonth ? 'text-zinc-400' : 'text-zinc-700'}`}>
+                <span className={`font-data text-xs sm:text-base ${cell.inMonth ? 'text-zinc-400' : 'text-zinc-700'}`}>
                   {cell.date.getDate()}
                 </span>
                 {cell.inMonth && hasTrades && (
-                  <span className={`font-data ${pnlSizeClass} font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-full block ${isProfit ? 'text-emerald-400' : 'text-red-400'}`}>
+                  <span className={`font-data text-xs sm:text-xl font-medium whitespace-nowrap ${isProfit ? 'text-emerald-400' : 'text-red-400'}`}>
                     {pnlText}
                   </span>
                 )}
@@ -1091,10 +1088,19 @@ export default function CalendarScreen() {
         </div>
       </section>
 
-      {/* DAY VIEW — fullscreen overlay, only when a specific day is selected */}
+      {/* DAY VIEW — bottom sheet, tap the dimmed backdrop anywhere to return to the calendar */}
       {selectedKey && (
-      <div className="fixed inset-0 z-40 bg-zinc-950 overflow-y-auto">
+      <div
+        className="fixed inset-0 z-40 bg-black/60"
+        onMouseDown={handleBackdropMouseDown}
+        onClick={(e) => { if (mouseDownOnBackdrop.current) setSelectedKey(null); }}
+      >
+      <div
+        className="absolute inset-x-0 bottom-0 max-h-[82vh] rounded-t-2xl border-t border-zinc-800 bg-zinc-950 shadow-2xl overflow-y-auto"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="max-w-3xl mx-auto px-3 sm:px-8 py-4 sm:py-8 flex flex-col gap-4">
+          <div className="mx-auto h-1 w-10 rounded-full bg-zinc-700 -mt-1 mb-1" />
           <div className="flex items-center justify-between">
             <div>
               <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">{selectedKey}</p>
@@ -1115,13 +1121,6 @@ export default function CalendarScreen() {
                 </span>
               </div>
             </div>
-            <button
-              onClick={() => setSelectedKey(null)}
-              className="rounded-md border border-zinc-800 bg-zinc-900 p-2 text-zinc-400 hover:text-zinc-100 hover:border-zinc-600 transition-colors"
-              aria-label="Закрыть"
-            >
-              <X className="h-4 w-4" />
-            </button>
           </div>
 
           <div className="inline-flex items-center self-start rounded-md border border-zinc-700 bg-zinc-900 overflow-hidden">
@@ -1205,6 +1204,7 @@ export default function CalendarScreen() {
             </div>
           )}
         </div>
+      </div>
       </div>
       )}
 
