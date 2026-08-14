@@ -164,7 +164,7 @@ export default function CalendarScreen() {
     setCtraderLoading(true);
     try {
       const redirectUri = window.location.origin + '/';
-      const { data, error } = await supabase.functions.invoke('ctrader-auth', {
+      const { data, error } = await supabase.functions.invoke('bright-api', {
         body: { code, redirectUri },
       });
       if (error || data?.error) throw new Error(error?.message || data?.error);
