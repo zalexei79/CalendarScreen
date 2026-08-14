@@ -69,9 +69,7 @@ function formatSignedShort(n) {
 function formatMoneyShort(n) {
   const abs = Math.abs(n);
   const [divisor, suffix] = abs >= 1e9 ? [1e9, 'б'] : abs >= 1e6 ? [1e6, 'м'] : abs >= 1e3 ? [1e3, 'к'] : [1, ''];
-  const value = abs / divisor;
-  const rounded = Math.round(value * 10) / 10;
-  return (Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)) + suffix;
+  return String(Math.round(abs / divisor)) + suffix;
 }
 
 function formatDateLabel(dateKey) {
@@ -127,10 +125,22 @@ const EXCHANGES = ['Bybit', 'Binance', 'OKX', 'MT4/MT5', 'cTrader'];
 const PLATFORMS = ['Manual', ...EXCHANGES];
 const RECENT_INSTRUMENTS_STORAGE_KEY = 'atj_recent_instruments';
 const CUSTOM_TAGS_STORAGE_KEY = 'atj_custom_instrument_tags';
+const DEPOSIT_SIZE_STORAGE_KEY = 'atj_deposit_size';
 const MAX_CUSTOM_TAGS = 6;
 
 export default function CalendarScreen() {
-  const today = useMemo(() => new Date(), []);
+  const [today, setToday] = useState(() => new Date());
+  useEffect(() => {
+    function refreshToday() {
+      if (document.visibilityState === 'visible') setToday(new Date());
+    }
+    window.addEventListener('focus', refreshToday);
+    document.addEventListener('visibilitychange', refreshToday);
+    return () => {
+      window.removeEventListener('focus', refreshToday);
+      document.removeEventListener('visibilitychange', refreshToday);
+    };
+  }, []);
 
   // Google session — informational only, doesn't block using the calendar
   const [user, setUser] = useState(null);
@@ -158,13 +168,12 @@ export default function CalendarScreen() {
         body: { code, redirectUri },
       });
       if (error || data?.error) throw new Error(error?.message || data?.error);
-      window.history.replaceState({}, document.title, window.location.pathname);
       setCtraderConnected(true);
     } catch (err) {
       console.error('[ctrader] ошибка подключения:', err);
-      setFormError('');
       alert('Не удалось подключить cTrader: ' + err.message);
     } finally {
+      window.history.replaceState({}, document.title, window.location.pathname);
       setCtraderLoading(false);
     }
   }
@@ -203,6 +212,10 @@ export default function CalendarScreen() {
       const code = new URLSearchParams(window.location.search).get('code');
       if (code && currentUser) {
         handleCtraderCallback(code);
+      } else if (code && !currentUser) {
+        // код есть, но пользователь ещё не вошёл через Google — обмен невозможен,
+        // чистим адрес сразу, иначе код "зависнет" в URL навсегда
+        window.history.replaceState({}, document.title, window.location.pathname);
       } else if (currentUser) {
         checkCtraderStatus(currentUser.id);
       }
@@ -287,6 +300,31 @@ export default function CalendarScreen() {
   }
 
   const [selectedKey, setSelectedKey] = useState(null);
+  const [displayMode, setDisplayMode] = useState('usd'); // 'usd' | 'percent'
+  const [depositSize, setDepositSize] = useState(() => {
+    try {
+      return Number(window.localStorage.getItem(DEPOSIT_SIZE_STORAGE_KEY)) || 0;
+    } catch {
+      return 0;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(DEPOSIT_SIZE_STORAGE_KEY, String(depositSize));
+    } catch {
+      // ignore storage write failures
+    }
+  }, [depositSize]);
+
+  function formatPnlDisplay(amount, short) {
+    if (displayMode === 'percent' && depositSize > 0) {
+      const pct = (amount / depositSize) * 100;
+      return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+    }
+    return `${amount >= 0 ? '+' : '-'}$${short ? formatMoneyShort(amount) : formatMoney(amount)}`;
+  }
+
   const suppressNextHistoryPush = useRef(false);
 
   // native "back" support: opening a day pushes a history entry, so the
@@ -400,7 +438,6 @@ export default function CalendarScreen() {
   // tracks whether mousedown actually started on the backdrop itself,
   // so a text-selection drag that ends outside a modal doesn't close it
   const mouseDownOnBackdrop = useRef(false);
-  const timeInputRef = useRef(null);
   const periodMenuRef = useRef(null);
   const monthMenuRef = useRef(null);
   const yearMenuRef = useRef(null);
@@ -409,7 +446,7 @@ export default function CalendarScreen() {
     const firstOfMonth = new Date(year, month, 1);
     const offset = (firstOfMonth.getDay() + 6) % 7; // Monday-start week
     const start = new Date(year, month, 1 - offset);
-    return Array.from({ length: 35 }, (_, i) => {
+    return Array.from({ length: 42 }, (_, i) => {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       const key = keyFromDate(d);
@@ -431,6 +468,17 @@ export default function CalendarScreen() {
   function totalPnlForDay(key) {
     return tradesForDayFiltered(key).reduce((sum, t) => sum + t.pnl, 0);
   }
+
+  // heatmap scale: strongest color = the day with the biggest |PnL| this month
+  const monthMaxAbsPnl = useMemo(() => {
+    let max = 0;
+    for (const cell of cells) {
+      if (!cell.inMonth) continue;
+      const abs = Math.abs(totalPnlForDay(cell.key));
+      if (abs > max) max = abs;
+    }
+    return max;
+  }, [cells, manualTrades, platformFilter]);
 
   // Flatten every saved trade with its date, then keep only the ones inside
   // the selected period AND matching the platform filter — this drives both
@@ -502,7 +550,17 @@ export default function CalendarScreen() {
       else current = 0;
     }
 
-    return { bestDay, worstDay, topInstrument, avgPnl, longestLossStreak };
+    // Profit Factor / Payoff Ratio — pure math over analysisTrades, no new data needed
+    const winTrades = analysisTrades.filter((t) => t.pnl > 0);
+    const lossTrades = analysisTrades.filter((t) => t.pnl < 0);
+    const grossProfit = winTrades.reduce((acc, t) => acc + t.pnl, 0);
+    const grossLoss = Math.abs(lossTrades.reduce((acc, t) => acc + t.pnl, 0));
+    const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0;
+    const avgWin = winTrades.length > 0 ? grossProfit / winTrades.length : 0;
+    const avgLoss = lossTrades.length > 0 ? grossLoss / lossTrades.length : 0;
+    const payoffRatio = avgLoss > 0 ? avgWin / avgLoss : 0;
+
+    return { bestDay, worstDay, topInstrument, avgPnl, longestLossStreak, profitFactor, avgWin, avgLoss, payoffRatio };
   }, [analysisTrades, analysisStats]);
 
   const [analysisOpen, setAnalysisOpen] = useState(false);
@@ -783,19 +841,15 @@ export default function CalendarScreen() {
     setHistoryOpen(false);
   }
 
-  // --- History browser: independent period, lists trades, click → jump to day
+  // --- History browser: shows everything, click a trade to jump to its day
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
-  const [historyFrom, setHistoryFrom] = useState('0000-01-01');
-  const [historyTo, setHistoryTo] = useState('9999-12-31');
-  const [historyPreset, setHistoryPreset] = useState('Вся история');
 
   const historyTrades = useMemo(() => {
     return Object.entries(manualTrades)
       .flatMap(([dateKey, arr]) => arr.map((t) => ({ ...t, dateKey })))
-      .filter((t) => t.dateKey >= historyFrom && t.dateKey <= historyTo)
       .sort((a, b) => (a.dateKey === b.dateKey ? b.time.localeCompare(a.time) : b.dateKey.localeCompare(a.dateKey)));
-  }, [manualTrades, historyFrom, historyTo]);
+  }, [manualTrades]);
 
   function openHistory() {
     setHistoryOpen(true);
@@ -805,13 +859,6 @@ export default function CalendarScreen() {
   function closeHistory() {
     setHistoryVisible(false);
     setTimeout(() => setHistoryOpen(false), 180);
-  }
-
-  function handleHistoryPreset(preset) {
-    setHistoryPreset(preset);
-    const range = getPresetRange(preset, today);
-    setHistoryFrom(range.from);
-    setHistoryTo(range.to);
   }
 
   // --- Platform connect: API keys (stub — wire to your backend) -------------
@@ -921,30 +968,29 @@ export default function CalendarScreen() {
             </button>
 
             {/* account pill: platform + login, merged into one seamless container */}
-            <div className="ml-2 flex items-center rounded-md border border-zinc-800 bg-zinc-900 font-data text-[11px] tracking-wide overflow-hidden">
+            <div className="ml-2 flex items-center rounded-md border border-zinc-800 bg-zinc-900 font-data text-[10px] tracking-wide overflow-hidden">
               <button
                 onClick={openConnectModal}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-400/10 text-amber-400 hover:bg-amber-400/20 transition-colors"
+                className="flex items-center gap-1 px-2 py-1 bg-amber-400/10 text-amber-400 hover:bg-amber-400/20 transition-colors"
               >
-                <Link2 className="h-3.5 w-3.5" />
+                <Link2 className="h-3 w-3" />
                 Площадка
                 {ctraderConnected && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />}
               </button>
 
-              <span className="h-4 w-px bg-zinc-800" />
+              <span className="h-3.5 w-px bg-zinc-800" />
 
               {user ? (
-                <div className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5">
-                  <span className="max-w-[110px] truncate text-zinc-300">
+                <div className="flex items-center gap-1 pl-2 pr-1 py-1">
+                  <span className="max-w-[80px] truncate text-zinc-300">
                     {user.user_metadata?.nickname || user.user_metadata?.full_name || user.email}
                   </span>
                   <button
                     onClick={handleGoogleLogout}
                     title="Выйти из аккаунта"
-                    className="flex items-center gap-1 text-zinc-500 hover:text-red-400 transition-colors border-l border-zinc-800 pl-2 ml-0.5"
+                    className="flex items-center gap-1 text-zinc-500 hover:text-red-400 transition-colors border-l border-zinc-800 pl-1.5 ml-0.5"
                   >
-                    <LogOut className="h-3.5 w-3.5" />
-                    Выйти
+                    <LogOut className="h-3 w-3" />
                   </button>
                 </div>
               ) : (
@@ -968,6 +1014,22 @@ export default function CalendarScreen() {
               <Calendar className="h-3.5 w-3.5 text-amber-400" />
               {periodButtonLabel}
               <ChevronDown className={`h-3.5 w-3.5 text-zinc-500 transition-transform ${periodMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            <button
+              onClick={() => {
+                if (displayMode === 'usd' && depositSize <= 0) {
+                  const input = window.prompt('Размер депозита для расчёта %:', '1000');
+                  const value = parseFloat(input);
+                  if (!input || Number.isNaN(value) || value <= 0) return;
+                  setDepositSize(value);
+                }
+                setDisplayMode((m) => (m === 'usd' ? 'percent' : 'usd'));
+              }}
+              title={depositSize > 0 ? `Депозит: $${formatMoney(depositSize)}` : 'Задать депозит для %'}
+              className="ml-1.5 rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 font-data text-xs text-zinc-300 hover:border-zinc-600 transition-colors"
+            >
+              {displayMode === 'usd' ? '$' : '%'}
             </button>
 
             {periodMenuOpen && (
@@ -1044,7 +1106,7 @@ export default function CalendarScreen() {
           ))}
         </div>
         <div
-          className="grid grid-cols-7 grid-rows-5 gap-1 sm:gap-2 h-full"
+          className="grid grid-cols-7 grid-rows-6 gap-1 sm:gap-2 h-full"
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedKey(null); }}
         >
           {cells.map((cell) => {
@@ -1052,12 +1114,18 @@ export default function CalendarScreen() {
             const hasTrades = tradesForDayFiltered(cell.key).length > 0;
             const pnl = totalPnlForDay(cell.key);
             const isProfit = pnl >= 0;
-            const pnlText = `${isProfit ? '+' : '-'}$${formatMoneyShort(pnl)}`;
+            const pnlText = formatPnlDisplay(pnl, true);
             const inPeriodRange = (periodMenuOpen || periodPreset === 'Вся история') && cell.key >= dateFrom && cell.key <= dateTo;
+            const intensity = monthMaxAbsPnl > 0 ? Math.min(Math.abs(pnl) / monthMaxAbsPnl, 1) : 0;
+            const heatmapStyle =
+              cell.inMonth && hasTrades && !isSelected && !inPeriodRange
+                ? { backgroundColor: isProfit ? `rgba(16,185,129,${(0.14 + intensity * 0.28).toFixed(2)})` : `rgba(239,68,68,${(0.14 + intensity * 0.28).toFixed(2)})` }
+                : undefined;
             return (
               <button
                 key={cell.key}
                 onClick={() => setSelectedKey(isSelected ? null : cell.key)}
+                style={heatmapStyle}
                 className={[
                   'relative rounded-md border flex flex-col justify-between text-left transition-all duration-150',
                   'min-h-[64px] sm:min-h-[110px] p-1.5 sm:p-4',
@@ -1078,7 +1146,7 @@ export default function CalendarScreen() {
                   {cell.date.getDate()}
                 </span>
                 {cell.inMonth && hasTrades && (
-                  <span className={`font-data text-xs sm:text-xl font-medium whitespace-nowrap ${isProfit ? 'text-emerald-400' : 'text-red-400'}`}>
+                  <span className={`font-data text-[10px] sm:text-lg font-medium whitespace-nowrap ${isProfit ? 'text-emerald-400' : 'text-red-400'}`}>
                     {pnlText}
                   </span>
                 )}
@@ -1242,31 +1310,14 @@ export default function CalendarScreen() {
             </button>
 
             <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">История сделок</p>
-            <h2 className="font-display text-lg font-semibold text-zinc-50 mb-3">
-              {historyFrom === '0000-01-01' ? 'Вся история' : historyFrom === historyTo ? historyFrom : `${historyFrom} — ${historyTo}`}
-            </h2>
+            <h2 className="font-display text-lg font-semibold text-zinc-50 mb-3">Вся история</h2>
 
-            <div className="flex flex-wrap items-center gap-1.5 mb-4">
-              {PERIOD_PRESETS.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => handleHistoryPreset(p)}
-                  className={[
-                    'rounded-full border px-2.5 py-1 font-data text-[11px] tracking-wide transition-colors',
-                    historyPreset === p
-                      ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
-                      : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
-                  ].join(' ')}
-                >
-                  {p}
-                </button>
-              ))}
-              <input
-                type="date"
-                onChange={(e) => e.target.value && jumpToTradeDate(e.target.value)}
-                className="rounded-full border border-zinc-700 bg-zinc-950 px-2.5 py-1 font-data text-[11px] text-zinc-300 focus:outline-none focus:border-amber-400/60"
-              />
-            </div>
+            <input
+              type="date"
+              onChange={(e) => e.target.value && jumpToTradeDate(e.target.value)}
+              className="w-full mb-4 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 font-data text-xs text-zinc-300 focus:outline-none focus:border-amber-400/60"
+              placeholder="Перейти к дате"
+            />
 
             <p className="text-xs text-zinc-500 mb-2">{historyTrades.length} сделок</p>
 
@@ -1460,7 +1511,7 @@ export default function CalendarScreen() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-[3fr_2fr] gap-3">
+              <div className="grid grid-cols-[4fr_2fr] gap-3">
                 <div>
                   <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
                     Результат, $
@@ -1472,13 +1523,14 @@ export default function CalendarScreen() {
                       aria-label="Прибыль"
                       title="Прибыль"
                       className={[
-                        'shrink-0 w-8 rounded-md border font-data text-sm font-semibold transition-colors',
+                        'shrink-0 flex items-center gap-1 px-2.5 rounded-md border font-data text-xs font-semibold transition-colors',
                         form.sign === 'plus'
                           ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-400'
                           : 'border-zinc-700 bg-zinc-950 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
                       ].join(' ')}
                     >
-                      +
+                      <TrendingUp className="h-3.5 w-3.5" />
+                      Профит
                     </button>
                     <button
                       type="button"
@@ -1486,13 +1538,14 @@ export default function CalendarScreen() {
                       aria-label="Убыток"
                       title="Убыток"
                       className={[
-                        'shrink-0 w-8 rounded-md border font-data text-sm font-semibold transition-colors',
+                        'shrink-0 flex items-center gap-1 px-2.5 rounded-md border font-data text-xs font-semibold transition-colors',
                         form.sign === 'minus'
                           ? 'border-red-400/60 bg-red-500/10 text-red-400'
                           : 'border-zinc-700 bg-zinc-950 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
                       ].join(' ')}
                     >
-                      −
+                      <TrendingDown className="h-3.5 w-3.5" />
+                      Убыток
                     </button>
                     <input
                       type="number"
@@ -1511,7 +1564,6 @@ export default function CalendarScreen() {
                   </label>
                   <input
                     type="time"
-                    ref={timeInputRef}
                     value={form.time}
                     onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* not supported in this browser */ } }}
                     onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
@@ -1830,6 +1882,23 @@ export default function CalendarScreen() {
                     <span className="text-red-400 font-data">{basicAnalysis.longestLossStreak}</span>
                   </div>
                 )}
+                <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
+                  <span className="text-zinc-500">Profit Factor</span>
+                  <span className={`font-data font-medium ${basicAnalysis.profitFactor >= 1.5 ? 'text-emerald-400' : basicAnalysis.profitFactor >= 1 ? 'text-zinc-200' : 'text-red-400'}`}>
+                    {basicAnalysis.profitFactor === Infinity ? 'MAX' : basicAnalysis.profitFactor.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
+                  <span className="text-zinc-500">Средний плюс / минус</span>
+                  <span className="font-data">
+                    <span className="text-emerald-400">+${formatMoney(basicAnalysis.avgWin)}</span>
+                    <span className="text-zinc-600"> / </span>
+                    <span className="text-red-400">-${formatMoney(basicAnalysis.avgLoss)}</span>
+                    {basicAnalysis.payoffRatio > 0 && (
+                      <span className="text-zinc-600 text-xs"> · 1:{basicAnalysis.payoffRatio.toFixed(2)}</span>
+                    )}
+                  </span>
+                </div>
               </div>
             )}
 
