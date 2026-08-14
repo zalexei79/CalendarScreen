@@ -1006,7 +1006,7 @@ export default function CalendarScreen() {
           </div>
 
           {/* compact period picker — replaces the old preset select + two date inputs */}
-          <div className="relative" ref={periodMenuRef}>
+          <div className="relative flex items-center" ref={periodMenuRef}>
             <button
               onClick={() => setPeriodMenuOpen((v) => !v)}
               className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 font-data text-xs text-zinc-300 hover:border-zinc-600 transition-colors"
@@ -1516,14 +1516,14 @@ export default function CalendarScreen() {
                   <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
                     Результат, $
                   </label>
-                  <div className="flex items-stretch gap-1.5">
+                  <div className="grid grid-cols-2 gap-1.5 mb-1.5">
                     <button
                       type="button"
                       onClick={() => setForm((f) => ({ ...f, sign: 'plus' }))}
                       aria-label="Прибыль"
                       title="Прибыль"
                       className={[
-                        'shrink-0 flex items-center gap-1 px-2.5 rounded-md border font-data text-xs font-semibold transition-colors',
+                        'flex items-center justify-center gap-1 py-1.5 rounded-md border font-data text-xs font-semibold transition-colors',
                         form.sign === 'plus'
                           ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-400'
                           : 'border-zinc-700 bg-zinc-950 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
@@ -1538,7 +1538,7 @@ export default function CalendarScreen() {
                       aria-label="Убыток"
                       title="Убыток"
                       className={[
-                        'shrink-0 flex items-center gap-1 px-2.5 rounded-md border font-data text-xs font-semibold transition-colors',
+                        'flex items-center justify-center gap-1 py-1.5 rounded-md border font-data text-xs font-semibold transition-colors',
                         form.sign === 'minus'
                           ? 'border-red-400/60 bg-red-500/10 text-red-400'
                           : 'border-zinc-700 bg-zinc-950 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
@@ -1547,16 +1547,16 @@ export default function CalendarScreen() {
                       <TrendingDown className="h-3.5 w-3.5" />
                       Убыток
                     </button>
-                    <input
-                      type="number"
-                      min="0"
-                      step="any"
-                      value={form.pnl}
-                      onChange={(e) => { setForm((f) => ({ ...f, pnl: e.target.value })); setFormError(''); }}
-                      className="w-full min-w-0 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
-                      placeholder="150"
-                    />
                   </div>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={form.pnl}
+                    onChange={(e) => { setForm((f) => ({ ...f, pnl: e.target.value })); setFormError(''); }}
+                    className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
+                    placeholder="150"
+                  />
                 </div>
                 <div>
                   <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
@@ -1567,7 +1567,7 @@ export default function CalendarScreen() {
                     value={form.time}
                     onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* not supported in this browser */ } }}
                     onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
-                    className="w-full h-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
+                    className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-2 text-xs text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
                   />
                 </div>
               </div>
