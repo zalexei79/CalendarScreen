@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Inbox, TrendingUp, TrendingDown, Sparkles, Plus, X, Trash2,
   Calendar, ChevronDown, ChevronLeft, ChevronRight, Link2, KeyRound, UploadCloud, FileText,
-  LogIn, LogOut, CheckCircle2, RefreshCw, History,
+  LogIn, LogOut, CheckCircle2, RefreshCw, History, Download, Pencil,
 } from 'lucide-react';
 import { supabase } from './src/supabaseClient';
 
@@ -126,6 +126,7 @@ const PLATFORMS = ['Manual', ...EXCHANGES];
 const RECENT_INSTRUMENTS_STORAGE_KEY = 'atj_recent_instruments';
 const CUSTOM_TAGS_STORAGE_KEY = 'atj_custom_instrument_tags';
 const DEPOSIT_SIZE_STORAGE_KEY = 'atj_deposit_size';
+const TRADER_MODE_STORAGE_KEY = 'atj_trader_mode';
 const MAX_CUSTOM_TAGS = 6;
 
 export default function CalendarScreen() {
@@ -317,6 +318,22 @@ export default function CalendarScreen() {
     }
   }, [depositSize]);
 
+  const [traderMode, setTraderMode] = useState(() => {
+    try {
+      return window.localStorage.getItem(TRADER_MODE_STORAGE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(TRADER_MODE_STORAGE_KEY, traderMode ? '1' : '0');
+    } catch {
+      // ignore storage write failures
+    }
+  }, [traderMode]);
+
   function formatPnlDisplay(amount, short) {
     if (displayMode === 'percent' && depositSize > 0) {
       const pct = (amount / depositSize) * 100;
@@ -353,12 +370,128 @@ export default function CalendarScreen() {
   const [customTagInput, setCustomTagInput] = useState('');
   const dragTagIndex = useRef(null);
 
-  // load this user's trades from Supabase whenever they log in; clear on logout
+  // --- Offline support: cache trades locally, queue writes made while offline
+  const TRADES_CACHE_KEY = 'atj_trades_cache';
+  const OFFLINE_QUEUE_KEY = 'atj_offline_queue';
+
+  function readOfflineQueue() {
+    try {
+      return JSON.parse(window.localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  }
+  function writeOfflineQueue(queue) {
+    try {
+      window.localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+    } catch {
+      // ignore storage failures
+    }
+  }
+  function cacheTradesLocally(trades) {
+    try {
+      window.localStorage.setItem(TRADES_CACHE_KEY, JSON.stringify(trades));
+    } catch {
+      // ignore storage failures
+    }
+  }
+
+  const [pendingSyncCount, setPendingSyncCount] = useState(() => readOfflineQueue().length);
+
+  // --- Install as app (PWA) ------------------------------------------------
+  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
+  const [installInfoOpen, setInstallInfoOpen] = useState(false);
+  const installInfoRef = useRef(null);
+  const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent);
+
+  useEffect(() => {
+    function onBeforeInstallPrompt(e) {
+      e.preventDefault();
+      setDeferredInstallPrompt(e);
+    }
+    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+  }, []);
+
+  useEffect(() => {
+    if (!installInfoOpen) return;
+    function onDocClick(e) {
+      if (installInfoRef.current && !installInfoRef.current.contains(e.target)) setInstallInfoOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [installInfoOpen]);
+
+  const installInstructions = isIOS
+    ? 'Нажмите значок «Поделиться» внизу Safari, затем «На экран «Домой»» — приложение появится как иконка, будет открываться без адресной строки и работать офлайн.'
+    : 'Нажмите кнопку ниже (или значок установки в адресной строке браузера) — приложение появится на рабочем столе/телефоне и будет работать без интернета.';
+
+  async function handleInstallClick() {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      setDeferredInstallPrompt(null);
+      return;
+    }
+    setInstallInfoOpen((v) => !v);
+  }
+
+  async function flushOfflineQueue() {
+    if (!user || !navigator.onLine) return;
+    const queue = readOfflineQueue();
+    if (queue.length === 0) return;
+
+    const remaining = [];
+    for (const item of queue) {
+      try {
+        if (item.action === 'insert') {
+          const { data, error } = await supabase.from('trades').insert(item.trade).select().single();
+          if (error) throw error;
+          // swap the temporary offline id for the real database id
+          setManualTrades((prev) => ({
+            ...prev,
+            [item.trade.date_key]: (prev[item.trade.date_key] || []).map((t) =>
+              t.id === item.tempId ? { ...t, id: data.id } : t
+            ),
+          }));
+        } else if (item.action === 'update') {
+          const { error } = await supabase.from('trades').update(item.updates).eq('id', item.tradeId);
+          if (error) throw error;
+        } else if (item.action === 'delete') {
+          const { error } = await supabase.from('trades').delete().eq('id', item.tradeId);
+          if (error) throw error;
+        }
+      } catch (err) {
+        console.error('[offline] не удалось синхронизировать, оставляю в очереди:', err);
+        remaining.push(item);
+      }
+    }
+    writeOfflineQueue(remaining);
+    setPendingSyncCount(remaining.length);
+  }
+
+  useEffect(() => {
+    window.addEventListener('online', flushOfflineQueue);
+    return () => window.removeEventListener('online', flushOfflineQueue);
+  }, [user]);
+
+  // load this user's trades from Supabase whenever they log in; clear on logout.
+  // Offline (or while the request is in flight) we show the last locally cached copy.
   useEffect(() => {
     if (!user) {
       setManualTrades({});
       return;
     }
+
+    try {
+      const cached = window.localStorage.getItem(TRADES_CACHE_KEY);
+      if (cached) setManualTrades(JSON.parse(cached));
+    } catch {
+      // ignore malformed cache
+    }
+
+    if (!navigator.onLine) return; // stay on cached data until back online
+
     supabase
       .from('trades')
       .select('*')
@@ -382,17 +515,22 @@ export default function CalendarScreen() {
           });
         }
         setManualTrades(grouped);
+        flushOfflineQueue();
       });
   }, [user]);
 
+  // keep the local offline cache in sync with whatever's on screen
+  useEffect(() => {
+    cacheTradesLocally(manualTrades);
+  }, [manualTrades]);
+
 
   // --- Period filter state (compact popover) --------------------------------
-  const [periodPreset, setPeriodPreset] = useState('Текущий месяц');
-  const initialRange = useMemo(() => getPresetRange('Текущий месяц', today), [today]);
+  const [periodPreset, setPeriodPreset] = useState('Вся история');
+  const initialRange = useMemo(() => getPresetRange('Вся история', today), [today]);
   const [dateFrom, setDateFrom] = useState(initialRange.from);
   const [dateTo, setDateTo] = useState(initialRange.to);
   const [platformFilter, setPlatformFilter] = useState('ALL');
-  const [periodMenuOpen, setPeriodMenuOpen] = useState(false);
   const [monthMenuOpen, setMonthMenuOpen] = useState(false);
   const [yearMenuOpen, setYearMenuOpen] = useState(false);
 
@@ -438,7 +576,6 @@ export default function CalendarScreen() {
   // tracks whether mousedown actually started on the backdrop itself,
   // so a text-selection drag that ends outside a modal doesn't close it
   const mouseDownOnBackdrop = useRef(false);
-  const periodMenuRef = useRef(null);
   const monthMenuRef = useRef(null);
   const yearMenuRef = useRef(null);
 
@@ -596,22 +733,43 @@ export default function CalendarScreen() {
     year: 'numeric',
   });
 
-  function openModal() {
+  const [editingTrade, setEditingTrade] = useState(null); // { id, dateKey } | null
+
+  function openModal(tradeToEdit) {
     if (!user) {
       handleGoogleLogin();
       return;
     }
-    if (isFutureSelected) return; // нельзя добавлять сделки на будущее
-    setModalDateKey(targetDateKey);
-    setForm({
-      instrument: recentInstruments[0] || '',
-      direction: 'LONG',
-      sign: 'plus',
-      pnl: '',
-      time: currentTimeHHMM(),
-      comment: '',
-      platform: 'Manual',
-    });
+    if (tradeToEdit) {
+      setEditingTrade({ id: tradeToEdit.id, dateKey: tradeToEdit.dateKey || modalDateKey || targetDateKey });
+      setModalDateKey(tradeToEdit.dateKey || modalDateKey || targetDateKey);
+      setForm({
+        instrument: tradeToEdit.instrument,
+        direction: tradeToEdit.direction,
+        sign: tradeToEdit.pnl >= 0 ? 'plus' : 'minus',
+        pnl: String(Math.abs(tradeToEdit.pnl)),
+        time: tradeToEdit.time,
+        comment: tradeToEdit.comment || '',
+        platform: tradeToEdit.platform || 'Manual',
+        takeProfit: tradeToEdit.take_profit != null ? String(tradeToEdit.take_profit) : '',
+        stopLoss: tradeToEdit.stop_loss != null ? String(tradeToEdit.stop_loss) : '',
+      });
+    } else {
+      if (isFutureSelected) return; // нельзя добавлять сделки на будущее
+      setEditingTrade(null);
+      setModalDateKey(targetDateKey);
+      setForm({
+        instrument: recentInstruments[0] || '',
+        direction: '',
+        sign: 'plus',
+        pnl: '',
+        time: currentTimeHHMM(),
+        comment: '',
+        platform: 'Manual',
+        takeProfit: '',
+        stopLoss: '',
+      });
+    }
     setFormError('');
     setModalOpen(true);
     requestAnimationFrame(() => setModalVisible(true));
@@ -620,6 +778,7 @@ export default function CalendarScreen() {
   function closeModal() {
     setModalVisible(false);
     setFormError('');
+    setEditingTrade(null);
     setTimeout(() => setModalOpen(false), 180);
   }
 
@@ -646,18 +805,6 @@ export default function CalendarScreen() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [modalOpen, connectOpen]);
-
-  // close the period popover on an outside click
-  useEffect(() => {
-    if (!periodMenuOpen) return;
-    function onDocClick(e) {
-      if (periodMenuRef.current && !periodMenuRef.current.contains(e.target)) {
-        setPeriodMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [periodMenuOpen]);
 
   useEffect(() => {
     if (!monthMenuOpen) return;
@@ -778,23 +925,70 @@ export default function CalendarScreen() {
     }
 
     const signedPnl = form.sign === 'minus' ? -Math.abs(magnitude) : Math.abs(magnitude);
+    const autoDirection = signedPnl >= 0 ? 'LONG' : 'SHORT'; // хранится для совместимости со схемой БД; в интерфейсе показываем как Доход/Расход
+    const finalDirection = traderMode && form.direction ? form.direction : autoDirection;
     const time = form.time || currentTimeHHMM();
     const comment = form.comment.trim();
+    const tp = traderMode && form.takeProfit.trim() !== '' ? parseFloat(form.takeProfit) : null;
+    const sl = traderMode && form.stopLoss.trim() !== '' ? parseFloat(form.stopLoss) : null;
 
-    const { data, error } = await supabase
-      .from('trades')
-      .insert({
-        user_id: user.id,
-        date_key: dateKey,
-        time,
-        instrument,
-        direction: form.direction,
-        pnl: signedPnl,
-        comment,
-        platform: form.platform,
-      })
-      .select()
-      .single();
+    const tradeRow = {
+      user_id: user.id,
+      date_key: dateKey,
+      time,
+      instrument,
+      direction: finalDirection,
+      pnl: signedPnl,
+      take_profit: tp,
+      stop_loss: sl,
+      comment,
+      platform: form.platform,
+    };
+
+    if (editingTrade) {
+      const updates = { time, instrument, direction: finalDirection, pnl: signedPnl, comment, platform: form.platform, ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}) };
+
+      if (!navigator.onLine) {
+        setManualTrades((prev) => ({
+          ...prev,
+          [dateKey]: (prev[dateKey] || []).map((t) => (t.id === editingTrade.id ? { ...t, ...updates, pending: true } : t)),
+        }));
+        const queue = readOfflineQueue();
+        queue.push({ action: 'update', tradeId: editingTrade.id, updates });
+        writeOfflineQueue(queue);
+        setPendingSyncCount(queue.length);
+        closeModal();
+        return;
+      }
+
+      const { error: updateError } = await supabase.from('trades').update(updates).eq('id', editingTrade.id);
+      if (updateError) {
+        setFormError('Не удалось сохранить: ' + updateError.message);
+        return;
+      }
+      setManualTrades((prev) => ({
+        ...prev,
+        [dateKey]: (prev[dateKey] || []).map((t) => (t.id === editingTrade.id ? { ...t, ...updates } : t)),
+      }));
+      closeModal();
+      return;
+    }
+
+    if (!navigator.onLine) {
+      // offline: save locally with a temp id, queue for sync once back online
+      const tempId = `offline-${Date.now()}`;
+      const newTrade = { id: tempId, time, instrument, direction: finalDirection, pnl: signedPnl, comment, platform: form.platform, take_profit: tp, stop_loss: sl, pending: true };
+      setManualTrades((prev) => ({ ...prev, [dateKey]: [...(prev[dateKey] || []), newTrade] }));
+      const queue = readOfflineQueue();
+      queue.push({ action: 'insert', tempId, trade: tradeRow });
+      writeOfflineQueue(queue);
+      setPendingSyncCount(queue.length);
+      setRecentInstruments((prev) => [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5));
+      closeModal();
+      return;
+    }
+
+    const { data, error } = await supabase.from('trades').insert(tradeRow).select().single();
 
     if (error) {
       setFormError('Не удалось сохранить: ' + error.message);
@@ -822,6 +1016,24 @@ export default function CalendarScreen() {
   }
 
   async function handleDeleteTrade(dateKey, tradeId) {
+    // if this trade only exists locally (never synced), just drop it and its queued insert
+    if (String(tradeId).startsWith('offline-')) {
+      const queue = readOfflineQueue().filter((item) => item.tempId !== tradeId);
+      writeOfflineQueue(queue);
+      setPendingSyncCount(queue.length);
+      setManualTrades((prev) => ({ ...prev, [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId) }));
+      return;
+    }
+
+    if (!navigator.onLine) {
+      const queue = readOfflineQueue();
+      queue.push({ action: 'delete', tradeId });
+      writeOfflineQueue(queue);
+      setPendingSyncCount(queue.length);
+      setManualTrades((prev) => ({ ...prev, [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId) }));
+      return;
+    }
+
     const { error } = await supabase.from('trades').delete().eq('id', tradeId);
     if (error) {
       console.error('[trades] ошибка удаления:', error);
@@ -841,24 +1053,78 @@ export default function CalendarScreen() {
     setHistoryOpen(false);
   }
 
-  // --- History browser: shows everything, click a trade to jump to its day
+  // --- History browser: filterable, shows a total, click a trade to jump to its day
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
+  const [historyWinLoss, setHistoryWinLoss] = useState('all'); // 'all' | 'win' | 'loss'
+  const [confirmingClear, setConfirmingClear] = useState(false);
 
   const historyTrades = useMemo(() => {
     return Object.entries(manualTrades)
       .flatMap(([dateKey, arr]) => arr.map((t) => ({ ...t, dateKey })))
+      .filter((t) => t.dateKey >= dateFrom && t.dateKey <= dateTo)
+      .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
+      .filter((t) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? t.pnl >= 0 : t.pnl < 0))
       .sort((a, b) => (a.dateKey === b.dateKey ? b.time.localeCompare(a.time) : b.dateKey.localeCompare(a.dateKey)));
-  }, [manualTrades]);
+  }, [manualTrades, dateFrom, dateTo, platformFilter, historyWinLoss]);
+
+  const historyTotal = useMemo(() => historyTrades.reduce((sum, t) => sum + t.pnl, 0), [historyTrades]);
 
   function openHistory() {
     setHistoryOpen(true);
+    setConfirmingClear(false);
     requestAnimationFrame(() => setHistoryVisible(true));
   }
 
   function closeHistory() {
     setHistoryVisible(false);
+    setConfirmingClear(false);
     setTimeout(() => setHistoryOpen(false), 180);
+  }
+
+  async function handleClearHistory() {
+    if (!confirmingClear) {
+      setConfirmingClear(true);
+      return;
+    }
+    if (!user) return;
+    const { error } = await supabase.from('trades').delete().eq('user_id', user.id);
+    if (error) {
+      console.error('[trades] ошибка очистки истории:', error);
+      return;
+    }
+    setManualTrades({});
+    setConfirmingClear(false);
+  }
+
+  function handleExportCsv() {
+    const header = ['Дата', 'Время', 'Категория', 'Тип', 'Сумма', 'Источник', 'Комментарий'];
+    const rows = historyTrades.map((t) => [
+      t.dateKey,
+      t.time,
+      t.instrument,
+      t.pnl >= 0 ? 'Доход' : 'Расход',
+      t.pnl,
+      t.platform,
+      (t.comment || '').replace(/"/g, '""'),
+    ]);
+    const csv = [header, ...rows]
+      .map((row) => row.map((cell) => `"${cell}"`).join(','))
+      .join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `trades_${keyFromDate(today)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleEditDeposit() {
+    const input = window.prompt('Размер депозита для расчёта %:', depositSize > 0 ? String(depositSize) : '1000');
+    const value = parseFloat(input);
+    if (!input || Number.isNaN(value) || value <= 0) return;
+    setDepositSize(value);
   }
 
   // --- Platform connect: API keys (stub — wire to your backend) -------------
@@ -893,10 +1159,12 @@ export default function CalendarScreen() {
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
         .font-display { font-family: 'Space Grotesk', sans-serif; }
         .font-data { font-family: 'JetBrains Mono', monospace; }
+        @keyframes cellGlowIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
       `}</style>
 
       {/* HEADER */}
       <header className="px-3 sm:px-8 pt-4 sm:pt-8 pb-4 border-b border-zinc-800">
+        <p className="font-data text-[10px] tracking-widest text-zinc-600 uppercase mb-2">{traderMode ? 'Трейдерский календарь' : 'Денежный календарь'}</p>
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -1003,89 +1271,49 @@ export default function CalendarScreen() {
                 </button>
               )}
             </div>
-          </div>
 
-          {/* compact period picker — replaces the old preset select + two date inputs */}
-          <div className="relative flex items-center" ref={periodMenuRef}>
+            {/* PRO trader mode toggle */}
             <button
-              onClick={() => setPeriodMenuOpen((v) => !v)}
-              className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 font-data text-xs text-zinc-300 hover:border-zinc-600 transition-colors"
+              onClick={() => setTraderMode((v) => !v)}
+              title="Режим трейдера: LONG/SHORT, Take Profit / Stop Loss"
+              className={[
+                'ml-1.5 rounded-md border px-2 py-1 font-data text-[10px] tracking-wide transition-colors',
+                traderMode
+                  ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                  : 'border-zinc-800 bg-zinc-900 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
+              ].join(' ')}
             >
-              <Calendar className="h-3.5 w-3.5 text-amber-400" />
-              {periodButtonLabel}
-              <ChevronDown className={`h-3.5 w-3.5 text-zinc-500 transition-transform ${periodMenuOpen ? 'rotate-180' : ''}`} />
+              PRO
             </button>
 
-            <button
-              onClick={() => {
-                if (displayMode === 'usd' && depositSize <= 0) {
-                  const input = window.prompt('Размер депозита для расчёта %:', '1000');
-                  const value = parseFloat(input);
-                  if (!input || Number.isNaN(value) || value <= 0) return;
-                  setDepositSize(value);
-                }
-                setDisplayMode((m) => (m === 'usd' ? 'percent' : 'usd'));
-              }}
-              title={depositSize > 0 ? `Депозит: $${formatMoney(depositSize)}` : 'Задать депозит для %'}
-              className="ml-1.5 rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 font-data text-xs text-zinc-300 hover:border-zinc-600 transition-colors"
-            >
-              {displayMode === 'usd' ? '$' : '%'}
-            </button>
+            {/* install as app + offline pending-sync indicator */}
+            <div className="relative ml-1.5" ref={installInfoRef}>
+              <button
+                onClick={handleInstallClick}
+                title="Установить приложение"
+                className="flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1 text-zinc-400 hover:text-amber-400 hover:border-zinc-600 transition-colors"
+              >
+                <Download className="h-3.5 w-3.5" />
+                {pendingSyncCount > 0 && (
+                  <span
+                    title={`${pendingSyncCount} сделок ждут синхронизации`}
+                    className="h-1.5 w-1.5 rounded-full bg-amber-400"
+                  />
+                )}
+              </button>
 
-            {periodMenuOpen && (
-              <div className="fixed inset-x-0 bottom-0 sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80 max-h-[75vh] sm:max-h-none overflow-y-auto rounded-t-2xl sm:rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl z-30 p-4 sm:p-3">
-                <p className="font-data text-[10px] tracking-widest text-zinc-500 uppercase mb-1.5">Период</p>
-                <div className="flex flex-col gap-1 mb-3">
-                  {PERIOD_PRESETS.map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => handlePresetChange(p)}
-                      className={[
-                        'text-left rounded-md px-2.5 py-1.5 text-sm transition-colors',
-                        periodPreset === p
-                          ? 'bg-amber-400/10 text-amber-400'
-                          : 'text-zinc-300 hover:bg-zinc-800',
-                      ].join(' ')}
-                    >
-                      {p}
-                    </button>
-                  ))}
+              {installInfoOpen && (
+                <div className="absolute right-0 top-full mt-2 w-64 rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl z-30 p-3">
+                  <p className="font-data text-[10px] tracking-widest text-amber-400 uppercase mb-1.5">Установить как приложение</p>
+                  <p className="text-xs text-zinc-400 leading-relaxed">{installInstructions}</p>
+                  {pendingSyncCount > 0 && (
+                    <p className="text-xs text-amber-400 mt-2 pt-2 border-t border-zinc-800">
+                      {pendingSyncCount} {pendingSyncCount === 1 ? 'сделка' : 'сделок'} сохранены офлайн и досинхронизируются, когда появится интернет.
+                    </p>
+                  )}
                 </div>
-
-                <div className="border-t border-zinc-800 pt-3 mb-3">
-                  <p className="font-data text-[10px] tracking-widest text-zinc-500 uppercase mb-1.5">Свой период</p>
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="date"
-                      value={dateFrom}
-                      onChange={(e) => handleDateFromChange(e.target.value)}
-                      className="flex-1 min-w-0 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-200 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
-                    />
-                    <span className="text-zinc-600">—</span>
-                    <input
-                      type="date"
-                      value={dateTo}
-                      onChange={(e) => handleDateToChange(e.target.value)}
-                      className="flex-1 min-w-0 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-200 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
-                    />
-                  </div>
-                </div>
-
-                <div className="border-t border-zinc-800 pt-3">
-                  <p className="font-data text-[10px] tracking-widest text-zinc-500 uppercase mb-1.5">Площадка</p>
-                  <select
-                    value={platformFilter}
-                    onChange={(e) => setPlatformFilter(e.target.value)}
-                    className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-200 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
-                  >
-                    <option value="ALL">Все площадки</option>
-                    {PLATFORMS.map((p) => (
-                      <option key={p} value={p}>{p}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -1109,18 +1337,24 @@ export default function CalendarScreen() {
           className="grid grid-cols-7 grid-rows-6 gap-1 sm:gap-2 h-full"
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedKey(null); }}
         >
-          {cells.map((cell) => {
+          {cells.map((cell, cellIndex) => {
             const isSelected = cell.key === selectedKey;
             const hasTrades = tradesForDayFiltered(cell.key).length > 0;
             const pnl = totalPnlForDay(cell.key);
             const isProfit = pnl >= 0;
             const pnlText = formatPnlDisplay(pnl, true);
-            const inPeriodRange = (periodMenuOpen || periodPreset === 'Вся история') && cell.key >= dateFrom && cell.key <= dateTo;
             const intensity = monthMaxAbsPnl > 0 ? Math.min(Math.abs(pnl) / monthMaxAbsPnl, 1) : 0;
+            const glowRgb = isProfit ? '16,185,129' : '239,68,68';
             const heatmapStyle =
-              cell.inMonth && hasTrades && !isSelected && !inPeriodRange
-                ? { backgroundColor: isProfit ? `rgba(16,185,129,${(0.14 + intensity * 0.28).toFixed(2)})` : `rgba(239,68,68,${(0.14 + intensity * 0.28).toFixed(2)})` }
-                : undefined;
+              cell.inMonth && hasTrades && !isSelected
+                ? {
+                    backgroundColor: `rgba(${glowRgb},${(0.10 + intensity * 0.22).toFixed(2)})`,
+                    borderColor: `rgba(${glowRgb},${(0.35 + intensity * 0.5).toFixed(2)})`,
+                    boxShadow: `0 0 ${Math.round(6 + intensity * 22)}px rgba(${glowRgb},${(0.25 + intensity * 0.45).toFixed(2)})`,
+                    animation: 'cellGlowIn 0.35s ease-out both',
+                    animationDelay: `${cellIndex * 18}ms`,
+                  }
+                : { animation: 'cellGlowIn 0.35s ease-out both', animationDelay: `${cellIndex * 18}ms` };
             return (
               <button
                 key={cell.key}
@@ -1129,13 +1363,11 @@ export default function CalendarScreen() {
                 className={[
                   'relative rounded-md border flex flex-col justify-between text-left transition-all duration-150',
                   'min-h-[64px] sm:min-h-[110px] p-1.5 sm:p-4',
-                  cell.inMonth ? 'bg-zinc-900' : 'bg-zinc-950',
-                  cell.inMonth ? 'border-zinc-800' : 'border-zinc-900',
+                  cell.inMonth ? (hasTrades ? 'bg-zinc-900' : 'bg-zinc-900/20') : 'bg-zinc-950',
+                  cell.inMonth ? (hasTrades ? 'border-zinc-800' : 'border-zinc-800/30') : 'border-zinc-900',
                   !cell.inMonth ? 'opacity-40' : '',
                   isSelected
                     ? 'border-amber-400 ring-2 ring-amber-400/60 bg-zinc-800 scale-[1.03] shadow-lg shadow-amber-500/10 z-10'
-                    : inPeriodRange
-                    ? 'border-sky-400/50 bg-sky-400/10'
                     : 'hover:border-zinc-600 hover:bg-zinc-800/60',
                 ].join(' ')}
               >
@@ -1236,12 +1468,12 @@ export default function CalendarScreen() {
                       <span
                         className={[
                           'font-data text-[11px] tracking-wider px-2 py-0.5 rounded-full',
-                          trade.direction === 'LONG'
+                          trade.pnl >= 0
                             ? 'bg-emerald-500/10 text-emerald-400'
                             : 'bg-red-500/10 text-red-400',
                         ].join(' ')}
                       >
-                        {trade.direction}
+                        {trade.pnl >= 0 ? 'Доход' : 'Расход'}
                       </span>
                       <span className="font-data text-[10px] text-zinc-600">{trade.platform}</span>
                     </div>
@@ -1249,6 +1481,14 @@ export default function CalendarScreen() {
                       <span className={`font-data text-sm font-medium ${trade.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                         {trade.pnl >= 0 ? '+' : '-'}${formatMoney(trade.pnl)}
                       </span>
+                      <button
+                        onClick={() => openModal(trade)}
+                        className="text-zinc-600 hover:text-amber-400 transition-colors opacity-0 group-hover:opacity-100"
+                        aria-label="Редактировать сделку"
+                        title="Редактировать сделку"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
                       <button
                         onClick={() => handleDeleteTrade(trade.dateKey, trade.id)}
                         className="text-zinc-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
@@ -1310,12 +1550,103 @@ export default function CalendarScreen() {
             </button>
 
             <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">История сделок</p>
-            <h2 className="font-display text-lg font-semibold text-zinc-50 mb-3">Вся история</h2>
+            <h2 className="font-display text-lg font-semibold text-zinc-50 mb-3">
+              {periodPreset === 'Вся история' ? 'Вся история' : dateFrom === dateTo ? dateFrom : `${dateFrom} — ${dateTo}`}
+            </h2>
+
+            {/* $/% + deposit */}
+            <div className="flex items-center gap-2 mb-3">
+              <button
+                onClick={() => {
+                  if (displayMode === 'usd' && depositSize <= 0) {
+                    handleEditDeposit();
+                    return;
+                  }
+                  setDisplayMode((m) => (m === 'usd' ? 'percent' : 'usd'));
+                }}
+                className="rounded-md border border-zinc-700 bg-zinc-950 px-2.5 py-1 font-data text-xs text-zinc-300 hover:border-zinc-600 transition-colors"
+              >
+                {displayMode === 'usd' ? '$' : '%'}
+              </button>
+              <button
+                onClick={handleEditDeposit}
+                className="font-data text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                Депозит: {depositSize > 0 ? `$${formatMoney(depositSize)}` : 'не задан'} ✎
+              </button>
+            </div>
+
+            {/* period presets */}
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {PERIOD_PRESETS.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => handlePresetChange(p)}
+                  className={[
+                    'rounded-full border px-2.5 py-1 font-data text-[11px] tracking-wide transition-colors',
+                    periodPreset === p
+                      ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                      : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
+                  ].join(' ')}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5 mb-3">
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => handleDateFromChange(e.target.value)}
+                className="flex-1 min-w-0 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-200 font-data focus:outline-none focus:border-amber-400/60"
+              />
+              <span className="text-zinc-600">—</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => handleDateToChange(e.target.value)}
+                className="flex-1 min-w-0 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-200 font-data focus:outline-none focus:border-amber-400/60"
+              />
+            </div>
+
+            {/* platform + win/loss filters */}
+            <div className="flex items-center gap-1.5 mb-2">
+              <select
+                value={platformFilter}
+                onChange={(e) => setPlatformFilter(e.target.value)}
+                className="flex-1 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-200 font-data focus:outline-none focus:border-amber-400/60"
+              >
+                <option value="ALL">Все источники</option>
+                {PLATFORMS.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-1.5 mb-4">
+              {[
+                { key: 'all', label: 'Все' },
+                { key: 'win', label: 'Прибыль' },
+                { key: 'loss', label: 'Убыток' },
+              ].map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => setHistoryWinLoss(opt.key)}
+                  className={[
+                    'flex-1 rounded-md border px-2 py-1.5 font-data text-xs transition-colors',
+                    historyWinLoss === opt.key
+                      ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                      : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
+                  ].join(' ')}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
 
             <input
               type="date"
               onChange={(e) => e.target.value && jumpToTradeDate(e.target.value)}
-              className="w-full mb-4 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 font-data text-xs text-zinc-300 focus:outline-none focus:border-amber-400/60"
+              className="w-full mb-3 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 font-data text-xs text-zinc-300 focus:outline-none focus:border-amber-400/60"
               placeholder="Перейти к дате"
             />
 
@@ -1334,7 +1665,7 @@ export default function CalendarScreen() {
                       <span className="text-sm text-zinc-200 font-medium truncate">{trade.instrument}</span>
                     </div>
                     <span className={`font-data text-sm font-medium shrink-0 ${trade.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {trade.pnl >= 0 ? '+' : '-'}${formatMoney(trade.pnl)}
+                      {formatPnlDisplay(trade.pnl)}
                     </span>
                   </button>
                 ))}
@@ -1342,6 +1673,36 @@ export default function CalendarScreen() {
             ) : (
               <p className="text-sm text-zinc-600 text-center py-6">Нет сделок за выбранный период</p>
             )}
+
+            {/* total for whatever is currently filtered */}
+            <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2.5 mt-3">
+              <span className="text-xs text-zinc-500">Итог</span>
+              <span className={`font-data text-sm font-semibold ${historyTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {formatPnlDisplay(historyTotal)}
+              </span>
+            </div>
+
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={handleExportCsv}
+                disabled={historyTrades.length === 0}
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-md border border-zinc-800 px-3 py-2 font-data text-xs text-zinc-400 hover:text-zinc-200 hover:border-zinc-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Экспорт CSV
+              </button>
+              <button
+                onClick={handleClearHistory}
+                className={[
+                  'flex-1 rounded-md border px-3 py-2 font-data text-xs transition-colors',
+                  confirmingClear
+                    ? 'border-red-500 bg-red-500/10 text-red-400'
+                    : 'border-zinc-800 text-zinc-600 hover:text-red-400 hover:border-red-500/40',
+                ].join(' ')}
+              >
+                {confirmingClear ? 'Точно удалить? Ещё раз' : 'Очистить историю'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1368,7 +1729,7 @@ export default function CalendarScreen() {
               <X className="h-4 w-4" />
             </button>
 
-            <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">Новая сделка</p>
+            <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">{editingTrade ? 'Редактировать сделку' : 'Новая сделка'}</p>
             <h2 className="font-display text-lg font-semibold text-zinc-50 mb-5">
               {modalDateKey &&
                 parseDateKeyLocal(modalDateKey).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -1377,7 +1738,7 @@ export default function CalendarScreen() {
             <div className="flex flex-col gap-4">
               <div>
                 <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
-                  Инструмент
+                  Категория
                 </label>
 
                 {(() => {
@@ -1479,16 +1840,13 @@ export default function CalendarScreen() {
                 />
               </div>
 
-              <div>
-                <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
-                  Направление
-                </label>
-                <div className="grid grid-cols-2 gap-2">
+              {traderMode && (
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() => setForm((f) => ({ ...f, direction: 'LONG' }))}
                     className={[
-                      'rounded-md border px-3 py-2 text-sm font-data tracking-wider transition-colors',
+                      'rounded-md border px-2 py-2 text-xs font-data tracking-wider transition-colors',
                       form.direction === 'LONG'
                         ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-400'
                         : 'border-zinc-700 bg-zinc-950 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
@@ -1500,7 +1858,7 @@ export default function CalendarScreen() {
                     type="button"
                     onClick={() => setForm((f) => ({ ...f, direction: 'SHORT' }))}
                     className={[
-                      'rounded-md border px-3 py-2 text-sm font-data tracking-wider transition-colors',
+                      'rounded-md border px-2 py-2 text-xs font-data tracking-wider transition-colors',
                       form.direction === 'SHORT'
                         ? 'border-red-400/60 bg-red-500/10 text-red-400'
                         : 'border-zinc-700 bg-zinc-950 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
@@ -1508,8 +1866,40 @@ export default function CalendarScreen() {
                   >
                     SHORT
                   </button>
+                  <div className="col-span-1" />
                 </div>
-              </div>
+              )}
+
+              {traderMode && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
+                      Take Profit
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={form.takeProfit}
+                      onChange={(e) => setForm((f) => ({ ...f, takeProfit: e.target.value }))}
+                      className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
+                      placeholder="Необязательно"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
+                      Stop Loss
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={form.stopLoss}
+                      onChange={(e) => setForm((f) => ({ ...f, stopLoss: e.target.value }))}
+                      className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
+                      placeholder="Необязательно"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-[4fr_2fr] gap-3">
                 <div>
@@ -1574,7 +1964,7 @@ export default function CalendarScreen() {
 
               <div>
                 <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
-                  Площадка
+                  Источник
                 </label>
                 <select
                   value={form.platform}
@@ -1606,7 +1996,7 @@ export default function CalendarScreen() {
                 onClick={handleSaveTrade}
                 className="mt-1 w-full rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-300 transition-colors"
               >
-                Сохранить сделку
+                {editingTrade ? 'Сохранить изменения' : 'Сохранить сделку'}
               </button>
             </div>
           </div>
@@ -1853,52 +2243,35 @@ export default function CalendarScreen() {
             <p className="text-xs text-zinc-500 mb-4">{analysisStats.count} сделок в выборке</p>
 
             {basicAnalysis && (
-              <div className="flex flex-col gap-2.5 text-sm mb-4">
-                <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
-                  <span className="text-zinc-500">Лучший день</span>
-                  <span className="text-emerald-400 font-data">
-                    {formatDateLabel(basicAnalysis.bestDay[0])} · {formatSignedShort(basicAnalysis.bestDay[1])}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
-                  <span className="text-zinc-500">Худший день</span>
-                  <span className="text-red-400 font-data">
-                    {formatDateLabel(basicAnalysis.worstDay[0])} · {formatSignedShort(basicAnalysis.worstDay[1])}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
-                  <span className="text-zinc-500">Частый инструмент</span>
-                  <span className="text-zinc-200 font-data">{basicAnalysis.topInstrument[0]} ({basicAnalysis.topInstrument[1]})</span>
-                </div>
-                <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
-                  <span className="text-zinc-500">Средний результат сделки</span>
-                  <span className={`font-data ${basicAnalysis.avgPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {formatSignedShort(basicAnalysis.avgPnl)}
-                  </span>
-                </div>
-                {basicAnalysis.longestLossStreak >= 2 && (
-                  <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
-                    <span className="text-zinc-500">Серия убытков подряд</span>
-                    <span className="text-red-400 font-data">{basicAnalysis.longestLossStreak}</span>
-                  </div>
-                )}
-                <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
-                  <span className="text-zinc-500">Profit Factor</span>
-                  <span className={`font-data font-medium ${basicAnalysis.profitFactor >= 1.5 ? 'text-emerald-400' : basicAnalysis.profitFactor >= 1 ? 'text-zinc-200' : 'text-red-400'}`}>
+              <div className="mb-4">
+                <div className="text-center rounded-lg border border-zinc-800 bg-zinc-950 py-4 mb-3">
+                  <p className="font-data text-[10px] tracking-widest text-zinc-500 uppercase mb-1">Profit Factor</p>
+                  <p className={`font-display text-3xl font-semibold ${basicAnalysis.profitFactor >= 1.5 ? 'text-emerald-400' : basicAnalysis.profitFactor >= 1 ? 'text-zinc-200' : 'text-red-400'}`}>
                     {basicAnalysis.profitFactor === Infinity ? 'MAX' : basicAnalysis.profitFactor.toFixed(2)}
-                  </span>
+                  </p>
                 </div>
-                <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
-                  <span className="text-zinc-500">Средний плюс / минус</span>
-                  <span className="font-data">
-                    <span className="text-emerald-400">+${formatMoney(basicAnalysis.avgWin)}</span>
-                    <span className="text-zinc-600"> / </span>
-                    <span className="text-red-400">-${formatMoney(basicAnalysis.avgLoss)}</span>
-                    {basicAnalysis.payoffRatio > 0 && (
-                      <span className="text-zinc-600 text-xs"> · 1:{basicAnalysis.payoffRatio.toFixed(2)}</span>
-                    )}
-                  </span>
-                </div>
+
+                <p className="text-xs text-zinc-500 leading-relaxed">
+                  Средний:{' '}
+                  <span className="text-emerald-400 font-data">+${formatMoney(basicAnalysis.avgWin)}</span>
+                  {' / '}
+                  <span className="text-red-400 font-data">-${formatMoney(basicAnalysis.avgLoss)}</span>
+                  {basicAnalysis.payoffRatio > 0 && <span className="font-data"> (1:{basicAnalysis.payoffRatio.toFixed(2)})</span>}
+                  {' · Лучший день: '}
+                  <span className="text-emerald-400 font-data">{formatSignedShort(basicAnalysis.bestDay[1])}</span>
+                  {' ('}{formatDateLabel(basicAnalysis.bestDay[0])}{')'}
+                  {' · Худший: '}
+                  <span className="text-red-400 font-data">{formatSignedShort(basicAnalysis.worstDay[1])}</span>
+                  {' ('}{formatDateLabel(basicAnalysis.worstDay[0])}{')'}
+                  {' · Частый: '}
+                  <span className="text-zinc-300 font-data">{basicAnalysis.topInstrument[0]}</span>
+                  {basicAnalysis.longestLossStreak >= 2 && (
+                    <>
+                      {' · Серия убытков: '}
+                      <span className="text-red-400 font-data">{basicAnalysis.longestLossStreak}</span>
+                    </>
+                  )}
+                </p>
               </div>
             )}
 
