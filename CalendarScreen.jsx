@@ -28,6 +28,12 @@ function currentTimeHHMM() {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
+// Safely normalize form/input values before string operations.
+// Old or incomplete trade records must never be able to crash the whole screen.
+function textValue(value) {
+  return value == null ? '' : String(value);
+}
+
 // yyyy-mm-dd key — used consistently for calendar cells, manual trade storage
 // and the period date inputs so that string comparison ("2026-07-16" <=
 // "2026-07-31") is enough to filter by period.
@@ -249,7 +255,7 @@ export default function CalendarScreen() {
 
   function handleSaveNickname() {
     const googleName = user?.user_metadata?.full_name || user?.email || '';
-    const nickname = nicknameInput.trim() || googleName;
+    const nickname = textValue(nicknameInput).trim() || googleName;
     supabase.auth.updateUser({ data: { nickname } });
     closeNicknameModal();
   }
@@ -506,12 +512,12 @@ export default function CalendarScreen() {
           grouped[row.date_key] = grouped[row.date_key] || [];
           grouped[row.date_key].push({
             id: row.id,
-            time: row.time,
-            instrument: row.instrument,
-            direction: row.direction,
+            time: textValue(row.time),
+            instrument: textValue(row.instrument),
+            direction: textValue(row.direction),
             pnl: Number(row.pnl),
             comment: row.comment || '',
-            platform: row.platform,
+            platform: textValue(row.platform) || 'Manual',
           });
         }
         setManualTrades(grouped);
@@ -744,13 +750,13 @@ export default function CalendarScreen() {
       setEditingTrade({ id: tradeToEdit.id, dateKey: tradeToEdit.dateKey || modalDateKey || targetDateKey });
       setModalDateKey(tradeToEdit.dateKey || modalDateKey || targetDateKey);
       setForm({
-        instrument: tradeToEdit.instrument,
-        direction: tradeToEdit.direction,
+        instrument: textValue(tradeToEdit.instrument),
+        direction: textValue(tradeToEdit.direction),
         sign: tradeToEdit.pnl >= 0 ? 'plus' : 'minus',
         pnl: String(Math.abs(tradeToEdit.pnl)),
-        time: tradeToEdit.time,
+        time: textValue(tradeToEdit.time) || currentTimeHHMM(),
         comment: tradeToEdit.comment || '',
-        platform: tradeToEdit.platform || 'Manual',
+        platform: textValue(tradeToEdit.platform) || 'Manual',
         takeProfit: tradeToEdit.take_profit != null ? String(tradeToEdit.take_profit) : '',
         stopLoss: tradeToEdit.stop_loss != null ? String(tradeToEdit.stop_loss) : '',
       });
@@ -829,9 +835,15 @@ export default function CalendarScreen() {
     try {
       if (typeof window !== 'undefined') {
         const stored = window.localStorage.getItem(RECENT_INSTRUMENTS_STORAGE_KEY);
-        if (stored) setRecentInstruments(JSON.parse(stored));
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) setRecentInstruments(parsed.filter((v) => typeof v === 'string'));
+        }
         const storedCustom = window.localStorage.getItem(CUSTOM_TAGS_STORAGE_KEY);
-        if (storedCustom) setCustomTags(JSON.parse(storedCustom));
+        if (storedCustom) {
+          const parsedCustom = JSON.parse(storedCustom);
+          if (Array.isArray(parsedCustom)) setCustomTags(parsedCustom.filter((v) => typeof v === 'string'));
+        }
       }
     } catch {
       // ignore malformed/unavailable storage
@@ -859,7 +871,7 @@ export default function CalendarScreen() {
   }, [customTags]);
 
   function addCustomTag(raw) {
-    const tag = raw.trim().toUpperCase();
+    const tag = textValue(raw).trim().toUpperCase();
     if (!tag) return;
     if (DEFAULT_ASSET_TAGS.includes(tag) || customTags.includes(tag)) return;
     if (customTags.length >= MAX_CUSTOM_TAGS) return;
@@ -909,12 +921,12 @@ export default function CalendarScreen() {
       return;
     }
 
-    const instrument = form.instrument.trim().toUpperCase();
+    const instrument = textValue(form.instrument).trim().toUpperCase();
     if (!instrument) {
       setFormError('Укажите символ инструмента.');
       return;
     }
-    if (form.pnl.trim() === '') {
+    if (textValue(form.pnl).trim() === '') {
       setFormError('Укажите результат сделки в $.');
       return;
     }
@@ -928,9 +940,9 @@ export default function CalendarScreen() {
     const autoDirection = signedPnl >= 0 ? 'LONG' : 'SHORT'; // хранится для совместимости со схемой БД; в интерфейсе показываем как Доход/Расход
     const finalDirection = traderMode && form.direction ? form.direction : autoDirection;
     const time = form.time || currentTimeHHMM();
-    const comment = form.comment.trim();
-    const tp = traderMode && form.takeProfit.trim() !== '' ? parseFloat(form.takeProfit) : null;
-    const sl = traderMode && form.stopLoss.trim() !== '' ? parseFloat(form.stopLoss) : null;
+    const comment = textValue(form.comment).trim();
+    const tp = traderMode && textValue(form.takeProfit).trim() !== '' ? parseFloat(form.takeProfit) : null;
+    const sl = traderMode && textValue(form.stopLoss).trim() !== '' ? parseFloat(form.stopLoss) : null;
 
     const tradeRow = {
       user_id: user.id,
@@ -997,12 +1009,12 @@ export default function CalendarScreen() {
 
     const newTrade = {
       id: data.id,
-      time: data.time,
-      instrument: data.instrument,
-      direction: data.direction,
+      time: textValue(data.time),
+      instrument: textValue(data.instrument),
+      direction: textValue(data.direction),
       pnl: Number(data.pnl),
       comment: data.comment || '',
-      platform: data.platform,
+      platform: textValue(data.platform) || 'Manual',
     };
 
     setManualTrades((prev) => ({
@@ -1770,7 +1782,7 @@ export default function CalendarScreen() {
                 </label>
 
                 {(() => {
-                  const key = form.instrument.trim().toUpperCase();
+                  const key = textValue(form.instrument).trim().toUpperCase();
                   const info = INSTRUMENT_INFO[key];
                   return (
                     <div className="flex items-center gap-3 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2.5 mb-2">
@@ -1791,7 +1803,7 @@ export default function CalendarScreen() {
                       onClick={() => { setForm((f) => ({ ...f, instrument: tag })); setFormError(''); }}
                       className={[
                         'rounded-full border px-2.5 py-1 font-data text-[11px] tracking-wide transition-colors',
-                        form.instrument.trim().toUpperCase() === tag
+                        textValue(form.instrument).trim().toUpperCase() === tag
                           ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
                           : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
                       ].join(' ')}
@@ -1813,7 +1825,7 @@ export default function CalendarScreen() {
                       }}
                       className={[
                         'flex items-center gap-1 rounded-full border pl-2.5 pr-1 py-1 font-data text-[11px] tracking-wide cursor-grab transition-colors',
-                        form.instrument.trim().toUpperCase() === tag
+                        textValue(form.instrument).trim().toUpperCase() === tag
                           ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
                           : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
                       ].join(' ')}
@@ -1842,7 +1854,7 @@ export default function CalendarScreen() {
                         if (e.key === 'Enter') { addCustomTag(customTagInput); setCustomTagInput(''); setAddingCustomTag(false); }
                         if (e.key === 'Escape') { setCustomTagInput(''); setAddingCustomTag(false); }
                       }}
-                      onBlur={() => { if (customTagInput.trim()) addCustomTag(customTagInput); setCustomTagInput(''); setAddingCustomTag(false); }}
+                      onBlur={() => { if (textValue(customTagInput).trim()) addCustomTag(customTagInput); setCustomTagInput(''); setAddingCustomTag(false); }}
                       placeholder="TICKER"
                       className="w-20 rounded-full border border-amber-400/60 bg-zinc-950 px-2.5 py-1 font-data text-[11px] tracking-wide text-zinc-100 focus:outline-none"
                     />
@@ -2174,7 +2186,7 @@ export default function CalendarScreen() {
 
                 <button
                   onClick={handleSaveApiKeys}
-                  disabled={!apiForm.key.trim() || !apiForm.secret.trim()}
+                  disabled={!textValue(apiForm.key).trim() || !textValue(apiForm.secret).trim()}
                   className="w-full rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   Подключить {apiForm.exchange}
