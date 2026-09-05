@@ -1247,19 +1247,8 @@ export default function CalendarScreen() {
               <ChevronRight className="h-4 w-4" />
             </button>
 
-            {/* account pill: platform + login, merged into one seamless container */}
+            {/* Account */}
             <div className="ml-2 flex items-center rounded-md border border-zinc-800 bg-zinc-900 font-data text-[10px] tracking-wide overflow-hidden">
-              <button
-                onClick={openConnectModal}
-                className="flex items-center gap-1 px-2 py-1 bg-amber-400/10 text-amber-400 hover:bg-amber-400/20 transition-colors"
-              >
-                <Link2 className="h-3 w-3" />
-                Площадка
-                {ctraderConnected && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />}
-              </button>
-
-              <span className="h-3.5 w-px bg-zinc-800" />
-
               {user ? (
                 <div className="flex items-center gap-1 pl-2 pr-1 py-1">
                   <span className="max-w-[80px] truncate text-zinc-300">
@@ -1284,47 +1273,73 @@ export default function CalendarScreen() {
               )}
             </div>
 
-            {/* Smooth mode switch: Money / PRO */}
-            <button
-              type="button"
-              role="switch"
-              aria-checked={traderMode}
-              onClick={() => setTraderMode((v) => !v)}
-              title={traderMode
-                ? 'PRO: LONG/SHORT, Take Profit и Stop Loss'
-                : 'Денежный: доходы и расходы без трейдерских полей'}
-              className="ml-1.5 relative h-7 w-[92px] shrink-0 rounded-full border border-zinc-800 bg-zinc-900 p-0.5 font-data text-[9px] tracking-wider text-zinc-500 shadow-inner focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60"
-            >
-              {/* sliding active pill */}
-              <span
-                aria-hidden="true"
-                className={[
-                  'absolute top-0.5 bottom-0.5 left-0.5 w-[44px] rounded-full border transition-all duration-300 ease-out',
-                  traderMode
-                    ? 'translate-x-[44px] border-amber-400/50 bg-amber-400/10 shadow-[0_0_14px_rgba(251,191,36,0.08)]'
-                    : 'translate-x-0 border-zinc-700 bg-zinc-800/90',
-                ].join(' ')}
-              />
+            {/* Money / PRO + platform reveal */}
+            <div className="ml-1.5 flex items-center">
+              {/* Smooth mode switch */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={traderMode}
+                onClick={() => setTraderMode((v) => !v)}
+                title={traderMode
+                  ? 'PRO: LONG/SHORT, Take Profit и Stop Loss'
+                  : 'Денежный: доходы и расходы без трейдерских полей'}
+                className="relative h-7 w-[92px] shrink-0 rounded-full border border-zinc-800 bg-zinc-900 p-0.5 font-data text-[9px] tracking-wider text-zinc-500 shadow-inner focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60"
+              >
+                {/* sliding active pill */}
+                <span
+                  aria-hidden="true"
+                  className={[
+                    'absolute top-0.5 bottom-0.5 left-0.5 w-[44px] rounded-full border transition-all duration-300 ease-out',
+                    traderMode
+                      ? 'translate-x-[44px] border-amber-400/50 bg-amber-400/10 shadow-[0_0_14px_rgba(251,191,36,0.08)]'
+                      : 'translate-x-0 border-zinc-700 bg-zinc-800/90',
+                  ].join(' ')}
+                />
 
-              <span
-                className={[
-                  'relative z-10 flex h-full items-center justify-center transition-colors duration-300',
-                  !traderMode ? 'text-zinc-100' : 'text-zinc-600',
-                ].join(' ')}
-                style={{ width: '44px' }}
+                <span
+                  className={[
+                    'relative z-10 flex h-full items-center justify-center transition-colors duration-300',
+                    !traderMode ? 'text-zinc-100' : 'text-zinc-600',
+                  ].join(' ')}
+                  style={{ width: '44px' }}
+                >
+                  ДЕНЬГИ
+                </span>
+                <span
+                  className={[
+                    'absolute right-0.5 top-0.5 bottom-0.5 z-10 flex items-center justify-center transition-colors duration-300',
+                    traderMode ? 'text-amber-400' : 'text-zinc-600',
+                  ].join(' ')}
+                  style={{ width: '44px' }}
+                >
+                  PRO
+                </span>
+              </button>
+
+              {/* Platform slides out from the right side of PRO */}
+              <div
+                className="overflow-hidden shrink-0 transition-[width,margin,opacity] duration-300 ease-out"
+                style={{
+                  width: traderMode ? '92px' : '0px',
+                  marginLeft: traderMode ? '6px' : '0px',
+                  opacity: traderMode ? 1 : 0,
+                }}
+                aria-hidden={!traderMode}
               >
-                ДЕНЬГИ
-              </span>
-              <span
-                className={[
-                  'absolute right-0.5 top-0.5 bottom-0.5 z-10 flex items-center justify-center transition-colors duration-300',
-                  traderMode ? 'text-amber-400' : 'text-zinc-600',
-                ].join(' ')}
-                style={{ width: '44px' }}
-              >
-                PRO
-              </span>
-            </button>
+                <button
+                  onClick={openConnectModal}
+                  tabIndex={traderMode ? 0 : -1}
+                  className="flex h-7 w-[92px] items-center justify-center gap-1 rounded-md border border-amber-400/40 bg-amber-400/10 px-2 font-data text-[10px] tracking-wide text-amber-400 whitespace-nowrap hover:bg-amber-400/15 transition-colors"
+                >
+                  <Link2 className="h-3 w-3 shrink-0" />
+                  Площадка
+                  {ctraderConnected && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  )}
+                </button>
+              </div>
+            </div>
 
             {/* install as app + offline pending-sync indicator */}
             <div className="relative ml-1.5" ref={installInfoRef}>
