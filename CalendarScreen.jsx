@@ -1272,18 +1272,46 @@ export default function CalendarScreen() {
               )}
             </div>
 
-            {/* PRO trader mode toggle */}
+            {/* Smooth mode switch: Money / PRO */}
             <button
+              type="button"
+              role="switch"
+              aria-checked={traderMode}
               onClick={() => setTraderMode((v) => !v)}
-              title="Режим трейдера: LONG/SHORT, Take Profit / Stop Loss"
-              className={[
-                'ml-1.5 rounded-md border px-2 py-1 font-data text-[10px] tracking-wide transition-colors',
-                traderMode
-                  ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
-                  : 'border-zinc-800 bg-zinc-900 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
-              ].join(' ')}
+              title={traderMode
+                ? 'PRO: LONG/SHORT, Take Profit и Stop Loss'
+                : 'Денежный: доходы и расходы без трейдерских полей'}
+              className="ml-1.5 relative h-7 w-[92px] shrink-0 rounded-full border border-zinc-800 bg-zinc-900 p-0.5 font-data text-[9px] tracking-wider text-zinc-500 shadow-inner focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60"
             >
-              PRO
+              {/* sliding active pill */}
+              <span
+                aria-hidden="true"
+                className={[
+                  'absolute top-0.5 bottom-0.5 left-0.5 w-[44px] rounded-full border transition-all duration-300 ease-out',
+                  traderMode
+                    ? 'translate-x-[44px] border-amber-400/50 bg-amber-400/10 shadow-[0_0_14px_rgba(251,191,36,0.08)]'
+                    : 'translate-x-0 border-zinc-700 bg-zinc-800/90',
+                ].join(' ')}
+              />
+
+              <span
+                className={[
+                  'relative z-10 flex h-full items-center justify-center transition-colors duration-300',
+                  !traderMode ? 'text-zinc-100' : 'text-zinc-600',
+                ].join(' ')}
+                style={{ width: '44px' }}
+              >
+                ДЕНЬГИ
+              </span>
+              <span
+                className={[
+                  'absolute right-0.5 top-0.5 bottom-0.5 z-10 flex items-center justify-center transition-colors duration-300',
+                  traderMode ? 'text-amber-400' : 'text-zinc-600',
+                ].join(' ')}
+                style={{ width: '44px' }}
+              >
+                PRO
+              </span>
             </button>
 
             {/* install as app + offline pending-sync indicator */}
