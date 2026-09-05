@@ -151,6 +151,11 @@ function getMoneyCategoryMeta(category) {
   return MONEY_CATEGORIES.find((item) => item.key === category) || null;
 }
 
+function getValidUserId(user) {
+  const id = user?.id;
+  return typeof id === 'string' && id.trim() ? id.trim() : null;
+}
+
 export default function CalendarScreen() {
   const [today, setToday] = useState(() => new Date());
   useEffect(() => {
@@ -179,6 +184,10 @@ export default function CalendarScreen() {
   const [ctraderLoading, setCtraderLoading] = useState(false);
 
   async function checkCtraderStatus(userId) {
+    if (!userId) {
+      setCtraderConnected(false);
+      return;
+    }
     const { data } = await supabase.from('ctrader_tokens').select('id').eq('user_id', userId).maybeSingle();
     setCtraderConnected(!!data);
   }
@@ -202,7 +211,7 @@ export default function CalendarScreen() {
   }
 
   function handleConnectCtrader() {
-    if (!user) {
+    if (!getValidUserId(user)) {
       handleGoogleLogin();
       return;
     }
@@ -229,18 +238,19 @@ export default function CalendarScreen() {
       const { data, error } = await supabase.auth.getSession();
       console.log('[auth] getSession →', data.session ? 'сессия найдена' : 'сессии нет', error || '');
       const currentUser = data.session?.user ?? null;
-      setUser(currentUser);
+      const normalizedUser = getValidUserId(currentUser) ? currentUser : null;
+      setUser(normalizedUser);
 
       // cTrader вернул нас с ?code=... в адресе — обмениваем на токены
       const code = new URLSearchParams(window.location.search).get('code');
-      if (code && currentUser) {
+      if (code && normalizedUser) {
         handleCtraderCallback(code);
-      } else if (code && !currentUser) {
+      } else if (code && !normalizedUser) {
         // код есть, но пользователь ещё не вошёл через Google — обмен невозможен,
         // чистим адрес сразу, иначе код "зависнет" в URL навсегда
         window.history.replaceState({}, document.title, window.location.pathname);
-      } else if (currentUser) {
-        checkCtraderStatus(currentUser.id);
+      } else if (normalizedUser) {
+        checkCtraderStatus(getValidUserId(normalizedUser));
       }
     }
     init();
@@ -248,8 +258,9 @@ export default function CalendarScreen() {
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('[auth] событие:', event, session ? session.user.email : '(нет пользователя)');
       const activeUser = session?.user ?? null;
-      setUser(activeUser);
-      if (activeUser) checkCtraderStatus(activeUser.id);
+      const normalizedUser = getValidUserId(activeUser) ? activeUser : null;
+      setUser(normalizedUser);
+      if (normalizedUser) checkCtraderStatus(getValidUserId(normalizedUser));
       else setCtraderConnected(false);
     });
     return () => listener.subscription.unsubscribe();
@@ -487,6 +498,12 @@ export default function CalendarScreen() {
     for (const item of queue) {
       try {
         if (item.action === 'insert') {
+          const queuedUserId = item.trade?.user_id;
+          if (!queuedUserId) {
+            // Legacy guest queue item: guest data stays local and must not
+            // be sent to Supabase without a real authenticated user id.
+            continue;
+          }
           const { data, error } = await supabase.from('trades').insert(item.trade).select().single();
           if (error) throw error;
           // swap the temporary offline id for the real database id
@@ -520,10 +537,11 @@ export default function CalendarScreen() {
   // Guest: read/write locally and use the app without any account.
   // Signed-in: read the user's cloud data, with a user-specific local cache.
   useEffect(() => {
-    const owner = user?.id || 'guest';
+    const cloudUserId = getValidUserId(user);
+    const owner = cloudUserId || 'guest';
     tradesCacheOwnerRef.current = '__loading__';
 
-    const cached = readCachedTrades(user?.id || null);
+    const cached = readCachedTrades(cloudUserId);
     setManualTrades(cached);
 
     if (!user) {
@@ -540,7 +558,7 @@ export default function CalendarScreen() {
     supabase
       .from('trades')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', cloudUserId)
       .then(({ data, error }) => {
         if (error) {
           console.error('[trades] ошибка загрузки:', error);
@@ -573,9 +591,10 @@ export default function CalendarScreen() {
 
   // Keep the correct guest/user cache in sync with what is displayed.
   useEffect(() => {
-    const owner = user?.id || 'guest';
+    const cloudUserId = getValidUserId(user);
+    const owner = cloudUserId || 'guest';
     if (tradesCacheOwnerRef.current !== owner) return;
-    cacheTradesLocally(manualTrades, user?.id || null);
+    cacheTradesLocally(manualTrades, cloudUserId);
   }, [manualTrades, user?.id]);
 
 
@@ -955,6 +974,8 @@ export default function CalendarScreen() {
   }
 
   async function handleSaveTrade() {
+  // A guest never reaches Supabase. Only a real auth user id may be sent
+  // as trades.user_id because the database column is UUID.
     const dateKey = modalDateKey || targetDateKey;
 
     if (dateKey > todayKey) {
@@ -998,8 +1019,10 @@ export default function CalendarScreen() {
       platform,
     };
 
+    const cloudUserId = getValidUserId(user);
+
     // ---------------- Guest mode ----------------
-    if (!user) {
+    if (!cloudUserId) {
       if (editingTrade) {
         const guestUpdates = {
           ...localTradeBase,
@@ -1037,7 +1060,7 @@ export default function CalendarScreen() {
 
     // ---------------- Signed-in mode ----------------
     const tradeRow = {
-      user_id: user.id,
+      user_id: cloudUserId,
       date_key: dateKey,
       time,
       instrument,
@@ -1236,12 +1259,13 @@ export default function CalendarScreen() {
     }
 
     // Guest history is stored locally and can be cleared without login.
-    if (!user) {
+    const cloudUserId = getValidUserId(user);
+    if (!cloudUserId) {
       setManualTrades({});
       setConfirmingClear(false);
       return;
     }
-    const { error } = await supabase.from('trades').delete().eq('user_id', user.id);
+    const { error } = await supabase.from('trades').delete().eq('user_id', cloudUserId);
     if (error) {
       console.error('[trades] ошибка очистки истории:', error);
       return;
