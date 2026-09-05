@@ -165,7 +165,7 @@ export default function CalendarScreen() {
     };
   }, []);
 
-  // Google session — informational only, doesn't block using the calendar
+  // Google session — optional; the calendar works without signing in
   const [user, setUser] = useState(null);
   const nicknamePrompted = useRef(false);
 
@@ -392,9 +392,34 @@ export default function CalendarScreen() {
   const [customTagInput, setCustomTagInput] = useState('');
   const dragTagIndex = useRef(null);
 
-  // --- Offline support: cache trades locally, queue writes made while offline
-  const TRADES_CACHE_KEY = 'atj_trades_cache';
+  // --- Offline/local support ----------------------------------------------
+  // Guest users work completely locally. Authenticated users get their own
+  // browser cache, so different accounts on the same device never mix data.
+  const GUEST_TRADES_CACHE_KEY = 'money_calendar_guest_trades_cache';
   const OFFLINE_QUEUE_KEY = 'atj_offline_queue';
+
+  function getTradesCacheKey(userId) {
+    return userId ? `money_calendar_trades_${userId}` : GUEST_TRADES_CACHE_KEY;
+  }
+
+  function readCachedTrades(userId) {
+    try {
+      const raw = window.localStorage.getItem(getTradesCacheKey(userId));
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function cacheTradesLocally(trades, userId) {
+    try {
+      window.localStorage.setItem(getTradesCacheKey(userId), JSON.stringify(trades));
+    } catch {
+      // ignore storage failures
+    }
+  }
 
   function readOfflineQueue() {
     try {
@@ -403,6 +428,7 @@ export default function CalendarScreen() {
       return [];
     }
   }
+
   function writeOfflineQueue(queue) {
     try {
       window.localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
@@ -410,15 +436,9 @@ export default function CalendarScreen() {
       // ignore storage failures
     }
   }
-  function cacheTradesLocally(trades) {
-    try {
-      window.localStorage.setItem(TRADES_CACHE_KEY, JSON.stringify(trades));
-    } catch {
-      // ignore storage failures
-    }
-  }
 
   const [pendingSyncCount, setPendingSyncCount] = useState(() => readOfflineQueue().length);
+  const tradesCacheOwnerRef = useRef('__loading__');
 
   // --- Install as app (PWA) ------------------------------------------------
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
@@ -497,22 +517,25 @@ export default function CalendarScreen() {
     return () => window.removeEventListener('online', flushOfflineQueue);
   }, [user]);
 
-  // load this user's trades from Supabase whenever they log in; clear on logout.
-  // Offline (or while the request is in flight) we show the last locally cached copy.
+  // Guest: read/write locally and use the app without any account.
+  // Signed-in: read the user's cloud data, with a user-specific local cache.
   useEffect(() => {
+    const owner = user?.id || 'guest';
+    tradesCacheOwnerRef.current = '__loading__';
+
+    const cached = readCachedTrades(user?.id || null);
+    setManualTrades(cached);
+
     if (!user) {
-      setManualTrades({});
+      tradesCacheOwnerRef.current = owner;
+      setCtraderConnected(false);
       return;
     }
 
-    try {
-      const cached = window.localStorage.getItem(TRADES_CACHE_KEY);
-      if (cached) setManualTrades(JSON.parse(cached));
-    } catch {
-      // ignore malformed cache
+    if (!navigator.onLine) {
+      tradesCacheOwnerRef.current = owner;
+      return;
     }
-
-    if (!navigator.onLine) return; // stay on cached data until back online
 
     supabase
       .from('trades')
@@ -521,8 +544,11 @@ export default function CalendarScreen() {
       .then(({ data, error }) => {
         if (error) {
           console.error('[trades] ошибка загрузки:', error);
+          // Keep cached data visible even when cloud loading fails.
+          tradesCacheOwnerRef.current = owner;
           return;
         }
+
         const grouped = {};
         for (const row of data) {
           grouped[row.date_key] = grouped[row.date_key] || [];
@@ -534,17 +560,23 @@ export default function CalendarScreen() {
             pnl: Number(row.pnl),
             comment: row.comment || '',
             platform: textValue(row.platform) || 'Manual',
+            take_profit: row.take_profit ?? null,
+            stop_loss: row.stop_loss ?? null,
           });
         }
+
         setManualTrades(grouped);
+        tradesCacheOwnerRef.current = owner;
         flushOfflineQueue();
       });
   }, [user]);
 
-  // keep the local offline cache in sync with whatever's on screen
+  // Keep the correct guest/user cache in sync with what is displayed.
   useEffect(() => {
-    cacheTradesLocally(manualTrades);
-  }, [manualTrades]);
+    const owner = user?.id || 'guest';
+    if (tradesCacheOwnerRef.current !== owner) return;
+    cacheTradesLocally(manualTrades, user?.id || null);
+  }, [manualTrades, user?.id]);
 
 
   // --- Period filter state (compact popover) --------------------------------
@@ -758,10 +790,6 @@ export default function CalendarScreen() {
   const [editingTrade, setEditingTrade] = useState(null); // { id, dateKey } | null
 
   function openModal(tradeToEdit) {
-    if (!user) {
-      handleGoogleLogin();
-      return;
-    }
     if (tradeToEdit) {
       setEditingTrade({ id: tradeToEdit.id, dateKey: tradeToEdit.dateKey || modalDateKey || targetDateKey });
       setModalDateKey(tradeToEdit.dateKey || modalDateKey || targetDateKey);
@@ -927,39 +955,87 @@ export default function CalendarScreen() {
   }
 
   async function handleSaveTrade() {
-    if (!user) {
-      setFormError('Войдите через Google, чтобы сохранять сделки.');
-      return;
-    }
     const dateKey = modalDateKey || targetDateKey;
+
     if (dateKey > todayKey) {
-      setFormError('Нельзя добавить сделку на будущую дату.');
+      setFormError('Нельзя добавить запись на будущую дату.');
       return;
     }
 
     const instrument = textValue(form.instrument).trim().toUpperCase();
     if (!instrument) {
-      setFormError('Укажите символ инструмента.');
+      setFormError(traderMode ? 'Укажите символ инструмента.' : 'Выберите категорию или укажите свою.');
       return;
     }
+
     if (textValue(form.pnl).trim() === '') {
-      setFormError('Укажите результат сделки в $.');
+      setFormError('Укажите сумму в $.');
       return;
     }
+
     const magnitude = parseFloat(form.pnl);
     if (Number.isNaN(magnitude) || magnitude < 0) {
-      setFormError('Результат должен быть числом ≥ 0.');
+      setFormError('Сумма должна быть числом ≥ 0.');
       return;
     }
 
     const signedPnl = form.sign === 'minus' ? -Math.abs(magnitude) : Math.abs(magnitude);
-    const autoDirection = signedPnl >= 0 ? 'LONG' : 'SHORT'; // хранится для совместимости со схемой БД; в интерфейсе показываем как Доход/Расход
+    const autoDirection = signedPnl >= 0 ? 'LONG' : 'SHORT';
     const finalDirection = traderMode && form.direction ? form.direction : autoDirection;
-    const time = form.time || currentTimeHHMM();
+    const time = textValue(form.time) || currentTimeHHMM();
     const comment = textValue(form.comment).trim();
     const tp = traderMode && textValue(form.takeProfit).trim() !== '' ? parseFloat(form.takeProfit) : null;
     const sl = traderMode && textValue(form.stopLoss).trim() !== '' ? parseFloat(form.stopLoss) : null;
+    const platform = textValue(form.platform) || 'Manual';
 
+    // Guest/local record. In money mode there are no trader-only DB fields.
+    const localTradeBase = {
+      time,
+      instrument,
+      direction: finalDirection,
+      pnl: signedPnl,
+      comment,
+      platform,
+    };
+
+    // ---------------- Guest mode ----------------
+    if (!user) {
+      if (editingTrade) {
+        const guestUpdates = {
+          ...localTradeBase,
+          ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}),
+          pending: false,
+        };
+
+        setManualTrades((prev) => ({
+          ...prev,
+          [dateKey]: (prev[dateKey] || []).map((t) =>
+            t.id === editingTrade.id ? { ...t, ...guestUpdates } : t
+          ),
+        }));
+        closeModal();
+        return;
+      }
+
+      const localId = `guest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const newGuestTrade = {
+        id: localId,
+        ...localTradeBase,
+        ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}),
+        pending: false,
+      };
+
+      setManualTrades((prev) => ({
+        ...prev,
+        [dateKey]: [...(prev[dateKey] || []), newGuestTrade],
+      }));
+
+      setRecentInstruments((prev) => [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5));
+      closeModal();
+      return;
+    }
+
+    // ---------------- Signed-in mode ----------------
     const tradeRow = {
       user_id: user.id,
       date_key: dateKey,
@@ -967,19 +1043,31 @@ export default function CalendarScreen() {
       instrument,
       direction: finalDirection,
       pnl: signedPnl,
-      take_profit: tp,
-      stop_loss: sl,
       comment,
-      platform: form.platform,
+      platform,
+      // IMPORTANT: these columns are sent only in PRO mode.
+      // The normal money mode therefore works even when the DB does not
+      // yet contain trader-only fields.
+      ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}),
     };
 
     if (editingTrade) {
-      const updates = { time, instrument, direction: finalDirection, pnl: signedPnl, comment, platform: form.platform, ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}) };
+      const updates = {
+        time,
+        instrument,
+        direction: finalDirection,
+        pnl: signedPnl,
+        comment,
+        platform,
+        ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}),
+      };
 
       if (!navigator.onLine) {
         setManualTrades((prev) => ({
           ...prev,
-          [dateKey]: (prev[dateKey] || []).map((t) => (t.id === editingTrade.id ? { ...t, ...updates, pending: true } : t)),
+          [dateKey]: (prev[dateKey] || []).map((t) =>
+            t.id === editingTrade.id ? { ...t, ...updates, pending: true } : t
+          ),
         }));
         const queue = readOfflineQueue();
         queue.push({ action: 'update', tradeId: editingTrade.id, updates });
@@ -989,24 +1077,40 @@ export default function CalendarScreen() {
         return;
       }
 
-      const { error: updateError } = await supabase.from('trades').update(updates).eq('id', editingTrade.id);
+      const { error: updateError } = await supabase
+        .from('trades')
+        .update(updates)
+        .eq('id', editingTrade.id);
+
       if (updateError) {
         setFormError('Не удалось сохранить: ' + updateError.message);
         return;
       }
+
       setManualTrades((prev) => ({
         ...prev,
-        [dateKey]: (prev[dateKey] || []).map((t) => (t.id === editingTrade.id ? { ...t, ...updates } : t)),
+        [dateKey]: (prev[dateKey] || []).map((t) =>
+          t.id === editingTrade.id ? { ...t, ...updates } : t
+        ),
       }));
       closeModal();
       return;
     }
 
     if (!navigator.onLine) {
-      // offline: save locally with a temp id, queue for sync once back online
       const tempId = `offline-${Date.now()}`;
-      const newTrade = { id: tempId, time, instrument, direction: finalDirection, pnl: signedPnl, comment, platform: form.platform, take_profit: tp, stop_loss: sl, pending: true };
-      setManualTrades((prev) => ({ ...prev, [dateKey]: [...(prev[dateKey] || []), newTrade] }));
+      const newTrade = {
+        id: tempId,
+        ...localTradeBase,
+        ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}),
+        pending: true,
+      };
+
+      setManualTrades((prev) => ({
+        ...prev,
+        [dateKey]: [...(prev[dateKey] || []), newTrade],
+      }));
+
       const queue = readOfflineQueue();
       queue.push({ action: 'insert', tempId, trade: tradeRow });
       writeOfflineQueue(queue);
@@ -1031,6 +1135,8 @@ export default function CalendarScreen() {
       pnl: Number(data.pnl),
       comment: data.comment || '',
       platform: textValue(data.platform) || 'Manual',
+      take_profit: data.take_profit ?? null,
+      stop_loss: data.stop_loss ?? null,
     };
 
     setManualTrades((prev) => ({
@@ -1039,11 +1145,19 @@ export default function CalendarScreen() {
     }));
 
     setRecentInstruments((prev) => [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5));
-
     closeModal();
   }
 
   async function handleDeleteTrade(dateKey, tradeId) {
+    // Guest mode is local-only: no Supabase call and no sync queue.
+    if (!user) {
+      setManualTrades((prev) => ({
+        ...prev,
+        [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId),
+      }));
+      return;
+    }
+
     // if this trade only exists locally (never synced), just drop it and its queued insert
     if (String(tradeId).startsWith('offline-')) {
       const queue = readOfflineQueue().filter((item) => item.tempId !== tradeId);
@@ -1120,7 +1234,13 @@ export default function CalendarScreen() {
       setConfirmingClear(true);
       return;
     }
-    if (!user) return;
+
+    // Guest history is stored locally and can be cleared without login.
+    if (!user) {
+      setManualTrades({});
+      setConfirmingClear(false);
+      return;
+    }
     const { error } = await supabase.from('trades').delete().eq('user_id', user.id);
     if (error) {
       console.error('[trades] ошибка очистки истории:', error);
