@@ -3,7 +3,6 @@ import {
   Inbox, TrendingUp, TrendingDown, Sparkles, Plus, X, Trash2,
   Calendar, ChevronDown, ChevronLeft, ChevronRight, Link2, KeyRound, UploadCloud, FileText,
   LogIn, LogOut, CheckCircle2, RefreshCw, History, Download, Pencil,
-  Wallet, ShoppingCart, Home, Briefcase, ShoppingBag, CreditCard, MoreHorizontal,
 } from 'lucide-react';
 import { supabase } from './src/supabaseClient';
 
@@ -24,15 +23,20 @@ import { supabase } from './src/supabaseClient';
  * persist credentials or parse & ingest a broker export.
  */
 
+function textValue(value) {
+  return value == null ? '' : String(value);
+}
+
+function getValidUserId(user) {
+  const id = typeof user?.id === 'string' ? getValidUserId(user).trim() : '';
+  const uuidPattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidPattern.test(id) ? id : null;
+}
+
 function currentTimeHHMM() {
   const d = new Date();
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
-// Safely normalize form/input values before string operations.
-// Old or incomplete trade records must never be able to crash the whole screen.
-function textValue(value) {
-  return value == null ? '' : String(value);
 }
 
 // yyyy-mm-dd key — used consistently for calendar cells, manual trade storage
@@ -128,17 +132,6 @@ const INSTRUMENT_INFO = {
   EURUSD: { icon: '€', label: 'Euro / US Dollar' },
   NDX100: { icon: '📈', label: 'Nasdaq 100' },
 };
-
-const MONEY_CATEGORIES = [
-  { key: 'Зарплата', icon: Wallet },
-  { key: 'Продукты', icon: ShoppingCart },
-  { key: 'Жильё', icon: Home },
-  { key: 'Работа', icon: Briefcase },
-  { key: 'Покупки', icon: ShoppingBag },
-  { key: 'Подписки', icon: CreditCard },
-  { key: 'Фриланс', icon: Wallet },
-  { key: 'Другое', icon: MoreHorizontal },
-];
 const EXCHANGES = ['Bybit', 'Binance', 'OKX', 'MT4/MT5', 'cTrader'];
 const PLATFORMS = ['Manual', ...EXCHANGES];
 const RECENT_INSTRUMENTS_STORAGE_KEY = 'atj_recent_instruments';
@@ -146,19 +139,6 @@ const CUSTOM_TAGS_STORAGE_KEY = 'atj_custom_instrument_tags';
 const DEPOSIT_SIZE_STORAGE_KEY = 'atj_deposit_size';
 const TRADER_MODE_STORAGE_KEY = 'atj_trader_mode';
 const MAX_CUSTOM_TAGS = 6;
-
-function getMoneyCategoryMeta(category) {
-  return MONEY_CATEGORIES.find((item) => item.key === category) || null;
-}
-
-function getValidUserId(user) {
-  const id = typeof user?.id === 'string' ? getValidUserId(user).trim() : '';
-  // Supabase public.user_id is UUID. Treat anything else (including the
-  // literal string "undefined") as a guest session.
-  const uuidPattern =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidPattern.test(id) ? id : null;
-}
 
 export default function CalendarScreen() {
   const [today, setToday] = useState(() => new Date());
@@ -174,7 +154,7 @@ export default function CalendarScreen() {
     };
   }, []);
 
-  // Google session — optional; the calendar works without signing in
+  // Google session — informational only, doesn't block using the calendar
   const [user, setUser] = useState(null);
   const nicknamePrompted = useRef(false);
 
@@ -286,13 +266,13 @@ export default function CalendarScreen() {
 
   function handleSaveNickname() {
     const googleName = user?.user_metadata?.full_name || user?.email || '';
-    const nickname = textValue(nicknameInput).trim() || googleName;
+    const nickname = nicknameInput.trim() || googleName;
     supabase.auth.updateUser({ data: { nickname } });
     closeNicknameModal();
   }
 
   async function handleGoogleLogin() {
-    console.log('[auth] кнопка "Войти через Google" нажата');
+    console.log('[auth] кнопка "Войти для синхронизации" нажата');
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -407,17 +387,16 @@ export default function CalendarScreen() {
   const [customTagInput, setCustomTagInput] = useState('');
   const dragTagIndex = useRef(null);
 
-  // --- Offline/local support ----------------------------------------------
-  // Guest users work completely locally. Authenticated users get their own
-  // browser cache, so different accounts on the same device never mix data.
+  // --- Guest + offline support ---------------------------------------------
   const GUEST_TRADES_CACHE_KEY = 'money_calendar_guest_trades_cache';
+  const LEGACY_TRADES_CACHE_KEY = 'atj_trades_cache';
   const LEGACY_OFFLINE_QUEUE_KEY = 'atj_offline_queue';
 
   function getTradesCacheKey(userId) {
     return userId ? `money_calendar_trades_${userId}` : GUEST_TRADES_CACHE_KEY;
   }
 
-  function readCachedTrades(userId) {
+  function readCachedTrades(userId = null) {
     try {
       const raw = window.localStorage.getItem(getTradesCacheKey(userId));
       if (!raw) return {};
@@ -428,7 +407,7 @@ export default function CalendarScreen() {
     }
   }
 
-  function cacheTradesLocally(trades, userId) {
+  function cacheTradesLocally(trades, userId = null) {
     try {
       window.localStorage.setItem(getTradesCacheKey(userId), JSON.stringify(trades));
     } catch {
@@ -437,23 +416,22 @@ export default function CalendarScreen() {
   }
 
   function getOfflineQueueKey(userId) {
-    return userId
-      ? `atj_offline_queue_${userId}`
-      : 'atj_offline_queue_guest';
+    return userId ? `atj_offline_queue_${userId}` : null;
   }
 
   function readOfflineQueue(userId = null) {
     try {
       const key = getOfflineQueueKey(userId);
-      const raw = window.localStorage.getItem(key);
-      const parsed = JSON.parse(raw || '[]');
+      if (!key) return [];
+      const parsed = JSON.parse(window.localStorage.getItem(key) || '[]');
       return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
   }
 
-  function writeOfflineQueue(queue, userId = null) {
+  function writeOfflineQueue(queue, userId) {
+    if (!userId) return;
     try {
       window.localStorage.setItem(getOfflineQueueKey(userId), JSON.stringify(queue));
     } catch {
@@ -461,30 +439,41 @@ export default function CalendarScreen() {
     }
   }
 
-  const [pendingSyncCount, setPendingSyncCount] = useState(() => {
-    return readOfflineQueue(null).length;
-  });
   const tradesCacheOwnerRef = useRef('__loading__');
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
 
-  // A small migration cleanup: the old global queue could contain records
-  // with user_id = undefined. They must never be sent to a UUID column.
+  // Remove only malformed items from the old global queue. Valid legacy
+  // records will be migrated to the authenticated user's queue on login.
   useEffect(() => {
     try {
-      const legacy = JSON.parse(window.localStorage.getItem(LEGACY_OFFLINE_QUEUE_KEY) || '[]');
-      if (!Array.isArray(legacy)) return;
-      const clean = legacy.filter((item) => {
-        const id = typeof item?.trade?.user_id === 'string' ? item.trade.user_id.trim() : '';
-        return getValidUserId({ id }) !== null;
-      });
-      window.localStorage.removeItem(LEGACY_OFFLINE_QUEUE_KEY);
-      if (clean.length) {
-        const id = clean[0]?.trade?.user_id;
-        if (getValidUserId({ id })) {
-          writeOfflineQueue(clean, id);
+      const raw = window.localStorage.getItem(LEGACY_OFFLINE_QUEUE_KEY);
+      if (!raw) return;
+      const legacy = JSON.parse(raw);
+      if (!Array.isArray(legacy)) {
+        window.localStorage.removeItem(LEGACY_OFFLINE_QUEUE_KEY);
+        return;
+      }
+      const valid = legacy.filter((item) =>
+        getValidUserId({ id: item?.trade?.user_id }) !== null
+      );
+      if (valid.length) {
+        const groups = {};
+        for (const item of valid) {
+          const uid = getValidUserId({ id: item?.trade?.user_id });
+          groups[uid] = groups[uid] || [];
+          groups[uid].push(item);
+        }
+        for (const [uid, queue] of Object.entries(groups)) {
+          const existing = readOfflineQueue(uid);
+          writeOfflineQueue([...existing, ...queue], uid);
         }
       }
+      window.localStorage.removeItem(LEGACY_OFFLINE_QUEUE_KEY);
+      // The legacy trade cache was shared between accounts; do not expose it
+      // as guest data.
+      window.localStorage.removeItem(LEGACY_TRADES_CACHE_KEY);
     } catch {
-      // ignore legacy queue migration errors
+      // ignore legacy migration failures
     }
   }, []);
 
@@ -527,43 +516,29 @@ export default function CalendarScreen() {
   }
 
   async function insertTradeCloudSafe(trade) {
-    const cleanUserId = getValidUserId({ id: trade?.user_id });
-    if (!cleanUserId) {
-      return {
-        data: null,
-        error: new Error('Некорректный user_id: запись сохранена локально.'),
-        invalidUserId: true,
-      };
+    const userId = getValidUserId({ id: trade?.user_id });
+    if (!userId) {
+      return { data: null, error: new Error('Некорректный user_id.'), invalidUserId: true };
     }
 
-    const firstPayload = { ...trade, user_id: cleanUserId };
-    let result = await supabase.from('trades').insert(firstPayload).select().single();
+    const payload = { ...trade, user_id: userId };
+    let result = await supabase.from('trades').insert(payload).select().single();
 
-    // PRO may contain TP/SL while the current database schema may not yet
-    // have those optional columns. Save the core trade anyway and keep the
-    // optional values locally until the columns are added.
+    // If PRO columns are not in the DB yet, save the core trade instead of
+    // blocking the whole operation.
     if (
       result.error &&
-      /could not find the '?(stop_loss|take_profit)'? column|schema cache|column.*does not exist/i.test(
-        result.error.message || ''
-      ) &&
-      ('stop_loss' in firstPayload || 'take_profit' in firstPayload)
+      /could not find the '?(stop_loss|take_profit)'? column|schema cache|column.*does not exist/i.test(result.error.message || '') &&
+      ('stop_loss' in payload || 'take_profit' in payload)
     ) {
-      const fallbackPayload = { ...firstPayload };
-      delete fallbackPayload.stop_loss;
-      delete fallbackPayload.take_profit;
-
-      result = await supabase.from('trades').insert(fallbackPayload).select().single();
-
-      if (!result.error) {
-        return { ...result, optionalColumnsMissing: true };
-      }
+      const fallback = { ...payload };
+      delete fallback.stop_loss;
+      delete fallback.take_profit;
+      result = await supabase.from('trades').insert(fallback).select().single();
+      if (!result.error) return { ...result, optionalColumnsMissing: true };
     }
 
-    if (
-      result.error &&
-      /invalid input syntax for type uuid/i.test(result.error.message || '')
-    ) {
+    if (result.error && /invalid input syntax for type uuid/i.test(result.error.message || '')) {
       return { ...result, invalidUserId: true };
     }
 
@@ -575,19 +550,14 @@ export default function CalendarScreen() {
 
     if (
       result.error &&
-      /could not find the '?(stop_loss|take_profit)'? column|schema cache|column.*does not exist/i.test(
-        result.error.message || ''
-      ) &&
+      /could not find the '?(stop_loss|take_profit)'? column|schema cache|column.*does not exist/i.test(result.error.message || '') &&
       ('stop_loss' in updates || 'take_profit' in updates)
     ) {
-      const fallbackUpdates = { ...updates };
-      delete fallbackUpdates.stop_loss;
-      delete fallbackUpdates.take_profit;
-      result = await supabase.from('trades').update(fallbackUpdates).eq('id', tradeId);
-
-      if (!result.error) {
-        return { ...result, optionalColumnsMissing: true };
-      }
+      const fallback = { ...updates };
+      delete fallback.stop_loss;
+      delete fallback.take_profit;
+      result = await supabase.from('trades').update(fallback).eq('id', tradeId);
+      if (!result.error) return { ...result, optionalColumnsMissing: true };
     }
 
     return result;
@@ -609,12 +579,7 @@ export default function CalendarScreen() {
       try {
         if (item.action === 'insert') {
           const queuedUserId = getValidUserId({ id: item.trade?.user_id });
-
-          // Never send another user's queue or malformed UUIDs to Supabase.
-          if (!queuedUserId || queuedUserId !== cloudUserId) {
-            console.warn('[offline] пропускаю запись с некорректным/чужим user_id');
-            continue;
-          }
+          if (!queuedUserId || queuedUserId !== cloudUserId) continue;
 
           const result = await insertTradeCloudSafe(item.trade);
           if (result.error) throw result.error;
@@ -622,23 +587,18 @@ export default function CalendarScreen() {
           setManualTrades((prev) => ({
             ...prev,
             [item.trade.date_key]: (prev[item.trade.date_key] || []).map((t) =>
-              t.id === item.tempId
-                ? { ...t, id: result.data.id, pending: false }
-                : t
+              t.id === item.tempId ? { ...t, id: result.data.id, pending: false } : t
             ),
-          });
+          }));
         } else if (item.action === 'update') {
           const { error } = await updateTradeCloudSafe(item.tradeId, item.updates);
           if (error) throw error;
         } else if (item.action === 'delete') {
-          const { error } = await supabase
-            .from('trades')
-            .delete()
-            .eq('id', item.tradeId);
+          const { error } = await supabase.from('trades').delete().eq('id', item.tradeId);
           if (error) throw error;
         }
       } catch (err) {
-        console.error('[offline] не удалось синхронизировать, оставляю в очереди:', err);
+        console.error('[offline] не удалось синхронизировать:', err);
         remaining.push(item);
       }
     }
@@ -650,22 +610,22 @@ export default function CalendarScreen() {
   useEffect(() => {
     window.addEventListener('online', flushOfflineQueue);
     return () => window.removeEventListener('online', flushOfflineQueue);
-  }, [user]);
+  }, [user?.id]);
 
-  // Guest: read/write locally and use the app without any account.
-  // Signed-in: read the user's cloud data, with a user-specific local cache.
+  // Guest: use local data only. Authenticated: hydrate from the user's own
+  // Supabase data, with a user-specific browser cache.
   useEffect(() => {
     const cloudUserId = getValidUserId(user);
     const owner = cloudUserId || 'guest';
+
     tradesCacheOwnerRef.current = '__loading__';
     setPendingSyncCount(readOfflineQueue(cloudUserId).length);
 
     const cached = readCachedTrades(cloudUserId);
     setManualTrades(cached);
 
-    if (!user) {
+    if (!cloudUserId) {
       tradesCacheOwnerRef.current = owner;
-      setCtraderConnected(false);
       return;
     }
 
@@ -681,13 +641,12 @@ export default function CalendarScreen() {
       .then(({ data, error }) => {
         if (error) {
           console.error('[trades] ошибка загрузки:', error);
-          // Keep cached data visible even when cloud loading fails.
           tradesCacheOwnerRef.current = owner;
           return;
         }
 
         const grouped = {};
-        for (const row of data) {
+        for (const row of data || []) {
           grouped[row.date_key] = grouped[row.date_key] || [];
           grouped[row.date_key].push({
             id: row.id,
@@ -708,14 +667,12 @@ export default function CalendarScreen() {
       });
   }, [user]);
 
-  // Keep the correct guest/user cache in sync with what is displayed.
   useEffect(() => {
     const cloudUserId = getValidUserId(user);
     const owner = cloudUserId || 'guest';
     if (tradesCacheOwnerRef.current !== owner) return;
     cacheTradesLocally(manualTrades, cloudUserId);
   }, [manualTrades, user?.id]);
-
 
   // --- Period filter state (compact popover) --------------------------------
   const [periodPreset, setPeriodPreset] = useState('Вся история');
@@ -932,13 +889,13 @@ export default function CalendarScreen() {
       setEditingTrade({ id: tradeToEdit.id, dateKey: tradeToEdit.dateKey || modalDateKey || targetDateKey });
       setModalDateKey(tradeToEdit.dateKey || modalDateKey || targetDateKey);
       setForm({
-        instrument: textValue(tradeToEdit.instrument),
-        direction: textValue(tradeToEdit.direction),
+        instrument: tradeToEdit.instrument,
+        direction: tradeToEdit.direction,
         sign: tradeToEdit.pnl >= 0 ? 'plus' : 'minus',
         pnl: String(Math.abs(tradeToEdit.pnl)),
-        time: textValue(tradeToEdit.time) || currentTimeHHMM(),
+        time: tradeToEdit.time,
         comment: tradeToEdit.comment || '',
-        platform: textValue(tradeToEdit.platform) || 'Manual',
+        platform: tradeToEdit.platform || 'Manual',
         takeProfit: tradeToEdit.take_profit != null ? String(tradeToEdit.take_profit) : '',
         stopLoss: tradeToEdit.stop_loss != null ? String(tradeToEdit.stop_loss) : '',
       });
@@ -947,7 +904,7 @@ export default function CalendarScreen() {
       setEditingTrade(null);
       setModalDateKey(targetDateKey);
       setForm({
-        instrument: traderMode ? (recentInstruments[0] || '') : 'Зарплата',
+        instrument: recentInstruments[0] || '',
         direction: '',
         sign: 'plus',
         pnl: '',
@@ -1017,15 +974,9 @@ export default function CalendarScreen() {
     try {
       if (typeof window !== 'undefined') {
         const stored = window.localStorage.getItem(RECENT_INSTRUMENTS_STORAGE_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) setRecentInstruments(parsed.filter((v) => typeof v === 'string'));
-        }
+        if (stored) setRecentInstruments(JSON.parse(stored));
         const storedCustom = window.localStorage.getItem(CUSTOM_TAGS_STORAGE_KEY);
-        if (storedCustom) {
-          const parsedCustom = JSON.parse(storedCustom);
-          if (Array.isArray(parsedCustom)) setCustomTags(parsedCustom.filter((v) => typeof v === 'string'));
-        }
+        if (storedCustom) setCustomTags(JSON.parse(storedCustom));
       }
     } catch {
       // ignore malformed/unavailable storage
@@ -1053,7 +1004,7 @@ export default function CalendarScreen() {
   }, [customTags]);
 
   function addCustomTag(raw) {
-    const tag = textValue(raw).trim().toUpperCase();
+    const tag = raw.trim().toUpperCase();
     if (!tag) return;
     if (DEFAULT_ASSET_TAGS.includes(tag) || customTags.includes(tag)) return;
     if (customTags.length >= MAX_CUSTOM_TAGS) return;
@@ -1093,8 +1044,6 @@ export default function CalendarScreen() {
   }
 
   async function handleSaveTrade() {
-  // A guest never reaches Supabase. Only a real auth user id may be sent
-  // as trades.user_id because the database column is UUID.
     const dateKey = modalDateKey || targetDateKey;
 
     if (dateKey > todayKey) {
@@ -1113,7 +1062,7 @@ export default function CalendarScreen() {
       return;
     }
 
-    const magnitude = parseFloat(form.pnl);
+    const magnitude = parseFloat(textValue(form.pnl));
     if (Number.isNaN(magnitude) || magnitude < 0) {
       setFormError('Сумма должна быть числом ≥ 0.');
       return;
@@ -1124,11 +1073,15 @@ export default function CalendarScreen() {
     const finalDirection = traderMode && form.direction ? form.direction : autoDirection;
     const time = textValue(form.time) || currentTimeHHMM();
     const comment = textValue(form.comment).trim();
-    const tp = traderMode && textValue(form.takeProfit).trim() !== '' ? parseFloat(form.takeProfit) : null;
-    const sl = traderMode && textValue(form.stopLoss).trim() !== '' ? parseFloat(form.stopLoss) : null;
     const platform = textValue(form.platform) || 'Manual';
 
-    // Guest/local record. In money mode there are no trader-only DB fields.
+    const tp = traderMode && textValue(form.takeProfit).trim() !== ''
+      ? parseFloat(form.takeProfit)
+      : null;
+    const sl = traderMode && textValue(form.stopLoss).trim() !== ''
+      ? parseFloat(form.stopLoss)
+      : null;
+
     const localTradeBase = {
       time,
       instrument,
@@ -1140,44 +1093,46 @@ export default function CalendarScreen() {
 
     const cloudUserId = getValidUserId(user);
 
-    // ---------------- Guest mode ----------------
+    // ===================== GUEST MODE =====================
     if (!cloudUserId) {
       if (editingTrade) {
-        const guestUpdates = {
-          ...localTradeBase,
-          ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}),
-          pending: false,
-        };
-
         setManualTrades((prev) => ({
           ...prev,
           [dateKey]: (prev[dateKey] || []).map((t) =>
-            t.id === editingTrade.id ? { ...t, ...guestUpdates } : t
+            t.id === editingTrade.id
+              ? {
+                  ...t,
+                  ...localTradeBase,
+                  ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}),
+                  pending: false,
+                }
+              : t
           ),
         }));
-        closeModal();
-        return;
+      } else {
+        const localId = `guest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        setManualTrades((prev) => ({
+          ...prev,
+          [dateKey]: [
+            ...(prev[dateKey] || []),
+            {
+              id: localId,
+              ...localTradeBase,
+              ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}),
+              pending: false,
+            },
+          ],
+        }));
+        setRecentInstruments((prev) =>
+          [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5)
+        );
       }
 
-      const localId = `guest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const newGuestTrade = {
-        id: localId,
-        ...localTradeBase,
-        ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}),
-        pending: false,
-      };
-
-      setManualTrades((prev) => ({
-        ...prev,
-        [dateKey]: [...(prev[dateKey] || []), newGuestTrade],
-      }));
-
-      setRecentInstruments((prev) => [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5));
       closeModal();
       return;
     }
 
-    // ---------------- Signed-in mode ----------------
+    // ===================== CLOUD MODE =====================
     const tradeRow = {
       user_id: cloudUserId,
       date_key: dateKey,
@@ -1187,9 +1142,6 @@ export default function CalendarScreen() {
       pnl: signedPnl,
       comment,
       platform,
-      // IMPORTANT: these columns are sent only in PRO mode.
-      // The normal money mode therefore works even when the DB does not
-      // yet contain trader-only fields.
       ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}),
     };
 
@@ -1211,6 +1163,7 @@ export default function CalendarScreen() {
             t.id === editingTrade.id ? { ...t, ...updates, pending: true } : t
           ),
         }));
+
         const queue = readOfflineQueue(cloudUserId);
         queue.push({ action: 'update', tradeId: editingTrade.id, updates });
         writeOfflineQueue(queue, cloudUserId);
@@ -1219,17 +1172,16 @@ export default function CalendarScreen() {
         return;
       }
 
-      const { error: updateError } = await updateTradeCloudSafe(editingTrade.id, updates);
-
-      if (updateError) {
-        setFormError('Не удалось сохранить: ' + updateError.message);
+      const { error } = await updateTradeCloudSafe(editingTrade.id, updates);
+      if (error) {
+        setFormError('Не удалось сохранить: ' + error.message);
         return;
       }
 
       setManualTrades((prev) => ({
         ...prev,
         [dateKey]: (prev[dateKey] || []).map((t) =>
-          t.id === editingTrade.id ? { ...t, ...updates } : t
+          t.id === editingTrade.id ? { ...t, ...updates, pending: false } : t
         ),
       }));
       closeModal();
@@ -1254,39 +1206,42 @@ export default function CalendarScreen() {
       queue.push({ action: 'insert', tempId, trade: tradeRow });
       writeOfflineQueue(queue, cloudUserId);
       setPendingSyncCount(queue.length);
-      setRecentInstruments((prev) => [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5));
+      setRecentInstruments((prev) =>
+        [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5)
+      );
       closeModal();
       return;
     }
 
     const result = await insertTradeCloudSafe(tradeRow);
-    const { data, error } = result;
 
-    if (error) {
-      // A malformed/legacy auth session must never block the journal.
-      // Fall back to local storage when Supabase rejects the user UUID.
-      if (result.invalidUserId || /invalid input syntax for type uuid/i.test(error.message || '')) {
-        console.warn('[trades] invalid auth UUID; saving locally as guest');
-        const localId = `guest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        const fallbackTrade = {
-          id: localId,
-          ...localTradeBase,
-          ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}),
-          pending: false,
-        };
+    if (result.error) {
+      if (result.invalidUserId || /invalid input syntax for type uuid/i.test(result.error.message || '')) {
+        // Auth session is malformed — never block the journal.
         setManualTrades((prev) => ({
           ...prev,
-          [dateKey]: [...(prev[dateKey] || []), fallbackTrade],
+          [dateKey]: [
+            ...(prev[dateKey] || []),
+            {
+              id: `guest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              ...localTradeBase,
+              ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}),
+              pending: false,
+            },
+          ],
         }));
-        setRecentInstruments((prev) => [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5));
+        setRecentInstruments((prev) =>
+          [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5)
+        );
         closeModal();
         return;
       }
 
-      setFormError('Не удалось сохранить: ' + error.message);
+      setFormError('Не удалось сохранить: ' + result.error.message);
       return;
     }
 
+    const data = result.data;
     const newTrade = {
       id: data.id,
       time: textValue(data.time),
@@ -1295,8 +1250,8 @@ export default function CalendarScreen() {
       pnl: Number(data.pnl),
       comment: data.comment || '',
       platform: textValue(data.platform) || 'Manual',
-      take_profit: data.take_profit ?? null,
-      stop_loss: data.stop_loss ?? null,
+      take_profit: data.take_profit ?? (result.optionalColumnsMissing ? tp : null),
+      stop_loss: data.stop_loss ?? (result.optionalColumnsMissing ? sl : null),
     };
 
     setManualTrades((prev) => ({
@@ -1304,12 +1259,15 @@ export default function CalendarScreen() {
       [dateKey]: [...(prev[dateKey] || []), newTrade],
     }));
 
-    setRecentInstruments((prev) => [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5));
+    setRecentInstruments((prev) =>
+      [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5)
+    );
+
     closeModal();
   }
 
   async function handleDeleteTrade(dateKey, tradeId) {
-    // Guest mode is local-only: no Supabase call and no sync queue.
+    // Guest mode is local-only.
     if (!getValidUserId(user)) {
       setManualTrades((prev) => ({
         ...prev,
@@ -1318,13 +1276,17 @@ export default function CalendarScreen() {
       return;
     }
 
-    // if this trade only exists locally (never synced), just drop it and its queued insert
+    // If this trade only exists locally (never synced), drop it and its
+    // queued insert without touching Supabase.
     if (String(tradeId).startsWith('offline-')) {
       const cloudUserId = getValidUserId(user);
       const queue = readOfflineQueue(cloudUserId).filter((item) => item.tempId !== tradeId);
       writeOfflineQueue(queue, cloudUserId);
       setPendingSyncCount(queue.length);
-      setManualTrades((prev) => ({ ...prev, [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId) }));
+      setManualTrades((prev) => ({
+        ...prev,
+        [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId),
+      }));
       return;
     }
 
@@ -1361,7 +1323,6 @@ export default function CalendarScreen() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
   const [historyWinLoss, setHistoryWinLoss] = useState('all'); // 'all' | 'win' | 'loss'
-  const [historyFiltersOpen, setHistoryFiltersOpen] = useState(false);
   const [confirmingClear, setConfirmingClear] = useState(false);
 
   const historyTrades = useMemo(() => {
@@ -1374,19 +1335,15 @@ export default function CalendarScreen() {
   }, [manualTrades, dateFrom, dateTo, platformFilter, historyWinLoss]);
 
   const historyTotal = useMemo(() => historyTrades.reduce((sum, t) => sum + t.pnl, 0), [historyTrades]);
-  const historyIncome = useMemo(() => historyTrades.reduce((sum, t) => sum + (t.pnl > 0 ? t.pnl : 0), 0), [historyTrades]);
-  const historyExpense = useMemo(() => historyTrades.reduce((sum, t) => sum + (t.pnl < 0 ? Math.abs(t.pnl) : 0), 0), [historyTrades]);
 
   function openHistory() {
     setHistoryOpen(true);
-    setHistoryFiltersOpen(false);
     setConfirmingClear(false);
     requestAnimationFrame(() => setHistoryVisible(true));
   }
 
   function closeHistory() {
     setHistoryVisible(false);
-    setHistoryFiltersOpen(false);
     setConfirmingClear(false);
     setTimeout(() => setHistoryOpen(false), 180);
   }
@@ -1397,13 +1354,14 @@ export default function CalendarScreen() {
       return;
     }
 
-    // Guest history is stored locally and can be cleared without login.
     const cloudUserId = getValidUserId(user);
+
     if (!cloudUserId) {
       setManualTrades({});
       setConfirmingClear(false);
       return;
     }
+
     const { error } = await supabase.from('trades').delete().eq('user_id', cloudUserId);
     if (error) {
       console.error('[trades] ошибка очистки истории:', error);
@@ -1551,8 +1509,19 @@ export default function CalendarScreen() {
               <ChevronRight className="h-4 w-4" />
             </button>
 
-            {/* Account */}
+            {/* account pill: platform + login, merged into one seamless container */}
             <div className="ml-2 flex items-center rounded-md border border-zinc-800 bg-zinc-900 font-data text-[10px] tracking-wide overflow-hidden">
+              <button
+                onClick={openConnectModal}
+                className="flex items-center gap-1 px-2 py-1 bg-amber-400/10 text-amber-400 hover:bg-amber-400/20 transition-colors"
+              >
+                <Link2 className="h-3 w-3" />
+                Площадка
+                {ctraderConnected && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />}
+              </button>
+
+              <span className="h-3.5 w-px bg-zinc-800" />
+
               {user ? (
                 <div className="flex items-center gap-1 pl-2 pr-1 py-1">
                   <span className="max-w-[80px] truncate text-zinc-300">
@@ -1572,82 +1541,24 @@ export default function CalendarScreen() {
                   className="flex items-center gap-1.5 px-2.5 py-1.5 text-zinc-400 hover:text-amber-400 transition-colors"
                 >
                   <LogIn className="h-3.5 w-3.5" />
-                  Войти через Google
+                  Войти для синхронизации
                 </button>
               )}
             </div>
 
-            {/* Money / PRO + platform reveal */}
-            <div className="ml-1.5 flex items-center">
-              {/* Smooth mode switch */}
-              <button
-                type="button"
-                role="switch"
-                aria-checked={traderMode}
-                onClick={() => setTraderMode((v) => {
-                  const next = !v;
-                  if (!next) setPlatformFilter('ALL');
-                  return next;
-                })}
-                title={traderMode
-                  ? 'PRO: LONG/SHORT, Take Profit и Stop Loss'
-                  : 'Денежный: доходы и расходы без трейдерских полей'}
-                className="relative h-7 w-[92px] shrink-0 rounded-full border border-zinc-800 bg-zinc-900 p-0.5 font-data text-[9px] tracking-wider text-zinc-500 shadow-inner focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60"
-              >
-                {/* sliding active pill */}
-                <span
-                  aria-hidden="true"
-                  className={[
-                    'absolute top-0.5 bottom-0.5 left-0.5 w-[44px] rounded-full border transition-all duration-300 ease-out',
-                    traderMode
-                      ? 'translate-x-[44px] border-amber-400/50 bg-amber-400/10 shadow-[0_0_14px_rgba(251,191,36,0.08)]'
-                      : 'translate-x-0 border-zinc-700 bg-zinc-800/90',
-                  ].join(' ')}
-                />
-
-                <span
-                  className={[
-                    'relative z-10 flex h-full items-center justify-center transition-colors duration-300',
-                    !traderMode ? 'text-zinc-100' : 'text-zinc-600',
-                  ].join(' ')}
-                  style={{ width: '44px' }}
-                >
-                  ДЕНЬГИ
-                </span>
-                <span
-                  className={[
-                    'absolute right-0.5 top-0.5 bottom-0.5 z-10 flex items-center justify-center transition-colors duration-300',
-                    traderMode ? 'text-amber-400' : 'text-zinc-600',
-                  ].join(' ')}
-                  style={{ width: '44px' }}
-                >
-                  PRO
-                </span>
-              </button>
-
-              {/* Platform slides out from the right side of PRO */}
-              <div
-                className="overflow-hidden shrink-0 transition-[width,margin,opacity] duration-300 ease-out"
-                style={{
-                  width: traderMode ? '92px' : '0px',
-                  marginLeft: traderMode ? '6px' : '0px',
-                  opacity: traderMode ? 1 : 0,
-                }}
-                aria-hidden={!traderMode}
-              >
-                <button
-                  onClick={openConnectModal}
-                  tabIndex={traderMode ? 0 : -1}
-                  className="flex h-7 w-[92px] items-center justify-center gap-1 rounded-md border border-amber-400/40 bg-amber-400/10 px-2 font-data text-[10px] tracking-wide text-amber-400 whitespace-nowrap hover:bg-amber-400/15 transition-colors"
-                >
-                  <Link2 className="h-3 w-3 shrink-0" />
-                  Площадка
-                  {ctraderConnected && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                  )}
-                </button>
-              </div>
-            </div>
+            {/* PRO trader mode toggle */}
+            <button
+              onClick={() => setTraderMode((v) => !v)}
+              title="Режим трейдера: LONG/SHORT, Take Profit / Stop Loss"
+              className={[
+                'ml-1.5 rounded-md border px-2 py-1 font-data text-[10px] tracking-wide transition-colors',
+                traderMode
+                  ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                  : 'border-zinc-800 bg-zinc-900 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
+              ].join(' ')}
+            >
+              PRO
+            </button>
 
             {/* install as app + offline pending-sync indicator */}
             <div className="relative ml-1.5" ref={installInfoRef}>
@@ -1767,7 +1678,7 @@ export default function CalendarScreen() {
           <div className="flex items-center justify-between">
             <div>
               <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">{selectedKey}</p>
-              <p className="text-[11px] text-zinc-500 mb-0.5">{traderMode ? 'Общий результат дня' : 'Баланс дня'}</p>
+              <p className="text-[11px] text-zinc-500 mb-0.5">Общий результат дня</p>
               <div className="flex items-center gap-2">
                 {periodStats.count > 0 &&
                   (periodStats.pnl >= 0 ? (
@@ -1803,34 +1714,22 @@ export default function CalendarScreen() {
               className="flex items-center gap-1.5 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Plus className="h-4 w-4" />
-              {traderMode ? 'Добавить сделку' : 'Добавить запись'}
+              Добавить сделку
             </button>
           </div>
 
-          {traderMode ? (
-            <div className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900 px-4 py-2 font-data text-xs text-zinc-400">
-              <span>Сделок: <span className="text-zinc-100 font-medium">{periodStats.count}</span></span>
-              <span className="text-zinc-700">•</span>
-              <span>PnL: <span className={`font-medium ${periodStats.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{periodStats.pnl >= 0 ? '+' : '-'}${formatMoney(periodStats.pnl)}</span></span>
-              <span className="text-zinc-700">•</span>
-              <span>Winrate: <span className="text-zinc-100 font-medium">{periodStats.winrate}%</span></span>
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5">
-                <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">Операций</p>
-                <p className="font-data text-sm text-zinc-100">{periodStats.count}</p>
-              </div>
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5">
-                <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">Доходы</p>
-                <p className="font-data text-sm text-emerald-400">+${formatMoney(periodTrades.reduce((sum, t) => sum + (t.pnl > 0 ? t.pnl : 0), 0))}</p>
-              </div>
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5">
-                <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">Расходы</p>
-                <p className="font-data text-sm text-red-400">−${formatMoney(periodTrades.reduce((sum, t) => sum + (t.pnl < 0 ? Math.abs(t.pnl) : 0), 0))}</p>
-              </div>
-            </div>
-          )}
+          <div className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900 px-4 py-2 font-data text-xs text-zinc-400">
+            <span>Сделок: <span className="text-zinc-100 font-medium">{periodStats.count}</span></span>
+            <span className="text-zinc-700">•</span>
+            <span>
+              PnL:{' '}
+              <span className={`font-medium ${periodStats.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {periodStats.pnl >= 0 ? '+' : '-'}${formatMoney(periodStats.pnl)}
+              </span>
+            </span>
+            <span className="text-zinc-700">•</span>
+            <span>Winrate: <span className="text-zinc-100 font-medium">{periodStats.winrate}%</span></span>
+          </div>
 
           {periodTrades.length > 0 ? (
             <div className="rounded-lg border border-zinc-800 bg-zinc-900 divide-y divide-zinc-800">
@@ -1848,7 +1747,7 @@ export default function CalendarScreen() {
                             : 'bg-red-500/10 text-red-400',
                         ].join(' ')}
                       >
-                        {trade.pnl >= 0 ? (traderMode ? 'Прибыль' : 'Доход') : (traderMode ? 'Убыток' : 'Расход')}
+                        {trade.pnl >= 0 ? 'Доход' : 'Расход'}
                       </span>
                       <span className="font-data text-[10px] text-zinc-600">{trade.platform}</span>
                     </div>
@@ -1882,7 +1781,7 @@ export default function CalendarScreen() {
             <div className="flex items-center justify-center py-16">
               <div className="text-center max-w-sm border border-dashed border-zinc-800 rounded-xl px-10 py-10">
                 <Inbox className="h-8 w-8 text-zinc-700 mx-auto mb-4" />
-                <p className="text-zinc-500 text-sm">{traderMode ? 'Сделок за этот день пока нет' : 'Записей за этот день пока нет'}</p>
+                <p className="text-zinc-500 text-sm">Сделок за этот день пока нет</p>
               </div>
             </div>
           )}
@@ -1902,333 +1801,181 @@ export default function CalendarScreen() {
         </button>
       </div>
 
-      {/* HISTORY MODAL — money mode gets a simple personal-finance timeline; PRO keeps the dense trader view */}
+      {/* HISTORY MODAL — pick a preset/date or browse everything, click a trade to jump to its day */}
       {historyOpen && (
         <div
-          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-3 sm:px-4 transition-opacity duration-200 ${
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${
             historyVisible ? 'opacity-100' : 'opacity-0'
           }`}
           onMouseDown={handleBackdropMouseDown}
           onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) closeHistory(); }}
         >
           <div
-            className={`relative w-full ${traderMode ? 'max-w-md' : 'max-w-lg'} max-h-[86vh] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl transition-all duration-200 ${
+            className={`relative w-full max-w-md max-h-[80vh] flex flex-col rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl transition-all duration-200 ${
               historyVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
             }`}
           >
-            <div className="flex items-center justify-between px-5 sm:px-6 pt-5 pb-4 border-b border-zinc-800/80">
-              <div>
-                <p className="font-data text-[10px] tracking-[0.22em] text-amber-400 uppercase mb-1">
-                  {traderMode ? 'История сделок' : 'Мои деньги'}
-                </p>
-                <h2 className="font-display text-xl font-semibold text-zinc-50">
-                  {traderMode
-                    ? (periodPreset === 'Вся история' ? 'Вся история' : dateFrom === dateTo ? dateFrom : `${dateFrom} — ${dateTo}`)
-                    : 'Финансовая история'}
-                </h2>
-              </div>
+            <button
+              onClick={closeHistory}
+              className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-200 transition-colors"
+              aria-label="Закрыть"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">История сделок</p>
+            <h2 className="font-display text-lg font-semibold text-zinc-50 mb-3">
+              {periodPreset === 'Вся история' ? 'Вся история' : dateFrom === dateTo ? dateFrom : `${dateFrom} — ${dateTo}`}
+            </h2>
+
+            {/* $/% + deposit */}
+            <div className="flex items-center gap-2 mb-3">
               <button
-                onClick={closeHistory}
-                className="rounded-full p-2 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
-                aria-label="Закрыть"
+                onClick={() => {
+                  if (displayMode === 'usd' && depositSize <= 0) {
+                    handleEditDeposit();
+                    return;
+                  }
+                  setDisplayMode((m) => (m === 'usd' ? 'percent' : 'usd'));
+                }}
+                className="rounded-md border border-zinc-700 bg-zinc-950 px-2.5 py-1 font-data text-xs text-zinc-300 hover:border-zinc-600 transition-colors"
               >
-                <X className="h-4 w-4" />
+                {displayMode === 'usd' ? '$' : '%'}
+              </button>
+              <button
+                onClick={handleEditDeposit}
+                className="font-data text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                Депозит: {depositSize > 0 ? `$${formatMoney(depositSize)}` : 'не задан'} ✎
               </button>
             </div>
 
-            <div className="overflow-y-auto px-5 sm:px-6 py-5 max-h-[calc(86vh-80px)]">
-              {!traderMode ? (
-                <>
-                  {/* Money summary */}
-                  <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4 sm:p-5 mb-4">
-                    <p className="text-xs text-zinc-500 mb-2">Результат за выбранный период</p>
-                    <div className={`font-display text-4xl sm:text-5xl font-semibold tracking-tight ${historyTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {formatPnlDisplay(historyTotal)}
+            {/* period presets */}
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {PERIOD_PRESETS.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => handlePresetChange(p)}
+                  className={[
+                    'rounded-full border px-2.5 py-1 font-data text-[11px] tracking-wide transition-colors',
+                    periodPreset === p
+                      ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                      : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
+                  ].join(' ')}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5 mb-3">
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => handleDateFromChange(e.target.value)}
+                className="flex-1 min-w-0 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-200 font-data focus:outline-none focus:border-amber-400/60"
+              />
+              <span className="text-zinc-600">—</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => handleDateToChange(e.target.value)}
+                className="flex-1 min-w-0 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-200 font-data focus:outline-none focus:border-amber-400/60"
+              />
+            </div>
+
+            {/* platform + win/loss filters */}
+            <div className="flex items-center gap-1.5 mb-2">
+              <select
+                value={platformFilter}
+                onChange={(e) => setPlatformFilter(e.target.value)}
+                className="flex-1 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-200 font-data focus:outline-none focus:border-amber-400/60"
+              >
+                <option value="ALL">Все источники</option>
+                {PLATFORMS.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-1.5 mb-4">
+              {[
+                { key: 'all', label: 'Все' },
+                { key: 'win', label: 'Прибыль' },
+                { key: 'loss', label: 'Убыток' },
+              ].map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => setHistoryWinLoss(opt.key)}
+                  className={[
+                    'flex-1 rounded-md border px-2 py-1.5 font-data text-xs transition-colors',
+                    historyWinLoss === opt.key
+                      ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                      : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
+                  ].join(' ')}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            <input
+              type="date"
+              onChange={(e) => e.target.value && jumpToTradeDate(e.target.value)}
+              className="w-full mb-3 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 font-data text-xs text-zinc-300 focus:outline-none focus:border-amber-400/60"
+              placeholder="Перейти к дате"
+            />
+
+            <p className="text-xs text-zinc-500 mb-2">{historyTrades.length} сделок</p>
+
+            {historyTrades.length > 0 ? (
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900 divide-y divide-zinc-800 overflow-y-auto">
+                {historyTrades.map((trade) => (
+                  <button
+                    key={trade.id}
+                    onClick={() => jumpToTradeDate(trade.dateKey)}
+                    className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-zinc-800/60 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="font-data text-xs text-zinc-500 w-14 shrink-0">{formatDateLabel(trade.dateKey)}</span>
+                      <span className="text-sm text-zinc-200 font-medium truncate">{trade.instrument}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-3 mt-4">
-                      <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/70 px-3 py-3">
-                        <p className="text-[11px] text-zinc-500 mb-1">Доходы</p>
-                        <p className="font-data text-sm text-emerald-400">+${formatMoney(historyIncome)}</p>
-                      </div>
-                      <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/70 px-3 py-3">
-                        <p className="text-[11px] text-zinc-500 mb-1">Расходы</p>
-                        <p className="font-data text-sm text-red-400">−${formatMoney(historyExpense)}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Fast period controls */}
-                  <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1">
-                    {PERIOD_PRESETS.map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => handlePresetChange(p)}
-                        className={[
-                          'shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors',
-                          periodPreset === p
-                            ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-300'
-                            : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
-                        ].join(' ')}
-                      >
-                        {p}
-                      </button>
-                    ))}
-                    <button
-                      onClick={() => setHistoryFiltersOpen((v) => !v)}
-                      className={[
-                        'shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors',
-                        historyFiltersOpen ? 'border-zinc-500 bg-zinc-800 text-zinc-100' : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200',
-                      ].join(' ')}
-                    >
-                      Фильтры
-                    </button>
-                  </div>
-
-                  {historyFiltersOpen && (
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 mb-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <input
-                          type="date"
-                          value={dateFrom}
-                          onChange={(e) => handleDateFromChange(e.target.value)}
-                          className="flex-1 min-w-0 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 font-data focus:outline-none focus:border-emerald-400/50"
-                        />
-                        <span className="text-zinc-600">—</span>
-                        <input
-                          type="date"
-                          value={dateTo}
-                          onChange={(e) => handleDateToChange(e.target.value)}
-                          className="flex-1 min-w-0 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 font-data focus:outline-none focus:border-emerald-400/50"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        {[
-                          { key: 'all', label: 'Все' },
-                          { key: 'win', label: 'Доходы' },
-                          { key: 'loss', label: 'Расходы' },
-                        ].map((opt) => (
-                          <button
-                            key={opt.key}
-                            onClick={() => setHistoryWinLoss(opt.key)}
-                            className={[
-                              'flex-1 rounded-lg border px-3 py-2 text-xs transition-colors',
-                              historyWinLoss === opt.key
-                                ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-300'
-                                : 'border-zinc-700 bg-zinc-900 text-zinc-400 hover:text-zinc-200',
-                            ].join(' ')}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs text-zinc-500">{historyTrades.length} операций</p>
-                    {periodPreset !== 'Вся история' && (
-                      <button
-                        onClick={() => setHistoryFiltersOpen(true)}
-                        className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors"
-                      >
-                        Изменить период
-                      </button>
-                    )}
-                  </div>
-
-                  {historyTrades.length > 0 ? (
-                    <div className="rounded-2xl border border-zinc-800 bg-zinc-950 overflow-hidden">
-                      {historyTrades.map((entry) => {
-                        const category = getMoneyCategoryMeta(entry.instrument);
-                        const Icon = category?.icon || MoreHorizontal;
-                        return (
-                          <button
-                            key={entry.id}
-                            onClick={() => jumpToTradeDate(entry.dateKey)}
-                            className="w-full px-4 py-3.5 flex items-center gap-3 text-left border-b last:border-b-0 border-zinc-800/80 hover:bg-zinc-900 transition-colors"
-                          >
-                            <span className={`h-9 w-9 shrink-0 rounded-xl flex items-center justify-center ${entry.pnl >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                              <Icon className="h-4 w-4" />
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block text-sm font-medium text-zinc-100 truncate">{entry.instrument || 'Другое'}</span>
-                              <span className="block text-[11px] text-zinc-500 mt-0.5">{formatDateLabel(entry.dateKey)} · {entry.time}{entry.comment ? ` · ${entry.comment}` : ''}</span>
-                            </span>
-                            <span className={`font-data text-sm font-medium shrink-0 ${entry.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {entry.pnl >= 0 ? '+' : '−'}${formatMoney(entry.pnl)}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="rounded-2xl border border-dashed border-zinc-800 px-6 py-12 text-center">
-                      <Wallet className="h-8 w-8 text-zinc-700 mx-auto mb-3" />
-                      <p className="text-sm text-zinc-500">Пока здесь пусто</p>
-                      <p className="text-xs text-zinc-700 mt-1">Добавляй доходы и расходы — календарь соберёт картину месяца.</p>
-                    </div>
-                  )}
-
-                  <div className="flex gap-2 mt-4">
-                    <button
-                      onClick={handleExportCsv}
-                      disabled={historyTrades.length === 0}
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-zinc-800 px-3 py-2.5 text-xs text-zinc-400 hover:text-zinc-200 hover:border-zinc-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      Экспорт CSV
-                    </button>
-                    <button
-                      onClick={handleClearHistory}
-                      className={[
-                        'flex-1 rounded-xl border px-3 py-2.5 text-xs transition-colors',
-                        confirmingClear
-                          ? 'border-red-500 bg-red-500/10 text-red-400'
-                          : 'border-zinc-800 text-zinc-600 hover:text-red-400 hover:border-red-500/40',
-                      ].join(' ')}
-                    >
-                      {confirmingClear ? 'Точно удалить?' : 'Очистить историю'}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  {/* PRO history: preserve the denser trader workflow */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <button
-                      onClick={() => {
-                        if (displayMode === 'usd' && depositSize <= 0) {
-                          handleEditDeposit();
-                          return;
-                        }
-                        setDisplayMode((m) => (m === 'usd' ? 'percent' : 'usd'));
-                      }}
-                      className="rounded-md border border-zinc-700 bg-zinc-950 px-2.5 py-1 font-data text-xs text-zinc-300 hover:border-zinc-600 transition-colors"
-                    >
-                      {displayMode === 'usd' ? '$' : '%'}
-                    </button>
-                    <button
-                      onClick={handleEditDeposit}
-                      className="font-data text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-                    >
-                      Депозит: {depositSize > 0 ? `$${formatMoney(depositSize)}` : 'не задан'} ✎
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    {PERIOD_PRESETS.map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => handlePresetChange(p)}
-                        className={[
-                          'rounded-full border px-2.5 py-1 font-data text-[11px] tracking-wide transition-colors',
-                          periodPreset === p
-                            ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
-                            : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
-                        ].join(' ')}
-                      >
-                        {p}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <input
-                      type="date"
-                      value={dateFrom}
-                      onChange={(e) => handleDateFromChange(e.target.value)}
-                      className="flex-1 min-w-0 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-200 font-data focus:outline-none focus:border-amber-400/60"
-                    />
-                    <span className="text-zinc-600">—</span>
-                    <input
-                      type="date"
-                      value={dateTo}
-                      onChange={(e) => handleDateToChange(e.target.value)}
-                      className="flex-1 min-w-0 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-200 font-data focus:outline-none focus:border-amber-400/60"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <select
-                      value={platformFilter}
-                      onChange={(e) => setPlatformFilter(e.target.value)}
-                      className="flex-1 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-200 font-data focus:outline-none focus:border-amber-400/60"
-                    >
-                      <option value="ALL">Все источники</option>
-                      {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
-                    </select>
-                  </div>
-
-                  <div className="flex gap-1.5 mb-4">
-                    {[{ key: 'all', label: 'Все' }, { key: 'win', label: 'Прибыль' }, { key: 'loss', label: 'Убыток' }].map((opt) => (
-                      <button
-                        key={opt.key}
-                        onClick={() => setHistoryWinLoss(opt.key)}
-                        className={[
-                          'flex-1 rounded-md border px-2 py-1.5 font-data text-xs transition-colors',
-                          historyWinLoss === opt.key
-                            ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
-                            : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
-                        ].join(' ')}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  <p className="text-xs text-zinc-500 mb-2">{historyTrades.length} сделок</p>
-                  {historyTrades.length > 0 ? (
-                    <div className="rounded-lg border border-zinc-800 bg-zinc-950 divide-y divide-zinc-800 overflow-y-auto">
-                      {historyTrades.map((trade) => (
-                        <button
-                          key={trade.id}
-                          onClick={() => jumpToTradeDate(trade.dateKey)}
-                          className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-zinc-900 transition-colors"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <span className="font-data text-xs text-zinc-500 w-14 shrink-0">{formatDateLabel(trade.dateKey)}</span>
-                            <span className="text-sm text-zinc-200 font-medium truncate">{trade.instrument}</span>
-                          </div>
-                          <span className={`font-data text-sm font-medium shrink-0 ${trade.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {formatPnlDisplay(trade.pnl)}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-zinc-600 text-center py-6">Нет сделок за выбранный период</p>
-                  )}
-
-                  <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2.5 mt-3">
-                    <span className="text-xs text-zinc-500">Итог</span>
-                    <span className={`font-data text-sm font-semibold ${historyTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {formatPnlDisplay(historyTotal)}
+                    <span className={`font-data text-sm font-medium shrink-0 ${trade.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {formatPnlDisplay(trade.pnl)}
                     </span>
-                  </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-600 text-center py-6">Нет сделок за выбранный период</p>
+            )}
 
-                  <div className="flex gap-2 mt-4">
-                    <button
-                      onClick={handleExportCsv}
-                      disabled={historyTrades.length === 0}
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-md border border-zinc-800 px-3 py-2 font-data text-xs text-zinc-400 hover:text-zinc-200 hover:border-zinc-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      Экспорт CSV
-                    </button>
-                    <button
-                      onClick={handleClearHistory}
-                      className={[
-                        'flex-1 rounded-md border px-3 py-2 font-data text-xs transition-colors',
-                        confirmingClear
-                          ? 'border-red-500 bg-red-500/10 text-red-400'
-                          : 'border-zinc-800 text-zinc-600 hover:text-red-400 hover:border-red-500/40',
-                      ].join(' ')}
-                    >
-                      {confirmingClear ? 'Точно удалить? Ещё раз' : 'Очистить историю'}
-                    </button>
-                  </div>
-                </>
-              )}
+            {/* total for whatever is currently filtered */}
+            <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2.5 mt-3">
+              <span className="text-xs text-zinc-500">Итог</span>
+              <span className={`font-data text-sm font-semibold ${historyTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {formatPnlDisplay(historyTotal)}
+              </span>
+            </div>
+
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={handleExportCsv}
+                disabled={historyTrades.length === 0}
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-md border border-zinc-800 px-3 py-2 font-data text-xs text-zinc-400 hover:text-zinc-200 hover:border-zinc-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Экспорт CSV
+              </button>
+              <button
+                onClick={handleClearHistory}
+                className={[
+                  'flex-1 rounded-md border px-3 py-2 font-data text-xs transition-colors',
+                  confirmingClear
+                    ? 'border-red-500 bg-red-500/10 text-red-400'
+                    : 'border-zinc-800 text-zinc-600 hover:text-red-400 hover:border-red-500/40',
+                ].join(' ')}
+              >
+                {confirmingClear ? 'Точно удалить? Ещё раз' : 'Очистить историю'}
+              </button>
             </div>
           </div>
         </div>
@@ -2265,143 +2012,108 @@ export default function CalendarScreen() {
             <div className="flex flex-col gap-4">
               <div>
                 <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
-                  {traderMode ? 'Категория' : 'На что запись'}
+                  Категория
                 </label>
 
-                {traderMode ? (
-                  <>
-                    {(() => {
-                      const key = textValue(form.instrument).trim().toUpperCase();
-                      const info = INSTRUMENT_INFO[key];
-                      return (
-                        <div className="flex items-center gap-3 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2.5 mb-2">
-                          <span className="text-xl leading-none">{info?.icon || '＋'}</span>
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-zinc-100 truncate">{key || 'Не выбран'}</p>
-                            {info && <p className="text-xs text-zinc-500 truncate">{info.label}</p>}
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                      {quickAssetTags.map((tag) => (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => { setForm((f) => ({ ...f, instrument: tag })); setFormError(''); }}
-                          className={[
-                            'rounded-full border px-2.5 py-1 font-data text-[11px] tracking-wide transition-colors',
-                            textValue(form.instrument).trim().toUpperCase() === tag
-                              ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
-                              : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
-                          ].join(' ')}
-                        >
-                          {tag}
-                        </button>
-                      ))}
-
-                      {customTags.filter((t) => !quickAssetTags.includes(t)).map((tag) => (
-                        <span
-                          key={tag}
-                          draggable
-                          onDragStart={() => { dragTagIndex.current = customTags.indexOf(tag); }}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={() => {
-                            const dropIndex = customTags.indexOf(tag);
-                            if (dragTagIndex.current !== null && dragTagIndex.current !== dropIndex) reorderCustomTag(dragTagIndex.current, dropIndex);
-                            dragTagIndex.current = null;
-                          }}
-                          className={[
-                            'flex items-center gap-1 rounded-full border pl-2.5 pr-1 py-1 font-data text-[11px] tracking-wide cursor-grab transition-colors',
-                            textValue(form.instrument).trim().toUpperCase() === tag
-                              ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
-                              : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
-                          ].join(' ')}
-                        >
-                          <button type="button" onClick={() => { setForm((f) => ({ ...f, instrument: tag })); setFormError(''); }}>
-                            {tag}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => removeCustomTag(tag)}
-                            className="text-zinc-600 hover:text-red-400 transition-colors"
-                            aria-label={`Удалить ${tag}`}
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </span>
-                      ))}
-
-                      {addingCustomTag ? (
-                        <input
-                          type="text"
-                          autoFocus
-                          value={customTagInput}
-                          onChange={(e) => setCustomTagInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') { addCustomTag(customTagInput); setCustomTagInput(''); setAddingCustomTag(false); }
-                            if (e.key === 'Escape') { setCustomTagInput(''); setAddingCustomTag(false); }
-                          }}
-                          onBlur={() => { if (textValue(customTagInput).trim()) addCustomTag(customTagInput); setCustomTagInput(''); setAddingCustomTag(false); }}
-                          placeholder="TICKER"
-                          className="w-20 rounded-full border border-amber-400/60 bg-zinc-950 px-2.5 py-1 font-data text-[11px] tracking-wide text-zinc-100 focus:outline-none"
-                        />
-                      ) : (
-                        customTags.length < MAX_CUSTOM_TAGS && (
-                          <button
-                            type="button"
-                            onClick={() => setAddingCustomTag(true)}
-                            title="Добавить свой инструмент"
-                            className="flex items-center justify-center h-6 w-6 rounded-full border border-dashed border-zinc-700 text-zinc-500 hover:text-amber-400 hover:border-amber-400/60 transition-colors"
-                          >
-                            <Plus className="h-3 w-3" />
-                          </button>
-                        )
-                      )}
+                {(() => {
+                  const key = form.instrument.trim().toUpperCase();
+                  const info = INSTRUMENT_INFO[key];
+                  return (
+                    <div className="flex items-center gap-3 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2.5 mb-2">
+                      <span className="text-xl leading-none">{info?.icon || '＋'}</span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-zinc-100 truncate">{key || 'Не выбран'}</p>
+                        {info && <p className="text-xs text-zinc-500 truncate">{info.label}</p>}
+                      </div>
                     </div>
+                  );
+                })()}
+
+                <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                  {quickAssetTags.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => { setForm((f) => ({ ...f, instrument: tag })); setFormError(''); }}
+                      className={[
+                        'rounded-full border px-2.5 py-1 font-data text-[11px] tracking-wide transition-colors',
+                        form.instrument.trim().toUpperCase() === tag
+                          ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                          : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
+                      ].join(' ')}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+
+                  {customTags.filter((t) => !quickAssetTags.includes(t)).map((tag) => (
+                    <span
+                      key={tag}
+                      draggable
+                      onDragStart={() => { dragTagIndex.current = customTags.indexOf(tag); }}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={() => {
+                        const dropIndex = customTags.indexOf(tag);
+                        if (dragTagIndex.current !== null && dragTagIndex.current !== dropIndex) reorderCustomTag(dragTagIndex.current, dropIndex);
+                        dragTagIndex.current = null;
+                      }}
+                      className={[
+                        'flex items-center gap-1 rounded-full border pl-2.5 pr-1 py-1 font-data text-[11px] tracking-wide cursor-grab transition-colors',
+                        form.instrument.trim().toUpperCase() === tag
+                          ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                          : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
+                      ].join(' ')}
+                    >
+                      <button type="button" onClick={() => { setForm((f) => ({ ...f, instrument: tag })); setFormError(''); }}>
+                        {tag}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeCustomTag(tag)}
+                        className="text-zinc-600 hover:text-red-400 transition-colors"
+                        aria-label={`Удалить ${tag}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+
+                  {addingCustomTag ? (
                     <input
                       type="text"
-                      value={form.instrument}
-                      onChange={(e) => { setForm((f) => ({ ...f, instrument: e.target.value })); setFormError(''); }}
-                      className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
-                      placeholder="Например, XAUUSD"
+                      autoFocus
+                      value={customTagInput}
+                      onChange={(e) => setCustomTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') { addCustomTag(customTagInput); setCustomTagInput(''); setAddingCustomTag(false); }
+                        if (e.key === 'Escape') { setCustomTagInput(''); setAddingCustomTag(false); }
+                      }}
+                      onBlur={() => { if (customTagInput.trim()) addCustomTag(customTagInput); setCustomTagInput(''); setAddingCustomTag(false); }}
+                      placeholder="TICKER"
+                      className="w-20 rounded-full border border-amber-400/60 bg-zinc-950 px-2.5 py-1 font-data text-[11px] tracking-wide text-zinc-100 focus:outline-none"
                     />
-                  </>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-2 gap-2 mb-2">
-                      {MONEY_CATEGORIES.map((category) => {
-                        const Icon = category.icon;
-                        const active = textValue(form.instrument).trim() === category.key;
-                        return (
-                          <button
-                            key={category.key}
-                            type="button"
-                            onClick={() => { setForm((f) => ({ ...f, instrument: category.key })); setFormError(''); }}
-                            className={[
-                              'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left transition-colors',
-                              active
-                                ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-300'
-                                : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200',
-                            ].join(' ')}
-                          >
-                            <Icon className="h-4 w-4 shrink-0" />
-                            <span className="text-xs font-medium">{category.key}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <input
-                      type="text"
-                      value={form.instrument}
-                      onChange={(e) => { setForm((f) => ({ ...f, instrument: e.target.value })); setFormError(''); }}
-                      className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-100 focus:outline-none focus:border-emerald-400/50 focus:ring-1 focus:ring-emerald-400/20"
-                      placeholder="Своя категория, например: Кафе"
-                    />
-                  </>
-                )}
+                  ) : (
+                    customTags.length < MAX_CUSTOM_TAGS && (
+                      <button
+                        type="button"
+                        onClick={() => setAddingCustomTag(true)}
+                        title="Добавить свой инструмент"
+                        className="flex items-center justify-center h-6 w-6 rounded-full border border-dashed border-zinc-700 text-zinc-500 hover:text-amber-400 hover:border-amber-400/60 transition-colors"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    )
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={form.instrument}
+                  onChange={(e) => { setForm((f) => ({ ...f, instrument: e.target.value })); setFormError(''); }}
+                  className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
+                  placeholder="Например, XAUUSD"
+                />
               </div>
+
               {traderMode && (
                 <div className="grid grid-cols-3 gap-2">
                   <button
@@ -2466,7 +2178,7 @@ export default function CalendarScreen() {
               <div className="grid grid-cols-[4fr_2fr] gap-3">
                 <div>
                   <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
-                    {traderMode ? 'Результат, $' : 'Сумма, $'}
+                    Результат, $
                   </label>
                   <div className="grid grid-cols-2 gap-1.5 mb-1.5">
                     <button
@@ -2482,7 +2194,7 @@ export default function CalendarScreen() {
                       ].join(' ')}
                     >
                       <TrendingUp className="h-3.5 w-3.5" />
-                      {traderMode ? 'Профит' : 'Доход'}
+                      Профит
                     </button>
                     <button
                       type="button"
@@ -2497,7 +2209,7 @@ export default function CalendarScreen() {
                       ].join(' ')}
                     >
                       <TrendingDown className="h-3.5 w-3.5" />
-                      {traderMode ? 'Убыток' : 'Расход'}
+                      Убыток
                     </button>
                   </div>
                   <input
@@ -2708,7 +2420,7 @@ export default function CalendarScreen() {
 
                 <button
                   onClick={handleSaveApiKeys}
-                  disabled={!textValue(apiForm.key).trim() || !textValue(apiForm.secret).trim()}
+                  disabled={!apiForm.key.trim() || !apiForm.secret.trim()}
                   className="w-full rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   Подключить {apiForm.exchange}
