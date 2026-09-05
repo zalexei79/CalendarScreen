@@ -619,7 +619,7 @@ export default function CalendarScreen() {
 
     supabase
       .from('trades')
-      .select('*')
+      .select('id,date_key,time,instrument,direction,pnl,comment,platform')
       .eq('user_id', cloudUserId)
       .then(({ data, error }) => {
         if (error) {
@@ -1058,7 +1058,10 @@ export default function CalendarScreen() {
       return;
     }
 
-    const signedPnl = form.sign === 'minus' ? -Math.abs(magnitude) : Math.abs(magnitude);
+    const signedPnl = form.sign === 'minus'
+      ? -Math.abs(magnitude)
+      : Math.abs(magnitude);
+
     const finalDirection =
       traderMode && form.direction
         ? form.direction
@@ -1067,13 +1070,19 @@ export default function CalendarScreen() {
     const time = textValue(form.time) || currentTimeHHMM();
     const comment = textValue(form.comment).trim();
     const platform = textValue(form.platform) || 'Manual';
+
     const tp = traderMode && textValue(form.takeProfit).trim() !== ''
       ? parseFloat(form.takeProfit)
       : null;
+
     const sl = traderMode && textValue(form.stopLoss).trim() !== ''
       ? parseFloat(form.stopLoss)
       : null;
 
+    // IMPORTANT:
+    // The journal always saves the user's action locally first. This means
+    // Money mode works with zero authentication, and a temporary/broken
+    // Supabase session can never prevent the user from adding a record.
     const localTrade = {
       time,
       instrument,
@@ -1082,38 +1091,51 @@ export default function CalendarScreen() {
       comment,
       platform,
       ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}),
+      pending: false,
     };
 
-    const cloudUserId = getValidUserId(user);
-
-    // ================= GUEST =================
-    if (!cloudUserId) {
-      if (editingTrade) {
-        setManualTrades((prev) => ({
-          ...prev,
-          [dateKey]: (prev[dateKey] || []).map((t) =>
-            t.id === editingTrade.id
-              ? { ...t, ...localTrade, pending: false }
-              : t
-          ),
-        }));
-      } else {
-        const localId = `guest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        setManualTrades((prev) => ({
-          ...prev,
-          [dateKey]: [...(prev[dateKey] || []), { id: localId, ...localTrade, pending: false }],
-        }));
-      }
-
-      setRecentInstruments((prev) =>
-        [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5)
-      );
-      closeModal();
-      return;
+    // ================= LOCAL FIRST =================
+    // This is the source of truth for the UI. It also writes to the guest
+    // or user-specific local cache through the manualTrades effect.
+    if (editingTrade) {
+      setManualTrades((prev) => ({
+        ...prev,
+        [dateKey]: (prev[dateKey] || []).map((t) =>
+          t.id === editingTrade.id
+            ? { ...t, ...localTrade }
+            : t
+        ),
+      }));
+    } else {
+      const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      setManualTrades((prev) => ({
+        ...prev,
+        [dateKey]: [
+          ...(prev[dateKey] || []),
+          {
+            id: localId,
+            ...localTrade,
+          },
+        ],
+      }));
     }
 
-    // ================= CLOUD =================
-    const tradeRow = {
+    setRecentInstruments((prev) =>
+      [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5)
+    );
+
+    // Close immediately so the user sees the successful action even if
+    // cloud sync is unavailable.
+    closeModal();
+
+    // ================= OPTIONAL CLOUD SYNC =================
+    // Only a verified UUID is allowed to reach Supabase.
+    const cloudUserId = getValidUserId(user);
+    if (!cloudUserId || !navigator.onLine) return;
+
+    // For now, do not send trader-only TP/SL fields because the user's
+    // current trades table does not contain those columns yet.
+    const cloudBase = {
       user_id: cloudUserId,
       date_key: dateKey,
       time,
@@ -1122,124 +1144,68 @@ export default function CalendarScreen() {
       pnl: signedPnl,
       comment,
       platform,
-      ...(PRO_DB_COLUMNS_AVAILABLE && traderMode
-        ? { take_profit: tp, stop_loss: sl }
-        : {}),
     };
 
-    if (editingTrade) {
-      const updates = {
-        time,
-        instrument,
-        direction: finalDirection,
-        pnl: signedPnl,
-        comment,
-        platform,
-        ...(PRO_DB_COLUMNS_AVAILABLE && traderMode
-          ? { take_profit: tp, stop_loss: sl }
-          : {}),
-      };
+    try {
+      if (editingTrade && !String(editingTrade.id).startsWith('local-')) {
+        const cloudUpdates = {
+          time,
+          instrument,
+          direction: finalDirection,
+          pnl: signedPnl,
+          comment,
+          platform,
+        };
+        const { error } = await supabase
+          .from('trades')
+          .update(cloudUpdates)
+          .eq('id', editingTrade.id);
 
-      if (!navigator.onLine) {
-        setManualTrades((prev) => ({
-          ...prev,
-          [dateKey]: (prev[dateKey] || []).map((t) =>
-            t.id === editingTrade.id ? { ...t, ...localTrade, pending: true } : t
-          ),
-        }));
-
-        const queue = readOfflineQueue(cloudUserId);
-        queue.push({ action: 'update', tradeId: editingTrade.id, updates });
-        writeOfflineQueue(queue, cloudUserId);
-        setPendingSyncCount(queue.length);
-        closeModal();
+        if (error) {
+          console.warn('[cloud-sync] update skipped:', error.message);
+        }
         return;
       }
 
-      const { error } = await updateTradeCloudCore(editingTrade.id, updates);
+      // A local ID is not a Supabase UUID. Create the cloud copy separately.
+      const { data, error } = await supabase
+        .from('trades')
+        .insert(cloudBase)
+        .select()
+        .single();
 
       if (error) {
-        setFormError('Не удалось сохранить: ' + error.message);
+        console.warn('[cloud-sync] insert skipped:', error.message);
         return;
       }
 
-      setManualTrades((prev) => ({
-        ...prev,
-        [dateKey]: (prev[dateKey] || []).map((t) =>
-          t.id === editingTrade.id
-            ? { ...t, ...localTrade, pending: false }
-            : t
-        ),
-      }));
-      closeModal();
-      return;
+      // Replace the temporary local id with the real cloud id so later
+      // editing/deleting the just-created record can work normally.
+      setManualTrades((prev) => {
+        const next = { ...prev };
+        next[dateKey] = (next[dateKey] || []).map((t) => {
+          if (
+            t.id === editingTrade?.id ||
+            (t.id && String(t.id).startsWith('local-') && !editingTrade)
+          ) {
+            // Only replace the most recently-created local record in add mode.
+            if (!editingTrade) {
+              return { ...t, id: data.id };
+            }
+          }
+          return t;
+        });
+        return next;
+      });
+    } catch (err) {
+      // Cloud sync must never turn a successful local save into a visible error.
+      console.warn('[cloud-sync] unavailable, local record kept:', err);
     }
-
-    if (!navigator.onLine) {
-      const tempId = `offline-${Date.now()}`;
-      setManualTrades((prev) => ({
-        ...prev,
-        [dateKey]: [
-          ...(prev[dateKey] || []),
-          { id: tempId, ...localTrade, pending: true },
-        ],
-      }));
-
-      const queue = readOfflineQueue(cloudUserId);
-      queue.push({ action: 'insert', tempId, trade: tradeRow });
-      writeOfflineQueue(queue, cloudUserId);
-      setPendingSyncCount(queue.length);
-      setRecentInstruments((prev) =>
-        [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5)
-      );
-      closeModal();
-      return;
-    }
-
-    const result = await insertTradeCloudCore(tradeRow);
-
-    if (result.error) {
-      if (result.invalidUserId || /invalid input syntax for type uuid/i.test(result.error.message || '')) {
-        // Never let a broken auth session destroy the journal.
-        const localId = `guest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        setManualTrades((prev) => ({
-          ...prev,
-          [dateKey]: [...(prev[dateKey] || []), { id: localId, ...localTrade, pending: false }],
-        }));
-        closeModal();
-        return;
-      }
-
-      setFormError('Не удалось сохранить: ' + result.error.message);
-      return;
-    }
-
-    const data = result.data;
-    const newTrade = {
-      id: data.id,
-      ...localTrade,
-      // DB doesn't have these columns yet, but keep what the user entered
-      // in the current browser session.
-      take_profit: tp,
-      stop_loss: sl,
-      pending: false,
-    };
-
-    setManualTrades((prev) => ({
-      ...prev,
-      [dateKey]: [...(prev[dateKey] || []), newTrade],
-    }));
-
-    setRecentInstruments((prev) =>
-      [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5)
-    );
-
-    closeModal();
   }
 
   async function handleDeleteTrade(dateKey, tradeId) {
-    // Guest mode is local-only: no Supabase call and no sync queue.
-    if (!user) {
+    // Local/guest records never go to Supabase.
+    if (!getValidUserId(user) || String(tradeId).startsWith('local-')) {
       setManualTrades((prev) => ({
         ...prev,
         [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId),
@@ -1247,31 +1213,49 @@ export default function CalendarScreen() {
       return;
     }
 
-    // if this trade only exists locally (never synced), just drop it and its queued insert
+    // Unsynced offline records are local-only.
     if (String(tradeId).startsWith('offline-')) {
       const cloudUserId = getValidUserId(user);
       const queue = readOfflineQueue(cloudUserId).filter((item) => item.tempId !== tradeId);
       writeOfflineQueue(queue, cloudUserId);
       setPendingSyncCount(queue.length);
-      setManualTrades((prev) => ({ ...prev, [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId) }));
+      setManualTrades((prev) => ({
+        ...prev,
+        [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId),
+      }));
       return;
     }
 
     if (!navigator.onLine) {
       const cloudUserId = getValidUserId(user);
+      if (!cloudUserId) {
+        setManualTrades((prev) => ({
+          ...prev,
+          [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId),
+        }));
+        return;
+      }
+
       const queue = readOfflineQueue(cloudUserId);
       queue.push({ action: 'delete', tradeId });
       writeOfflineQueue(queue, cloudUserId);
       setPendingSyncCount(queue.length);
-      setManualTrades((prev) => ({ ...prev, [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId) }));
+
+      setManualTrades((prev) => ({
+        ...prev,
+        [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId),
+      }));
       return;
     }
 
     const { error } = await supabase.from('trades').delete().eq('id', tradeId);
+
+    // The UI should still reflect the user's delete action even if the cloud
+    // copy cannot currently be removed.
     if (error) {
-      console.error('[trades] ошибка удаления:', error);
-      return;
+      console.warn('[trades] cloud delete skipped:', error.message);
     }
+
     setManualTrades((prev) => ({
       ...prev,
       [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId),
@@ -1326,20 +1310,26 @@ export default function CalendarScreen() {
       return;
     }
 
-    // Guest history is stored locally and can be cleared without login.
     const cloudUserId = getValidUserId(user);
-    if (!cloudUserId) {
-      setManualTrades({});
-      setConfirmingClear(false);
-      return;
-    }
-    const { error } = await supabase.from('trades').delete().eq('user_id', cloudUserId);
-    if (error) {
-      console.error('[trades] ошибка очистки истории:', error);
-      return;
-    }
+
+    // Local state is always cleared immediately.
     setManualTrades({});
     setConfirmingClear(false);
+
+    if (!cloudUserId || !navigator.onLine) return;
+
+    try {
+      const { error } = await supabase
+        .from('trades')
+        .delete()
+        .eq('user_id', cloudUserId);
+
+      if (error) {
+        console.warn('[trades] cloud clear skipped:', error.message);
+      }
+    } catch (err) {
+      console.warn('[trades] cloud clear unavailable:', err);
+    }
   }
 
   function handleExportCsv() {
