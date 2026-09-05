@@ -152,8 +152,12 @@ function getMoneyCategoryMeta(category) {
 }
 
 function getValidUserId(user) {
-  const id = user?.id;
-  return typeof id === 'string' && id.trim() ? id.trim() : null;
+  const id = typeof user?.id === 'string' ? user.id.trim() : '';
+  // Supabase public.user_id is UUID. Treat anything else (including the
+  // literal string "undefined") as a guest session.
+  const uuidPattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidPattern.test(id) ? id : null;
 }
 
 export default function CalendarScreen() {
@@ -1146,6 +1150,26 @@ export default function CalendarScreen() {
     const { data, error } = await supabase.from('trades').insert(tradeRow).select().single();
 
     if (error) {
+      // A malformed/legacy auth session must never block the journal.
+      // Fall back to local storage when Supabase rejects the user UUID.
+      if (/invalid input syntax for type uuid/i.test(error.message || '')) {
+        console.warn('[trades] invalid auth UUID; saving locally as guest');
+        const localId = `guest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const fallbackTrade = {
+          id: localId,
+          ...localTradeBase,
+          ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}),
+          pending: false,
+        };
+        setManualTrades((prev) => ({
+          ...prev,
+          [dateKey]: [...(prev[dateKey] || []), fallbackTrade],
+        }));
+        setRecentInstruments((prev) => [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5));
+        closeModal();
+        return;
+      }
+
       setFormError('Не удалось сохранить: ' + error.message);
       return;
     }
