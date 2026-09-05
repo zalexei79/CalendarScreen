@@ -152,7 +152,7 @@ function getMoneyCategoryMeta(category) {
 }
 
 function getValidUserId(user) {
-  const id = typeof user?.id === 'string' ? user.id.trim() : '';
+  const id = typeof user?.id === 'string' ? getValidUserId(user).trim() : '';
   // Supabase public.user_id is UUID. Treat anything else (including the
   // literal string "undefined") as a guest session.
   const uuidPattern =
@@ -411,7 +411,7 @@ export default function CalendarScreen() {
   // Guest users work completely locally. Authenticated users get their own
   // browser cache, so different accounts on the same device never mix data.
   const GUEST_TRADES_CACHE_KEY = 'money_calendar_guest_trades_cache';
-  const OFFLINE_QUEUE_KEY = 'atj_offline_queue';
+  const LEGACY_OFFLINE_QUEUE_KEY = 'atj_offline_queue';
 
   function getTradesCacheKey(userId) {
     return userId ? `money_calendar_trades_${userId}` : GUEST_TRADES_CACHE_KEY;
@@ -436,24 +436,57 @@ export default function CalendarScreen() {
     }
   }
 
-  function readOfflineQueue() {
+  function getOfflineQueueKey(userId) {
+    return userId
+      ? `atj_offline_queue_${userId}`
+      : 'atj_offline_queue_guest';
+  }
+
+  function readOfflineQueue(userId = null) {
     try {
-      return JSON.parse(window.localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]');
+      const key = getOfflineQueueKey(userId);
+      const raw = window.localStorage.getItem(key);
+      const parsed = JSON.parse(raw || '[]');
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
   }
 
-  function writeOfflineQueue(queue) {
+  function writeOfflineQueue(queue, userId = null) {
     try {
-      window.localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+      window.localStorage.setItem(getOfflineQueueKey(userId), JSON.stringify(queue));
     } catch {
       // ignore storage failures
     }
   }
 
-  const [pendingSyncCount, setPendingSyncCount] = useState(() => readOfflineQueue().length);
+  const [pendingSyncCount, setPendingSyncCount] = useState(() => {
+    return readOfflineQueue(null).length;
+  });
   const tradesCacheOwnerRef = useRef('__loading__');
+
+  // A small migration cleanup: the old global queue could contain records
+  // with user_id = undefined. They must never be sent to a UUID column.
+  useEffect(() => {
+    try {
+      const legacy = JSON.parse(window.localStorage.getItem(LEGACY_OFFLINE_QUEUE_KEY) || '[]');
+      if (!Array.isArray(legacy)) return;
+      const clean = legacy.filter((item) => {
+        const id = typeof item?.trade?.user_id === 'string' ? item.trade.user_id.trim() : '';
+        return getValidUserId({ id }) !== null;
+      });
+      window.localStorage.removeItem(LEGACY_OFFLINE_QUEUE_KEY);
+      if (clean.length) {
+        const id = clean[0]?.trade?.user_id;
+        if (getValidUserId({ id })) {
+          writeOfflineQueue(clean, id);
+        }
+      }
+    } catch {
+      // ignore legacy queue migration errors
+    }
+  }, []);
 
   // --- Install as app (PWA) ------------------------------------------------
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
@@ -493,35 +526,115 @@ export default function CalendarScreen() {
     setInstallInfoOpen((v) => !v);
   }
 
+  async function insertTradeCloudSafe(trade) {
+    const cleanUserId = getValidUserId({ id: trade?.user_id });
+    if (!cleanUserId) {
+      return {
+        data: null,
+        error: new Error('Некорректный user_id: запись сохранена локально.'),
+        invalidUserId: true,
+      };
+    }
+
+    const firstPayload = { ...trade, user_id: cleanUserId };
+    let result = await supabase.from('trades').insert(firstPayload).select().single();
+
+    // PRO may contain TP/SL while the current database schema may not yet
+    // have those optional columns. Save the core trade anyway and keep the
+    // optional values locally until the columns are added.
+    if (
+      result.error &&
+      /could not find the '?(stop_loss|take_profit)'? column|schema cache|column.*does not exist/i.test(
+        result.error.message || ''
+      ) &&
+      ('stop_loss' in firstPayload || 'take_profit' in firstPayload)
+    ) {
+      const fallbackPayload = { ...firstPayload };
+      delete fallbackPayload.stop_loss;
+      delete fallbackPayload.take_profit;
+
+      result = await supabase.from('trades').insert(fallbackPayload).select().single();
+
+      if (!result.error) {
+        return { ...result, optionalColumnsMissing: true };
+      }
+    }
+
+    if (
+      result.error &&
+      /invalid input syntax for type uuid/i.test(result.error.message || '')
+    ) {
+      return { ...result, invalidUserId: true };
+    }
+
+    return result;
+  }
+
+  async function updateTradeCloudSafe(tradeId, updates) {
+    let result = await supabase.from('trades').update(updates).eq('id', tradeId);
+
+    if (
+      result.error &&
+      /could not find the '?(stop_loss|take_profit)'? column|schema cache|column.*does not exist/i.test(
+        result.error.message || ''
+      ) &&
+      ('stop_loss' in updates || 'take_profit' in updates)
+    ) {
+      const fallbackUpdates = { ...updates };
+      delete fallbackUpdates.stop_loss;
+      delete fallbackUpdates.take_profit;
+      result = await supabase.from('trades').update(fallbackUpdates).eq('id', tradeId);
+
+      if (!result.error) {
+        return { ...result, optionalColumnsMissing: true };
+      }
+    }
+
+    return result;
+  }
+
   async function flushOfflineQueue() {
-    if (!user || !navigator.onLine) return;
-    const queue = readOfflineQueue();
-    if (queue.length === 0) return;
+    const cloudUserId = getValidUserId(user);
+    if (!cloudUserId || !navigator.onLine) return;
+
+    const queue = readOfflineQueue(cloudUserId);
+    if (queue.length === 0) {
+      setPendingSyncCount(0);
+      return;
+    }
 
     const remaining = [];
+
     for (const item of queue) {
       try {
         if (item.action === 'insert') {
-          const queuedUserId = item.trade?.user_id;
-          if (!queuedUserId) {
-            // Legacy guest queue item: guest data stays local and must not
-            // be sent to Supabase without a real authenticated user id.
+          const queuedUserId = getValidUserId({ id: item.trade?.user_id });
+
+          // Never send another user's queue or malformed UUIDs to Supabase.
+          if (!queuedUserId || queuedUserId !== cloudUserId) {
+            console.warn('[offline] пропускаю запись с некорректным/чужим user_id');
             continue;
           }
-          const { data, error } = await supabase.from('trades').insert(item.trade).select().single();
-          if (error) throw error;
-          // swap the temporary offline id for the real database id
+
+          const result = await insertTradeCloudSafe(item.trade);
+          if (result.error) throw result.error;
+
           setManualTrades((prev) => ({
             ...prev,
             [item.trade.date_key]: (prev[item.trade.date_key] || []).map((t) =>
-              t.id === item.tempId ? { ...t, id: data.id } : t
+              t.id === item.tempId
+                ? { ...t, id: result.data.id, pending: false }
+                : t
             ),
-          }));
+          });
         } else if (item.action === 'update') {
-          const { error } = await supabase.from('trades').update(item.updates).eq('id', item.tradeId);
+          const { error } = await updateTradeCloudSafe(item.tradeId, item.updates);
           if (error) throw error;
         } else if (item.action === 'delete') {
-          const { error } = await supabase.from('trades').delete().eq('id', item.tradeId);
+          const { error } = await supabase
+            .from('trades')
+            .delete()
+            .eq('id', item.tradeId);
           if (error) throw error;
         }
       } catch (err) {
@@ -529,7 +642,8 @@ export default function CalendarScreen() {
         remaining.push(item);
       }
     }
-    writeOfflineQueue(remaining);
+
+    writeOfflineQueue(remaining, cloudUserId);
     setPendingSyncCount(remaining.length);
   }
 
@@ -544,6 +658,7 @@ export default function CalendarScreen() {
     const cloudUserId = getValidUserId(user);
     const owner = cloudUserId || 'guest';
     tradesCacheOwnerRef.current = '__loading__';
+    setPendingSyncCount(readOfflineQueue(cloudUserId).length);
 
     const cached = readCachedTrades(cloudUserId);
     setManualTrades(cached);
@@ -1096,18 +1211,15 @@ export default function CalendarScreen() {
             t.id === editingTrade.id ? { ...t, ...updates, pending: true } : t
           ),
         }));
-        const queue = readOfflineQueue();
+        const queue = readOfflineQueue(cloudUserId);
         queue.push({ action: 'update', tradeId: editingTrade.id, updates });
-        writeOfflineQueue(queue);
+        writeOfflineQueue(queue, cloudUserId);
         setPendingSyncCount(queue.length);
         closeModal();
         return;
       }
 
-      const { error: updateError } = await supabase
-        .from('trades')
-        .update(updates)
-        .eq('id', editingTrade.id);
+      const { error: updateError } = await updateTradeCloudSafe(editingTrade.id, updates);
 
       if (updateError) {
         setFormError('Не удалось сохранить: ' + updateError.message);
@@ -1138,21 +1250,22 @@ export default function CalendarScreen() {
         [dateKey]: [...(prev[dateKey] || []), newTrade],
       }));
 
-      const queue = readOfflineQueue();
+      const queue = readOfflineQueue(cloudUserId);
       queue.push({ action: 'insert', tempId, trade: tradeRow });
-      writeOfflineQueue(queue);
+      writeOfflineQueue(queue, cloudUserId);
       setPendingSyncCount(queue.length);
       setRecentInstruments((prev) => [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5));
       closeModal();
       return;
     }
 
-    const { data, error } = await supabase.from('trades').insert(tradeRow).select().single();
+    const result = await insertTradeCloudSafe(tradeRow);
+    const { data, error } = result;
 
     if (error) {
       // A malformed/legacy auth session must never block the journal.
       // Fall back to local storage when Supabase rejects the user UUID.
-      if (/invalid input syntax for type uuid/i.test(error.message || '')) {
+      if (result.invalidUserId || /invalid input syntax for type uuid/i.test(error.message || '')) {
         console.warn('[trades] invalid auth UUID; saving locally as guest');
         const localId = `guest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         const fallbackTrade = {
@@ -1197,7 +1310,7 @@ export default function CalendarScreen() {
 
   async function handleDeleteTrade(dateKey, tradeId) {
     // Guest mode is local-only: no Supabase call and no sync queue.
-    if (!user) {
+    if (!getValidUserId(user)) {
       setManualTrades((prev) => ({
         ...prev,
         [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId),
@@ -1207,17 +1320,19 @@ export default function CalendarScreen() {
 
     // if this trade only exists locally (never synced), just drop it and its queued insert
     if (String(tradeId).startsWith('offline-')) {
-      const queue = readOfflineQueue().filter((item) => item.tempId !== tradeId);
-      writeOfflineQueue(queue);
+      const cloudUserId = getValidUserId(user);
+      const queue = readOfflineQueue(cloudUserId).filter((item) => item.tempId !== tradeId);
+      writeOfflineQueue(queue, cloudUserId);
       setPendingSyncCount(queue.length);
       setManualTrades((prev) => ({ ...prev, [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId) }));
       return;
     }
 
     if (!navigator.onLine) {
-      const queue = readOfflineQueue();
+      const cloudUserId = getValidUserId(user);
+      const queue = readOfflineQueue(cloudUserId);
       queue.push({ action: 'delete', tradeId });
-      writeOfflineQueue(queue);
+      writeOfflineQueue(queue, cloudUserId);
       setPendingSyncCount(queue.length);
       setManualTrades((prev) => ({ ...prev, [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId) }));
       return;
