@@ -211,7 +211,7 @@ const TRANSLATIONS = {
     saveRecord: 'Сохранить запись', recordNotePlaceholder: 'Заметка по записи (необязательно)',
     recordFutureBlocked: 'Нельзя добавить запись на будущую дату',
     myMoney: 'Мои деньги',
-    freePlan: 'БЕСПЛАТНО', history: 'История', filters: 'Фильтры', all: 'Все', entries: 'записей',
+    freePlan: 'FREE', history: 'История', filters: 'Фильтры', all: 'Все', entries: 'записей',
     financialHistory: 'Финансовая история', resultForPeriod: 'Результат за выбранный период',
   },
   en: {
@@ -245,7 +245,7 @@ const TRANSLATIONS = {
     saveRecord: 'Salvează înregistrarea', recordNotePlaceholder: 'Notă (opțional)',
     recordFutureBlocked: 'Nu se poate adăuga o înregistrare pentru o dată viitoare',
     myMoney: 'Banii mei',
-    freePlan: 'GRATUIT', history: 'Istoric', filters: 'Filtre', all: 'Toate', entries: 'înregistrări',
+    freePlan: 'FREE', history: 'Istoric', filters: 'Filtre', all: 'Toate', entries: 'înregistrări',
     financialHistory: 'Istoric financiar', resultForPeriod: 'Rezultat pentru perioada selectată',
   },
 };
@@ -285,6 +285,7 @@ export default function CalendarScreen() {
   const [nicknameModalOpen, setNicknameModalOpen] = useState(false);
   const [nicknameModalVisible, setNicknameModalVisible] = useState(false);
   const [nicknameInput, setNicknameInput] = useState('');
+  const [setupStep, setSetupStep] = useState(null);
 
   // --- cTrader connection state ------------------------------------------
   const [ctraderConnected, setCtraderConnected] = useState(false);
@@ -392,6 +393,7 @@ export default function CalendarScreen() {
     const nickname = textValue(nicknameInput).trim() || googleName;
     supabase.auth.updateUser({ data: { nickname } });
     closeNicknameModal();
+    setSetupStep('language');
   }
 
   async function handleGoogleLogin() {
@@ -3074,6 +3076,18 @@ export default function CalendarScreen() {
         </div>
       )}
 
+
+      {setupStep && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
+          <div className={`w-full max-w-sm rounded-2xl border p-6 shadow-2xl ${isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'}`}>
+            <p className="font-data text-[10px] tracking-widest text-amber-400 uppercase mb-2">Настройка {setupStep === 'language' ? '1' : setupStep === 'currency' ? '2' : '3'} из 3</p>
+            <h2 className={`font-display text-xl font-semibold mb-4 ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>{setupStep === 'language' ? 'Выберите язык' : setupStep === 'currency' ? 'Выберите валюту' : 'Выберите тему'}</h2>
+            {setupStep === 'language' && <div className="grid grid-cols-3 gap-2">{LANGUAGES.map((item) => <button key={item.code} onClick={() => { setLanguage(item.code); setSetupStep('currency'); }} className="rounded-lg border border-zinc-300 px-3 py-3 font-data text-sm hover:border-amber-400">{item.label}</button>)}</div>}
+            {setupStep === 'currency' && <div className="grid grid-cols-2 gap-2">{CURRENCIES.map((item) => <button key={item.code} onClick={() => { setCurrency(item.code); setSetupStep('theme'); }} className="rounded-lg border border-zinc-300 px-3 py-3 font-data text-sm hover:border-amber-400">{item.symbol} {item.code}</button>)}</div>}
+            {setupStep === 'theme' && <div className="grid grid-cols-2 gap-2"><button onClick={() => { setTheme('light'); setSetupStep(null); }} className="rounded-lg border border-zinc-300 px-3 py-3 hover:border-amber-400">☀ День</button><button onClick={() => { setTheme('dark'); setSetupStep(null); }} className="rounded-lg border border-zinc-700 px-3 py-3 hover:border-amber-400">🌙 Ночь</button></div>}
+          </div>
+        </div>
+      )}
 
       {nicknameModalOpen && (
         <div
