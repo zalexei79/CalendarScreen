@@ -1651,13 +1651,13 @@ export default function CalendarScreen() {
 
                   <div className={`rounded-lg border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'}`}>
                     <p className={`flex items-center gap-1.5 text-[11px] uppercase tracking-wide mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}><CircleDollarSign className="h-3.5 w-3.5" /> {t('currency')}</p>
-                    <div className="flex gap-1.5">
+                    <div className="grid grid-cols-2 gap-1.5">
                       {CURRENCIES.map((c) => (
                         <button
                           key={c.code}
                           onClick={() => setCurrency(c.code)}
                           className={[
-                            'flex-1 rounded-md border px-2 py-1.5 text-xs font-data transition-colors',
+                            'rounded-md border px-2 py-1.5 text-xs font-data transition-colors',
                             currency === c.code
                               ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
                               : isLight
@@ -1795,6 +1795,8 @@ export default function CalendarScreen() {
                     'absolute top-0.5 bottom-0.5 left-0.5 w-[44px] rounded-full border transition-all duration-300 ease-out',
                     traderMode
                       ? 'translate-x-[44px] border-amber-400/50 bg-amber-400/10 shadow-[0_0_14px_rgba(251,191,36,0.08)]'
+                      : isLight
+                      ? 'translate-x-0 border-zinc-300 bg-zinc-200'
                       : 'translate-x-0 border-zinc-700 bg-zinc-800/90',
                   ].join(' ')}
                 />
