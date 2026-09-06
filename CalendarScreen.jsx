@@ -475,7 +475,17 @@ export default function CalendarScreen() {
     }
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsVisible, setSettingsVisible] = useState(false);
   const settingsRef = useRef(null);
+
+  function openSettings() {
+    setSettingsOpen(true);
+    requestAnimationFrame(() => setSettingsVisible(true));
+  }
+  function closeSettings() {
+    setSettingsVisible(false);
+    setTimeout(() => setSettingsOpen(false), 160);
+  }
 
   useEffect(() => {
     try { window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language); } catch { /* ignore */ }
@@ -492,7 +502,7 @@ export default function CalendarScreen() {
   useEffect(() => {
     if (!settingsOpen) return;
     function onDocClick(e) {
-      if (settingsRef.current && !settingsRef.current.contains(e.target)) setSettingsOpen(false);
+      if (settingsRef.current && !settingsRef.current.contains(e.target)) closeSettings();
     }
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
@@ -1495,6 +1505,7 @@ export default function CalendarScreen() {
         .font-display { font-family: 'Space Grotesk', sans-serif; }
         .font-data { font-family: 'JetBrains Mono', monospace; }
         @keyframes cellGlowIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
+        @keyframes themeIconPop { from { opacity: 0; transform: scale(0.4) rotate(-40deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
       `}</style>
 
       {/* HEADER */}
@@ -1510,19 +1521,25 @@ export default function CalendarScreen() {
               title={isLight ? t('themeDark') : t('themeLight')}
               aria-label="Переключить тему"
               className={[
-                'flex items-center gap-1 rounded-full border px-2 py-1 text-xs transition-colors',
+                'relative flex items-center gap-1 rounded-full border px-2 py-1 text-xs overflow-hidden transition-all duration-300',
                 isLight
                   ? 'border-zinc-300 bg-white text-zinc-600 hover:border-zinc-400'
                   : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-amber-400 hover:border-zinc-600',
               ].join(' ')}
             >
-              {isLight ? '☀️' : '🌙'}
+              <span
+                key={theme}
+                className="inline-block"
+                style={{ animation: 'themeIconPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both' }}
+              >
+                {isLight ? '☀️' : '🌙'}
+              </span>
             </button>
 
             <div className="relative" ref={settingsRef}>
               <button
                 type="button"
-                onClick={() => setSettingsOpen((v) => !v)}
+                onClick={() => (settingsOpen ? closeSettings() : openSettings())}
                 title={t('settings')}
                 aria-label={t('settings')}
                 className={[
@@ -1532,14 +1549,21 @@ export default function CalendarScreen() {
                     : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-amber-400 hover:border-zinc-600',
                 ].join(' ')}
               >
-                ⚙️
+                <span
+                  className="inline-block transition-transform duration-300 ease-out"
+                  style={{ transform: settingsOpen ? 'rotate(75deg)' : 'rotate(0deg)' }}
+                >
+                  ⚙️
+                </span>
               </button>
 
               {settingsOpen && (
                 <div
                   className={[
-                    'absolute right-0 top-full mt-2 z-30 rounded-xl border shadow-xl p-3',
+                    'absolute right-0 top-full mt-2 z-30 rounded-xl border shadow-xl p-3 origin-top-right',
                     'w-[220px] sm:w-[260px]',
+                    'transition-all duration-200 ease-out',
+                    settingsVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-1.5 scale-95',
                     isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900',
                   ].join(' ')}
                 >
@@ -1799,7 +1823,7 @@ export default function CalendarScreen() {
 
       {/* CALENDAR — the main view of the whole app */}
       <section
-        className="flex-1 px-3 sm:px-8 py-4 sm:py-6 border-b border-zinc-800 relative"
+        className={`flex-1 px-3 sm:px-8 py-4 sm:py-6 border-b relative transition-colors duration-200 ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}
         onClick={(e) => { if (e.target === e.currentTarget) setSelectedKey(null); }}
       >
         <div
@@ -1807,7 +1831,7 @@ export default function CalendarScreen() {
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedKey(null); }}
         >
           {WEEKDAYS.map((w) => (
-            <div key={w} className="font-data text-[11px] tracking-wider text-zinc-600 text-center uppercase pb-1">
+            <div key={w} className={`font-data text-[11px] tracking-wider text-center uppercase pb-1 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
               {w}
             </div>
           ))}
@@ -1842,22 +1866,28 @@ export default function CalendarScreen() {
                 className={[
                   'relative rounded-md border flex flex-col justify-between text-left transition-all duration-150',
                   'min-h-[64px] sm:min-h-[110px] p-1.5 sm:p-4',
-                  cell.inMonth ? (hasTrades ? 'bg-zinc-900' : 'bg-zinc-900/20') : 'bg-zinc-950',
-                  cell.inMonth ? (hasTrades ? 'border-zinc-800' : 'border-zinc-800/30') : 'border-zinc-900',
+                  isLight
+                    ? (cell.inMonth ? (hasTrades ? 'bg-white' : 'bg-zinc-50') : 'bg-zinc-100')
+                    : (cell.inMonth ? (hasTrades ? 'bg-zinc-900' : 'bg-zinc-900/20') : 'bg-zinc-950'),
+                  isLight
+                    ? (cell.inMonth ? (hasTrades ? 'border-zinc-300' : 'border-zinc-200') : 'border-zinc-200')
+                    : (cell.inMonth ? (hasTrades ? 'border-zinc-800' : 'border-zinc-800/30') : 'border-zinc-900'),
                   !cell.inMonth ? 'opacity-40' : '',
                   isSelected
-                    ? 'border-amber-400 ring-2 ring-amber-400/60 bg-zinc-800 scale-[1.03] shadow-lg shadow-amber-500/10 z-10'
+                    ? `border-amber-400 ring-2 ring-amber-400/60 scale-[1.03] shadow-lg shadow-amber-500/10 z-10 ${isLight ? 'bg-amber-50' : 'bg-zinc-800'}`
+                    : isLight
+                    ? 'hover:border-zinc-400 hover:bg-zinc-100'
                     : 'hover:border-zinc-600 hover:bg-zinc-800/60',
                 ].join(' ')}
               >
                 {cell.isToday && (
                   <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-amber-400" />
                 )}
-                <span className={`font-data text-xs sm:text-base ${cell.inMonth ? 'text-zinc-400' : 'text-zinc-700'}`}>
+                <span className={`font-data text-xs sm:text-base ${cell.inMonth ? (isLight ? 'text-zinc-500' : 'text-zinc-400') : (isLight ? 'text-zinc-300' : 'text-zinc-700')}`}>
                   {cell.date.getDate()}
                 </span>
                 {cell.inMonth && hasTrades && (
-                  <span className={`font-data text-[10px] sm:text-lg font-medium whitespace-nowrap ${isProfit ? 'text-emerald-400' : 'text-red-400'}`}>
+                  <span className={`font-data text-[10px] sm:text-lg font-medium whitespace-nowrap ${isProfit ? 'text-emerald-500' : 'text-red-500'}`}>
                     {pnlText}
                   </span>
                 )}
@@ -1875,11 +1905,11 @@ export default function CalendarScreen() {
         onClick={(e) => { if (mouseDownOnBackdrop.current) setSelectedKey(null); }}
       >
       <div
-        className="absolute inset-x-0 bottom-0 max-h-[82vh] rounded-t-2xl border-t border-zinc-800 bg-zinc-950 shadow-2xl overflow-y-auto"
+        className={`absolute inset-x-0 bottom-0 max-h-[82vh] rounded-t-2xl border-t shadow-2xl overflow-y-auto transition-colors duration-200 ${isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-950'}`}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="max-w-3xl mx-auto px-3 sm:px-8 py-4 sm:py-8 flex flex-col gap-4">
-          <div className="mx-auto h-1 w-10 rounded-full bg-zinc-700 -mt-1 mb-1" />
+          <div className={`mx-auto h-1 w-10 rounded-full -mt-1 mb-1 ${isLight ? 'bg-zinc-300' : 'bg-zinc-700'}`} />
           <div className="flex items-center justify-between">
             <div>
               <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">{selectedKey}</p>
@@ -1902,21 +1932,21 @@ export default function CalendarScreen() {
             </div>
           </div>
 
-          <div className="inline-flex items-center self-start rounded-md border border-zinc-700 bg-zinc-900 overflow-hidden">
+          <div className={`inline-flex items-center self-start rounded-md border overflow-hidden ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-700 bg-zinc-900'}`}>
             <button
               onClick={openAnalysis}
               disabled={periodStats.count === 0}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm text-amber-400 hover:bg-amber-400/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-3 py-2 text-sm text-amber-500 hover:bg-amber-400/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <Sparkles className="h-4 w-4" />
               {t('analysis')}
             </button>
-            <span className="h-5 w-px bg-zinc-700" />
+            <span className={`h-5 w-px ${isLight ? 'bg-zinc-300' : 'bg-zinc-700'}`} />
             <button
-              onClick={openModal}
+              onClick={() => openModal()}
               disabled={isFutureSelected}
               title={isFutureSelected ? (traderMode ? 'Нельзя добавить сделку на будущую дату' : t('recordFutureBlocked')) : undefined}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${isLight ? 'text-zinc-700 hover:bg-zinc-200' : 'text-zinc-200 hover:bg-zinc-800'}`}
             >
               <Plus className="h-4 w-4" />
               {traderMode ? t('addTrade') : t('addRecord')}
@@ -1924,57 +1954,57 @@ export default function CalendarScreen() {
           </div>
 
           {traderMode ? (
-            <div className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900 px-4 py-2 font-data text-xs text-zinc-400">
-              <span>{t('trades')}: <span className="text-zinc-100 font-medium">{periodStats.count}</span></span>
-              <span className="text-zinc-700">•</span>
-              <span>PnL: <span className={`font-medium ${periodStats.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{periodStats.pnl >= 0 ? '+' : '-'}{currencySymbol}{formatMoney(periodStats.pnl)}</span></span>
-              <span className="text-zinc-700">•</span>
-              <span>{t('winrate')}: <span className="text-zinc-100 font-medium">{periodStats.winrate}%</span></span>
+            <div className={`flex items-center gap-2 rounded-md border px-4 py-2 font-data text-xs ${isLight ? 'border-zinc-300 bg-zinc-50 text-zinc-500' : 'border-zinc-800 bg-zinc-900 text-zinc-400'}`}>
+              <span>{t('trades')}: <span className={isLight ? 'text-zinc-900 font-medium' : 'text-zinc-100 font-medium'}>{periodStats.count}</span></span>
+              <span className={isLight ? 'text-zinc-300' : 'text-zinc-700'}>•</span>
+              <span>PnL: <span className={`font-medium ${periodStats.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{periodStats.pnl >= 0 ? '+' : '-'}{currencySymbol}{formatMoney(periodStats.pnl)}</span></span>
+              <span className={isLight ? 'text-zinc-300' : 'text-zinc-700'}>•</span>
+              <span>{t('winrate')}: <span className={isLight ? 'text-zinc-900 font-medium' : 'text-zinc-100 font-medium'}>{periodStats.winrate}%</span></span>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5">
-                <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">{t('operations')}</p>
-                <p className="font-data text-sm text-zinc-100">{periodStats.count}</p>
+              <div className={`rounded-lg border px-3 py-2.5 ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-900'}`}>
+                <p className={`text-[10px] uppercase tracking-wider mb-1 ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('operations')}</p>
+                <p className={`font-data text-sm ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{periodStats.count}</p>
               </div>
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5">
-                <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">{t('income')}</p>
-                <p className="font-data text-sm text-emerald-400">+{currencySymbol}{formatMoney(periodTrades.reduce((sum, t) => sum + (t.pnl > 0 ? t.pnl : 0), 0))}</p>
+              <div className={`rounded-lg border px-3 py-2.5 ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-900'}`}>
+                <p className={`text-[10px] uppercase tracking-wider mb-1 ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('income')}</p>
+                <p className="font-data text-sm text-emerald-500">+{currencySymbol}{formatMoney(periodTrades.reduce((sum, t) => sum + (t.pnl > 0 ? t.pnl : 0), 0))}</p>
               </div>
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5">
-                <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">{t('expense')}</p>
-                <p className="font-data text-sm text-red-400">−{currencySymbol}{formatMoney(periodTrades.reduce((sum, t) => sum + (t.pnl < 0 ? Math.abs(t.pnl) : 0), 0))}</p>
+              <div className={`rounded-lg border px-3 py-2.5 ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-900'}`}>
+                <p className={`text-[10px] uppercase tracking-wider mb-1 ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('expense')}</p>
+                <p className="font-data text-sm text-red-500">−{currencySymbol}{formatMoney(periodTrades.reduce((sum, t) => sum + (t.pnl < 0 ? Math.abs(t.pnl) : 0), 0))}</p>
               </div>
             </div>
           )}
 
           {periodTrades.length > 0 ? (
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900 divide-y divide-zinc-800">
+            <div className={`rounded-lg border divide-y ${isLight ? 'border-zinc-300 bg-zinc-50 divide-zinc-200' : 'border-zinc-800 bg-zinc-900 divide-zinc-800'}`}>
               {periodTrades.map((trade) => (
                 <div key={trade.id} className="px-4 py-3 group">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <span className="font-data text-xs text-zinc-500 w-12">{trade.time}</span>
-                      <span className="text-sm text-zinc-200 font-medium">{trade.instrument}</span>
+                      <span className={`font-data text-xs w-12 ${isLight ? 'text-zinc-400' : 'text-zinc-500'}`}>{trade.time}</span>
+                      <span className={`text-sm font-medium ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{trade.instrument}</span>
                       <span
                         className={[
                           'font-data text-[11px] tracking-wider px-2 py-0.5 rounded-full',
                           trade.pnl >= 0
-                            ? 'bg-emerald-500/10 text-emerald-400'
-                            : 'bg-red-500/10 text-red-400',
+                            ? 'bg-emerald-500/10 text-emerald-500'
+                            : 'bg-red-500/10 text-red-500',
                         ].join(' ')}
                       >
                         {trade.pnl >= 0 ? (traderMode ? 'Прибыль' : 'Доход') : (traderMode ? 'Убыток' : 'Расход')}
                       </span>
-                      <span className="font-data text-[10px] text-zinc-600">{trade.platform}</span>
+                      <span className={`font-data text-[10px] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{trade.platform}</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className={`font-data text-sm font-medium ${trade.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      <span className={`font-data text-sm font-medium ${trade.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                         {trade.pnl >= 0 ? '+' : '-'}{currencySymbol}{formatMoney(trade.pnl)}
                       </span>
                       <button
                         onClick={() => openModal(trade)}
-                        className="text-zinc-600 hover:text-amber-400 transition-colors opacity-0 group-hover:opacity-100"
+                        className={`transition-colors opacity-0 group-hover:opacity-100 ${isLight ? 'text-zinc-400 hover:text-amber-500' : 'text-zinc-600 hover:text-amber-400'}`}
                         aria-label={traderMode ? 'Редактировать сделку' : t('editRecord')}
                         title={traderMode ? 'Редактировать сделку' : t('editRecord')}
                       >
@@ -1982,7 +2012,7 @@ export default function CalendarScreen() {
                       </button>
                       <button
                         onClick={() => handleDeleteTrade(trade.dateKey, trade.id)}
-                        className="text-zinc-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                        className={`transition-colors opacity-0 group-hover:opacity-100 ${isLight ? 'text-zinc-400 hover:text-red-500' : 'text-zinc-600 hover:text-red-400'}`}
                         aria-label={traderMode ? 'Удалить сделку' : t('deleteRecord')}
                         title={traderMode ? 'Удалить сделку' : t('deleteRecord')}
                       >
@@ -1990,15 +2020,15 @@ export default function CalendarScreen() {
                       </button>
                     </div>
                   </div>
-                  {trade.comment && <p className="text-xs text-zinc-500 mt-1.5 pl-16 leading-relaxed">{trade.comment}</p>}
+                  {trade.comment && <p className={`text-xs mt-1.5 pl-16 leading-relaxed ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{trade.comment}</p>}
                 </div>
               ))}
             </div>
           ) : (
             <div className="flex items-center justify-center py-16">
-              <div className="text-center max-w-sm border border-dashed border-zinc-800 rounded-xl px-10 py-10">
-                <Inbox className="h-8 w-8 text-zinc-700 mx-auto mb-4" />
-                <p className="text-zinc-500 text-sm">{traderMode ? 'Сделок за этот день пока нет' : 'Записей за этот день пока нет'}</p>
+              <div className={`text-center max-w-sm border border-dashed rounded-xl px-10 py-10 ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}>
+                <Inbox className={`h-8 w-8 mx-auto mb-4 ${isLight ? 'text-zinc-300' : 'text-zinc-700'}`} />
+                <p className={`text-sm ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{traderMode ? 'Сделок за этот день пока нет' : 'Записей за этот день пока нет'}</p>
               </div>
             </div>
           )}
@@ -2011,7 +2041,11 @@ export default function CalendarScreen() {
       <div className="fixed bottom-4 inset-x-0 flex justify-center z-30 pointer-events-none">
         <button
           onClick={openHistory}
-          className="pointer-events-auto flex items-center gap-2 rounded-full border border-zinc-700 bg-zinc-900/95 backdrop-blur px-4 py-2.5 text-sm text-zinc-200 shadow-xl hover:border-amber-400/60 hover:text-amber-400 transition-colors"
+          className={`pointer-events-auto flex items-center gap-2 rounded-full border backdrop-blur px-4 py-2.5 text-sm shadow-xl transition-colors ${
+            isLight
+              ? 'border-zinc-300 bg-white/95 text-zinc-700 hover:border-amber-400/60 hover:text-amber-500'
+              : 'border-zinc-700 bg-zinc-900/95 text-zinc-200 hover:border-amber-400/60 hover:text-amber-400'
+          }`}
         >
           <History className="h-4 w-4" />
           История
