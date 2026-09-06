@@ -151,6 +151,84 @@ function getMoneyCategoryMeta(category) {
   return MONEY_CATEGORIES.find((item) => item.key === category) || null;
 }
 
+// ---------------------------------------------------------------------------
+// Settings: language / currency / theme
+// Persisted locally per device (not per Supabase user) — same pattern as the
+// other small UI prefs already in this file (deposit size, trader mode).
+// ---------------------------------------------------------------------------
+const LANGUAGE_STORAGE_KEY = 'atj_language';
+const CURRENCY_STORAGE_KEY = 'atj_currency';
+const THEME_STORAGE_KEY = 'atj_theme';
+
+const LANGUAGES = [
+  { code: 'ru', label: 'RU' },
+  { code: 'en', label: 'EN' },
+  { code: 'md', label: 'MD' },
+];
+
+const CURRENCIES = [
+  { code: 'USD', symbol: '$', label: 'USD' },
+  { code: 'EUR', symbol: '€', label: 'EUR' },
+  { code: 'MDL', symbol: 'L', label: 'MDL' },
+];
+
+function getCurrencyMeta(code) {
+  return CURRENCIES.find((c) => c.code === code) || CURRENCIES[0];
+}
+
+// Only the chrome that's always visible (header, day panel, settings, empty
+// states) is translated for now — deep modals (platform connect, CSV import,
+// AI analysis copy) stay in Russian for this pass and can be extended later
+// using the same `t()` helper and dictionary shape.
+const TRANSLATIONS = {
+  ru: {
+    titleMoney: 'Денежный календарь', titlePro: 'Трейдерский календарь',
+    signIn: 'Войти через Google', signOut: 'Выйти из аккаунта',
+    settings: 'Настройки', language: 'Язык', currency: 'Валюта', theme: 'Тема',
+    themeDark: 'Ночь', themeLight: 'День',
+    balanceOfDay: 'Баланс дня', overallResult: 'Общий результат дня',
+    analysis: 'Анализ', addRecord: 'Новая запись', addTrade: 'Добавить сделку',
+    operations: 'История', income: 'Доходы', expense: 'Расходы',
+    trades: 'Сделок', winrate: 'Winrate', noRecords: 'Пока нет записей за этот период.',
+    close: 'Закрыть',
+    record: 'Запись', editRecord: 'Редактировать запись', deleteRecord: 'Удалить запись',
+    saveRecord: 'Сохранить запись', recordNotePlaceholder: 'Заметка по записи (необязательно)',
+    recordFutureBlocked: 'Нельзя добавить запись на будущую дату',
+  },
+  en: {
+    titleMoney: 'Money Calendar', titlePro: 'Trading Calendar',
+    signIn: 'Sign in with Google', signOut: 'Sign out',
+    settings: 'Settings', language: 'Language', currency: 'Currency', theme: 'Theme',
+    themeDark: 'Dark', themeLight: 'Light',
+    balanceOfDay: "Day's balance", overallResult: "Day's overall result",
+    analysis: 'Analysis', addRecord: 'New entry', addTrade: 'Add trade',
+    operations: 'History', income: 'Income', expense: 'Expenses',
+    trades: 'Trades', winrate: 'Winrate', noRecords: 'No entries for this period yet.',
+    close: 'Close',
+    record: 'Entry', editRecord: 'Edit entry', deleteRecord: 'Delete entry',
+    saveRecord: 'Save entry', recordNotePlaceholder: 'Note (optional)',
+    recordFutureBlocked: "Can't add an entry for a future date",
+  },
+  md: {
+    titleMoney: 'Calendar de bani', titlePro: 'Calendar de tranzacții',
+    signIn: 'Autentificare cu Google', signOut: 'Ieșire din cont',
+    settings: 'Setări', language: 'Limbă', currency: 'Valută', theme: 'Temă',
+    themeDark: 'Noapte', themeLight: 'Zi',
+    balanceOfDay: 'Soldul zilei', overallResult: 'Rezultatul zilei',
+    analysis: 'Analiză', addRecord: 'Înregistrare nouă', addTrade: 'Adaugă tranzacție',
+    operations: 'Istoric', income: 'Venituri', expense: 'Cheltuieli',
+    trades: 'Tranzacții', winrate: 'Winrate', noRecords: 'Încă nu sunt înregistrări pentru această perioadă.',
+    close: 'Închide',
+    record: 'Înregistrare', editRecord: 'Editează înregistrarea', deleteRecord: 'Șterge înregistrarea',
+    saveRecord: 'Salvează înregistrarea', recordNotePlaceholder: 'Notă (opțional)',
+    recordFutureBlocked: 'Nu se poate adăuga o înregistrare pentru o dată viitoare',
+  },
+};
+
+function translate(language, key) {
+  return (TRANSLATIONS[language] && TRANSLATIONS[language][key]) || TRANSLATIONS.ru[key] || key;
+}
+
 function getValidUserId(user) {
   const id = typeof user?.id === 'string' ? user.id.trim() : '';
   // Supabase public.user_id is UUID. Treat anything else (including the
@@ -371,12 +449,65 @@ export default function CalendarScreen() {
     }
   }, [traderMode]);
 
+  // --- Settings: language / currency / theme ------------------------------
+  const [language, setLanguage] = useState(() => {
+    try {
+      const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+      return LANGUAGES.some((l) => l.code === stored) ? stored : 'ru';
+    } catch {
+      return 'ru';
+    }
+  });
+  const [currency, setCurrency] = useState(() => {
+    try {
+      const stored = window.localStorage.getItem(CURRENCY_STORAGE_KEY);
+      return CURRENCIES.some((c) => c.code === stored) ? stored : 'USD';
+    } catch {
+      return 'USD';
+    }
+  });
+  const [theme, setTheme] = useState(() => {
+    try {
+      const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+      return stored === 'light' ? 'light' : 'dark';
+    } catch {
+      return 'dark';
+    }
+  });
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsRef = useRef(null);
+
+  useEffect(() => {
+    try { window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language); } catch { /* ignore */ }
+  }, [language]);
+
+  useEffect(() => {
+    try { window.localStorage.setItem(CURRENCY_STORAGE_KEY, currency); } catch { /* ignore */ }
+  }, [currency]);
+
+  useEffect(() => {
+    try { window.localStorage.setItem(THEME_STORAGE_KEY, theme); } catch { /* ignore */ }
+  }, [theme]);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    function onDocClick(e) {
+      if (settingsRef.current && !settingsRef.current.contains(e.target)) setSettingsOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [settingsOpen]);
+
+  const t = (key) => translate(language, key);
+  const currencySymbol = getCurrencyMeta(currency).symbol;
+  const isLight = theme === 'light';
+
   function formatPnlDisplay(amount, short) {
     if (displayMode === 'percent' && depositSize > 0) {
       const pct = (amount / depositSize) * 100;
       return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
     }
-    return `${amount >= 0 ? '+' : '-'}$${short ? formatMoneyShort(amount) : formatMoney(amount)}`;
+    return `${amount >= 0 ? '+' : '-'}${currencySymbol}${short ? formatMoneyShort(amount) : formatMoney(amount)}`;
   }
 
   const suppressNextHistoryPush = useRef(false);
@@ -1084,30 +1215,36 @@ export default function CalendarScreen() {
 
     // -------- LOCAL FIRST --------
     // This is what the UI renders. It never depends on Google/Supabase.
-    let nextTrades = manualTradesRef.current;
-    const nextForDay = [...(nextTrades[dateKey] || [])];
+    //
+    // IMPORTANT: this must go through the functional setState form, reading
+    // off `prev` (React's own latest state) rather than a manually-kept
+    // `manualTradesRef` snapshot. The ref is only re-synced *after* a render
+    // commits, so if a background update (cloud fetch merge, offline-queue
+    // flush) lands in that gap, a snapshot taken from the stale ref would
+    // overwrite it — this is what silently dropped a same-day second entry.
+    // Building the next value inside the updater keeps every save strictly
+    // ordered against every other update to the same state, regardless of
+    // timing.
+    setManualTrades((prev) => {
+      const nextForDay = [...(prev[dateKey] || [])];
 
-    if (isEditing) {
-      const index = nextForDay.findIndex((t) => String(t.id) === String(editingTrade.id));
-      if (index >= 0) {
-        nextForDay[index] = { ...nextForDay[index], ...localTrade };
+      if (isEditing) {
+        const index = nextForDay.findIndex((t) => String(t.id) === String(editingTrade.id));
+        if (index >= 0) {
+          nextForDay[index] = { ...nextForDay[index], ...localTrade };
+        } else {
+          nextForDay.push(localTrade);
+        }
       } else {
         nextForDay.push(localTrade);
       }
-    } else {
-      nextForDay.push(localTrade);
-    }
 
-    nextTrades = {
-      ...nextTrades,
-      [dateKey]: nextForDay,
-    };
-
-    manualTradesRef.current = nextTrades;
-    setManualTrades(nextTrades);
-
-    // Persist immediately to the correct local store.
-    cacheTradesLocally(nextTrades, cloudUserId);
+      const nextTrades = { ...prev, [dateKey]: nextForDay };
+      manualTradesRef.current = nextTrades;
+      // Persist immediately to the correct local store.
+      cacheTradesLocally(nextTrades, cloudUserId);
+      return nextTrades;
+    });
 
     setRecentInstruments((prev) =>
       [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5)
@@ -1193,14 +1330,16 @@ export default function CalendarScreen() {
   async function handleDeleteTrade(dateKey, tradeId) {
     const cloudUserId = getValidUserId(user);
 
-    const nextTrades = { ...manualTradesRef.current };
-    nextTrades[dateKey] = (nextTrades[dateKey] || []).filter(
-      (t) => String(t.id) !== String(tradeId)
-    );
-
-    manualTradesRef.current = nextTrades;
-    setManualTrades(nextTrades);
-    cacheTradesLocally(nextTrades, cloudUserId);
+    // Same reasoning as handleSaveTrade: build off `prev`, not the ref.
+    setManualTrades((prev) => {
+      const nextTrades = { ...prev };
+      nextTrades[dateKey] = (nextTrades[dateKey] || []).filter(
+        (t) => String(t.id) !== String(tradeId)
+      );
+      manualTradesRef.current = nextTrades;
+      cacheTradesLocally(nextTrades, cloudUserId);
+      return nextTrades;
+    });
 
     // Guest/local-only record.
     if (!cloudUserId || String(tradeId).startsWith('guest-') || String(tradeId).startsWith('local-')) {
@@ -1350,7 +1489,7 @@ export default function CalendarScreen() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-zinc-950 text-zinc-100 flex flex-col">
+    <div className={`min-h-screen w-full flex flex-col transition-colors duration-200 ${isLight ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
         .font-display { font-family: 'Space Grotesk', sans-serif; }
@@ -1359,8 +1498,103 @@ export default function CalendarScreen() {
       `}</style>
 
       {/* HEADER */}
-      <header className="px-3 sm:px-8 pt-4 sm:pt-8 pb-4 border-b border-zinc-800">
-        <p className="font-data text-[10px] tracking-widest text-zinc-600 uppercase mb-2">{traderMode ? 'Трейдерский календарь' : 'Денежный календарь'}</p>
+      <header className={`px-3 sm:px-8 pt-4 sm:pt-8 pb-4 border-b ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}>
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <p className={`font-data text-[10px] tracking-widest uppercase ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{traderMode ? t('titlePro') : t('titleMoney')}</p>
+
+          {/* Theme toggle + settings gear — compact on mobile, same control scales up on wider screens */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setTheme((v) => (v === 'light' ? 'dark' : 'light'))}
+              title={isLight ? t('themeDark') : t('themeLight')}
+              aria-label="Переключить тему"
+              className={[
+                'flex items-center gap-1 rounded-full border px-2 py-1 text-xs transition-colors',
+                isLight
+                  ? 'border-zinc-300 bg-white text-zinc-600 hover:border-zinc-400'
+                  : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-amber-400 hover:border-zinc-600',
+              ].join(' ')}
+            >
+              {isLight ? '☀️' : '🌙'}
+            </button>
+
+            <div className="relative" ref={settingsRef}>
+              <button
+                type="button"
+                onClick={() => setSettingsOpen((v) => !v)}
+                title={t('settings')}
+                aria-label={t('settings')}
+                className={[
+                  'flex items-center justify-center h-7 w-7 rounded-full border transition-colors',
+                  isLight
+                    ? 'border-zinc-300 bg-white text-zinc-600 hover:border-zinc-400'
+                    : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-amber-400 hover:border-zinc-600',
+                ].join(' ')}
+              >
+                ⚙️
+              </button>
+
+              {settingsOpen && (
+                <div
+                  className={[
+                    'absolute right-0 top-full mt-2 z-30 rounded-xl border shadow-xl p-3',
+                    'w-[220px] sm:w-[260px]',
+                    isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900',
+                  ].join(' ')}
+                >
+                  <p className={`font-data text-[10px] tracking-widest uppercase mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                    {t('settings')}
+                  </p>
+
+                  <div className="mb-3">
+                    <p className={`text-[11px] uppercase tracking-wide mb-1.5 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>🌐 {t('language')}</p>
+                    <div className="flex gap-1.5">
+                      {LANGUAGES.map((l) => (
+                        <button
+                          key={l.code}
+                          onClick={() => setLanguage(l.code)}
+                          className={[
+                            'flex-1 rounded-md border px-2 py-1.5 text-xs font-data transition-colors',
+                            language === l.code
+                              ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                              : isLight
+                              ? 'border-zinc-300 text-zinc-600 hover:border-zinc-400'
+                              : 'border-zinc-700 text-zinc-400 hover:border-zinc-600',
+                          ].join(' ')}
+                        >
+                          {l.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className={`text-[11px] uppercase tracking-wide mb-1.5 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>💵 {t('currency')}</p>
+                    <div className="flex gap-1.5">
+                      {CURRENCIES.map((c) => (
+                        <button
+                          key={c.code}
+                          onClick={() => setCurrency(c.code)}
+                          className={[
+                            'flex-1 rounded-md border px-2 py-1.5 text-xs font-data transition-colors',
+                            currency === c.code
+                              ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                              : isLight
+                              ? 'border-zinc-300 text-zinc-600 hover:border-zinc-400'
+                              : 'border-zinc-700 text-zinc-400 hover:border-zinc-600',
+                          ].join(' ')}
+                        >
+                          {c.symbol} {c.code}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -1440,7 +1674,7 @@ export default function CalendarScreen() {
                   </span>
                   <button
                     onClick={handleGoogleLogout}
-                    title="Выйти из аккаунта"
+                    title={t('signOut')}
                     className="flex items-center gap-1 text-zinc-500 hover:text-red-400 transition-colors border-l border-zinc-800 pl-1.5 ml-0.5"
                   >
                     <LogOut className="h-3 w-3" />
@@ -1452,7 +1686,7 @@ export default function CalendarScreen() {
                   className="flex items-center gap-1.5 px-2.5 py-1.5 text-zinc-400 hover:text-amber-400 transition-colors"
                 >
                   <LogIn className="h-3.5 w-3.5" />
-                  Войти через Google
+                  {t('signIn')}
                 </button>
               )}
             </div>
@@ -1551,7 +1785,9 @@ export default function CalendarScreen() {
                   <p className="text-xs text-zinc-400 leading-relaxed">{installInstructions}</p>
                   {pendingSyncCount > 0 && (
                     <p className="text-xs text-amber-400 mt-2 pt-2 border-t border-zinc-800">
-                      {pendingSyncCount} {pendingSyncCount === 1 ? 'сделка' : 'сделок'} сохранены офлайн и досинхронизируются, когда появится интернет.
+                      {pendingSyncCount} {traderMode
+                        ? (pendingSyncCount === 1 ? 'сделка' : 'сделок')
+                        : (pendingSyncCount === 1 ? 'запись' : 'записей')} сохранены офлайн и досинхронизируются, когда появится интернет.
                     </p>
                   )}
                 </div>
@@ -1647,7 +1883,7 @@ export default function CalendarScreen() {
           <div className="flex items-center justify-between">
             <div>
               <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">{selectedKey}</p>
-              <p className="text-[11px] text-zinc-500 mb-0.5">{traderMode ? 'Общий результат дня' : 'Баланс дня'}</p>
+              <p className="text-[11px] text-zinc-500 mb-0.5">{traderMode ? t('overallResult') : t('balanceOfDay')}</p>
               <div className="flex items-center gap-2">
                 {periodStats.count > 0 &&
                   (periodStats.pnl >= 0 ? (
@@ -1660,7 +1896,7 @@ export default function CalendarScreen() {
                     periodStats.count === 0 ? 'text-zinc-600' : periodStats.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'
                   }`}
                 >
-                  {periodStats.count === 0 ? '—' : `${periodStats.pnl >= 0 ? '+' : '-'}$${formatMoney(periodStats.pnl)}`}
+                  {periodStats.count === 0 ? '—' : `${periodStats.pnl >= 0 ? '+' : '-'}${currencySymbol}${formatMoney(periodStats.pnl)}`}
                 </span>
               </div>
             </div>
@@ -1673,41 +1909,41 @@ export default function CalendarScreen() {
               className="flex items-center gap-1.5 px-3 py-2 text-sm text-amber-400 hover:bg-amber-400/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <Sparkles className="h-4 w-4" />
-              Анализ
+              {t('analysis')}
             </button>
             <span className="h-5 w-px bg-zinc-700" />
             <button
               onClick={openModal}
               disabled={isFutureSelected}
-              title={isFutureSelected ? 'Нельзя добавить сделку на будущую дату' : undefined}
+              title={isFutureSelected ? (traderMode ? 'Нельзя добавить сделку на будущую дату' : t('recordFutureBlocked')) : undefined}
               className="flex items-center gap-1.5 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Plus className="h-4 w-4" />
-              {traderMode ? 'Добавить сделку' : 'Добавить запись'}
+              {traderMode ? t('addTrade') : t('addRecord')}
             </button>
           </div>
 
           {traderMode ? (
             <div className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900 px-4 py-2 font-data text-xs text-zinc-400">
-              <span>Сделок: <span className="text-zinc-100 font-medium">{periodStats.count}</span></span>
+              <span>{t('trades')}: <span className="text-zinc-100 font-medium">{periodStats.count}</span></span>
               <span className="text-zinc-700">•</span>
-              <span>PnL: <span className={`font-medium ${periodStats.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{periodStats.pnl >= 0 ? '+' : '-'}${formatMoney(periodStats.pnl)}</span></span>
+              <span>PnL: <span className={`font-medium ${periodStats.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{periodStats.pnl >= 0 ? '+' : '-'}{currencySymbol}{formatMoney(periodStats.pnl)}</span></span>
               <span className="text-zinc-700">•</span>
-              <span>Winrate: <span className="text-zinc-100 font-medium">{periodStats.winrate}%</span></span>
+              <span>{t('winrate')}: <span className="text-zinc-100 font-medium">{periodStats.winrate}%</span></span>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-2">
               <div className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5">
-                <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">Операций</p>
+                <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">{t('operations')}</p>
                 <p className="font-data text-sm text-zinc-100">{periodStats.count}</p>
               </div>
               <div className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5">
-                <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">Доходы</p>
-                <p className="font-data text-sm text-emerald-400">+${formatMoney(periodTrades.reduce((sum, t) => sum + (t.pnl > 0 ? t.pnl : 0), 0))}</p>
+                <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">{t('income')}</p>
+                <p className="font-data text-sm text-emerald-400">+{currencySymbol}{formatMoney(periodTrades.reduce((sum, t) => sum + (t.pnl > 0 ? t.pnl : 0), 0))}</p>
               </div>
               <div className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5">
-                <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">Расходы</p>
-                <p className="font-data text-sm text-red-400">−${formatMoney(periodTrades.reduce((sum, t) => sum + (t.pnl < 0 ? Math.abs(t.pnl) : 0), 0))}</p>
+                <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">{t('expense')}</p>
+                <p className="font-data text-sm text-red-400">−{currencySymbol}{formatMoney(periodTrades.reduce((sum, t) => sum + (t.pnl < 0 ? Math.abs(t.pnl) : 0), 0))}</p>
               </div>
             </div>
           )}
@@ -1734,21 +1970,21 @@ export default function CalendarScreen() {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className={`font-data text-sm font-medium ${trade.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {trade.pnl >= 0 ? '+' : '-'}${formatMoney(trade.pnl)}
+                        {trade.pnl >= 0 ? '+' : '-'}{currencySymbol}{formatMoney(trade.pnl)}
                       </span>
                       <button
                         onClick={() => openModal(trade)}
                         className="text-zinc-600 hover:text-amber-400 transition-colors opacity-0 group-hover:opacity-100"
-                        aria-label="Редактировать сделку"
-                        title="Редактировать сделку"
+                        aria-label={traderMode ? 'Редактировать сделку' : t('editRecord')}
+                        title={traderMode ? 'Редактировать сделку' : t('editRecord')}
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
                       <button
                         onClick={() => handleDeleteTrade(trade.dateKey, trade.id)}
                         className="text-zinc-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                        aria-label="Удалить сделку"
-                        title="Удалить сделку"
+                        aria-label={traderMode ? 'Удалить сделку' : t('deleteRecord')}
+                        title={traderMode ? 'Удалить сделку' : t('deleteRecord')}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -1828,11 +2064,11 @@ export default function CalendarScreen() {
                     <div className="grid grid-cols-2 gap-3 mt-4">
                       <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/70 px-3 py-3">
                         <p className="text-[11px] text-zinc-500 mb-1">Доходы</p>
-                        <p className="font-data text-sm text-emerald-400">+${formatMoney(historyIncome)}</p>
+                        <p className="font-data text-sm text-emerald-400">+{currencySymbol}{formatMoney(historyIncome)}</p>
                       </div>
                       <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/70 px-3 py-3">
                         <p className="text-[11px] text-zinc-500 mb-1">Расходы</p>
-                        <p className="font-data text-sm text-red-400">−${formatMoney(historyExpense)}</p>
+                        <p className="font-data text-sm text-red-400">−{currencySymbol}{formatMoney(historyExpense)}</p>
                       </div>
                     </div>
                   </div>
@@ -1905,7 +2141,7 @@ export default function CalendarScreen() {
                   )}
 
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs text-zinc-500">{historyTrades.length} операций</p>
+                    <p className="text-xs text-zinc-500">{historyTrades.length} {traderMode ? 'операций' : 'записей'}</p>
                     {periodPreset !== 'Вся история' && (
                       <button
                         onClick={() => setHistoryFiltersOpen(true)}
@@ -1935,7 +2171,7 @@ export default function CalendarScreen() {
                               <span className="block text-[11px] text-zinc-500 mt-0.5">{formatDateLabel(entry.dateKey)} · {entry.time}{entry.comment ? ` · ${entry.comment}` : ''}</span>
                             </span>
                             <span className={`font-data text-sm font-medium shrink-0 ${entry.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {entry.pnl >= 0 ? '+' : '−'}${formatMoney(entry.pnl)}
+                              {entry.pnl >= 0 ? '+' : '−'}{currencySymbol}{formatMoney(entry.pnl)}
                             </span>
                           </button>
                         );
@@ -1991,7 +2227,7 @@ export default function CalendarScreen() {
                       onClick={handleEditDeposit}
                       className="font-data text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
                     >
-                      Депозит: {depositSize > 0 ? `$${formatMoney(depositSize)}` : 'не задан'} ✎
+                      Депозит: {depositSize > 0 ? `${currencySymbol}${formatMoney(depositSize)}` : 'не задан'} ✎
                     </button>
                   </div>
 
@@ -2136,7 +2372,11 @@ export default function CalendarScreen() {
               <X className="h-4 w-4" />
             </button>
 
-            <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">{editingTrade ? 'Редактировать сделку' : 'Новая сделка'}</p>
+            <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">
+              {traderMode
+                ? (editingTrade ? 'Редактировать сделку' : 'Новая сделка')
+                : (editingTrade ? t('editRecord') : t('addRecord'))}
+            </p>
             <h2 className="font-display text-lg font-semibold text-zinc-50 mb-5">
               {modalDateKey &&
                 parseDateKeyLocal(modalDateKey).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -2428,7 +2668,7 @@ export default function CalendarScreen() {
                   onChange={(e) => setForm((f) => ({ ...f, comment: e.target.value }))}
                   rows={2}
                   className="w-full resize-none rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
-                  placeholder="Заметка по сделке (необязательно)"
+                  placeholder={traderMode ? 'Заметка по сделке (необязательно)' : t('recordNotePlaceholder')}
                 />
               </div>
 
@@ -2438,7 +2678,7 @@ export default function CalendarScreen() {
                 onClick={handleSaveTrade}
                 className="mt-1 w-full rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-300 transition-colors"
               >
-                {editingTrade ? 'Сохранить изменения' : 'Сохранить сделку'}
+                {editingTrade ? 'Сохранить изменения' : (traderMode ? 'Сохранить сделку' : t('saveRecord'))}
               </button>
             </div>
           </div>
