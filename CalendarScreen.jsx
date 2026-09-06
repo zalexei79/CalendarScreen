@@ -1566,7 +1566,7 @@ export default function CalendarScreen() {
   }
 
   return (
-    <div className={`h-screen min-h-[100dvh] w-full flex flex-col overflow-hidden transition-colors duration-200 ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
+    <div className={`min-h-screen w-full flex flex-col transition-colors duration-200 ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
         .font-display { font-family: 'Space Grotesk', sans-serif; }
@@ -1577,8 +1577,11 @@ export default function CalendarScreen() {
            every remaining dark utility class legible in the light theme,
            including the header, popovers and bottom sheets. */
         .theme-light .bg-zinc-950,
-        .theme-light .bg-zinc-900 { background-color: #ffffff !important; }
-        .theme-light .bg-zinc-800 { background-color: #e4e4e7 !important; }
+        .theme-light .bg-zinc-900 { background-color: #faf3eb !important; }
+        .theme-light .bg-zinc-800 { background-color: #e8e0d8 !important; }
+        .theme-light .bg-zinc-100 { background-color: #f5f0e8 !important; }
+        .theme-light .bg-zinc-50 { background-color: #f8f2ea !important; }
+        .theme-light .bg-white { background-color: #faf3eb !important; }
         .theme-light .text-zinc-50,
         .theme-light .text-zinc-100 { color: #18181b !important; }
         .theme-light .text-zinc-200 { color: #27272a !important; }
@@ -1588,10 +1591,9 @@ export default function CalendarScreen() {
         .theme-light .text-zinc-600 { color: #3f3f46 !important; }
         .theme-light .text-zinc-700 { color: #27272a !important; }
         .theme-light .border-zinc-800,
-        .theme-light .border-zinc-700 { border-color: #d4d4d8 !important; }
-        .theme-light .border-zinc-200 { border-color: #d4d4d8 !important; }
-        .theme-light .border-zinc-300 { border-color: #a1a1aa !important; }
-        .theme-light .bg-zinc-50 { background-color: #f4f4f5 !important; }
+        .theme-light .border-zinc-700 { border-color: #d4c8bc !important; }
+        .theme-light .border-zinc-200 { border-color: #d4c8bc !important; }
+        .theme-light .border-zinc-300 { border-color: #c8bcb0 !important; }
         /* Dark, unobtrusive scrollbars everywhere instead of the default
            bright OS scrollbar, which reads as a stray white line in this UI. */
         * { scrollbar-width: thin; scrollbar-color: #52525b transparent; }
@@ -1602,25 +1604,15 @@ export default function CalendarScreen() {
         .theme-light { scrollbar-color: #a1a1aa transparent; }
         /* Mobile layout: use the available viewport instead of leaving a huge empty area. */
         @media (max-width: 639px) {
-          /* Mobile: the calendar owns all remaining viewport height. */
-          .mobile-calendar-section {
-            min-height: 0;
-            height: 100%;
-          }
-          .mobile-calendar-days {
-            min-height: 0;
-            grid-template-rows: repeat(5, minmax(0, 1fr));
-            grid-auto-rows: unset;
-          }
-          .mobile-calendar-cell {
-            min-height: 0 !important;
-            height: 100%;
+          .calendar-days-grid {
+            flex: 1 1 auto;
+            grid-auto-rows: minmax(76px, 1fr);
           }
         }
       `}</style>
 
       {/* HEADER */}
-      <header className={`px-3 sm:px-8 pt-4 sm:pt-8 pb-4 sm:pb-4 border-b ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}>
+      <header className={`px-2 sm:px-8 pt-3 sm:pt-8 pb-3 sm:pb-4 border-b ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}>
         <div className="flex items-start justify-between gap-2 mb-2">
           <p className={`font-data text-[10px] tracking-widest uppercase ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{traderMode ? t('titlePro') : t('titleMoney')}</p>
 
@@ -1767,15 +1759,15 @@ export default function CalendarScreen() {
               onClick={goToPrevMonth}
               aria-label="Предыдущий месяц"
               title="Предыдущий месяц"
-              className="rounded-xl border border-zinc-800 bg-zinc-900 h-12 w-12 sm:h-10 sm:w-10 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:border-zinc-600 transition-colors"
+              className="rounded-lg border border-zinc-800 bg-zinc-900 h-10 w-10 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:border-zinc-600 transition-colors"
             >
-              <ChevronLeft className="h-5 w-5 sm:h-4 sm:w-4" />
+              <ChevronLeft className="h-4 w-4" />
             </button>
             <div className="flex items-baseline gap-1.5 sm:gap-2 min-w-0 sm:min-w-[190px]">
               <div className="relative" ref={monthMenuRef}>
                 <button
                   onClick={() => { setMonthMenuOpen((v) => !v); setYearMenuOpen(false); }}
-                  className="font-display text-[30px] sm:text-2xl font-semibold text-zinc-50 hover:text-amber-400 transition-colors"
+                  className="font-display text-2xl sm:text-2xl font-semibold text-zinc-50 hover:text-amber-400 transition-colors"
                 >
                   {monthsFor(language)[month]}
                 </button>
@@ -1800,7 +1792,7 @@ export default function CalendarScreen() {
               <div className="relative" ref={yearMenuRef}>
                 <button
                   onClick={() => { setYearMenuOpen((v) => !v); setMonthMenuOpen(false); }}
-                  className="font-display text-[30px] sm:text-2xl font-semibold text-zinc-500 hover:text-amber-400 transition-colors"
+                  className="font-display text-2xl sm:text-2xl font-semibold text-zinc-500 hover:text-amber-400 transition-colors"
                 >
                   {year}
                 </button>
@@ -1826,9 +1818,9 @@ export default function CalendarScreen() {
               onClick={goToNextMonth}
               aria-label="Следующий месяц"
               title="Следующий месяц"
-              className="rounded-xl border border-zinc-800 bg-zinc-900 h-12 w-12 sm:h-10 sm:w-10 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:border-zinc-600 transition-colors"
+              className="rounded-lg border border-zinc-800 bg-zinc-900 h-10 w-10 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:border-zinc-600 transition-colors"
             >
-              <ChevronRight className="h-5 w-5 sm:h-4 sm:w-4" />
+              <ChevronRight className="h-4 w-4" />
             </button>
 
             {/* Account */}
@@ -1857,8 +1849,8 @@ export default function CalendarScreen() {
               )}
             </div>
 
-            {/* Money / PRO + platform reveal */}
-            <div className="ml-1.5 flex items-center basis-full sm:basis-auto justify-end sm:justify-start">
+            {/* Money / PRO + platform reveal — скрыто на мобильных */}
+            <div className="ml-1.5 hidden sm:flex items-center basis-full sm:basis-auto justify-end sm:justify-start">
               {/* Smooth mode switch */}
               <button
                 type="button"
@@ -1872,15 +1864,15 @@ export default function CalendarScreen() {
                 title={traderMode
                   ? 'PRO: LONG/SHORT, Take Profit и Stop Loss'
                   : 'Денежный: доходы и расходы без трейдерских полей'}
-                className="relative h-11 w-[118px] sm:h-9 sm:w-[104px] shrink-0 rounded-full border border-zinc-800 bg-zinc-900 p-0.5 font-data text-[9px] tracking-wider text-zinc-500 shadow-inner focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60"
+                className="relative h-9 w-[104px] shrink-0 rounded-full border border-zinc-800 bg-zinc-900 p-0.5 font-data text-[9px] tracking-wider text-zinc-500 shadow-inner focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60"
               >
                 {/* sliding active pill */}
                 <span
                   aria-hidden="true"
                   className={[
-                    'absolute top-0.5 bottom-0.5 left-0.5 w-[57px] sm:w-[50px] rounded-full border transition-all duration-300 ease-out',
+                    'absolute top-0.5 bottom-0.5 left-0.5 w-[50px] rounded-full border transition-all duration-300 ease-out',
                     traderMode
-                      ? 'translate-x-[57px] sm:translate-x-[50px] border-amber-400/50 bg-amber-400/10 shadow-[0_0_14px_rgba(251,191,36,0.08)]'
+                      ? 'translate-x-[50px] border-amber-400/50 bg-amber-400/10 shadow-[0_0_14px_rgba(251,191,36,0.08)]'
                       : isLight
                       ? 'translate-x-0 border-zinc-300 bg-zinc-200'
                       : 'translate-x-0 border-zinc-700 bg-zinc-800/90',
@@ -1889,17 +1881,19 @@ export default function CalendarScreen() {
 
                 <span
                   className={[
-                    'relative z-10 flex h-full w-[57px] sm:w-[50px] items-center justify-center transition-colors duration-300',
+                    'relative z-10 flex h-full items-center justify-center transition-colors duration-300',
                     !traderMode ? 'text-zinc-100' : 'text-zinc-600',
                   ].join(' ')}
+                  style={{ width: '50px' }}
                 >
                   {t('freePlan')}
                 </span>
                 <span
                   className={[
-                    'absolute right-0.5 top-0.5 bottom-0.5 z-10 flex w-[57px] sm:w-[50px] items-center justify-center transition-colors duration-300',
+                    'absolute right-0.5 top-0.5 bottom-0.5 z-10 flex items-center justify-center transition-colors duration-300',
                     traderMode ? 'text-amber-400' : 'text-zinc-600',
                   ].join(' ')}
+                  style={{ width: '50px' }}
                 >
                   PRO
                 </span>
@@ -1907,11 +1901,9 @@ export default function CalendarScreen() {
 
               {/* Platform slides out from the right side of PRO */}
               <div
-                className={[
-                  'overflow-hidden shrink-0 transition-[width,margin,opacity] duration-300 ease-out',
-                  traderMode ? 'w-[124px] sm:w-[108px]' : 'w-0',
-                ].join(' ')}
+                className="overflow-hidden shrink-0 transition-[width,margin,opacity] duration-300 ease-out"
                 style={{
+                  width: traderMode ? '108px' : '0px',
                   marginLeft: traderMode ? '8px' : '0px',
                   opacity: traderMode ? 1 : 0,
                 }}
@@ -1920,7 +1912,7 @@ export default function CalendarScreen() {
                 <button
                   onClick={openConnectModal}
                   tabIndex={traderMode ? 0 : -1}
-                  className="flex h-11 sm:h-9 w-[124px] sm:w-[108px] items-center justify-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-400/10 px-2 font-data text-[11px] tracking-wide text-amber-400 whitespace-nowrap hover:bg-amber-400/15 transition-colors"
+                  className="flex h-9 w-[108px] items-center justify-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-400/10 px-2 font-data text-[11px] tracking-wide text-amber-400 whitespace-nowrap hover:bg-amber-400/15 transition-colors"
                 >
                   <Link2 className="h-3 w-3 shrink-0" />
                   Площадка
@@ -1967,7 +1959,7 @@ export default function CalendarScreen() {
 
       {/* CALENDAR — the main view of the whole app */}
       <section
-        className={`mobile-calendar-section flex-1 min-h-0 flex flex-col px-2 sm:px-8 pt-3 sm:py-6 pb-20 sm:pb-6 border-b relative transition-colors duration-200 ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}
+        className={`flex-1 min-h-0 flex flex-col px-2 sm:px-8 pt-2 sm:py-6 pb-20 sm:pb-6 border-b relative transition-colors duration-200 ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}
         onClick={(e) => { if (e.target === e.currentTarget) setSelectedKey(null); }}
         onTouchStart={(e) => { calendarTouchStart.current = e.touches[0]?.clientX ?? null; }}
         onTouchEnd={(e) => {
@@ -1983,13 +1975,13 @@ export default function CalendarScreen() {
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedKey(null); }}
         >
           {WEEKDAYS.map((w) => (
-            <div key={w} className={`font-data text-[13px] sm:text-[11px] tracking-wider text-center uppercase pb-2 sm:pb-1 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
+            <div key={w} className={`font-data text-[11px] tracking-wider text-center uppercase pb-1 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
               {w}
             </div>
           ))}
         </div>
         <div
-          className="calendar-days-grid mobile-calendar-days flex-1 min-h-0 grid grid-cols-7 gap-1 sm:gap-2"
+          className="calendar-days-grid flex-1 grid grid-cols-7 gap-1 sm:gap-2"
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedKey(null); }}
         >
           {cells.map((cell, cellIndex) => {
@@ -2000,13 +1992,16 @@ export default function CalendarScreen() {
             const isProfit = pnl >= 0;
             const pnlText = formatPnlDisplay(pnl, true);
             const intensity = monthMaxAbsPnl > 0 ? Math.min(Math.abs(pnl) / monthMaxAbsPnl, 1) : 0;
+            const isTodayCell = cell.isToday;
+            // Для невыбранных и не сегодняшних дней снижаем яркость на 35%
+            const effectiveIntensity = (isTodayCell || isSelected) ? intensity : intensity * 0.65;
             const glowRgb = isProfit ? '16,185,129' : '239,68,68';
             const heatmapStyle =
               cell.inMonth && hasTrades && !isSelected
                 ? {
-                    backgroundColor: `rgba(${glowRgb},${(0.10 + intensity * 0.22).toFixed(2)})`,
-                    borderColor: `rgba(${glowRgb},${(0.35 + intensity * 0.5).toFixed(2)})`,
-                    boxShadow: `0 0 ${Math.round(6 + intensity * 22)}px rgba(${glowRgb},${(0.25 + intensity * 0.45).toFixed(2)})`,
+                    backgroundColor: `rgba(${glowRgb},${(0.10 + effectiveIntensity * 0.22).toFixed(2)})`,
+                    borderColor: `rgba(${glowRgb},${(0.35 + effectiveIntensity * 0.5).toFixed(2)})`,
+                    boxShadow: `0 0 ${Math.round(6 + effectiveIntensity * 22)}px rgba(${glowRgb},${(0.25 + effectiveIntensity * 0.45).toFixed(2)})`,
                     animation: 'cellGlowIn 0.35s ease-out both',
                     animationDelay: `${cellIndex * 18}ms`,
                   }
@@ -2018,7 +2013,7 @@ export default function CalendarScreen() {
                 style={heatmapStyle}
                 className={[
                   'relative rounded-md border flex flex-col justify-between text-left transition-all duration-150',
-                  'mobile-calendar-cell min-h-[76px] sm:min-h-[110px] p-2.5 sm:p-4',
+                  'min-h-[76px] sm:min-h-[110px] p-2.5 sm:p-4',
                   isLight
                     ? (cell.inMonth ? (hasTrades ? 'bg-white' : 'bg-zinc-50') : 'bg-zinc-100')
                     : (cell.inMonth ? (hasTrades ? 'bg-zinc-900' : 'bg-zinc-900/20') : 'bg-zinc-950'),
@@ -2037,11 +2032,11 @@ export default function CalendarScreen() {
                 {cell.isToday && (
                   <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-amber-400" />
                 )}
-                <span className={`font-data text-[16px] sm:text-base ${cell.inMonth ? (isLight ? 'text-zinc-500' : 'text-zinc-400') : (isLight ? 'text-zinc-300' : 'text-zinc-700')}`}>
+                <span className={`font-data text-sm sm:text-base ${cell.inMonth ? (isLight ? 'text-zinc-500' : 'text-zinc-400') : (isLight ? 'text-zinc-300' : 'text-zinc-700')}`}>
                   {cell.date.getDate()}
                 </span>
                 {cell.inMonth && hasTrades && (
-                  <span className={`font-data text-[14px] sm:text-lg font-medium whitespace-nowrap ${isProfit ? 'text-emerald-500' : 'text-red-500'}`}>
+                  <span className={`font-data text-[12px] sm:text-lg font-medium whitespace-nowrap ${isProfit ? 'text-emerald-500' : 'text-red-500'}`}>
                     {pnlText}
                   </span>
                 )}
@@ -2192,16 +2187,16 @@ export default function CalendarScreen() {
       )}
 
       {/* bottom "История" entry point — search/browse all saved trades */}
-      <div className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] sm:bottom-4 inset-x-0 flex justify-center z-30 pointer-events-none">
+      <div className="fixed bottom-4 sm:bottom-4 inset-x-0 flex justify-center z-30 pointer-events-none">
         <button
           onClick={openHistory}
-          className={`pointer-events-auto flex items-center gap-2 rounded-full border backdrop-blur px-6 py-3.5 text-base sm:px-5 sm:py-3 shadow-xl transition-colors ${
+          className={`pointer-events-auto flex items-center gap-2 rounded-full border backdrop-blur px-5 py-3 text-base shadow-xl transition-colors ${
             isLight
               ? 'border-zinc-300 bg-white/95 text-zinc-700 hover:border-amber-400/60 hover:text-amber-500'
               : 'border-zinc-700 bg-zinc-900/95 text-zinc-200 hover:border-amber-400/60 hover:text-amber-400'
           }`}
         >
-          <History className="h-5 w-5 sm:h-4 sm:w-4" />
+          <History className="h-4 w-4" />
           {t('history')}
         </button>
       </div>
