@@ -185,9 +185,6 @@ export default function CalendarScreen() {
 
   // --- cTrader connection state ------------------------------------------
   const [ctraderConnected, setCtraderConnected] = useState(false);
-  // Keep PRO fields in the UI/local state, but don't send them to Supabase
-  // until the trades table has take_profit/stop_loss columns.
-  const PRO_DB_COLUMNS_AVAILABLE = false;
   const [ctraderLoading, setCtraderLoading] = useState(false);
 
   async function checkCtraderStatus(userId) {
@@ -295,7 +292,7 @@ export default function CalendarScreen() {
   }
 
   async function handleGoogleLogin() {
-    console.log('[auth] кнопка "Войти для синхронизации" нажата');
+    console.log('[auth] кнопка "Войти через Google" нажата');
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -404,6 +401,7 @@ export default function CalendarScreen() {
 
 
   const [manualTrades, setManualTrades] = useState({}); // { [dateKey]: Trade[] } — real, user-saved trades only
+  const manualTradesRef = useRef({});
   const [recentInstruments, setRecentInstruments] = useState([]); // most-recently-used instrument symbols
   const [customTags, setCustomTags] = useState([]); // user-added instrument tags, max MAX_CUSTOM_TAGS
   const [addingCustomTag, setAddingCustomTag] = useState(false);
@@ -414,14 +412,13 @@ export default function CalendarScreen() {
   // Guest users work completely locally. Authenticated users get their own
   // browser cache, so different accounts on the same device never mix data.
   const GUEST_TRADES_CACHE_KEY = 'money_calendar_guest_trades_cache';
-  const LEGACY_TRADES_CACHE_KEY = 'atj_trades_cache';
-  const LEGACY_OFFLINE_QUEUE_KEY = 'atj_offline_queue';
+  const OFFLINE_QUEUE_KEY = 'atj_offline_queue';
 
   function getTradesCacheKey(userId) {
     return userId ? `money_calendar_trades_${userId}` : GUEST_TRADES_CACHE_KEY;
   }
 
-  function readCachedTrades(userId = null) {
+  function readCachedTrades(userId) {
     try {
       const raw = window.localStorage.getItem(getTradesCacheKey(userId));
       if (!raw) return {};
@@ -432,7 +429,7 @@ export default function CalendarScreen() {
     }
   }
 
-  function cacheTradesLocally(trades, userId = null) {
+  function cacheTradesLocally(trades, userId) {
     try {
       window.localStorage.setItem(getTradesCacheKey(userId), JSON.stringify(trades));
     } catch {
@@ -440,42 +437,24 @@ export default function CalendarScreen() {
     }
   }
 
-  function getOfflineQueueKey(userId) {
-    return userId ? `atj_offline_queue_${userId}` : null;
-  }
-
-  function readOfflineQueue(userId = null) {
-    if (!userId) return [];
+  function readOfflineQueue() {
     try {
-      const parsed = JSON.parse(window.localStorage.getItem(getOfflineQueueKey(userId)) || '[]');
-      return Array.isArray(parsed) ? parsed : [];
+      return JSON.parse(window.localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]');
     } catch {
       return [];
     }
   }
 
-  function writeOfflineQueue(queue, userId) {
-    if (!userId) return;
+  function writeOfflineQueue(queue) {
     try {
-      window.localStorage.setItem(getOfflineQueueKey(userId), JSON.stringify(queue));
+      window.localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
     } catch {
       // ignore storage failures
     }
   }
 
-  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  const [pendingSyncCount, setPendingSyncCount] = useState(() => readOfflineQueue().length);
   const tradesCacheOwnerRef = useRef('__loading__');
-
-  // Remove the old shared queue/cache so malformed legacy records cannot
-  // leak into a guest session or another Google account.
-  useEffect(() => {
-    try {
-      window.localStorage.removeItem(LEGACY_OFFLINE_QUEUE_KEY);
-      window.localStorage.removeItem(LEGACY_TRADES_CACHE_KEY);
-    } catch {
-      // ignore cleanup failures
-    }
-  }, []);
 
   // --- Install as app (PWA) ------------------------------------------------
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
@@ -515,100 +494,64 @@ export default function CalendarScreen() {
     setInstallInfoOpen((v) => !v);
   }
 
-  async function insertTradeCloudCore(trade) {
-    const userId = getValidUserId({ id: trade?.user_id });
-    if (!userId) return { data: null, error: new Error('Некорректный user_id.'), invalidUserId: true };
-
-    const payload = { ...trade, user_id: userId };
-
-    // Do not send trader-only fields until DB columns exist.
-    if (!PRO_DB_COLUMNS_AVAILABLE) {
-      delete payload.take_profit;
-      delete payload.stop_loss;
-    }
-
-    const result = await supabase.from('trades').insert(payload).select().single();
-
-    if (result.error && /invalid input syntax for type uuid/i.test(result.error.message || '')) {
-      return { ...result, invalidUserId: true };
-    }
-
-    return result;
-  }
-
-  async function updateTradeCloudCore(tradeId, updates) {
-    const payload = { ...updates };
-    if (!PRO_DB_COLUMNS_AVAILABLE) {
-      delete payload.take_profit;
-      delete payload.stop_loss;
-    }
-    return supabase.from('trades').update(payload).eq('id', tradeId);
-  }
-
   async function flushOfflineQueue() {
-    const cloudUserId = getValidUserId(user);
-    if (!cloudUserId || !navigator.onLine) return;
-
-    const queue = readOfflineQueue(cloudUserId);
-    if (queue.length === 0) {
-      setPendingSyncCount(0);
-      return;
-    }
+    if (!user || !navigator.onLine) return;
+    const queue = readOfflineQueue();
+    if (queue.length === 0) return;
 
     const remaining = [];
-
     for (const item of queue) {
       try {
         if (item.action === 'insert') {
-          const queuedUserId = getValidUserId({ id: item.trade?.user_id });
-
-          // Never send a malformed or foreign user's queued record.
-          if (!queuedUserId || queuedUserId !== cloudUserId) continue;
-
-          const result = await insertTradeCloudCore(item.trade);
-          if (result.error) throw result.error;
-
+          const queuedUserId = item.trade?.user_id;
+          if (!queuedUserId) {
+            // Legacy guest queue item: guest data stays local and must not
+            // be sent to Supabase without a real authenticated user id.
+            continue;
+          }
+          const { data, error } = await supabase.from('trades').insert(item.trade).select().single();
+          if (error) throw error;
+          // swap the temporary offline id for the real database id
           setManualTrades((prev) => ({
             ...prev,
             [item.trade.date_key]: (prev[item.trade.date_key] || []).map((t) =>
-              t.id === item.tempId ? { ...t, id: result.data.id, pending: false } : t
+              t.id === item.tempId ? { ...t, id: data.id } : t
             ),
           }));
         } else if (item.action === 'update') {
-          const { error } = await updateTradeCloudCore(item.tradeId, item.updates);
+          const { error } = await supabase.from('trades').update(item.updates).eq('id', item.tradeId);
           if (error) throw error;
         } else if (item.action === 'delete') {
           const { error } = await supabase.from('trades').delete().eq('id', item.tradeId);
           if (error) throw error;
         }
       } catch (err) {
-        console.error('[offline] не удалось синхронизировать:', err);
+        console.error('[offline] не удалось синхронизировать, оставляю в очереди:', err);
         remaining.push(item);
       }
     }
-
-    writeOfflineQueue(remaining, cloudUserId);
+    writeOfflineQueue(remaining);
     setPendingSyncCount(remaining.length);
   }
 
   useEffect(() => {
     window.addEventListener('online', flushOfflineQueue);
     return () => window.removeEventListener('online', flushOfflineQueue);
-  }, [user?.id]);
+  }, [user]);
 
-  // Guest: local-only. Google: hydrate that user's own cloud data.
+  // Guest: read/write locally and use the app without any account.
+  // Signed-in: read the user's cloud data, with a user-specific local cache.
   useEffect(() => {
     const cloudUserId = getValidUserId(user);
     const owner = cloudUserId || 'guest';
-
     tradesCacheOwnerRef.current = '__loading__';
-    setPendingSyncCount(readOfflineQueue(cloudUserId).length);
 
     const cached = readCachedTrades(cloudUserId);
     setManualTrades(cached);
 
-    if (!cloudUserId) {
+    if (!user) {
       tradesCacheOwnerRef.current = owner;
+      setCtraderConnected(false);
       return;
     }
 
@@ -619,17 +562,18 @@ export default function CalendarScreen() {
 
     supabase
       .from('trades')
-      .select('id,date_key,time,instrument,direction,pnl,comment,platform')
+      .select('*')
       .eq('user_id', cloudUserId)
       .then(({ data, error }) => {
         if (error) {
           console.error('[trades] ошибка загрузки:', error);
+          // Keep cached data visible even when cloud loading fails.
           tradesCacheOwnerRef.current = owner;
           return;
         }
 
         const grouped = {};
-        for (const row of data || []) {
+        for (const row of data) {
           grouped[row.date_key] = grouped[row.date_key] || [];
           grouped[row.date_key].push({
             id: row.id,
@@ -644,18 +588,59 @@ export default function CalendarScreen() {
           });
         }
 
-        setManualTrades(grouped);
+        setManualTrades((prev) => {
+          const merged = { ...grouped };
+
+          // Keep local-only records and local edits. Cloud records fill in
+          // anything that is not already present locally.
+          for (const [dateKey, localList] of Object.entries(prev || {})) {
+            if (!merged[dateKey]) {
+              merged[dateKey] = localList;
+              continue;
+            }
+
+            const cloudById = new Map(merged[dateKey].map((t) => [String(t.id), t]));
+            const localByCloudId = new Map(
+              localList
+                .filter((t) => t.id && !String(t.id).startsWith('guest-') && !String(t.id).startsWith('local-') && !String(t.id).startsWith('offline-'))
+                .map((t) => [String(t.id), t])
+            );
+
+            // Preserve local version of any record that already exists in cloud.
+            for (const [id, localTrade] of localByCloudId.entries()) {
+              if (cloudById.has(id)) {
+                cloudById.set(id, localTrade);
+              }
+            }
+
+            // Append genuinely local-only records.
+            const existingIds = new Set(merged[dateKey].map((t) => String(t.id)));
+            for (const localTrade of localList) {
+              if (!existingIds.has(String(localTrade.id))) {
+                merged[dateKey].push(localTrade);
+              }
+            }
+          }
+
+          manualTradesRef.current = merged;
+          return merged;
+        });
+
         tradesCacheOwnerRef.current = owner;
         flushOfflineQueue();
       });
   }, [user]);
 
+  // Keep the correct guest/user cache in sync with what is displayed.
   useEffect(() => {
+    manualTradesRef.current = manualTrades;
+
     const cloudUserId = getValidUserId(user);
     const owner = cloudUserId || 'guest';
     if (tradesCacheOwnerRef.current !== owner) return;
     cacheTradesLocally(manualTrades, cloudUserId);
   }, [manualTrades, user?.id]);
+
 
   // --- Period filter state (compact popover) --------------------------------
   const [periodPreset, setPeriodPreset] = useState('Вся история');
@@ -1047,7 +1032,7 @@ export default function CalendarScreen() {
     }
 
     const pnlText = textValue(form.pnl).trim();
-    if (pnlText === '') {
+    if (!pnlText) {
       setFormError('Укажите сумму в $.');
       return;
     }
@@ -1079,11 +1064,14 @@ export default function CalendarScreen() {
       ? parseFloat(form.stopLoss)
       : null;
 
-    // IMPORTANT:
-    // The journal always saves the user's action locally first. This means
-    // Money mode works with zero authentication, and a temporary/broken
-    // Supabase session can never prevent the user from adding a record.
+    const cloudUserId = getValidUserId(user);
+    const isEditing = Boolean(editingTrade);
+    const localId = isEditing
+      ? editingTrade.id
+      : `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
     const localTrade = {
+      id: localId,
       time,
       instrument,
       direction: finalDirection,
@@ -1094,48 +1082,46 @@ export default function CalendarScreen() {
       pending: false,
     };
 
-    // ================= LOCAL FIRST =================
-    // This is the source of truth for the UI. It also writes to the guest
-    // or user-specific local cache through the manualTrades effect.
-    if (editingTrade) {
-      setManualTrades((prev) => ({
-        ...prev,
-        [dateKey]: (prev[dateKey] || []).map((t) =>
-          t.id === editingTrade.id
-            ? { ...t, ...localTrade }
-            : t
-        ),
-      }));
+    // -------- LOCAL FIRST --------
+    // This is what the UI renders. It never depends on Google/Supabase.
+    let nextTrades = manualTradesRef.current;
+    const nextForDay = [...(nextTrades[dateKey] || [])];
+
+    if (isEditing) {
+      const index = nextForDay.findIndex((t) => String(t.id) === String(editingTrade.id));
+      if (index >= 0) {
+        nextForDay[index] = { ...nextForDay[index], ...localTrade };
+      } else {
+        nextForDay.push(localTrade);
+      }
     } else {
-      const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      setManualTrades((prev) => ({
-        ...prev,
-        [dateKey]: [
-          ...(prev[dateKey] || []),
-          {
-            id: localId,
-            ...localTrade,
-          },
-        ],
-      }));
+      nextForDay.push(localTrade);
     }
+
+    nextTrades = {
+      ...nextTrades,
+      [dateKey]: nextForDay,
+    };
+
+    manualTradesRef.current = nextTrades;
+    setManualTrades(nextTrades);
+
+    // Persist immediately to the correct local store.
+    cacheTradesLocally(nextTrades, cloudUserId);
 
     setRecentInstruments((prev) =>
       [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5)
     );
 
-    // Close immediately so the user sees the successful action even if
-    // cloud sync is unavailable.
     closeModal();
 
-    // ================= OPTIONAL CLOUD SYNC =================
-    // Only a verified UUID is allowed to reach Supabase.
-    const cloudUserId = getValidUserId(user);
-    if (!cloudUserId || !navigator.onLine) return;
+    // -------- GUEST --------
+    if (!cloudUserId) return;
 
-    // For now, do not send trader-only TP/SL fields because the user's
-    // current trades table does not contain those columns yet.
-    const cloudBase = {
+    // -------- CLOUD SYNC IN BACKGROUND --------
+    // Only the core columns are sent for now. This prevents the missing
+    // stop_loss/take_profit DB columns from breaking PRO saves.
+    const cloudPayload = {
       user_id: cloudUserId,
       date_key: dateKey,
       time,
@@ -1147,19 +1133,20 @@ export default function CalendarScreen() {
     };
 
     try {
-      if (editingTrade && !String(editingTrade.id).startsWith('local-')) {
-        const cloudUpdates = {
-          time,
-          instrument,
-          direction: finalDirection,
-          pnl: signedPnl,
-          comment,
-          platform,
-        };
+      if (isEditing && !String(editingTrade.id).startsWith('local-') && !String(editingTrade.id).startsWith('guest-') && !String(editingTrade.id).startsWith('offline-')) {
+        // Existing Supabase record: update in the background.
         const { error } = await supabase
           .from('trades')
-          .update(cloudUpdates)
-          .eq('id', editingTrade.id);
+          .update({
+            time,
+            instrument,
+            direction: finalDirection,
+            pnl: signedPnl,
+            comment,
+            platform,
+          })
+          .eq('id', editingTrade.id)
+          .eq('user_id', cloudUserId);
 
         if (error) {
           console.warn('[cloud-sync] update skipped:', error.message);
@@ -1167,99 +1154,79 @@ export default function CalendarScreen() {
         return;
       }
 
-      // A local ID is not a Supabase UUID. Create the cloud copy separately.
+      // New local record: create the cloud copy in the background.
       const { data, error } = await supabase
         .from('trades')
-        .insert(cloudBase)
+        .insert(cloudPayload)
         .select()
         .single();
 
       if (error) {
-        console.warn('[cloud-sync] insert skipped:', error.message);
+        console.warn('[cloud-sync] insert skipped, local record kept:', error.message);
         return;
       }
 
-      // Replace the temporary local id with the real cloud id so later
-      // editing/deleting the just-created record can work normally.
+      // Replace ONLY the local record we just created.
       setManualTrades((prev) => {
-        const next = { ...prev };
-        next[dateKey] = (next[dateKey] || []).map((t) => {
-          if (
-            t.id === editingTrade?.id ||
-            (t.id && String(t.id).startsWith('local-') && !editingTrade)
-          ) {
-            // Only replace the most recently-created local record in add mode.
-            if (!editingTrade) {
-              return { ...t, id: data.id };
-            }
-          }
-          return t;
-        });
-        return next;
+        const merged = { ...prev };
+        const list = [...(merged[dateKey] || [])];
+        const index = list.findIndex((t) => String(t.id) === String(localId));
+
+        if (index >= 0) {
+          list[index] = {
+            ...list[index],
+            id: data.id,
+            pending: false,
+          };
+          merged[dateKey] = list;
+        }
+
+        manualTradesRef.current = merged;
+        cacheTradesLocally(merged, cloudUserId);
+        return merged;
       });
     } catch (err) {
-      // Cloud sync must never turn a successful local save into a visible error.
       console.warn('[cloud-sync] unavailable, local record kept:', err);
     }
   }
 
   async function handleDeleteTrade(dateKey, tradeId) {
-    // Local/guest records never go to Supabase.
-    if (!getValidUserId(user) || String(tradeId).startsWith('local-')) {
-      setManualTrades((prev) => ({
-        ...prev,
-        [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId),
-      }));
+    const cloudUserId = getValidUserId(user);
+
+    const nextTrades = { ...manualTradesRef.current };
+    nextTrades[dateKey] = (nextTrades[dateKey] || []).filter(
+      (t) => String(t.id) !== String(tradeId)
+    );
+
+    manualTradesRef.current = nextTrades;
+    setManualTrades(nextTrades);
+    cacheTradesLocally(nextTrades, cloudUserId);
+
+    // Guest/local-only record.
+    if (!cloudUserId || String(tradeId).startsWith('guest-') || String(tradeId).startsWith('local-')) {
       return;
     }
 
-    // Unsynced offline records are local-only.
-    if (String(tradeId).startsWith('offline-')) {
-      const cloudUserId = getValidUserId(user);
-      const queue = readOfflineQueue(cloudUserId).filter((item) => item.tempId !== tradeId);
-      writeOfflineQueue(queue, cloudUserId);
-      setPendingSyncCount(queue.length);
-      setManualTrades((prev) => ({
-        ...prev,
-        [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId),
-      }));
-      return;
-    }
-
+    // Offline synced-later delete.
     if (!navigator.onLine) {
-      const cloudUserId = getValidUserId(user);
-      if (!cloudUserId) {
-        setManualTrades((prev) => ({
-          ...prev,
-          [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId),
-        }));
-        return;
-      }
-
       const queue = readOfflineQueue(cloudUserId);
       queue.push({ action: 'delete', tradeId });
       writeOfflineQueue(queue, cloudUserId);
       setPendingSyncCount(queue.length);
-
-      setManualTrades((prev) => ({
-        ...prev,
-        [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId),
-      }));
       return;
     }
 
-    const { error } = await supabase.from('trades').delete().eq('id', tradeId);
+    try {
+      const { error } = await supabase
+        .from('trades')
+        .delete()
+        .eq('id', tradeId)
+        .eq('user_id', cloudUserId);
 
-    // The UI should still reflect the user's delete action even if the cloud
-    // copy cannot currently be removed.
-    if (error) {
-      console.warn('[trades] cloud delete skipped:', error.message);
+      if (error) console.warn('[trades] cloud delete skipped:', error.message);
+    } catch (err) {
+      console.warn('[trades] cloud delete unavailable:', err);
     }
-
-    setManualTrades((prev) => ({
-      ...prev,
-      [dateKey]: (prev[dateKey] || []).filter((t) => t.id !== tradeId),
-    }));
   }
 
   function jumpToTradeDate(dateKey) {
@@ -1310,26 +1277,20 @@ export default function CalendarScreen() {
       return;
     }
 
+    // Guest history is stored locally and can be cleared without login.
     const cloudUserId = getValidUserId(user);
-
-    // Local state is always cleared immediately.
+    if (!cloudUserId) {
+      setManualTrades({});
+      setConfirmingClear(false);
+      return;
+    }
+    const { error } = await supabase.from('trades').delete().eq('user_id', cloudUserId);
+    if (error) {
+      console.error('[trades] ошибка очистки истории:', error);
+      return;
+    }
     setManualTrades({});
     setConfirmingClear(false);
-
-    if (!cloudUserId || !navigator.onLine) return;
-
-    try {
-      const { error } = await supabase
-        .from('trades')
-        .delete()
-        .eq('user_id', cloudUserId);
-
-      if (error) {
-        console.warn('[trades] cloud clear skipped:', error.message);
-      }
-    } catch (err) {
-      console.warn('[trades] cloud clear unavailable:', err);
-    }
   }
 
   function handleExportCsv() {
@@ -1491,7 +1452,7 @@ export default function CalendarScreen() {
                   className="flex items-center gap-1.5 px-2.5 py-1.5 text-zinc-400 hover:text-amber-400 transition-colors"
                 >
                   <LogIn className="h-3.5 w-3.5" />
-                  Войти для синхронизации
+                  Войти через Google
                 </button>
               )}
             </div>
