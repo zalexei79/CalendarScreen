@@ -150,6 +150,7 @@ const MONEY_CATEGORIES = [
   { key: 'Работа', icon: Briefcase },
   { key: 'Покупки', icon: ShoppingBag },
   { key: 'Подписки', icon: CreditCard },
+  { key: 'Сигареты', icon: MoreHorizontal },
   { key: 'Фриланс', icon: Wallet },
   { key: 'Другое', icon: MoreHorizontal },
 ];
@@ -980,6 +981,20 @@ export default function CalendarScreen() {
 
     return { bestDay, worstDay, topInstrument, avgPnl, longestLossStreak, profitFactor, avgWin, avgLoss, payoffRatio };
   }, [analysisTrades, analysisStats]);
+
+  const moneyAnalysis = useMemo(() => {
+    if (traderMode || analysisTrades.length === 0) return null;
+    const income = analysisTrades.filter((t) => t.pnl > 0).reduce((sum, t) => sum + t.pnl, 0);
+    const expenses = Math.abs(analysisTrades.filter((t) => t.pnl < 0).reduce((sum, t) => sum + t.pnl, 0));
+    const categories = {};
+    for (const t of analysisTrades.filter((t) => t.pnl < 0)) {
+      const category = textValue(t.instrument).trim() || 'Другое';
+      categories[category] = (categories[category] || 0) + Math.abs(t.pnl);
+    }
+    const topCategories = Object.entries(categories).sort((a, b) => b[1] - a[1]).slice(0, 4);
+    const cigarettes = categories['Сигареты'] || 0;
+    return { income, expenses, balance: income - expenses, topCategories, cigarettes, cigaretteShare: expenses ? Math.round((cigarettes / expenses) * 100) : 0 };
+  }, [analysisTrades, traderMode]);
 
   const [analysisOpen, setAnalysisOpen] = useState(false);
   const [analysisVisible, setAnalysisVisible] = useState(false);
@@ -2974,9 +2989,40 @@ export default function CalendarScreen() {
               ))}
             </div>
 
-            <p className="text-xs text-zinc-500 mb-4">{analysisStats.count} сделок в выборке</p>
+            <p className="text-xs text-zinc-500 mb-4">{analysisStats.count} {traderMode ? 'сделок' : 'операций'} в выборке</p>
 
-            {basicAnalysis && (
+            {moneyAnalysis && (
+              <div className="mb-4 space-y-3">
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    ['Доходы', moneyAnalysis.income, 'text-emerald-400'],
+                    ['Расходы', moneyAnalysis.expenses, 'text-red-400'],
+                    ['Остаток', moneyAnalysis.balance, moneyAnalysis.balance >= 0 ? 'text-emerald-400' : 'text-red-400'],
+                  ].map(([label, amount, color]) => (
+                    <div key={label} className="rounded-lg border border-zinc-800 bg-zinc-950 p-2">
+                      <p className="text-[10px] text-zinc-500">{label}</p>
+                      <p className={`font-data text-sm ${color}`}>{amount < 0 ? '-' : ''}{currencySymbol}{formatMoney(Math.abs(amount))}</p>
+                    </div>
+                  ))}
+                </div>
+                {moneyAnalysis.topCategories.length > 0 && (
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3">
+                    <p className="mb-2 text-xs font-medium text-zinc-300">Куда уходят деньги</p>
+                    <div className="space-y-2">
+                      {moneyAnalysis.topCategories.map(([category, amount]) => (
+                        <div key={category}>
+                          <div className="mb-1 flex justify-between text-[11px] text-zinc-500"><span>{category}</span><span>{currencySymbol}{formatMoney(amount)}</span></div>
+                          <div className="h-1.5 overflow-hidden rounded-full bg-zinc-800"><div className="h-full rounded-full bg-amber-400" style={{ width: `${Math.max(6, Math.round((amount / moneyAnalysis.expenses) * 100))}%` }} /></div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {moneyAnalysis.cigarettes > 0 && <p className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-500">Сигареты: {currencySymbol}{formatMoney(moneyAnalysis.cigarettes)} — {moneyAnalysis.cigaretteShare}% всех расходов.</p>}
+              </div>
+            )}
+
+            {traderMode && basicAnalysis && (
               <div className="mb-4">
                 <div className="text-center rounded-lg border border-zinc-800 bg-zinc-950 py-4 mb-3">
                   <p className="font-data text-[10px] tracking-widest text-zinc-500 uppercase mb-1">Profit Factor</p>
