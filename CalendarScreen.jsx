@@ -211,6 +211,8 @@ const TRANSLATIONS = {
     saveRecord: 'Сохранить запись', recordNotePlaceholder: 'Заметка по записи (необязательно)',
     recordFutureBlocked: 'Нельзя добавить запись на будущую дату',
     myMoney: 'Мои деньги',
+    freePlan: 'БЕСПЛАТНО', history: 'История', filters: 'Фильтры', all: 'Все', entries: 'записей',
+    financialHistory: 'Финансовая история', resultForPeriod: 'Результат за выбранный период',
   },
   en: {
     titleMoney: 'Money Calendar', titlePro: 'Trading Calendar',
@@ -226,6 +228,8 @@ const TRANSLATIONS = {
     saveRecord: 'Save entry', recordNotePlaceholder: 'Note (optional)',
     recordFutureBlocked: "Can't add an entry for a future date",
     myMoney: 'My money',
+    freePlan: 'FREE', history: 'History', filters: 'Filters', all: 'All', entries: 'entries',
+    financialHistory: 'Financial history', resultForPeriod: 'Result for selected period',
   },
   md: {
     titleMoney: 'Calendar de bani', titlePro: 'Calendar de tranzacții',
@@ -241,6 +245,8 @@ const TRANSLATIONS = {
     saveRecord: 'Salvează înregistrarea', recordNotePlaceholder: 'Notă (opțional)',
     recordFutureBlocked: 'Nu se poate adăuga o înregistrare pentru o dată viitoare',
     myMoney: 'Banii mei',
+    freePlan: 'GRATUIT', history: 'Istoric', filters: 'Filtre', all: 'Toate', entries: 'înregistrări',
+    financialHistory: 'Istoric financiar', resultForPeriod: 'Rezultat pentru perioada selectată',
   },
 };
 
@@ -1823,7 +1829,7 @@ export default function CalendarScreen() {
                   ].join(' ')}
                   style={{ width: '44px' }}
                 >
-                  ДЕНЬГИ
+                  {t('freePlan')}
                 </span>
                 <span
                   className={[
@@ -2121,7 +2127,7 @@ export default function CalendarScreen() {
           }`}
         >
           <History className="h-4 w-4" />
-          История
+          {t('history')}
         </button>
       </div>
 
@@ -2147,7 +2153,7 @@ export default function CalendarScreen() {
                 <h2 className="font-display text-xl font-semibold text-zinc-50">
                   {traderMode
                     ? (periodPreset === 'Вся история' ? 'Вся история' : dateFrom === dateTo ? dateFrom : `${dateFrom} — ${dateTo}`)
-                    : 'Финансовая история'}
+                    : t('financialHistory')}
                 </h2>
               </div>
               <button
@@ -2165,7 +2171,7 @@ export default function CalendarScreen() {
                   {/* Money summary */}
                   <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4 sm:p-5 mb-4">
                     <div className="flex items-center justify-between gap-2 mb-2">
-                      <p className="text-xs text-zinc-500">Результат за выбранный период</p>
+                      <p className="text-xs text-zinc-500">{t('resultForPeriod')}</p>
                       <div className="flex gap-1 shrink-0">
                         {CURRENCIES.map((c) => (
                           <button
@@ -2189,11 +2195,11 @@ export default function CalendarScreen() {
                     </div>
                     <div className="grid grid-cols-2 gap-3 mt-4">
                       <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/70 px-3 py-3">
-                        <p className="text-[11px] text-zinc-500 mb-1">Доходы</p>
+                        <p className="text-[11px] text-zinc-500 mb-1">{t('income')}</p>
                         <p className="font-data text-sm text-emerald-400">+{currencySymbol}{formatMoney(historyIncome)}</p>
                       </div>
                       <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/70 px-3 py-3">
-                        <p className="text-[11px] text-zinc-500 mb-1">Расходы</p>
+                        <p className="text-[11px] text-zinc-500 mb-1">{t('expense')}</p>
                         <p className="font-data text-sm text-red-400">−{currencySymbol}{formatMoney(historyExpense)}</p>
                       </div>
                     </div>
@@ -2222,7 +2228,7 @@ export default function CalendarScreen() {
                         historyFiltersOpen ? 'border-zinc-500 bg-zinc-800 text-zinc-100' : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200',
                       ].join(' ')}
                     >
-                      Фильтры
+                      {t('filters')}
                     </button>
                   </div>
 
@@ -2245,9 +2251,9 @@ export default function CalendarScreen() {
                       </div>
                       <div className="flex gap-2">
                         {[
-                          { key: 'all', label: 'Все' },
-                          { key: 'win', label: 'Доходы' },
-                          { key: 'loss', label: 'Расходы' },
+                          { key: 'all', label: t('all') },
+                          { key: 'win', label: t('income') },
+                          { key: 'loss', label: t('expense') },
                         ].map((opt) => (
                           <button
                             key={opt.key}
