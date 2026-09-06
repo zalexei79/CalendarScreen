@@ -819,7 +819,7 @@ export default function CalendarScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalDateKey, setModalDateKey] = useState(null);
   const [form, setForm] = useState({
-    instrument: '', direction: 'LONG', sign: 'plus', pnl: '', time: currentTimeHHMM(), comment: '', platform: 'Manual',
+    instrument: '', direction: 'LONG', sign: 'plus', pnl: '', time: currentTimeHHMM(), comment: '', platform: 'Manual', currency: 'USD',
   });
   const [formError, setFormError] = useState('');
 
@@ -1005,6 +1005,7 @@ export default function CalendarScreen() {
         time: textValue(tradeToEdit.time) || currentTimeHHMM(),
         comment: tradeToEdit.comment || '',
         platform: textValue(tradeToEdit.platform) || 'Manual',
+        currency: tradeToEdit.currency || currency,
         takeProfit: tradeToEdit.take_profit != null ? String(tradeToEdit.take_profit) : '',
         stopLoss: tradeToEdit.stop_loss != null ? String(tradeToEdit.stop_loss) : '',
       });
@@ -1020,6 +1021,7 @@ export default function CalendarScreen() {
         time: currentTimeHHMM(),
         comment: '',
         platform: 'Manual',
+        currency,
         takeProfit: '',
         stopLoss: '',
       });
@@ -1219,6 +1221,10 @@ export default function CalendarScreen() {
       pnl: signedPnl,
       comment,
       platform,
+      // Per-entry currency: kept local-only (not sent to Supabase below) so
+      // it can't break cloud saves if the `trades` table doesn't have this
+      // column yet — same precaution as take_profit/stop_loss above.
+      currency: form.currency || currency,
       ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}),
       pending: false,
     };
@@ -1499,13 +1505,23 @@ export default function CalendarScreen() {
   }
 
   return (
-    <div className={`min-h-screen w-full flex flex-col transition-colors duration-200 ${isLight ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
+    <div className={`min-h-screen w-full flex flex-col transition-colors duration-200 ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
         .font-display { font-family: 'Space Grotesk', sans-serif; }
         .font-data { font-family: 'JetBrains Mono', monospace; }
         @keyframes cellGlowIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
         @keyframes themeIconPop { from { opacity: 0; transform: scale(0.4) rotate(-40deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
+        /* Light theme contrast fix: the muted grays below were tuned for a
+           dark background and read as near-invisible on white. Overriding
+           them here (scoped to .theme-light) fixes every screen at once
+           instead of touching each individual className. */
+        .theme-light .text-zinc-500 { color: #52525b !important; }
+        .theme-light .text-zinc-600 { color: #3f3f46 !important; }
+        .theme-light .text-zinc-700 { color: #27272a !important; }
+        .theme-light .border-zinc-200 { border-color: #d4d4d8 !important; }
+        .theme-light .border-zinc-300 { border-color: #a1a1aa !important; }
+        .theme-light .bg-zinc-50 { background-color: #f4f4f5 !important; }
       `}</style>
 
       {/* HEADER */}
@@ -2000,7 +2016,7 @@ export default function CalendarScreen() {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className={`font-data text-sm font-medium ${trade.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {trade.pnl >= 0 ? '+' : '-'}{currencySymbol}{formatMoney(trade.pnl)}
+                        {trade.pnl >= 0 ? '+' : '-'}{getCurrencyMeta(trade.currency || currency).symbol}{formatMoney(trade.pnl)}
                       </span>
                       <button
                         onClick={() => openModal(trade)}
@@ -2205,7 +2221,7 @@ export default function CalendarScreen() {
                               <span className="block text-[11px] text-zinc-500 mt-0.5">{formatDateLabel(entry.dateKey)} · {entry.time}{entry.comment ? ` · ${entry.comment}` : ''}</span>
                             </span>
                             <span className={`font-data text-sm font-medium shrink-0 ${entry.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {entry.pnl >= 0 ? '+' : '−'}{currencySymbol}{formatMoney(entry.pnl)}
+                              {entry.pnl >= 0 ? '+' : '−'}{getCurrencyMeta(entry.currency || currency).symbol}{formatMoney(entry.pnl)}
                             </span>
                           </button>
                         );
@@ -2619,9 +2635,29 @@ export default function CalendarScreen() {
 
               <div className="grid grid-cols-[4fr_2fr] gap-3">
                 <div>
-                  <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
-                    {traderMode ? 'Результат, $' : 'Сумма, $'}
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase">
+                      {traderMode ? 'Результат' : 'Сумма'}
+                    </label>
+                    <div className="flex gap-1">
+                      {CURRENCIES.map((c) => (
+                        <button
+                          key={c.code}
+                          type="button"
+                          onClick={() => setForm((f) => ({ ...f, currency: c.code }))}
+                          title={c.code}
+                          className={[
+                            'px-1.5 py-0.5 rounded text-[11px] font-data border transition-colors',
+                            form.currency === c.code
+                              ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                              : 'border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
+                          ].join(' ')}
+                        >
+                          {c.symbol}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <div className="grid grid-cols-2 gap-1.5 mb-1.5">
                     <button
                       type="button"
