@@ -170,6 +170,7 @@ const CURRENCIES = [
   { code: 'USD', symbol: '$', label: 'USD' },
   { code: 'EUR', symbol: '€', label: 'EUR' },
   { code: 'MDL', symbol: 'L', label: 'MDL' },
+  { code: 'RUB', symbol: '₽', label: 'RUB' },
 ];
 
 function getCurrencyMeta(code) {
@@ -2635,29 +2636,9 @@ export default function CalendarScreen() {
 
               <div className="grid grid-cols-[4fr_2fr] gap-3">
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase">
-                      {traderMode ? 'Результат' : 'Сумма'}
-                    </label>
-                    <div className="flex gap-1">
-                      {CURRENCIES.map((c) => (
-                        <button
-                          key={c.code}
-                          type="button"
-                          onClick={() => setForm((f) => ({ ...f, currency: c.code }))}
-                          title={c.code}
-                          className={[
-                            'px-1.5 py-0.5 rounded text-[11px] font-data border transition-colors',
-                            form.currency === c.code
-                              ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
-                              : 'border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
-                          ].join(' ')}
-                        >
-                          {c.symbol}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
+                    {traderMode ? 'Результат' : 'Сумма'}
+                  </label>
                   <div className="grid grid-cols-2 gap-1.5 mb-1.5">
                     <button
                       type="button"
@@ -2709,25 +2690,48 @@ export default function CalendarScreen() {
                     value={form.time}
                     onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* not supported in this browser */ } }}
                     onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
-                    className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-2 text-xs text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
+                    className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-2 text-xs text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40 mb-1.5"
                   />
+                  <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
+                    Валюта
+                  </label>
+                  <div className="grid grid-cols-2 gap-1">
+                    {CURRENCIES.map((c) => (
+                      <button
+                        key={c.code}
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, currency: c.code }))}
+                        title={c.code}
+                        className={[
+                          'py-1.5 rounded-md text-xs font-data border transition-colors',
+                          form.currency === c.code
+                            ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                            : 'border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
+                        ].join(' ')}
+                      >
+                        {c.symbol}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
-                  Источник
-                </label>
-                <select
-                  value={form.platform}
-                  onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value }))}
-                  className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
-                >
-                  {PLATFORMS.map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-              </div>
+              {traderMode && (
+                <div>
+                  <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
+                    Источник
+                  </label>
+                  <select
+                    value={form.platform}
+                    onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value }))}
+                    className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
+                  >
+                    {PLATFORMS.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
@@ -2746,7 +2750,7 @@ export default function CalendarScreen() {
 
               <button
                 onClick={handleSaveTrade}
-                className="mt-1 w-full rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-300 transition-colors"
+                className="mt-2 mx-auto block w-full sm:w-4/5 rounded-lg bg-amber-400 px-4 py-3.5 text-base font-bold text-zinc-950 hover:bg-amber-300 transition-colors shadow-lg shadow-amber-500/20"
               >
                 {editingTrade ? 'Сохранить изменения' : (traderMode ? 'Сохранить сделку' : t('saveRecord'))}
               </button>
