@@ -4,6 +4,7 @@ import {
   Calendar, ChevronDown, ChevronLeft, ChevronRight, Link2, KeyRound, UploadCloud, FileText,
   LogIn, LogOut, CheckCircle2, RefreshCw, History, Download, Pencil,
   Wallet, ShoppingCart, Home, Briefcase, ShoppingBag, CreditCard, MoreHorizontal,
+  Settings, Sun, Moon, Languages, CircleDollarSign,
 } from 'lucide-react';
 import { supabase } from './src/supabaseClient';
 
@@ -1536,13 +1537,22 @@ export default function CalendarScreen() {
         .font-data { font-family: 'JetBrains Mono', monospace; }
         @keyframes cellGlowIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
         @keyframes themeIconPop { from { opacity: 0; transform: scale(0.4) rotate(-40deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
-        /* Light theme contrast fix: the muted grays below were tuned for a
-           dark background and read as near-invisible on white. Overriding
-           them here (scoped to .theme-light) fixes every screen at once
-           instead of touching each individual className. */
+        /* The screen was designed dark-first. These scoped replacements make
+           every remaining dark utility class legible in the light theme,
+           including the header, popovers and bottom sheets. */
+        .theme-light .bg-zinc-950,
+        .theme-light .bg-zinc-900 { background-color: #ffffff !important; }
+        .theme-light .bg-zinc-800 { background-color: #e4e4e7 !important; }
+        .theme-light .text-zinc-50,
+        .theme-light .text-zinc-100 { color: #18181b !important; }
+        .theme-light .text-zinc-200 { color: #27272a !important; }
+        .theme-light .text-zinc-300 { color: #3f3f46 !important; }
+        .theme-light .text-zinc-400 { color: #52525b !important; }
         .theme-light .text-zinc-500 { color: #52525b !important; }
         .theme-light .text-zinc-600 { color: #3f3f46 !important; }
         .theme-light .text-zinc-700 { color: #27272a !important; }
+        .theme-light .border-zinc-800,
+        .theme-light .border-zinc-700 { border-color: #d4d4d8 !important; }
         .theme-light .border-zinc-200 { border-color: #d4d4d8 !important; }
         .theme-light .border-zinc-300 { border-color: #a1a1aa !important; }
         .theme-light .bg-zinc-50 { background-color: #f4f4f5 !important; }
@@ -1580,7 +1590,7 @@ export default function CalendarScreen() {
                 className="inline-block"
                 style={{ animation: 'themeIconPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both' }}
               >
-                {isLight ? '☀️' : '🌙'}
+                {isLight ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
               </span>
             </button>
 
@@ -1591,36 +1601,34 @@ export default function CalendarScreen() {
                 title={t('settings')}
                 aria-label={t('settings')}
                 className={[
-                  'flex items-center justify-center h-7 w-7 rounded-full border transition-colors',
+                  'flex items-center justify-center h-7 w-7 rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60',
                   isLight
                     ? 'border-zinc-300 bg-white text-zinc-600 hover:border-zinc-400'
                     : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-amber-400 hover:border-zinc-600',
                 ].join(' ')}
               >
-                <span
-                  className="inline-block transition-transform duration-300 ease-out"
+                <Settings
+                  className="h-3.5 w-3.5 transition-transform duration-300 ease-out"
                   style={{ transform: settingsOpen ? 'rotate(75deg)' : 'rotate(0deg)' }}
-                >
-                  ⚙️
-                </span>
+                />
               </button>
 
               {settingsOpen && (
                 <div
                   className={[
-                    'absolute right-0 top-full mt-2 z-30 rounded-xl border shadow-xl p-3 origin-top-right',
+                    'absolute right-0 top-full mt-2 z-30 rounded-xl border shadow-xl p-4 origin-top-right',
                     'w-[220px] sm:w-[260px]',
                     'transition-all duration-200 ease-out',
                     settingsVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-1.5 scale-95',
                     isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900',
                   ].join(' ')}
                 >
-                  <p className={`font-data text-[10px] tracking-widest uppercase mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                  <p className={`font-data text-[10px] tracking-widest uppercase mb-3 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
                     {t('settings')}
                   </p>
 
-                  <div className="mb-3">
-                    <p className={`text-[11px] uppercase tracking-wide mb-1.5 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>🌐 {t('language')}</p>
+                  <div className={`mb-3 rounded-lg border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'}`}>
+                    <p className={`flex items-center gap-1.5 text-[11px] uppercase tracking-wide mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}><Languages className="h-3.5 w-3.5" /> {t('language')}</p>
                     <div className="flex gap-1.5">
                       {LANGUAGES.map((l) => (
                         <button
@@ -1641,8 +1649,8 @@ export default function CalendarScreen() {
                     </div>
                   </div>
 
-                  <div>
-                    <p className={`text-[11px] uppercase tracking-wide mb-1.5 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>💵 {t('currency')}</p>
+                  <div className={`rounded-lg border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'}`}>
+                    <p className={`flex items-center gap-1.5 text-[11px] uppercase tracking-wide mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}><CircleDollarSign className="h-3.5 w-3.5" /> {t('currency')}</p>
                     <div className="flex gap-1.5">
                       {CURRENCIES.map((c) => (
                         <button
