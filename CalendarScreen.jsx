@@ -1711,8 +1711,8 @@ export default function CalendarScreen() {
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 mb-2 sm:mb-4">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <button
               onClick={goToPrevMonth}
               aria-label="Предыдущий месяц"
@@ -1721,11 +1721,11 @@ export default function CalendarScreen() {
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <div className="flex items-baseline gap-2 min-w-[190px]">
+            <div className="flex items-baseline gap-1.5 sm:gap-2 min-w-0 sm:min-w-[190px]">
               <div className="relative" ref={monthMenuRef}>
                 <button
                   onClick={() => { setMonthMenuOpen((v) => !v); setYearMenuOpen(false); }}
-                  className="font-display text-2xl font-semibold text-zinc-50 hover:text-amber-400 transition-colors"
+                  className="font-display text-xl sm:text-2xl font-semibold text-zinc-50 hover:text-amber-400 transition-colors"
                 >
                   {monthsFor(language)[month]}
                 </button>
@@ -1750,7 +1750,7 @@ export default function CalendarScreen() {
               <div className="relative" ref={yearMenuRef}>
                 <button
                   onClick={() => { setYearMenuOpen((v) => !v); setMonthMenuOpen(false); }}
-                  className="font-display text-2xl font-semibold text-zinc-500 hover:text-amber-400 transition-colors"
+                  className="font-display text-xl sm:text-2xl font-semibold text-zinc-500 hover:text-amber-400 transition-colors"
                 >
                   {year}
                 </button>
@@ -1782,7 +1782,7 @@ export default function CalendarScreen() {
             </button>
 
             {/* Account */}
-            <div className="ml-2 flex items-center rounded-md border border-zinc-800 bg-zinc-900 font-data text-[10px] tracking-wide overflow-hidden">
+            <div className="ml-2 hidden sm:flex items-center rounded-md border border-zinc-800 bg-zinc-900 font-data text-[10px] tracking-wide overflow-hidden">
               {user ? (
                 <div className="flex items-center gap-1 pl-2 pr-1 py-1">
                   <span className="max-w-[80px] truncate text-zinc-300">
@@ -1859,7 +1859,7 @@ export default function CalendarScreen() {
 
               {/* Platform slides out from the right side of PRO */}
               <div
-                className="overflow-hidden shrink-0 transition-[width,margin,opacity] duration-300 ease-out"
+                className="hidden sm:block overflow-hidden shrink-0 transition-[width,margin,opacity] duration-300 ease-out"
                 style={{
                   width: traderMode ? '92px' : '0px',
                   marginLeft: traderMode ? '6px' : '0px',
@@ -1882,7 +1882,7 @@ export default function CalendarScreen() {
             </div>
 
             {/* install as app + offline pending-sync indicator */}
-            <div className="relative ml-1.5" ref={installInfoRef}>
+            <div className="relative ml-1.5 hidden sm:block" ref={installInfoRef}>
               <button
                 onClick={handleInstallClick}
                 title="Установить приложение"
@@ -2142,7 +2142,7 @@ export default function CalendarScreen() {
       )}
 
       {/* bottom "История" entry point — search/browse all saved trades */}
-      <div className="fixed bottom-4 inset-x-0 flex justify-center z-30 pointer-events-none">
+      <div className="fixed bottom-3 sm:bottom-4 inset-x-0 flex justify-center z-30 pointer-events-none">
         <button
           onClick={openHistory}
           className={`pointer-events-auto flex items-center gap-2 rounded-full border backdrop-blur px-4 py-2.5 text-sm shadow-xl transition-colors ${
