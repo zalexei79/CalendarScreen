@@ -4,7 +4,7 @@ import {
   Calendar, ChevronDown, ChevronLeft, ChevronRight, Link2, KeyRound, UploadCloud, FileText,
   LogIn, LogOut, CheckCircle2, RefreshCw, History, Download, Pencil,
   Wallet, ShoppingCart, Home, Briefcase, ShoppingBag, CreditCard, MoreHorizontal,
-  Settings, Sun, Moon, Languages, CircleDollarSign,
+  Settings, Sun, Moon, Languages, CircleDollarSign, Sync,
 } from 'lucide-react';
 import { supabase } from './src/supabaseClient';
 
@@ -290,6 +290,7 @@ export default function CalendarScreen() {
   // --- cTrader connection state ------------------------------------------
   const [ctraderConnected, setCtraderConnected] = useState(false);
   const [ctraderLoading, setCtraderLoading] = useState(false);
+  const [syncingCtrader, setSyncingCtrader] = useState(false);
 
   async function checkCtraderStatus(userId) {
     if (!userId) {
@@ -326,6 +327,53 @@ export default function CalendarScreen() {
     const clientId = import.meta.env.VITE_CTRADER_CLIENT_ID;
     const redirectUri = encodeURIComponent(window.location.origin + '/');
     window.location.href = `https://connect.spotware.com/apps/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=trading`;
+  }
+
+  // --- Заглушка синхронизации сделок cTrader (заменить на реальный вызов Edge Function) ---
+  async function handleSyncCtraderTrades() {
+    if (!ctraderConnected) return;
+    setSyncingCtrader(true);
+    try {
+      // В реальном проекте здесь должен быть вызов Edge Function, которая получает сделки из cTrader.
+      // Пока имитируем получение нескольких сделок за последние 3 дня.
+      const now = new Date();
+      const mockTrades = [
+        { date: addDays(now, -2), time: '10:15', instrument: 'BTCUSD', direction: 'LONG', pnl: 120, comment: 'Синхронизировано из cTrader', platform: 'cTrader' },
+        { date: addDays(now, -2), time: '14:30', instrument: 'XAUUSD', direction: 'SHORT', pnl: -85, comment: '', platform: 'cTrader' },
+        { date: addDays(now, -1), time: '09:45', instrument: 'EURUSD', direction: 'LONG', pnl: 45, comment: '', platform: 'cTrader' },
+        { date: addDays(now, -1), time: '16:20', instrument: 'NDX100', direction: 'LONG', pnl: 210, comment: '', platform: 'cTrader' },
+        { date: now, time: '11:00', instrument: 'ETHUSD', direction: 'SHORT', pnl: -30, comment: '', platform: 'cTrader' },
+      ];
+
+      const cloudUserId = getValidUserId(user);
+      for (const trade of mockTrades) {
+        const dateKey = keyFromDate(trade.date);
+        const localId = `ctrader-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const newTrade = {
+          id: localId,
+          time: trade.time,
+          instrument: trade.instrument,
+          direction: trade.direction,
+          pnl: trade.pnl,
+          comment: trade.comment,
+          platform: trade.platform,
+          currency: currency,
+          pending: false,
+        };
+        setManualTrades((prev) => ({
+          ...prev,
+          [dateKey]: [...(prev[dateKey] || []), newTrade],
+        }));
+        // Сохраняем локально
+        cacheTradesLocally(manualTrades, cloudUserId);
+      }
+      alert('Синхронизация завершена (демо). Добавлено 5 тестовых сделок.');
+    } catch (err) {
+      console.error('[ctrader sync] ошибка:', err);
+      alert('Ошибка синхронизации: ' + err.message);
+    } finally {
+      setSyncingCtrader(false);
+    }
   }
 
   useEffect(() => {
@@ -2178,7 +2226,7 @@ export default function CalendarScreen() {
         </button>
       </div>
 
-      {/* HISTORY MODAL — money mode gets a simple personal-finance timeline; PRO keeps the dense trader view */}
+      {/* HISTORY MODAL — улучшен визуал для светлой темы + кнопка синхронизации cTrader */}
       {historyOpen && (
         <div
           className={`fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-3 sm:px-4 transition-opacity duration-200 ${
@@ -2188,16 +2236,18 @@ export default function CalendarScreen() {
           onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) closeHistory(); }}
         >
           <div
-            className={`relative w-full ${traderMode ? 'max-w-md' : 'max-w-lg'} max-h-[86vh] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl transition-all duration-200 ${
+            className={`relative w-full ${traderMode ? 'max-w-md' : 'max-w-lg'} max-h-[86vh] overflow-hidden rounded-2xl border shadow-2xl transition-all duration-200 ${
               historyVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+            } ${
+              isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
             }`}
           >
-            <div className="flex items-center justify-between px-5 sm:px-6 pt-5 pb-4 border-b border-zinc-800/80">
+            <div className={`flex items-center justify-between px-5 sm:px-6 pt-5 pb-4 border-b ${isLight ? 'border-zinc-200' : 'border-zinc-800/80'}`}>
               <div>
                 <p className="font-data text-[10px] tracking-[0.22em] text-amber-400 uppercase mb-1">
                   {traderMode ? 'История сделок' : t('myMoney')}
                 </p>
-                <h2 className="font-display text-xl font-semibold text-zinc-50">
+                <h2 className={`font-display text-xl font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>
                   {traderMode
                     ? (periodPreset === 'Вся история' ? 'Вся история' : dateFrom === dateTo ? dateFrom : `${dateFrom} — ${dateTo}`)
                     : t('financialHistory')}
@@ -2205,20 +2255,24 @@ export default function CalendarScreen() {
               </div>
               <button
                 onClick={closeHistory}
-                className="rounded-full p-2 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
+                className={`rounded-full p-2 transition-colors ${
+                  isLight ? 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200'
+                }`}
                 aria-label="Закрыть"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="overflow-y-auto px-5 sm:px-6 py-5 max-h-[calc(86vh-80px)]">
+            <div className={`overflow-y-auto px-5 sm:px-6 py-5 max-h-[calc(86vh-80px)] ${isLight ? 'bg-zinc-50/50' : ''}`}>
               {!traderMode ? (
                 <>
-                  {/* Money summary */}
-                  <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4 sm:p-5 mb-4">
+                  {/* Money summary — улучшенная светлая тема */}
+                  <div className={`rounded-2xl border p-4 sm:p-5 mb-4 ${
+                    isLight ? 'bg-white border-zinc-300 shadow-sm' : 'bg-zinc-950/70 border-zinc-800'
+                  }`}>
                     <div className="flex items-center justify-between gap-2 mb-2">
-                      <p className="text-xs text-zinc-500">{t('resultForPeriod')}</p>
+                      <p className={`text-xs ${isLight ? 'text-zinc-600' : 'text-zinc-500'}`}>{t('resultForPeriod')}</p>
                       <div className="flex gap-1 shrink-0">
                         {CURRENCIES.map((c) => (
                           <button
@@ -2229,6 +2283,8 @@ export default function CalendarScreen() {
                               'px-1.5 py-0.5 rounded text-[11px] font-data border transition-colors',
                               currency === c.code
                                 ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                                : isLight
+                                ? 'border-zinc-300 text-zinc-500 hover:text-zinc-700 hover:border-zinc-400'
                                 : 'border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
                             ].join(' ')}
                           >
@@ -2237,17 +2293,21 @@ export default function CalendarScreen() {
                         ))}
                       </div>
                     </div>
-                    <div className={`font-display text-4xl sm:text-5xl font-semibold tracking-tight ${historyTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    <div className={`font-display text-4xl sm:text-5xl font-semibold tracking-tight ${historyTotal >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                       {formatPnlDisplay(historyTotal)}
                     </div>
                     <div className="grid grid-cols-2 gap-3 mt-4">
-                      <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/70 px-3 py-3">
-                        <p className="text-[11px] text-zinc-500 mb-1">{t('income')}</p>
-                        <p className="font-data text-sm text-emerald-400">+{currencySymbol}{formatMoney(historyIncome)}</p>
+                      <div className={`rounded-xl border px-3 py-3 ${
+                        isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800/80 bg-zinc-900/70'
+                      }`}>
+                        <p className={`text-[11px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'} mb-1`}>{t('income')}</p>
+                        <p className="font-data text-sm text-emerald-600">+{currencySymbol}{formatMoney(historyIncome)}</p>
                       </div>
-                      <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/70 px-3 py-3">
-                        <p className="text-[11px] text-zinc-500 mb-1">{t('expense')}</p>
-                        <p className="font-data text-sm text-red-400">−{currencySymbol}{formatMoney(historyExpense)}</p>
+                      <div className={`rounded-xl border px-3 py-3 ${
+                        isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800/80 bg-zinc-900/70'
+                      }`}>
+                        <p className={`text-[11px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'} mb-1`}>{t('expense')}</p>
+                        <p className="font-data text-sm text-red-600">−{currencySymbol}{formatMoney(historyExpense)}</p>
                       </div>
                     </div>
                   </div>
@@ -2255,11 +2315,11 @@ export default function CalendarScreen() {
                   {historyInsights.length > 0 && (
                     <div className="mb-4 rounded-2xl border border-amber-400/25 bg-amber-400/5 p-4">
                       <p className="mb-2 text-xs font-semibold text-amber-400">Наблюдения по привычкам</p>
-                      <div className="space-y-1.5">{historyInsights.map((insight) => <p key={insight} className="text-xs leading-relaxed text-zinc-400">• {insight}</p>)}</div>
+                      <div className="space-y-1.5">{historyInsights.map((insight) => <p key={insight} className={`text-xs leading-relaxed ${isLight ? 'text-zinc-700' : 'text-zinc-400'}`}>• {insight}</p>)}</div>
                     </div>
                   )}
 
-                  {/* Fast period controls */}
+                  {/* Fast period controls - улучшены для светлой темы */}
                   <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1 no-scrollbar">
                     {PERIOD_PRESETS.map((p) => (
                       <button
@@ -2268,7 +2328,9 @@ export default function CalendarScreen() {
                         className={[
                           'shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors',
                           periodPreset === p
-                            ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-300'
+                            ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-700'
+                            : isLight
+                            ? 'border-zinc-300 bg-white text-zinc-600 hover:text-zinc-800 hover:border-zinc-400'
                             : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
                         ].join(' ')}
                       >
@@ -2279,7 +2341,11 @@ export default function CalendarScreen() {
                       onClick={() => setHistoryFiltersOpen((v) => !v)}
                       className={[
                         'shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors',
-                        historyFiltersOpen ? 'border-zinc-500 bg-zinc-800 text-zinc-100' : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200',
+                        historyFiltersOpen
+                          ? 'border-zinc-500 bg-zinc-800 text-zinc-100'
+                          : isLight
+                          ? 'border-zinc-300 bg-white text-zinc-600 hover:text-zinc-800 hover:border-zinc-400'
+                          : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200',
                       ].join(' ')}
                     >
                       {t('filters')}
@@ -2287,20 +2353,26 @@ export default function CalendarScreen() {
                   </div>
 
                   {historyFiltersOpen && (
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 mb-4">
+                    <div className={`rounded-xl border p-3 mb-4 ${
+                      isLight ? 'bg-white border-zinc-300' : 'bg-zinc-950/60 border-zinc-800'
+                    }`}>
                       <div className="flex items-center gap-2 mb-3">
                         <input
                           type="date"
                           value={dateFrom}
                           onChange={(e) => handleDateFromChange(e.target.value)}
-                          className="flex-1 min-w-0 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 font-data focus:outline-none focus:border-emerald-400/50"
+                          className={`flex-1 min-w-0 rounded-lg border px-3 py-2 text-xs font-data focus:outline-none focus:border-emerald-400/50 ${
+                            isLight ? 'bg-white border-zinc-300 text-zinc-900' : 'bg-zinc-900 border-zinc-700 text-zinc-200'
+                          }`}
                         />
-                        <span className="text-zinc-600">—</span>
+                        <span className={isLight ? 'text-zinc-400' : 'text-zinc-600'}>—</span>
                         <input
                           type="date"
                           value={dateTo}
                           onChange={(e) => handleDateToChange(e.target.value)}
-                          className="flex-1 min-w-0 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 font-data focus:outline-none focus:border-emerald-400/50"
+                          className={`flex-1 min-w-0 rounded-lg border px-3 py-2 text-xs font-data focus:outline-none focus:border-emerald-400/50 ${
+                            isLight ? 'bg-white border-zinc-300 text-zinc-900' : 'bg-zinc-900 border-zinc-700 text-zinc-200'
+                          }`}
                         />
                       </div>
                       <div className="flex gap-2">
@@ -2315,7 +2387,9 @@ export default function CalendarScreen() {
                             className={[
                               'flex-1 rounded-lg border px-3 py-2 text-xs transition-colors',
                               historyWinLoss === opt.key
-                                ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-300'
+                                ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-700'
+                                : isLight
+                                ? 'border-zinc-300 bg-white text-zinc-600 hover:text-zinc-800 hover:border-zinc-400'
                                 : 'border-zinc-700 bg-zinc-900 text-zinc-400 hover:text-zinc-200',
                             ].join(' ')}
                           >
@@ -2326,12 +2400,12 @@ export default function CalendarScreen() {
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs text-zinc-500">{historyTrades.length} {traderMode ? 'операций' : 'записей'}</p>
+                  <div className={`flex items-center justify-between mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                    <p className="text-xs">{historyTrades.length} {traderMode ? 'операций' : 'записей'}</p>
                     {periodPreset !== 'Вся история' && (
                       <button
                         onClick={() => setHistoryFiltersOpen(true)}
-                        className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors"
+                        className={`text-xs ${isLight ? 'text-zinc-600 hover:text-zinc-900' : 'text-zinc-600 hover:text-zinc-300'} transition-colors`}
                       >
                         Изменить период
                       </button>
@@ -2339,7 +2413,9 @@ export default function CalendarScreen() {
                   </div>
 
                   {historyTrades.length > 0 ? (
-                    <div className="rounded-2xl border border-zinc-800 bg-zinc-950 overflow-hidden">
+                    <div className={`rounded-2xl border overflow-hidden ${
+                      isLight ? 'bg-white border-zinc-300' : 'bg-zinc-950 border-zinc-800'
+                    }`}>
                       {historyTrades.map((entry) => {
                         const category = getMoneyCategoryMeta(entry.instrument);
                         const Icon = category?.icon || MoreHorizontal;
@@ -2347,16 +2423,20 @@ export default function CalendarScreen() {
                           <button
                             key={entry.id}
                             onClick={() => jumpToTradeDate(entry.dateKey)}
-                            className="w-full px-4 py-3.5 flex items-center gap-3 text-left border-b last:border-b-0 border-zinc-800/80 hover:bg-zinc-900 transition-colors"
+                            className={`w-full px-4 py-3.5 flex items-center gap-3 text-left border-b last:border-b-0 transition-colors ${
+                              isLight
+                                ? 'border-zinc-200 hover:bg-zinc-50 text-zinc-800'
+                                : 'border-zinc-800/80 hover:bg-zinc-900 text-zinc-100'
+                            }`}
                           >
-                            <span className={`h-9 w-9 shrink-0 rounded-xl flex items-center justify-center ${entry.pnl >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                            <span className={`h-9 w-9 shrink-0 rounded-xl flex items-center justify-center ${entry.pnl >= 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
                               <Icon className="h-4 w-4" />
                             </span>
                             <span className="min-w-0 flex-1">
-                              <span className="block text-sm font-medium text-zinc-100 truncate">{entry.instrument || 'Другое'}</span>
-                              <span className="block text-[11px] text-zinc-500 mt-0.5">{formatDateLabel(entry.dateKey)} · {entry.time}{entry.comment ? ` · ${entry.comment}` : ''}</span>
+                              <span className={`block text-sm font-medium truncate ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{entry.instrument || 'Другое'}</span>
+                              <span className={`block text-[11px] mt-0.5 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{formatDateLabel(entry.dateKey)} · {entry.time}{entry.comment ? ` · ${entry.comment}` : ''}</span>
                             </span>
-                            <span className={`font-data text-sm font-medium shrink-0 ${entry.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            <span className={`font-data text-sm font-medium shrink-0 ${entry.pnl >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                               {entry.pnl >= 0 ? '+' : '−'}{getCurrencyMeta(entry.currency || currency).symbol}{formatMoney(entry.pnl)}
                             </span>
                           </button>
@@ -2364,10 +2444,12 @@ export default function CalendarScreen() {
                       })}
                     </div>
                   ) : (
-                    <div className="rounded-2xl border border-dashed border-zinc-800 px-6 py-12 text-center">
-                      <Wallet className="h-8 w-8 text-zinc-700 mx-auto mb-3" />
-                      <p className="text-sm text-zinc-500">Пока здесь пусто</p>
-                      <p className="text-xs text-zinc-700 mt-1">Добавляй доходы и расходы — календарь соберёт картину месяца.</p>
+                    <div className={`rounded-2xl border border-dashed px-6 py-12 text-center ${
+                      isLight ? 'border-zinc-300 bg-white/50' : 'border-zinc-800'
+                    }`}>
+                      <Wallet className={`h-8 w-8 mx-auto mb-3 ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`} />
+                      <p className={`text-sm ${isLight ? 'text-zinc-600' : 'text-zinc-500'}`}>Пока здесь пусто</p>
+                      <p className={`text-xs mt-1 ${isLight ? 'text-zinc-500' : 'text-zinc-700'}`}>Добавляй доходы и расходы — календарь соберёт картину месяца.</p>
                     </div>
                   )}
 
@@ -2375,7 +2457,11 @@ export default function CalendarScreen() {
                     <button
                       onClick={handleExportCsv}
                       disabled={historyTrades.length === 0}
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-zinc-800 px-3 py-2.5 text-xs text-zinc-400 hover:text-zinc-200 hover:border-zinc-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                        isLight
+                          ? 'border-zinc-300 bg-white text-zinc-600 hover:text-zinc-900 hover:border-zinc-400'
+                          : 'border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600'
+                      }`}
                     >
                       <Download className="h-3.5 w-3.5" />
                       Экспорт CSV
@@ -2385,7 +2471,9 @@ export default function CalendarScreen() {
                       className={[
                         'flex-1 rounded-xl border px-3 py-2.5 text-xs transition-colors',
                         confirmingClear
-                          ? 'border-red-500 bg-red-500/10 text-red-400'
+                          ? 'border-red-500 bg-red-500/10 text-red-600'
+                          : isLight
+                          ? 'border-zinc-300 bg-white text-zinc-600 hover:text-red-600 hover:border-red-500/40'
                           : 'border-zinc-800 text-zinc-600 hover:text-red-400 hover:border-red-500/40',
                       ].join(' ')}
                     >
@@ -2395,7 +2483,7 @@ export default function CalendarScreen() {
                 </>
               ) : (
                 <>
-                  {/* PRO history: preserve the denser trader workflow */}
+                  {/* PRO history — улучшен визуал для светлой темы */}
                   <div className="flex items-center gap-2 mb-3">
                     <button
                       onClick={() => {
@@ -2405,16 +2493,34 @@ export default function CalendarScreen() {
                         }
                         setDisplayMode((m) => (m === 'usd' ? 'percent' : 'usd'));
                       }}
-                      className="rounded-md border border-zinc-700 bg-zinc-950 px-2.5 py-1 font-data text-xs text-zinc-300 hover:border-zinc-600 transition-colors"
+                      className={`rounded-md border px-2.5 py-1 font-data text-xs transition-colors ${
+                        isLight
+                          ? 'border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400'
+                          : 'border-zinc-700 bg-zinc-950 text-zinc-300 hover:border-zinc-600'
+                      }`}
                     >
                       {displayMode === 'usd' ? '$' : '%'}
                     </button>
                     <button
                       onClick={handleEditDeposit}
-                      className="font-data text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                      className={`font-data text-xs ${isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-500 hover:text-zinc-300'} transition-colors`}
                     >
                       Депозит: {depositSize > 0 ? `${currencySymbol}${formatMoney(depositSize)}` : 'не задан'} ✎
                     </button>
+                    {ctraderConnected && (
+                      <button
+                        onClick={handleSyncCtraderTrades}
+                        disabled={syncingCtrader}
+                        className={`ml-auto flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs transition-colors ${
+                          isLight
+                            ? 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                            : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                        }`}
+                      >
+                        <Sync className={`h-3 w-3 ${syncingCtrader ? 'animate-spin' : ''}`} />
+                        {syncingCtrader ? 'Синхр...' : 'Синхронизировать'}
+                      </button>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap gap-1.5 mb-2">
@@ -2426,6 +2532,8 @@ export default function CalendarScreen() {
                           'rounded-full border px-2.5 py-1 font-data text-[11px] tracking-wide transition-colors',
                           periodPreset === p
                             ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                            : isLight
+                            ? 'border-zinc-300 bg-white text-zinc-600 hover:text-zinc-800 hover:border-zinc-400'
                             : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
                         ].join(' ')}
                       >
@@ -2439,14 +2547,22 @@ export default function CalendarScreen() {
                       type="date"
                       value={dateFrom}
                       onChange={(e) => handleDateFromChange(e.target.value)}
-                      className="flex-1 min-w-0 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-200 font-data focus:outline-none focus:border-amber-400/60"
+                      className={`flex-1 min-w-0 rounded-md border px-2 py-1.5 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
+                        isLight
+                          ? 'bg-white border-zinc-300 text-zinc-900'
+                          : 'bg-zinc-950 border-zinc-700 text-zinc-200'
+                      }`}
                     />
-                    <span className="text-zinc-600">—</span>
+                    <span className={isLight ? 'text-zinc-400' : 'text-zinc-600'}>—</span>
                     <input
                       type="date"
                       value={dateTo}
                       onChange={(e) => handleDateToChange(e.target.value)}
-                      className="flex-1 min-w-0 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-200 font-data focus:outline-none focus:border-amber-400/60"
+                      className={`flex-1 min-w-0 rounded-md border px-2 py-1.5 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
+                        isLight
+                          ? 'bg-white border-zinc-300 text-zinc-900'
+                          : 'bg-zinc-950 border-zinc-700 text-zinc-200'
+                      }`}
                     />
                   </div>
 
@@ -2454,7 +2570,11 @@ export default function CalendarScreen() {
                     <select
                       value={platformFilter}
                       onChange={(e) => setPlatformFilter(e.target.value)}
-                      className="flex-1 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-xs text-zinc-200 font-data focus:outline-none focus:border-amber-400/60"
+                      className={`flex-1 rounded-md border px-2 py-1.5 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
+                        isLight
+                          ? 'bg-white border-zinc-300 text-zinc-900'
+                          : 'bg-zinc-950 border-zinc-700 text-zinc-200'
+                      }`}
                     >
                       <option value="ALL">Все источники</option>
                       {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
@@ -2470,6 +2590,8 @@ export default function CalendarScreen() {
                           'flex-1 rounded-md border px-2 py-1.5 font-data text-xs transition-colors',
                           historyWinLoss === opt.key
                             ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                            : isLight
+                            ? 'border-zinc-300 bg-white text-zinc-600 hover:text-zinc-800 hover:border-zinc-400'
                             : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
                         ].join(' ')}
                       >
@@ -2478,32 +2600,40 @@ export default function CalendarScreen() {
                     ))}
                   </div>
 
-                  <p className="text-xs text-zinc-500 mb-2">{historyTrades.length} сделок</p>
+                  <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'} mb-2`}>{historyTrades.length} сделок</p>
                   {historyTrades.length > 0 ? (
-                    <div className="rounded-lg border border-zinc-800 bg-zinc-950 divide-y divide-zinc-800 overflow-y-auto">
+                    <div className={`rounded-lg border divide-y overflow-y-auto ${
+                      isLight
+                        ? 'bg-white border-zinc-300 divide-zinc-200'
+                        : 'bg-zinc-950 border-zinc-800 divide-zinc-800'
+                    }`}>
                       {historyTrades.map((trade) => (
                         <button
                           key={trade.id}
                           onClick={() => jumpToTradeDate(trade.dateKey)}
-                          className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-zinc-900 transition-colors"
+                          className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors ${
+                            isLight ? 'hover:bg-zinc-50' : 'hover:bg-zinc-900'
+                          }`}
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <span className="font-data text-xs text-zinc-500 w-14 shrink-0">{formatDateLabel(trade.dateKey)}</span>
-                            <span className="text-sm text-zinc-200 font-medium truncate">{trade.instrument}</span>
+                            <span className={`font-data text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'} w-14 shrink-0`}>{formatDateLabel(trade.dateKey)}</span>
+                            <span className={`text-sm font-medium truncate ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{trade.instrument}</span>
                           </div>
-                          <span className={`font-data text-sm font-medium shrink-0 ${trade.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          <span className={`font-data text-sm font-medium shrink-0 ${trade.pnl >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                             {formatPnlDisplay(trade.pnl)}
                           </span>
                         </button>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-zinc-600 text-center py-6">Нет сделок за выбранный период</p>
+                    <p className={`text-sm text-center py-6 ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>Нет сделок за выбранный период</p>
                   )}
 
-                  <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2.5 mt-3">
-                    <span className="text-xs text-zinc-500">Итог</span>
-                    <span className={`font-data text-sm font-semibold ${historyTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  <div className={`flex items-center justify-between rounded-md border px-3 py-2.5 mt-3 ${
+                    isLight ? 'bg-white border-zinc-300' : 'bg-zinc-950 border-zinc-800'
+                  }`}>
+                    <span className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>Итог</span>
+                    <span className={`font-data text-sm font-semibold ${historyTotal >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                       {formatPnlDisplay(historyTotal)}
                     </span>
                   </div>
@@ -2512,7 +2642,11 @@ export default function CalendarScreen() {
                     <button
                       onClick={handleExportCsv}
                       disabled={historyTrades.length === 0}
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-md border border-zinc-800 px-3 py-2 font-data text-xs text-zinc-400 hover:text-zinc-200 hover:border-zinc-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      className={`flex-1 flex items-center justify-center gap-1.5 rounded-md border px-3 py-2 font-data text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                        isLight
+                          ? 'border-zinc-300 bg-white text-zinc-600 hover:text-zinc-900 hover:border-zinc-400'
+                          : 'border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600'
+                      }`}
                     >
                       <Download className="h-3.5 w-3.5" />
                       Экспорт CSV
@@ -2522,7 +2656,9 @@ export default function CalendarScreen() {
                       className={[
                         'flex-1 rounded-md border px-3 py-2 font-data text-xs transition-colors',
                         confirmingClear
-                          ? 'border-red-500 bg-red-500/10 text-red-400'
+                          ? 'border-red-500 bg-red-500/10 text-red-600'
+                          : isLight
+                          ? 'border-zinc-300 bg-white text-zinc-600 hover:text-red-600 hover:border-red-500/40'
                           : 'border-zinc-800 text-zinc-600 hover:text-red-400 hover:border-red-500/40',
                       ].join(' ')}
                     >
@@ -2546,13 +2682,17 @@ export default function CalendarScreen() {
           onClick={handleModalBackdropClick}
         >
           <div
-            className={`relative w-full max-w-[360px] rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-4 shadow-2xl transition-all duration-200 sm:px-5 sm:py-5 ${
+            className={`relative w-full max-w-[360px] rounded-2xl border px-4 py-4 shadow-2xl transition-all duration-200 sm:px-5 sm:py-5 ${
               modalVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+            } ${
+              isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
             }`}
           >
             <button
               onClick={closeModal}
-              className="absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-full text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
+              className={`absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
+                isLight ? 'text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200'
+              }`}
               aria-label="Закрыть"
             >
               <X className="h-4 w-4" />
@@ -2564,7 +2704,7 @@ export default function CalendarScreen() {
                   ? (editingTrade ? 'Редактировать сделку' : 'Новая сделка')
                   : (editingTrade ? t('editRecord') : t('addRecord'))}
               </p>
-              <p className="mt-1 text-xs text-zinc-500">
+              <p className={`mt-1 text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
                 {modalDateKey &&
                   parseDateKeyLocal(modalDateKey).toLocaleDateString('ru-RU', {
                     day: 'numeric',
@@ -2576,15 +2716,17 @@ export default function CalendarScreen() {
 
             <div className="mt-4">
               {/* Income / expense: the first and fastest decision */}
-              <div className="grid grid-cols-2 gap-1 rounded-xl border border-zinc-800 bg-zinc-950 p-1">
+              <div className={`grid grid-cols-2 gap-1 rounded-xl border p-1 ${
+                isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'
+              }`}>
                 <button
                   type="button"
                   onClick={() => { setForm((f) => ({ ...f, sign: 'plus' })); setFormError(''); }}
                   className={[
                     'flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-colors',
                     form.sign === 'plus'
-                      ? 'bg-emerald-500/10 text-emerald-400'
-                      : 'text-zinc-500 hover:text-zinc-300',
+                      ? 'bg-emerald-500/10 text-emerald-600'
+                      : isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-300',
                   ].join(' ')}
                 >
                   <TrendingUp className="h-3.5 w-3.5" />
@@ -2596,8 +2738,8 @@ export default function CalendarScreen() {
                   className={[
                     'flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-colors',
                     form.sign === 'minus'
-                      ? 'bg-red-500/10 text-red-400'
-                      : 'text-zinc-500 hover:text-zinc-300',
+                      ? 'bg-red-500/10 text-red-600'
+                      : isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-300',
                   ].join(' ')}
                 >
                   <TrendingDown className="h-3.5 w-3.5" />
@@ -2606,7 +2748,9 @@ export default function CalendarScreen() {
               </div>
 
               {/* Amount is the visual focus */}
-              <div className="mt-3 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 focus-within:border-amber-400/60 focus-within:ring-1 focus-within:ring-amber-400/20">
+              <div className={`mt-3 rounded-xl border px-3 py-2 focus-within:border-amber-400/60 focus-within:ring-1 focus-within:ring-amber-400/20 ${
+                isLight ? 'border-zinc-300 bg-white' : 'border-zinc-700 bg-zinc-950'
+              }`}>
                 <input
                   type="number"
                   min="0"
@@ -2614,7 +2758,9 @@ export default function CalendarScreen() {
                   autoFocus
                   value={form.pnl}
                   onChange={(e) => { setForm((f) => ({ ...f, pnl: e.target.value })); setFormError(''); }}
-                  className="w-full bg-transparent text-center font-data text-3xl font-semibold tracking-tight text-zinc-100 outline-none placeholder:text-zinc-700"
+                  className={`w-full bg-transparent text-center font-data text-3xl font-semibold tracking-tight outline-none placeholder:text-zinc-700 ${
+                    isLight ? 'text-zinc-900' : 'text-zinc-100'
+                  }`}
                   placeholder="0"
                   aria-label={traderMode ? 'Результат' : 'Сумма'}
                 />
@@ -2632,7 +2778,9 @@ export default function CalendarScreen() {
                     className={[
                       'min-w-10 rounded-lg border px-3 py-1.5 font-data text-xs transition-colors',
                       form.currency === c.code
-                        ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                        ? 'border-amber-400/60 bg-amber-400/10 text-amber-600'
+                        : isLight
+                        ? 'border-zinc-300 bg-white text-zinc-500 hover:border-zinc-400 hover:text-zinc-700'
                         : 'border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300',
                     ].join(' ')}
                   >
@@ -2643,7 +2791,9 @@ export default function CalendarScreen() {
 
               {/* Time is available, but deliberately quiet */}
               <div className="mt-2 flex justify-center">
-                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] text-zinc-600 hover:bg-zinc-800 hover:text-zinc-400 transition-colors">
+                <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] transition-colors ${
+                  isLight ? 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700' : 'text-zinc-600 hover:bg-zinc-800 hover:text-zinc-400'
+                }`}>
                   <span>◷</span>
                   <span>{form.time || currentTimeHHMM()}</span>
                   <input
@@ -2661,7 +2811,9 @@ export default function CalendarScreen() {
               <button
                 type="button"
                 onClick={() => setDetailsOpen((v) => !v)}
-                className="mx-auto mt-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors"
+                className={`mx-auto mt-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                  isLight ? 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'
+                }`}
               >
                 <MoreHorizontal className="h-3.5 w-3.5" />
                 {detailsOpen ? 'Скрыть детали' : 'Дополнительно'}
@@ -2669,11 +2821,15 @@ export default function CalendarScreen() {
               </button>
 
               {detailsOpen && (
-                <div className="mt-2 space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
+                <div className={`mt-2 space-y-3 rounded-xl border p-3 ${
+                  isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-950/60'
+                }`}>
                   {traderMode ? (
                     <>
                       <div>
-                        <label className="mb-1.5 block font-data text-[10px] tracking-widest text-zinc-600 uppercase">
+                        <label className={`mb-1.5 block font-data text-[10px] tracking-widest uppercase ${
+                          isLight ? 'text-zinc-600' : 'text-zinc-600'
+                        }`}>
                           Инструмент
                         </label>
                         <div className="flex flex-wrap gap-1.5 mb-2">
@@ -2685,7 +2841,9 @@ export default function CalendarScreen() {
                               className={[
                                 'rounded-full border px-2.5 py-1 font-data text-[11px] transition-colors',
                                 textValue(form.instrument).trim().toUpperCase() === tag
-                                  ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                                  ? 'border-amber-400/60 bg-amber-400/10 text-amber-600'
+                                  : isLight
+                                  ? 'border-zinc-300 bg-white text-zinc-500 hover:text-zinc-700'
                                   : 'border-zinc-800 text-zinc-500 hover:text-zinc-300',
                               ].join(' ')}
                             >
@@ -2697,7 +2855,11 @@ export default function CalendarScreen() {
                           type="text"
                           value={form.instrument}
                           onChange={(e) => { setForm((f) => ({ ...f, instrument: e.target.value })); setFormError(''); }}
-                          className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data outline-none focus:border-amber-400/60"
+                          className={`w-full rounded-lg border px-3 py-2 text-sm font-data outline-none focus:border-amber-400/60 ${
+                            isLight
+                              ? 'bg-white border-zinc-300 text-zinc-900'
+                              : 'bg-zinc-950 border-zinc-800 text-zinc-100'
+                          }`}
                           placeholder="Например, XAUUSD"
                         />
                       </div>
@@ -2709,7 +2871,9 @@ export default function CalendarScreen() {
                           className={[
                             'rounded-lg border py-2 text-xs font-data transition-colors',
                             form.direction === 'LONG'
-                              ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-400'
+                              ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-600'
+                              : isLight
+                              ? 'border-zinc-300 bg-white text-zinc-500 hover:text-zinc-700'
                               : 'border-zinc-800 text-zinc-500 hover:text-zinc-300',
                           ].join(' ')}
                         >LONG</button>
@@ -2719,7 +2883,9 @@ export default function CalendarScreen() {
                           className={[
                             'rounded-lg border py-2 text-xs font-data transition-colors',
                             form.direction === 'SHORT'
-                              ? 'border-red-400/60 bg-red-500/10 text-red-400'
+                              ? 'border-red-400/60 bg-red-500/10 text-red-600'
+                              : isLight
+                              ? 'border-zinc-300 bg-white text-zinc-500 hover:text-zinc-700'
                               : 'border-zinc-800 text-zinc-500 hover:text-zinc-300',
                           ].join(' ')}
                         >SHORT</button>
@@ -2731,7 +2897,11 @@ export default function CalendarScreen() {
                           step="any"
                           value={form.takeProfit}
                           onChange={(e) => setForm((f) => ({ ...f, takeProfit: e.target.value }))}
-                          className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data outline-none focus:border-amber-400/60"
+                          className={`w-full rounded-lg border px-3 py-2 text-sm font-data outline-none focus:border-amber-400/60 ${
+                            isLight
+                              ? 'bg-white border-zinc-300 text-zinc-900'
+                              : 'bg-zinc-950 border-zinc-800 text-zinc-100'
+                          }`}
                           placeholder="Take Profit"
                         />
                         <input
@@ -2739,7 +2909,11 @@ export default function CalendarScreen() {
                           step="any"
                           value={form.stopLoss}
                           onChange={(e) => setForm((f) => ({ ...f, stopLoss: e.target.value }))}
-                          className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data outline-none focus:border-amber-400/60"
+                          className={`w-full rounded-lg border px-3 py-2 text-sm font-data outline-none focus:border-amber-400/60 ${
+                            isLight
+                              ? 'bg-white border-zinc-300 text-zinc-900'
+                              : 'bg-zinc-950 border-zinc-800 text-zinc-100'
+                          }`}
                           placeholder="Stop Loss"
                         />
                       </div>
@@ -2747,14 +2921,20 @@ export default function CalendarScreen() {
                       <select
                         value={form.platform}
                         onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value }))}
-                        className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data outline-none focus:border-amber-400/60"
+                        className={`w-full rounded-lg border px-3 py-2 text-sm font-data outline-none focus:border-amber-400/60 ${
+                          isLight
+                            ? 'bg-white border-zinc-300 text-zinc-900'
+                            : 'bg-zinc-950 border-zinc-800 text-zinc-100'
+                        }`}
                       >
                         {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
                       </select>
                     </>
                   ) : (
                     <div>
-                      <label className="mb-1.5 block font-data text-[10px] tracking-widest text-zinc-600 uppercase">
+                      <label className={`mb-1.5 block font-data text-[10px] tracking-widest uppercase ${
+                        isLight ? 'text-zinc-600' : 'text-zinc-600'
+                      }`}>
                         Категория
                       </label>
                       <div className="grid grid-cols-2 gap-1.5">
@@ -2769,7 +2949,9 @@ export default function CalendarScreen() {
                               className={[
                                 'flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-colors',
                                 active
-                                  ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-300'
+                                  ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-600'
+                                  : isLight
+                                  ? 'border-zinc-300 bg-white text-zinc-500 hover:text-zinc-700'
                                   : 'border-zinc-800 bg-zinc-950 text-zinc-500 hover:text-zinc-300',
                               ].join(' ')}
                             >
@@ -2783,7 +2965,11 @@ export default function CalendarScreen() {
                         type="text"
                         value={form.instrument}
                         onChange={(e) => { setForm((f) => ({ ...f, instrument: e.target.value })); setFormError(''); }}
-                        className="mt-1.5 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-400/50"
+                        className={`mt-1.5 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-emerald-400/50 ${
+                          isLight
+                            ? 'bg-white border-zinc-300 text-zinc-900'
+                            : 'bg-zinc-950 border-zinc-800 text-zinc-100'
+                        }`}
                         placeholder="Своя категория"
                       />
                     </div>
@@ -2793,13 +2979,17 @@ export default function CalendarScreen() {
                     value={form.comment}
                     onChange={(e) => setForm((f) => ({ ...f, comment: e.target.value }))}
                     rows={2}
-                    className="w-full resize-none rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-amber-400/60"
+                    className={`w-full resize-none rounded-lg border px-3 py-2 text-sm outline-none focus:border-amber-400/60 ${
+                      isLight
+                        ? 'bg-white border-zinc-300 text-zinc-900'
+                        : 'bg-zinc-950 border-zinc-800 text-zinc-100'
+                    }`}
                     placeholder={traderMode ? 'Заметка по сделке (необязательно)' : t('recordNotePlaceholder')}
                   />
                 </div>
               )}
 
-              {formError && <p className="mt-2 text-center text-xs text-red-400">{formError}</p>}
+              {formError && <p className="mt-2 text-center text-xs text-red-600">{formError}</p>}
 
               <button
                 onClick={handleSaveTrade}
@@ -2823,20 +3013,24 @@ export default function CalendarScreen() {
           onClick={handleConnectBackdropClick}
         >
           <div
-            className={`relative w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl transition-all duration-200 ${
+            className={`relative w-full max-w-md rounded-xl border p-6 shadow-xl transition-all duration-200 ${
               connectVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+            } ${
+              isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
             }`}
           >
             <button
               onClick={closeConnectModal}
-              className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-200 transition-colors"
+              className={`absolute top-4 right-4 transition-colors ${
+                isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-200'
+              }`}
               aria-label="Закрыть"
             >
               <X className="h-4 w-4" />
             </button>
 
             <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">Подключить площадку</p>
-            <h2 className="font-display text-lg font-semibold text-zinc-50 mb-3">Источник сделок</h2>
+            <h2 className={`font-display text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'} mb-3`}>Источник сделок</h2>
 
             <div className="rounded-md border border-amber-400/30 bg-amber-400/5 px-3 py-2 mb-4">
               <p className="text-xs text-amber-400/90 leading-relaxed">
@@ -2845,12 +3039,20 @@ export default function CalendarScreen() {
             </div>
 
             {/* tabs */}
-            <div className="flex gap-1 rounded-md border border-zinc-800 bg-zinc-950 p-1 mb-4">
+            <div className={`flex gap-1 rounded-md border p-1 mb-4 ${
+              isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'
+            }`}>
               <button
                 onClick={() => setConnectTab('ctrader')}
                 className={[
                   'flex-1 flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium transition-colors',
-                  connectTab === 'ctrader' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300',
+                  connectTab === 'ctrader'
+                    ? isLight
+                      ? 'bg-white text-zinc-900 shadow-sm'
+                      : 'bg-zinc-800 text-zinc-100'
+                    : isLight
+                    ? 'text-zinc-500 hover:text-zinc-700'
+                    : 'text-zinc-500 hover:text-zinc-300',
                 ].join(' ')}
               >
                 <Link2 className="h-3.5 w-3.5" />
@@ -2860,7 +3062,13 @@ export default function CalendarScreen() {
                 onClick={() => setConnectTab('api')}
                 className={[
                   'flex-1 flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium transition-colors',
-                  connectTab === 'api' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300',
+                  connectTab === 'api'
+                    ? isLight
+                      ? 'bg-white text-zinc-900 shadow-sm'
+                      : 'bg-zinc-800 text-zinc-100'
+                    : isLight
+                    ? 'text-zinc-500 hover:text-zinc-700'
+                    : 'text-zinc-500 hover:text-zinc-300',
                 ].join(' ')}
               >
                 <KeyRound className="h-3.5 w-3.5" />
@@ -2870,7 +3078,13 @@ export default function CalendarScreen() {
                 onClick={() => setConnectTab('csv')}
                 className={[
                   'flex-1 flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium transition-colors',
-                  connectTab === 'csv' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300',
+                  connectTab === 'csv'
+                    ? isLight
+                      ? 'bg-white text-zinc-900 shadow-sm'
+                      : 'bg-zinc-800 text-zinc-100'
+                    : isLight
+                    ? 'text-zinc-500 hover:text-zinc-700'
+                    : 'text-zinc-500 hover:text-zinc-300',
                 ].join(' ')}
               >
                 <UploadCloud className="h-3.5 w-3.5" />
@@ -2880,11 +3094,11 @@ export default function CalendarScreen() {
 
             {connectTab === 'ctrader' ? (
               <div className="flex flex-col gap-4">
-                <p className="text-xs text-zinc-500 leading-relaxed">
+                <p className={`text-xs ${isLight ? 'text-zinc-600' : 'text-zinc-500'} leading-relaxed`}>
                   Подключите свой аккаунт cTrader через Spotware — это разрешит приложению видеть ваши сделки.
                 </p>
                 {ctraderConnected ? (
-                  <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-emerald-400 text-sm">
+                  <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-emerald-600 text-sm">
                     <CheckCircle2 className="h-4 w-4" />
                     cTrader подключён
                   </div>
@@ -2902,7 +3116,9 @@ export default function CalendarScreen() {
             ) : connectTab === 'api' ? (
               <div className="flex flex-col gap-4">
                 <div>
-                  <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
+                  <label className={`block font-data text-[11px] tracking-widest uppercase mb-1.5 ${
+                    isLight ? 'text-zinc-600' : 'text-zinc-500'
+                  }`}>
                     Биржа / терминал
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -2914,7 +3130,9 @@ export default function CalendarScreen() {
                         className={[
                           'rounded-md border px-3 py-2 text-sm font-data transition-colors',
                           apiForm.exchange === ex
-                            ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                            ? 'border-amber-400/60 bg-amber-400/10 text-amber-600'
+                            : isLight
+                            ? 'border-zinc-300 bg-white text-zinc-500 hover:text-zinc-700 hover:border-zinc-400'
                             : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
                         ].join(' ')}
                       >
@@ -2925,7 +3143,9 @@ export default function CalendarScreen() {
                 </div>
 
                 <div>
-                  <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
+                  <label className={`block font-data text-[11px] tracking-widest uppercase mb-1.5 ${
+                    isLight ? 'text-zinc-600' : 'text-zinc-500'
+                  }`}>
                     API Key
                   </label>
                   <input
@@ -2933,12 +3153,18 @@ export default function CalendarScreen() {
                     value={apiForm.key}
                     onChange={(e) => setApiForm((f) => ({ ...f, key: e.target.value }))}
                     placeholder="••••••••••••"
-                    className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
+                    className={`w-full rounded-md border px-3 py-2 text-sm font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40 ${
+                      isLight
+                        ? 'bg-white border-zinc-300 text-zinc-900'
+                        : 'bg-zinc-950 border-zinc-700 text-zinc-100'
+                    }`}
                   />
                 </div>
 
                 <div>
-                  <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
+                  <label className={`block font-data text-[11px] tracking-widest uppercase mb-1.5 ${
+                    isLight ? 'text-zinc-600' : 'text-zinc-500'
+                  }`}>
                     API Secret
                   </label>
                   <input
@@ -2946,11 +3172,15 @@ export default function CalendarScreen() {
                     value={apiForm.secret}
                     onChange={(e) => setApiForm((f) => ({ ...f, secret: e.target.value }))}
                     placeholder="••••••••••••"
-                    className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
+                    className={`w-full rounded-md border px-3 py-2 text-sm font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40 ${
+                      isLight
+                        ? 'bg-white border-zinc-300 text-zinc-900'
+                        : 'bg-zinc-950 border-zinc-700 text-zinc-100'
+                    }`}
                   />
                 </div>
 
-                <p className="text-xs text-zinc-600 leading-relaxed">
+                <p className={`text-xs ${isLight ? 'text-zinc-600' : 'text-zinc-600'} leading-relaxed`}>
                   Рекомендуем создавать ключ с правами только на чтение (read-only), без доступа к выводу средств.
                 </p>
 
@@ -2970,21 +3200,21 @@ export default function CalendarScreen() {
                   onDrop={handleCsvDrop}
                   className={[
                     'flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-6 py-10 text-center cursor-pointer transition-colors',
-                    csvDragOver ? 'border-amber-400/60 bg-amber-400/5' : 'border-zinc-700 hover:border-zinc-600',
+                    csvDragOver ? 'border-amber-400/60 bg-amber-400/5' : isLight ? 'border-zinc-300 hover:border-zinc-400' : 'border-zinc-700 hover:border-zinc-600',
                   ].join(' ')}
                 >
                   <input type="file" accept=".csv" className="hidden" onChange={handleCsvSelect} />
                   {csvFile ? (
                     <>
                       <FileText className="h-6 w-6 text-amber-400" />
-                      <p className="text-sm text-zinc-200 font-medium">{csvFile.name}</p>
-                      <p className="text-xs text-zinc-600">Файл готов к импорту</p>
+                      <p className={`text-sm font-medium ${isLight ? 'text-zinc-900' : 'text-zinc-200'}`}>{csvFile.name}</p>
+                      <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>Файл готов к импорту</p>
                     </>
                   ) : (
                     <>
-                      <UploadCloud className="h-6 w-6 text-zinc-600" />
-                      <p className="text-sm text-zinc-400">Перетащите файл отчёта сюда</p>
-                      <p className="text-xs text-zinc-600">или нажмите, чтобы выбрать .csv</p>
+                      <UploadCloud className={`h-6 w-6 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`} />
+                      <p className={`text-sm ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>Перетащите файл отчёта сюда</p>
+                      <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>или нажмите, чтобы выбрать .csv</p>
                     </>
                   )}
                 </label>
@@ -3012,20 +3242,24 @@ export default function CalendarScreen() {
           onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) closeAnalysis(); }}
         >
           <div
-            className={`relative w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl transition-all duration-200 ${
+            className={`relative w-full max-w-md rounded-xl border p-6 shadow-xl transition-all duration-200 ${
               analysisVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+            } ${
+              isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
             }`}
           >
             <button
               onClick={closeAnalysis}
-              className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-200 transition-colors"
+              className={`absolute top-4 right-4 transition-colors ${
+                isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-200'
+              }`}
               aria-label="Закрыть"
             >
               <X className="h-4 w-4" />
             </button>
 
             <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">Анализ периода</p>
-            <h2 className="font-display text-lg font-semibold text-zinc-50 mb-3">
+            <h2 className={`font-display text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'} mb-3`}>
               {analysisFrom === '0000-01-01'
                 ? 'Вся история'
                 : analysisFrom === analysisTo
@@ -3041,7 +3275,9 @@ export default function CalendarScreen() {
                   className={[
                     'rounded-full border px-2.5 py-1 font-data text-[11px] tracking-wide transition-colors',
                     analysisPreset === p
-                      ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                      ? 'border-amber-400/60 bg-amber-400/10 text-amber-600'
+                      : isLight
+                      ? 'border-zinc-300 bg-white text-zinc-600 hover:text-zinc-800 hover:border-zinc-400'
                       : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
                   ].join(' ')}
                 >
@@ -3050,77 +3286,85 @@ export default function CalendarScreen() {
               ))}
             </div>
 
-            <p className="text-xs text-zinc-500 mb-4">{analysisStats.count} {traderMode ? 'сделок' : 'операций'} в выборке</p>
+            <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'} mb-4`}>{analysisStats.count} {traderMode ? 'сделок' : 'операций'} в выборке</p>
 
             {moneyAnalysis && (
               <div className="mb-4 space-y-3">
-                <div className="grid grid-cols-3 gap-2">
+                <div className={`grid grid-cols-3 gap-2 rounded-lg border p-2 ${
+                  isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-950'
+                }`}>
                   {[
-                    ['Доходы', moneyAnalysis.income, 'text-emerald-400'],
-                    ['Расходы', moneyAnalysis.expenses, 'text-red-400'],
-                    ['Остаток', moneyAnalysis.balance, moneyAnalysis.balance >= 0 ? 'text-emerald-400' : 'text-red-400'],
+                    ['Доходы', moneyAnalysis.income, 'text-emerald-600'],
+                    ['Расходы', moneyAnalysis.expenses, 'text-red-600'],
+                    ['Остаток', moneyAnalysis.balance, moneyAnalysis.balance >= 0 ? 'text-emerald-600' : 'text-red-600'],
                   ].map(([label, amount, color]) => (
-                    <div key={label} className="rounded-lg border border-zinc-800 bg-zinc-950 p-2">
-                      <p className="text-[10px] text-zinc-500">{label}</p>
+                    <div key={label} className="rounded-lg border p-2">
+                      <p className={`text-[10px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{label}</p>
                       <p className={`font-data text-sm ${color}`}>{amount < 0 ? '-' : ''}{currencySymbol}{formatMoney(Math.abs(amount))}</p>
                     </div>
                   ))}
                 </div>
                 {moneyAnalysis.topCategories.length > 0 && (
-                  <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3">
-                    <p className="mb-2 text-xs font-medium text-zinc-300">Куда уходят деньги</p>
+                  <div className={`rounded-lg border p-3 ${
+                    isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-950'
+                  }`}>
+                    <p className={`mb-2 text-xs font-medium ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>Куда уходят деньги</p>
                     <div className="space-y-2">
                       {moneyAnalysis.topCategories.map(([category, amount]) => (
                         <div key={category}>
-                          <div className="mb-1 flex justify-between text-[11px] text-zinc-500"><span>{category}</span><span>{currencySymbol}{formatMoney(amount)}</span></div>
+                          <div className={`mb-1 flex justify-between text-[11px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}><span>{category}</span><span>{currencySymbol}{formatMoney(amount)}</span></div>
                           <div className="h-1.5 overflow-hidden rounded-full bg-zinc-800"><div className="h-full rounded-full bg-amber-400" style={{ width: `${Math.max(6, Math.round((amount / moneyAnalysis.expenses) * 100))}%` }} /></div>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-                {moneyAnalysis.cigarettes > 0 && <p className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-500">Сигареты: {currencySymbol}{formatMoney(moneyAnalysis.cigarettes)} — {moneyAnalysis.cigaretteShare}% всех расходов.</p>}
+                {moneyAnalysis.cigarettes > 0 && <p className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-600">Сигареты: {currencySymbol}{formatMoney(moneyAnalysis.cigarettes)} — {moneyAnalysis.cigaretteShare}% всех расходов.</p>}
               </div>
             )}
 
             {traderMode && basicAnalysis && (
               <div className="mb-4">
-                <div className="text-center rounded-lg border border-zinc-800 bg-zinc-950 py-4 mb-3">
-                  <p className="font-data text-[10px] tracking-widest text-zinc-500 uppercase mb-1">Profit Factor</p>
-                  <p className={`font-display text-3xl font-semibold ${basicAnalysis.profitFactor >= 1.5 ? 'text-emerald-400' : basicAnalysis.profitFactor >= 1 ? 'text-zinc-200' : 'text-red-400'}`}>
+                <div className={`text-center rounded-lg border py-4 mb-3 ${
+                  isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-950'
+                }`}>
+                  <p className={`font-data text-[10px] tracking-widest ${isLight ? 'text-zinc-500' : 'text-zinc-500'} uppercase mb-1`}>Profit Factor</p>
+                  <p className={`font-display text-3xl font-semibold ${basicAnalysis.profitFactor >= 1.5 ? 'text-emerald-600' : basicAnalysis.profitFactor >= 1 ? 'text-zinc-800' : 'text-red-600'}`}>
                     {basicAnalysis.profitFactor === Infinity ? 'MAX' : basicAnalysis.profitFactor.toFixed(2)}
                   </p>
                 </div>
 
-                <p className="text-xs text-zinc-500 leading-relaxed">
+                <p className={`text-xs ${isLight ? 'text-zinc-600' : 'text-zinc-500'} leading-relaxed`}>
                   Средний:{' '}
-                  <span className="text-emerald-400 font-data">+${formatMoney(basicAnalysis.avgWin)}</span>
+                  <span className="text-emerald-600 font-data">+${formatMoney(basicAnalysis.avgWin)}</span>
                   {' / '}
-                  <span className="text-red-400 font-data">-${formatMoney(basicAnalysis.avgLoss)}</span>
+                  <span className="text-red-600 font-data">-${formatMoney(basicAnalysis.avgLoss)}</span>
                   {basicAnalysis.payoffRatio > 0 && <span className="font-data"> (1:{basicAnalysis.payoffRatio.toFixed(2)})</span>}
                   {' · Лучший день: '}
-                  <span className="text-emerald-400 font-data">{formatSignedShort(basicAnalysis.bestDay[1])}</span>
+                  <span className="text-emerald-600 font-data">{formatSignedShort(basicAnalysis.bestDay[1])}</span>
                   {' ('}{formatDateLabel(basicAnalysis.bestDay[0])}{')'}
                   {' · Худший: '}
-                  <span className="text-red-400 font-data">{formatSignedShort(basicAnalysis.worstDay[1])}</span>
+                  <span className="text-red-600 font-data">{formatSignedShort(basicAnalysis.worstDay[1])}</span>
                   {' ('}{formatDateLabel(basicAnalysis.worstDay[0])}{')'}
                   {' · Частый: '}
-                  <span className="text-zinc-300 font-data">{basicAnalysis.topInstrument[0]}</span>
+                  <span className={`font-data ${isLight ? 'text-zinc-800' : 'text-zinc-300'}`}>{basicAnalysis.topInstrument[0]}</span>
                   {basicAnalysis.longestLossStreak >= 2 && (
                     <>
                       {' · Серия убытков: '}
-                      <span className="text-red-400 font-data">{basicAnalysis.longestLossStreak}</span>
+                      <span className="text-red-600 font-data">{basicAnalysis.longestLossStreak}</span>
                     </>
                   )}
                 </p>
               </div>
             )}
 
-            <div className="rounded-md border border-dashed border-zinc-700 px-3 py-3 flex items-start gap-2.5">
-              <Sparkles className="h-4 w-4 text-zinc-600 shrink-0 mt-0.5" />
+            <div className={`rounded-md border border-dashed px-3 py-3 flex items-start gap-2.5 ${
+              isLight ? 'border-zinc-300' : 'border-zinc-700'
+            }`}>
+              <Sparkles className={`h-4 w-4 ${isLight ? 'text-zinc-400' : 'text-zinc-600'} shrink-0 mt-0.5`} />
               <div>
-                <p className="text-sm text-zinc-400 font-medium mb-0.5">Глубокий AI-анализ — скоро</p>
-                <p className="text-xs text-zinc-600 leading-relaxed">
+                <p className={`text-sm font-medium mb-0.5 ${isLight ? 'text-zinc-700' : 'text-zinc-400'}`}>Глубокий AI-анализ — скоро</p>
+                <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-600'} leading-relaxed`}>
                   Разбор эмоциональных паттернов, конкретных ошибок по каждой сделке и персональные рекомендации — по подписке.
                 </p>
               </div>
@@ -3132,12 +3376,22 @@ export default function CalendarScreen() {
 
       {setupStep && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
-          <div className={`w-full max-w-sm rounded-2xl border p-6 shadow-2xl ${isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'}`}>
+          <div className={`w-full max-w-sm rounded-2xl border p-6 shadow-2xl ${
+            isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
+          }`}>
             <p className="font-data text-[10px] tracking-widest text-amber-400 uppercase mb-2">Настройка {setupStep === 'language' ? '1' : setupStep === 'currency' ? '2' : '3'} из 3</p>
             <h2 className={`font-display text-xl font-semibold mb-4 ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>{setupStep === 'language' ? 'Выберите язык' : setupStep === 'currency' ? 'Выберите валюту' : 'Выберите тему'}</h2>
-            {setupStep === 'language' && <div className="grid grid-cols-3 gap-2">{LANGUAGES.map((item) => <button key={item.code} onClick={() => { setLanguage(item.code); setSetupStep('currency'); }} className="rounded-lg border border-zinc-300 px-3 py-3 font-data text-sm hover:border-amber-400">{item.label}</button>)}</div>}
-            {setupStep === 'currency' && <div className="grid grid-cols-2 gap-2">{CURRENCIES.map((item) => <button key={item.code} onClick={() => { setCurrency(item.code); setSetupStep('theme'); }} className="rounded-lg border border-zinc-300 px-3 py-3 font-data text-sm hover:border-amber-400">{item.symbol} {item.code}</button>)}</div>}
-            {setupStep === 'theme' && <div className="grid grid-cols-2 gap-2"><button onClick={() => { setTheme('light'); setSetupStep(null); }} className="rounded-lg border border-zinc-300 px-3 py-3 hover:border-amber-400">☀ День</button><button onClick={() => { setTheme('dark'); setSetupStep(null); }} className="rounded-lg border border-zinc-700 px-3 py-3 hover:border-amber-400">🌙 Ночь</button></div>}
+            {setupStep === 'language' && <div className="grid grid-cols-3 gap-2">{LANGUAGES.map((item) => <button key={item.code} onClick={() => { setLanguage(item.code); setSetupStep('currency'); }} className={`rounded-lg border px-3 py-3 font-data text-sm hover:border-amber-400 ${
+              isLight ? 'border-zinc-300' : 'border-zinc-700'
+            }`}>{item.label}</button>)}</div>}
+            {setupStep === 'currency' && <div className="grid grid-cols-2 gap-2">{CURRENCIES.map((item) => <button key={item.code} onClick={() => { setCurrency(item.code); setSetupStep('theme'); }} className={`rounded-lg border px-3 py-3 font-data text-sm hover:border-amber-400 ${
+              isLight ? 'border-zinc-300' : 'border-zinc-700'
+            }`}>{item.symbol} {item.code}</button>)}</div>}
+            {setupStep === 'theme' && <div className="grid grid-cols-2 gap-2"><button onClick={() => { setTheme('light'); setSetupStep(null); }} className={`rounded-lg border px-3 py-3 hover:border-amber-400 ${
+              isLight ? 'border-zinc-300' : 'border-zinc-700'
+            }`}>☀ День</button><button onClick={() => { setTheme('dark'); setSetupStep(null); }} className={`rounded-lg border px-3 py-3 hover:border-amber-400 ${
+              isLight ? 'border-zinc-300' : 'border-zinc-700'
+            }`}>🌙 Ночь</button></div>}
           </div>
         </div>
       )}
@@ -3149,13 +3403,15 @@ export default function CalendarScreen() {
           }`}
         >
           <div
-            className={`relative w-full max-w-sm rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl transition-all duration-200 ${
+            className={`relative w-full max-w-sm rounded-xl border p-6 shadow-xl transition-all duration-200 ${
               nicknameModalVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+            } ${
+              isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
             }`}
           >
             <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">Добро пожаловать</p>
-            <h2 className="font-display text-lg font-semibold text-zinc-50 mb-1">Как вас называть?</h2>
-            <p className="text-sm text-zinc-500 mb-4">
+            <h2 className={`font-display text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'} mb-1`}>Как вас называть?</h2>
+            <p className={`text-sm ${isLight ? 'text-zinc-600' : 'text-zinc-500'} mb-4`}>
               Это имя будет отображаться в приложении. Можно оставить пустым — тогда возьмём имя из Google.
             </p>
 
@@ -3166,7 +3422,11 @@ export default function CalendarScreen() {
               onKeyDown={(e) => e.key === 'Enter' && handleSaveNickname()}
               placeholder={user?.user_metadata?.full_name || user?.email || 'Ваш ник'}
               autoFocus
-              className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data mb-4 focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
+              className={`w-full rounded-md border px-3 py-2 text-sm font-data mb-4 focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40 ${
+                isLight
+                  ? 'bg-white border-zinc-300 text-zinc-900'
+                  : 'bg-zinc-950 border-zinc-700 text-zinc-100'
+              }`}
             />
 
             <button
