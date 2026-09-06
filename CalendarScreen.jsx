@@ -835,6 +835,7 @@ export default function CalendarScreen() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalDateKey, setModalDateKey] = useState(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [form, setForm] = useState({
     instrument: '', direction: 'LONG', sign: 'plus', pnl: '', time: currentTimeHHMM(), comment: '', platform: 'Manual', currency: 'USD',
   });
@@ -1048,6 +1049,7 @@ export default function CalendarScreen() {
       });
     }
     setFormError('');
+    setDetailsOpen(Boolean(traderMode && tradeToEdit));
     setModalOpen(true);
     requestAnimationFrame(() => setModalVisible(true));
   }
@@ -2449,7 +2451,7 @@ export default function CalendarScreen() {
         </div>
       )}
 
-      {/* ADD TRADE MODAL */}
+      {/* ADD TRADE MODAL — compact quick-entry UI */}
       {modalOpen && (
         <div
           className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${
@@ -2459,346 +2461,264 @@ export default function CalendarScreen() {
           onClick={handleModalBackdropClick}
         >
           <div
-            className={`relative w-full max-w-sm rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl transition-all duration-200 ${
+            className={`relative w-full max-w-[360px] rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-4 shadow-2xl transition-all duration-200 sm:px-5 sm:py-5 ${
               modalVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
             }`}
           >
             <button
               onClick={closeModal}
-              className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-200 transition-colors"
+              className="absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-full text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
               aria-label="Закрыть"
             >
               <X className="h-4 w-4" />
             </button>
 
-            <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">
-              {traderMode
-                ? (editingTrade ? 'Редактировать сделку' : 'Новая сделка')
-                : (editingTrade ? t('editRecord') : t('addRecord'))}
-            </p>
-            <h2 className="font-display text-lg font-semibold text-zinc-50 mb-5">
-              {modalDateKey &&
-                parseDateKeyLocal(modalDateKey).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
-            </h2>
+            <div className="pr-8">
+              <p className="font-data text-[10px] tracking-[0.18em] text-amber-400 uppercase">
+                {traderMode
+                  ? (editingTrade ? 'Редактировать сделку' : 'Новая сделка')
+                  : (editingTrade ? t('editRecord') : t('addRecord'))}
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">
+                {modalDateKey &&
+                  parseDateKeyLocal(modalDateKey).toLocaleDateString('ru-RU', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+              </p>
+            </div>
 
-            <div className="flex flex-col gap-4">
-              <div>
-                <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
-                  {traderMode ? 'Категория' : 'На что запись'}
-                </label>
-
-                {traderMode ? (
-                  <>
-                    {(() => {
-                      const key = textValue(form.instrument).trim().toUpperCase();
-                      const info = INSTRUMENT_INFO[key];
-                      return (
-                        <div className="flex items-center gap-3 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2.5 mb-2">
-                          <span className="text-xl leading-none">{info?.icon || '＋'}</span>
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-zinc-100 truncate">{key || 'Не выбран'}</p>
-                            {info && <p className="text-xs text-zinc-500 truncate">{info.label}</p>}
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                      {quickAssetTags.map((tag) => (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => { setForm((f) => ({ ...f, instrument: tag })); setFormError(''); }}
-                          className={[
-                            'rounded-full border px-2.5 py-1 font-data text-[11px] tracking-wide transition-colors',
-                            textValue(form.instrument).trim().toUpperCase() === tag
-                              ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
-                              : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
-                          ].join(' ')}
-                        >
-                          {tag}
-                        </button>
-                      ))}
-
-                      {customTags.filter((t) => !quickAssetTags.includes(t)).map((tag) => (
-                        <span
-                          key={tag}
-                          draggable
-                          onDragStart={() => { dragTagIndex.current = customTags.indexOf(tag); }}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={() => {
-                            const dropIndex = customTags.indexOf(tag);
-                            if (dragTagIndex.current !== null && dragTagIndex.current !== dropIndex) reorderCustomTag(dragTagIndex.current, dropIndex);
-                            dragTagIndex.current = null;
-                          }}
-                          className={[
-                            'flex items-center gap-1 rounded-full border pl-2.5 pr-1 py-1 font-data text-[11px] tracking-wide cursor-grab transition-colors',
-                            textValue(form.instrument).trim().toUpperCase() === tag
-                              ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
-                              : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
-                          ].join(' ')}
-                        >
-                          <button type="button" onClick={() => { setForm((f) => ({ ...f, instrument: tag })); setFormError(''); }}>
-                            {tag}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => removeCustomTag(tag)}
-                            className="text-zinc-600 hover:text-red-400 transition-colors"
-                            aria-label={`Удалить ${tag}`}
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </span>
-                      ))}
-
-                      {addingCustomTag ? (
-                        <input
-                          type="text"
-                          autoFocus
-                          value={customTagInput}
-                          onChange={(e) => setCustomTagInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') { addCustomTag(customTagInput); setCustomTagInput(''); setAddingCustomTag(false); }
-                            if (e.key === 'Escape') { setCustomTagInput(''); setAddingCustomTag(false); }
-                          }}
-                          onBlur={() => { if (textValue(customTagInput).trim()) addCustomTag(customTagInput); setCustomTagInput(''); setAddingCustomTag(false); }}
-                          placeholder="TICKER"
-                          className="w-20 rounded-full border border-amber-400/60 bg-zinc-950 px-2.5 py-1 font-data text-[11px] tracking-wide text-zinc-100 focus:outline-none"
-                        />
-                      ) : (
-                        customTags.length < MAX_CUSTOM_TAGS && (
-                          <button
-                            type="button"
-                            onClick={() => setAddingCustomTag(true)}
-                            title="Добавить свой инструмент"
-                            className="flex items-center justify-center h-6 w-6 rounded-full border border-dashed border-zinc-700 text-zinc-500 hover:text-amber-400 hover:border-amber-400/60 transition-colors"
-                          >
-                            <Plus className="h-3 w-3" />
-                          </button>
-                        )
-                      )}
-                    </div>
-                    <input
-                      type="text"
-                      value={form.instrument}
-                      onChange={(e) => { setForm((f) => ({ ...f, instrument: e.target.value })); setFormError(''); }}
-                      className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
-                      placeholder="Например, XAUUSD"
-                    />
-                  </>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-2 gap-2 mb-2">
-                      {MONEY_CATEGORIES.map((category) => {
-                        const Icon = category.icon;
-                        const active = textValue(form.instrument).trim() === category.key;
-                        return (
-                          <button
-                            key={category.key}
-                            type="button"
-                            onClick={() => { setForm((f) => ({ ...f, instrument: category.key })); setFormError(''); }}
-                            className={[
-                              'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left transition-colors',
-                              active
-                                ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-300'
-                                : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200',
-                            ].join(' ')}
-                          >
-                            <Icon className="h-4 w-4 shrink-0" />
-                            <span className="text-xs font-medium">{category.key}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <input
-                      type="text"
-                      value={form.instrument}
-                      onChange={(e) => { setForm((f) => ({ ...f, instrument: e.target.value })); setFormError(''); }}
-                      className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-100 focus:outline-none focus:border-emerald-400/50 focus:ring-1 focus:ring-emerald-400/20"
-                      placeholder="Своя категория, например: Кафе"
-                    />
-                  </>
-                )}
-              </div>
-              {traderMode && (
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, direction: 'LONG' }))}
-                    className={[
-                      'rounded-md border px-2 py-2 text-xs font-data tracking-wider transition-colors',
-                      form.direction === 'LONG'
-                        ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-400'
-                        : 'border-zinc-700 bg-zinc-950 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
-                    ].join(' ')}
-                  >
-                    LONG
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, direction: 'SHORT' }))}
-                    className={[
-                      'rounded-md border px-2 py-2 text-xs font-data tracking-wider transition-colors',
-                      form.direction === 'SHORT'
-                        ? 'border-red-400/60 bg-red-500/10 text-red-400'
-                        : 'border-zinc-700 bg-zinc-950 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
-                    ].join(' ')}
-                  >
-                    SHORT
-                  </button>
-                  <div className="col-span-1" />
-                </div>
-              )}
-
-              {traderMode && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
-                      Take Profit
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={form.takeProfit}
-                      onChange={(e) => setForm((f) => ({ ...f, takeProfit: e.target.value }))}
-                      className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
-                      placeholder="Необязательно"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
-                      Stop Loss
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={form.stopLoss}
-                      onChange={(e) => setForm((f) => ({ ...f, stopLoss: e.target.value }))}
-                      className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
-                      placeholder="Необязательно"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-[4fr_2fr] gap-3">
-                <div>
-                  <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
-                    {traderMode ? 'Результат' : 'Сумма'}
-                  </label>
-                  <div className="grid grid-cols-2 gap-1.5 mb-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setForm((f) => ({ ...f, sign: 'plus' }))}
-                      aria-label="Прибыль"
-                      title="Прибыль"
-                      className={[
-                        'flex items-center justify-center gap-1 py-1.5 rounded-md border font-data text-xs font-semibold transition-colors',
-                        form.sign === 'plus'
-                          ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-400'
-                          : 'border-zinc-700 bg-zinc-950 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
-                      ].join(' ')}
-                    >
-                      <TrendingUp className="h-3.5 w-3.5" />
-                      {traderMode ? 'Профит' : 'Доход'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setForm((f) => ({ ...f, sign: 'minus' }))}
-                      aria-label="Убыток"
-                      title="Убыток"
-                      className={[
-                        'flex items-center justify-center gap-1 py-1.5 rounded-md border font-data text-xs font-semibold transition-colors',
-                        form.sign === 'minus'
-                          ? 'border-red-400/60 bg-red-500/10 text-red-400'
-                          : 'border-zinc-700 bg-zinc-950 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
-                      ].join(' ')}
-                    >
-                      <TrendingDown className="h-3.5 w-3.5" />
-                      {traderMode ? 'Убыток' : 'Расход'}
-                    </button>
-                  </div>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={form.pnl}
-                    onChange={(e) => { setForm((f) => ({ ...f, pnl: e.target.value })); setFormError(''); }}
-                    className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
-                    placeholder="150"
-                  />
-                </div>
-                <div>
-                  <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
-                    Время
-                  </label>
-                  <input
-                    type="time"
-                    value={form.time}
-                    onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* not supported in this browser */ } }}
-                    onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
-                    className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-2 text-xs text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40 mb-1.5"
-                  />
-                  <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
-                    Валюта
-                  </label>
-                  <div className="grid grid-cols-2 gap-1">
-                    {CURRENCIES.map((c) => (
-                      <button
-                        key={c.code}
-                        type="button"
-                        onClick={() => setForm((f) => ({ ...f, currency: c.code }))}
-                        title={c.code}
-                        className={[
-                          'py-1.5 rounded-md text-xs font-data border transition-colors',
-                          form.currency === c.code
-                            ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
-                            : 'border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
-                        ].join(' ')}
-                      >
-                        {c.symbol}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+            <div className="mt-4">
+              {/* Income / expense: the first and fastest decision */}
+              <div className="grid grid-cols-2 gap-1 rounded-xl border border-zinc-800 bg-zinc-950 p-1">
+                <button
+                  type="button"
+                  onClick={() => { setForm((f) => ({ ...f, sign: 'plus' })); setFormError(''); }}
+                  className={[
+                    'flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-colors',
+                    form.sign === 'plus'
+                      ? 'bg-emerald-500/10 text-emerald-400'
+                      : 'text-zinc-500 hover:text-zinc-300',
+                  ].join(' ')}
+                >
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  {traderMode ? 'Профит' : 'Доход'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setForm((f) => ({ ...f, sign: 'minus' })); setFormError(''); }}
+                  className={[
+                    'flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-colors',
+                    form.sign === 'minus'
+                      ? 'bg-red-500/10 text-red-400'
+                      : 'text-zinc-500 hover:text-zinc-300',
+                  ].join(' ')}
+                >
+                  <TrendingDown className="h-3.5 w-3.5" />
+                  {traderMode ? 'Убыток' : 'Расход'}
+                </button>
               </div>
 
-              {traderMode && (
-                <div>
-                  <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
-                    Источник
-                  </label>
-                  <select
-                    value={form.platform}
-                    onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value }))}
-                    className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
-                  >
-                    {PLATFORMS.map((p) => (
-                      <option key={p} value={p}>{p}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div>
-                <label className="block font-data text-[11px] tracking-widest text-zinc-500 uppercase mb-1.5">
-                  Комментарий
-                </label>
-                <textarea
-                  value={form.comment}
-                  onChange={(e) => setForm((f) => ({ ...f, comment: e.target.value }))}
-                  rows={2}
-                  className="w-full resize-none rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40"
-                  placeholder={traderMode ? 'Заметка по сделке (необязательно)' : t('recordNotePlaceholder')}
+              {/* Amount is the visual focus */}
+              <div className="mt-3 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 focus-within:border-amber-400/60 focus-within:ring-1 focus-within:ring-amber-400/20">
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  autoFocus
+                  value={form.pnl}
+                  onChange={(e) => { setForm((f) => ({ ...f, pnl: e.target.value })); setFormError(''); }}
+                  className="w-full bg-transparent text-center font-data text-3xl font-semibold tracking-tight text-zinc-100 outline-none placeholder:text-zinc-700"
+                  placeholder="0"
+                  aria-label={traderMode ? 'Результат' : 'Сумма'}
                 />
               </div>
 
-              {formError && <p className="text-xs text-red-400 -mt-1">{formError}</p>}
+              {/* Currency */}
+              <div className="mt-2 flex items-center justify-center gap-1">
+                {CURRENCIES.map((c) => (
+                  <button
+                    key={c.code}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, currency: c.code }))}
+                    title={c.code}
+                    aria-label={`Валюта ${c.code}`}
+                    className={[
+                      'min-w-10 rounded-lg border px-3 py-1.5 font-data text-xs transition-colors',
+                      form.currency === c.code
+                        ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                        : 'border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300',
+                    ].join(' ')}
+                  >
+                    {c.symbol}
+                  </button>
+                ))}
+              </div>
+
+              {/* Time is available, but deliberately quiet */}
+              <div className="mt-2 flex justify-center">
+                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] text-zinc-600 hover:bg-zinc-800 hover:text-zinc-400 transition-colors">
+                  <span>◷</span>
+                  <span>{form.time || currentTimeHHMM()}</span>
+                  <input
+                    type="time"
+                    value={form.time}
+                    onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* not supported */ } }}
+                    onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
+                    className="sr-only"
+                    aria-label="Время"
+                  />
+                </label>
+              </div>
+
+              {/* Details are intentionally hidden for quick entry */}
+              <button
+                type="button"
+                onClick={() => setDetailsOpen((v) => !v)}
+                className="mx-auto mt-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors"
+              >
+                <MoreHorizontal className="h-3.5 w-3.5" />
+                {detailsOpen ? 'Скрыть детали' : 'Дополнительно'}
+                <ChevronDown className={`h-3 w-3 transition-transform ${detailsOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {detailsOpen && (
+                <div className="mt-2 space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
+                  {traderMode ? (
+                    <>
+                      <div>
+                        <label className="mb-1.5 block font-data text-[10px] tracking-widest text-zinc-600 uppercase">
+                          Инструмент
+                        </label>
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {quickAssetTags.map((tag) => (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => { setForm((f) => ({ ...f, instrument: tag })); setFormError(''); }}
+                              className={[
+                                'rounded-full border px-2.5 py-1 font-data text-[11px] transition-colors',
+                                textValue(form.instrument).trim().toUpperCase() === tag
+                                  ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                                  : 'border-zinc-800 text-zinc-500 hover:text-zinc-300',
+                              ].join(' ')}
+                            >
+                              {tag}
+                            </button>
+                          ))}
+                        </div>
+                        <input
+                          type="text"
+                          value={form.instrument}
+                          onChange={(e) => { setForm((f) => ({ ...f, instrument: e.target.value })); setFormError(''); }}
+                          className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data outline-none focus:border-amber-400/60"
+                          placeholder="Например, XAUUSD"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setForm((f) => ({ ...f, direction: 'LONG' }))}
+                          className={[
+                            'rounded-lg border py-2 text-xs font-data transition-colors',
+                            form.direction === 'LONG'
+                              ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-400'
+                              : 'border-zinc-800 text-zinc-500 hover:text-zinc-300',
+                          ].join(' ')}
+                        >LONG</button>
+                        <button
+                          type="button"
+                          onClick={() => setForm((f) => ({ ...f, direction: 'SHORT' }))}
+                          className={[
+                            'rounded-lg border py-2 text-xs font-data transition-colors',
+                            form.direction === 'SHORT'
+                              ? 'border-red-400/60 bg-red-500/10 text-red-400'
+                              : 'border-zinc-800 text-zinc-500 hover:text-zinc-300',
+                          ].join(' ')}
+                        >SHORT</button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="number"
+                          step="any"
+                          value={form.takeProfit}
+                          onChange={(e) => setForm((f) => ({ ...f, takeProfit: e.target.value }))}
+                          className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data outline-none focus:border-amber-400/60"
+                          placeholder="Take Profit"
+                        />
+                        <input
+                          type="number"
+                          step="any"
+                          value={form.stopLoss}
+                          onChange={(e) => setForm((f) => ({ ...f, stopLoss: e.target.value }))}
+                          className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data outline-none focus:border-amber-400/60"
+                          placeholder="Stop Loss"
+                        />
+                      </div>
+
+                      <select
+                        value={form.platform}
+                        onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value }))}
+                        className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 font-data outline-none focus:border-amber-400/60"
+                      >
+                        {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </>
+                  ) : (
+                    <div>
+                      <label className="mb-1.5 block font-data text-[10px] tracking-widest text-zinc-600 uppercase">
+                        Категория
+                      </label>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {MONEY_CATEGORIES.map((category) => {
+                          const Icon = category.icon;
+                          const active = textValue(form.instrument).trim() === category.key;
+                          return (
+                            <button
+                              key={category.key}
+                              type="button"
+                              onClick={() => { setForm((f) => ({ ...f, instrument: category.key })); setFormError(''); }}
+                              className={[
+                                'flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-colors',
+                                active
+                                  ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-300'
+                                  : 'border-zinc-800 bg-zinc-950 text-zinc-500 hover:text-zinc-300',
+                              ].join(' ')}
+                            >
+                              <Icon className="h-3.5 w-3.5 shrink-0" />
+                              <span className="text-xs font-medium">{category.key}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <input
+                        type="text"
+                        value={form.instrument}
+                        onChange={(e) => { setForm((f) => ({ ...f, instrument: e.target.value })); setFormError(''); }}
+                        className="mt-1.5 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-400/50"
+                        placeholder="Своя категория"
+                      />
+                    </div>
+                  )}
+
+                  <textarea
+                    value={form.comment}
+                    onChange={(e) => setForm((f) => ({ ...f, comment: e.target.value }))}
+                    rows={2}
+                    className="w-full resize-none rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-amber-400/60"
+                    placeholder={traderMode ? 'Заметка по сделке (необязательно)' : t('recordNotePlaceholder')}
+                  />
+                </div>
+              )}
+
+              {formError && <p className="mt-2 text-center text-xs text-red-400">{formError}</p>}
 
               <button
                 onClick={handleSaveTrade}
-                className="mt-2 mx-auto block w-full sm:w-4/5 rounded-lg bg-amber-400 px-4 py-3.5 text-base font-bold text-zinc-950 hover:bg-amber-300 transition-colors shadow-lg shadow-amber-500/20"
+                className="mt-3 block w-full rounded-xl bg-amber-400 px-4 py-3 text-base font-bold text-zinc-950 hover:bg-amber-300 transition-colors shadow-lg shadow-amber-500/20"
               >
                 {editingTrade ? 'Сохранить изменения' : (traderMode ? 'Сохранить сделку' : t('saveRecord'))}
               </button>
