@@ -1566,7 +1566,7 @@ export default function CalendarScreen() {
   }
 
   return (
-    <div className={`app-shell min-h-screen w-full flex flex-col transition-colors duration-200 ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
+    <div className={`h-screen min-h-[100dvh] w-full flex flex-col overflow-hidden transition-colors duration-200 ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
         .font-display { font-family: 'Space Grotesk', sans-serif; }
@@ -1600,105 +1600,27 @@ export default function CalendarScreen() {
         *::-webkit-scrollbar-thumb { background-color: #52525b; border-radius: 9999px; }
         .theme-light *::-webkit-scrollbar-thumb { background-color: #a1a1aa; }
         .theme-light { scrollbar-color: #a1a1aa transparent; }
-
-        /* Mobile polish: tighter hierarchy, less glow, calmer calendar geometry. */
+        /* Mobile layout: use the available viewport instead of leaving a huge empty area. */
         @media (max-width: 639px) {
-          .app-header {
-            padding-top: 10px !important;
-            padding-bottom: 10px !important;
+          /* Mobile: the calendar owns all remaining viewport height. */
+          .mobile-calendar-section {
+            min-height: 0;
+            height: 100%;
           }
-          .app-header > div:first-child {
-            margin-bottom: 10px !important;
+          .mobile-calendar-days {
+            min-height: 0;
+            grid-template-rows: repeat(5, minmax(0, 1fr));
+            grid-auto-rows: unset;
           }
-          .app-header > div:nth-child(2) {
-            min-width: 0;
-          }
-          .calendar-nav {
-            margin-bottom: 0 !important;
-          }
-          .calendar-nav-group {
-            min-width: 0;
-            flex: 1 1 auto;
-          }
-          .calendar-arrow {
-            width: 34px;
-            height: 34px;
-            padding: 0.4rem !important;
-          }
-          .calendar-month {
-            font-size: 21px !important;
-            line-height: 1.1;
-            white-space: nowrap;
-          }
-          .calendar-year {
-            font-size: 21px !important;
-            line-height: 1.1;
-          }
-          .app-header .calendar-nav-group + * {
-            flex-shrink: 0;
-          }
-          .app-calendar {
-            padding-top: 12px !important;
-            padding-left: 12px !important;
-            padding-right: 12px !important;
-          }
-          .calendar-weekdays {
-            margin-bottom: 6px !important;
-          }
-          .calendar-weekdays > div {
-            font-size: 10px !important;
-            padding-bottom: 2px !important;
-          }
-          .calendar-grid {
-            gap: 4px !important;
-          }
-          .calendar-cell {
-            height: 62px !important;
-            min-height: 62px !important;
-            padding: 7px !important;
-            border-radius: 10px !important;
-            box-shadow: none !important;
-          }
-          .calendar-cell-date {
-            font-size: 12px !important;
-          }
-          .calendar-cell-pnl {
-            font-size: 10px !important;
-            line-height: 1 !important;
-          }
-          .history-fab button {
-            min-height: 44px;
-            padding-left: 18px !important;
-            padding-right: 18px !important;
-            box-shadow: 0 8px 28px rgba(0,0,0,.35);
-          }
-          .quick-entry-backdrop {
-            align-items: flex-end !important;
-            padding: 0 !important;
-          }
-          .quick-entry-modal {
-            width: 100% !important;
-            max-width: none !important;
-            max-height: 92vh;
-            overflow-y: auto;
-            border-radius: 24px 24px 0 0 !important;
-            padding: 18px 16px calc(18px + env(safe-area-inset-bottom)) !important;
-            transform-origin: bottom center;
-          }
-          .quick-entry-modal::before {
-            content: '';
-            display: block;
-            width: 38px;
-            height: 4px;
-            margin: -4px auto 14px;
-            border-radius: 999px;
-            background: #3f3f46;
+          .mobile-calendar-cell {
+            min-height: 0 !important;
+            height: 100%;
           }
         }
       `}</style>
 
       {/* HEADER */}
-      <header className={`app-header px-3 sm:px-8 pt-3 sm:pt-8 pb-3 sm:pb-4 border-b ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}>
+      <header className={`px-3 sm:px-8 pt-4 sm:pt-8 pb-4 sm:pb-4 border-b ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}>
         <div className="flex items-start justify-between gap-2 mb-2">
           <p className={`font-data text-[10px] tracking-widest uppercase ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{traderMode ? t('titlePro') : t('titleMoney')}</p>
 
@@ -1710,7 +1632,7 @@ export default function CalendarScreen() {
               title={isLight ? t('themeDark') : t('themeLight')}
               aria-label="Переключить тему"
               className={[
-                'relative flex items-center gap-1 rounded-full border px-2 py-1 text-xs overflow-hidden transition-all duration-300',
+                'relative flex items-center justify-center gap-1 rounded-full border h-10 w-10 sm:h-8 sm:w-8 px-2 text-xs overflow-hidden transition-all duration-300',
                 isLight
                   ? 'border-zinc-300 bg-white text-zinc-600 hover:border-zinc-400'
                   : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-amber-400 hover:border-zinc-600',
@@ -1721,7 +1643,7 @@ export default function CalendarScreen() {
                 className="inline-block"
                 style={{ animation: 'themeIconPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both' }}
               >
-                {isLight ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+                {isLight ? <Sun className="h-5 w-5 sm:h-4 sm:w-4" /> : <Moon className="h-5 w-5 sm:h-4 sm:w-4" />}
               </span>
             </button>
 
@@ -1732,14 +1654,14 @@ export default function CalendarScreen() {
                 title={t('settings')}
                 aria-label={t('settings')}
                 className={[
-                  'flex items-center justify-center h-7 w-7 rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60',
+                  'flex items-center justify-center h-10 w-10 sm:h-8 sm:w-8 rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60',
                   isLight
                     ? 'border-zinc-300 bg-white text-zinc-600 hover:border-zinc-400'
                     : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-amber-400 hover:border-zinc-600',
                 ].join(' ')}
               >
                 <Settings
-                  className="h-3.5 w-3.5 transition-transform duration-300 ease-out"
+                  className="h-5 w-5 sm:h-4 sm:w-4 transition-transform duration-300 ease-out"
                   style={{ transform: settingsOpen ? 'rotate(75deg)' : 'rotate(0deg)' }}
                 />
               </button>
@@ -1748,7 +1670,7 @@ export default function CalendarScreen() {
                 <div
                   className={[
                     'absolute right-0 top-full mt-2 z-30 rounded-xl border shadow-xl p-4 origin-top-right',
-                    'w-[220px] sm:w-[260px]',
+                    'w-[290px] sm:w-[280px]',
                     'transition-all duration-200 ease-out',
                     settingsVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-1.5 scale-95',
                     isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900',
@@ -1766,7 +1688,7 @@ export default function CalendarScreen() {
                           key={l.code}
                           onClick={() => setLanguage(l.code)}
                           className={[
-                            'flex-1 rounded-md border px-2 py-1.5 text-xs font-data transition-colors',
+                            'flex-1 rounded-lg border px-2 py-3 text-sm font-data transition-colors',
                             language === l.code
                               ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
                               : isLight
@@ -1780,6 +1702,39 @@ export default function CalendarScreen() {
                     </div>
                   </div>
 
+                  {/* Account — visible on mobile inside the settings panel. */}
+                  <div className={`mb-3 rounded-lg border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'}`}>
+                    <p className={`font-data text-[11px] uppercase tracking-wide mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>Аккаунт</p>
+                    {user ? (
+                      <div className="flex items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className={`truncate text-sm font-medium ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>
+                            {user.user_metadata?.nickname || user.user_metadata?.full_name || user.email}
+                          </p>
+                          {user.user_metadata?.nickname && user.email && (
+                            <p className={`truncate text-[11px] mt-0.5 ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{user.email}</p>
+                          )}
+                        </div>
+                        <button
+                          onClick={handleGoogleLogout}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-700 text-zinc-500 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                          title={t('signOut')}
+                          aria-label={t('signOut')}
+                        >
+                          <LogOut className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleGoogleLogin}
+                        className="w-full flex items-center justify-center gap-2 rounded-lg border border-zinc-700 px-3 py-2.5 text-sm text-zinc-400 hover:border-amber-400/50 hover:text-amber-400 transition-colors"
+                      >
+                        <LogIn className="h-4 w-4" />
+                        {t('signIn')}
+                      </button>
+                    )}
+                  </div>
+
                   <div className={`rounded-lg border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'}`}>
                     <p className={`flex items-center gap-1.5 text-[11px] uppercase tracking-wide mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}><CircleDollarSign className="h-3.5 w-3.5" /> {t('currency')}</p>
                     <div className="grid grid-cols-2 gap-1.5">
@@ -1788,7 +1743,7 @@ export default function CalendarScreen() {
                           key={c.code}
                           onClick={() => setCurrency(c.code)}
                           className={[
-                            'rounded-md border px-2 py-1.5 text-xs font-data transition-colors',
+                            'rounded-lg border px-2 py-3 text-sm font-data transition-colors',
                             currency === c.code
                               ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
                               : isLight
@@ -1806,21 +1761,21 @@ export default function CalendarScreen() {
             </div>
           </div>
         </div>
-        <div className="calendar-nav flex flex-nowrap items-center justify-between gap-2 mb-2 sm:mb-4">
-          <div className="calendar-nav-group flex items-center gap-1.5 sm:gap-2 min-w-0">
+        <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 mb-2 sm:mb-4">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <button
               onClick={goToPrevMonth}
               aria-label="Предыдущий месяц"
               title="Предыдущий месяц"
-              className="calendar-arrow rounded-lg border border-zinc-800 bg-zinc-900 p-1.5 text-zinc-400 hover:text-zinc-100 hover:border-zinc-600 transition-colors shrink-0"
+              className="rounded-xl border border-zinc-800 bg-zinc-900 h-12 w-12 sm:h-10 sm:w-10 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:border-zinc-600 transition-colors"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-5 w-5 sm:h-4 sm:w-4" />
             </button>
             <div className="flex items-baseline gap-1.5 sm:gap-2 min-w-0 sm:min-w-[190px]">
               <div className="relative" ref={monthMenuRef}>
                 <button
                   onClick={() => { setMonthMenuOpen((v) => !v); setYearMenuOpen(false); }}
-                  className="calendar-month font-display text-xl sm:text-2xl font-semibold text-zinc-50 hover:text-amber-400 transition-colors"
+                  className="font-display text-[30px] sm:text-2xl font-semibold text-zinc-50 hover:text-amber-400 transition-colors"
                 >
                   {monthsFor(language)[month]}
                 </button>
@@ -1845,7 +1800,7 @@ export default function CalendarScreen() {
               <div className="relative" ref={yearMenuRef}>
                 <button
                   onClick={() => { setYearMenuOpen((v) => !v); setMonthMenuOpen(false); }}
-                  className="calendar-year font-display text-xl sm:text-2xl font-semibold text-zinc-500 hover:text-amber-400 transition-colors"
+                  className="font-display text-[30px] sm:text-2xl font-semibold text-zinc-500 hover:text-amber-400 transition-colors"
                 >
                   {year}
                 </button>
@@ -1871,9 +1826,9 @@ export default function CalendarScreen() {
               onClick={goToNextMonth}
               aria-label="Следующий месяц"
               title="Следующий месяц"
-              className="calendar-arrow rounded-lg border border-zinc-800 bg-zinc-900 p-1.5 text-zinc-400 hover:text-zinc-100 hover:border-zinc-600 transition-colors shrink-0"
+              className="rounded-xl border border-zinc-800 bg-zinc-900 h-12 w-12 sm:h-10 sm:w-10 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:border-zinc-600 transition-colors"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-5 w-5 sm:h-4 sm:w-4" />
             </button>
 
             {/* Account */}
@@ -1903,7 +1858,7 @@ export default function CalendarScreen() {
             </div>
 
             {/* Money / PRO + platform reveal */}
-            <div className="ml-1.5 flex items-center">
+            <div className="ml-1.5 flex items-center basis-full sm:basis-auto justify-end sm:justify-start">
               {/* Smooth mode switch */}
               <button
                 type="button"
@@ -1917,15 +1872,15 @@ export default function CalendarScreen() {
                 title={traderMode
                   ? 'PRO: LONG/SHORT, Take Profit и Stop Loss'
                   : 'Денежный: доходы и расходы без трейдерских полей'}
-                className="relative h-7 w-[92px] shrink-0 rounded-full border border-zinc-800 bg-zinc-900 p-0.5 font-data text-[9px] tracking-wider text-zinc-500 shadow-inner focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60"
+                className="relative h-11 w-[118px] sm:h-9 sm:w-[104px] shrink-0 rounded-full border border-zinc-800 bg-zinc-900 p-0.5 font-data text-[9px] tracking-wider text-zinc-500 shadow-inner focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60"
               >
                 {/* sliding active pill */}
                 <span
                   aria-hidden="true"
                   className={[
-                    'absolute top-0.5 bottom-0.5 left-0.5 w-[44px] rounded-full border transition-all duration-300 ease-out',
+                    'absolute top-0.5 bottom-0.5 left-0.5 w-[57px] sm:w-[50px] rounded-full border transition-all duration-300 ease-out',
                     traderMode
-                      ? 'translate-x-[44px] border-amber-400/50 bg-amber-400/10 shadow-[0_0_14px_rgba(251,191,36,0.08)]'
+                      ? 'translate-x-[57px] sm:translate-x-[50px] border-amber-400/50 bg-amber-400/10 shadow-[0_0_14px_rgba(251,191,36,0.08)]'
                       : isLight
                       ? 'translate-x-0 border-zinc-300 bg-zinc-200'
                       : 'translate-x-0 border-zinc-700 bg-zinc-800/90',
@@ -1934,19 +1889,17 @@ export default function CalendarScreen() {
 
                 <span
                   className={[
-                    'relative z-10 flex h-full items-center justify-center transition-colors duration-300',
+                    'relative z-10 flex h-full w-[57px] sm:w-[50px] items-center justify-center transition-colors duration-300',
                     !traderMode ? 'text-zinc-100' : 'text-zinc-600',
                   ].join(' ')}
-                  style={{ width: '44px' }}
                 >
                   {t('freePlan')}
                 </span>
                 <span
                   className={[
-                    'absolute right-0.5 top-0.5 bottom-0.5 z-10 flex items-center justify-center transition-colors duration-300',
+                    'absolute right-0.5 top-0.5 bottom-0.5 z-10 flex w-[57px] sm:w-[50px] items-center justify-center transition-colors duration-300',
                     traderMode ? 'text-amber-400' : 'text-zinc-600',
                   ].join(' ')}
-                  style={{ width: '44px' }}
                 >
                   PRO
                 </span>
@@ -1954,10 +1907,12 @@ export default function CalendarScreen() {
 
               {/* Platform slides out from the right side of PRO */}
               <div
-                className="hidden sm:block overflow-hidden shrink-0 transition-[width,margin,opacity] duration-300 ease-out"
+                className={[
+                  'overflow-hidden shrink-0 transition-[width,margin,opacity] duration-300 ease-out',
+                  traderMode ? 'w-[124px] sm:w-[108px]' : 'w-0',
+                ].join(' ')}
                 style={{
-                  width: traderMode ? '92px' : '0px',
-                  marginLeft: traderMode ? '6px' : '0px',
+                  marginLeft: traderMode ? '8px' : '0px',
                   opacity: traderMode ? 1 : 0,
                 }}
                 aria-hidden={!traderMode}
@@ -1965,7 +1920,7 @@ export default function CalendarScreen() {
                 <button
                   onClick={openConnectModal}
                   tabIndex={traderMode ? 0 : -1}
-                  className="flex h-7 w-[92px] items-center justify-center gap-1 rounded-md border border-amber-400/40 bg-amber-400/10 px-2 font-data text-[10px] tracking-wide text-amber-400 whitespace-nowrap hover:bg-amber-400/15 transition-colors"
+                  className="flex h-11 sm:h-9 w-[124px] sm:w-[108px] items-center justify-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-400/10 px-2 font-data text-[11px] tracking-wide text-amber-400 whitespace-nowrap hover:bg-amber-400/15 transition-colors"
                 >
                   <Link2 className="h-3 w-3 shrink-0" />
                   Площадка
@@ -2012,7 +1967,7 @@ export default function CalendarScreen() {
 
       {/* CALENDAR — the main view of the whole app */}
       <section
-        className={`app-calendar flex-none sm:flex-1 px-3 sm:px-8 pt-2 sm:pt-6 pb-24 sm:pb-6 border-b relative transition-colors duration-200 ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}
+        className={`mobile-calendar-section flex-1 min-h-0 flex flex-col px-2 sm:px-8 pt-3 sm:py-6 pb-20 sm:pb-6 border-b relative transition-colors duration-200 ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}
         onClick={(e) => { if (e.target === e.currentTarget) setSelectedKey(null); }}
         onTouchStart={(e) => { calendarTouchStart.current = e.touches[0]?.clientX ?? null; }}
         onTouchEnd={(e) => {
@@ -2024,17 +1979,17 @@ export default function CalendarScreen() {
         }}
       >
         <div
-          className="calendar-weekdays grid grid-cols-7 gap-1 sm:gap-2 mb-2"
+          className="grid grid-cols-7 gap-1 sm:gap-2 mb-2"
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedKey(null); }}
         >
           {WEEKDAYS.map((w) => (
-            <div key={w} className={`font-data text-[11px] tracking-wider text-center uppercase pb-1 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
+            <div key={w} className={`font-data text-[13px] sm:text-[11px] tracking-wider text-center uppercase pb-2 sm:pb-1 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
               {w}
             </div>
           ))}
         </div>
         <div
-          className="calendar-grid grid grid-cols-7 gap-1 sm:gap-2"
+          className="calendar-days-grid mobile-calendar-days flex-1 min-h-0 grid grid-cols-7 gap-1 sm:gap-2"
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedKey(null); }}
         >
           {cells.map((cell, cellIndex) => {
@@ -2051,7 +2006,7 @@ export default function CalendarScreen() {
                 ? {
                     backgroundColor: `rgba(${glowRgb},${(0.10 + intensity * 0.22).toFixed(2)})`,
                     borderColor: `rgba(${glowRgb},${(0.35 + intensity * 0.5).toFixed(2)})`,
-                    boxShadow: `0 0 0 1px rgba(${glowRgb},${(0.10 + intensity * 0.18).toFixed(2)})`,
+                    boxShadow: `0 0 ${Math.round(6 + intensity * 22)}px rgba(${glowRgb},${(0.25 + intensity * 0.45).toFixed(2)})`,
                     animation: 'cellGlowIn 0.35s ease-out both',
                     animationDelay: `${cellIndex * 18}ms`,
                   }
@@ -2062,8 +2017,8 @@ export default function CalendarScreen() {
                 onClick={() => setSelectedKey(isSelected ? null : cell.key)}
                 style={heatmapStyle}
                 className={[
-                  'calendar-cell relative rounded-xl border flex flex-col justify-between text-left transition-all duration-150',
-                  'h-[64px] sm:h-auto sm:min-h-[110px] p-2 sm:p-4',
+                  'relative rounded-md border flex flex-col justify-between text-left transition-all duration-150',
+                  'mobile-calendar-cell min-h-[76px] sm:min-h-[110px] p-2.5 sm:p-4',
                   isLight
                     ? (cell.inMonth ? (hasTrades ? 'bg-white' : 'bg-zinc-50') : 'bg-zinc-100')
                     : (cell.inMonth ? (hasTrades ? 'bg-zinc-900' : 'bg-zinc-900/20') : 'bg-zinc-950'),
@@ -2073,20 +2028,20 @@ export default function CalendarScreen() {
                   !cell.inMonth ? 'opacity-55' : '',
                   isPreviousMonth ? (isLight ? 'bg-amber-50' : 'bg-amber-400/5') : '',
                   isSelected
-                    ? `border-amber-400 ring-1 ring-amber-400/60 scale-[1.01] shadow-md shadow-amber-500/10 z-10 ${isLight ? 'bg-amber-50' : 'bg-zinc-800'}`
+                    ? `border-amber-400 ring-2 ring-amber-400/60 scale-[1.03] shadow-lg shadow-amber-500/10 z-10 ${isLight ? 'bg-amber-50' : 'bg-zinc-800'}`
                     : isLight
                     ? 'hover:border-zinc-400 hover:bg-zinc-100'
                     : 'hover:border-zinc-600 hover:bg-zinc-800/60',
                 ].join(' ')}
               >
                 {cell.isToday && (
-                  <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-amber-400" />
+                  <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-amber-400" />
                 )}
-                <span className={`calendar-cell-date font-data text-xs sm:text-base ${cell.inMonth ? (isLight ? 'text-zinc-500' : 'text-zinc-400') : (isLight ? 'text-zinc-300' : 'text-zinc-700')}`}>
+                <span className={`font-data text-[16px] sm:text-base ${cell.inMonth ? (isLight ? 'text-zinc-500' : 'text-zinc-400') : (isLight ? 'text-zinc-300' : 'text-zinc-700')}`}>
                   {cell.date.getDate()}
                 </span>
                 {cell.inMonth && hasTrades && (
-                  <span className={`calendar-cell-pnl font-data text-[10px] sm:text-lg font-medium whitespace-nowrap ${isProfit ? 'text-emerald-500' : 'text-red-500'}`}>
+                  <span className={`font-data text-[14px] sm:text-lg font-medium whitespace-nowrap ${isProfit ? 'text-emerald-500' : 'text-red-500'}`}>
                     {pnlText}
                   </span>
                 )}
@@ -2237,16 +2192,16 @@ export default function CalendarScreen() {
       )}
 
       {/* bottom "История" entry point — search/browse all saved trades */}
-      <div className="history-fab fixed bottom-5 sm:bottom-4 inset-x-0 flex justify-center z-30 pointer-events-none">
+      <div className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] sm:bottom-4 inset-x-0 flex justify-center z-30 pointer-events-none">
         <button
           onClick={openHistory}
-          className={`pointer-events-auto flex items-center gap-2 rounded-full border backdrop-blur px-5 py-3 text-sm shadow-xl transition-all ${
+          className={`pointer-events-auto flex items-center gap-2 rounded-full border backdrop-blur px-6 py-3.5 text-base sm:px-5 sm:py-3 shadow-xl transition-colors ${
             isLight
               ? 'border-zinc-300 bg-white/95 text-zinc-700 hover:border-amber-400/60 hover:text-amber-500'
               : 'border-zinc-700 bg-zinc-900/95 text-zinc-200 hover:border-amber-400/60 hover:text-amber-400'
           }`}
         >
-          <History className="h-4 w-4" />
+          <History className="h-5 w-5 sm:h-4 sm:w-4" />
           {t('history')}
         </button>
       </div>
@@ -2612,14 +2567,14 @@ export default function CalendarScreen() {
       {/* ADD TRADE MODAL — compact quick-entry UI */}
       {modalOpen && (
         <div
-          className={`quick-entry-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${
             modalVisible ? 'opacity-100' : 'opacity-0'
           }`}
           onMouseDown={handleBackdropMouseDown}
           onClick={handleModalBackdropClick}
         >
           <div
-            className={`quick-entry-modal relative w-full max-w-[360px] rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-4 shadow-2xl transition-all duration-200 sm:px-5 sm:py-5 ${
+            className={`relative w-full max-w-[360px] rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-4 shadow-2xl transition-all duration-200 sm:px-5 sm:py-5 ${
               modalVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
             }`}
           >
@@ -2888,7 +2843,7 @@ export default function CalendarScreen() {
       {/* CONNECT PLATFORM MODAL — API keys / CSV import */}
       {connectOpen && (
         <div
-          className={`quick-entry-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${
             connectVisible ? 'opacity-100' : 'opacity-0'
           }`}
           onMouseDown={handleBackdropMouseDown}
@@ -3077,7 +3032,7 @@ export default function CalendarScreen() {
       {/* ANALYSIS MODAL — free basic stats now, paid deep AI analysis coming later */}
       {analysisOpen && (
         <div
-          className={`quick-entry-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${
             analysisVisible ? 'opacity-100' : 'opacity-0'
           }`}
           onMouseDown={handleBackdropMouseDown}
@@ -3216,7 +3171,7 @@ export default function CalendarScreen() {
 
       {nicknameModalOpen && (
         <div
-          className={`quick-entry-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${
             nicknameModalVisible ? 'opacity-100' : 'opacity-0'
           }`}
         >
