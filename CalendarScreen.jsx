@@ -768,24 +768,12 @@ export default function CalendarScreen() {
               continue;
             }
 
-            const cloudById = new Map(merged[dateKey].map((t) => [String(t.id), t]));
-            const localByCloudId = new Map(
-              localList
-                .filter((t) => t.id && !String(t.id).startsWith('guest-') && !String(t.id).startsWith('local-') && !String(t.id).startsWith('offline-'))
-                .map((t) => [String(t.id), t])
-            );
+            const cloudIds = new Set(merged[dateKey].map((t) => String(t.id)));
 
-            // Preserve local version of any record that already exists in cloud.
-            for (const [id, localTrade] of localByCloudId.entries()) {
-              if (cloudById.has(id)) {
-                cloudById.set(id, localTrade);
-              }
-            }
-
-            // Append genuinely local-only records.
-            const existingIds = new Set(merged[dateKey].map((t) => String(t.id)));
+            // Append only local records that are not already in cloud.
+            // This ensures that newly added local records (with local-* id) are kept.
             for (const localTrade of localList) {
-              if (!existingIds.has(String(localTrade.id))) {
+              if (!cloudIds.has(String(localTrade.id))) {
                 merged[dateKey].push(localTrade);
               }
             }
@@ -1042,6 +1030,9 @@ export default function CalendarScreen() {
 
   const [editingTrade, setEditingTrade] = useState(null); // { id, dateKey } | null
 
+  // ---- FIX: prevent double-save and improve id generation ----
+  const [isSaving, setIsSaving] = useState(false);
+
   function openModal(tradeToEdit) {
     if (tradeToEdit) {
       setEditingTrade({ id: tradeToEdit.id, dateKey: tradeToEdit.dateKey || modalDateKey || targetDateKey });
@@ -1211,192 +1202,190 @@ export default function CalendarScreen() {
   }
 
   async function handleSaveTrade() {
-    const dateKey = modalDateKey || targetDateKey;
+    if (isSaving) return;
+    setIsSaving(true);
 
-    if (dateKey > todayKey) {
-      setFormError('Нельзя добавить запись на будущую дату.');
-      return;
-    }
+    try {
+      const dateKey = modalDateKey || targetDateKey;
 
-    const instrument = textValue(form.instrument).trim().toUpperCase();
-    if (!instrument) {
-      setFormError(traderMode ? 'Укажите символ инструмента.' : 'Выберите категорию или укажите свою.');
-      return;
-    }
+      if (dateKey > todayKey) {
+        setFormError('Нельзя добавить запись на будущую дату.');
+        setIsSaving(false);
+        return;
+      }
 
-    const pnlText = textValue(form.pnl).trim();
-    if (!pnlText) {
-      setFormError('Укажите сумму в $.');
-      return;
-    }
+      const instrument = textValue(form.instrument).trim().toUpperCase();
+      if (!instrument) {
+        setFormError(traderMode ? 'Укажите символ инструмента.' : 'Выберите категорию или укажите свою.');
+        setIsSaving(false);
+        return;
+      }
 
-    const magnitude = parseFloat(pnlText);
-    if (Number.isNaN(magnitude) || magnitude < 0) {
-      setFormError('Сумма должна быть числом ≥ 0.');
-      return;
-    }
+      const pnlText = textValue(form.pnl).trim();
+      if (!pnlText) {
+        setFormError('Укажите сумму в $.');
+        setIsSaving(false);
+        return;
+      }
 
-    const signedPnl = form.sign === 'minus'
-      ? -Math.abs(magnitude)
-      : Math.abs(magnitude);
+      const magnitude = parseFloat(pnlText);
+      if (Number.isNaN(magnitude) || magnitude < 0) {
+        setFormError('Сумма должна быть числом ≥ 0.');
+        setIsSaving(false);
+        return;
+      }
 
-    const finalDirection =
-      traderMode && form.direction
-        ? form.direction
-        : signedPnl >= 0 ? 'LONG' : 'SHORT';
+      const signedPnl = form.sign === 'minus'
+        ? -Math.abs(magnitude)
+        : Math.abs(magnitude);
 
-    const time = textValue(form.time) || currentTimeHHMM();
-    const comment = textValue(form.comment).trim();
-    const platform = textValue(form.platform) || 'Manual';
+      const finalDirection =
+        traderMode && form.direction
+          ? form.direction
+          : signedPnl >= 0 ? 'LONG' : 'SHORT';
 
-    const tp = traderMode && textValue(form.takeProfit).trim() !== ''
-      ? parseFloat(form.takeProfit)
-      : null;
+      const time = textValue(form.time) || currentTimeHHMM();
+      const comment = textValue(form.comment).trim();
+      const platform = textValue(form.platform) || 'Manual';
 
-    const sl = traderMode && textValue(form.stopLoss).trim() !== ''
-      ? parseFloat(form.stopLoss)
-      : null;
+      const tp = traderMode && textValue(form.takeProfit).trim() !== ''
+        ? parseFloat(form.takeProfit)
+        : null;
 
-    const cloudUserId = getValidUserId(user);
-    const isEditing = Boolean(editingTrade);
-    const localId = isEditing
-      ? editingTrade.id
-      : `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const sl = traderMode && textValue(form.stopLoss).trim() !== ''
+        ? parseFloat(form.stopLoss)
+        : null;
 
-    const localTrade = {
-      id: localId,
-      time,
-      instrument,
-      direction: finalDirection,
-      pnl: signedPnl,
-      comment,
-      platform,
-      // Per-entry currency: kept local-only (not sent to Supabase below) so
-      // it can't break cloud saves if the `trades` table doesn't have this
-      // column yet — same precaution as take_profit/stop_loss above.
-      currency: form.currency || currency,
-      ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}),
-      pending: false,
-    };
+      const cloudUserId = getValidUserId(user);
+      const isEditing = Boolean(editingTrade);
 
-    // -------- LOCAL FIRST --------
-    // This is what the UI renders. It never depends on Google/Supabase.
-    //
-    // IMPORTANT: this must go through the functional setState form, reading
-    // off `prev` (React's own latest state) rather than a manually-kept
-    // `manualTradesRef` snapshot. The ref is only re-synced *after* a render
-    // commits, so if a background update (cloud fetch merge, offline-queue
-    // flush) lands in that gap, a snapshot taken from the stale ref would
-    // overwrite it — this is what silently dropped a same-day second entry.
-    // Building the next value inside the updater keeps every save strictly
-    // ordered against every other update to the same state, regardless of
-    // timing.
-    setManualTrades((prev) => {
-      const nextForDay = [...(prev[dateKey] || [])];
+      // Генерируем уникальный ID (используем crypto.randomUUID если доступно)
+      const localId = crypto.randomUUID ? crypto.randomUUID() : `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-      if (isEditing) {
-        const index = nextForDay.findIndex((t) => String(t.id) === String(editingTrade.id));
-        if (index >= 0) {
-          nextForDay[index] = { ...nextForDay[index], ...localTrade };
+      const localTrade = {
+        id: isEditing ? editingTrade.id : localId,
+        time,
+        instrument,
+        direction: finalDirection,
+        pnl: signedPnl,
+        comment,
+        platform,
+        currency: form.currency || currency,
+        ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}),
+        pending: false,
+      };
+
+      // -------- LOCAL FIRST --------
+      setManualTrades((prev) => {
+        const nextForDay = [...(prev[dateKey] || [])];
+
+        if (isEditing) {
+          const index = nextForDay.findIndex((t) => String(t.id) === String(editingTrade.id));
+          if (index >= 0) {
+            nextForDay[index] = { ...nextForDay[index], ...localTrade };
+          } else {
+            nextForDay.push(localTrade);
+          }
         } else {
           nextForDay.push(localTrade);
         }
-      } else {
-        nextForDay.push(localTrade);
+
+        const nextTrades = { ...prev, [dateKey]: nextForDay };
+        manualTradesRef.current = nextTrades;
+        cacheTradesLocally(nextTrades, cloudUserId);
+        return nextTrades;
+      });
+
+      setRecentInstruments((prev) =>
+        [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5)
+      );
+
+      closeModal();
+
+      // -------- GUEST --------
+      if (!cloudUserId) {
+        setIsSaving(false);
+        return;
       }
 
-      const nextTrades = { ...prev, [dateKey]: nextForDay };
-      manualTradesRef.current = nextTrades;
-      // Persist immediately to the correct local store.
-      cacheTradesLocally(nextTrades, cloudUserId);
-      return nextTrades;
-    });
+      // -------- CLOUD SYNC IN BACKGROUND --------
+      const cloudPayload = {
+        user_id: cloudUserId,
+        date_key: dateKey,
+        time,
+        instrument,
+        direction: finalDirection,
+        pnl: signedPnl,
+        comment,
+        platform,
+      };
 
-    setRecentInstruments((prev) =>
-      [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5)
-    );
+      try {
+        if (isEditing && !String(editingTrade.id).startsWith('local-') && !String(editingTrade.id).startsWith('guest-') && !String(editingTrade.id).startsWith('offline-')) {
+          const { error } = await supabase
+            .from('trades')
+            .update({
+              time,
+              instrument,
+              direction: finalDirection,
+              pnl: signedPnl,
+              comment,
+              platform,
+            })
+            .eq('id', editingTrade.id)
+            .eq('user_id', cloudUserId);
 
-    closeModal();
+          if (error) {
+            console.warn('[cloud-sync] update skipped:', error.message);
+          }
+          setIsSaving(false);
+          return;
+        }
 
-    // -------- GUEST --------
-    if (!cloudUserId) return;
-
-    // -------- CLOUD SYNC IN BACKGROUND --------
-    // Only the core columns are sent for now. This prevents the missing
-    // stop_loss/take_profit DB columns from breaking PRO saves.
-    const cloudPayload = {
-      user_id: cloudUserId,
-      date_key: dateKey,
-      time,
-      instrument,
-      direction: finalDirection,
-      pnl: signedPnl,
-      comment,
-      platform,
-    };
-
-    try {
-      if (isEditing && !String(editingTrade.id).startsWith('local-') && !String(editingTrade.id).startsWith('guest-') && !String(editingTrade.id).startsWith('offline-')) {
-        // Existing Supabase record: update in the background.
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('trades')
-          .update({
-            time,
-            instrument,
-            direction: finalDirection,
-            pnl: signedPnl,
-            comment,
-            platform,
-          })
-          .eq('id', editingTrade.id)
-          .eq('user_id', cloudUserId);
+          .insert(cloudPayload)
+          .select()
+          .single();
 
         if (error) {
-          console.warn('[cloud-sync] update skipped:', error.message);
-        }
-        return;
-      }
-
-      // New local record: create the cloud copy in the background.
-      const { data, error } = await supabase
-        .from('trades')
-        .insert(cloudPayload)
-        .select()
-        .single();
-
-      if (error) {
-        console.warn('[cloud-sync] insert skipped, local record kept:', error.message);
-        return;
-      }
-
-      // Replace ONLY the local record we just created.
-      setManualTrades((prev) => {
-        const merged = { ...prev };
-        const list = [...(merged[dateKey] || [])];
-        const index = list.findIndex((t) => String(t.id) === String(localId));
-
-        if (index >= 0) {
-          list[index] = {
-            ...list[index],
-            id: data.id,
-            pending: false,
-          };
-          merged[dateKey] = list;
+          console.warn('[cloud-sync] insert skipped, local record kept:', error.message);
+          setIsSaving(false);
+          return;
         }
 
-        manualTradesRef.current = merged;
-        cacheTradesLocally(merged, cloudUserId);
-        return merged;
-      });
+        // Replace only the local record we just created.
+        setManualTrades((prev) => {
+          const merged = { ...prev };
+          const list = [...(merged[dateKey] || [])];
+          const index = list.findIndex((t) => String(t.id) === String(localId));
+
+          if (index >= 0) {
+            list[index] = {
+              ...list[index],
+              id: data.id,
+              pending: false,
+            };
+            merged[dateKey] = list;
+          }
+
+          manualTradesRef.current = merged;
+          cacheTradesLocally(merged, cloudUserId);
+          return merged;
+        });
+      } catch (err) {
+        console.warn('[cloud-sync] unavailable, local record kept:', err);
+      }
     } catch (err) {
-      console.warn('[cloud-sync] unavailable, local record kept:', err);
+      console.error('[save] unexpected error:', err);
+    } finally {
+      setIsSaving(false);
     }
   }
 
   async function handleDeleteTrade(dateKey, tradeId) {
     const cloudUserId = getValidUserId(user);
 
-    // Same reasoning as handleSaveTrade: build off `prev`, not the ref.
     setManualTrades((prev) => {
       const nextTrades = { ...prev };
       nextTrades[dateKey] = (nextTrades[dateKey] || []).filter(
@@ -1849,42 +1838,33 @@ export default function CalendarScreen() {
               )}
             </div>
 
-            {/* Money / PRO + platform reveal — скрыто на мобильных */}
-            <div className="ml-1.5 hidden sm:flex items-center basis-full sm:basis-auto justify-end sm:justify-start">
-              {/* Smooth mode switch */}
+            {/* Money / PRO + platform reveal — адаптивно, всегда видно, но на телефоне компактнее */}
+            <div className="ml-1.5 flex items-center basis-full sm:basis-auto justify-end sm:justify-start">
               <button
                 type="button"
                 role="switch"
                 aria-checked={traderMode}
-                onClick={() => setTraderMode((v) => {
-                  const next = !v;
-                  if (!next) setPlatformFilter('ALL');
-                  return next;
-                })}
-                title={traderMode
-                  ? 'PRO: LONG/SHORT, Take Profit и Stop Loss'
-                  : 'Денежный: доходы и расходы без трейдерских полей'}
-                className="relative h-9 w-[104px] shrink-0 rounded-full border border-zinc-800 bg-zinc-900 p-0.5 font-data text-[9px] tracking-wider text-zinc-500 shadow-inner focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60"
+                onClick={() => setTraderMode(v => { const next = !v; if (!next) setPlatformFilter('ALL'); return next; })}
+                title={traderMode ? 'PRO: LONG/SHORT, Take Profit и Stop Loss' : 'Денежный: доходы и расходы без трейдерских полей'}
+                className="relative h-8 sm:h-9 w-[80px] sm:w-[104px] shrink-0 rounded-full border border-zinc-800 bg-zinc-900 p-0.5 font-data text-[8px] sm:text-[9px] tracking-wider text-zinc-500 shadow-inner focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60"
               >
-                {/* sliding active pill */}
                 <span
                   aria-hidden="true"
                   className={[
-                    'absolute top-0.5 bottom-0.5 left-0.5 w-[50px] rounded-full border transition-all duration-300 ease-out',
+                    'absolute top-0.5 bottom-0.5 left-0.5 w-[38px] sm:w-[50px] rounded-full border transition-all duration-300 ease-out',
                     traderMode
-                      ? 'translate-x-[50px] border-amber-400/50 bg-amber-400/10 shadow-[0_0_14px_rgba(251,191,36,0.08)]'
+                      ? 'translate-x-[38px] sm:translate-x-[50px] border-amber-400/50 bg-amber-400/10 shadow-[0_0_14px_rgba(251,191,36,0.08)]'
                       : isLight
                       ? 'translate-x-0 border-zinc-300 bg-zinc-200'
                       : 'translate-x-0 border-zinc-700 bg-zinc-800/90',
                   ].join(' ')}
                 />
-
                 <span
                   className={[
                     'relative z-10 flex h-full items-center justify-center transition-colors duration-300',
                     !traderMode ? 'text-zinc-100' : 'text-zinc-600',
                   ].join(' ')}
-                  style={{ width: '50px' }}
+                  style={{ width: '38px' }}
                 >
                   {t('freePlan')}
                 </span>
@@ -1893,18 +1873,17 @@ export default function CalendarScreen() {
                     'absolute right-0.5 top-0.5 bottom-0.5 z-10 flex items-center justify-center transition-colors duration-300',
                     traderMode ? 'text-amber-400' : 'text-zinc-600',
                   ].join(' ')}
-                  style={{ width: '50px' }}
+                  style={{ width: '38px' }}
                 >
                   PRO
                 </span>
               </button>
 
-              {/* Platform slides out from the right side of PRO */}
               <div
                 className="overflow-hidden shrink-0 transition-[width,margin,opacity] duration-300 ease-out"
                 style={{
-                  width: traderMode ? '108px' : '0px',
-                  marginLeft: traderMode ? '8px' : '0px',
+                  width: traderMode ? '90px' : '0px',
+                  marginLeft: traderMode ? '6px' : '0px',
                   opacity: traderMode ? 1 : 0,
                 }}
                 aria-hidden={!traderMode}
@@ -1912,13 +1891,11 @@ export default function CalendarScreen() {
                 <button
                   onClick={openConnectModal}
                   tabIndex={traderMode ? 0 : -1}
-                  className="flex h-9 w-[108px] items-center justify-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-400/10 px-2 font-data text-[11px] tracking-wide text-amber-400 whitespace-nowrap hover:bg-amber-400/15 transition-colors"
+                  className="flex h-8 sm:h-9 w-[90px] sm:w-[108px] items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-400/10 px-1.5 sm:px-2 font-data text-[10px] sm:text-[11px] tracking-wide text-amber-400 whitespace-nowrap hover:bg-amber-400/15 transition-colors"
                 >
-                  <Link2 className="h-3 w-3 shrink-0" />
-                  Площадка
-                  {ctraderConnected && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                  )}
+                  <Link2 className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />
+                  <span className="hidden xs:inline">Площадка</span>
+                  {ctraderConnected && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />}
                 </button>
               </div>
             </div>
@@ -2826,9 +2803,10 @@ export default function CalendarScreen() {
 
               <button
                 onClick={handleSaveTrade}
-                className="mt-3 block w-full rounded-xl bg-amber-400 px-4 py-3 text-base font-bold text-zinc-950 hover:bg-amber-300 transition-colors shadow-lg shadow-amber-500/20"
+                disabled={isSaving}
+                className="mt-3 block w-full rounded-xl bg-amber-400 px-4 py-3 text-base font-bold text-zinc-950 hover:bg-amber-300 transition-colors shadow-lg shadow-amber-500/20 disabled:opacity-60"
               >
-                {editingTrade ? 'Сохранить изменения' : (traderMode ? 'Сохранить сделку' : t('saveRecord'))}
+                {isSaving ? 'Сохранение...' : (editingTrade ? 'Сохранить изменения' : (traderMode ? 'Сохранить сделку' : t('saveRecord')))}
               </button>
             </div>
           </div>
