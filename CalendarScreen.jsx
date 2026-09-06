@@ -119,6 +119,19 @@ const MONTHS = [
   'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
   'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
 ];
+const MONTHS_EN = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+const MONTHS_MD = [
+  'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
+  'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie',
+];
+function monthsFor(language) {
+  if (language === 'en') return MONTHS_EN;
+  if (language === 'md') return MONTHS_MD;
+  return MONTHS;
+}
 
 const DEFAULT_ASSET_TAGS = ['BTCUSD', 'ETHUSD', 'XAUUSD', 'EURUSD', 'NDX100'];
 const INSTRUMENT_INFO = {
@@ -195,6 +208,7 @@ const TRANSLATIONS = {
     record: 'Запись', editRecord: 'Редактировать запись', deleteRecord: 'Удалить запись',
     saveRecord: 'Сохранить запись', recordNotePlaceholder: 'Заметка по записи (необязательно)',
     recordFutureBlocked: 'Нельзя добавить запись на будущую дату',
+    myMoney: 'Мои деньги',
   },
   en: {
     titleMoney: 'Money Calendar', titlePro: 'Trading Calendar',
@@ -209,6 +223,7 @@ const TRANSLATIONS = {
     record: 'Entry', editRecord: 'Edit entry', deleteRecord: 'Delete entry',
     saveRecord: 'Save entry', recordNotePlaceholder: 'Note (optional)',
     recordFutureBlocked: "Can't add an entry for a future date",
+    myMoney: 'My money',
   },
   md: {
     titleMoney: 'Calendar de bani', titlePro: 'Calendar de tranzacții',
@@ -223,6 +238,7 @@ const TRANSLATIONS = {
     record: 'Înregistrare', editRecord: 'Editează înregistrarea', deleteRecord: 'Șterge înregistrarea',
     saveRecord: 'Salvează înregistrarea', recordNotePlaceholder: 'Notă (opțional)',
     recordFutureBlocked: 'Nu se poate adăuga o înregistrare pentru o dată viitoare',
+    myMoney: 'Banii mei',
   },
 };
 
@@ -858,7 +874,9 @@ export default function CalendarScreen() {
   // filtered by the active platform selection, so the calendar always
   // matches what the platform filter says (e.g. only Bybit trades)
   function tradesForDayFiltered(key) {
-    return (manualTrades[key] || []).filter((t) => platformFilter === 'ALL' || t.platform === platformFilter);
+    return (manualTrades[key] || [])
+      .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
+      .filter((t) => (t.currency || 'USD') === currency);
   }
 
   function totalPnlForDay(key) {
@@ -889,8 +907,9 @@ export default function CalendarScreen() {
       .flatMap(([dateKey, arr]) => arr.map((t) => ({ ...t, dateKey })))
       .filter((t) => t.dateKey >= effectiveFrom && t.dateKey <= effectiveTo)
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
+      .filter((t) => (t.currency || 'USD') === currency)
       .sort((a, b) => (a.dateKey === b.dateKey ? b.time.localeCompare(a.time) : b.dateKey.localeCompare(a.dateKey)));
-  }, [manualTrades, effectiveFrom, effectiveTo, platformFilter]);
+  }, [manualTrades, effectiveFrom, effectiveTo, platformFilter, currency]);
 
   const periodStats = useMemo(() => {
     const count = periodTrades.length;
@@ -910,8 +929,9 @@ export default function CalendarScreen() {
     return Object.entries(manualTrades)
       .flatMap(([dateKey, arr]) => arr.map((t) => ({ ...t, dateKey })))
       .filter((t) => t.dateKey >= analysisFrom && t.dateKey <= analysisTo)
-      .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter);
-  }, [manualTrades, analysisFrom, analysisTo, platformFilter]);
+      .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
+      .filter((t) => (t.currency || 'USD') === currency);
+  }, [manualTrades, analysisFrom, analysisTo, platformFilter, currency]);
 
   const analysisStats = useMemo(() => {
     const count = analysisTrades.length;
@@ -1405,9 +1425,10 @@ export default function CalendarScreen() {
       .flatMap(([dateKey, arr]) => arr.map((t) => ({ ...t, dateKey })))
       .filter((t) => t.dateKey >= dateFrom && t.dateKey <= dateTo)
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
+      .filter((t) => (t.currency || 'USD') === currency)
       .filter((t) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? t.pnl >= 0 : t.pnl < 0))
       .sort((a, b) => (a.dateKey === b.dateKey ? b.time.localeCompare(a.time) : b.dateKey.localeCompare(a.dateKey)));
-  }, [manualTrades, dateFrom, dateTo, platformFilter, historyWinLoss]);
+  }, [manualTrades, dateFrom, dateTo, platformFilter, historyWinLoss, currency]);
 
   const historyTotal = useMemo(() => historyTrades.reduce((sum, t) => sum + t.pnl, 0), [historyTrades]);
   const historyIncome = useMemo(() => historyTrades.reduce((sum, t) => sum + (t.pnl > 0 ? t.pnl : 0), 0), [historyTrades]);
@@ -1523,6 +1544,14 @@ export default function CalendarScreen() {
         .theme-light .border-zinc-200 { border-color: #d4d4d8 !important; }
         .theme-light .border-zinc-300 { border-color: #a1a1aa !important; }
         .theme-light .bg-zinc-50 { background-color: #f4f4f5 !important; }
+        /* Dark, unobtrusive scrollbars everywhere instead of the default
+           bright OS scrollbar, which reads as a stray white line in this UI. */
+        * { scrollbar-width: thin; scrollbar-color: #52525b transparent; }
+        *::-webkit-scrollbar { height: 6px; width: 6px; }
+        *::-webkit-scrollbar-track { background: transparent; }
+        *::-webkit-scrollbar-thumb { background-color: #52525b; border-radius: 9999px; }
+        .theme-light *::-webkit-scrollbar-thumb { background-color: #a1a1aa; }
+        .theme-light { scrollbar-color: #a1a1aa transparent; }
       `}</style>
 
       {/* HEADER */}
@@ -1652,11 +1681,11 @@ export default function CalendarScreen() {
                   onClick={() => { setMonthMenuOpen((v) => !v); setYearMenuOpen(false); }}
                   className="font-display text-2xl font-semibold text-zinc-50 hover:text-amber-400 transition-colors"
                 >
-                  {MONTHS[month]}
+                  {monthsFor(language)[month]}
                 </button>
                 {monthMenuOpen && (
                   <div className="absolute left-0 top-full mt-2 w-40 max-h-64 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl z-30 p-1">
-                    {MONTHS.map((m, i) => (
+                    {monthsFor(language).map((m, i) => (
                       <button
                         key={m}
                         onClick={() => { setViewMonth(i); setSelectedKey(null); setMonthMenuOpen(false); }}
@@ -2086,7 +2115,7 @@ export default function CalendarScreen() {
             <div className="flex items-center justify-between px-5 sm:px-6 pt-5 pb-4 border-b border-zinc-800/80">
               <div>
                 <p className="font-data text-[10px] tracking-[0.22em] text-amber-400 uppercase mb-1">
-                  {traderMode ? 'История сделок' : 'Мои деньги'}
+                  {traderMode ? 'История сделок' : t('myMoney')}
                 </p>
                 <h2 className="font-display text-xl font-semibold text-zinc-50">
                   {traderMode
@@ -2108,7 +2137,26 @@ export default function CalendarScreen() {
                 <>
                   {/* Money summary */}
                   <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4 sm:p-5 mb-4">
-                    <p className="text-xs text-zinc-500 mb-2">Результат за выбранный период</p>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <p className="text-xs text-zinc-500">Результат за выбранный период</p>
+                      <div className="flex gap-1 shrink-0">
+                        {CURRENCIES.map((c) => (
+                          <button
+                            key={c.code}
+                            onClick={() => setCurrency(c.code)}
+                            title={c.code}
+                            className={[
+                              'px-1.5 py-0.5 rounded text-[11px] font-data border transition-colors',
+                              currency === c.code
+                                ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                                : 'border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
+                            ].join(' ')}
+                          >
+                            {c.symbol}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     <div className={`font-display text-4xl sm:text-5xl font-semibold tracking-tight ${historyTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                       {formatPnlDisplay(historyTotal)}
                     </div>
@@ -2125,7 +2173,7 @@ export default function CalendarScreen() {
                   </div>
 
                   {/* Fast period controls */}
-                  <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1">
+                  <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1 no-scrollbar">
                     {PERIOD_PRESETS.map((p) => (
                       <button
                         key={p}
