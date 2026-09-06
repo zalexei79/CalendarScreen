@@ -67,7 +67,10 @@ function startOfWeekMonday(d) {
 function formatMoney(n) {
   const abs = Math.abs(n);
   const rounded = Math.round(abs * 100) / 100;
-  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
+  const raw = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
+  const [intPart, decPart] = raw.split('.');
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0');
+  return decPart ? `${grouped}.${decPart}` : grouped;
 }
 
 function formatSignedShort(n) {
@@ -2273,19 +2276,21 @@ export default function CalendarScreen() {
                   }`}>
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <p className={`text-xs ${isLight ? 'text-zinc-600' : 'text-zinc-500'}`}>{t('resultForPeriod')}</p>
-                      <div className="flex gap-1 shrink-0">
+                      <div className={`flex gap-0.5 shrink-0 rounded-lg border p-0.5 ${
+                        isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950/60'
+                      }`}>
                         {CURRENCIES.map((c) => (
                           <button
                             key={c.code}
                             onClick={() => setCurrency(c.code)}
-                            title={c.code}
+                            title={c.label}
                             className={[
-                              'px-1.5 py-0.5 rounded text-[11px] font-data border transition-colors',
+                              'min-w-[30px] h-7 px-1.5 rounded-md text-sm font-data font-medium border transition-colors flex items-center justify-center',
                               currency === c.code
-                                ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
+                                ? 'border-amber-400/60 bg-amber-400/15 text-amber-500'
                                 : isLight
-                                ? 'border-zinc-300 text-zinc-500 hover:text-zinc-700 hover:border-zinc-400'
-                                : 'border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600',
+                                ? 'border-transparent text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100'
+                                : 'border-transparent text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/70',
                             ].join(' ')}
                           >
                             {c.symbol}
@@ -2293,34 +2298,50 @@ export default function CalendarScreen() {
                         ))}
                       </div>
                     </div>
-                    <div className={`font-display text-4xl sm:text-5xl font-semibold tracking-tight ${historyTotal >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    <div className={`font-display text-4xl sm:text-5xl font-semibold tracking-tight tabular-nums ${historyTotal >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                       {formatPnlDisplay(historyTotal)}
                     </div>
                     <div className="grid grid-cols-2 gap-3 mt-4">
-                      <div className={`rounded-xl border px-3 py-3 ${
-                        isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800/80 bg-zinc-900/70'
+                      <div className={`rounded-xl border border-l-[3px] px-3 py-3 ${
+                        isLight ? 'border-zinc-200 border-l-emerald-400 bg-zinc-50' : 'border-zinc-800/80 border-l-emerald-500/70 bg-zinc-900/70'
                       }`}>
-                        <p className={`text-[11px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'} mb-1`}>{t('income')}</p>
-                        <p className="font-data text-sm text-emerald-600">+{currencySymbol}{formatMoney(historyIncome)}</p>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <TrendingUp className="h-3 w-3 text-emerald-500 shrink-0" />
+                          <p className={`text-[11px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{t('income')}</p>
+                        </div>
+                        <p className="font-data text-sm text-emerald-600 tabular-nums">+{currencySymbol}{formatMoney(historyIncome)}</p>
                       </div>
-                      <div className={`rounded-xl border px-3 py-3 ${
-                        isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800/80 bg-zinc-900/70'
+                      <div className={`rounded-xl border border-l-[3px] px-3 py-3 ${
+                        isLight ? 'border-zinc-200 border-l-red-400 bg-zinc-50' : 'border-zinc-800/80 border-l-red-500/70 bg-zinc-900/70'
                       }`}>
-                        <p className={`text-[11px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'} mb-1`}>{t('expense')}</p>
-                        <p className="font-data text-sm text-red-600">−{currencySymbol}{formatMoney(historyExpense)}</p>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <TrendingDown className="h-3 w-3 text-red-500 shrink-0" />
+                          <p className={`text-[11px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{t('expense')}</p>
+                        </div>
+                        <p className="font-data text-sm text-red-600 tabular-nums">−{currencySymbol}{formatMoney(historyExpense)}</p>
                       </div>
                     </div>
                   </div>
 
                   {historyInsights.length > 0 && (
                     <div className="mb-4 rounded-2xl border border-amber-400/25 bg-amber-400/5 p-4">
-                      <p className="mb-2 text-xs font-semibold text-amber-400">Наблюдения по привычкам</p>
-                      <div className="space-y-1.5">{historyInsights.map((insight) => <p key={insight} className={`text-xs leading-relaxed ${isLight ? 'text-zinc-700' : 'text-zinc-400'}`}>• {insight}</p>)}</div>
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Sparkles className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                        <p className="text-xs font-semibold text-amber-400">Наблюдения по привычкам</p>
+                      </div>
+                      <div className="space-y-1.5">
+                        {historyInsights.map((insight) => (
+                          <div key={insight} className="flex items-start gap-2">
+                            <span className="mt-1.5 h-1 w-1 rounded-full bg-amber-400/70 shrink-0" />
+                            <p className={`text-xs leading-relaxed ${isLight ? 'text-zinc-700' : 'text-zinc-400'}`}>{insight}</p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 
                   {/* Fast period controls - улучшены для светлой темы */}
-                  <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1 no-scrollbar">
+                  <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1 no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     {PERIOD_PRESETS.map((p) => (
                       <button
                         key={p}
@@ -2434,9 +2455,9 @@ export default function CalendarScreen() {
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className={`block text-sm font-medium truncate ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{entry.instrument || 'Другое'}</span>
-                              <span className={`block text-[11px] mt-0.5 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{formatDateLabel(entry.dateKey)} · {entry.time}{entry.comment ? ` · ${entry.comment}` : ''}</span>
+                              <span className={`block text-[11px] mt-0.5 truncate ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{formatDateLabel(entry.dateKey)} · {entry.time}{entry.comment ? ` · ${entry.comment}` : ''}</span>
                             </span>
-                            <span className={`font-data text-sm font-medium shrink-0 ${entry.pnl >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                            <span className={`font-data text-sm font-medium shrink-0 tabular-nums whitespace-nowrap ${entry.pnl >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                               {entry.pnl >= 0 ? '+' : '−'}{getCurrencyMeta(entry.currency || currency).symbol}{formatMoney(entry.pnl)}
                             </span>
                           </button>
