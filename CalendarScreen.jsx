@@ -443,6 +443,7 @@ export default function CalendarScreen() {
   }
 
   const [selectedKey, setSelectedKey] = useState(null);
+  const calendarTouchStart = useRef(null);
   const [displayMode, setDisplayMode] = useState('usd'); // 'usd' | 'percent'
   const [depositSize, setDepositSize] = useState(() => {
     try {
@@ -869,7 +870,9 @@ export default function CalendarScreen() {
     const firstOfMonth = new Date(year, month, 1);
     const offset = (firstOfMonth.getDay() + 6) % 7; // Monday-start week
     const start = new Date(year, month, 1 - offset);
-    return Array.from({ length: 42 }, (_, i) => {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cellCount = Math.ceil((offset + daysInMonth) / 7) * 7;
+    return Array.from({ length: cellCount }, (_, i) => {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       const key = keyFromDate(d);
@@ -1916,6 +1919,14 @@ export default function CalendarScreen() {
       <section
         className={`flex-1 px-2 sm:px-8 py-2 sm:py-6 border-b relative transition-colors duration-200 ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}
         onClick={(e) => { if (e.target === e.currentTarget) setSelectedKey(null); }}
+        onTouchStart={(e) => { calendarTouchStart.current = e.touches[0]?.clientX ?? null; }}
+        onTouchEnd={(e) => {
+          const startX = calendarTouchStart.current;
+          const endX = e.changedTouches[0]?.clientX;
+          calendarTouchStart.current = null;
+          if (startX == null || endX == null || Math.abs(endX - startX) < 48) return;
+          if (endX < startX) goToNextMonth(); else goToPrevMonth();
+        }}
       >
         <div
           className="grid grid-cols-7 gap-1 sm:gap-2 mb-2"
@@ -1928,11 +1939,12 @@ export default function CalendarScreen() {
           ))}
         </div>
         <div
-          className="grid grid-cols-7 grid-rows-6 gap-1 sm:gap-2 h-full"
+          className="grid grid-cols-7 gap-1 sm:gap-2"
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedKey(null); }}
         >
           {cells.map((cell, cellIndex) => {
             const isSelected = cell.key === selectedKey;
+            const isPreviousMonth = !cell.inMonth && cell.date < new Date(year, month, 1);
             const hasTrades = tradesForDayFiltered(cell.key).length > 0;
             const pnl = totalPnlForDay(cell.key);
             const isProfit = pnl >= 0;
@@ -1956,14 +1968,15 @@ export default function CalendarScreen() {
                 style={heatmapStyle}
                 className={[
                   'relative rounded-md border flex flex-col justify-between text-left transition-all duration-150',
-                  'min-h-[78px] sm:min-h-[110px] p-2 sm:p-4',
+                  'min-h-[56px] sm:min-h-[110px] p-1.5 sm:p-4',
                   isLight
                     ? (cell.inMonth ? (hasTrades ? 'bg-white' : 'bg-zinc-50') : 'bg-zinc-100')
                     : (cell.inMonth ? (hasTrades ? 'bg-zinc-900' : 'bg-zinc-900/20') : 'bg-zinc-950'),
                   isLight
                     ? (cell.inMonth ? (hasTrades ? 'border-zinc-300' : 'border-zinc-200') : 'border-zinc-200')
                     : (cell.inMonth ? (hasTrades ? 'border-zinc-800' : 'border-zinc-800/30') : 'border-zinc-900'),
-                  !cell.inMonth ? 'opacity-40' : '',
+                  !cell.inMonth ? 'opacity-55' : '',
+                  isPreviousMonth ? (isLight ? 'bg-amber-50' : 'bg-amber-400/5') : '',
                   isSelected
                     ? `border-amber-400 ring-2 ring-amber-400/60 scale-[1.03] shadow-lg shadow-amber-500/10 z-10 ${isLight ? 'bg-amber-50' : 'bg-zinc-800'}`
                     : isLight
