@@ -1306,12 +1306,9 @@ export default function CalendarScreen() {
               </button>
 
               <div
-                className="overflow-hidden shrink-0 transition-[width,margin,opacity] duration-300 ease-out"
-                style={{
-                  width: traderMode ? '88px' : '0px',
-                  marginLeft: traderMode ? '6px' : '0px',
-                  opacity: traderMode ? 1 : 0,
-                }}
+                className={`overflow-hidden shrink-0 transition-[width,margin,opacity] duration-300 ease-out ${
+                  traderMode ? 'ml-1.5 w-[88px] opacity-100 sm:w-[108px]' : 'ml-0 w-0 opacity-0'
+                }`}
                 aria-hidden={!traderMode}
               >
                 <button
@@ -1389,7 +1386,6 @@ export default function CalendarScreen() {
         >
           {cells.map((cell, cellIndex) => {
             const isSelected = cell.key === selectedKey;
-            const isPreviousMonth = !cell.inMonth && cell.date < new Date(year, month, 1);
             const hasTrades = tradesForDayFiltered(cell.key).length > 0;
             const pnl = totalPnlForDay(cell.key);
             const pnlTone = pnl > 0 ? 'profit' : pnl < 0 ? 'loss' : 'neutral';
@@ -1431,7 +1427,6 @@ export default function CalendarScreen() {
                     ? (cell.inMonth ? (hasTrades ? 'border-zinc-300' : 'border-zinc-200') : 'border-zinc-200')
                     : (cell.inMonth ? (hasTrades ? 'border-zinc-800' : 'border-zinc-800/30') : 'border-zinc-900'),
                   !cell.inMonth ? 'opacity-55' : '',
-                  isPreviousMonth ? (isLight ? 'bg-amber-50' : 'bg-amber-400/5') : '',
                   isSelected
                     ? `border-amber-400 ring-2 ring-amber-400/60 scale-[1.03] shadow-lg shadow-amber-500/10 z-10 ${isLight ? 'bg-amber-50' : 'bg-zinc-800'}`
                     : isLight
