@@ -73,6 +73,8 @@ import {
   TRANSLATIONS,
   translate,
 } from './src/shared/i18n';
+import { useAuth } from './src/features/auth/hooks/useAuth';
+import { useTrades } from './src/features/trades-sync/hooks/useTrades';
 
 export default function CalendarScreen() {
   const [today, setToday] = useState(() => new Date());
@@ -88,15 +90,20 @@ export default function CalendarScreen() {
     };
   }, []);
 
-  // Google session — optional; the calendar works without signing in
-  const [user, setUser] = useState(null);
-  const nicknamePrompted = useRef(false);
-
-  // in-app "choose a nickname" modal shown once right after a fresh Google login
-  const [nicknameModalOpen, setNicknameModalOpen] = useState(false);
-  const [nicknameModalVisible, setNicknameModalVisible] = useState(false);
-  const [nicknameInput, setNicknameInput] = useState('');
-  const [setupStep, setSetupStep] = useState(null);
+  // Auth via useAuth hook
+  const {
+    user,
+    validUserId,
+    handleGoogleLogin,
+    handleGoogleLogout,
+    nicknameModalOpen,
+    nicknameModalVisible,
+    nicknameInput,
+    setNicknameInput,
+    handleSaveNickname,
+    setupStep,
+    setSetupStep,
+  } = useAuth();
 
   // --- cTrader connection state ------------------------------------------
   const [ctraderConnected, setCtraderConnected] = useState(false);
@@ -131,7 +138,7 @@ export default function CalendarScreen() {
   }
 
   function handleConnectCtrader() {
-    if (!getValidUserId(user)) {
+    if (!validUserId) {
       handleGoogleLogin();
       return;
     }
@@ -140,138 +147,19 @@ export default function CalendarScreen() {
     window.location.href = `https://connect.spotware.com/apps/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=trading`;
   }
 
-  // --- Заглушка синхронизации сделок cTrader (заменить на реальный вызов Edge Function) ---
-  async function handleSyncCtraderTrades() {
-    if (!ctraderConnected) return;
-    setSyncingCtrader(true);
-    try {
-      // В реальном проекте здесь должен быть вызов Edge Function, которая получает сделки из cTrader.
-      // Пока имитируем получение нескольких сделок за последние 3 дня.
-      const now = new Date();
-      const mockTrades = [
-        { date: addDays(now, -2), time: '10:15', instrument: 'BTCUSD', direction: 'LONG', pnl: 120, comment: 'Синхронизировано из cTrader', platform: 'cTrader' },
-        { date: addDays(now, -2), time: '14:30', instrument: 'XAUUSD', direction: 'SHORT', pnl: -85, comment: '', platform: 'cTrader' },
-        { date: addDays(now, -1), time: '09:45', instrument: 'EURUSD', direction: 'LONG', pnl: 45, comment: '', platform: 'cTrader' },
-        { date: addDays(now, -1), time: '16:20', instrument: 'NDX100', direction: 'LONG', pnl: 210, comment: '', platform: 'cTrader' },
-        { date: now, time: '11:00', instrument: 'ETHUSD', direction: 'SHORT', pnl: -30, comment: '', platform: 'cTrader' },
-      ];
-
-      const cloudUserId = getValidUserId(user);
-      for (const trade of mockTrades) {
-        const dateKey = keyFromDate(trade.date);
-        const localId = `ctrader-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        const newTrade = {
-          id: localId,
-          time: trade.time,
-          instrument: trade.instrument,
-          direction: trade.direction,
-          pnl: trade.pnl,
-          comment: trade.comment,
-          platform: trade.platform,
-          currency: currency,
-          pending: false,
-        };
-        setManualTrades((prev) => ({
-          ...prev,
-          [dateKey]: [...(prev[dateKey] || []), newTrade],
-        }));
-        // Сохраняем локально
-        cacheTradesLocally(manualTrades, cloudUserId);
-      }
-      alert('Синхронизация завершена (демо). Добавлено 5 тестовых сделок.');
-    } catch (err) {
-      console.error('[ctrader sync] ошибка:', err);
-      alert('Ошибка синхронизации: ' + err.message);
-    } finally {
-      setSyncingCtrader(false);
-    }
-  }
-
+  // Check cTrader status on user change and handle OAuth code return
   useEffect(() => {
-    async function init() {
-      // Google возвращает нас на страницу с токенами в hash (#access_token=...).
-      // Библиотека сама их иногда не подхватывает — заберём вручную и надёжно.
-      if (window.location.hash.includes('access_token')) {
-        const params = new URLSearchParams(window.location.hash.substring(1));
-        const access_token = params.get('access_token');
-        const refresh_token = params.get('refresh_token');
-        if (access_token && refresh_token) {
-          const { error } = await supabase.auth.setSession({ access_token, refresh_token });
-          console.log('[auth] setSession вручную →', error ? 'ошибка' : 'успех', error || '');
-          window.history.replaceState(null, '', window.location.pathname);
-        }
-      }
-
-      const { data, error } = await supabase.auth.getSession();
-      console.log('[auth] getSession →', data.session ? 'сессия найдена' : 'сессии нет', error || '');
-      const currentUser = data.session?.user ?? null;
-      const normalizedUser = getValidUserId(currentUser) ? currentUser : null;
-      setUser(normalizedUser);
-
-      // cTrader вернул нас с ?code=... в адресе — обмениваем на токены
-      const code = new URLSearchParams(window.location.search).get('code');
-      if (code && normalizedUser) {
-        handleCtraderCallback(code);
-      } else if (code && !normalizedUser) {
-        // код есть, но пользователь ещё не вошёл через Google — обмен невозможен,
-        // чистим адрес сразу, иначе код "зависнет" в URL навсегда
-        window.history.replaceState({}, document.title, window.location.pathname);
-      } else if (normalizedUser) {
-        checkCtraderStatus(getValidUserId(normalizedUser));
-      }
+    const code = new URLSearchParams(window.location.search).get('code');
+    if (code && user) {
+      handleCtraderCallback(code);
+    } else if (code && !user) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (user) {
+      checkCtraderStatus(validUserId);
+    } else {
+      setCtraderConnected(false);
     }
-    init();
-
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[auth] событие:', event, session ? session.user.email : '(нет пользователя)');
-      const activeUser = session?.user ?? null;
-      const normalizedUser = getValidUserId(activeUser) ? activeUser : null;
-      setUser(normalizedUser);
-      if (normalizedUser) checkCtraderStatus(getValidUserId(normalizedUser));
-      else setCtraderConnected(false);
-    });
-    return () => listener.subscription.unsubscribe();
-  }, []);
-
-  // open the nickname modal once per fresh login, if no nickname is saved yet
-  useEffect(() => {
-    if (!user || user.user_metadata?.nickname || nicknamePrompted.current) return;
-    nicknamePrompted.current = true;
-    setNicknameInput(user.user_metadata?.full_name || '');
-    setNicknameModalOpen(true);
-    requestAnimationFrame(() => setNicknameModalVisible(true));
-  }, [user]);
-
-  function closeNicknameModal() {
-    setNicknameModalVisible(false);
-    setTimeout(() => setNicknameModalOpen(false), 180);
-  }
-
-  function handleSaveNickname() {
-    const googleName = user?.user_metadata?.full_name || user?.email || '';
-    const nickname = textValue(nicknameInput).trim() || googleName;
-    supabase.auth.updateUser({ data: { nickname } });
-    closeNicknameModal();
-    setSetupStep('language');
-  }
-
-  async function handleGoogleLogin() {
-    console.log('[auth] кнопка "Войти через Google" нажата');
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        queryParams: { prompt: 'select_account' },
-        redirectTo: window.location.origin,
-      },
-    });
-    if (error) console.error('[auth] ошибка от Supabase:', error);
-    else console.log('[auth] signInWithOAuth вызван, редирект-URL:', data?.url);
-  }
-
-  async function handleGoogleLogout() {
-    const { error } = await supabase.auth.signOut();
-    if (error) console.error('[auth] ошибка при выходе:', error);
-  }
+  }, [user, validUserId]);
 
   // --- Displayed month/year (navigable), separate from the real "today" ----
   const [viewYear, setViewYear] = useState(today.getFullYear());
@@ -428,55 +316,23 @@ export default function CalendarScreen() {
   }, []);
 
 
-  const [manualTrades, setManualTrades] = useState({}); // { [dateKey]: Trade[] } — real, user-saved trades only
-  const manualTradesRef = useRef({});
+  // Trades data management via useTrades hook
+  const {
+    manualTrades,
+    setManualTrades,
+    manualTradesRef,
+    cacheTradesLocally,
+    pendingSyncCount,
+    saveTrade: hookSaveTrade,
+    deleteTrade: hookDeleteTrade,
+    clearAllTrades: hookClearAllTrades,
+  } = useTrades({ user });
+
   const [recentInstruments, setRecentInstruments] = useState([]); // most-recently-used instrument symbols
   const [customTags, setCustomTags] = useState([]); // user-added instrument tags, max MAX_CUSTOM_TAGS
   const [addingCustomTag, setAddingCustomTag] = useState(false);
   const [customTagInput, setCustomTagInput] = useState('');
   const dragTagIndex = useRef(null);
-
-  // --- Offline/local support ----------------------------------------------
-  // Guest users work completely locally. Authenticated users get their own
-  // browser cache, so different accounts on the same device never mix data.
-
-  function readCachedTrades(userId) {
-    try {
-      const raw = window.localStorage.getItem(getTradesCacheKey(userId));
-      if (!raw) return {};
-      const parsed = JSON.parse(raw);
-      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-    } catch {
-      return {};
-    }
-  }
-
-  function cacheTradesLocally(trades, userId) {
-    try {
-      window.localStorage.setItem(getTradesCacheKey(userId), JSON.stringify(trades));
-    } catch {
-      // ignore storage failures
-    }
-  }
-
-  function readOfflineQueue() {
-    try {
-      return JSON.parse(window.localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]');
-    } catch {
-      return [];
-    }
-  }
-
-  function writeOfflineQueue(queue) {
-    try {
-      window.localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
-    } catch {
-      // ignore storage failures
-    }
-  }
-
-  const [pendingSyncCount, setPendingSyncCount] = useState(() => readOfflineQueue().length);
-  const tradesCacheOwnerRef = useRef('__loading__');
 
   // --- Install as app (PWA) ------------------------------------------------
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
@@ -515,141 +371,6 @@ export default function CalendarScreen() {
     }
     setInstallInfoOpen((v) => !v);
   }
-
-  async function flushOfflineQueue() {
-    if (!user || !navigator.onLine) return;
-    const queue = readOfflineQueue();
-    if (queue.length === 0) return;
-
-    const remaining = [];
-    for (const item of queue) {
-      try {
-        if (item.action === 'insert') {
-          const queuedUserId = item.trade?.user_id;
-          if (!queuedUserId) {
-            // Legacy guest queue item: guest data stays local and must not
-            // be sent to Supabase without a real authenticated user id.
-            continue;
-          }
-          const { data, error } = await supabase.from('trades').insert(item.trade).select().single();
-          if (error) throw error;
-          // swap the temporary offline id for the real database id
-          setManualTrades((prev) => ({
-            ...prev,
-            [item.trade.date_key]: (prev[item.trade.date_key] || []).map((t) =>
-              t.id === item.tempId ? { ...t, id: data.id } : t
-            ),
-          }));
-        } else if (item.action === 'update') {
-          const { error } = await supabase.from('trades').update(item.updates).eq('id', item.tradeId);
-          if (error) throw error;
-        } else if (item.action === 'delete') {
-          const { error } = await supabase.from('trades').delete().eq('id', item.tradeId);
-          if (error) throw error;
-        }
-      } catch (err) {
-        console.error('[offline] не удалось синхронизировать, оставляю в очереди:', err);
-        remaining.push(item);
-      }
-    }
-    writeOfflineQueue(remaining);
-    setPendingSyncCount(remaining.length);
-  }
-
-  useEffect(() => {
-    window.addEventListener('online', flushOfflineQueue);
-    return () => window.removeEventListener('online', flushOfflineQueue);
-  }, [user]);
-
-  // Guest: read/write locally and use the app without any account.
-  // Signed-in: read the user's cloud data, with a user-specific local cache.
-  useEffect(() => {
-    const cloudUserId = getValidUserId(user);
-    const owner = cloudUserId || 'guest';
-    tradesCacheOwnerRef.current = '__loading__';
-
-    const cached = readCachedTrades(cloudUserId);
-    setManualTrades(cached);
-
-    if (!user) {
-      tradesCacheOwnerRef.current = owner;
-      setCtraderConnected(false);
-      return;
-    }
-
-    if (!navigator.onLine) {
-      tradesCacheOwnerRef.current = owner;
-      return;
-    }
-
-    supabase
-      .from('trades')
-      .select('*')
-      .eq('user_id', cloudUserId)
-      .then(({ data, error }) => {
-        if (error) {
-          console.error('[trades] ошибка загрузки:', error);
-          // Keep cached data visible even when cloud loading fails.
-          tradesCacheOwnerRef.current = owner;
-          return;
-        }
-
-        const grouped = {};
-        for (const row of data) {
-          grouped[row.date_key] = grouped[row.date_key] || [];
-          grouped[row.date_key].push({
-            id: row.id,
-            time: textValue(row.time),
-            instrument: textValue(row.instrument),
-            direction: textValue(row.direction),
-            pnl: Number(row.pnl),
-            comment: row.comment || '',
-            platform: textValue(row.platform) || 'Manual',
-            take_profit: row.take_profit ?? null,
-            stop_loss: row.stop_loss ?? null,
-          });
-        }
-
-        setManualTrades((prev) => {
-          const merged = { ...grouped };
-
-          // Keep local-only records and local edits. Cloud records fill in
-          // anything that is not already present locally.
-          for (const [dateKey, localList] of Object.entries(prev || {})) {
-            if (!merged[dateKey]) {
-              merged[dateKey] = localList;
-              continue;
-            }
-
-            const cloudIds = new Set(merged[dateKey].map((t) => String(t.id)));
-
-            // Append only local records that are not already in cloud.
-            // This ensures that newly added local records (with local-* id) are kept.
-            for (const localTrade of localList) {
-              if (!cloudIds.has(String(localTrade.id))) {
-                merged[dateKey].push(localTrade);
-              }
-            }
-          }
-
-          manualTradesRef.current = merged;
-          return merged;
-        });
-
-        tradesCacheOwnerRef.current = owner;
-        flushOfflineQueue();
-      });
-  }, [user]);
-
-  // Keep the correct guest/user cache in sync with what is displayed.
-  useEffect(() => {
-    manualTradesRef.current = manualTrades;
-
-    const cloudUserId = getValidUserId(user);
-    const owner = cloudUserId || 'guest';
-    if (tradesCacheOwnerRef.current !== owner) return;
-    cacheTradesLocally(manualTrades, cloudUserId);
-  }, [manualTrades, user?.id]);
 
 
   // --- Period filter state (compact popover) --------------------------------
@@ -1109,44 +830,20 @@ export default function CalendarScreen() {
         ? parseFloat(form.stopLoss)
         : null;
 
-      const cloudUserId = getValidUserId(user);
-      const isEditing = Boolean(editingTrade);
-
-      // Генерируем уникальный ID (используем crypto.randomUUID если доступно)
-      const localId = crypto.randomUUID ? crypto.randomUUID() : `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-      const localTrade = {
-        id: isEditing ? editingTrade.id : localId,
+      await hookSaveTrade({
+        dateKey,
+        isEditing,
+        editingTradeId: editingTrade?.id,
         time,
         instrument,
         direction: finalDirection,
-        pnl: signedPnl,
+        signedPnl,
         comment,
         platform,
         currency: form.currency || currency,
-        ...(traderMode ? { take_profit: tp, stop_loss: sl } : {}),
-        pending: false,
-      };
-
-      // -------- LOCAL FIRST --------
-      setManualTrades((prev) => {
-        const nextForDay = [...(prev[dateKey] || [])];
-
-        if (isEditing) {
-          const index = nextForDay.findIndex((t) => String(t.id) === String(editingTrade.id));
-          if (index >= 0) {
-            nextForDay[index] = { ...nextForDay[index], ...localTrade };
-          } else {
-            nextForDay.push(localTrade);
-          }
-        } else {
-          nextForDay.push(localTrade);
-        }
-
-        const nextTrades = { ...prev, [dateKey]: nextForDay };
-        manualTradesRef.current = nextTrades;
-        cacheTradesLocally(nextTrades, cloudUserId);
-        return nextTrades;
+        takeProfit: tp,
+        stopLoss: sl,
+        traderMode,
       });
 
       setRecentInstruments((prev) =>
@@ -1154,81 +851,6 @@ export default function CalendarScreen() {
       );
 
       closeModal();
-
-      // -------- GUEST --------
-      if (!cloudUserId) {
-        setIsSaving(false);
-        return;
-      }
-
-      // -------- CLOUD SYNC IN BACKGROUND --------
-      const cloudPayload = {
-        user_id: cloudUserId,
-        date_key: dateKey,
-        time,
-        instrument,
-        direction: finalDirection,
-        pnl: signedPnl,
-        comment,
-        platform,
-      };
-
-      try {
-        if (isEditing && !String(editingTrade.id).startsWith('local-') && !String(editingTrade.id).startsWith('guest-') && !String(editingTrade.id).startsWith('offline-')) {
-          const { error } = await supabase
-            .from('trades')
-            .update({
-              time,
-              instrument,
-              direction: finalDirection,
-              pnl: signedPnl,
-              comment,
-              platform,
-            })
-            .eq('id', editingTrade.id)
-            .eq('user_id', cloudUserId);
-
-          if (error) {
-            console.warn('[cloud-sync] update skipped:', error.message);
-          }
-          setIsSaving(false);
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from('trades')
-          .insert(cloudPayload)
-          .select()
-          .single();
-
-        if (error) {
-          console.warn('[cloud-sync] insert skipped, local record kept:', error.message);
-          setIsSaving(false);
-          return;
-        }
-
-        // Replace only the local record we just created.
-        setManualTrades((prev) => {
-          const merged = { ...prev };
-          const list = [...(merged[dateKey] || [])];
-          const index = list.findIndex((t) => String(t.id) === String(localId));
-
-          if (index >= 0) {
-            list[index] = {
-              ...list[index],
-              id: data.id,
-              pending: false,
-            };
-            merged[dateKey] = list;
-          }
-
-          manualTradesRef.current = merged;
-          cacheTradesLocally(merged, cloudUserId);
-          return merged;
-        });
-      } catch (err) {
-        console.warn('[cloud-sync] unavailable, local record kept:', err);
-      }
     } catch (err) {
       console.error('[save] unexpected error:', err);
     } finally {
@@ -1237,43 +859,7 @@ export default function CalendarScreen() {
   }
 
   async function handleDeleteTrade(dateKey, tradeId) {
-    const cloudUserId = getValidUserId(user);
-
-    setManualTrades((prev) => {
-      const nextTrades = { ...prev };
-      nextTrades[dateKey] = (nextTrades[dateKey] || []).filter(
-        (t) => String(t.id) !== String(tradeId)
-      );
-      manualTradesRef.current = nextTrades;
-      cacheTradesLocally(nextTrades, cloudUserId);
-      return nextTrades;
-    });
-
-    // Guest/local-only record.
-    if (!cloudUserId || String(tradeId).startsWith('guest-') || String(tradeId).startsWith('local-')) {
-      return;
-    }
-
-    // Offline synced-later delete.
-    if (!navigator.onLine) {
-      const queue = readOfflineQueue(cloudUserId);
-      queue.push({ action: 'delete', tradeId });
-      writeOfflineQueue(queue, cloudUserId);
-      setPendingSyncCount(queue.length);
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('trades')
-        .delete()
-        .eq('id', tradeId)
-        .eq('user_id', cloudUserId);
-
-      if (error) console.warn('[trades] cloud delete skipped:', error.message);
-    } catch (err) {
-      console.warn('[trades] cloud delete unavailable:', err);
-    }
+    await hookDeleteTrade(dateKey, tradeId);
   }
 
   function jumpToTradeDate(dateKey) {
@@ -1334,20 +920,7 @@ export default function CalendarScreen() {
       setConfirmingClear(true);
       return;
     }
-
-    // Guest history is stored locally and can be cleared without login.
-    const cloudUserId = getValidUserId(user);
-    if (!cloudUserId) {
-      setManualTrades({});
-      setConfirmingClear(false);
-      return;
-    }
-    const { error } = await supabase.from('trades').delete().eq('user_id', cloudUserId);
-    if (error) {
-      console.error('[trades] ошибка очистки истории:', error);
-      return;
-    }
-    setManualTrades({});
+    await hookClearAllTrades();
     setConfirmingClear(false);
   }
 
