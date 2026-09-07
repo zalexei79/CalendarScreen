@@ -571,6 +571,17 @@ export default function CalendarScreen() {
     return { bestDay, worstDay, topInstrument, avgPnl, longestLossStreak, profitFactor, avgWin, avgLoss, payoffRatio };
   }, [analysisTrades, analysisStats]);
 
+  const incomeTrend = useMemo(() => {
+    if (traderMode || analysisTrades.length === 0) return [];
+    const byDay = {};
+    for (const t of analysisTrades) {
+      if (t.pnl > 0) byDay[t.dateKey] = (byDay[t.dateKey] || 0) + t.pnl;
+    }
+    return Object.entries(byDay)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, value]) => ({ date, value }));
+  }, [analysisTrades, traderMode]);
+
   const moneyAnalysis = useMemo(() => {
     if (traderMode || analysisTrades.length === 0) return null;
     const income = analysisTrades.filter((t) => t.pnl > 0).reduce((sum, t) => sum + t.pnl, 0);
@@ -2350,23 +2361,17 @@ export default function CalendarScreen() {
                 : `${analysisFrom} — ${analysisTo}`}
             </h2>
 
-            <div className="flex flex-wrap gap-1.5 mb-4">
-              {['Текущий период', ...PERIOD_PRESETS].map((p) => (
-                <button
-                  key={p}
-                  onClick={() => (p === 'Текущий период' ? openAnalysis() : handleAnalysisPreset(p))}
-                  className={[
-                    'rounded-full border px-2.5 py-1 font-data text-[11px] tracking-wide transition-colors',
-                    analysisPreset === p
-                      ? 'border-amber-400/60 bg-amber-400/10 text-amber-600'
-                      : isLight
-                      ? 'border-zinc-300 bg-white text-zinc-600 hover:text-zinc-800 hover:border-zinc-400'
-                      : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
-                  ].join(' ')}
-                >
-                  {p}
-                </button>
-              ))}
+            <div className="mb-4">
+              <label className={`mb-1.5 block font-data text-[10px] uppercase tracking-widest ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>Период анализа</label>
+              <select
+                value={analysisPreset}
+                onChange={(e) => (e.target.value === 'Текущий период' ? openAnalysis() : handleAnalysisPreset(e.target.value))}
+                className={`w-full appearance-none rounded-xl border px-3 py-2.5 font-data text-xs outline-none transition-colors ${
+                  isLight ? 'border-zinc-300 bg-white text-zinc-800' : 'border-zinc-700 bg-zinc-950 text-zinc-200'
+                }`}
+              >
+                {['Текущий период', ...PERIOD_PRESETS].map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
             </div>
 
             <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'} mb-4`}>{analysisStats.count} {traderMode ? 'сделок' : 'операций'} в выборке</p>
@@ -2381,12 +2386,39 @@ export default function CalendarScreen() {
                     ['Расходы', moneyAnalysis.expenses, 'text-red-600'],
                     ['Остаток', moneyAnalysis.balance, moneyAnalysis.balance >= 0 ? 'text-emerald-600' : 'text-red-600'],
                   ].map(([label, amount, color]) => (
-                    <div key={label} className="rounded-lg border p-2">
+                    <div key={label} className="min-w-0 overflow-hidden rounded-lg border p-2">
                       <p className={`text-[10px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{label}</p>
-                      <p className={`font-data text-sm ${color}`}>{amount < 0 ? '-' : ''}{currencySymbol}{formatMoney(Math.abs(amount))}</p>
+                      <p title={`${amount < 0 ? '-' : ''}${currencySymbol}${formatMoney(Math.abs(amount))}`} className={`truncate font-data text-xs sm:text-sm ${color}`}>{amount < 0 ? '-' : ''}{currencySymbol}{formatMoney(Math.abs(amount))}</p>
                     </div>
                   ))}
                 </div>
+                {incomeTrend.length > 0 && (() => {
+                  const width = 320;
+                  const height = 96;
+                  const max = Math.max(...incomeTrend.map((p) => p.value), 1);
+                  const points = incomeTrend.map((p, i) => {
+                    const x = incomeTrend.length === 1 ? width / 2 : (i / (incomeTrend.length - 1)) * (width - 8) + 4;
+                    const y = height - 10 - (p.value / max) * (height - 28);
+                    return `${x},${y}`;
+                  }).join(' ');
+                  return (
+                    <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-950'}`}>
+                      <div className="mb-2 flex items-center justify-between">
+                        <div>
+                          <p className={`text-xs font-medium ${isLight ? 'text-zinc-700' : 'text-zinc-200'}`}>Динамика доходов</p>
+                          <p className={`text-[10px] ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>Доходы по дням выбранного периода</p>
+                        </div>
+                        <TrendingUp className="h-4 w-4 text-emerald-500" />
+                      </div>
+                      <svg viewBox={`0 0 ${width} ${height}`} className="block h-24 w-full overflow-visible" preserveAspectRatio="none" aria-label="График доходов">
+                        <line x1="0" y1={height - 10} x2={width} y2={height - 10} stroke="currentColor" opacity="0.12" />
+                        <polyline points={points} fill="none" stroke="currentColor" className="text-emerald-500" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                      </svg>
+                      <div className={`mt-1 flex justify-between font-data text-[9px] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}><span>{incomeTrend[0]?.date}</span><span>{incomeTrend[incomeTrend.length - 1]?.date}</span></div>
+                    </div>
+                  );
+                })()}
+
                 {moneyAnalysis.topCategories.length > 0 && (
                   <div className={`rounded-lg border p-3 ${
                     isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-950'
@@ -2446,9 +2478,9 @@ export default function CalendarScreen() {
             }`}>
               <Sparkles className={`h-4 w-4 ${isLight ? 'text-zinc-400' : 'text-zinc-600'} shrink-0 mt-0.5`} />
               <div>
-                <p className={`text-sm font-medium mb-0.5 ${isLight ? 'text-zinc-700' : 'text-zinc-400'}`}>Глубокий AI-анализ — скоро</p>
+                <p className={`text-sm font-medium mb-0.5 ${isLight ? 'text-zinc-700' : 'text-zinc-400'}`}>AI-анализ уже в разработке</p>
                 <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-600'} leading-relaxed`}>
-                  Разбор эмоциональных паттернов, конкретных ошибок по каждой сделке и персональные рекомендации — по подписке.
+                  Пока здесь доступна базовая аналитика периода. Скоро добавим персональные инсайты, поиск повторяющихся ошибок и рекомендации по вашему стилю торговли.
                 </p>
               </div>
             </div>
