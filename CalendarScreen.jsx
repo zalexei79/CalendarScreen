@@ -1392,13 +1392,21 @@ export default function CalendarScreen() {
               {traderMode && historyAnalysisOpen && (
                 <section className={`relative overflow-hidden mb-5 rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-amber-300/70 bg-white shadow-sm' : 'border-amber-400/20 bg-gradient-to-br from-amber-400/[0.08] via-zinc-950 to-zinc-950 shadow-[0_18px_60px_rgba(0,0,0,.28)]'}`}>
                   <div className="absolute -right-8 -top-10 select-none pointer-events-none font-display text-8xl font-bold tracking-tighter text-amber-400/[0.045]">PRO</div>
-                  <div className="relative flex items-start justify-between gap-4 mb-5">
+                  <div className="relative flex items-start justify-between gap-4 mb-4">
                     <div>
                       <p className="font-data text-[10px] uppercase tracking-[0.24em] text-amber-500">PRO · Финансовая картина</p>
                       <h3 className={`mt-1 text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Деньги в движении</h3>
-                      <p className="mt-1 text-xs text-zinc-500">Сразу видно результат, динамику и главные источники движения денег.</p>
+                      <p className="mt-1 text-xs text-zinc-500">Личный финансовый intelligence — без лишнего шума.</p>
                     </div>
                     <Sparkles className="h-5 w-5 shrink-0 text-amber-500" />
+                  </div>
+
+                  <div className="relative mb-5 overflow-x-auto pb-1">
+                    <div className={`inline-flex min-w-max gap-1 rounded-xl border p-1 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-white/5 bg-black/20'}`}>
+                      {[{ code: 'ALL', symbol: 'Все', label: 'Все валюты' }, ...CURRENCIES].map((c) => (
+                        <button key={c.code} onClick={() => setHistoryCurrency(c.code)} title={c.label} className={`rounded-lg px-3 py-1.5 text-xs font-data transition-all ${historyCurrency === c.code ? 'bg-amber-400/15 text-amber-500 shadow-sm ring-1 ring-amber-400/20' : 'text-zinc-500 hover:text-zinc-300'}`}>{c.symbol} <span className="ml-1 opacity-60">{c.code === 'ALL' ? '' : c.code}</span></button>
+                      ))}
+                    </div>
                   </div>
 
                   {historyCurrency === 'ALL' ? (
@@ -1429,7 +1437,7 @@ export default function CalendarScreen() {
                   )}
 
                   <div className="mb-4 flex gap-1 overflow-x-auto pb-1">
-                    {[['overview','Обзор'],['income','Откуда деньги'],['expense','Куда уходят']].map(([key,label]) => <button key={key} onClick={() => setHistoryAnalysisTab(key)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${historyAnalysisTab === key ? 'bg-amber-400/15 text-amber-500 ring-1 ring-amber-400/20' : isLight ? 'text-zinc-500 hover:bg-zinc-100' : 'text-zinc-500 hover:bg-white/5'}`}>{label}</button>)}
+                    {[['overview','Обзор'],['income','Откуда'],['expense','Куда'],['radar','Радар'],['habits','Привычки']].map(([key,label]) => <button key={key} onClick={() => setHistoryAnalysisTab(key)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${historyAnalysisTab === key ? 'bg-gradient-to-r from-amber-400/20 to-amber-500/5 text-amber-400 ring-1 ring-amber-400/25 shadow-[0_8px_24px_rgba(251,191,36,.08)]' : isLight ? 'text-zinc-500 hover:bg-zinc-100' : 'text-zinc-500 hover:bg-white/5'}`}>{label}</button>)}
                   </div>
 
                   {historyAnalysisTab === 'overview' && (
@@ -1449,6 +1457,19 @@ export default function CalendarScreen() {
                   )}
                   {historyAnalysisTab === 'income' && <div className="space-y-3">{historyAnalysis.incomeSources.length ? historyAnalysis.incomeSources.slice(0,6).map(([name,value]) => <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-emerald-500">+{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{width:`${Math.max(5,(value/(historyIncome||1))*100)}%`}} /></div></div>) : <p className="py-5 text-center text-sm text-zinc-500">Нет доходов за этот период</p>}</div>}
                   {historyAnalysisTab === 'expense' && <div className="space-y-3">{historyAnalysis.expenseCategories.length ? historyAnalysis.expenseCategories.slice(0,6).map(([name,value]) => <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-red-500">−{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-red-500" style={{width:`${Math.max(5,(value/(historyExpense||1))*100)}%`}} /></div></div>) : <p className="py-5 text-center text-sm text-zinc-500">Нет расходов за этот период</p>}</div>}
+                  {historyAnalysisTab === 'radar' && <div className="space-y-2">
+                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-amber-200 bg-amber-50/40' : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.07] to-transparent'}`}><p className="font-data text-[10px] uppercase tracking-[0.18em] text-amber-500">✦ Финансовый радар</p><div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">Сила периода</p><p className="mt-1 text-sm font-semibold">{historyExpense > 0 ? `Доходы выше расходов в ${(historyIncome / historyExpense).toFixed(1)}×` : historyIncome > 0 ? 'Период без расходов' : 'Нужны данные'}</p></div>
+                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">Главный источник</p><p className="mt-1 text-sm font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || 'Пока нет доходов'}</p></div>
+                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">Зона внимания</p><p className="mt-1 text-sm font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || 'Расходов пока нет'}</p></div>
+                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">Лучший день</p><p className="mt-1 text-sm font-semibold">{historyAnalysis.dailyEntries.length ? historyAnalysis.dailyEntries.reduce((best, item) => item[1].income - item[1].expense > best[1].income - best[1].expense ? item : best)[0] : 'Недостаточно данных'}</p></div>
+                    </div></div>
+                  </div>}
+                  {historyAnalysisTab === 'habits' && <div className="grid gap-2 sm:grid-cols-3">
+                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}><p className="text-[10px] uppercase tracking-wider text-zinc-500">Активность</p><p className="mt-2 text-lg font-semibold">{historyTrades.length}</p><p className="text-xs text-zinc-500">операций за период</p></div>
+                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}><p className="text-[10px] uppercase tracking-wider text-zinc-500">Частый доход</p><p className="mt-2 text-sm font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p><p className="text-xs text-zinc-500">формирует поток</p></div>
+                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}><p className="text-[10px] uppercase tracking-wider text-zinc-500">Паттерн расходов</p><p className="mt-2 text-sm font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p><p className="text-xs text-zinc-500">главная категория</p></div>
+                  </div>}
                 </section>
               )}
 
