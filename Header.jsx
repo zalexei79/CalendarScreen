@@ -17,7 +17,7 @@ export default function Header({
   pendingSyncCount, installInfoOpen, installInstructions,
 }) {
   return (
-    <header className={`premium-surface sticky top-0 z-20 backdrop-blur-xl px-2 sm:px-8 pt-3 sm:pt-6 pb-3 sm:pb-4 border-b ${isLight ? 'border-zinc-300 bg-zinc-100/85' : 'border-zinc-800 bg-zinc-950/80'}`}>
+    <header className={`px-2 sm:px-8 pt-3 sm:pt-8 pb-3 sm:pb-4 border-b ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}>
       <div className="flex items-start justify-between gap-2 mb-2">
         <p className={`font-data text-[10px] tracking-widest uppercase ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{traderMode ? t('titlePro') : t('titleMoney')}</p>
     
@@ -227,32 +227,6 @@ export default function Header({
           >
             <ChevronRight className="h-4 w-4" />
           </button>
-    
-          {/* Account */}
-          <div className="ml-2 hidden sm:flex items-center rounded-md border border-zinc-800 bg-zinc-900 font-data text-[10px] tracking-wide overflow-hidden">
-            {user ? (
-              <div className="flex items-center gap-1 pl-2 pr-1 py-1">
-                <span className="max-w-[80px] truncate text-zinc-300">
-                  {user.user_metadata?.nickname || user.user_metadata?.full_name || user.email}
-                </span>
-                <button
-                  onClick={handleGoogleLogout}
-                  title={t('signOut')}
-                  className="flex items-center gap-1 text-zinc-500 hover:text-red-400 transition-colors border-l border-zinc-800 pl-1.5 ml-0.5"
-                >
-                  <LogOut className="h-3 w-3" />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={handleGoogleLogin}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-zinc-400 hover:text-amber-400 transition-colors"
-              >
-                <LogIn className="h-3.5 w-3.5" />
-                {t('signIn')}
-              </button>
-            )}
-          </div>
     
           {/* Money / PRO + platform reveal — адаптивно, всегда видно, но на телефоне компактнее */}
           <div className="mt-1 flex w-full items-center justify-between sm:mt-0 sm:ml-1.5 sm:w-auto sm:basis-auto sm:justify-start">
