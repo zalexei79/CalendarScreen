@@ -62,6 +62,11 @@ export function getPresetRange(preset, today) {
       const end = new Date(y, m + 1, 0);
       return { from: keyFromDate(start), to: keyFromDate(end) };
     }
+    case '3 месяца': {
+      const start = new Date(y, m - 2, 1);
+      const end = new Date(y, m + 1, 0);
+      return { from: keyFromDate(start), to: keyFromDate(end) };
+    }
     case 'Вся история':
       return { from: '0000-01-01', to: '9999-12-31' };
     default:

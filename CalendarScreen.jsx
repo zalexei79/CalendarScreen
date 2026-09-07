@@ -372,6 +372,7 @@ export default function CalendarScreen() {
   const [dateFrom, setDateFrom] = useState(initialRange.from);
   const [dateTo, setDateTo] = useState(initialRange.to);
   const [platformFilter, setPlatformFilter] = useState('ALL');
+  const [calendarTypeFilter, setCalendarTypeFilter] = useState('all');
   const [monthMenuOpen, setMonthMenuOpen] = useState(false);
   const [yearMenuOpen, setYearMenuOpen] = useState(false);
 
@@ -445,7 +446,8 @@ export default function CalendarScreen() {
   function tradesForDayFiltered(key) {
     return (manualTrades[key] || [])
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
-      .filter((t) => (t.currency || 'USD') === currency);
+      .filter((t) => (t.currency || 'USD') === currency)
+      .filter((t) => calendarTypeFilter === 'all' || (calendarTypeFilter === 'income' ? t.pnl >= 0 : t.pnl < 0));
   }
 
   function totalPnlForDay(key) {
@@ -461,7 +463,7 @@ export default function CalendarScreen() {
       if (abs > max) max = abs;
     }
     return max;
-  }, [cells, manualTrades, platformFilter]);
+  }, [cells, manualTrades, platformFilter, currency, calendarTypeFilter]);
 
   // Flatten every saved trade with its date, then keep only the ones inside
   // the selected period AND matching the platform filter — this drives both
@@ -477,8 +479,9 @@ export default function CalendarScreen() {
       .filter((t) => t.dateKey >= effectiveFrom && t.dateKey <= effectiveTo)
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
       .filter((t) => (t.currency || 'USD') === currency)
+      .filter((t) => calendarTypeFilter === 'all' || (calendarTypeFilter === 'income' ? t.pnl >= 0 : t.pnl < 0))
       .sort((a, b) => (a.dateKey === b.dateKey ? b.time.localeCompare(a.time) : b.dateKey.localeCompare(a.dateKey)));
-  }, [manualTrades, effectiveFrom, effectiveTo, platformFilter, currency]);
+  }, [manualTrades, effectiveFrom, effectiveTo, platformFilter, currency, calendarTypeFilter]);
 
   const periodStats = useMemo(() => {
     const count = periodTrades.length;
@@ -867,6 +870,7 @@ export default function CalendarScreen() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
   const [historyWinLoss, setHistoryWinLoss] = useState('all'); // 'all' | 'win' | 'loss'
+  const [historyCurrency, setHistoryCurrency] = useState('ALL');
   const [historyFiltersOpen, setHistoryFiltersOpen] = useState(false);
   const [confirmingClear, setConfirmingClear] = useState(false);
 
@@ -875,10 +879,20 @@ export default function CalendarScreen() {
       .flatMap(([dateKey, arr]) => arr.map((t) => ({ ...t, dateKey })))
       .filter((t) => t.dateKey >= dateFrom && t.dateKey <= dateTo)
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
-      .filter((t) => (t.currency || 'USD') === currency)
+      .filter((t) => historyCurrency === 'ALL' || (t.currency || 'USD') === historyCurrency)
       .filter((t) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? t.pnl >= 0 : t.pnl < 0))
       .sort((a, b) => (a.dateKey === b.dateKey ? b.time.localeCompare(a.time) : b.dateKey.localeCompare(a.dateKey)));
-  }, [manualTrades, dateFrom, dateTo, platformFilter, historyWinLoss, currency]);
+  }, [manualTrades, dateFrom, dateTo, platformFilter, historyWinLoss, historyCurrency]);
+
+  const historyByCurrency = useMemo(() => Object.entries(historyTrades.reduce((groups, trade) => {
+    const code = trade.currency || 'USD';
+    groups[code] = groups[code] || { income: 0, expense: 0, balance: 0, count: 0 };
+    groups[code].income += trade.pnl > 0 ? trade.pnl : 0;
+    groups[code].expense += trade.pnl < 0 ? Math.abs(trade.pnl) : 0;
+    groups[code].balance += trade.pnl;
+    groups[code].count += 1;
+    return groups;
+  }, {})), [historyTrades]);
 
   const historyTotal = useMemo(() => historyTrades.reduce((sum, t) => sum + t.pnl, 0), [historyTrades]);
   const historyIncome = useMemo(() => historyTrades.reduce((sum, t) => sum + (t.pnl > 0 ? t.pnl : 0), 0), [historyTrades]);
@@ -1037,6 +1051,21 @@ export default function CalendarScreen() {
       />
 
       {/* CALENDAR — the main view of the whole app */}
+      {!traderMode && (
+        <div className={`flex justify-center border-b px-3 py-2 ${isLight ? 'border-zinc-200 bg-zinc-100/70' : 'border-zinc-800 bg-zinc-950/40'}`}>
+          <div className={`inline-flex rounded-lg border p-0.5 ${isLight ? 'border-zinc-300 bg-white shadow-sm' : 'border-zinc-800 bg-zinc-900'}`}>
+            {[
+              { key: 'all', label: 'Все' },
+              { key: 'income', label: 'Доходы' },
+              { key: 'expense', label: 'Расходы' },
+            ].map((option) => (
+              <button key={option.key} onClick={() => setCalendarTypeFilter(option.key)} className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${calendarTypeFilter === option.key ? 'bg-amber-400/15 text-amber-600 shadow-sm' : isLight ? 'text-zinc-500 hover:text-zinc-900' : 'text-zinc-500 hover:text-zinc-100'}`}>
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <CalendarGrid
         cells={cells} selectedKey={selectedKey} isLight={isLight} monthMaxAbsPnl={monthMaxAbsPnl}
         tradesForDayFiltered={tradesForDayFiltered} totalPnlForDay={totalPnlForDay}
@@ -1257,14 +1286,14 @@ export default function CalendarScreen() {
                       <div className={`flex gap-0.5 shrink-0 rounded-lg border p-0.5 ${
                         isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950/60'
                       }`}>
-                        {CURRENCIES.map((c) => (
+                        {[{ code: 'ALL', symbol: 'Все', label: 'Все валюты' }, ...CURRENCIES].map((c) => (
                           <button
                             key={c.code}
-                            onClick={() => setCurrency(c.code)}
+                            onClick={() => setHistoryCurrency(c.code)}
                             title={c.label}
                             className={[
                               'min-w-[30px] h-7 px-1.5 rounded-md text-sm font-data font-medium border transition-colors flex items-center justify-center',
-                              currency === c.code
+                              historyCurrency === c.code
                                 ? 'border-amber-400/60 bg-amber-400/15 text-amber-500'
                                 : isLight
                                 ? 'border-transparent text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100'
@@ -1276,9 +1305,11 @@ export default function CalendarScreen() {
                         ))}
                       </div>
                     </div>
-                    <div className={`font-display text-4xl sm:text-5xl font-semibold tracking-tight tabular-nums ${historyTotal >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {historyCurrency === 'ALL' ? (
+                      <p className={`text-sm ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>Итоги показаны отдельно по валютам</p>
+                    ) : <div className={`font-display text-4xl sm:text-5xl font-semibold tracking-tight tabular-nums ${historyTotal >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                       {formatPnlDisplay(historyTotal)}
-                    </div>
+                    </div>}
                     <div className="grid grid-cols-2 gap-3 mt-4">
                       <div className={`rounded-xl border border-l-[3px] px-3 py-3 ${
                         isLight ? 'border-zinc-200 border-l-emerald-400 bg-zinc-50' : 'border-zinc-800/80 border-l-emerald-500/70 bg-zinc-900/70'
@@ -1300,6 +1331,18 @@ export default function CalendarScreen() {
                       </div>
                     </div>
                   </div>
+
+                  {historyCurrency === 'ALL' && historyByCurrency.length > 0 && (
+                    <div className="grid gap-2 mb-4 sm:grid-cols-2">
+                      {historyByCurrency.map(([code, stats]) => (
+                        <div key={code} className={`rounded-xl border px-3 py-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/60'}`}>
+                          <p className={`text-[11px] mb-1 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{code} · {stats.count} операций</p>
+                          <p className={`font-data text-sm font-medium ${stats.balance >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{stats.balance >= 0 ? '+' : '−'}{getCurrencyMeta(code).symbol}{formatMoney(stats.balance)}</p>
+                          <p className={`mt-1 text-[10px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>+{getCurrencyMeta(code).symbol}{formatMoney(stats.income)} · −{getCurrencyMeta(code).symbol}{formatMoney(stats.expense)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {historyInsights.length > 0 && (
                     <div className="mb-4 rounded-2xl border border-amber-400/25 bg-amber-400/5 p-4">

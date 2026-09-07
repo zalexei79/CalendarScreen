@@ -8,7 +8,7 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 
-export const PERIOD_PRESETS = ['Сегодня', 'Текущая неделя', 'Текущий месяц', 'Вся история'];
+export const PERIOD_PRESETS = ['Сегодня', 'Текущая неделя', 'Текущий месяц', '3 месяца', 'Вся история'];
 
 export const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
