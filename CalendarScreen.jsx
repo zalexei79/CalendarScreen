@@ -3,7 +3,7 @@ import {
   Inbox, TrendingUp, TrendingDown, Sparkles, Plus, X, Trash2,
   Calendar, ChevronDown, Link2, KeyRound, UploadCloud, FileText,
   CheckCircle2, RefreshCw, History, Download, Pencil,
-  Wallet, ShoppingCart, Home, Briefcase, ShoppingBag, CreditCard, MoreHorizontal, Cigarette,
+  Wallet, ShoppingCart, Home, Briefcase, ShoppingBag, CreditCard, MoreHorizontal, Cigarette, Utensils, Car, Gift, Gamepad2, Fish, ChartCandlestick, Repeat2, CircleDollarSign,
 } from 'lucide-react';
 import { supabase } from './src/supabaseClient';
 
@@ -666,7 +666,8 @@ export default function CalendarScreen() {
       });
     }
     setFormError('');
-    setDetailsOpen(Boolean(traderMode && tradeToEdit));
+    // Finance records need category controls immediately visible on mobile; otherwise the required category can be hidden below the fold.
+    setDetailsOpen(!traderMode || Boolean(traderMode && tradeToEdit));
     setModalOpen(true);
     requestAnimationFrame(() => setModalVisible(true));
   }
@@ -909,6 +910,8 @@ export default function CalendarScreen() {
   const [historyPeriodMenuOpen, setHistoryPeriodMenuOpen] = useState(false);
   const [historyAnalysisOpen, setHistoryAnalysisOpen] = useState(false);
   const [historyAnalysisTab, setHistoryAnalysisTab] = useState('overview');
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportPeriodPreset, setExportPeriodPreset] = useState('Текущий период');
   const [confirmingClear, setConfirmingClear] = useState(false);
 
   const historyTrades = useMemo(() => {
@@ -969,8 +972,25 @@ export default function CalendarScreen() {
   const getHistoryCategoryIcon = (instrument) => {
     const normalized = String(instrument || '').trim().toUpperCase();
     if (normalized.includes('СИГАРЕТ') || normalized.includes('ТАБАК')) return Cigarette;
-    return getMoneyCategoryMeta(instrument)?.icon || MoreHorizontal;
+    if (normalized.includes('ЗАРПЛАТ') || normalized.includes('РАБОТ')) return Briefcase;
+    if (normalized.includes('ЖИЛ') || normalized.includes('ДОМ') || normalized.includes('КВАРТИР')) return Home;
+    if (normalized.includes('ПОДПИСК')) return Repeat2;
+    if (normalized.includes('ЕДА') || normalized.includes('ПРОДУКТ') || normalized.includes('КАФЕ')) return Utensils;
+    if (normalized.includes('ТРАНСПОРТ') || normalized.includes('ТАКСИ') || normalized.includes('АВТО')) return Car;
+    if (normalized.includes('ПОДАР')) return Gift;
+    if (normalized.includes('РАЗВЛЕЧ') || normalized.includes('ИГР')) return Gamepad2;
+    if (normalized.includes('РЫБ')) return Fish;
+    if (/BTC|ETH|XAU|NDX|NASDAQ|EURUSD|GBPUSD|USDJPY/.test(normalized)) return ChartCandlestick;
+    return getMoneyCategoryMeta(instrument)?.icon || CircleDollarSign || MoreHorizontal;
   };
+
+  const moneyCategoriesWithIcons = useMemo(() => {
+    const base = Array.isArray(MONEY_CATEGORIES) ? MONEY_CATEGORIES.slice() : [];
+    if (!base.some((item) => String(item.key || '').toUpperCase().includes('СИГАРЕТ'))) {
+      base.push({ key: 'СИГАРЕТЫ', icon: Cigarette });
+    }
+    return base.map((item) => ({ ...item, icon: getHistoryCategoryIcon(item.key) }));
+  }, []);
 
   function openHistory() {
     setHistoryOpen(true);
@@ -995,28 +1015,47 @@ export default function CalendarScreen() {
     setConfirmingClear(false);
   }
 
+  const exportTrades = useMemo(() => {
+    const range = exportPeriodPreset === 'Текущий период'
+      ? { from: dateFrom, to: dateTo }
+      : getPresetRange(exportPeriodPreset, today);
+    return Object.entries(manualTrades)
+      .flatMap(([dateKey, arr]) => (arr || []).map((item) => ({ ...item, dateKey })))
+      .filter((item) => item.dateKey >= range.from && item.dateKey <= range.to)
+      .filter((item) => historyCurrency === 'ALL' || (item.currency || 'USD') === historyCurrency)
+      .filter((item) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? item.pnl >= 0 : item.pnl < 0));
+  }, [manualTrades, exportPeriodPreset, dateFrom, dateTo, today, historyCurrency, historyWinLoss]);
+
   function handleExportCsv() {
-    const header = ['Дата', 'Время', 'Категория', 'Тип', 'Сумма', 'Валюта', 'Источник', 'Комментарий'];
-    const rows = historyTrades.map((t) => [
-      t.dateKey,
-      t.time,
-      t.instrument,
-      t.pnl >= 0 ? 'Доход' : 'Расход',
-      t.pnl,
-      t.currency || 'USD',
-      t.platform,
-      (t.comment || '').replace(/"/g, '""'),
+    const range = exportPeriodPreset === 'Текущий период'
+      ? { from: dateFrom, to: dateTo }
+      : getPresetRange(exportPeriodPreset, today);
+    const title = `ДЕНЕЖНЫЙ КАЛЕНДАРЬ — Все ваши записи за период`;
+    const periodLabel = `${formatDateLabel(range.from)} — ${formatDateLabel(range.to)}`;
+    const rows = exportTrades.map((item) => [
+      formatDateLabel(item.dateKey),
+      item.time || '',
+      item.instrument || 'Другое',
+      item.pnl >= 0 ? 'Доход' : 'Расход',
+      formatAmountInCurrency(item.pnl, item.currency || 'USD'),
+      item.comment || '',
     ]);
-    const csv = [header, ...rows]
-      .map((row) => row.map((cell) => `"${cell}"`).join(','))
-      .join('\n');
+    const totalIncome = exportTrades.reduce((sum, item) => sum + (item.pnl > 0 ? item.pnl : 0), 0);
+    const totalExpense = exportTrades.reduce((sum, item) => sum + (item.pnl < 0 ? Math.abs(item.pnl) : 0), 0);
+    const currencyMeta = historyCurrency === 'ALL' ? null : getCurrencyMeta(historyCurrency);
+    const summary = currencyMeta ? [
+      [], ['ИТОГ ЗА ПЕРИОД'], ['Доходы', `+${currencyMeta.symbol}${formatMoney(totalIncome)}`], ['Расходы', `−${currencyMeta.symbol}${formatMoney(totalExpense)}`], ['Баланс', `${totalIncome-totalExpense >= 0 ? '+' : '−'}${currencyMeta.symbol}${formatMoney(Math.abs(totalIncome-totalExpense))}`]
+    ] : [];
+    const csvRows = [[title], [`Период: ${periodLabel}`], [], ['Дата', 'Время', 'Категория', 'Тип', 'Сумма', 'Комментарий'], ...rows, ...summary];
+    const csv = csvRows.map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `trades_${keyFromDate(today)}.csv`;
+    a.download = `money-calendar_${range.from}_${range.to}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+    setExportOpen(false);
   }
 
   function handleEditDeposit() {
@@ -1590,7 +1629,7 @@ export default function CalendarScreen() {
                   <div className="grid grid-cols-2 gap-2 mt-4">
                     <div>
                       <button
-                      onClick={handleExportCsv}
+                      onClick={() => setExportOpen(true)}
                       disabled={historyTrades.length === 0}
                       className={`w-full flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                         isLight
@@ -1599,9 +1638,9 @@ export default function CalendarScreen() {
                       }`}
                     >
                       <Download className="h-3.5 w-3.5" />
-                      Скачать CSV
+                      Скачать отчёт
                     </button>
-                      <p className={`mt-1 px-1 text-[10px] leading-tight ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>Скачает операции по выбранным фильтрам</p>
+                      <p className={`mt-1 px-1 text-[10px] leading-tight ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>Красивый денежный отчёт за выбранный период</p>
                     </div>
                     <button
                       onClick={handleClearHistory}
@@ -1777,7 +1816,7 @@ export default function CalendarScreen() {
 
                   <div className="flex gap-2 mt-4">
                     <button
-                      onClick={handleExportCsv}
+                      onClick={() => setExportOpen(true)}
                       disabled={historyTrades.length === 0}
                       className={`flex-1 flex items-center justify-center gap-1.5 rounded-md border px-3 py-2 font-data text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                         isLight
@@ -1786,7 +1825,7 @@ export default function CalendarScreen() {
                       }`}
                     >
                       <Download className="h-3.5 w-3.5" />
-                      Экспорт CSV
+                      Скачать отчёт
                     </button>
                     <button
                       onClick={handleClearHistory}
@@ -1812,14 +1851,14 @@ export default function CalendarScreen() {
       {/* ADD TRADE MODAL — compact quick-entry UI */}
       {modalOpen && (
         <div
-          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${
+          className={`fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-black/60 px-3 py-3 transition-opacity duration-200 sm:items-center sm:px-4 ${
             modalVisible ? 'opacity-100' : 'opacity-0'
           }`}
           onMouseDown={handleBackdropMouseDown}
           onClick={handleModalBackdropClick}
         >
           <div
-            className={`relative w-full max-w-[360px] rounded-2xl border px-4 py-4 shadow-2xl transition-all duration-200 sm:px-5 sm:py-5 ${
+            className={`relative my-auto w-full max-w-[360px] max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain rounded-2xl border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl transition-all duration-200 sm:px-5 sm:py-5 ${
               modalVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
             } ${
               isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
@@ -2075,7 +2114,7 @@ export default function CalendarScreen() {
                         Категория
                       </label>
                       <div className="grid grid-cols-2 gap-1.5">
-                        {MONEY_CATEGORIES.map((category) => {
+                        {moneyCategoriesWithIcons.map((category) => {
                           const Icon = category.icon;
                           const active = textValue(form.instrument).trim() === category.key;
                           return (
@@ -2131,10 +2170,37 @@ export default function CalendarScreen() {
               <button
                 onClick={handleSaveTrade}
                 disabled={isSaving}
-                className="mt-3 block w-full rounded-xl bg-amber-400 px-4 py-3 text-base font-bold text-zinc-950 hover:bg-amber-300 transition-colors shadow-lg shadow-amber-500/20 disabled:opacity-60"
+                className="sticky bottom-0 mt-3 block w-full rounded-xl bg-amber-400 px-4 py-3 text-base font-bold text-zinc-950 hover:bg-amber-300 transition-colors shadow-lg shadow-amber-500/20 disabled:opacity-60"
               >
                 {isSaving ? 'Сохранение...' : (editingTrade ? 'Сохранить изменения' : (traderMode ? 'Сохранить сделку' : t('saveRecord')))}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EXPORT REPORT MODAL */}
+      {exportOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) setExportOpen(false); }}>
+          <div className={`w-full max-w-md rounded-2xl border shadow-2xl ${isLight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-zinc-800 bg-zinc-950 text-zinc-100'}`}>
+            <div className="flex items-center justify-between border-b border-zinc-800/70 px-5 py-4">
+              <div><p className="font-data text-[10px] uppercase tracking-[0.22em] text-amber-500">Денежный календарь</p><h3 className="mt-1 font-semibold">Скачать отчёт</h3></div>
+              <button onClick={() => setExportOpen(false)} className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-500/10"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="p-5">
+              <p className="text-sm font-medium">Все ваши записи за выбранный период</p>
+              <p className="mt-1 text-xs text-zinc-500">Выбери период — технические поля вроде Manual в обычный отчёт не попадут.</p>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                {['Текущий период', 'Сегодня', 'Текущая неделя', 'Текущий месяц', '3 месяца', 'Вся история'].map((preset) => (
+                  <button key={preset} onClick={() => setExportPeriodPreset(preset)} className={`rounded-xl border px-3 py-2.5 text-left text-xs transition-colors ${exportPeriodPreset === preset ? 'border-amber-400/50 bg-amber-400/10 text-amber-600' : isLight ? 'border-zinc-200 hover:bg-zinc-50' : 'border-zinc-800 hover:bg-zinc-900'}`}>{preset}</button>
+                ))}
+              </div>
+              <div className={`mt-4 rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/40'}`}>
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500">В отчёте</p>
+                <p className="mt-1 text-sm font-medium">Дата · категория · доходы и расходы · сумма · комментарии</p>
+                <p className="mt-1 text-xs text-zinc-500">{exportTrades.length} записей с учётом текущей валюты и фильтров</p>
+              </div>
+              <button onClick={handleExportCsv} disabled={!exportTrades.length} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"><Download className="h-4 w-4" />Скачать денежный отчёт</button>
             </div>
           </div>
         </div>
