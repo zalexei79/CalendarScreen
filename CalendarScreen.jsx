@@ -909,6 +909,7 @@ export default function CalendarScreen() {
   const [historyCurrency, setHistoryCurrency] = useState('ALL');
   const [historyFiltersOpen, setHistoryFiltersOpen] = useState(false);
   const [confirmingClear, setConfirmingClear] = useState(false);
+  const [historyAmountExpanded, setHistoryAmountExpanded] = useState(false);
 
   const historyTrades = useMemo(() => {
     return Object.entries(manualTrades)
@@ -945,10 +946,40 @@ export default function CalendarScreen() {
     return insights;
   }, [historyTrades, historyExpense, traderMode]);
 
+  // Advanced financial analysis lives inside History so analytics always follows the same filters.
+  const historyMoneyAnalysis = useMemo(() => {
+    if (traderMode || historyTrades.length === 0 || historyCurrency === 'ALL') return null;
+    const income = historyTrades.filter((t) => t.pnl > 0).reduce((sum, t) => sum + t.pnl, 0);
+    const expenses = Math.abs(historyTrades.filter((t) => t.pnl < 0).reduce((sum, t) => sum + t.pnl, 0));
+    const byIncomeDay = {};
+    const byExpenseDay = {};
+    const categories = {};
+    for (const t of historyTrades) {
+      if (t.pnl > 0) byIncomeDay[t.dateKey] = (byIncomeDay[t.dateKey] || 0) + t.pnl;
+      if (t.pnl < 0) {
+        byExpenseDay[t.dateKey] = (byExpenseDay[t.dateKey] || 0) + Math.abs(t.pnl);
+        const category = textValue(t.instrument).trim() || 'Другое';
+        categories[category] = (categories[category] || 0) + Math.abs(t.pnl);
+      }
+    }
+    const dates = [...new Set(historyTrades.map((t) => t.dateKey))].sort();
+    const makeTrend = (source) => dates.map((date) => ({ date, value: source[date] || 0 }));
+    return {
+      income,
+      expenses,
+      balance: income - expenses,
+      incomeTrend: makeTrend(byIncomeDay),
+      expenseTrend: makeTrend(byExpenseDay),
+      topCategories: Object.entries(categories).sort((a, b) => b[1] - a[1]).slice(0, 5),
+    };
+  }, [historyTrades, historyCurrency, traderMode]);
+
+
   function openHistory() {
     setHistoryOpen(true);
     setHistoryFiltersOpen(false);
     setConfirmingClear(false);
+    setHistoryAmountExpanded(false);
     requestAnimationFrame(() => setHistoryVisible(true));
   }
 
@@ -1163,16 +1194,7 @@ export default function CalendarScreen() {
             </div>
           </div>
 
-          <div className={`inline-flex items-center self-start rounded-md border overflow-hidden ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-700 bg-zinc-900'}`}>
-            <button
-              onClick={openAnalysis}
-              disabled={periodStats.count === 0}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm text-amber-500 hover:bg-amber-400/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <Sparkles className="h-4 w-4" />
-              {t('analysis')}
-            </button>
-            <span className={`h-5 w-px ${isLight ? 'bg-zinc-300' : 'bg-zinc-700'}`} />
+          <div className={`inline-flex items-center self-start rounded-md border overflow-hidden ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'}`}>
             <button
               onClick={() => openModal()}
               disabled={isFutureSelected}
@@ -1293,10 +1315,10 @@ export default function CalendarScreen() {
           onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) closeHistory(); }}
         >
           <div
-            className={`relative w-full ${traderMode ? 'max-w-md' : 'max-w-lg'} max-h-[86vh] overflow-hidden rounded-2xl border shadow-2xl transition-all duration-200 ${
+            className={`relative w-full ${traderMode ? 'max-w-md' : 'max-w-2xl'} max-h-[90vh] overflow-hidden rounded-2xl border shadow-2xl transition-all duration-200 ${
               historyVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
             } ${
-              isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
+              isLight ? 'border-zinc-200 bg-[#f6f4ef]' : 'border-zinc-900 bg-[#08090b]'
             }`}
           >
             <div className={`flex items-center justify-between px-5 sm:px-6 pt-5 pb-4 border-b ${isLight ? 'border-zinc-200' : 'border-zinc-800/80'}`}>
@@ -1321,7 +1343,7 @@ export default function CalendarScreen() {
               </button>
             </div>
 
-            <div className={`overflow-y-auto px-5 sm:px-6 py-5 max-h-[calc(86vh-80px)] ${isLight ? 'bg-zinc-50/50' : ''}`}>
+            <div className={`overflow-y-auto px-5 sm:px-6 py-5 max-h-[calc(90vh-80px)] ${isLight ? 'bg-[#eeece6]/70' : 'bg-[#050607]/70'}`}>
               {!traderMode ? (
                 <>
                   {/* Money summary — улучшенная светлая тема */}
@@ -1354,9 +1376,14 @@ export default function CalendarScreen() {
                     </div>
                     {historyCurrency === 'ALL' ? (
                       <p className={`text-sm ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>Итоги показаны отдельно по валютам</p>
-                    ) : <div className={`font-display text-4xl sm:text-5xl font-semibold tracking-tight tabular-nums ${historyTotal >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    ) : <button
+                      type="button"
+                      onClick={() => setHistoryAmountExpanded((v) => !v)}
+                      title="Нажмите, чтобы изменить размер отображения суммы"
+                      className={`text-left font-display font-semibold tracking-tight tabular-nums transition-all ${historyAmountExpanded ? 'text-2xl sm:text-3xl break-all' : 'text-4xl sm:text-5xl'} ${historyTotal >= 0 ? 'text-emerald-600' : 'text-red-600'}`}
+                    >
                       {historyTotal >= 0 ? '+' : '-'}{historyCurrencySymbol}{formatMoney(historyTotal)}
-                    </div>}
+                    </button>}
                     {historyCurrency !== 'ALL' && (
                     <div className="grid grid-cols-2 gap-3 mt-4">
                       <div className={`rounded-xl border border-l-[3px] px-3 py-3 ${
@@ -1408,6 +1435,54 @@ export default function CalendarScreen() {
                         ))}
                       </div>
                     </div>
+                  )}
+
+                  {historyMoneyAnalysis && (
+                    <section className="mb-5 space-y-3">
+                      <div className="flex items-end justify-between gap-3">
+                        <div>
+                          <p className="font-data text-[10px] uppercase tracking-[0.18em] text-amber-500">Аналитика периода</p>
+                          <h3 className={`text-base font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-100'}`}>Как меняются деньги</h3>
+                        </div>
+                        <span className={`text-[11px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>по выбранным фильтрам</span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          ['Доходы', historyMoneyAnalysis.income, 'text-emerald-500'],
+                          ['Расходы', historyMoneyAnalysis.expenses, 'text-red-500'],
+                          ['Баланс', historyMoneyAnalysis.balance, historyMoneyAnalysis.balance >= 0 ? 'text-emerald-500' : 'text-red-500'],
+                        ].map(([label, amount, color]) => (
+                          <div key={label} className={`min-w-0 rounded-xl border px-3 py-3 ${isLight ? 'border-zinc-200 bg-white/70' : 'border-zinc-900 bg-[#0b0d10]'}`}>
+                            <p className={`text-[10px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{label}</p>
+                            <p title={`${historyCurrencySymbol}${formatMoney(Math.abs(amount))}`} className={`mt-1 truncate font-data text-xs sm:text-sm ${color}`}>{amount < 0 ? '−' : ''}{historyCurrencySymbol}{formatMoney(Math.abs(amount))}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {[['Динамика доходов', historyMoneyAnalysis.incomeTrend, 'text-emerald-500', 'Доходы по датам'], ['Динамика расходов', historyMoneyAnalysis.expenseTrend, 'text-red-500', 'Расходы по датам']].map(([title, trend, color, subtitle]) => {
+                        const max = Math.max(...trend.map((p) => p.value), 1);
+                        return (
+                          <div key={title} className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white/75' : 'border-zinc-900 bg-[#0b0d10]'}`}>
+                            <div className="mb-4 flex items-center justify-between">
+                              <div><p className={`text-sm font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-100'}`}>{title}</p><p className={`text-[10px] ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{subtitle}</p></div>
+                              {title.includes('доходов') ? <TrendingUp className={`h-4 w-4 ${color}`} /> : <TrendingDown className={`h-4 w-4 ${color}`} />}
+                            </div>
+                            <div className="flex h-28 items-end gap-1.5 overflow-x-auto pb-1 no-scrollbar [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                              {trend.map((point) => <button key={point.date} type="button" title={`${point.date}: ${historyCurrencySymbol}${formatMoney(point.value)}`} className="group relative flex h-full min-w-[14px] flex-1 items-end justify-center">
+                                <span className={`w-full rounded-t-md opacity-85 transition-all duration-200 group-hover:opacity-100 group-hover:scale-y-105 ${color.replace('text-', 'bg-')}`} style={{height: `${Math.max(point.value > 0 ? 8 : 2, Math.round((point.value / max) * 100))}%`}} />
+                              </button>)}
+                            </div>
+                            <div className={`mt-2 flex justify-between font-data text-[9px] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}><span>{trend[0]?.date}</span><span>{trend[trend.length - 1]?.date}</span></div>
+                          </div>
+                        );
+                      })}
+
+                      {historyMoneyAnalysis.topCategories.length > 0 && <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white/75' : 'border-zinc-900 bg-[#0b0d10]'}`}>
+                        <div className="mb-3 flex items-center justify-between"><p className={`text-sm font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-100'}`}>Куда уходят деньги</p><span className={`text-[10px] ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>топ расходов</span></div>
+                        <div className="space-y-2.5">{historyMoneyAnalysis.topCategories.map(([category, amount]) => <div key={category}><div className={`mb-1 flex justify-between gap-3 text-[11px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}><span className="truncate">{category}</span><span className="shrink-0">{historyCurrencySymbol}{formatMoney(amount)}</span></div><div className={`h-1.5 overflow-hidden rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-800'}`}><div className="h-full rounded-full bg-amber-400" style={{width: `${Math.max(6, Math.round((amount / historyMoneyAnalysis.expenses) * 100))}%`}} /></div></div>)}</div>
+                      </div>}
+                    </section>
                   )}
 
                   {/* Fast period controls - улучшены для светлой темы */}
@@ -2327,7 +2402,8 @@ export default function CalendarScreen() {
       )}
 
       {/* ANALYSIS MODAL — free basic stats now, paid deep AI analysis coming later */}
-      {analysisOpen && (
+      {/* Legacy standalone analysis disabled: analytics now lives inside History. */}
+      {false && analysisOpen && (
         <div
           className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${
             analysisVisible ? 'opacity-100' : 'opacity-0'
