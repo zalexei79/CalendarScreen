@@ -3,7 +3,7 @@ import {
   Inbox, TrendingUp, TrendingDown, Sparkles, Plus, X, Trash2,
   Calendar, ChevronDown, Link2, KeyRound, UploadCloud, FileText,
   CheckCircle2, RefreshCw, History, Download, Pencil,
-  Wallet, ShoppingCart, Home, Briefcase, ShoppingBag, CreditCard, MoreHorizontal,
+  Wallet, ShoppingCart, Home, Briefcase, ShoppingBag, CreditCard, MoreHorizontal, Cigarette,
 } from 'lucide-react';
 import { supabase } from './src/supabaseClient';
 
@@ -966,6 +966,12 @@ export default function CalendarScreen() {
     return { incomeSources: sort(incomeSources), expenseCategories: sort(expenseCategories), dailyEntries, maxDaily };
   }, [historyTrades]);
 
+  const getHistoryCategoryIcon = (instrument) => {
+    const normalized = String(instrument || '').trim().toUpperCase();
+    if (normalized.includes('СИГАРЕТ') || normalized.includes('ТАБАК')) return Cigarette;
+    return getMoneyCategoryMeta(instrument)?.icon || MoreHorizontal;
+  };
+
   function openHistory() {
     setHistoryOpen(true);
     setHistoryFiltersOpen(false);
@@ -1351,14 +1357,29 @@ export default function CalendarScreen() {
               <button
                 onClick={() => setHistoryAnalysisOpen((v) => !v)}
                 disabled={historyTrades.length === 0}
-                className="mb-4 inline-flex items-center gap-2 rounded-xl border border-amber-400/30 bg-amber-400/10 px-3.5 py-2.5 text-xs font-semibold text-amber-500 transition-all hover:bg-amber-400/15 disabled:cursor-not-allowed disabled:opacity-40"
+                className={`mb-4 w-full group relative overflow-hidden rounded-2xl border px-4 py-3.5 text-left transition-all duration-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40 ${
+                  historyAnalysisOpen
+                    ? 'border-amber-400/50 bg-amber-400/10 shadow-[0_10px_30px_rgba(251,191,36,.08)]'
+                    : isLight ? 'border-zinc-300 bg-white hover:border-amber-400/50 hover:shadow-lg' : 'border-zinc-800 bg-zinc-950/70 hover:border-amber-400/45 hover:bg-zinc-900'
+                }`}
               >
-                <Sparkles className="h-3.5 w-3.5" /> {historyAnalysisOpen ? 'Скрыть анализ' : 'Анализ'}
-                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${historyAnalysisOpen ? 'rotate-180' : ''}`} />
+                <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-amber-400/10 to-transparent pointer-events-none" />
+                <div className="relative flex items-center justify-between gap-3">
+                  <span className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/10 text-amber-500 group-hover:scale-110 transition-transform"><Sparkles className="h-4 w-4" /></span>
+                    <span>
+                      <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{historyAnalysisOpen ? 'Анализ открыт' : 'Открыть анализ'}</span>
+                      <span className="block mt-0.5 text-[11px] text-zinc-500">Динамика · источники денег · структура расходов</span>
+                    </span>
+                  </span>
+                  <ChevronDown className={`h-4 w-4 text-amber-500 transition-transform duration-300 ${historyAnalysisOpen ? 'rotate-180' : ''}`} />
+                </div>
               </button>
               {!traderMode ? (
                 <>
-                  {/* Money summary — улучшенная светлая тема */}
+                  {historyAnalysisOpen && (
+                    <>
+                  {/* Money summary — shown only inside analysis */}
                   <div className={`rounded-2xl border p-4 sm:p-5 mb-4 ${
                     isLight ? 'bg-white border-zinc-300 shadow-sm' : 'bg-zinc-950/70 border-zinc-800'
                   }`}>
@@ -1392,9 +1413,11 @@ export default function CalendarScreen() {
                       {historyTotal >= 0 ? '+' : '-'}{historyCurrencySymbol}{formatMoney(historyTotal)}
                     </div>}
                   </div>
+                    </>
+                  )}
 
                   {historyAnalysisOpen && (
-                    <div className={`mb-4 rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-300 bg-white shadow-sm' : 'border-zinc-800 bg-zinc-950/70'}`}>
+                    <div className={`relative overflow-hidden mb-4 rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-300 bg-white shadow-sm' : 'border-zinc-800 bg-zinc-950/70'}`}>
                       {historyCurrency === 'ALL' ? (
                         <div className="py-6 text-center">
                           <Sparkles className="h-6 w-6 mx-auto mb-2 text-amber-500" />
@@ -1403,7 +1426,14 @@ export default function CalendarScreen() {
                         </div>
                       ) : (
                         <>
-                          <div className="flex gap-1 overflow-x-auto pb-1 mb-4">
+                          <div className="absolute -right-4 -top-6 select-none pointer-events-none font-display text-7xl font-bold tracking-tighter text-zinc-500/[0.035]">ANALYSIS</div>
+                          <div className="relative flex items-end justify-between gap-3 mb-4">
+                            <div>
+                              <p className="font-data text-[10px] uppercase tracking-[0.22em] text-amber-500">Деньги в движении</p>
+                              <p className={`mt-1 text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Посмотри, откуда приходят и куда уходят деньги</p>
+                            </div>
+                          </div>
+                          <div className="relative flex gap-1 overflow-x-auto pb-1 mb-4">
                             {[['overview','Обзор'],['income','Откуда деньги'],['expense','Куда уходят']].map(([key,label]) => (
                               <button key={key} onClick={() => setHistoryAnalysisTab(key)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${historyAnalysisTab === key ? 'bg-amber-400/15 text-amber-600' : isLight ? 'text-zinc-500 hover:bg-zinc-100' : 'text-zinc-500 hover:bg-zinc-900'}`}>{label}</button>
                             ))}
@@ -1426,8 +1456,8 @@ export default function CalendarScreen() {
                               </div>
                             </>
                           )}
-                          {historyAnalysisTab === 'income' && <div className="space-y-3">{historyAnalysis.incomeSources.length ? historyAnalysis.incomeSources.map(([name,value]) => <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate">{name}</span><span className="font-data text-emerald-600">+{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{width: `${Math.max(5, (value / (historyIncome || 1)) * 100)}%`}} /></div></div>) : <p className="py-6 text-center text-sm text-zinc-500">Нет доходов</p>}</div>}
-                          {historyAnalysisTab === 'expense' && <div className="space-y-3">{historyAnalysis.expenseCategories.length ? historyAnalysis.expenseCategories.map(([name,value]) => <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate">{name}</span><span className="font-data text-red-600">−{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-red-500" style={{width: `${Math.max(5, (value / (historyExpense || 1)) * 100)}%`}} /></div></div>) : <p className="py-6 text-center text-sm text-zinc-500">Нет расходов</p>}</div>}
+                          {historyAnalysisTab === 'income' && <div className="relative space-y-3 overflow-hidden rounded-xl p-2"><div className="absolute -left-2 top-0 select-none pointer-events-none font-display text-5xl font-bold tracking-tighter text-emerald-500/[0.06]">ОТКУДА</div><p className="relative pt-9 pb-1 text-xs text-zinc-500">Источники, которые формируют твой денежный поток</p>{historyAnalysis.incomeSources.length ? historyAnalysis.incomeSources.map(([name,value]) => <div key={name} className="relative"><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-emerald-600">+{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{width: `${Math.max(5, (value / (historyIncome || 1)) * 100)}%`}} /></div></div>) : <p className="py-6 text-center text-sm text-zinc-500">Нет доходов</p>}</div>}
+                          {historyAnalysisTab === 'expense' && <div className="relative space-y-3 overflow-hidden rounded-xl p-2"><div className="absolute -left-2 top-0 select-none pointer-events-none font-display text-5xl font-bold tracking-tighter text-red-500/[0.06]">КУДА</div><p className="relative pt-9 pb-1 text-xs text-zinc-500">Направления, которые забирают больше всего денег</p>{historyAnalysis.expenseCategories.length ? historyAnalysis.expenseCategories.map(([name,value]) => <div key={name} className="relative"><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-red-600">−{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-red-500 transition-all duration-500" style={{width: `${Math.max(5, (value / (historyExpense || 1)) * 100)}%`}} /></div></div>) : <p className="py-6 text-center text-sm text-zinc-500">Нет расходов</p>}</div>}
                         </>
                       )}
                     </div>
@@ -1522,8 +1552,7 @@ export default function CalendarScreen() {
                       isLight ? 'bg-white border-zinc-300' : 'bg-zinc-950 border-zinc-800'
                     }`}>
                       {historyTrades.map((entry) => {
-                        const category = getMoneyCategoryMeta(entry.instrument);
-                        const Icon = category?.icon || MoreHorizontal;
+                        const Icon = getHistoryCategoryIcon(entry.instrument);
                         return (
                           <button
                             key={entry.id}
