@@ -17,7 +17,7 @@ export default function Header({
   pendingSyncCount, installInfoOpen, installInstructions,
 }) {
   return (
-    <header className={`px-2 sm:px-8 pt-3 sm:pt-8 pb-3 sm:pb-4 border-b ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}>
+    <header className={`premium-surface sticky top-0 z-20 backdrop-blur-xl px-2 sm:px-8 pt-3 sm:pt-6 pb-3 sm:pb-4 border-b ${isLight ? 'border-zinc-300 bg-zinc-100/85' : 'border-zinc-800 bg-zinc-950/80'}`}>
       <div className="flex items-start justify-between gap-2 mb-2">
         <p className={`font-data text-[10px] tracking-widest uppercase ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{traderMode ? t('titlePro') : t('titleMoney')}</p>
     

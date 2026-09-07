@@ -43,8 +43,8 @@ export default function CalendarDayCell({
 
   return (
     <button onClick={onSelect} style={heatmapStyle} className={[
-      'relative rounded-md border flex flex-col justify-between text-left transition-all duration-150',
-      'min-h-[62px] sm:min-h-[110px] p-1.5 sm:p-4',
+      'relative rounded-xl border flex flex-col justify-between text-left transition-all duration-200 ease-out',
+      'min-h-[62px] sm:min-h-[110px] p-2 sm:p-4',
       isLight ? (cell.inMonth ? (hasTrades ? 'bg-white' : 'bg-zinc-50') : '') : (cell.inMonth ? (hasTrades ? 'bg-zinc-900' : 'bg-zinc-900/20') : ''),
       isLight ? (cell.inMonth ? (hasTrades ? 'border-zinc-300' : 'border-zinc-200') : '') : (cell.inMonth ? (hasTrades ? 'border-zinc-800' : 'border-zinc-800/30') : ''),
       isSelected ? `border-amber-400 ring-2 ring-amber-400/60 scale-[1.03] shadow-lg shadow-amber-500/10 z-10 ${isLight ? 'bg-amber-50' : 'bg-zinc-800'}` : isLight ? 'hover:border-zinc-400 hover:bg-zinc-100' : 'hover:border-zinc-600 hover:bg-zinc-800/60',

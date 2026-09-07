@@ -1015,7 +1015,7 @@ export default function CalendarScreen() {
   }
 
   return (
-    <div className={`min-h-screen w-full flex flex-col transition-colors duration-200 ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
+    <div className={`premium-shell min-h-screen w-full flex flex-col transition-colors duration-300 ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
         .font-display { font-family: 'Space Grotesk', sans-serif; }
@@ -1052,11 +1052,20 @@ export default function CalendarScreen() {
         .theme-light *::-webkit-scrollbar-thumb { background-color: #a1a1aa; }
         .theme-light { scrollbar-color: #a1a1aa transparent; }
         /* Mobile layout: use the available viewport instead of leaving a huge empty area. */
+        /* Premium visual system */
+        .premium-shell { background-image: radial-gradient(circle at 12% -10%, rgba(251,191,36,.10), transparent 28%), radial-gradient(circle at 90% 5%, rgba(59,130,246,.06), transparent 24%); }
+        .premium-surface { box-shadow: 0 18px 55px rgba(0,0,0,.18); }
+        button { -webkit-tap-highlight-color: transparent; }
+        button:focus-visible { outline: 2px solid rgba(251,191,36,.7); outline-offset: 2px; }
+        .calendar-days-grid > button { border-radius: 14px !important; overflow: hidden; }
+        @media (min-width: 640px) { .calendar-days-grid > button { border-radius: 18px !important; } }
+        .calendar-days-grid > button:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0,0,0,.16); }
+        .calendar-days-grid > button:active { transform: scale(.985); }
+        @keyframes premiumFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
+        .history-fab { animation: premiumFloat 3.6s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
         @media (max-width: 639px) {
-          .calendar-days-grid {
-            flex: 1 1 auto;
-            grid-auto-rows: minmax(76px, 1fr);
-          }
+          .calendar-days-grid { flex: 1 1 auto; grid-auto-rows: minmax(76px, 1fr); }
         }
       `}</style>
 
@@ -1249,7 +1258,7 @@ export default function CalendarScreen() {
       )}
 
       {/* bottom "История" entry point — search/browse all saved trades */}
-      <div className="fixed bottom-4 sm:bottom-4 inset-x-0 flex justify-center z-30 pointer-events-none">
+      <div className="history-fab fixed bottom-4 sm:bottom-4 inset-x-0 flex justify-center z-30 pointer-events-none">
         <button
           onClick={openHistory}
           className={`pointer-events-auto group flex items-center gap-2.5 rounded-full border backdrop-blur-xl px-5 py-3 text-base shadow-[0_14px_40px_rgba(0,0,0,.24)] transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 ${
