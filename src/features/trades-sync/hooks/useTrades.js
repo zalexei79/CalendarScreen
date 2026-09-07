@@ -50,7 +50,7 @@ export function useTrades({ user }) {
     }));
   }, []);
 
-  const { pendingSyncCount, enqueueOperation, flushOfflineQueue } = useOfflineQueue({
+  const { pendingSyncCount, enqueueOperation, amendPendingInsert, flushOfflineQueue } = useOfflineQueue({
     user,
     onSyncedInsert: handleSyncedInsert,
   });
@@ -190,6 +190,28 @@ export function useTrades({ user }) {
       const cloudPayload = toSupabaseTradePayload(localTrade, dateKey, cloudUserId);
       const cloudUpdates = toSupabaseTradeUpdates(localTrade, dateKey);
 
+      const isTemporaryTrade =
+        isEditing &&
+        (String(editingTradeId).startsWith('local-') ||
+          String(editingTradeId).startsWith('guest-') ||
+          String(editingTradeId).startsWith('offline-'));
+
+      // A local-* trade can already have a queued insert even after the
+      // browser reports online. Amend that insert rather than creating a
+      // second cloud insert for the same local record.
+      if (
+        isTemporaryTrade &&
+        amendPendingInsert({
+          action: 'update',
+          user_id: cloudUserId,
+          tradeId: editingTradeId,
+          date_key: dateKey,
+          updates: cloudUpdates,
+        })
+      ) {
+        return;
+      }
+
       if (!navigator.onLine) {
         enqueueOperation(
           isEditing
@@ -201,10 +223,7 @@ export function useTrades({ user }) {
 
       try {
         if (
-          isEditing &&
-          !String(editingTradeId).startsWith('local-') &&
-          !String(editingTradeId).startsWith('guest-') &&
-          !String(editingTradeId).startsWith('offline-')
+          isEditing && !isTemporaryTrade
         ) {
           const { error } = await supabase
             .from('trades')
@@ -261,7 +280,7 @@ export function useTrades({ user }) {
         }
       }
     },
-    [cloudUserId, cacheTradesLocally, enqueueOperation]
+    [cloudUserId, cacheTradesLocally, enqueueOperation, amendPendingInsert]
   );
 
   // Delete trade

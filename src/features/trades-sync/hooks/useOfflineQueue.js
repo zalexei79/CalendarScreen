@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { OFFLINE_QUEUE_KEY } from '../../../shared/config/constants';
 import { getValidUserId } from '../../../shared/lib/formatters';
@@ -10,14 +10,44 @@ export function isRetryableNetworkError(error) {
   return /network|failed to fetch|fetch failed|load failed|networkerror|timeout|timed out|connection|offline/.test(message);
 }
 
+function createOperationId() {
+  const generatedId = globalThis.crypto?.randomUUID
+    ? globalThis.crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return `operation-${generatedId}`;
+}
+
 /**
  * useOfflineQueue: manages the pending offline operations queue and synchronizes
  * inserts, updates, and deletes with Supabase when online connectivity is restored.
  */
 export function useOfflineQueue({ user, onSyncedInsert }) {
+  const isFlushingRef = useRef(false);
+  const inFlightOperationIdsRef = useRef(new Set());
+
   const readOfflineQueue = useCallback(() => {
     try {
-      return JSON.parse(window.localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]');
+      const parsed = JSON.parse(window.localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]');
+      if (!Array.isArray(parsed)) return [];
+
+      // Give existing entries a stable identity before processing them. This
+      // keeps legacy queue data removable one operation at a time as well.
+      let changed = false;
+      const queue = parsed.map((item) => {
+        if (item?.operationId && typeof item.revision === 'number') return item;
+        changed = true;
+        return {
+          ...item,
+          operationId: item?.operationId || createOperationId(),
+          revision: typeof item?.revision === 'number' ? item.revision : 0,
+        };
+      });
+
+      if (changed) {
+        window.localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+      }
+
+      return queue;
     } catch {
       return [];
     }
@@ -33,6 +63,37 @@ export function useOfflineQueue({ user, onSyncedInsert }) {
 
   const [pendingSyncCount, setPendingSyncCount] = useState(() => readOfflineQueue().length);
 
+  const amendPendingInsert = useCallback((operation) => {
+    const queue = readOfflineQueue();
+    const insertIndex = queue.findIndex(
+      (item) =>
+        item.action === 'insert' &&
+        item.user_id === operation.user_id &&
+        item.tempId === operation.tradeId
+    );
+
+    if (insertIndex < 0) return false;
+
+    const existing = queue[insertIndex];
+    queue[insertIndex] = {
+      ...existing,
+      date_key: operation.date_key,
+      trade: {
+        ...existing.trade,
+        ...operation.updates,
+        date_key: operation.date_key,
+      },
+      revision: existing.revision + 1,
+      cancelRequested: false,
+      status: undefined,
+      failedAt: undefined,
+      lastError: undefined,
+    };
+    writeOfflineQueue(queue);
+    setPendingSyncCount(queue.length);
+    return true;
+  }, [readOfflineQueue, writeOfflineQueue]);
+
   const enqueueOperation = useCallback((operation) => {
     const queue = readOfflineQueue();
 
@@ -45,74 +106,153 @@ export function useOfflineQueue({ user, onSyncedInsert }) {
         item.tempId === operation.tradeId
     );
     if (insertIndex >= 0 && operation.action === 'update') {
-      queue[insertIndex] = {
-        ...queue[insertIndex],
-        trade: { ...queue[insertIndex].trade, ...operation.updates },
-      };
-      writeOfflineQueue(queue);
-      setPendingSyncCount(queue.length);
+      amendPendingInsert(operation);
       return;
     }
     if (insertIndex >= 0 && operation.action === 'delete') {
+      const insert = queue[insertIndex];
+      if (inFlightOperationIdsRef.current.has(insert.operationId)) {
+        queue[insertIndex] = {
+          ...insert,
+          cancelRequested: true,
+          revision: insert.revision + 1,
+        };
+        writeOfflineQueue(queue);
+        setPendingSyncCount(queue.length);
+        return;
+      }
       queue.splice(insertIndex, 1);
       writeOfflineQueue(queue);
       setPendingSyncCount(queue.length);
       return;
     }
 
-    queue.push(operation);
+    queue.push({ ...operation, operationId: createOperationId(), revision: 0 });
     writeOfflineQueue(queue);
     setPendingSyncCount(queue.length);
-  }, [readOfflineQueue, writeOfflineQueue]);
+  }, [readOfflineQueue, writeOfflineQueue, amendPendingInsert]);
 
   const flushOfflineQueue = useCallback(async () => {
     const activeUserId = getValidUserId(user);
-    if (!activeUserId || !navigator.onLine) return;
-    const queue = readOfflineQueue();
-    if (queue.length === 0) return;
+    if (!activeUserId || !navigator.onLine || isFlushingRef.current) return;
 
-    const remaining = [];
-    for (const item of queue) {
-      // Legacy entries have no proven owner. Preserve them rather than
-      // sending them under whichever account happens to be signed in.
-      if (!item.user_id || item.user_id !== activeUserId) {
-        remaining.push(item);
-        continue;
-      }
+    isFlushingRef.current = true;
+    try {
+      while (navigator.onLine) {
+        // Read the latest queue before each request. enqueueOperation can run
+        // while the previous request is pending, so no stale snapshot is ever
+        // written back after a request finishes.
+        const item = readOfflineQueue().find(
+          (entry) =>
+            entry.status !== 'failed' &&
+            entry.user_id === activeUserId
+        );
 
-      try {
-        if (item.action === 'insert') {
-          const { data, error } = await supabase.from('trades').insert(item.trade).select().single();
-          if (error) throw error;
+        if (!item) break;
 
-          // Notify parent to replace temporary offline id with real database id
-          if (onSyncedInsert) {
-            onSyncedInsert(item.trade.date_key, item.tempId, data.id);
+        inFlightOperationIdsRef.current.add(item.operationId);
+        try {
+          if (item.action === 'insert') {
+            const { data, error } = await supabase.from('trades').insert(item.trade).select().single();
+            if (error) throw error;
+
+            const latestQueue = readOfflineQueue();
+            const latestItem = latestQueue.find((entry) => entry.operationId === item.operationId);
+
+            if (onSyncedInsert) {
+              onSyncedInsert(latestItem?.trade?.date_key || item.trade.date_key, item.tempId, data.id);
+            }
+
+            if (latestItem?.cancelRequested) {
+              const nextQueue = latestQueue.map((entry) => (
+                entry.operationId === item.operationId
+                  ? {
+                    operationId: entry.operationId,
+                    revision: entry.revision,
+                    action: 'delete',
+                    user_id: entry.user_id,
+                    tradeId: data.id,
+                    date_key: entry.trade.date_key,
+                  }
+                  : entry
+              ));
+              writeOfflineQueue(nextQueue);
+              setPendingSyncCount(nextQueue.length);
+              continue;
+            }
+
+            if (latestItem && latestItem.revision !== item.revision) {
+              const { user_id, date_key, ...updates } = latestItem.trade;
+              const nextQueue = latestQueue.map((entry) => (
+                entry.operationId === item.operationId
+                  ? {
+                    operationId: entry.operationId,
+                    revision: entry.revision,
+                    action: 'update',
+                    user_id: entry.user_id,
+                    tradeId: data.id,
+                    date_key,
+                    updates,
+                  }
+                  : entry
+              ));
+              writeOfflineQueue(nextQueue);
+              setPendingSyncCount(nextQueue.length);
+              continue;
+            }
+          } else if (item.action === 'update') {
+            const { error } = await supabase
+              .from('trades')
+              .update(item.updates)
+              .eq('id', item.tradeId)
+              .eq('user_id', activeUserId);
+            if (error) throw error;
+          } else if (item.action === 'delete') {
+            const { error } = await supabase
+              .from('trades')
+              .delete()
+              .eq('id', item.tradeId)
+              .eq('user_id', activeUserId);
+            if (error) throw error;
+          } else {
+            throw new Error(`Unsupported offline operation: ${item.action}`);
           }
-        } else if (item.action === 'update') {
-          const { error } = await supabase
-            .from('trades')
-            .update(item.updates)
-            .eq('id', item.tradeId)
-            .eq('user_id', activeUserId);
-          if (error) throw error;
-        } else if (item.action === 'delete') {
-          const { error } = await supabase
-            .from('trades')
-            .delete()
-            .eq('id', item.tradeId)
-            .eq('user_id', activeUserId);
-          if (error) throw error;
-        } else {
-          remaining.push(item);
+
+          // Remove only the operation that just succeeded. This preserves any
+          // operations enqueued while the Supabase request was in flight.
+          const latestQueue = readOfflineQueue();
+          const nextQueue = latestQueue.filter((entry) => entry.operationId !== item.operationId);
+          writeOfflineQueue(nextQueue);
+          setPendingSyncCount(nextQueue.length);
+        } catch (err) {
+          if (isRetryableNetworkError(err)) {
+            console.warn('[offline] retryable sync error; operation remains queued:', err);
+            break;
+          }
+
+          // Preserve the operation and its payload for diagnosis, but do not
+          // retry a permanent error on every online event or app restart.
+          const latestQueue = readOfflineQueue();
+          const nextQueue = latestQueue.map((entry) => (
+            entry.operationId === item.operationId
+              ? {
+                ...entry,
+                status: 'failed',
+                failedAt: new Date().toISOString(),
+                lastError: String(err?.message || err),
+              }
+              : entry
+          ));
+          writeOfflineQueue(nextQueue);
+          setPendingSyncCount(nextQueue.length);
+          console.error('[offline] permanent sync error; operation retained as failed and will not retry automatically:', err);
+        } finally {
+          inFlightOperationIdsRef.current.delete(item.operationId);
         }
-      } catch (err) {
-        console.error('[offline] не удалось синхронизировать, оставляю в очереди:', err);
-        remaining.push(item);
       }
+    } finally {
+      isFlushingRef.current = false;
     }
-    writeOfflineQueue(remaining);
-    setPendingSyncCount(remaining.length);
   }, [user, readOfflineQueue, writeOfflineQueue, onSyncedInsert]);
 
   useEffect(() => {
@@ -123,6 +263,7 @@ export function useOfflineQueue({ user, onSyncedInsert }) {
   return {
     pendingSyncCount,
     enqueueOperation,
+    amendPendingInsert,
     flushOfflineQueue,
   };
 }
