@@ -288,6 +288,14 @@ export default function CalendarScreen() {
     return `${amount >= 0 ? '+' : '-'}${currencySymbol}${short ? formatMoneyShort(amount) : formatMoney(amount)}`;
   }
 
+  function formatAmountInCurrency(amount, code, { signed = true, short = false } = {}) {
+    const symbol = getCurrencyMeta(code || 'USD').symbol;
+    const abs = Math.abs(Number(amount) || 0);
+    const value = short ? formatMoneyShort(abs) : formatMoney(abs);
+    if (!signed) return `${symbol}${value}`;
+    return `${amount >= 0 ? '+' : '−'}${symbol}${value}`;
+  }
+
   const suppressNextHistoryPush = useRef(false);
 
   // native "back" support: opening a day pushes a history entry, so the
@@ -849,6 +857,11 @@ export default function CalendarScreen() {
       closeModal();
     } catch (err) {
       console.error('[save] unexpected error:', err);
+      setFormError(
+        navigator.onLine === false
+          ? 'Не удалось поставить запись в очередь офлайн-синхронизации. Попробуйте ещё раз.'
+          : (err?.message || 'Не удалось сохранить запись. Попробуйте ещё раз.')
+      );
     } finally {
       setIsSaving(false);
     }
@@ -932,13 +945,14 @@ export default function CalendarScreen() {
   }
 
   function handleExportCsv() {
-    const header = ['Дата', 'Время', 'Категория', 'Тип', 'Сумма', 'Источник', 'Комментарий'];
+    const header = ['Дата', 'Время', 'Категория', 'Тип', 'Сумма', 'Валюта', 'Источник', 'Комментарий'];
     const rows = historyTrades.map((t) => [
       t.dateKey,
       t.time,
       t.instrument,
       t.pnl >= 0 ? 'Доход' : 'Расход',
       t.pnl,
+      t.currency || 'USD',
       t.platform,
       (t.comment || '').replace(/"/g, '""'),
     ]);
@@ -1184,7 +1198,7 @@ export default function CalendarScreen() {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className={`font-data text-sm font-medium ${trade.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {trade.pnl >= 0 ? '+' : '-'}{getCurrencyMeta(trade.currency || currency).symbol}{formatMoney(trade.pnl)}
+                        {formatAmountInCurrency(trade.pnl, trade.currency || 'USD')}
                       </span>
                       <button
                         onClick={() => openModal(trade)}
@@ -1310,6 +1324,7 @@ export default function CalendarScreen() {
                     ) : <div className={`font-display text-4xl sm:text-5xl font-semibold tracking-tight tabular-nums ${historyTotal >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                       {formatPnlDisplay(historyTotal)}
                     </div>}
+                    {historyCurrency !== 'ALL' && (
                     <div className="grid grid-cols-2 gap-3 mt-4">
                       <div className={`rounded-xl border border-l-[3px] px-3 py-3 ${
                         isLight ? 'border-zinc-200 border-l-emerald-400 bg-zinc-50' : 'border-zinc-800/80 border-l-emerald-500/70 bg-zinc-900/70'
@@ -1331,6 +1346,8 @@ export default function CalendarScreen() {
                       </div>
                     </div>
                   </div>
+
+                    )}
 
                   {historyCurrency === 'ALL' && historyByCurrency.length > 0 && (
                     <div className="grid gap-2 mb-4 sm:grid-cols-2">
@@ -1479,7 +1496,7 @@ export default function CalendarScreen() {
                               <span className={`block text-[11px] mt-0.5 truncate ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{formatDateLabel(entry.dateKey)} · {entry.time}{entry.comment ? ` · ${entry.comment}` : ''}</span>
                             </span>
                             <span className={`font-data text-sm font-medium shrink-0 tabular-nums whitespace-nowrap ${entry.pnl >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                              {entry.pnl >= 0 ? '+' : '−'}{getCurrencyMeta(entry.currency || currency).symbol}{formatMoney(entry.pnl)}
+                              {formatAmountInCurrency(entry.pnl, entry.currency || 'USD')}
                             </span>
                           </button>
                         );
