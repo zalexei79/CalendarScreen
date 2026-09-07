@@ -1,8 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../../supabaseClient';
-import { getValidUserId, textValue } from '../../../shared/lib/formatters';
+import { getValidUserId } from '../../../shared/lib/formatters';
 import { getTradesCacheKey } from '../../../shared/config/constants';
-import { useOfflineQueue } from './useOfflineQueue';
+import {
+  fromSupabaseTradeRow,
+  toSupabaseTradePayload,
+  toSupabaseTradeUpdates,
+} from '../lib/tradeMapper';
+import { isRetryableNetworkError, useOfflineQueue } from './useOfflineQueue';
 
 /**
  * useTrades: encapsulates Local-First storage, local storage caching per user/guest,
@@ -81,17 +86,7 @@ export function useTrades({ user }) {
         const grouped = {};
         for (const row of data) {
           grouped[row.date_key] = grouped[row.date_key] || [];
-          grouped[row.date_key].push({
-            id: row.id,
-            time: textValue(row.time),
-            instrument: textValue(row.instrument),
-            direction: textValue(row.direction),
-            pnl: Number(row.pnl),
-            comment: row.comment || '',
-            platform: textValue(row.platform) || 'Manual',
-            take_profit: row.take_profit ?? null,
-            stop_loss: row.stop_loss ?? null,
-          });
+          grouped[row.date_key].push(fromSupabaseTradeRow(row));
         }
 
         setManualTrades((prev) => {
@@ -147,9 +142,10 @@ export function useTrades({ user }) {
       stopLoss,
       traderMode,
     }) => {
-      const localId = crypto.randomUUID
+      const generatedId = crypto.randomUUID
         ? crypto.randomUUID()
-        : `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const localId = `local-${generatedId}`;
 
       const localTrade = {
         id: isEditing ? editingTradeId : localId,
@@ -191,16 +187,17 @@ export function useTrades({ user }) {
       }
 
       // 3. Cloud Sync in background
-      const cloudPayload = {
-        user_id: cloudUserId,
-        date_key: dateKey,
-        time,
-        instrument,
-        direction,
-        pnl: signedPnl,
-        comment,
-        platform,
-      };
+      const cloudPayload = toSupabaseTradePayload(localTrade, dateKey, cloudUserId);
+      const cloudUpdates = toSupabaseTradeUpdates(localTrade, dateKey);
+
+      if (!navigator.onLine) {
+        enqueueOperation(
+          isEditing
+            ? { action: 'update', user_id: cloudUserId, tradeId: editingTradeId, date_key: dateKey, updates: cloudUpdates }
+            : { action: 'insert', user_id: cloudUserId, tempId: localId, date_key: dateKey, trade: cloudPayload }
+        );
+        return;
+      }
 
       try {
         if (
@@ -211,19 +208,15 @@ export function useTrades({ user }) {
         ) {
           const { error } = await supabase
             .from('trades')
-            .update({
-              time,
-              instrument,
-              direction,
-              pnl: signedPnl,
-              comment,
-              platform,
-            })
+            .update(cloudUpdates)
             .eq('id', editingTradeId)
             .eq('user_id', cloudUserId);
 
           if (error) {
             console.warn('[cloud-sync] update skipped:', error.message);
+            if (isRetryableNetworkError(error)) {
+              enqueueOperation({ action: 'update', user_id: cloudUserId, tradeId: editingTradeId, date_key: dateKey, updates: cloudUpdates });
+            }
           }
           return;
         }
@@ -232,6 +225,9 @@ export function useTrades({ user }) {
 
         if (error) {
           console.warn('[cloud-sync] insert skipped, local record kept:', error.message);
+          if (isRetryableNetworkError(error)) {
+            enqueueOperation({ action: 'insert', user_id: cloudUserId, tempId: localId, date_key: dateKey, trade: cloudPayload });
+          }
           return;
         }
 
@@ -256,9 +252,16 @@ export function useTrades({ user }) {
         });
       } catch (err) {
         console.warn('[cloud-sync] unavailable, local record kept:', err);
+        if (isRetryableNetworkError(err)) {
+          enqueueOperation(
+            isEditing
+              ? { action: 'update', user_id: cloudUserId, tradeId: editingTradeId, date_key: dateKey, updates: cloudUpdates }
+              : { action: 'insert', user_id: cloudUserId, tempId: localId, date_key: dateKey, trade: cloudPayload }
+          );
+        }
       }
     },
-    [cloudUserId, cacheTradesLocally]
+    [cloudUserId, cacheTradesLocally, enqueueOperation]
   );
 
   // Delete trade
@@ -274,12 +277,17 @@ export function useTrades({ user }) {
         return nextTrades;
       });
 
-      if (!cloudUserId || String(tradeId).startsWith('guest-') || String(tradeId).startsWith('local-')) {
+      if (!cloudUserId || String(tradeId).startsWith('guest-')) {
         return;
       }
 
       if (!navigator.onLine) {
-        enqueueOperation({ action: 'delete', tradeId });
+        enqueueOperation({ action: 'delete', user_id: cloudUserId, tradeId, date_key: dateKey });
+        return;
+      }
+
+      if (String(tradeId).startsWith('local-')) {
+        enqueueOperation({ action: 'delete', user_id: cloudUserId, tradeId, date_key: dateKey });
         return;
       }
 
@@ -290,9 +298,17 @@ export function useTrades({ user }) {
           .eq('id', tradeId)
           .eq('user_id', cloudUserId);
 
-        if (error) console.warn('[trades] cloud delete skipped:', error.message);
+        if (error) {
+          console.warn('[trades] cloud delete skipped:', error.message);
+          if (isRetryableNetworkError(error)) {
+            enqueueOperation({ action: 'delete', user_id: cloudUserId, tradeId, date_key: dateKey });
+          }
+        }
       } catch (err) {
         console.warn('[trades] cloud delete unavailable:', err);
+        if (isRetryableNetworkError(err)) {
+          enqueueOperation({ action: 'delete', user_id: cloudUserId, tradeId, date_key: dateKey });
+        }
       }
     },
     [cloudUserId, cacheTradesLocally, enqueueOperation]

@@ -832,7 +832,7 @@ export default function CalendarScreen() {
 
       await hookSaveTrade({
         dateKey,
-        isEditing,
+        isEditing: Boolean(editingTrade),
         editingTradeId: editingTrade?.id,
         time,
         instrument,
