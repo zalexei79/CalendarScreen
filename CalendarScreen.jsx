@@ -1410,15 +1410,23 @@ export default function CalendarScreen() {
                   </div>
 
                   {historyCurrency === 'ALL' ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
-                      {historyByCurrency.length ? historyByCurrency.map(([code, stats]) => {
-                        const meta = getCurrencyMeta(code);
-                        return <button key={code} onClick={() => setHistoryCurrency(code)} className={`rounded-xl border p-3 text-left transition-all hover:-translate-y-0.5 ${isLight ? 'border-zinc-200 bg-zinc-50 hover:border-amber-400/40' : 'border-zinc-800 bg-black/20 hover:border-amber-400/35'}`}>
-                          <span className="text-[10px] text-zinc-500">{code}</span>
-                          <span className={`mt-1 block font-data text-base font-semibold tabular-nums ${stats.balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.balance >= 0 ? '+' : '-'}{meta.symbol}{formatMoney(stats.balance)}</span>
-                          <span className="mt-1 block text-[10px] text-zinc-500">{stats.count} операций</span>
-                        </button>;
-                      }) : <p className="col-span-full py-8 text-center text-sm text-zinc-500">За выбранный период пока нет данных.</p>}
+                    <div className="mb-5 space-y-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {historyByCurrency.length ? historyByCurrency.map(([code, stats]) => {
+                          const meta = getCurrencyMeta(code);
+                          return <button key={code} onClick={() => setHistoryCurrency(code)} className={`rounded-xl border p-3 text-left transition-all hover:-translate-y-0.5 ${isLight ? 'border-zinc-200 bg-zinc-50 hover:border-amber-400/40' : 'border-zinc-800 bg-black/20 hover:border-amber-400/35'}`}>
+                            <span className="text-[10px] text-zinc-500">{code}</span>
+                            <span className={`mt-1 block font-data text-base font-semibold tabular-nums ${stats.balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.balance >= 0 ? '+' : '-'}{meta.symbol}{formatMoney(stats.balance)}</span>
+                            <span className="mt-1 block text-[10px] text-zinc-500">{stats.count} операций · открыть анализ</span>
+                          </button>;
+                        }) : <p className="col-span-full py-8 text-center text-sm text-zinc-500">За выбранный период пока нет данных.</p>}
+                      </div>
+                      <div className={`rounded-2xl border p-3 sm:p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-white/5 bg-black/20'}`}>
+                        <div className="mb-3 flex items-end justify-between gap-3"><div><p className="text-xs font-semibold">Динамика по валютам</p><p className="mt-1 text-[10px] text-zinc-500">Валюты не смешиваются — каждая сохраняет собственный масштаб.</p></div><span className="text-[10px] text-amber-500">PRO</span></div>
+                        <div className="grid gap-2">
+                          {historyByCurrency.map(([code, stats]) => { const meta = getCurrencyMeta(code); return <button key={code} onClick={() => setHistoryCurrency(code)} className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800/80 bg-zinc-900/40'}`}><span><span className="block text-xs font-medium">{meta.symbol} {code}</span><span className="mt-0.5 block text-[10px] text-zinc-500">{stats.count} операций за период</span></span><span className={`font-data text-sm ${stats.balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.balance >= 0 ? '+' : '−'}{meta.symbol}{formatMoney(Math.abs(stats.balance))}</span></button>; })}
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <>
@@ -1442,11 +1450,9 @@ export default function CalendarScreen() {
 
                   {historyAnalysisTab === 'overview' && (
                     <div>
-                      <div className={`rounded-xl border p-3 mb-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}>
-                        <div className="flex items-center justify-between mb-3"><span className="text-xs font-medium">Динамика периода</span><span className="text-[10px] text-zinc-500">Нажми на столбец</span></div>
-                        <div className="flex items-end gap-1 h-24">
-                          {historyAnalysis.dailyEntries.length ? historyAnalysis.dailyEntries.slice(-18).map(([date, stats]) => <button key={date} title={`${date}: +${formatMoney(stats.income)} / -${formatMoney(stats.expense)}`} className="group relative flex-1 min-w-[10px] h-full flex items-end justify-center gap-[2px]" onClick={() => { setHistoryFiltersOpen(true); }}><span className="w-full rounded-t-sm bg-emerald-500/75 transition-all group-hover:bg-emerald-400" style={{height:`${Math.max(3,(stats.income/historyAnalysis.maxDaily)*100)}%`}} /><span className="absolute bottom-0 w-full rounded-t-sm bg-red-500/65 transition-all group-hover:bg-red-400" style={{height:`${Math.max(2,(stats.expense/historyAnalysis.maxDaily)*55)}%`}} /></button>) : <span className="m-auto text-xs text-zinc-500">Недостаточно данных</span>}
-                        </div>
+                      <div className={`rounded-2xl border p-3 sm:p-4 mb-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}>
+                        <div className="mb-4 flex items-end justify-between gap-3"><div><span className="text-sm font-semibold">Динамика периода</span><p className="mt-1 text-[10px] text-zinc-500">Доходы и расходы по дням — читается без наведения.</p></div><div className="flex gap-2 text-[9px]"><span className="text-emerald-500">● Доход</span><span className="text-red-400">● Расход</span></div></div>
+                        {historyAnalysis.dailyEntries.length ? (() => { const entries = historyAnalysis.dailyEntries.slice(-8); const max = Math.max(1, ...entries.flatMap(([,v]) => [v.income, v.expense])); return <div className="grid grid-cols-8 gap-2 items-end h-36">{entries.map(([date, stats]) => { const label = date.slice(8,10); const net = stats.income - stats.expense; return <div key={date} className="flex h-full min-w-0 flex-col justify-end"><div className="mb-2 text-center text-[9px] font-data text-zinc-500">{net >= 0 ? '+' : '−'}{formatMoney(Math.abs(net))}</div><div className="flex flex-1 items-end justify-center gap-1"><span className="w-2.5 sm:w-3 rounded-t-md bg-emerald-500/80" style={{height:`${Math.max(5,(stats.income/max)*100)}%`}}/><span className="w-2.5 sm:w-3 rounded-t-md bg-red-500/75" style={{height:`${Math.max(4,(stats.expense/max)*100)}%`}}/></div><span className="mt-2 text-center text-[9px] text-zinc-600">{label}</span></div>; })}</div>; })() : <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-zinc-800 text-xs text-zinc-500">Добавь ещё несколько операций — здесь появится динамика периода.</div>}
                       </div>
                       <div className="grid sm:grid-cols-3 gap-2">
                         <div className={`rounded-xl p-3 ${isLight ? 'bg-emerald-50' : 'bg-emerald-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">Главный доход</p><p className="mt-1 text-xs font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p></div>
