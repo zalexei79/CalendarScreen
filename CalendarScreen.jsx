@@ -4,7 +4,7 @@ import {
   Calendar, ChevronDown, ChevronLeft, ChevronRight, Link2, KeyRound, UploadCloud, FileText,
   LogIn, LogOut, CheckCircle2, RefreshCw, History, Download, Pencil,
   Wallet, ShoppingCart, Home, Briefcase, ShoppingBag, CreditCard, MoreHorizontal,
-  Settings, Sun, Moon, Languages, CircleDollarSign, Sync,
+  Settings, Sun, Moon, Languages, CircleDollarSign,
 } from 'lucide-react';
 import { supabase } from './src/supabaseClient';
 
@@ -25,246 +25,54 @@ import { supabase } from './src/supabaseClient';
  * persist credentials or parse & ingest a broker export.
  */
 
-function currentTimeHHMM() {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
-// Safely normalize form/input values before string operations.
-// Old or incomplete trade records must never be able to crash the whole screen.
-function textValue(value) {
-  return value == null ? '' : String(value);
-}
-
-// yyyy-mm-dd key — used consistently for calendar cells, manual trade storage
-// and the period date inputs so that string comparison ("2026-07-16" <=
-// "2026-07-31") is enough to filter by period.
-function keyFromDate(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-// dateKey ("yyyy-mm-dd") is always a LOCAL calendar date — parse it as local,
-// never via `new Date(dateKey)` (that reads it as UTC and can shift by a day).
-function parseDateKeyLocal(dateKey) {
-  const [y, m, day] = dateKey.split('-').map(Number);
-  return new Date(y, m - 1, day);
-}
-
-function addDays(d, n) {
-  const r = new Date(d);
-  r.setDate(r.getDate() + n);
-  return r;
-}
-
-function startOfWeekMonday(d) {
-  const day = (d.getDay() + 6) % 7; // Monday-start week
-  return addDays(d, -day);
-}
-
-function formatMoney(n) {
-  const abs = Math.abs(n);
-  const rounded = Math.round(abs * 100) / 100;
-  const raw = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
-  const [intPart, decPart] = raw.split('.');
-  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0');
-  return decPart ? `${grouped}.${decPart}` : grouped;
-}
-
-function formatSignedShort(n) {
-  return `${n >= 0 ? '+' : '-'}$${formatMoney(n)}`;
-}
-
-function formatMoneyShort(n) {
-  const abs = Math.abs(n);
-  const [divisor, suffix] = abs >= 1e9 ? [1e9, 'б'] : abs >= 1e6 ? [1e6, 'м'] : abs >= 1e3 ? [1e3, 'к'] : [1, ''];
-  return String(Math.round(abs / divisor)) + suffix;
-}
-
-function formatDateLabel(dateKey) {
-  return parseDateKeyLocal(dateKey).toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'short',
-  });
-}
-
-const PERIOD_PRESETS = ['Сегодня', 'Текущая неделя', 'Текущий месяц', 'Вся история'];
-
-function getPresetRange(preset, today) {
-  const y = today.getFullYear();
-  const m = today.getMonth();
-
-  switch (preset) {
-    case 'Сегодня': {
-      const k = keyFromDate(today);
-      return { from: k, to: k };
-    }
-    case 'Текущая неделя': {
-      const start = startOfWeekMonday(today);
-      const end = addDays(start, 6);
-      return { from: keyFromDate(start), to: keyFromDate(end) };
-    }
-    case 'Текущий месяц': {
-      const start = new Date(y, m, 1);
-      const end = new Date(y, m + 1, 0);
-      return { from: keyFromDate(start), to: keyFromDate(end) };
-    }
-    case 'Вся история':
-      return { from: '0000-01-01', to: '9999-12-31' };
-    default:
-      return { from: keyFromDate(today), to: keyFromDate(today) };
-  }
-}
-
-const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-const MONTHS = [
-  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
-];
-const MONTHS_EN = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-const MONTHS_MD = [
-  'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
-  'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie',
-];
-function monthsFor(language) {
-  if (language === 'en') return MONTHS_EN;
-  if (language === 'md') return MONTHS_MD;
-  return MONTHS;
-}
-
-const DEFAULT_ASSET_TAGS = ['BTCUSD', 'ETHUSD', 'XAUUSD', 'EURUSD', 'NDX100'];
-const INSTRUMENT_INFO = {
-  BTCUSD: { icon: '₿', label: 'Bitcoin / US Dollar' },
-  ETHUSD: { icon: 'Ξ', label: 'Ethereum / US Dollar' },
-  XAUUSD: { icon: '🥇', label: 'Gold / US Dollar' },
-  EURUSD: { icon: '€', label: 'Euro / US Dollar' },
-  NDX100: { icon: '📈', label: 'Nasdaq 100' },
-};
-
-const MONEY_CATEGORIES = [
-  { key: 'Зарплата', icon: Wallet },
-  { key: 'Продукты', icon: ShoppingCart },
-  { key: 'Жильё', icon: Home },
-  { key: 'Работа', icon: Briefcase },
-  { key: 'Покупки', icon: ShoppingBag },
-  { key: 'Подписки', icon: CreditCard },
-  { key: 'Сигареты', icon: MoreHorizontal },
-  { key: 'Фриланс', icon: Wallet },
-  { key: 'Другое', icon: MoreHorizontal },
-];
-const EXCHANGES = ['Bybit', 'Binance', 'OKX', 'MT4/MT5', 'cTrader'];
-const PLATFORMS = ['Manual', ...EXCHANGES];
-const RECENT_INSTRUMENTS_STORAGE_KEY = 'atj_recent_instruments';
-const CUSTOM_TAGS_STORAGE_KEY = 'atj_custom_instrument_tags';
-const DEPOSIT_SIZE_STORAGE_KEY = 'atj_deposit_size';
-const TRADER_MODE_STORAGE_KEY = 'atj_trader_mode';
-const MAX_CUSTOM_TAGS = 6;
-
-function getMoneyCategoryMeta(category) {
-  return MONEY_CATEGORIES.find((item) => item.key === category) || null;
-}
-
-// ---------------------------------------------------------------------------
-// Settings: language / currency / theme
-// Persisted locally per device (not per Supabase user) — same pattern as the
-// other small UI prefs already in this file (deposit size, trader mode).
-// ---------------------------------------------------------------------------
-const LANGUAGE_STORAGE_KEY = 'atj_language';
-const CURRENCY_STORAGE_KEY = 'atj_currency';
-const THEME_STORAGE_KEY = 'atj_theme';
-
-const LANGUAGES = [
-  { code: 'ru', label: 'RU' },
-  { code: 'en', label: 'EN' },
-  { code: 'md', label: 'MD' },
-];
-
-const CURRENCIES = [
-  { code: 'USD', symbol: '$', label: 'USD' },
-  { code: 'EUR', symbol: '€', label: 'EUR' },
-  { code: 'MDL', symbol: 'L', label: 'MDL' },
-  { code: 'RUB', symbol: '₽', label: 'RUB' },
-];
-
-function getCurrencyMeta(code) {
-  return CURRENCIES.find((c) => c.code === code) || CURRENCIES[0];
-}
-
-// Only the chrome that's always visible (header, day panel, settings, empty
-// states) is translated for now — deep modals (platform connect, CSV import,
-// AI analysis copy) stay in Russian for this pass and can be extended later
-// using the same `t()` helper and dictionary shape.
-const TRANSLATIONS = {
-  ru: {
-    titleMoney: 'Денежный календарь', titlePro: 'Трейдерский календарь',
-    signIn: 'Войти через Google', signOut: 'Выйти из аккаунта',
-    settings: 'Настройки', language: 'Язык', currency: 'Валюта', theme: 'Тема',
-    themeDark: 'Ночь', themeLight: 'День',
-    balanceOfDay: 'Баланс дня', overallResult: 'Общий результат дня',
-    analysis: 'Анализ', addRecord: 'Новая запись', addTrade: 'Добавить сделку',
-    operations: 'История', income: 'Доходы', expense: 'Расходы',
-    trades: 'Сделок', winrate: 'Winrate', noRecords: 'Пока нет записей за этот период.',
-    close: 'Закрыть',
-    record: 'Запись', editRecord: 'Редактировать запись', deleteRecord: 'Удалить запись',
-    saveRecord: 'Сохранить запись', recordNotePlaceholder: 'Заметка по записи (необязательно)',
-    recordFutureBlocked: 'Нельзя добавить запись на будущую дату',
-    myMoney: 'Мои деньги',
-    freePlan: 'FREE', history: 'История', filters: 'Фильтры', all: 'Все', entries: 'записей',
-    financialHistory: 'Финансовая история', resultForPeriod: 'Результат за выбранный период',
-  },
-  en: {
-    titleMoney: 'Money Calendar', titlePro: 'Trading Calendar',
-    signIn: 'Sign in with Google', signOut: 'Sign out',
-    settings: 'Settings', language: 'Language', currency: 'Currency', theme: 'Theme',
-    themeDark: 'Dark', themeLight: 'Light',
-    balanceOfDay: "Day's balance", overallResult: "Day's overall result",
-    analysis: 'Analysis', addRecord: 'New entry', addTrade: 'Add trade',
-    operations: 'History', income: 'Income', expense: 'Expenses',
-    trades: 'Trades', winrate: 'Winrate', noRecords: 'No entries for this period yet.',
-    close: 'Close',
-    record: 'Entry', editRecord: 'Edit entry', deleteRecord: 'Delete entry',
-    saveRecord: 'Save entry', recordNotePlaceholder: 'Note (optional)',
-    recordFutureBlocked: "Can't add an entry for a future date",
-    myMoney: 'My money',
-    freePlan: 'FREE', history: 'History', filters: 'Filters', all: 'All', entries: 'entries',
-    financialHistory: 'Financial history', resultForPeriod: 'Result for selected period',
-  },
-  md: {
-    titleMoney: 'Calendar de bani', titlePro: 'Calendar de tranzacții',
-    signIn: 'Autentificare cu Google', signOut: 'Ieșire din cont',
-    settings: 'Setări', language: 'Limbă', currency: 'Valută', theme: 'Temă',
-    themeDark: 'Noapte', themeLight: 'Zi',
-    balanceOfDay: 'Soldul zilei', overallResult: 'Rezultatul zilei',
-    analysis: 'Analiză', addRecord: 'Înregistrare nouă', addTrade: 'Adaugă tranzacție',
-    operations: 'Istoric', income: 'Venituri', expense: 'Cheltuieli',
-    trades: 'Tranzacții', winrate: 'Winrate', noRecords: 'Încă nu sunt înregistrări pentru această perioadă.',
-    close: 'Închide',
-    record: 'Înregistrare', editRecord: 'Editează înregistrarea', deleteRecord: 'Șterge înregistrarea',
-    saveRecord: 'Salvează înregistrarea', recordNotePlaceholder: 'Notă (opțional)',
-    recordFutureBlocked: 'Nu se poate adăuga o înregistrare pentru o dată viitoare',
-    myMoney: 'Banii mei',
-    freePlan: 'FREE', history: 'Istoric', filters: 'Filtre', all: 'Toate', entries: 'înregistrări',
-    financialHistory: 'Istoric financiar', resultForPeriod: 'Rezultat pentru perioada selectată',
-  },
-};
-
-function translate(language, key) {
-  return (TRANSLATIONS[language] && TRANSLATIONS[language][key]) || TRANSLATIONS.ru[key] || key;
-}
-
-function getValidUserId(user) {
-  const id = typeof user?.id === 'string' ? user.id.trim() : '';
-  // Supabase public.user_id is UUID. Treat anything else (including the
-  // literal string "undefined") as a guest session.
-  const uuidPattern =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidPattern.test(id) ? id : null;
-}
+import {
+  currentTimeHHMM,
+  keyFromDate,
+  parseDateKeyLocal,
+  addDays,
+  startOfWeekMonday,
+  formatDateLabel,
+  getPresetRange,
+} from './src/shared/lib/dateUtils';
+import {
+  textValue,
+  formatMoney,
+  formatSignedShort,
+  formatMoneyShort,
+  getValidUserId,
+} from './src/shared/lib/formatters';
+import {
+  PERIOD_PRESETS,
+  WEEKDAYS,
+  DEFAULT_ASSET_TAGS,
+  INSTRUMENT_INFO,
+  MONEY_CATEGORIES,
+  EXCHANGES,
+  PLATFORMS,
+  MAX_CUSTOM_TAGS,
+  RECENT_INSTRUMENTS_STORAGE_KEY,
+  CUSTOM_TAGS_STORAGE_KEY,
+  DEPOSIT_SIZE_STORAGE_KEY,
+  TRADER_MODE_STORAGE_KEY,
+  LANGUAGE_STORAGE_KEY,
+  CURRENCY_STORAGE_KEY,
+  THEME_STORAGE_KEY,
+  GUEST_TRADES_CACHE_KEY,
+  OFFLINE_QUEUE_KEY,
+  LANGUAGES,
+  CURRENCIES,
+  getTradesCacheKey,
+  getMoneyCategoryMeta,
+  getCurrencyMeta,
+} from './src/shared/config/constants';
+import {
+  MONTHS,
+  MONTHS_EN,
+  MONTHS_MD,
+  monthsFor,
+  TRANSLATIONS,
+  translate,
+} from './src/shared/i18n';
 
 export default function CalendarScreen() {
   const [today, setToday] = useState(() => new Date());
@@ -631,12 +439,6 @@ export default function CalendarScreen() {
   // --- Offline/local support ----------------------------------------------
   // Guest users work completely locally. Authenticated users get their own
   // browser cache, so different accounts on the same device never mix data.
-  const GUEST_TRADES_CACHE_KEY = 'money_calendar_guest_trades_cache';
-  const OFFLINE_QUEUE_KEY = 'atj_offline_queue';
-
-  function getTradesCacheKey(userId) {
-    return userId ? `money_calendar_trades_${userId}` : GUEST_TRADES_CACHE_KEY;
-  }
 
   function readCachedTrades(userId) {
     try {
@@ -2538,7 +2340,7 @@ export default function CalendarScreen() {
                             : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
                         }`}
                       >
-                        <Sync className={`h-3 w-3 ${syncingCtrader ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={`h-3 w-3 ${syncingCtrader ? 'animate-spin' : ''}`} />
                         {syncingCtrader ? 'Синхр...' : 'Синхронизировать'}
                       </button>
                     )}
