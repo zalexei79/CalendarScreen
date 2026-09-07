@@ -910,6 +910,7 @@ export default function CalendarScreen() {
   const historyTotal = useMemo(() => historyTrades.reduce((sum, t) => sum + t.pnl, 0), [historyTrades]);
   const historyIncome = useMemo(() => historyTrades.reduce((sum, t) => sum + (t.pnl > 0 ? t.pnl : 0), 0), [historyTrades]);
   const historyExpense = useMemo(() => historyTrades.reduce((sum, t) => sum + (t.pnl < 0 ? Math.abs(t.pnl) : 0), 0), [historyTrades]);
+  const historyCurrencySymbol = historyCurrency === 'ALL' ? '' : getCurrencyMeta(historyCurrency).symbol;
   const historyInsights = useMemo(() => {
     if (traderMode || historyExpense === 0) return [];
     const expensesByCategory = {};
@@ -1322,7 +1323,7 @@ export default function CalendarScreen() {
                     {historyCurrency === 'ALL' ? (
                       <p className={`text-sm ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>Итоги показаны отдельно по валютам</p>
                     ) : <div className={`font-display text-4xl sm:text-5xl font-semibold tracking-tight tabular-nums ${historyTotal >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {formatPnlDisplay(historyTotal)}
+                      {historyTotal >= 0 ? '+' : '-'}{historyCurrencySymbol}{formatMoney(historyTotal)}
                     </div>}
                     {historyCurrency !== 'ALL' && (
                     <div className="grid grid-cols-2 gap-3 mt-4">
@@ -1333,7 +1334,7 @@ export default function CalendarScreen() {
                           <TrendingUp className="h-3 w-3 text-emerald-500 shrink-0" />
                           <p className={`text-[11px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{t('income')}</p>
                         </div>
-                        <p className="font-data text-sm text-emerald-600 tabular-nums">+{currencySymbol}{formatMoney(historyIncome)}</p>
+                        <p className="font-data text-sm text-emerald-600 tabular-nums">+{historyCurrencySymbol}{formatMoney(historyIncome)}</p>
                       </div>
                       <div className={`rounded-xl border border-l-[3px] px-3 py-3 ${
                         isLight ? 'border-zinc-200 border-l-red-400 bg-zinc-50' : 'border-zinc-800/80 border-l-red-500/70 bg-zinc-900/70'
@@ -1342,12 +1343,11 @@ export default function CalendarScreen() {
                           <TrendingDown className="h-3 w-3 text-red-500 shrink-0" />
                           <p className={`text-[11px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{t('expense')}</p>
                         </div>
-                        <p className="font-data text-sm text-red-600 tabular-nums">−{currencySymbol}{formatMoney(historyExpense)}</p>
+                        <p className="font-data text-sm text-red-600 tabular-nums">−{historyCurrencySymbol}{formatMoney(historyExpense)}</p>
                       </div>
                     </div>
-                  </div>
-
                     )}
+                  </div>
 
                   {historyCurrency === 'ALL' && historyByCurrency.length > 0 && (
                     <div className="grid gap-2 mb-4 sm:grid-cols-2">
@@ -1696,7 +1696,7 @@ export default function CalendarScreen() {
                   }`}>
                     <span className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>Итог</span>
                     <span className={`font-data text-sm font-semibold ${historyTotal >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {formatPnlDisplay(historyTotal)}
+                      {historyTotal >= 0 ? '+' : '-'}{historyCurrencySymbol}{formatMoney(historyTotal)}
                     </span>
                   </div>
 
