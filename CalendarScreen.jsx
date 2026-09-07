@@ -1265,7 +1265,7 @@ export default function CalendarScreen() {
             </div>
 
             {/* Money / PRO + platform reveal — адаптивно, всегда видно, но на телефоне компактнее */}
-            <div className="ml-1.5 flex items-center basis-full sm:basis-auto justify-end sm:justify-start">
+            <div className="mt-1 flex w-full items-center justify-between sm:mt-0 sm:ml-1.5 sm:w-auto sm:basis-auto sm:justify-start">
               <button
                 type="button"
                 role="switch"
@@ -1308,7 +1308,7 @@ export default function CalendarScreen() {
               <div
                 className="overflow-hidden shrink-0 transition-[width,margin,opacity] duration-300 ease-out"
                 style={{
-                  width: traderMode ? '90px' : '0px',
+                  width: traderMode ? '88px' : '0px',
                   marginLeft: traderMode ? '6px' : '0px',
                   opacity: traderMode ? 1 : 0,
                 }}
@@ -1317,7 +1317,7 @@ export default function CalendarScreen() {
                 <button
                   onClick={openConnectModal}
                   tabIndex={traderMode ? 0 : -1}
-                  className="flex h-8 sm:h-9 w-[90px] sm:w-[108px] items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-400/10 px-1.5 sm:px-2 font-data text-[10px] sm:text-[11px] tracking-wide text-amber-400 whitespace-nowrap hover:bg-amber-400/15 transition-colors"
+                  className="flex h-8 sm:h-9 w-[88px] sm:w-[108px] items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-400/10 px-1 sm:px-2 font-data text-[10px] sm:text-[11px] tracking-wide text-amber-400 whitespace-nowrap hover:bg-amber-400/15 transition-colors"
                 >
                   <Link2 className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />
                   <span className="hidden xs:inline">Площадка</span>
@@ -1384,7 +1384,7 @@ export default function CalendarScreen() {
           ))}
         </div>
         <div
-          className="calendar-days-grid flex-1 grid grid-cols-7 gap-1 sm:gap-2"
+          className="calendar-days-grid grid flex-none grid-cols-7 auto-rows-[62px] gap-1 sm:flex-1 sm:auto-rows-auto sm:gap-2"
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedKey(null); }}
         >
           {cells.map((cell, cellIndex) => {
@@ -1392,19 +1392,26 @@ export default function CalendarScreen() {
             const isPreviousMonth = !cell.inMonth && cell.date < new Date(year, month, 1);
             const hasTrades = tradesForDayFiltered(cell.key).length > 0;
             const pnl = totalPnlForDay(cell.key);
-            const isProfit = pnl >= 0;
+            const pnlTone = pnl > 0 ? 'profit' : pnl < 0 ? 'loss' : 'neutral';
             const pnlText = formatPnlDisplay(pnl, true);
             const intensity = monthMaxAbsPnl > 0 ? Math.min(Math.abs(pnl) / monthMaxAbsPnl, 1) : 0;
             const isTodayCell = cell.isToday;
             // Для невыбранных и не сегодняшних дней снижаем яркость на 35%
             const effectiveIntensity = (isTodayCell || isSelected) ? intensity : intensity * 0.65;
-            const glowRgb = isProfit ? '16,185,129' : '239,68,68';
+            const glowRgb = pnlTone === 'profit' ? '16,185,129' : '239,68,68';
             const heatmapStyle =
               cell.inMonth && hasTrades && !isSelected
                 ? {
                     backgroundColor: `rgba(${glowRgb},${(0.10 + effectiveIntensity * 0.22).toFixed(2)})`,
                     borderColor: `rgba(${glowRgb},${(0.35 + effectiveIntensity * 0.5).toFixed(2)})`,
                     boxShadow: `0 0 ${Math.round(6 + effectiveIntensity * 22)}px rgba(${glowRgb},${(0.25 + effectiveIntensity * 0.45).toFixed(2)})`,
+                    animation: 'cellGlowIn 0.35s ease-out both',
+                    animationDelay: `${cellIndex * 18}ms`,
+                  }
+                : !cell.inMonth && hasTrades && !isSelected
+                ? {
+                    backgroundColor: `rgba(${glowRgb},0.05)`,
+                    borderColor: `rgba(${glowRgb},0.16)`,
                     animation: 'cellGlowIn 0.35s ease-out both',
                     animationDelay: `${cellIndex * 18}ms`,
                   }
@@ -1416,7 +1423,7 @@ export default function CalendarScreen() {
                 style={heatmapStyle}
                 className={[
                   'relative rounded-md border flex flex-col justify-between text-left transition-all duration-150',
-                  'min-h-[76px] sm:min-h-[110px] p-2.5 sm:p-4',
+                  'min-h-[62px] sm:min-h-[110px] p-1.5 sm:p-4',
                   isLight
                     ? (cell.inMonth ? (hasTrades ? 'bg-white' : 'bg-zinc-50') : 'bg-zinc-100')
                     : (cell.inMonth ? (hasTrades ? 'bg-zinc-900' : 'bg-zinc-900/20') : 'bg-zinc-950'),
@@ -1438,8 +1445,12 @@ export default function CalendarScreen() {
                 <span className={`font-data text-sm sm:text-base ${cell.inMonth ? (isLight ? 'text-zinc-500' : 'text-zinc-400') : (isLight ? 'text-zinc-300' : 'text-zinc-700')}`}>
                   {cell.date.getDate()}
                 </span>
-                {cell.inMonth && hasTrades && (
-                  <span className={`font-data text-[12px] sm:text-lg font-medium whitespace-nowrap ${isProfit ? 'text-emerald-500' : 'text-red-500'}`}>
+                {hasTrades && (
+                  <span className={`font-data text-[11px] sm:text-lg font-medium whitespace-nowrap ${
+                    pnlTone === 'profit' ? (cell.inMonth ? 'text-emerald-500' : 'text-emerald-500/70') :
+                    pnlTone === 'loss' ? (cell.inMonth ? 'text-red-500' : 'text-red-500/70') :
+                    cell.inMonth ? 'text-zinc-500' : 'text-zinc-500/70'
+                  }`}>
                     {pnlText}
                   </span>
                 )}
@@ -1849,23 +1860,26 @@ export default function CalendarScreen() {
                     </div>
                   )}
 
-                  <div className="flex gap-2 mt-4">
-                    <button
+                  <div className="grid grid-cols-2 gap-2 mt-4">
+                    <div>
+                      <button
                       onClick={handleExportCsv}
                       disabled={historyTrades.length === 0}
-                      className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                      className={`w-full flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                         isLight
                           ? 'border-zinc-300 bg-white text-zinc-600 hover:text-zinc-900 hover:border-zinc-400'
                           : 'border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600'
                       }`}
                     >
                       <Download className="h-3.5 w-3.5" />
-                      Экспорт CSV
+                      Скачать CSV
                     </button>
+                      <p className={`mt-1 px-1 text-[10px] leading-tight ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>Скачает операции по выбранным фильтрам</p>
+                    </div>
                     <button
                       onClick={handleClearHistory}
                       className={[
-                        'flex-1 rounded-xl border px-3 py-2.5 text-xs transition-colors',
+                        'h-fit rounded-xl border px-3 py-2.5 text-xs transition-colors',
                         confirmingClear
                           ? 'border-red-500 bg-red-500/10 text-red-600'
                           : isLight
