@@ -381,7 +381,6 @@ export default function CalendarScreen() {
   const [dateTo, setDateTo] = useState(initialRange.to);
   const [platformFilter, setPlatformFilter] = useState('ALL');
   const [calendarTypeFilter, setCalendarTypeFilter] = useState('all');
-  const [calendarFiltersOpen, setCalendarFiltersOpen] = useState(false);
   const [monthMenuOpen, setMonthMenuOpen] = useState(false);
   const [yearMenuOpen, setYearMenuOpen] = useState(false);
 
@@ -1158,41 +1157,14 @@ export default function CalendarScreen() {
         yearMenuRef={yearMenuRef} yearMenuOpen={yearMenuOpen} setYearMenuOpen={setYearMenuOpen}
         month={month} year={year} today={today} setViewMonth={setViewMonth} setViewYear={setViewYear}
         setSelectedKey={setSelectedKey} setTraderMode={setTraderMode} setPlatformFilter={setPlatformFilter}
+        platformFilter={platformFilter} platformOptions={PLATFORMS}
+        calendarTypeFilter={calendarTypeFilter} setCalendarTypeFilter={setCalendarTypeFilter}
         openConnectModal={openConnectModal} ctraderConnected={ctraderConnected}
         installInfoRef={installInfoRef} handleInstallClick={handleInstallClick}
         pendingSyncCount={pendingSyncCount} installInfoOpen={installInfoOpen} installInstructions={installInstructions}
       />
 
-      {/* CALENDAR — filters are tucked into a compact PRO drawer */}
-      {!traderMode && (
-        <div className={`relative z-20 flex justify-center border-b px-3 py-2 ${isLight ? 'border-zinc-200 bg-zinc-100/70' : 'border-zinc-800 bg-zinc-950/40'}`}>
-          <div className="relative">
-            <button
-              onClick={() => setCalendarFiltersOpen((v) => !v)}
-              className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold tracking-wide transition-all ${calendarFiltersOpen ? 'border-amber-400/50 bg-amber-400/10 text-amber-600' : isLight ? 'border-zinc-300 bg-white text-zinc-600 hover:border-amber-400/40' : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-amber-400/30'}`}
-            >
-              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-              PRO
-            </button>
-            {calendarFiltersOpen && (
-              <div className={`absolute left-1/2 top-full mt-2 -translate-x-1/2 w-max rounded-2xl border p-2 shadow-2xl ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'}`}>
-                <p className={`px-2 pb-2 text-[10px] uppercase tracking-[0.18em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>Показать в календаре</p>
-                <div className={`inline-flex rounded-xl border p-1 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900'}`}>
-                  {[
-                    { key: 'all', label: 'Все' },
-                    { key: 'income', label: 'Доходы' },
-                    { key: 'expense', label: 'Расходы' },
-                  ].map((option) => (
-                    <button key={option.key} onClick={() => { setCalendarTypeFilter(option.key); setCalendarFiltersOpen(false); }} className={`rounded-lg px-3 py-2 text-xs font-medium transition-colors ${calendarTypeFilter === option.key ? 'bg-amber-400/15 text-amber-600 shadow-sm' : isLight ? 'text-zinc-500 hover:text-zinc-900' : 'text-zinc-500 hover:text-zinc-100'}`}>
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* PRO controls live in Header: one clean control center, no floating duplicate block. */}
       <CalendarGrid
         cells={cells} selectedKey={selectedKey} isLight={isLight} monthMaxAbsPnl={monthMaxAbsPnl}
         tradesForDayFiltered={tradesForDayFiltered} totalPnlForDay={totalPnlForDay}

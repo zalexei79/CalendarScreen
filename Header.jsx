@@ -13,6 +13,7 @@ export default function Header({
   goToPrevMonth, goToNextMonth, monthMenuRef, monthMenuOpen, setMonthMenuOpen,
   yearMenuRef, yearMenuOpen, setYearMenuOpen, month, year, today,
   setViewMonth, setViewYear, setSelectedKey, setTraderMode, setPlatformFilter,
+  platformFilter, platformOptions = [], calendarTypeFilter, setCalendarTypeFilter,
   openConnectModal, ctraderConnected, installInfoRef, handleInstallClick,
   pendingSyncCount, installInfoOpen, installInstructions,
 }) {
@@ -345,6 +346,62 @@ export default function Header({
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* One clean PRO control center — expands only with the FREE/PRO toggle. */}
+      <div
+        className={`grid overflow-hidden transition-[grid-template-rows,opacity,margin] duration-300 ease-out ${
+          traderMode ? 'grid-rows-[1fr] opacity-100 mt-1 sm:mt-2' : 'grid-rows-[0fr] opacity-0 mt-0'
+        }`}
+        aria-hidden={!traderMode}
+      >
+        <div className="min-h-0">
+          <div className={`flex flex-col gap-2 rounded-xl border px-2.5 py-2 sm:flex-row sm:items-center sm:justify-between ${isLight ? 'border-amber-300/60 bg-amber-50/70' : 'border-amber-400/20 bg-amber-400/[0.035]'}`}>
+            <div className="flex min-w-0 items-center gap-2">
+              <span className={`shrink-0 font-data text-[9px] uppercase tracking-[0.16em] ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>Площадки</span>
+              <div className={`flex min-w-0 items-center gap-1 overflow-x-auto rounded-lg border p-1 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/70'}`}>
+                {['ALL', ...platformOptions].map((platform) => (
+                  <button
+                    key={platform}
+                    type="button"
+                    onClick={() => setPlatformFilter(platform)}
+                    className={`shrink-0 rounded-md px-2.5 py-1.5 font-data text-[10px] transition-all ${
+                      platformFilter === platform
+                        ? 'bg-amber-400/15 text-amber-500 shadow-sm'
+                        : isLight ? 'text-zinc-500 hover:text-zinc-900' : 'text-zinc-600 hover:text-zinc-200'
+                    }`}
+                  >
+                    {platform === 'ALL' ? 'Все' : platform}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex min-w-0 items-center gap-2 sm:justify-end">
+              <span className={`shrink-0 font-data text-[9px] uppercase tracking-[0.16em] ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>Показать в календаре</span>
+              <div className={`flex items-center gap-1 rounded-lg border p-1 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/70'}`}>
+                {[
+                  { key: 'all', label: 'Все' },
+                  { key: 'income', label: '+ Доходы' },
+                  { key: 'expense', label: '− Расходы' },
+                ].map((option) => (
+                  <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => setCalendarTypeFilter(option.key)}
+                    className={`whitespace-nowrap rounded-md px-2.5 py-1.5 font-data text-[10px] transition-all ${
+                      calendarTypeFilter === option.key
+                        ? 'bg-amber-400/15 text-amber-500 shadow-sm'
+                        : isLight ? 'text-zinc-500 hover:text-zinc-900' : 'text-zinc-600 hover:text-zinc-200'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
