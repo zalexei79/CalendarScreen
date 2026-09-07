@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  ChevronLeft, ChevronRight, Link2, LogIn, LogOut, Download,
+  ChevronLeft, ChevronRight, Link2, LogIn, LogOut, Download, Smartphone, Monitor, Wifi, Cloud,
   Settings, Sun, Moon, Languages, CircleDollarSign,
 } from 'lucide-react';
 import { LANGUAGES, CURRENCIES } from './src/shared/config/constants';
@@ -228,6 +228,32 @@ export default function Header({
             <ChevronRight className="h-4 w-4" />
           </button>
     
+          {/* Account */}
+          <div className="ml-2 hidden sm:flex items-center rounded-md border border-zinc-800 bg-zinc-900 font-data text-[10px] tracking-wide overflow-hidden">
+            {user ? (
+              <div className="flex items-center gap-1 pl-2 pr-1 py-1">
+                <span className="max-w-[80px] truncate text-zinc-300">
+                  {user.user_metadata?.nickname || user.user_metadata?.full_name || user.email}
+                </span>
+                <button
+                  onClick={handleGoogleLogout}
+                  title={t('signOut')}
+                  className="flex items-center gap-1 text-zinc-500 hover:text-red-400 transition-colors border-l border-zinc-800 pl-1.5 ml-0.5"
+                >
+                  <LogOut className="h-3 w-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleGoogleLogin}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-zinc-400 hover:text-amber-400 transition-colors"
+              >
+                <LogIn className="h-3.5 w-3.5" />
+                {t('signIn')}
+              </button>
+            )}
+          </div>
+    
           {/* Money / PRO + platform reveal — адаптивно, всегда видно, но на телефоне компактнее */}
           <div className="mt-1 flex w-full items-center justify-between sm:mt-0 sm:ml-1.5 sm:w-auto sm:basis-auto sm:justify-start">
             <button
@@ -236,14 +262,14 @@ export default function Header({
               aria-checked={traderMode}
               onClick={() => setTraderMode(v => { const next = !v; if (!next) setPlatformFilter('ALL'); return next; })}
               title={traderMode ? 'PRO: LONG/SHORT, Take Profit и Stop Loss' : 'Денежный: доходы и расходы без трейдерских полей'}
-              className="relative h-8 sm:h-9 w-[80px] sm:w-[104px] shrink-0 rounded-full border border-zinc-800 bg-zinc-900 p-0.5 font-data text-[8px] sm:text-[9px] tracking-wider text-zinc-500 shadow-inner focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60"
+              className="relative h-8 sm:h-9 w-[88px] sm:w-[112px] shrink-0 rounded-full border border-zinc-800/90 bg-zinc-950/80 p-0.5 font-data text-[8px] sm:text-[9px] tracking-[0.14em] text-zinc-500 shadow-[inset_0_1px_0_rgba(255,255,255,.03),0_8px_24px_rgba(0,0,0,.16)] transition-all duration-300 hover:border-zinc-700 focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60"
             >
               <span
                 aria-hidden="true"
                 className={[
-                  'absolute top-0.5 bottom-0.5 left-0.5 w-[38px] sm:w-[50px] rounded-full border transition-all duration-300 ease-out',
+                  'absolute top-0.5 bottom-0.5 left-0.5 w-[42px] sm:w-[54px] rounded-full border transition-all duration-300 ease-out',
                   traderMode
-                    ? 'translate-x-[38px] sm:translate-x-[50px] border-amber-400/50 bg-amber-400/10 shadow-[0_0_14px_rgba(251,191,36,0.08)]'
+                    ? 'translate-x-[42px] sm:translate-x-[54px] border-amber-400/50 bg-gradient-to-br from-amber-400/20 to-amber-500/5 shadow-[0_0_18px_rgba(251,191,36,0.12)]'
                     : isLight
                     ? 'translate-x-0 border-zinc-300 bg-zinc-200'
                     : 'translate-x-0 border-zinc-700 bg-zinc-800/90',
@@ -254,7 +280,7 @@ export default function Header({
                   'relative z-10 flex h-full items-center justify-center transition-colors duration-300',
                   !traderMode ? 'text-zinc-100' : 'text-zinc-600',
                 ].join(' ')}
-                style={{ width: '38px' }}
+                style={{ width: '42px' }}
               >
                 {t('freePlan')}
               </span>
@@ -263,7 +289,7 @@ export default function Header({
                   'absolute right-0.5 top-0.5 bottom-0.5 z-10 flex items-center justify-center transition-colors duration-300',
                   traderMode ? 'text-amber-400' : 'text-zinc-600',
                 ].join(' ')}
-                style={{ width: '38px' }}
+                style={{ width: '42px' }}
               >
                 PRO
               </span>
@@ -291,29 +317,32 @@ export default function Header({
           <div className="relative ml-1.5 hidden sm:block" ref={installInfoRef}>
             <button
               onClick={handleInstallClick}
-              title="Установить приложение"
-              className="flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1 text-zinc-400 hover:text-amber-400 hover:border-zinc-600 transition-colors"
+              title="Скачать / установить приложение"
+              className="group flex items-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900/70 px-2.5 py-1.5 text-zinc-400 shadow-sm transition-all hover:-translate-y-px hover:border-amber-400/35 hover:bg-zinc-900 hover:text-amber-300"
             >
-              <Download className="h-3.5 w-3.5" />
-              {pendingSyncCount > 0 && (
-                <span
-                  title={`${pendingSyncCount} сделок ждут синхронизации`}
-                  className="h-1.5 w-1.5 rounded-full bg-amber-400"
-                />
-              )}
+              <span className="flex h-5 w-5 items-center justify-center rounded-md bg-zinc-800 text-amber-400 transition-colors group-hover:bg-amber-400/10"><Download className="h-3 w-3" /></span>
+              <span className="font-data text-[9px] tracking-[0.12em] uppercase">Приложение</span>
+              {pendingSyncCount > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />}
             </button>
-    
+
             {installInfoOpen && (
-              <div className="absolute right-0 top-full mt-2 w-64 rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl z-30 p-3">
-                <p className="font-data text-[10px] tracking-widest text-amber-400 uppercase mb-1.5">Установить как приложение</p>
-                <p className="text-xs text-zinc-400 leading-relaxed">{installInstructions}</p>
-                {pendingSyncCount > 0 && (
-                  <p className="text-xs text-amber-400 mt-2 pt-2 border-t border-zinc-800">
-                    {pendingSyncCount} {traderMode
-                      ? (pendingSyncCount === 1 ? 'сделка' : 'сделок')
-                      : (pendingSyncCount === 1 ? 'запись' : 'записей')} сохранены офлайн и досинхронизируются, когда появится интернет.
-                  </p>
-                )}
+              <div className="absolute right-0 top-full mt-3 w-[320px] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950/95 shadow-2xl backdrop-blur-xl z-30">
+                <div className="border-b border-zinc-800 bg-gradient-to-r from-amber-400/10 via-transparent to-transparent px-4 py-3.5">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/10 text-amber-400"><Download className="h-4 w-4" /></div>
+                    <div><p className="font-data text-[10px] tracking-[0.2em] text-amber-400 uppercase">AI Trade Journal</p><p className="mt-0.5 text-sm font-semibold text-zinc-100">Всегда под рукой</p></div>
+                  </div>
+                </div>
+                <div className="space-y-3 px-4 py-3.5">
+                  <p className="text-xs leading-relaxed text-zinc-400">Установите журнал как приложение — быстрый запуск, полноэкранный режим и доступ к данным даже при нестабильном интернете.</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-2"><Smartphone className="mb-1 h-3.5 w-3.5 text-amber-400"/><p className="text-[10px] text-zinc-300">Mobile</p></div>
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-2"><Monitor className="mb-1 h-3.5 w-3.5 text-amber-400"/><p className="text-[10px] text-zinc-300">Desktop</p></div>
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-2"><Cloud className="mb-1 h-3.5 w-3.5 text-amber-400"/><p className="text-[10px] text-zinc-300">Sync</p></div>
+                  </div>
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-2.5"><div className="flex gap-2"><Wifi className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400"/><p className="text-[11px] leading-relaxed text-zinc-400">{installInstructions}</p></div></div>
+                  {pendingSyncCount > 0 && <p className="border-t border-zinc-800 pt-2.5 text-[11px] leading-relaxed text-amber-300">{pendingSyncCount} {traderMode ? (pendingSyncCount === 1 ? 'сделка' : 'сделок') : (pendingSyncCount === 1 ? 'запись' : 'записей')} ждут синхронизации.</p>}
+                </div>
               </div>
             )}
           </div>
