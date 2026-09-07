@@ -995,6 +995,9 @@ export default function CalendarScreen() {
     setHistoryOpen(true);
     setHistoryFiltersOpen(false);
     setConfirmingClear(false);
+    // PRO history should immediately demonstrate its value — no hidden analytics.
+    setHistoryAnalysisOpen(true);
+    setHistoryAnalysisTab('overview');
     requestAnimationFrame(() => setHistoryVisible(true));
   }
 
@@ -1336,7 +1339,7 @@ export default function CalendarScreen() {
           onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) closeHistory(); }}
         >
           <div
-            className={`relative w-full ${traderMode ? 'max-w-md' : 'max-w-lg'} max-h-[86vh] overflow-hidden rounded-2xl border shadow-2xl transition-all duration-200 ${
+            className={`relative w-full ${traderMode ? 'max-w-2xl' : 'max-w-lg'} max-h-[90dvh] overflow-hidden rounded-2xl border shadow-2xl transition-all duration-200 ${
               historyVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
             } ${
               isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
@@ -1364,7 +1367,7 @@ export default function CalendarScreen() {
               </button>
             </div>
 
-            <div className={`overflow-y-auto px-5 sm:px-6 py-5 max-h-[calc(86vh-80px)] ${isLight ? 'bg-zinc-50/50' : ''}`}>
+            <div className={`overflow-y-auto px-5 sm:px-6 py-5 max-h-[calc(90dvh-80px)] ${isLight ? 'bg-zinc-50/50' : ''}`}>
               <button
                 onClick={() => setHistoryAnalysisOpen((v) => !v)}
                 disabled={historyTrades.length === 0}
@@ -1386,6 +1389,69 @@ export default function CalendarScreen() {
                   <ChevronDown className={`h-4 w-4 text-amber-500 transition-transform duration-300 ${historyAnalysisOpen ? 'rotate-180' : ''}`} />
                 </div>
               </button>
+              {traderMode && historyAnalysisOpen && (
+                <section className={`relative overflow-hidden mb-5 rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-amber-300/70 bg-white shadow-sm' : 'border-amber-400/20 bg-gradient-to-br from-amber-400/[0.08] via-zinc-950 to-zinc-950 shadow-[0_18px_60px_rgba(0,0,0,.28)]'}`}>
+                  <div className="absolute -right-8 -top-10 select-none pointer-events-none font-display text-8xl font-bold tracking-tighter text-amber-400/[0.045]">PRO</div>
+                  <div className="relative flex items-start justify-between gap-4 mb-5">
+                    <div>
+                      <p className="font-data text-[10px] uppercase tracking-[0.24em] text-amber-500">PRO · Финансовая картина</p>
+                      <h3 className={`mt-1 text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Деньги в движении</h3>
+                      <p className="mt-1 text-xs text-zinc-500">Сразу видно результат, динамику и главные источники движения денег.</p>
+                    </div>
+                    <Sparkles className="h-5 w-5 shrink-0 text-amber-500" />
+                  </div>
+
+                  {historyCurrency === 'ALL' ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
+                      {historyByCurrency.length ? historyByCurrency.map(([code, stats]) => {
+                        const meta = getCurrencyMeta(code);
+                        return <button key={code} onClick={() => setHistoryCurrency(code)} className={`rounded-xl border p-3 text-left transition-all hover:-translate-y-0.5 ${isLight ? 'border-zinc-200 bg-zinc-50 hover:border-amber-400/40' : 'border-zinc-800 bg-black/20 hover:border-amber-400/35'}`}>
+                          <span className="text-[10px] text-zinc-500">{code}</span>
+                          <span className={`mt-1 block font-data text-base font-semibold tabular-nums ${stats.balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.balance >= 0 ? '+' : '-'}{meta.symbol}{formatMoney(stats.balance)}</span>
+                          <span className="mt-1 block text-[10px] text-zinc-500">{stats.count} операций</span>
+                        </button>;
+                      }) : <p className="col-span-full py-8 text-center text-sm text-zinc-500">За выбранный период пока нет данных.</p>}
+                    </div>
+                  ) : (
+                    <>
+                      <div className={`mb-5 rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-white/5 bg-black/20'}`}>
+                        <div className="flex items-center justify-between gap-3">
+                          <div><p className="text-[10px] uppercase tracking-wider text-zinc-500">Результат за период</p><p className={`mt-1 font-display text-3xl sm:text-4xl font-semibold tracking-tight tabular-nums ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{historyTotal >= 0 ? '+' : '-'}{historyCurrencySymbol}{formatMoney(historyTotal)}</p></div>
+                          <div className="text-right"><p className="text-[10px] text-zinc-500">{historyTrades.length} операций</p><p className="mt-1 text-xs text-amber-500">PRO insight</p></div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 mb-5">
+                        <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/50'}`}><p className="text-[10px] text-zinc-500">Доходы</p><p className="mt-1 font-data text-xs sm:text-sm text-emerald-500 truncate">+{historyCurrencySymbol}{formatMoney(historyIncome)}</p></div>
+                        <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/50'}`}><p className="text-[10px] text-zinc-500">Расходы</p><p className="mt-1 font-data text-xs sm:text-sm text-red-500 truncate">−{historyCurrencySymbol}{formatMoney(historyExpense)}</p></div>
+                        <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/50'}`}><p className="text-[10px] text-zinc-500">Баланс</p><p className={`mt-1 font-data text-xs sm:text-sm truncate ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{historyTotal >= 0 ? '+' : '-'}{historyCurrencySymbol}{formatMoney(historyTotal)}</p></div>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="mb-4 flex gap-1 overflow-x-auto pb-1">
+                    {[['overview','Обзор'],['income','Откуда деньги'],['expense','Куда уходят']].map(([key,label]) => <button key={key} onClick={() => setHistoryAnalysisTab(key)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${historyAnalysisTab === key ? 'bg-amber-400/15 text-amber-500 ring-1 ring-amber-400/20' : isLight ? 'text-zinc-500 hover:bg-zinc-100' : 'text-zinc-500 hover:bg-white/5'}`}>{label}</button>)}
+                  </div>
+
+                  {historyAnalysisTab === 'overview' && (
+                    <div>
+                      <div className={`rounded-xl border p-3 mb-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}>
+                        <div className="flex items-center justify-between mb-3"><span className="text-xs font-medium">Динамика периода</span><span className="text-[10px] text-zinc-500">Нажми на столбец</span></div>
+                        <div className="flex items-end gap-1 h-24">
+                          {historyAnalysis.dailyEntries.length ? historyAnalysis.dailyEntries.slice(-18).map(([date, stats]) => <button key={date} title={`${date}: +${formatMoney(stats.income)} / -${formatMoney(stats.expense)}`} className="group relative flex-1 min-w-[10px] h-full flex items-end justify-center gap-[2px]" onClick={() => { setHistoryFiltersOpen(true); }}><span className="w-full rounded-t-sm bg-emerald-500/75 transition-all group-hover:bg-emerald-400" style={{height:`${Math.max(3,(stats.income/historyAnalysis.maxDaily)*100)}%`}} /><span className="absolute bottom-0 w-full rounded-t-sm bg-red-500/65 transition-all group-hover:bg-red-400" style={{height:`${Math.max(2,(stats.expense/historyAnalysis.maxDaily)*55)}%`}} /></button>) : <span className="m-auto text-xs text-zinc-500">Недостаточно данных</span>}
+                        </div>
+                      </div>
+                      <div className="grid sm:grid-cols-3 gap-2">
+                        <div className={`rounded-xl p-3 ${isLight ? 'bg-emerald-50' : 'bg-emerald-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">Главный доход</p><p className="mt-1 text-xs font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p></div>
+                        <div className={`rounded-xl p-3 ${isLight ? 'bg-red-50' : 'bg-red-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">Главный расход</p><p className="mt-1 text-xs font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p></div>
+                        <div className={`rounded-xl p-3 ${isLight ? 'bg-amber-50' : 'bg-amber-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">Финансовый вывод</p><p className="mt-1 text-xs font-semibold">{historyIncome > historyExpense ? 'Доходы выше расходов' : historyExpense > 0 ? 'Расходы требуют внимания' : 'Данных пока мало'}</p></div>
+                      </div>
+                    </div>
+                  )}
+                  {historyAnalysisTab === 'income' && <div className="space-y-3">{historyAnalysis.incomeSources.length ? historyAnalysis.incomeSources.slice(0,6).map(([name,value]) => <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-emerald-500">+{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{width:`${Math.max(5,(value/(historyIncome||1))*100)}%`}} /></div></div>) : <p className="py-5 text-center text-sm text-zinc-500">Нет доходов за этот период</p>}</div>}
+                  {historyAnalysisTab === 'expense' && <div className="space-y-3">{historyAnalysis.expenseCategories.length ? historyAnalysis.expenseCategories.slice(0,6).map(([name,value]) => <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-red-500">−{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-red-500" style={{width:`${Math.max(5,(value/(historyExpense||1))*100)}%`}} /></div></div>) : <p className="py-5 text-center text-sm text-zinc-500">Нет расходов за этот период</p>}</div>}
+                </section>
+              )}
+
               {!traderMode ? (
                 <>
                   {historyAnalysisOpen && (
