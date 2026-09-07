@@ -499,6 +499,34 @@ export default function CalendarScreen() {
     return { count, pnl, winrate };
   }, [periodTrades]);
 
+
+  // Day sheet: show EVERY record saved for the selected day, regardless of
+  // currency. The summary remains intentionally tied to the interface
+  // currency, so USD/MDL/EUR are never added together.
+  const selectedDayTrades = useMemo(() => {
+    if (!selectedKey) return [];
+    return (manualTrades[selectedKey] || [])
+      .map((t) => ({ ...t, dateKey: selectedKey }))
+      .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
+      .filter((t) => calendarTypeFilter === 'all' || (calendarTypeFilter === 'income' ? t.pnl >= 0 : t.pnl < 0))
+      .sort((a, b) => b.time.localeCompare(a.time));
+  }, [manualTrades, selectedKey, platformFilter, calendarTypeFilter]);
+
+  const selectedDayCurrencyTrades = useMemo(
+    () => selectedDayTrades.filter((t) => (t.currency || 'USD') === currency),
+    [selectedDayTrades, currency]
+  );
+
+  const selectedDayCurrencyStats = useMemo(() => {
+    const count = selectedDayCurrencyTrades.length;
+    const pnl = selectedDayCurrencyTrades.reduce((sum, t) => sum + t.pnl, 0);
+    const wins = selectedDayCurrencyTrades.filter((t) => t.pnl >= 0).length;
+    const income = selectedDayCurrencyTrades.reduce((sum, t) => sum + (t.pnl > 0 ? t.pnl : 0), 0);
+    const expense = selectedDayCurrencyTrades.reduce((sum, t) => sum + (t.pnl < 0 ? Math.abs(t.pnl) : 0), 0);
+    const winrate = count ? Math.round((wins / count) * 100) : 0;
+    return { count, pnl, wins, income, expense, winrate };
+  }, [selectedDayCurrencyTrades]);
+
   // free, rule-based analysis — no AI call, just arithmetic. Has its own
   // period, defaulting to whatever's currently selected when opened.
   const [analysisFrom, setAnalysisFrom] = useState(effectiveFrom);
@@ -1114,18 +1142,18 @@ export default function CalendarScreen() {
               <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">{selectedKey}</p>
               <p className="text-[11px] text-zinc-500 mb-0.5">{traderMode ? t('overallResult') : t('balanceOfDay')}</p>
               <div className="flex items-center gap-2">
-                {periodStats.count > 0 &&
-                  (periodStats.pnl >= 0 ? (
+                {selectedDayCurrencyStats.count > 0 &&
+                  (selectedDayCurrencyStats.pnl >= 0 ? (
                     <TrendingUp className="h-4 w-4 text-emerald-400" />
                   ) : (
                     <TrendingDown className="h-4 w-4 text-red-400" />
                   ))}
                 <span
                   className={`font-data text-lg font-semibold ${
-                    periodStats.count === 0 ? 'text-zinc-600' : periodStats.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'
+                    selectedDayCurrencyStats.count === 0 ? 'text-zinc-600' : selectedDayCurrencyStats.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'
                   }`}
                 >
-                  {periodStats.count === 0 ? '—' : `${periodStats.pnl >= 0 ? '+' : '-'}${currencySymbol}${formatMoney(periodStats.pnl)}`}
+                  {selectedDayCurrencyStats.count === 0 ? '—' : `${selectedDayCurrencyStats.pnl >= 0 ? '+' : '-'}${currencySymbol}${formatMoney(selectedDayCurrencyStats.pnl)}`}
                 </span>
               </div>
             </div>
@@ -1134,7 +1162,7 @@ export default function CalendarScreen() {
           <div className={`inline-flex items-center self-start rounded-md border overflow-hidden ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-700 bg-zinc-900'}`}>
             <button
               onClick={openAnalysis}
-              disabled={periodStats.count === 0}
+              disabled={selectedDayCurrencyStats.count === 0}
               className="flex items-center gap-1.5 px-3 py-2 text-sm text-amber-500 hover:bg-amber-400/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <Sparkles className="h-4 w-4" />
@@ -1154,32 +1182,32 @@ export default function CalendarScreen() {
 
           {traderMode ? (
             <div className={`flex items-center gap-2 rounded-md border px-4 py-2 font-data text-xs ${isLight ? 'border-zinc-300 bg-zinc-50 text-zinc-500' : 'border-zinc-800 bg-zinc-900 text-zinc-400'}`}>
-              <span>{t('trades')}: <span className={isLight ? 'text-zinc-900 font-medium' : 'text-zinc-100 font-medium'}>{periodStats.count}</span></span>
+              <span>{t('trades')}: <span className={isLight ? 'text-zinc-900 font-medium' : 'text-zinc-100 font-medium'}>{selectedDayTrades.length}</span></span>
               <span className={isLight ? 'text-zinc-300' : 'text-zinc-700'}>•</span>
-              <span>PnL: <span className={`font-medium ${periodStats.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{periodStats.pnl >= 0 ? '+' : '-'}{currencySymbol}{formatMoney(periodStats.pnl)}</span></span>
+              <span>PnL: <span className={`font-medium ${selectedDayCurrencyStats.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{selectedDayCurrencyStats.pnl >= 0 ? '+' : '-'}{currencySymbol}{formatMoney(selectedDayCurrencyStats.pnl)}</span></span>
               <span className={isLight ? 'text-zinc-300' : 'text-zinc-700'}>•</span>
-              <span>{t('winrate')}: <span className={isLight ? 'text-zinc-900 font-medium' : 'text-zinc-100 font-medium'}>{periodStats.winrate}%</span></span>
+              <span>{t('winrate')}: <span className={isLight ? 'text-zinc-900 font-medium' : 'text-zinc-100 font-medium'}>{selectedDayCurrencyStats.winrate}%</span></span>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-2">
               <div className={`rounded-lg border px-3 py-2.5 ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-900'}`}>
                 <p className={`text-[10px] uppercase tracking-wider mb-1 ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('operations')}</p>
-                <p className={`font-data text-sm ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{periodStats.count}</p>
+                <p className={`font-data text-sm ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{selectedDayTrades.length}</p>
               </div>
               <div className={`rounded-lg border px-3 py-2.5 ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-900'}`}>
                 <p className={`text-[10px] uppercase tracking-wider mb-1 ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('income')}</p>
-                <p className="font-data text-sm text-emerald-500">+{currencySymbol}{formatMoney(periodTrades.reduce((sum, t) => sum + (t.pnl > 0 ? t.pnl : 0), 0))}</p>
+                <p className="font-data text-sm text-emerald-500">+{currencySymbol}{formatMoney(selectedDayCurrencyStats.income)}</p>
               </div>
               <div className={`rounded-lg border px-3 py-2.5 ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-900'}`}>
                 <p className={`text-[10px] uppercase tracking-wider mb-1 ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('expense')}</p>
-                <p className="font-data text-sm text-red-500">−{currencySymbol}{formatMoney(periodTrades.reduce((sum, t) => sum + (t.pnl < 0 ? Math.abs(t.pnl) : 0), 0))}</p>
+                <p className="font-data text-sm text-red-500">−{currencySymbol}{formatMoney(selectedDayCurrencyStats.expense)}</p>
               </div>
             </div>
           )}
 
-          {periodTrades.length > 0 ? (
+          {selectedDayTrades.length > 0 ? (
             <div className={`rounded-lg border divide-y ${isLight ? 'border-zinc-300 bg-zinc-50 divide-zinc-200' : 'border-zinc-800 bg-zinc-900 divide-zinc-800'}`}>
-              {periodTrades.map((trade) => (
+              {selectedDayTrades.map((trade) => (
                 <div key={trade.id} className="px-4 py-3 group">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
