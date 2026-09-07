@@ -2,359 +2,224 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { getValidUserId } from '../../../shared/lib/formatters';
 import { getTradesCacheKey } from '../../../shared/config/constants';
-import {
-  fromSupabaseTradeRow,
-  toSupabaseTradePayload,
-  toSupabaseTradeUpdates,
-} from '../lib/tradeMapper';
+import { fromSupabaseTradeRow, toSupabaseTradePayload, toSupabaseTradeUpdates } from '../lib/tradeMapper';
 import { isRetryableNetworkError, useOfflineQueue } from './useOfflineQueue';
 
+function isTemporaryId(id) {
+  const value = String(id || '');
+  return value.startsWith('local-') || value.startsWith('guest-') || value.startsWith('offline-');
+}
+
+function groupRows(rows) {
+  const grouped = {};
+  for (const row of rows || []) {
+    const trade = fromSupabaseTradeRow(row);
+    const dateKey = row.date_key;
+    if (!dateKey) continue;
+    (grouped[dateKey] ||= []).push(trade);
+  }
+  return grouped;
+}
+
 /**
- * useTrades: encapsulates Local-First storage, local storage caching per user/guest,
- * Supabase cloud synchronization, and optimistic CRUD operations.
+ * Local-first trade store with cloud reconciliation.
+ * Cloud rows are authoritative for confirmed records; only unsynced temporary
+ * records are preserved locally during a refresh. This prevents stale caches on
+ * another device from resurrecting edited/deleted cloud records.
  */
 export function useTrades({ user }) {
   const [manualTrades, setManualTrades] = useState({});
   const manualTradesRef = useRef({});
   const tradesCacheOwnerRef = useRef('__loading__');
-
   const cloudUserId = getValidUserId(user);
   const owner = cloudUserId || 'guest';
 
   const readCachedTrades = useCallback((userId) => {
     try {
       const raw = window.localStorage.getItem(getTradesCacheKey(userId));
-      if (!raw) return {};
-      const parsed = JSON.parse(raw);
+      const parsed = raw ? JSON.parse(raw) : {};
       return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-    } catch {
-      return {};
-    }
+    } catch { return {}; }
   }, []);
 
   const cacheTradesLocally = useCallback((trades, userId) => {
-    try {
-      window.localStorage.setItem(getTradesCacheKey(userId), JSON.stringify(trades));
-    } catch {
-      // ignore storage failures
-    }
+    try { window.localStorage.setItem(getTradesCacheKey(userId), JSON.stringify(trades)); } catch { /* ignore */ }
   }, []);
 
-  // Callback when an offline insert is successfully flushed to Supabase
   const handleSyncedInsert = useCallback((dateKey, tempId, realId) => {
-    setManualTrades((prev) => ({
-      ...prev,
-      [dateKey]: (prev[dateKey] || []).map((t) =>
-        t.id === tempId ? { ...t, id: realId } : t
-      ),
-    }));
+    setManualTrades((prev) => {
+      const next = {
+        ...prev,
+        [dateKey]: (prev[dateKey] || []).map((t) => String(t.id) === String(tempId) ? { ...t, id: realId, pending: false } : t),
+      };
+      manualTradesRef.current = next;
+      return next;
+    });
   }, []);
 
-  const { pendingSyncCount, enqueueOperation, amendPendingInsert, flushOfflineQueue } = useOfflineQueue({
-    user,
-    onSyncedInsert: handleSyncedInsert,
-  });
+  const { pendingSyncCount, enqueueOperation, amendPendingInsert, flushOfflineQueue } = useOfflineQueue({ user, onSyncedInsert: handleSyncedInsert });
 
-  // Load cache on user change, then sync with cloud if signed in
+  const reconcileCloudRows = useCallback((rows) => {
+    const cloud = groupRows(rows);
+    setManualTrades((prev) => {
+      const next = { ...cloud };
+      // Preserve only records that do not exist on the server yet.
+      for (const [dateKey, list] of Object.entries(prev || {})) {
+        for (const trade of list || []) {
+          if (isTemporaryId(trade.id)) (next[dateKey] ||= []).push(trade);
+        }
+      }
+      manualTradesRef.current = next;
+      cacheTradesLocally(next, cloudUserId);
+      return next;
+    });
+  }, [cacheTradesLocally, cloudUserId]);
+
+  const refreshFromCloud = useCallback(async () => {
+    if (!cloudUserId || !navigator.onLine) return;
+    const { data, error } = await supabase.from('trades').select('*').eq('user_id', cloudUserId);
+    if (error) {
+      console.warn('[trades] cloud refresh failed:', error.message);
+      return;
+    }
+    reconcileCloudRows(data || []);
+  }, [cloudUserId, reconcileCloudRows]);
+
   useEffect(() => {
     tradesCacheOwnerRef.current = '__loading__';
-
     const cached = readCachedTrades(cloudUserId);
+    manualTradesRef.current = cached;
     setManualTrades(cached);
+    tradesCacheOwnerRef.current = owner;
+    if (!cloudUserId || !navigator.onLine) return;
 
-    if (!user) {
-      tradesCacheOwnerRef.current = owner;
-      return;
-    }
+    let cancelled = false;
+    (async () => {
+      await flushOfflineQueue();
+      if (!cancelled) await refreshFromCloud();
+    })();
+    return () => { cancelled = true; };
+  }, [cloudUserId, owner, readCachedTrades, flushOfflineQueue, refreshFromCloud]);
 
-    if (!navigator.onLine) {
-      tradesCacheOwnerRef.current = owner;
-      return;
-    }
-
-    supabase
-      .from('trades')
-      .select('*')
-      .eq('user_id', cloudUserId)
-      .then(({ data, error }) => {
-        if (error) {
-          console.error('[trades] ошибка загрузки:', error);
-          tradesCacheOwnerRef.current = owner;
-          return;
-        }
-
-        const grouped = {};
-        for (const row of data) {
-          grouped[row.date_key] = grouped[row.date_key] || [];
-          grouped[row.date_key].push(fromSupabaseTradeRow(row));
-        }
-
-        setManualTrades((prev) => {
-          const merged = { ...grouped };
-
-          // Keep local-only records and local edits. Cloud records fill in
-          // anything that is not already present locally.
-          for (const [dateKey, localList] of Object.entries(prev || {})) {
-            if (!merged[dateKey]) {
-              merged[dateKey] = localList;
-              continue;
-            }
-
-            const cloudIds = new Set(merged[dateKey].map((t) => String(t.id)));
-
-            for (const localTrade of localList) {
-              if (!cloudIds.has(String(localTrade.id))) {
-                merged[dateKey].push(localTrade);
-              }
-            }
-          }
-
-          manualTradesRef.current = merged;
-          return merged;
-        });
-
-        tradesCacheOwnerRef.current = owner;
-        flushOfflineQueue();
-      });
-  }, [user, cloudUserId, owner, readCachedTrades, flushOfflineQueue]);
-
-  // Sync cache with displayed manualTrades
   useEffect(() => {
     manualTradesRef.current = manualTrades;
-    if (tradesCacheOwnerRef.current !== owner) return;
-    cacheTradesLocally(manualTrades, cloudUserId);
+    if (tradesCacheOwnerRef.current === owner) cacheTradesLocally(manualTrades, cloudUserId);
   }, [manualTrades, cloudUserId, owner, cacheTradesLocally]);
 
-  // Local-First Save (Insert or Update)
-  const saveTrade = useCallback(
-    async ({
-      dateKey,
-      isEditing,
-      editingTradeId,
-      time,
-      instrument,
-      direction,
-      signedPnl,
-      comment,
-      platform,
-      currency,
-      takeProfit,
-      stopLoss,
-      traderMode,
-    }) => {
-      const generatedId = crypto.randomUUID
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const localId = `local-${generatedId}`;
+  // Device-to-device sync: realtime when available, plus refresh on focus/online
+  // as a reliable fallback for browsers/PWA sessions that suspend sockets.
+  useEffect(() => {
+    if (!cloudUserId) return;
+    const refresh = () => { refreshFromCloud(); };
+    const onVisibility = () => { if (document.visibilityState === 'visible') refresh(); };
+    window.addEventListener('online', refresh);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onVisibility);
 
-      const localTrade = {
-        id: isEditing ? editingTradeId : localId,
-        time,
-        instrument,
-        direction,
-        pnl: signedPnl,
-        comment,
-        platform,
-        currency,
-        ...(traderMode ? { take_profit: takeProfit, stop_loss: stopLoss } : {}),
-        pending: false,
-      };
+    const channel = supabase
+      .channel(`trades-sync-${cloudUserId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trades', filter: `user_id=eq.${cloudUserId}` }, refresh)
+      .subscribe();
 
-      // 1. Optimistic Local Update
-      setManualTrades((prev) => {
-        const nextForDay = [...(prev[dateKey] || [])];
+    return () => {
+      window.removeEventListener('online', refresh);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onVisibility);
+      supabase.removeChannel(channel);
+    };
+  }, [cloudUserId, refreshFromCloud]);
 
-        if (isEditing) {
-          const index = nextForDay.findIndex((t) => String(t.id) === String(editingTradeId));
-          if (index >= 0) {
-            nextForDay[index] = { ...nextForDay[index], ...localTrade };
-          } else {
-            nextForDay.push(localTrade);
-          }
-        } else {
-          nextForDay.push(localTrade);
-        }
+  const saveTrade = useCallback(async (args) => {
+    const { dateKey, isEditing, editingTradeId, time, instrument, direction, signedPnl, comment, platform, currency, takeProfit, stopLoss, traderMode } = args;
+    const generatedId = globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const localId = `local-${generatedId}`;
+    const localTrade = {
+      id: isEditing ? editingTradeId : localId,
+      time, instrument, direction, pnl: signedPnl, comment, platform,
+      currency: currency || 'USD',
+      ...(traderMode ? { take_profit: takeProfit, stop_loss: stopLoss } : {}),
+      pending: Boolean(cloudUserId),
+    };
 
-        const nextTrades = { ...prev, [dateKey]: nextForDay };
-        manualTradesRef.current = nextTrades;
-        cacheTradesLocally(nextTrades, cloudUserId);
-        return nextTrades;
-      });
+    setManualTrades((prev) => {
+      const day = [...(prev[dateKey] || [])];
+      const index = isEditing ? day.findIndex((t) => String(t.id) === String(editingTradeId)) : -1;
+      if (index >= 0) day[index] = { ...day[index], ...localTrade };
+      else day.push(localTrade);
+      const next = { ...prev, [dateKey]: day };
+      manualTradesRef.current = next;
+      cacheTradesLocally(next, cloudUserId);
+      return next;
+    });
 
-      // 2. Guest user finishes here
-      if (!cloudUserId) {
-        return;
-      }
+    if (!cloudUserId) return;
+    const payload = toSupabaseTradePayload(localTrade, dateKey, cloudUserId);
+    const updates = toSupabaseTradeUpdates(localTrade, dateKey);
+    const temporary = isEditing && isTemporaryId(editingTradeId);
 
-      // 3. Cloud Sync in background
-      const cloudPayload = toSupabaseTradePayload(localTrade, dateKey, cloudUserId);
-      const cloudUpdates = toSupabaseTradeUpdates(localTrade, dateKey);
+    if (temporary && amendPendingInsert({ action: 'update', user_id: cloudUserId, tradeId: editingTradeId, date_key: dateKey, updates })) return;
 
-      const isTemporaryTrade =
-        isEditing &&
-        (String(editingTradeId).startsWith('local-') ||
-          String(editingTradeId).startsWith('guest-') ||
-          String(editingTradeId).startsWith('offline-'));
+    const operation = isEditing
+      ? { action: 'update', user_id: cloudUserId, tradeId: editingTradeId, date_key: dateKey, updates }
+      : { action: 'insert', user_id: cloudUserId, tempId: localId, date_key: dateKey, trade: payload };
 
-      // A local-* trade can already have a queued insert even after the
-      // browser reports online. Amend that insert rather than creating a
-      // second cloud insert for the same local record.
-      if (
-        isTemporaryTrade &&
-        amendPendingInsert({
-          action: 'update',
-          user_id: cloudUserId,
-          tradeId: editingTradeId,
-          date_key: dateKey,
-          updates: cloudUpdates,
-        })
-      ) {
-        return;
-      }
+    if (!navigator.onLine || temporary) { enqueueOperation(operation); return; }
 
-      if (!navigator.onLine) {
-        enqueueOperation(
-          isEditing
-            ? { action: 'update', user_id: cloudUserId, tradeId: editingTradeId, date_key: dateKey, updates: cloudUpdates }
-            : { action: 'insert', user_id: cloudUserId, tempId: localId, date_key: dateKey, trade: cloudPayload }
-        );
-        return;
-      }
-
-      try {
-        if (
-          isEditing && !isTemporaryTrade
-        ) {
-          const { error } = await supabase
-            .from('trades')
-            .update(cloudUpdates)
-            .eq('id', editingTradeId)
-            .eq('user_id', cloudUserId);
-
-          if (error) {
-            console.warn('[cloud-sync] update skipped:', error.message);
-            if (isRetryableNetworkError(error)) {
-              enqueueOperation({ action: 'update', user_id: cloudUserId, tradeId: editingTradeId, date_key: dateKey, updates: cloudUpdates });
-            }
-          }
-          return;
-        }
-
-        const { data, error } = await supabase.from('trades').insert(cloudPayload).select().single();
-
-        if (error) {
-          console.warn('[cloud-sync] insert skipped, local record kept:', error.message);
-          if (isRetryableNetworkError(error)) {
-            enqueueOperation({ action: 'insert', user_id: cloudUserId, tempId: localId, date_key: dateKey, trade: cloudPayload });
-          }
-          return;
-        }
-
-        // Replace local id with server id
+    try {
+      if (isEditing) {
+        const { error } = await supabase.from('trades').update(updates).eq('id', editingTradeId).eq('user_id', cloudUserId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from('trades').insert(payload).select().single();
+        if (error) throw error;
         setManualTrades((prev) => {
-          const merged = { ...prev };
-          const list = [...(merged[dateKey] || [])];
-          const index = list.findIndex((t) => String(t.id) === String(localId));
-
-          if (index >= 0) {
-            list[index] = {
-              ...list[index],
-              id: data.id,
-              pending: false,
-            };
-            merged[dateKey] = list;
-          }
-
-          manualTradesRef.current = merged;
-          cacheTradesLocally(merged, cloudUserId);
-          return merged;
+          const next = {
+            ...prev,
+            [dateKey]: (prev[dateKey] || []).map((t) => String(t.id) === String(localId) ? { ...t, id: data.id, pending: false } : t),
+          };
+          manualTradesRef.current = next;
+          cacheTradesLocally(next, cloudUserId);
+          return next;
         });
-      } catch (err) {
-        console.warn('[cloud-sync] unavailable, local record kept:', err);
-        if (isRetryableNetworkError(err)) {
-          enqueueOperation(
-            isEditing
-              ? { action: 'update', user_id: cloudUserId, tradeId: editingTradeId, date_key: dateKey, updates: cloudUpdates }
-              : { action: 'insert', user_id: cloudUserId, tempId: localId, date_key: dateKey, trade: cloudPayload }
-          );
-        }
       }
-    },
-    [cloudUserId, cacheTradesLocally, enqueueOperation, amendPendingInsert]
-  );
+      await refreshFromCloud();
+    } catch (error) {
+      console.warn('[cloud-sync] save deferred:', error?.message || error);
+      if (isRetryableNetworkError(error)) enqueueOperation(operation);
+      else throw error;
+    }
+  }, [cloudUserId, cacheTradesLocally, enqueueOperation, amendPendingInsert, refreshFromCloud]);
 
-  // Delete trade
-  const deleteTrade = useCallback(
-    async (dateKey, tradeId) => {
-      setManualTrades((prev) => {
-        const nextTrades = { ...prev };
-        nextTrades[dateKey] = (nextTrades[dateKey] || []).filter(
-          (t) => String(t.id) !== String(tradeId)
-        );
-        manualTradesRef.current = nextTrades;
-        cacheTradesLocally(nextTrades, cloudUserId);
-        return nextTrades;
-      });
+  const deleteTrade = useCallback(async (dateKey, tradeId) => {
+    setManualTrades((prev) => {
+      const next = { ...prev, [dateKey]: (prev[dateKey] || []).filter((t) => String(t.id) !== String(tradeId)) };
+      manualTradesRef.current = next;
+      cacheTradesLocally(next, cloudUserId);
+      return next;
+    });
+    if (!cloudUserId || String(tradeId).startsWith('guest-')) return;
+    const operation = { action: 'delete', user_id: cloudUserId, tradeId, date_key: dateKey };
+    if (!navigator.onLine || isTemporaryId(tradeId)) { enqueueOperation(operation); return; }
+    try {
+      const { error } = await supabase.from('trades').delete().eq('id', tradeId).eq('user_id', cloudUserId);
+      if (error) throw error;
+      await refreshFromCloud();
+    } catch (error) {
+      console.warn('[cloud-sync] delete deferred:', error?.message || error);
+      if (isRetryableNetworkError(error)) enqueueOperation(operation);
+      else throw error;
+    }
+  }, [cloudUserId, cacheTradesLocally, enqueueOperation, refreshFromCloud]);
 
-      if (!cloudUserId || String(tradeId).startsWith('guest-')) {
-        return;
-      }
-
-      if (!navigator.onLine) {
-        enqueueOperation({ action: 'delete', user_id: cloudUserId, tradeId, date_key: dateKey });
-        return;
-      }
-
-      if (String(tradeId).startsWith('local-')) {
-        enqueueOperation({ action: 'delete', user_id: cloudUserId, tradeId, date_key: dateKey });
-        return;
-      }
-
-      try {
-        const { error } = await supabase
-          .from('trades')
-          .delete()
-          .eq('id', tradeId)
-          .eq('user_id', cloudUserId);
-
-        if (error) {
-          console.warn('[trades] cloud delete skipped:', error.message);
-          if (isRetryableNetworkError(error)) {
-            enqueueOperation({ action: 'delete', user_id: cloudUserId, tradeId, date_key: dateKey });
-          }
-        }
-      } catch (err) {
-        console.warn('[trades] cloud delete unavailable:', err);
-        if (isRetryableNetworkError(err)) {
-          enqueueOperation({ action: 'delete', user_id: cloudUserId, tradeId, date_key: dateKey });
-        }
-      }
-    },
-    [cloudUserId, cacheTradesLocally, enqueueOperation]
-  );
-
-  // Clear all trades
   const clearAllTrades = useCallback(async () => {
-    if (!cloudUserId) {
-      setManualTrades({});
-      return;
-    }
+    if (!cloudUserId) { setManualTrades({}); return; }
+    if (!navigator.onLine) throw new Error('Для очистки всей облачной истории нужно подключение к интернету.');
     const { error } = await supabase.from('trades').delete().eq('user_id', cloudUserId);
-    if (error) {
-      console.error('[trades] ошибка очистки истории:', error);
-      return;
-    }
+    if (error) throw error;
     setManualTrades({});
-  }, [cloudUserId]);
+    manualTradesRef.current = {};
+    cacheTradesLocally({}, cloudUserId);
+  }, [cloudUserId, cacheTradesLocally]);
 
-  return {
-    manualTrades,
-    setManualTrades,
-    manualTradesRef,
-    cacheTradesLocally,
-    pendingSyncCount,
-    saveTrade,
-    deleteTrade,
-    clearAllTrades,
-  };
+  return { manualTrades, setManualTrades, manualTradesRef, cacheTradesLocally, pendingSyncCount, saveTrade, deleteTrade, clearAllTrades, refreshFromCloud };
 }

@@ -481,6 +481,9 @@ export default function CalendarScreen() {
   const effectiveFrom = selectedKey || dateFrom;
   const effectiveTo = selectedKey || dateTo;
 
+  // The selected-day sheet is intentionally different from the calendar totals:
+  // it shows every record in every currency, while monetary totals stay scoped to
+  // the interface currency so different currencies are never added together.
   const periodTrades = useMemo(() => {
     return Object.entries(manualTrades)
       .flatMap(([dateKey, arr]) => arr.map((t) => ({ ...t, dateKey })))
@@ -491,41 +494,22 @@ export default function CalendarScreen() {
       .sort((a, b) => (a.dateKey === b.dateKey ? b.time.localeCompare(a.time) : b.dateKey.localeCompare(a.dateKey)));
   }, [manualTrades, effectiveFrom, effectiveTo, platformFilter, currency, calendarTypeFilter]);
 
-  const periodStats = useMemo(() => {
-    const count = periodTrades.length;
-    const pnl = periodTrades.reduce((sum, t) => sum + t.pnl, 0);
-    const wins = periodTrades.filter((t) => t.pnl >= 0).length;
-    const winrate = count ? Math.round((wins / count) * 100) : 0;
-    return { count, pnl, winrate };
-  }, [periodTrades]);
-
-
-  // Day sheet: show EVERY record saved for the selected day, regardless of
-  // currency. The summary remains intentionally tied to the interface
-  // currency, so USD/MDL/EUR are never added together.
   const selectedDayTrades = useMemo(() => {
-    if (!selectedKey) return [];
+    if (!selectedKey) return periodTrades;
     return (manualTrades[selectedKey] || [])
       .map((t) => ({ ...t, dateKey: selectedKey }))
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
       .filter((t) => calendarTypeFilter === 'all' || (calendarTypeFilter === 'income' ? t.pnl >= 0 : t.pnl < 0))
       .sort((a, b) => b.time.localeCompare(a.time));
-  }, [manualTrades, selectedKey, platformFilter, calendarTypeFilter]);
+  }, [selectedKey, manualTrades, periodTrades, platformFilter, calendarTypeFilter]);
 
-  const selectedDayCurrencyTrades = useMemo(
-    () => selectedDayTrades.filter((t) => (t.currency || 'USD') === currency),
-    [selectedDayTrades, currency]
-  );
-
-  const selectedDayCurrencyStats = useMemo(() => {
-    const count = selectedDayCurrencyTrades.length;
-    const pnl = selectedDayCurrencyTrades.reduce((sum, t) => sum + t.pnl, 0);
-    const wins = selectedDayCurrencyTrades.filter((t) => t.pnl >= 0).length;
-    const income = selectedDayCurrencyTrades.reduce((sum, t) => sum + (t.pnl > 0 ? t.pnl : 0), 0);
-    const expense = selectedDayCurrencyTrades.reduce((sum, t) => sum + (t.pnl < 0 ? Math.abs(t.pnl) : 0), 0);
-    const winrate = count ? Math.round((wins / count) * 100) : 0;
-    return { count, pnl, wins, income, expense, winrate };
-  }, [selectedDayCurrencyTrades]);
+  const periodStats = useMemo(() => {
+    const count = selectedKey ? selectedDayTrades.length : periodTrades.length;
+    const pnl = periodTrades.reduce((sum, t) => sum + t.pnl, 0);
+    const wins = periodTrades.filter((t) => t.pnl >= 0).length;
+    const winrate = periodTrades.length ? Math.round((wins / periodTrades.length) * 100) : 0;
+    return { count, pnl, winrate };
+  }, [periodTrades, selectedDayTrades, selectedKey]);
 
   // free, rule-based analysis — no AI call, just arithmetic. Has its own
   // period, defaulting to whatever's currently selected when opened.
@@ -1142,18 +1126,18 @@ export default function CalendarScreen() {
               <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">{selectedKey}</p>
               <p className="text-[11px] text-zinc-500 mb-0.5">{traderMode ? t('overallResult') : t('balanceOfDay')}</p>
               <div className="flex items-center gap-2">
-                {selectedDayCurrencyStats.count > 0 &&
-                  (selectedDayCurrencyStats.pnl >= 0 ? (
+                {periodStats.count > 0 &&
+                  (periodStats.pnl >= 0 ? (
                     <TrendingUp className="h-4 w-4 text-emerald-400" />
                   ) : (
                     <TrendingDown className="h-4 w-4 text-red-400" />
                   ))}
                 <span
                   className={`font-data text-lg font-semibold ${
-                    selectedDayCurrencyStats.count === 0 ? 'text-zinc-600' : selectedDayCurrencyStats.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'
+                    periodStats.count === 0 ? 'text-zinc-600' : periodStats.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'
                   }`}
                 >
-                  {selectedDayCurrencyStats.count === 0 ? '—' : `${selectedDayCurrencyStats.pnl >= 0 ? '+' : '-'}${currencySymbol}${formatMoney(selectedDayCurrencyStats.pnl)}`}
+                  {periodStats.count === 0 ? '—' : `${periodStats.pnl >= 0 ? '+' : '-'}${currencySymbol}${formatMoney(periodStats.pnl)}`}
                 </span>
               </div>
             </div>
@@ -1162,7 +1146,7 @@ export default function CalendarScreen() {
           <div className={`inline-flex items-center self-start rounded-md border overflow-hidden ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-700 bg-zinc-900'}`}>
             <button
               onClick={openAnalysis}
-              disabled={selectedDayCurrencyStats.count === 0}
+              disabled={periodStats.count === 0}
               className="flex items-center gap-1.5 px-3 py-2 text-sm text-amber-500 hover:bg-amber-400/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <Sparkles className="h-4 w-4" />
@@ -1182,25 +1166,25 @@ export default function CalendarScreen() {
 
           {traderMode ? (
             <div className={`flex items-center gap-2 rounded-md border px-4 py-2 font-data text-xs ${isLight ? 'border-zinc-300 bg-zinc-50 text-zinc-500' : 'border-zinc-800 bg-zinc-900 text-zinc-400'}`}>
-              <span>{t('trades')}: <span className={isLight ? 'text-zinc-900 font-medium' : 'text-zinc-100 font-medium'}>{selectedDayTrades.length}</span></span>
+              <span>{t('trades')}: <span className={isLight ? 'text-zinc-900 font-medium' : 'text-zinc-100 font-medium'}>{periodStats.count}</span></span>
               <span className={isLight ? 'text-zinc-300' : 'text-zinc-700'}>•</span>
-              <span>PnL: <span className={`font-medium ${selectedDayCurrencyStats.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{selectedDayCurrencyStats.pnl >= 0 ? '+' : '-'}{currencySymbol}{formatMoney(selectedDayCurrencyStats.pnl)}</span></span>
+              <span>PnL: <span className={`font-medium ${periodStats.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{periodStats.pnl >= 0 ? '+' : '-'}{currencySymbol}{formatMoney(periodStats.pnl)}</span></span>
               <span className={isLight ? 'text-zinc-300' : 'text-zinc-700'}>•</span>
-              <span>{t('winrate')}: <span className={isLight ? 'text-zinc-900 font-medium' : 'text-zinc-100 font-medium'}>{selectedDayCurrencyStats.winrate}%</span></span>
+              <span>{t('winrate')}: <span className={isLight ? 'text-zinc-900 font-medium' : 'text-zinc-100 font-medium'}>{periodStats.winrate}%</span></span>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-2">
               <div className={`rounded-lg border px-3 py-2.5 ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-900'}`}>
                 <p className={`text-[10px] uppercase tracking-wider mb-1 ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('operations')}</p>
-                <p className={`font-data text-sm ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{selectedDayTrades.length}</p>
+                <p className={`font-data text-sm ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{periodStats.count}</p>
               </div>
               <div className={`rounded-lg border px-3 py-2.5 ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-900'}`}>
                 <p className={`text-[10px] uppercase tracking-wider mb-1 ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('income')}</p>
-                <p className="font-data text-sm text-emerald-500">+{currencySymbol}{formatMoney(selectedDayCurrencyStats.income)}</p>
+                <p className="font-data text-sm text-emerald-500">+{currencySymbol}{formatMoney(periodTrades.reduce((sum, t) => sum + (t.pnl > 0 ? t.pnl : 0), 0))}</p>
               </div>
               <div className={`rounded-lg border px-3 py-2.5 ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-900'}`}>
                 <p className={`text-[10px] uppercase tracking-wider mb-1 ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('expense')}</p>
-                <p className="font-data text-sm text-red-500">−{currencySymbol}{formatMoney(selectedDayCurrencyStats.expense)}</p>
+                <p className="font-data text-sm text-red-500">−{currencySymbol}{formatMoney(periodTrades.reduce((sum, t) => sum + (t.pnl < 0 ? Math.abs(t.pnl) : 0), 0))}</p>
               </div>
             </div>
           )}
@@ -1268,14 +1252,14 @@ export default function CalendarScreen() {
       <div className="fixed bottom-4 sm:bottom-4 inset-x-0 flex justify-center z-30 pointer-events-none">
         <button
           onClick={openHistory}
-          className={`pointer-events-auto flex items-center gap-2 rounded-full border backdrop-blur px-5 py-3 text-base shadow-xl transition-colors ${
+          className={`pointer-events-auto group flex items-center gap-2.5 rounded-full border backdrop-blur-xl px-5 py-3 text-base shadow-[0_14px_40px_rgba(0,0,0,.24)] transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 ${
             isLight
-              ? 'border-zinc-300 bg-white/95 text-zinc-700 hover:border-amber-400/60 hover:text-amber-500'
-              : 'border-zinc-700 bg-zinc-900/95 text-zinc-200 hover:border-amber-400/60 hover:text-amber-400'
+              ? 'border-zinc-300/90 bg-white/95 text-zinc-700 hover:border-amber-400/70 hover:text-amber-600'
+              : 'border-zinc-700/90 bg-zinc-900/95 text-zinc-100 hover:border-amber-400/70 hover:text-amber-300'
           }`}
         >
-          <History className="h-4 w-4" />
-          {t('history')}
+          <span className="h-7 w-7 rounded-full bg-amber-400/10 flex items-center justify-center group-hover:bg-amber-400/15 transition-colors"><History className="h-4 w-4 text-amber-500" /></span>
+          <span className="font-medium">{t('history')}</span>
         </button>
       </div>
 

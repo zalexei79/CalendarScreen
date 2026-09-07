@@ -12,6 +12,7 @@ export function toSupabaseTradePayload(localTrade, dateKey, userId) {
     pnl: localTrade.pnl,
     comment: localTrade.comment,
     platform: localTrade.platform,
+    currency: localTrade.currency || 'USD',
   };
 }
 
@@ -29,8 +30,8 @@ export function fromSupabaseTradeRow(row) {
     pnl: Number(row.pnl),
     comment: row.comment || '',
     platform: textValue(row.platform) || 'Manual',
-    // These fields were already read by the app. They remain local-only on
-    // writes until their database columns are explicitly confirmed.
+    currency: textValue(row.currency) || 'USD',
+    // Optional fields are preserved locally when present in the database row.
     take_profit: row.take_profit ?? null,
     stop_loss: row.stop_loss ?? null,
   };
