@@ -962,10 +962,49 @@ export default function CalendarScreen() {
         daily[item.dateKey].expense += value;
       }
     });
+
     const sort = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]);
-    const dailyEntries = Object.entries(daily).sort((a, b) => a[0].localeCompare(b[0]));
-    const maxDaily = Math.max(1, ...dailyEntries.map(([, v]) => Math.max(v.income, v.expense)));
-    return { incomeSources: sort(incomeSources), expenseCategories: sort(expenseCategories), dailyEntries, maxDaily };
+    const existingEntries = Object.entries(daily).sort((a, b) => a[0].localeCompare(b[0]));
+
+    // Последовательная шкала: даже дни без операций остаются на графике.
+    // Так динамика читается как период, а не как случайный набор столбиков.
+    const toDate = (key) => {
+      const [y, m, d] = key.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    };
+    const toKey = (date) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+
+    let chartEntries = existingEntries;
+    if (existingEntries.length) {
+      const lastKey = existingEntries[existingEntries.length - 1][0];
+      const lastDate = toDate(lastKey);
+      const startDate = new Date(lastDate);
+      startDate.setDate(lastDate.getDate() - 9);
+      chartEntries = Array.from({ length: 10 }, (_, index) => {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + index);
+        const key = toKey(date);
+        return [key, daily[key] || { income: 0, expense: 0 }];
+      });
+    }
+
+    const maxDaily = Math.max(1, ...chartEntries.map(([, v]) => Math.max(v.income, v.expense)));
+    const totalIncome = Object.values(daily).reduce((sum, v) => sum + v.income, 0);
+    const totalExpense = Object.values(daily).reduce((sum, v) => sum + v.expense, 0);
+    const bestDay = existingEntries.length
+      ? existingEntries.reduce((best, item) => item[1].income - item[1].expense > best[1].income - best[1].expense ? item : best)
+      : null;
+
+    return {
+      incomeSources: sort(incomeSources),
+      expenseCategories: sort(expenseCategories),
+      dailyEntries: existingEntries,
+      chartEntries,
+      maxDaily,
+      totalIncome,
+      totalExpense,
+      bestDay,
+    };
   }, [historyTrades]);
 
   const getHistoryCategoryIcon = (instrument) => {
@@ -1416,7 +1455,7 @@ export default function CalendarScreen() {
                           const meta = getCurrencyMeta(code);
                           return <button key={code} onClick={() => setHistoryCurrency(code)} className={`rounded-xl border p-3 text-left transition-all hover:-translate-y-0.5 ${isLight ? 'border-zinc-200 bg-zinc-50 hover:border-amber-400/40' : 'border-zinc-800 bg-black/20 hover:border-amber-400/35'}`}>
                             <span className="text-[10px] text-zinc-500">{code}</span>
-                            <span className={`mt-1 block font-data text-base font-semibold tabular-nums ${stats.balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.balance >= 0 ? '+' : '-'}{meta.symbol}{formatMoney(stats.balance)}</span>
+                            <span className={`mt-1 block font-data text-sm sm:text-base font-semibold tabular-nums leading-tight break-all ${stats.balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.balance >= 0 ? '+' : '−'}{meta.symbol}{formatMoneyShort(Math.abs(stats.balance))}</span>
                             <span className="mt-1 block text-[10px] text-zinc-500">{stats.count} операций · открыть анализ</span>
                           </button>;
                         }) : <p className="col-span-full py-8 text-center text-sm text-zinc-500">За выбранный период пока нет данных.</p>}
@@ -1430,16 +1469,34 @@ export default function CalendarScreen() {
                     </div>
                   ) : (
                     <>
-                      <div className={`mb-5 rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-white/5 bg-black/20'}`}>
-                        <div className="flex items-center justify-between gap-3">
-                          <div><p className="text-[10px] uppercase tracking-wider text-zinc-500">Результат за период</p><p className={`mt-1 font-display text-3xl sm:text-4xl font-semibold tracking-tight tabular-nums ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{historyTotal >= 0 ? '+' : '-'}{historyCurrencySymbol}{formatMoney(historyTotal)}</p></div>
-                          <div className="text-right"><p className="text-[10px] text-zinc-500">{historyTrades.length} операций</p><p className="mt-1 text-xs text-amber-500">PRO insight</p></div>
+                      <div className={`relative mb-5 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-white/5 bg-black/20'}`}>
+                        <div className="absolute -right-3 -bottom-6 select-none pointer-events-none font-display text-7xl sm:text-8xl font-bold tracking-tighter text-emerald-500/[0.045]">{historyCurrency}</div>
+                        <div className="relative flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] uppercase tracking-wider text-zinc-500">Результат за период</p>
+                            <p className={`mt-2 font-display font-semibold tracking-tight tabular-nums leading-none break-all text-[clamp(1.75rem,9vw,3.5rem)] ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                              {historyTotal >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoney(Math.abs(historyTotal))}
+                            </p>
+                            <p className="mt-3 text-[11px] text-zinc-500">{historyTrades.length} операций · {historyCurrency} · выбранный период</p>
+                          </div>
+                          <div className={`shrink-0 rounded-xl border px-3 py-2 text-right ${isLight ? 'border-amber-200 bg-white/80' : 'border-amber-400/15 bg-amber-400/[0.04]'}`}>
+                            <p className="text-[9px] uppercase tracking-wider text-zinc-500">Статус</p>
+                            <p className={`mt-1 text-xs font-semibold ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>{historyTotal >= 0 ? 'Положительный' : 'Требует внимания'}</p>
+                          </div>
                         </div>
                       </div>
+
                       <div className="grid grid-cols-3 gap-2 mb-5">
-                        <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/50'}`}><p className="text-[10px] text-zinc-500">Доходы</p><p className="mt-1 font-data text-xs sm:text-sm text-emerald-500 truncate">+{historyCurrencySymbol}{formatMoney(historyIncome)}</p></div>
-                        <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/50'}`}><p className="text-[10px] text-zinc-500">Расходы</p><p className="mt-1 font-data text-xs sm:text-sm text-red-500 truncate">−{historyCurrencySymbol}{formatMoney(historyExpense)}</p></div>
-                        <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/50'}`}><p className="text-[10px] text-zinc-500">Баланс</p><p className={`mt-1 font-data text-xs sm:text-sm truncate ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{historyTotal >= 0 ? '+' : '-'}{historyCurrencySymbol}{formatMoney(historyTotal)}</p></div>
+                        {[
+                          ['Доходы', historyIncome, 'text-emerald-500'],
+                          ['Расходы', historyExpense, 'text-red-500'],
+                          ['Баланс', Math.abs(historyTotal), historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'],
+                        ].map(([label, amount, color]) => (
+                          <div key={label} className={`min-w-0 rounded-xl border p-2.5 sm:p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/50'}`}>
+                            <p className="text-[9px] sm:text-[10px] text-zinc-500">{label}</p>
+                            <p className={`mt-1 font-data text-[11px] sm:text-xs font-medium tabular-nums leading-tight break-all ${color}`}>{label === 'Расходы' ? '−' : label === 'Баланс' && historyTotal >= 0 ? '+' : '+'}{historyCurrencySymbol}{formatMoneyShort(amount)}</p>
+                          </div>
+                        ))}
                       </div>
                     </>
                   )}
@@ -1450,14 +1507,38 @@ export default function CalendarScreen() {
 
                   {historyAnalysisTab === 'overview' && (
                     <div>
-                      <div className={`rounded-2xl border p-3 sm:p-4 mb-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}>
-                        <div className="mb-4 flex items-end justify-between gap-3"><div><span className="text-sm font-semibold">Динамика периода</span><p className="mt-1 text-[10px] text-zinc-500">Доходы и расходы по дням — читается без наведения.</p></div><div className="flex gap-2 text-[9px]"><span className="text-emerald-500">● Доход</span><span className="text-red-400">● Расход</span></div></div>
-                        {historyAnalysis.dailyEntries.length ? (() => { const entries = historyAnalysis.dailyEntries.slice(-8); const max = Math.max(1, ...entries.flatMap(([,v]) => [v.income, v.expense])); return <div className="grid grid-cols-8 gap-2 items-end h-36">{entries.map(([date, stats]) => { const label = date.slice(8,10); const net = stats.income - stats.expense; return <div key={date} className="flex h-full min-w-0 flex-col justify-end"><div className="mb-2 text-center text-[9px] font-data text-zinc-500">{net >= 0 ? '+' : '−'}{formatMoney(Math.abs(net))}</div><div className="flex flex-1 items-end justify-center gap-1"><span className="w-2.5 sm:w-3 rounded-t-md bg-emerald-500/80" style={{height:`${Math.max(5,(stats.income/max)*100)}%`}}/><span className="w-2.5 sm:w-3 rounded-t-md bg-red-500/75" style={{height:`${Math.max(4,(stats.expense/max)*100)}%`}}/></div><span className="mt-2 text-center text-[9px] text-zinc-600">{label}</span></div>; })}</div>; })() : <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-zinc-800 text-xs text-zinc-500">Добавь ещё несколько операций — здесь появится динамика периода.</div>}
+                      <div className={`relative overflow-hidden rounded-2xl border p-3 sm:p-4 mb-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}>
+                        <div className="absolute inset-x-4 top-[52%] border-t border-dashed border-zinc-500/15 pointer-events-none" />
+                        <div className="relative mb-4 flex items-end justify-between gap-3">
+                          <div>
+                            <span className="text-sm font-semibold">Динамика периода</span>
+                            <p className="mt-1 text-[10px] text-zinc-500">Последние 10 календарных дней. Значение видно сразу — без наведения.</p>
+                          </div>
+                          <div className="flex shrink-0 gap-2 text-[9px]"><span className="text-emerald-500">● Приход</span><span className="text-red-400">● Расход</span></div>
+                        </div>
+                        {historyAnalysis.chartEntries.length ? (
+                          <div className="relative grid grid-cols-5 sm:grid-cols-10 gap-x-1.5 gap-y-3 items-end h-52 sm:h-44">
+                            {historyAnalysis.chartEntries.map(([date, stats]) => {
+                              const net = stats.income - stats.expense;
+                              const active = stats.income > 0 || stats.expense > 0;
+                              return <div key={date} className="min-w-0 h-full flex flex-col justify-end">
+                                <div className={`mb-1 min-h-[14px] text-center text-[8px] sm:text-[9px] font-data tabular-nums ${!active ? 'text-zinc-700' : net >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>
+                                  {active ? `${net >= 0 ? '+' : '−'}${formatMoneyShort(Math.abs(net))}` : '—'}
+                                </div>
+                                <div className="relative flex flex-1 items-end justify-center gap-1">
+                                  <span className={`w-2.5 sm:w-3 rounded-t-md transition-all duration-500 ${stats.income > 0 ? 'bg-gradient-to-t from-emerald-600/70 to-emerald-300/90 shadow-[0_0_16px_rgba(16,185,129,.18)]' : 'bg-emerald-500/[0.06]'}`} style={{height:`${stats.income > 0 ? Math.max(6,(stats.income/historyAnalysis.maxDaily)*100) : 3}%`}} />
+                                  <span className={`w-2.5 sm:w-3 rounded-t-md transition-all duration-500 ${stats.expense > 0 ? 'bg-gradient-to-t from-red-700/65 to-red-400/85 shadow-[0_0_16px_rgba(248,113,113,.12)]' : 'bg-red-500/[0.05]'}`} style={{height:`${stats.expense > 0 ? Math.max(5,(stats.expense/historyAnalysis.maxDaily)*100) : 3}%`}} />
+                                </div>
+                                <span className={`mt-2 text-center text-[8px] sm:text-[9px] ${active ? 'text-zinc-500' : 'text-zinc-700'}`}>{date.slice(8,10)}</span>
+                              </div>;
+                            })}
+                          </div>
+                        ) : <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-zinc-800 text-xs text-zinc-500">Добавь ещё несколько операций — здесь появится динамика периода.</div>}
                       </div>
                       <div className="grid sm:grid-cols-3 gap-2">
-                        <div className={`rounded-xl p-3 ${isLight ? 'bg-emerald-50' : 'bg-emerald-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">Главный доход</p><p className="mt-1 text-xs font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p></div>
-                        <div className={`rounded-xl p-3 ${isLight ? 'bg-red-50' : 'bg-red-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">Главный расход</p><p className="mt-1 text-xs font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p></div>
-                        <div className={`rounded-xl p-3 ${isLight ? 'bg-amber-50' : 'bg-amber-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">Финансовый вывод</p><p className="mt-1 text-xs font-semibold">{historyIncome > historyExpense ? 'Доходы выше расходов' : historyExpense > 0 ? 'Расходы требуют внимания' : 'Данных пока мало'}</p></div>
+                        <button onClick={() => setHistoryAnalysisTab('income')} className={`text-left rounded-xl p-3 transition-transform hover:-translate-y-0.5 ${isLight ? 'bg-emerald-50' : 'bg-emerald-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">Главный источник</p><p className="mt-1 text-xs font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p><p className="mt-1 text-[10px] text-emerald-500">Открыть структуру →</p></button>
+                        <button onClick={() => setHistoryAnalysisTab('expense')} className={`text-left rounded-xl p-3 transition-transform hover:-translate-y-0.5 ${isLight ? 'bg-red-50' : 'bg-red-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">Зона расходов</p><p className="mt-1 text-xs font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p><p className="mt-1 text-[10px] text-red-400">Посмотреть детали →</p></button>
+                        <div className={`rounded-xl p-3 ${isLight ? 'bg-amber-50' : 'bg-amber-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">Финансовый вывод</p><p className="mt-1 text-xs font-semibold leading-relaxed">{historyIncome > historyExpense ? 'Поток положительный: доходы покрывают расходы.' : historyExpense > 0 ? 'Расходы сейчас сильнее — стоит посмотреть структуру.' : 'Данных пока мало для уверенного вывода.'}</p></div>
                       </div>
                     </div>
                   )}
