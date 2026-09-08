@@ -1282,6 +1282,7 @@ export default function CalendarScreen() {
         openConnectModal={openConnectModal} ctraderConnected={ctraderConnected}
         installInfoRef={installInfoRef} handleInstallClick={handleInstallClick}
         pendingSyncCount={pendingSyncCount} installInfoOpen={installInfoOpen} installInstructions={installInstructions}
+        periodStats={periodStats} periodTrades={periodTrades} currencySymbol={currencySymbol} formatMoney={formatMoney}
       />
 
       {/* PRO controls live in Header: one clean control center, no floating duplicate block. */}
@@ -1456,18 +1457,24 @@ export default function CalendarScreen() {
             <span className="relative font-medium">{t('history')}{traderMode && <span className="ml-1 text-amber-400">✦</span>}</span>
           </button>
 
-          {/* Central Eye-Catching Add '+' Button */}
+          {/* Central Add '+' Button — sleek, elegant, calm */}
           <button
             type="button"
             onClick={() => openModal()}
             title={traderMode ? t('addTrade') : t('addRecord')}
             aria-label={traderMode ? t('addTrade') : t('addRecord')}
-            className="group relative flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 px-4 sm:px-5 py-2 sm:py-2.5 text-zinc-950 font-bold shadow-[0_4px_24px_rgba(245,158,11,0.45)] hover:shadow-[0_8px_34px_rgba(245,158,11,0.7)] hover:scale-[1.04] active:scale-[0.96] transition-all duration-200 border border-amber-200/60"
+            className={`group relative flex items-center gap-2 rounded-full px-4 sm:px-5 py-2 sm:py-2.5 font-medium transition-all duration-200 active:scale-[0.97] border ${
+              isLight
+                ? 'border-slate-800 bg-slate-900 text-white hover:bg-slate-800 shadow-sm'
+                : 'border-zinc-700/80 bg-zinc-900 text-zinc-100 hover:border-amber-400/50 hover:bg-zinc-800 shadow-sm'
+            }`}
           >
-            <span className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-black/10 transition-transform duration-300 group-hover:rotate-90">
-              <Plus className="h-4 w-4 sm:h-5 sm:w-5 stroke-[2.8] text-zinc-950" />
+            <span className={`flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full transition-transform duration-200 group-hover:rotate-90 ${
+              isLight ? 'bg-white/15 text-amber-300' : 'bg-amber-400/15 text-amber-400'
+            }`}>
+              <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 stroke-[2.5]" />
             </span>
-            <span className="text-xs sm:text-sm font-bold tracking-tight">
+            <span className="text-xs sm:text-sm font-semibold tracking-tight">
               {traderMode ? t('addTrade') : t('addRecord')}
             </span>
           </button>

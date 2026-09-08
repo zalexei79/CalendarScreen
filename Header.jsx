@@ -16,7 +16,17 @@ export default function Header({
   openConnectModal, ctraderConnected, installInfoRef, handleInstallClick,
   pendingSyncCount, installInfoOpen, installInstructions,
   platformFilter, platformOptions = [], calendarTypeFilter, setCalendarTypeFilter,
+  periodStats, periodTrades = [], currencySymbol = '$', formatMoney,
 }) {
+  const totalTrades = periodTrades?.length || 0;
+  const winCount = periodTrades?.filter((t) => t.pnl >= 0).length || 0;
+  const lossCount = totalTrades - winCount;
+  const winrate = totalTrades > 0 ? Math.round((winCount / totalTrades) * 100) : 0;
+  const netPnl = periodTrades?.reduce((sum, t) => sum + t.pnl, 0) || 0;
+  const radius = 22;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (winrate / 100) * circumference;
+
   return (
     <header className={`px-2 sm:px-8 pt-3 sm:pt-6 pb-3 sm:pb-4 border-b ${isLight ? 'border-slate-200/90 bg-white' : 'border-zinc-800'}`}>
       {/* Top row: Brand app icon + Title on left, [Download] [Theme] [Settings] on right */}
@@ -419,9 +429,95 @@ export default function Header({
       </div>
 
       {/* PRO control center */}
-      <div className={`overflow-hidden transition-all duration-300 ${traderMode ? 'max-h-44 opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0 pointer-events-none'}`}>
+      <div className={`overflow-hidden transition-all duration-300 ${traderMode ? 'max-h-96 opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0 pointer-events-none'}`}>
         <div className={`rounded-2xl border px-3 py-3 sm:px-4 ${isLight ? 'border-slate-200/90 bg-white shadow-xs' : 'border-amber-400/20 bg-gradient-to-r from-amber-400/[0.07] via-zinc-950 to-zinc-950'}`}>
           <div className="flex flex-col gap-3">
+            {/* PRO Donut Chart + Performance Overview */}
+            <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border p-2.5 sm:p-3 transition-colors ${
+              isLight ? 'border-slate-200/80 bg-slate-50/70' : 'border-zinc-800 bg-zinc-900/50'
+            }`}>
+              <div className="flex items-center gap-3.5">
+                {/* Circular Donut Diagram */}
+                <div className="relative flex items-center justify-center shrink-0 w-13 h-13 sm:w-14 sm:h-14">
+                  <svg className="w-13 h-13 sm:w-14 sm:h-14 -rotate-90 transform" viewBox="0 0 56 56">
+                    <circle
+                      cx="28"
+                      cy="28"
+                      r={radius}
+                      className={isLight ? 'text-slate-200' : 'text-zinc-800'}
+                      strokeWidth="5.5"
+                      stroke="currentColor"
+                      fill="transparent"
+                    />
+                    {totalTrades > 0 && lossCount > 0 && (
+                      <circle
+                        cx="28"
+                        cy="28"
+                        r={radius}
+                        className="text-rose-500/85"
+                        strokeWidth="5.5"
+                        strokeDasharray={circumference}
+                        strokeDashoffset="0"
+                        stroke="currentColor"
+                        fill="transparent"
+                      />
+                    )}
+                    {totalTrades > 0 && winCount > 0 && (
+                      <circle
+                        cx="28"
+                        cy="28"
+                        r={radius}
+                        className="text-emerald-500 transition-all duration-700 ease-out"
+                        strokeWidth="5.5"
+                        strokeDasharray={circumference}
+                        strokeDashoffset={strokeDashoffset}
+                        strokeLinecap="round"
+                        stroke="currentColor"
+                        fill="transparent"
+                      />
+                    )}
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center leading-none">
+                    <span className={`font-data text-xs font-bold ${
+                      totalTrades === 0 ? (isLight ? 'text-slate-400' : 'text-zinc-500') : winrate >= 50 ? 'text-emerald-600' : 'text-rose-600'
+                    }`}>
+                      {totalTrades > 0 ? `${winrate}%` : '0%'}
+                    </span>
+                    <span className="text-[7px] uppercase font-bold tracking-tight text-slate-400 mt-0.5">WIN</span>
+                  </div>
+                </div>
+
+                {/* Legend & Stats */}
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="font-data text-[10px] uppercase tracking-wider text-amber-500 font-bold">PRO WINRATE</span>
+                    <span className="text-[10px] text-slate-400">•</span>
+                    <span className={`font-data text-[10px] ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>{totalTrades} {t('trades')}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs">
+                    <span className="flex items-center gap-1 text-emerald-600 font-semibold font-data">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      +{winCount} {t('profitTrade')}
+                    </span>
+                    <span className="flex items-center gap-1 text-rose-600 font-semibold font-data">
+                      <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                      −{lossCount} {t('lossTrade')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Net PnL Pill Badge */}
+              <div className={`self-stretch sm:self-auto flex items-center justify-between sm:justify-end gap-2 rounded-lg border px-3 py-1.5 font-data ${
+                isLight ? 'border-slate-200 bg-white' : 'border-zinc-800 bg-zinc-950'
+              }`}>
+                <span className={`text-[10px] uppercase tracking-wide ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>{t('total')}:</span>
+                <span className={`text-sm font-bold ${netPnl >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {netPnl >= 0 ? '+' : '−'}{currencySymbol}{formatMoney ? formatMoney(Math.abs(netPnl)) : Math.abs(netPnl)}
+                </span>
+              </div>
+            </div>
+
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center justify-between">
               <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
                 <span className={`shrink-0 font-data text-[9px] uppercase tracking-[0.18em] ${isLight ? 'text-slate-500 font-semibold' : 'text-zinc-500'}`}>{t('platforms')}</span>
