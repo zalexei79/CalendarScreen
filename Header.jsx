@@ -18,7 +18,7 @@ export default function Header({
   platformFilter, platformOptions = [], calendarTypeFilter, setCalendarTypeFilter,
 }) {
   return (
-    <header className={`px-2 sm:px-8 pt-3 sm:pt-6 pb-3 sm:pb-4 border-b ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}>
+    <header className={`px-2 sm:px-8 pt-3 sm:pt-6 pb-3 sm:pb-4 border-b ${isLight ? 'border-slate-200/90 bg-white' : 'border-zinc-800'}`}>
       {/* Top row: Brand app icon + Title on left, [Download] [Theme] [Settings] on right */}
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -420,11 +420,11 @@ export default function Header({
 
       {/* PRO control center */}
       <div className={`overflow-hidden transition-all duration-300 ${traderMode ? 'max-h-44 opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0 pointer-events-none'}`}>
-        <div className={`rounded-2xl border px-3 py-3 sm:px-4 ${isLight ? 'border-amber-300/60 bg-amber-50/70' : 'border-amber-400/20 bg-gradient-to-r from-amber-400/[0.07] via-zinc-950 to-zinc-950'}`}>
+        <div className={`rounded-2xl border px-3 py-3 sm:px-4 ${isLight ? 'border-slate-200/90 bg-white shadow-xs' : 'border-amber-400/20 bg-gradient-to-r from-amber-400/[0.07] via-zinc-950 to-zinc-950'}`}>
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center justify-between">
               <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-                <span className="shrink-0 font-data text-[9px] uppercase tracking-[0.18em] text-zinc-500">{t('platforms')}</span>
+                <span className={`shrink-0 font-data text-[9px] uppercase tracking-[0.18em] ${isLight ? 'text-slate-500 font-semibold' : 'text-zinc-500'}`}>{t('platforms')}</span>
                 <div className="flex min-w-0 gap-1 overflow-x-auto pb-0.5">
                   {platformOptions.map((p) => (
                     <button
@@ -432,9 +432,9 @@ export default function Header({
                       onClick={() => setPlatformFilter(p)}
                       className={`shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-data transition-all ${
                         platformFilter === p
-                          ? 'border border-amber-400/45 bg-amber-400/15 text-amber-400 shadow-[0_6px_18px_rgba(251,191,36,.08)]'
+                          ? (isLight ? 'border border-amber-500/50 bg-amber-50 text-amber-800 font-bold shadow-xs' : 'border border-amber-400/45 bg-amber-400/15 text-amber-400 shadow-[0_6px_18px_rgba(251,191,36,.08)]')
                           : isLight
-                          ? 'text-zinc-500 hover:bg-white'
+                          ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                           : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'
                       }`}
                     >
@@ -449,7 +449,7 @@ export default function Header({
                 onClick={openConnectModal}
                 className={`shrink-0 flex items-center justify-center gap-1.5 rounded-xl border px-2.5 py-1.5 font-data text-[10px] tracking-wide font-medium transition-all hover:-translate-y-px shadow-sm ${
                   isLight
-                    ? 'border-amber-400/50 bg-amber-400/10 text-amber-700 hover:bg-amber-400/20'
+                    ? 'border-amber-400/60 bg-amber-50 text-amber-800 hover:bg-amber-100'
                     : 'border-amber-400/40 bg-amber-400/10 text-amber-400 hover:bg-amber-400/20'
                 }`}
                 title={t('connectPlatform')}
@@ -460,8 +460,8 @@ export default function Header({
               </button>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <span className="shrink-0 font-data text-[9px] uppercase tracking-[0.18em] text-zinc-500">{t('show')}</span>
-              <div className={`inline-flex w-fit gap-1 rounded-xl border p-1 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}>
+              <span className={`shrink-0 font-data text-[9px] uppercase tracking-[0.18em] ${isLight ? 'text-slate-500 font-semibold' : 'text-zinc-500'}`}>{t('show')}</span>
+              <div className={`inline-flex w-fit gap-1 rounded-xl border p-1 ${isLight ? 'border-slate-200 bg-slate-100/70' : 'border-zinc-800 bg-black/20'}`}>
                 {[
                   ['all', t('all')],
                   ['income', `+ ${t('income')}`],
@@ -471,7 +471,9 @@ export default function Header({
                     key={key}
                     onClick={() => setCalendarTypeFilter(key)}
                     className={`rounded-lg px-3 py-1.5 text-[10px] font-data transition-all ${
-                      calendarTypeFilter === key ? 'bg-amber-400/15 text-amber-500 ring-1 ring-amber-400/20 font-medium' : 'text-zinc-500 hover:text-zinc-300'
+                      calendarTypeFilter === key
+                        ? (isLight ? 'bg-white text-slate-900 shadow-xs font-bold' : 'bg-amber-400/15 text-amber-500 ring-1 ring-amber-400/20 font-medium')
+                        : (isLight ? 'text-slate-600 hover:text-slate-900' : 'text-zinc-500 hover:text-zinc-300')
                     }`}
                   >
                     {label}

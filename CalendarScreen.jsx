@@ -1212,35 +1212,36 @@ export default function CalendarScreen() {
         .font-data { font-family: 'JetBrains Mono', monospace; }
         @keyframes cellGlowIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
         @keyframes themeIconPop { from { opacity: 0; transform: scale(0.4) rotate(-40deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
-        /* The screen was designed dark-first. These scoped replacements make
-           every remaining dark utility class legible in the light theme,
-           including the header, popovers and bottom sheets. */
+        /* Modern crisp, readable light theme palette */
+        .theme-light.premium-shell {
+          background-color: #f8fafc;
+          background-image: radial-gradient(circle at 15% -5%, rgba(251,191,36,.06), transparent 30%), radial-gradient(circle at 85% 0%, rgba(59,130,246,.03), transparent 25%);
+        }
         .theme-light .bg-zinc-950,
-        .theme-light .bg-zinc-900 { background-color: #faf3eb !important; }
-        .theme-light .bg-zinc-800 { background-color: #e8e0d8 !important; }
-        .theme-light .bg-zinc-100 { background-color: #f5f0e8 !important; }
-        .theme-light .bg-zinc-50 { background-color: #f8f2ea !important; }
-        .theme-light .bg-white { background-color: #faf3eb !important; }
+        .theme-light .bg-zinc-900 { background-color: #ffffff !important; }
+        .theme-light .bg-zinc-800 { background-color: #f1f5f9 !important; }
+        .theme-light .bg-zinc-100 { background-color: #f8fafc !important; }
+        .theme-light .bg-zinc-50 { background-color: #ffffff !important; }
+        .theme-light .bg-white { background-color: #ffffff !important; }
         .theme-light .text-zinc-50,
-        .theme-light .text-zinc-100 { color: #18181b !important; }
-        .theme-light .text-zinc-200 { color: #27272a !important; }
-        .theme-light .text-zinc-300 { color: #3f3f46 !important; }
-        .theme-light .text-zinc-400 { color: #52525b !important; }
-        .theme-light .text-zinc-500 { color: #52525b !important; }
-        .theme-light .text-zinc-600 { color: #3f3f46 !important; }
-        .theme-light .text-zinc-700 { color: #27272a !important; }
+        .theme-light .text-zinc-100 { color: #0f172a !important; }
+        .theme-light .text-zinc-200 { color: #1e293b !important; }
+        .theme-light .text-zinc-300 { color: #334155 !important; }
+        .theme-light .text-zinc-400 { color: #475569 !important; }
+        .theme-light .text-zinc-500 { color: #64748b !important; }
+        .theme-light .text-zinc-600 { color: #475569 !important; }
+        .theme-light .text-zinc-700 { color: #334155 !important; }
         .theme-light .border-zinc-800,
-        .theme-light .border-zinc-700 { border-color: #d4c8bc !important; }
-        .theme-light .border-zinc-200 { border-color: #d4c8bc !important; }
-        .theme-light .border-zinc-300 { border-color: #c8bcb0 !important; }
-        /* Dark, unobtrusive scrollbars everywhere instead of the default
-           bright OS scrollbar, which reads as a stray white line in this UI. */
+        .theme-light .border-zinc-700 { border-color: #e2e8f0 !important; }
+        .theme-light .border-zinc-200 { border-color: #e2e8f0 !important; }
+        .theme-light .border-zinc-300 { border-color: #e2e8f0 !important; }
+        /* Clean scrollbars */
         * { scrollbar-width: thin; scrollbar-color: #52525b transparent; }
         *::-webkit-scrollbar { height: 6px; width: 6px; }
         *::-webkit-scrollbar-track { background: transparent; }
         *::-webkit-scrollbar-thumb { background-color: #52525b; border-radius: 9999px; }
-        .theme-light *::-webkit-scrollbar-thumb { background-color: #a1a1aa; }
-        .theme-light { scrollbar-color: #a1a1aa transparent; }
+        .theme-light *::-webkit-scrollbar-thumb { background-color: #cbd5e1; }
+        .theme-light { scrollbar-color: #cbd5e1 transparent; }
         /* Mobile layout: use the available viewport instead of leaving a huge empty area. */
         /* Premium visual system */
         .premium-shell { background-image: radial-gradient(circle at 12% -10%, rgba(251,191,36,.10), transparent 28%), radial-gradient(circle at 90% 5%, rgba(59,130,246,.06), transparent 24%); }
