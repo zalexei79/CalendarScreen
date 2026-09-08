@@ -950,12 +950,31 @@ export default function CalendarScreen() {
   const [confirmingClear, setConfirmingClear] = useState(false);
 
   const historyTrades = useMemo(() => {
-    return Object.entries(manualTrades)
-      .flatMap(([dateKey, arr]) => arr.map((t) => ({ ...t, dateKey })))
+    // History must never trust a raw synced record: Bybit/cTrader/Supabase
+    // can temporarily give us nulls, strings or partially filled objects.
+    // Normalize only the UI view; the stored data and sync layer stay untouched.
+    const source = manualTrades && typeof manualTrades === 'object' ? manualTrades : {};
+
+    return Object.entries(source)
+      .flatMap(([dateKey, arr]) => {
+        if (!Array.isArray(arr)) return [];
+        return arr
+          .filter((trade) => trade && typeof trade === 'object')
+          .map((trade, index) => ({
+            ...trade,
+            _historyId: trade.id || `${dateKey}-${index}`,
+            dateKey: String(trade.dateKey || dateKey || ''),
+            time: String(trade.time || '00:00'),
+            instrument: String(trade.instrument || trade.symbol || 'Другое'),
+            platform: String(trade.platform || 'Manual'),
+            currency: String(trade.currency || 'USD').toUpperCase(),
+            pnl: Number.isFinite(Number(trade.pnl)) ? Number(trade.pnl) : 0,
+          }));
+      })
       .filter((t) => t.dateKey >= dateFrom && t.dateKey <= dateTo)
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
-      .filter((t) => historyCurrency === 'ALL' || (t.currency || 'USD') === historyCurrency)
-      .filter((t) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? t.pnl >= 0 : t.pnl < 0))
+      .filter((t) => historyCurrency === 'ALL' || t.currency === historyCurrency)
+      .filter((t) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? t.pnl > 0 : t.pnl < 0))
       .sort((a, b) => (a.dateKey === b.dateKey ? b.time.localeCompare(a.time) : b.dateKey.localeCompare(a.dateKey)));
   }, [manualTrades, dateFrom, dateTo, platformFilter, historyWinLoss, historyCurrency]);
 
