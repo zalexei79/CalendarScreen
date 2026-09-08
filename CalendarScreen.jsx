@@ -950,26 +950,29 @@ export default function CalendarScreen() {
   const [confirmingClear, setConfirmingClear] = useState(false);
 
   const historyTrades = useMemo(() => {
-    // History must never trust a raw synced record: Bybit/cTrader/Supabase
-    // can temporarily give us nulls, strings or partially filled objects.
-    // Normalize only the UI view; the stored data and sync layer stay untouched.
     const source = manualTrades && typeof manualTrades === 'object' ? manualTrades : {};
 
     return Object.entries(source)
-      .flatMap(([dateKey, arr]) => {
-        if (!Array.isArray(arr)) return [];
-        return arr
+      .flatMap(([dateKey, value]) => {
+        if (!Array.isArray(value)) return [];
+        return value
           .filter((trade) => trade && typeof trade === 'object')
-          .map((trade, index) => ({
-            ...trade,
-            _historyId: trade.id || `${dateKey}-${index}`,
-            dateKey: String(trade.dateKey || dateKey || ''),
-            time: String(trade.time || '00:00'),
-            instrument: String(trade.instrument || trade.symbol || 'Другое'),
-            platform: String(trade.platform || 'Manual'),
-            currency: String(trade.currency || 'USD').toUpperCase(),
-            pnl: Number.isFinite(Number(trade.pnl)) ? Number(trade.pnl) : 0,
-          }));
+          .map((trade, index) => {
+            const rawPnl = Number(trade.pnl);
+            const safePnl = Number.isFinite(rawPnl) ? rawPnl : 0;
+            const safeDateKey = String(trade.dateKey || dateKey || '');
+            const safeTime = String(trade.time || '00:00');
+            return {
+              ...trade,
+              id: String(trade.id ?? `${safeDateKey}-${safeTime}-${index}`),
+              dateKey: safeDateKey,
+              time: safeTime,
+              pnl: safePnl,
+              currency: String(trade.currency || 'USD').toUpperCase(),
+              platform: String(trade.platform || 'Manual'),
+              instrument: String(trade.instrument || 'Другое'),
+            };
+          });
       })
       .filter((t) => t.dateKey >= dateFrom && t.dateKey <= dateTo)
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
@@ -2016,8 +2019,8 @@ export default function CalendarScreen() {
                   {/* ── Luxury Donut + Stats Header ─────────────────────── */}
                   {(() => {
                     const hTrades = historyTrades;
-                    const hWin = hTrades.filter(t => t.pnl >= 0).length;
-                    const hLoss = hTrades.length - hWin;
+                    const hWin = hTrades.filter(t => t.pnl > 0).length;
+                    const hLoss = hTrades.filter(t => t.pnl < 0).length;
                     const hWinrate = hTrades.length > 0 ? Math.round((hWin / hTrades.length) * 100) : 0;
                     const hTotal = hTrades.reduce((s, t) => s + t.pnl, 0);
                     const r = 38;
