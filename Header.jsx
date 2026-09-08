@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   ChevronLeft, ChevronRight, Link2, LogIn, LogOut, Download, Smartphone, Monitor, Wifi, Cloud,
-  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal,
+  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, CheckCircle2,
 } from 'lucide-react';
 import { LANGUAGES, CURRENCIES } from './src/shared/config/constants';
 import { monthsFor } from './src/shared/i18n';
@@ -18,14 +18,7 @@ export default function Header({
   platformFilter, platformOptions = [], calendarTypeFilter, setCalendarTypeFilter,
   periodStats, periodTrades = [], currencySymbol = '$', formatMoney,
 }) {
-  const totalTrades = periodTrades?.length || 0;
-  const winCount = periodTrades?.filter((t) => t.pnl >= 0).length || 0;
-  const lossCount = totalTrades - winCount;
-  const winrate = totalTrades > 0 ? Math.round((winCount / totalTrades) * 100) : 0;
-  const netPnl = periodTrades?.reduce((sum, t) => sum + t.pnl, 0) || 0;
-  const radius = 22;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (winrate / 100) * circumference;
+
 
   return (
     <header className={`px-2 sm:px-8 pt-3 sm:pt-6 pb-3 sm:pb-4 border-b ${isLight ? 'border-slate-200/90 bg-white' : 'border-zinc-800'}`}>
@@ -428,133 +421,60 @@ export default function Header({
         </div>
       </div>
 
+
       {/* PRO control center */}
-      <div className={`overflow-hidden transition-all duration-300 ${traderMode ? 'max-h-96 opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0 pointer-events-none'}`}>
+      <div className={`overflow-hidden transition-all duration-300 ${traderMode ? 'max-h-52 opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0 pointer-events-none'}`}>
         <div className={`rounded-2xl border px-3 py-3 sm:px-4 ${isLight ? 'border-slate-200/90 bg-white shadow-xs' : 'border-amber-400/20 bg-gradient-to-r from-amber-400/[0.07] via-zinc-950 to-zinc-950'}`}>
-          <div className="flex flex-col gap-3">
-            {/* PRO Donut Chart + Performance Overview */}
-            <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border p-2.5 sm:p-3 transition-colors ${
-              isLight ? 'border-slate-200/80 bg-slate-50/70' : 'border-zinc-800 bg-zinc-900/50'
-            }`}>
-              <div className="flex items-center gap-3.5">
-                {/* Circular Donut Diagram */}
-                <div className="relative flex items-center justify-center shrink-0 w-13 h-13 sm:w-14 sm:h-14">
-                  <svg className="w-13 h-13 sm:w-14 sm:h-14 -rotate-90 transform" viewBox="0 0 56 56">
-                    <circle
-                      cx="28"
-                      cy="28"
-                      r={radius}
-                      className={isLight ? 'text-slate-200' : 'text-zinc-800'}
-                      strokeWidth="5.5"
-                      stroke="currentColor"
-                      fill="transparent"
-                    />
-                    {totalTrades > 0 && lossCount > 0 && (
-                      <circle
-                        cx="28"
-                        cy="28"
-                        r={radius}
-                        className="text-rose-500/85"
-                        strokeWidth="5.5"
-                        strokeDasharray={circumference}
-                        strokeDashoffset="0"
-                        stroke="currentColor"
-                        fill="transparent"
-                      />
-                    )}
-                    {totalTrades > 0 && winCount > 0 && (
-                      <circle
-                        cx="28"
-                        cy="28"
-                        r={radius}
-                        className="text-emerald-500 transition-all duration-700 ease-out"
-                        strokeWidth="5.5"
-                        strokeDasharray={circumference}
-                        strokeDashoffset={strokeDashoffset}
-                        strokeLinecap="round"
-                        stroke="currentColor"
-                        fill="transparent"
-                      />
-                    )}
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center leading-none">
-                    <span className={`font-data text-xs font-bold ${
-                      totalTrades === 0 ? (isLight ? 'text-slate-400' : 'text-zinc-500') : winrate >= 50 ? 'text-emerald-600' : 'text-rose-600'
-                    }`}>
-                      {totalTrades > 0 ? `${winrate}%` : '0%'}
-                    </span>
-                    <span className="text-[7px] uppercase font-bold tracking-tight text-slate-400 mt-0.5">WIN</span>
-                  </div>
-                </div>
-
-                {/* Legend & Stats */}
-                <div>
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <span className="font-data text-[10px] uppercase tracking-wider text-amber-500 font-bold">PRO WINRATE</span>
-                    <span className="text-[10px] text-slate-400">•</span>
-                    <span className={`font-data text-[10px] ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>{totalTrades} {t('trades')}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs">
-                    <span className="flex items-center gap-1 text-emerald-600 font-semibold font-data">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                      +{winCount} {t('profitTrade')}
-                    </span>
-                    <span className="flex items-center gap-1 text-rose-600 font-semibold font-data">
-                      <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-                      −{lossCount} {t('lossTrade')}
-                    </span>
-                  </div>
-                </div>
+          <div className="flex flex-col gap-2.5">
+            {/* Platforms row */}
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
+              <span className={`shrink-0 font-data text-[9px] uppercase tracking-[0.18em] ${isLight ? 'text-slate-500 font-semibold' : 'text-zinc-500'}`}>{t('platforms')}</span>
+              <div className="flex min-w-0 gap-1 overflow-x-auto pb-0.5 flex-1">
+                {platformOptions.map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPlatformFilter(p)}
+                    className={`shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-data transition-all ${
+                      platformFilter === p
+                        ? (isLight ? 'border border-amber-500/50 bg-amber-50 text-amber-800 font-bold shadow-xs' : 'border border-amber-400/45 bg-amber-400/15 text-amber-400 shadow-[0_6px_18px_rgba(251,191,36,.08)]')
+                        : isLight
+                        ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'
+                    }`}
+                  >
+                    {p === 'ALL' ? t('all') : p}
+                  </button>
+                ))}
               </div>
 
-              {/* Net PnL Pill Badge */}
-              <div className={`self-stretch sm:self-auto flex items-center justify-between sm:justify-end gap-2 rounded-lg border px-3 py-1.5 font-data ${
-                isLight ? 'border-slate-200 bg-white' : 'border-zinc-800 bg-zinc-950'
-              }`}>
-                <span className={`text-[10px] uppercase tracking-wide ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>{t('total')}:</span>
-                <span className={`text-sm font-bold ${netPnl >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {netPnl >= 0 ? '+' : '−'}{currencySymbol}{formatMoney ? formatMoney(Math.abs(netPnl)) : Math.abs(netPnl)}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-                <span className={`shrink-0 font-data text-[9px] uppercase tracking-[0.18em] ${isLight ? 'text-slate-500 font-semibold' : 'text-zinc-500'}`}>{t('platforms')}</span>
-                <div className="flex min-w-0 gap-1 overflow-x-auto pb-0.5">
-                  {platformOptions.map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setPlatformFilter(p)}
-                      className={`shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-data transition-all ${
-                        platformFilter === p
-                          ? (isLight ? 'border border-amber-500/50 bg-amber-50 text-amber-800 font-bold shadow-xs' : 'border border-amber-400/45 bg-amber-400/15 text-amber-400 shadow-[0_6px_18px_rgba(251,191,36,.08)]')
-                          : isLight
-                          ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                          : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'
-                      }`}
-                    >
-                      {p === 'ALL' ? t('all') : p}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Connect platform button styled right next to platforms */}
-              <button
-                onClick={openConnectModal}
-                className={`shrink-0 flex items-center justify-center gap-1.5 rounded-xl border px-2.5 py-1.5 font-data text-[10px] tracking-wide font-medium transition-all hover:-translate-y-px shadow-sm ${
+              {/* Connected or Connect button */}
+              {ctraderConnected ? (
+                <div className={`shrink-0 flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 font-data text-[10px] font-semibold ${
                   isLight
-                    ? 'border-amber-400/60 bg-amber-50 text-amber-800 hover:bg-amber-100'
-                    : 'border-amber-400/40 bg-amber-400/10 text-amber-400 hover:bg-amber-400/20'
-                }`}
-                title={t('connectPlatform')}
-              >
-                <Link2 className="h-3 w-3 shrink-0" />
-                <span>{t('connectPlatform')}</span>
-                {ctraderConnected && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />}
-              </button>
+                    ? 'border-emerald-300/80 bg-emerald-50 text-emerald-700'
+                    : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                }`}>
+                  <CheckCircle2 className="h-3 w-3 shrink-0" />
+                  <span>{t('connected') || 'Подключено'}</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                </div>
+              ) : (
+                <button
+                  onClick={openConnectModal}
+                  className={`shrink-0 flex items-center justify-center gap-1.5 rounded-xl border px-2.5 py-1.5 font-data text-[10px] tracking-wide font-medium transition-all hover:-translate-y-px shadow-sm ${
+                    isLight
+                      ? 'border-amber-400/60 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                      : 'border-amber-400/40 bg-amber-400/10 text-amber-400 hover:bg-amber-400/20'
+                  }`}
+                  title={t('connectPlatform')}
+                >
+                  <Link2 className="h-3 w-3 shrink-0" />
+                  <span>{t('connectPlatform')}</span>
+                </button>
+              )}
             </div>
+
+            {/* Show filter row */}
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <span className={`shrink-0 font-data text-[9px] uppercase tracking-[0.18em] ${isLight ? 'text-slate-500 font-semibold' : 'text-zinc-500'}`}>{t('show')}</span>
               <div className={`inline-flex w-fit gap-1 rounded-xl border p-1 ${isLight ? 'border-slate-200 bg-slate-100/70' : 'border-zinc-800 bg-black/20'}`}>
@@ -580,6 +500,7 @@ export default function Header({
           </div>
         </div>
       </div>
+
     </header>
   );
 }

@@ -1992,139 +1992,307 @@ export default function CalendarScreen() {
                 </>
               ) : (
                 <>
-                  {/* PRO history — улучшен визуал для светлой темы */}
+                  {/* PRO HISTORY — Premium redesign with donut chart */}
+
+                  {/* ── Luxury Donut + Stats Header ─────────────────────── */}
+                  {(() => {
+                    const hTrades = historyTrades;
+                    const hWin = hTrades.filter(t => t.pnl >= 0).length;
+                    const hLoss = hTrades.length - hWin;
+                    const hWinrate = hTrades.length > 0 ? Math.round((hWin / hTrades.length) * 100) : 0;
+                    const hTotal = hTrades.reduce((s, t) => s + t.pnl, 0);
+                    const r = 38;
+                    const circ = 2 * Math.PI * r;
+                    const offset = circ - (hWinrate / 100) * circ;
+                    const lossOffset = circ - ((hLoss / (hTrades.length || 1)) * circ);
+                    return (
+                      <div className={`relative mb-4 overflow-hidden rounded-2xl border p-4 sm:p-5 ${
+                        isLight
+                          ? 'border-zinc-200 bg-gradient-to-br from-white to-zinc-50/80 shadow-sm'
+                          : 'border-amber-400/15 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black shadow-[0_24px_60px_rgba(0,0,0,.4)]'
+                      }`}>
+                        {/* Ambient glow */}
+                        <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-amber-400/[0.06] blur-3xl" />
+                        <div className="pointer-events-none absolute -left-6 -bottom-6 h-32 w-32 rounded-full bg-emerald-500/[0.05] blur-2xl" />
+
+                        <div className="relative flex items-center gap-5">
+                          {/* Donut SVG */}
+                          <div className="relative flex shrink-0 items-center justify-center" style={{width:96,height:96}}>
+                            <svg width="96" height="96" viewBox="0 0 96 96" className="-rotate-90">
+                              {/* Track */}
+                              <circle cx="48" cy="48" r={r} strokeWidth="9"
+                                stroke={isLight ? '#e2e8f0' : '#27272a'} fill="none" />
+                              {/* Loss arc (full if any losses) */}
+                              {hTrades.length > 0 && hLoss > 0 && (
+                                <circle cx="48" cy="48" r={r} strokeWidth="9"
+                                  stroke="rgb(239 68 68 / 0.75)"
+                                  strokeDasharray={circ}
+                                  strokeDashoffset="0"
+                                  fill="none" />
+                              )}
+                              {/* Win arc */}
+                              {hTrades.length > 0 && hWin > 0 && (
+                                <circle cx="48" cy="48" r={r} strokeWidth="9"
+                                  stroke="rgb(16 185 129)"
+                                  strokeDasharray={circ}
+                                  strokeDashoffset={offset}
+                                  strokeLinecap="round"
+                                  fill="none"
+                                  style={{transition:'stroke-dashoffset 0.8s cubic-bezier(.4,0,.2,1)'}} />
+                              )}
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center leading-none">
+                              <span className={`font-data text-xl font-bold tabular-nums ${
+                                hTrades.length === 0 ? 'text-zinc-500'
+                                : hWinrate >= 50 ? 'text-emerald-500' : 'text-red-500'
+                              }`}>{hWinrate}%</span>
+                              <span className={`mt-1 text-[9px] font-bold uppercase tracking-widest ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>WIN</span>
+                            </div>
+                          </div>
+
+                          {/* Stats */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="font-data text-[10px] uppercase tracking-[0.22em] text-amber-500 font-bold">PRO</span>
+                              <span className={`font-data text-[10px] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>·</span>
+                              <span className={`font-data text-[10px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{hTrades.length} {t('trades')}</span>
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                              <div className="flex items-center gap-2">
+                                <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                                <span className={`font-data text-xs font-semibold text-emerald-600`}>+{hWin} {t('profitTrade')}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="h-2 w-2 rounded-full bg-red-500 shrink-0" />
+                                <span className={`font-data text-xs font-semibold text-red-500`}>−{hLoss} {t('lossTrade')}</span>
+                              </div>
+                            </div>
+                            <div className={`mt-3 flex items-center justify-between rounded-xl border px-3 py-2 font-data ${
+                              isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/80'
+                            }`}>
+                              <span className={`text-[10px] uppercase tracking-wide ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('total')}:</span>
+                              <span className={`text-sm font-bold tabular-nums ${hTotal >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                {hTotal >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoney(Math.abs(hTotal))}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Win-rate bar */}
+                        {hTrades.length > 0 && (
+                          <div className="relative mt-4 overflow-hidden rounded-full" style={{height:4}}>
+                            <div className={`absolute inset-0 ${isLight ? 'bg-red-200' : 'bg-red-500/20'}`} />
+                            <div
+                              className="absolute inset-y-0 left-0 rounded-full bg-emerald-500 transition-all duration-700"
+                              style={{width:`${hWinrate}%`}}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* ── Compact Luxury Filter Bar ───────────────────────── */}
+                  <div className={`mb-4 rounded-2xl border p-3 ${
+                    isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800/80 bg-zinc-950/60'
+                  }`}>
+                    {/* Period row */}
+                    <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                      <span className={`shrink-0 font-data text-[9px] uppercase tracking-[0.18em] mr-1 ${isLight ? 'text-zinc-400 font-semibold' : 'text-zinc-600'}`}>{t('period') || 'Период'}</span>
+                      <div className="flex gap-1 overflow-x-auto pb-0.5 flex-wrap">
+                        {PERIOD_PRESETS.map((p) => (
+                          <button key={p} onClick={() => handlePresetChange(p)}
+                            className={`shrink-0 rounded-full border px-2.5 py-1 font-data text-[10px] transition-all ${
+                              periodPreset === p
+                                ? 'border-amber-400/60 bg-amber-400/12 text-amber-500 font-semibold shadow-[0_0_12px_rgba(251,191,36,.15)]'
+                                : isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-500 hover:border-amber-400/40 hover:text-zinc-700'
+                                : 'border-zinc-800 bg-zinc-900/50 text-zinc-500 hover:border-amber-400/30 hover:text-zinc-300'
+                            }`}>{p}</button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Date range */}
+                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 mb-3">
+                      <input type="date" value={dateFrom} onChange={(e) => handleDateFromChange(e.target.value)}
+                        className={`min-w-0 rounded-xl border px-2 py-1.5 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
+                          isLight ? 'bg-zinc-50 border-zinc-200 text-zinc-800' : 'bg-zinc-900 border-zinc-700 text-zinc-200'
+                        }`} />
+                      <span className={`text-center text-xs ${isLight ? 'text-zinc-300' : 'text-zinc-700'}`}>—</span>
+                      <input type="date" value={dateTo} onChange={(e) => handleDateToChange(e.target.value)}
+                        className={`min-w-0 rounded-xl border px-2 py-1.5 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
+                          isLight ? 'bg-zinc-50 border-zinc-200 text-zinc-800' : 'bg-zinc-900 border-zinc-700 text-zinc-200'
+                        }`} />
+                    </div>
+
+                    {/* Platform + Currency row */}
+                    <div className="flex gap-1.5 flex-wrap">
+                      {/* Platform select */}
+                      <div className="relative flex-1 min-w-[110px]">
+                        <select value={platformFilter} onChange={(e) => setPlatformFilter(e.target.value)}
+                          className={`w-full appearance-none rounded-xl border px-3 py-2 pr-7 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
+                            isLight ? 'bg-zinc-50 border-zinc-200 text-zinc-700' : 'bg-zinc-900 border-zinc-700 text-zinc-200'
+                          }`}>
+                          <option value="ALL">{t('allSources')}</option>
+                          {PLATFORMS.map((item) => <option key={item} value={item}>{item}</option>)}
+                        </select>
+                        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500">
+                          <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" /></svg>
+                        </span>
+                      </div>
+
+                      {/* Currency selector */}
+                      <div className={`inline-flex gap-1 rounded-xl border p-1 ${
+                        isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/50'
+                      }`}>
+                        {[{ code: 'ALL', symbol: t('all') }, ...CURRENCIES].map((c) => (
+                          <button key={c.code} onClick={() => setHistoryCurrency(c.code)}
+                            title={c.code}
+                            className={`rounded-lg px-2 py-1 text-[10px] font-data transition-all ${
+                              historyCurrency === c.code
+                                ? 'bg-amber-400/15 text-amber-500 ring-1 ring-amber-400/20 font-semibold'
+                                : isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-300'
+                            }`}>
+                            {c.symbol}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── Win/Loss quick filter ───────────────────────────── */}
+                  <div className={`flex gap-1 mb-4 rounded-xl border p-1 ${
+                    isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'
+                  }`}>
+                    {[
+                      { key: 'all', label: t('all') },
+                      { key: 'win', label: `✦ ${t('profit')}` },
+                      { key: 'loss', label: `− ${t('loss')}` },
+                    ].map((opt) => (
+                      <button key={opt.key} onClick={() => setHistoryWinLoss(opt.key)}
+                        className={`flex-1 rounded-lg py-2 font-data text-xs font-medium transition-all ${
+                          historyWinLoss === opt.key
+                            ? opt.key === 'win'
+                              ? 'bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-400/25'
+                              : opt.key === 'loss'
+                              ? 'bg-red-500/15 text-red-500 ring-1 ring-red-400/20'
+                              : (isLight ? 'bg-white text-zinc-900 shadow-sm' : 'bg-amber-400/12 text-amber-400 ring-1 ring-amber-400/20')
+                            : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-500 hover:text-zinc-300'
+                        }`}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* ── Display mode + deposit + sync ──────────────────── */}
                   <div className="flex items-center gap-2 mb-3">
                     <button
                       onClick={() => {
-                        if (displayMode === 'usd' && depositSize <= 0) {
-                          handleEditDeposit();
-                          return;
-                        }
+                        if (displayMode === 'usd' && depositSize <= 0) { handleEditDeposit(); return; }
                         setDisplayMode((m) => (m === 'usd' ? 'percent' : 'usd'));
                       }}
-                      className={`rounded-md border px-2.5 py-1 font-data text-xs transition-colors ${
-                        isLight
-                          ? 'border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400'
-                          : 'border-zinc-700 bg-zinc-950 text-zinc-300 hover:border-zinc-600'
+                      className={`rounded-lg border px-2.5 py-1 font-data text-xs font-semibold transition-all ${
+                        isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-amber-400/50'
+                        : 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-amber-400/40'
                       }`}
                     >
-                      {displayMode === 'usd' ? '$' : '%'}
+                      {displayMode === 'usd' ? currencySymbol : '%'}
                     </button>
-                    <button
-                      onClick={handleEditDeposit}
-                      className={`font-data text-xs ${isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-500 hover:text-zinc-300'} transition-colors`}
-                    >
+                    <button onClick={handleEditDeposit}
+                      className={`font-data text-xs transition-colors ${isLight ? 'text-zinc-400 hover:text-zinc-700' : 'text-zinc-600 hover:text-zinc-300'}`}>
                       {t('deposit')}: {depositSize > 0 ? `${currencySymbol}${formatMoney(depositSize)}` : t('notSet')} ✎
                     </button>
                     {ctraderConnected && (
-                      <button
-                        onClick={handleSyncCtraderTrades}
-                        disabled={syncingCtrader}
-                        className={`ml-auto flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs transition-colors ${
-                          isLight
-                            ? 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                            : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
-                        }`}
-                      >
+                      <button onClick={handleSyncCtraderTrades} disabled={syncingCtrader}
+                        className={`ml-auto flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all ${
+                          isLight ? 'border-emerald-300/80 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                          : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                        }`}>
                         <RefreshCw className={`h-3 w-3 ${syncingCtrader ? 'animate-spin' : ''}`} />
                         {syncingCtrader ? t('syncing') : t('synchronize')}
                       </button>
                     )}
                   </div>
 
-                  <div className="mb-3">
-                    <button onClick={() => setProFiltersOpen((v) => !v)} className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-colors ${proFiltersOpen ? 'border-amber-400/45 bg-amber-400/10' : isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/70'}`}>
-                      <span><span className="block text-xs font-medium">{t('periodAndFilters')}</span><span className="mt-0.5 block text-[10px] text-zinc-500">{periodPreset} · {platformFilter === 'ALL' ? t('allSources') : platformFilter}</span></span>
-                      <ChevronDown className={`h-4 w-4 text-amber-500 transition-transform ${proFiltersOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    {proFiltersOpen && <div className={`mt-2 space-y-3 rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50/70' : 'border-zinc-800 bg-black/20'}`}>
-                      <div className="flex flex-wrap gap-1.5">{PERIOD_PRESETS.map((p) => <button key={p} onClick={() => handlePresetChange(p)} className={`rounded-full border px-2.5 py-1.5 font-data text-[10px] ${periodPreset === p ? 'border-amber-400/60 bg-amber-400/10 text-amber-500' : isLight ? 'border-zinc-300 bg-white text-zinc-600' : 'border-zinc-700 bg-zinc-950 text-zinc-400'}`}>{p}</button>)}</div>
-                      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5"><input type="date" value={dateFrom} onChange={(e) => handleDateFromChange(e.target.value)} className={`min-w-0 rounded-xl border px-2 py-2 text-xs font-data ${isLight ? 'bg-white border-zinc-300 text-zinc-900' : 'bg-zinc-950 border-zinc-700 text-zinc-200'}`} /><span className="text-zinc-500">—</span><input type="date" value={dateTo} onChange={(e) => handleDateToChange(e.target.value)} className={`min-w-0 rounded-xl border px-2 py-2 text-xs font-data ${isLight ? 'bg-white border-zinc-300 text-zinc-900' : 'bg-zinc-950 border-zinc-700 text-zinc-200'}`} /></div>
-                      <select value={platformFilter} onChange={(e) => setPlatformFilter(e.target.value)} className={`w-full rounded-xl border px-3 py-2 text-xs font-data ${isLight ? 'bg-white border-zinc-300 text-zinc-900' : 'bg-zinc-950 border-zinc-700 text-zinc-200'}`}><option value="ALL">{t('allSources')}</option>{PLATFORMS.map((item) => <option key={item} value={item}>{item}</option>)}</select>
-                    </div>}
-                  </div>
+                  {/* ── Trade count label ──────────────────────────────── */}
+                  <p className={`text-xs mb-2 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
+                    {historyTrades.length} {t('trades')} {periodPreset !== 'Вся история' ? `· ${periodPreset}` : ''}
+                    {platformFilter !== 'ALL' ? ` · ${platformFilter}` : ''}
+                    {historyCurrency !== 'ALL' ? ` · ${historyCurrency}` : ''}
+                  </p>
 
-                  <div className="flex gap-1.5 mb-4">
-                    {[{ key: 'all', label: t('all') }, { key: 'win', label: t('profit') }, { key: 'loss', label: t('loss') }].map((opt) => (
-                      <button
-                        key={opt.key}
-                        onClick={() => setHistoryWinLoss(opt.key)}
-                        className={[
-                          'flex-1 rounded-md border px-2 py-1.5 font-data text-xs transition-colors',
-                          historyWinLoss === opt.key
-                            ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
-                            : isLight
-                            ? 'border-zinc-300 bg-white text-zinc-600 hover:text-zinc-800 hover:border-zinc-400'
-                            : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
-                        ].join(' ')}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'} mb-2`}>{historyTrades.length} {t('trades')}</p>
+                  {/* ── Trades list ────────────────────────────────────── */}
                   {historyTrades.length > 0 ? (
-                    <div className={`rounded-lg border divide-y overflow-y-auto ${
-                      isLight
-                        ? 'bg-white border-zinc-300 divide-zinc-200'
-                        : 'bg-zinc-950 border-zinc-800 divide-zinc-800'
+                    <div className={`rounded-2xl border overflow-hidden divide-y ${
+                      isLight ? 'border-zinc-200 bg-white divide-zinc-100' : 'border-zinc-800 bg-zinc-950 divide-zinc-800/70'
                     }`}>
                       {historyTrades.map((trade) => (
                         <button
                           key={trade.id}
                           onClick={() => jumpToTradeDate(trade.dateKey)}
-                          className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors ${
-                            isLight ? 'hover:bg-zinc-50' : 'hover:bg-zinc-900'
+                          className={`w-full flex items-center justify-between px-4 py-3 text-left transition-all group ${
+                            isLight ? 'hover:bg-zinc-50/80' : 'hover:bg-zinc-900/70'
                           }`}
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <span className={`font-data text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'} w-14 shrink-0`}>{formatDateLabel(trade.dateKey)}</span>
-                            <span className={`text-sm font-medium truncate ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{trade.instrument}</span>
+                            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border font-data text-[10px] font-bold transition-transform group-hover:scale-105 ${
+                              trade.pnl >= 0
+                                ? isLight ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
+                                : isLight ? 'border-red-200 bg-red-50 text-red-700' : 'border-red-500/20 bg-red-500/10 text-red-400'
+                            }`}>
+                              {trade.pnl >= 0 ? '+' : '−'}
+                            </span>
+                            <span className="min-w-0">
+                              <span className={`block text-sm font-medium truncate ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>
+                                {trade.instrument}
+                              </span>
+                              <span className={`block text-[11px] mt-0.5 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
+                                {formatDateLabel(trade.dateKey)} · {trade.time}
+                                {trade.platform && trade.platform !== 'Manual' ? ` · ${trade.platform}` : ''}
+                              </span>
+                            </span>
                           </div>
-                          <span className={`font-data text-sm font-medium shrink-0 ${trade.pnl >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          <span className={`font-data text-sm font-semibold shrink-0 tabular-nums ${trade.pnl >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
                             {formatPnlDisplay(trade.pnl)}
                           </span>
                         </button>
                       ))}
                     </div>
                   ) : (
-                    <p className={`text-sm text-center py-6 ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('noTradesPeriod')}</p>
+                    <div className={`rounded-2xl border border-dashed px-6 py-14 text-center ${
+                      isLight ? 'border-zinc-200' : 'border-zinc-800'
+                    }`}>
+                      <p className={`text-sm ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('noTradesPeriod')}</p>
+                    </div>
                   )}
 
-                  <div className={`flex items-center justify-between rounded-md border px-3 py-2.5 mt-3 ${
-                    isLight ? 'bg-white border-zinc-300' : 'bg-zinc-950 border-zinc-800'
+                  {/* ── Footer: Total + actions ─────────────────────────── */}
+                  <div className={`flex items-center justify-between rounded-xl border px-4 py-3 mt-3 ${
+                    isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-zinc-950 border-zinc-800'
                   }`}>
-                    <span className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{t('total')}</span>
-                    <span className={`font-data text-sm font-semibold ${historyTotal >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {historyTotal >= 0 ? '+' : '-'}{historyCurrencySymbol}{formatMoney(historyTotal)}
+                    <span className={`font-data text-xs uppercase tracking-wide ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('total')}</span>
+                    <span className={`font-data text-base font-bold tabular-nums ${historyTotal >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                      {historyTotal >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoney(Math.abs(historyTotal))}
                     </span>
                   </div>
 
-                  <div className="flex gap-2 mt-4">
-                    <button
-                      onClick={() => setExportOpen(true)}
-                      disabled={historyTrades.length === 0}
-                      className={`flex-1 flex items-center justify-center gap-1.5 rounded-md border px-3 py-2 font-data text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                        isLight
-                          ? 'border-zinc-300 bg-white text-zinc-600 hover:text-zinc-900 hover:border-zinc-400'
-                          : 'border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600'
-                      }`}
-                    >
+                  <div className="flex gap-2 mt-3">
+                    <button onClick={() => setExportOpen(true)} disabled={historyTrades.length === 0}
+                      className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 font-data text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                        isLight ? 'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:text-zinc-900'
+                        : 'border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+                      }`}>
                       <Download className="h-3.5 w-3.5" />
                       {t('downloadReport')}
                     </button>
-                    <button
-                      onClick={handleClearHistory}
+                    <button onClick={handleClearHistory}
                       className={[
-                        'flex-1 rounded-md border px-3 py-2 font-data text-xs transition-colors',
+                        'flex-1 rounded-xl border px-3 py-2.5 font-data text-xs font-medium transition-all',
                         confirmingClear
-                          ? 'border-red-500 bg-red-500/10 text-red-600'
-                          : isLight
-                          ? 'border-zinc-300 bg-white text-zinc-600 hover:text-red-600 hover:border-red-500/40'
-                          : 'border-zinc-800 text-zinc-600 hover:text-red-400 hover:border-red-500/40',
-                      ].join(' ')}
-                    >
+                          ? 'border-red-500/60 bg-red-500/10 text-red-500'
+                          : isLight ? 'border-zinc-200 bg-white text-zinc-500 hover:border-red-400/50 hover:text-red-500'
+                          : 'border-zinc-800 text-zinc-600 hover:border-red-500/40 hover:text-red-400',
+                      ].join(' ')}>
                       {confirmingClear ? t('confirmClearHistory') : t('clearHistory')}
                     </button>
                   </div>
@@ -2134,6 +2302,7 @@ export default function CalendarScreen() {
           </div>
         </div>
       )}
+
 
       {/* ADD TRADE MODAL — compact quick-entry UI */}
       {modalOpen && (
