@@ -66,6 +66,15 @@ export const TRANSLATIONS = {
     downloadReportSubtitle: 'Красивый денежный отчёт за выбранный период',
     clearHistory: 'Очистить историю',
     confirmClearHistory: 'Точно удалить всё?',
+    freeDynamicsBtn: 'Динамика периода',
+    freeDynamicsBtnSub: 'График доходов и расходов по дням',
+    flowSummaryPositive: 'Поток положительный — доходы покрывают расходы.',
+    flowSummaryNegative: 'Расходы сильнее — стоит изучить структуру.',
+    flowSummaryEmpty: 'Добавьте пару записей — здесь появится вывод.',
+    freeAnalysisTitle: 'Обзор денег',
+    freeAnalysisSub: 'Откуда приходят и куда уходят',
+    incomeLabel: 'Доходы',
+    expenseLabel: 'Расходы',
     
     // PRO Analysis
     proFinancialPicture: 'PRO · Финансовая картина',
@@ -239,6 +248,15 @@ export const TRANSLATIONS = {
     downloadReportSubtitle: 'Financial report for selected period',
     clearHistory: 'Clear history',
     confirmClearHistory: 'Delete all records?',
+    freeDynamicsBtn: 'Period dynamics',
+    freeDynamicsBtnSub: 'Daily income & expense chart',
+    flowSummaryPositive: 'Flow positive — income covers expenses.',
+    flowSummaryNegative: 'Spending is ahead — worth exploring the structure.',
+    flowSummaryEmpty: 'Add a few entries — a summary will appear here.',
+    freeAnalysisTitle: 'Money overview',
+    freeAnalysisSub: 'Where it comes from and where it goes',
+    incomeLabel: 'Income',
+    expenseLabel: 'Expenses',
     
     // PRO Analysis
     proFinancialPicture: 'PRO · Financial Picture',
@@ -412,6 +430,15 @@ export const TRANSLATIONS = {
     downloadReportSubtitle: 'Raport financiar pentru perioada selectată',
     clearHistory: 'Șterge istoricul',
     confirmClearHistory: 'Sigur doriți să ștergeți totul?',
+    freeDynamicsBtn: 'Dinamica perioadei',
+    freeDynamicsBtnSub: 'Grafic venituri și cheltuieli pe zile',
+    flowSummaryPositive: 'Flux pozitiv — veniturile acoperă cheltuielile.',
+    flowSummaryNegative: 'Cheltuielile domină — merită explorată structura.',
+    flowSummaryEmpty: 'Adăugați câteva înregistrări — concluzia va apărea aici.',
+    freeAnalysisTitle: 'Rezumat bani',
+    freeAnalysisSub: 'De unde vin și unde merg',
+    incomeLabel: 'Venituri',
+    expenseLabel: 'Cheltuieli',
     
     // PRO Analysis
     proFinancialPicture: 'PRO · Imagine financiară',

@@ -913,6 +913,7 @@ export default function CalendarScreen() {
   const [freeTimelineSelected, setFreeTimelineSelected] = useState(null);
   // 0 = latest window, 1 = previous 10 days, etc. Keeps the timeline browsable.
   const [freeTimelineOffset, setFreeTimelineOffset] = useState(0);
+  const [freeDynamicsOpen, setFreeDynamicsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [exportPeriodPreset, setExportPeriodPreset] = useState('Текущий период');
   const [confirmingClear, setConfirmingClear] = useState(false);
@@ -1412,11 +1413,12 @@ export default function CalendarScreen() {
           onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) closeHistory(); }}
         >
           <div
-            className={`relative w-full ${traderMode ? 'max-w-2xl' : 'max-w-lg'} max-h-[90dvh] overflow-hidden rounded-2xl border shadow-2xl transition-all duration-200 ${
+            className={`relative w-full ${traderMode ? 'max-w-2xl' : 'max-w-lg'} flex flex-col overflow-hidden rounded-2xl border shadow-2xl transition-all duration-200 ${
               historyVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
             } ${
               isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
             }`}
+            style={{ maxHeight: 'min(90svh, 90vh, calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px))' }}
           >
             <div className={`flex items-center justify-between px-5 sm:px-6 pt-5 pb-4 border-b ${isLight ? 'border-zinc-200' : 'border-zinc-800/80'}`}>
               <div>
@@ -1440,48 +1442,163 @@ export default function CalendarScreen() {
               </button>
             </div>
 
-            <div className={`overflow-y-auto px-5 sm:px-6 py-5 max-h-[calc(90dvh-80px)] ${isLight ? 'bg-zinc-50/50' : ''}`}>
+            <div className={`overflow-y-auto px-5 sm:px-6 py-5 flex-1 min-h-0 ${isLight ? 'bg-zinc-50/50' : ''}`} style={{ overscrollBehavior: 'contain' }}>
+              {/* FREE — Динамика периода (скрыта по умолчанию, раскрывается по кнопке) */}
               {!traderMode && (
-                <section className={`mb-4 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950'}`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div><p className="font-data text-[11px] uppercase tracking-[0.2em] text-emerald-500">Финансовый ритм</p><h3 className={`mt-1 text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Динамика периода</h3><p className="mt-1 text-xs text-zinc-500">10 дней за раз · листай назад и выбирай день для деталей.</p></div>
-                    <span className={`rounded-xl px-3 py-2 text-sm font-data font-semibold ${historyTotal >= 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>{historyCurrency === 'ALL' ? 'Все' : `${historyTotal >= 0 ? '+' : '−'}${historyCurrencySymbol}${formatMoneyShort(Math.abs(historyTotal))}`}</span>
-                  </div>
-                  <div className="mt-4 flex items-center gap-1.5 overflow-x-auto pb-1">
-                    <span className="mr-1 shrink-0 text-[10px] uppercase tracking-[0.16em] text-zinc-500">Показать</span>
-                    {[{ code: 'ALL', symbol: 'Все', label: 'Все валюты' }, ...CURRENCIES].map((c) => (
-                      <button key={c.code} type="button" onClick={() => setHistoryCurrency(c.code)} className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-data transition-all ${historyCurrency === c.code ? 'border-amber-400/60 bg-amber-400/10 text-amber-500' : isLight ? 'border-zinc-200 bg-white text-zinc-500' : 'border-zinc-800 bg-zinc-950 text-zinc-500'}`}>{c.symbol} <span className="opacity-70">{c.code}</span></button>
-                    ))}
-                  </div>
-                  <div className={`mt-3 rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50/70' : 'border-zinc-800 bg-black/20'}`}>
-                    <div className="mb-3 flex items-center justify-between gap-3"><div className="flex gap-3 text-[10px]"><span className="text-emerald-500">● Приход</span><span className="text-red-400">● Расход</span></div><span className="text-[10px] text-zinc-500">{historyTimeline.from} — {historyTimeline.to}</span></div>
-                    <div className="mb-3 flex items-center justify-between gap-2">
-                      <button type="button" onClick={() => setFreeTimelineOffset((v) => v + 1)} className={`rounded-lg border px-3 py-1.5 text-xs font-data transition-colors ${isLight ? 'border-zinc-200 bg-white text-zinc-600 hover:border-amber-400/50' : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-amber-400/40'}`}>← Раньше</button>
-                      <span className="text-[10px] text-zinc-500">Нажми на столбец — детали дня</span>
-                      <button type="button" disabled={freeTimelineOffset === 0} onClick={() => setFreeTimelineOffset((v) => Math.max(0, v - 1))} className={`rounded-lg border px-3 py-1.5 text-xs font-data transition-colors disabled:opacity-30 ${isLight ? 'border-zinc-200 bg-white text-zinc-600 hover:border-amber-400/50' : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-amber-400/40'}`}>Позже →</button>
+                <section className="mb-4">
+                  {/* Кнопка-аккордеон */}
+                  <button
+                    type="button"
+                    onClick={() => setFreeDynamicsOpen((v) => !v)}
+                    className={`w-full group relative overflow-hidden rounded-2xl border px-4 py-3.5 text-left transition-all duration-200 hover:-translate-y-0.5 ${
+                      freeDynamicsOpen
+                        ? isLight ? 'border-emerald-300/70 bg-emerald-50/60' : 'border-emerald-500/30 bg-emerald-500/[0.06]'
+                        : isLight ? 'border-zinc-300 bg-white hover:border-emerald-400/50 hover:shadow-md' : 'border-zinc-800 bg-zinc-950/70 hover:border-emerald-500/35 hover:bg-zinc-900'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="flex items-center gap-3">
+                        <span className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${freeDynamicsOpen ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-500' : isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-400 group-hover:border-emerald-300/50 group-hover:text-emerald-500' : 'border-zinc-800 bg-zinc-900 text-zinc-500 group-hover:border-emerald-500/25 group-hover:text-emerald-500'}`}>
+                          <TrendingUp className="h-4 w-4" />
+                        </span>
+                        <span>
+                          <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('freeDynamicsBtn')}</span>
+                          <span className="block mt-0.5 text-[11px] text-zinc-500">{t('freeDynamicsBtnSub')}</span>
+                        </span>
+                      </span>
+                      <span className="flex items-center gap-2 shrink-0">
+                        <span className={`font-data text-sm font-semibold tabular-nums ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          {historyCurrency === 'ALL' ? t('allCurrencies') : `${historyTotal >= 0 ? '+' : '−'}${historyCurrencySymbol}${formatMoneyShort(Math.abs(historyTotal))}`}
+                        </span>
+                        <ChevronDown className={`h-4 w-4 text-emerald-500 transition-transform duration-300 ${freeDynamicsOpen ? 'rotate-180' : ''}`} />
+                      </span>
                     </div>
-                    {historyCurrency === 'ALL' && <p className="mb-3 rounded-lg border border-amber-400/20 bg-amber-400/[0.05] px-2.5 py-2 text-[10px] leading-relaxed text-zinc-500">Все валюты показывают все записи. Для точных денежных сумм и сравнения выбери конкретную валюту.</p>}
-                    <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 items-end h-44 sm:h-48">
-                      {historyTimeline.points.map((point) => {
-                        const incomeH = point.income ? Math.max(7, Math.round((point.income / historyTimeline.max) * 100)) : 3;
-                        const expenseH = point.expense ? Math.max(7, Math.round((point.expense / historyTimeline.max) * 100)) : 3;
-                        const active = point.income || point.expense;
-                        const net = point.net;
-                        const selected = freeTimelineSelected === point.key;
-                        return <button type="button" key={point.key} onClick={() => setFreeTimelineSelected(selected ? null : point.key)} className={`group min-w-0 h-full rounded-xl px-1 pt-2 pb-1 flex flex-col justify-end transition-all ${selected ? (isLight ? 'bg-white shadow-md ring-1 ring-amber-400/40' : 'bg-white/[0.04] ring-1 ring-amber-400/30') : 'hover:bg-zinc-500/[0.04]'}`}>
-                          <span className={`mb-1 min-h-[28px] text-center text-[9px] sm:text-[10px] font-data leading-tight ${!active ? 'text-zinc-400' : net >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>{active ? `${net >= 0 ? '+' : '−'}${formatMoneyShort(Math.abs(net))}` : '—'}</span>
-                          <div className="flex flex-1 items-end justify-center gap-1"><span className="w-2.5 sm:w-3 rounded-t-md bg-gradient-to-t from-emerald-600/70 to-emerald-300/90 transition-all" style={{height:`${incomeH}%`}} /><span className="w-2.5 sm:w-3 rounded-t-md bg-gradient-to-t from-red-700/65 to-red-400/85 transition-all" style={{height:`${expenseH}%`}} /></div>
-                          <span className="mt-2 text-center text-[9px] text-zinc-500">{point.label}</span>
-                        </button>;
-                      })}
+                  </button>
+
+                  {/* Содержимое аккордеона */}
+                  {freeDynamicsOpen && (
+                    <div className={`mt-2 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950'}`}>
+                      {/* Переключатель валюты */}
+                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 mb-3">
+                        <span className="mr-1 shrink-0 text-[10px] uppercase tracking-[0.16em] text-zinc-500">{t('show')}</span>
+                        {[{ code: 'ALL', symbol: t('all'), label: t('allCurrencies') }, ...CURRENCIES].map((c) => (
+                          <button key={c.code} type="button" onClick={() => setHistoryCurrency(c.code)} className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-data transition-all ${historyCurrency === c.code ? 'border-amber-400/60 bg-amber-400/10 text-amber-500' : isLight ? 'border-zinc-200 bg-white text-zinc-500' : 'border-zinc-800 bg-zinc-950 text-zinc-500'}`}>{c.symbol} <span className="opacity-70">{c.code === 'ALL' ? '' : c.code}</span></button>
+                        ))}
+                      </div>
+
+                      <div className={`rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50/70' : 'border-zinc-800 bg-black/20'}`}>
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <div className="flex gap-3 text-[10px]"><span className="text-emerald-500">● {t('incomeLabel')}</span><span className="text-red-400">● {t('expenseLabel')}</span></div>
+                          <span className="text-[10px] text-zinc-500">{historyTimeline.from} — {historyTimeline.to}</span>
+                        </div>
+                        <div className="mb-3 flex items-center justify-between gap-2">
+                          <button type="button" onClick={() => setFreeTimelineOffset((v) => v + 1)} className={`rounded-lg border px-3 py-1.5 text-xs font-data transition-colors ${isLight ? 'border-zinc-200 bg-white text-zinc-600 hover:border-amber-400/50' : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-amber-400/40'}`}>{t('earlier')}</button>
+                          <span className="text-[10px] text-zinc-500">{t('clickColumnHint')}</span>
+                          <button type="button" disabled={freeTimelineOffset === 0} onClick={() => setFreeTimelineOffset((v) => Math.max(0, v - 1))} className={`rounded-lg border px-3 py-1.5 text-xs font-data transition-colors disabled:opacity-30 ${isLight ? 'border-zinc-200 bg-white text-zinc-600 hover:border-amber-400/50' : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-amber-400/40'}`}>{t('later')}</button>
+                        </div>
+                        {historyCurrency === 'ALL' && <p className="mb-3 rounded-lg border border-amber-400/20 bg-amber-400/[0.05] px-2.5 py-2 text-[10px] leading-relaxed text-zinc-500">{t('allCurrenciesNotice')}</p>}
+                        <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 items-end h-44 sm:h-48">
+                          {historyTimeline.points.map((point) => {
+                            const incomeH = point.income ? Math.max(7, Math.round((point.income / historyTimeline.max) * 100)) : 3;
+                            const expenseH = point.expense ? Math.max(7, Math.round((point.expense / historyTimeline.max) * 100)) : 3;
+                            const active = point.income || point.expense;
+                            const net = point.net;
+                            const selected = freeTimelineSelected === point.key;
+                            return <button type="button" key={point.key} onClick={() => setFreeTimelineSelected(selected ? null : point.key)} className={`group min-w-0 h-full rounded-xl px-1 pt-2 pb-1 flex flex-col justify-end transition-all ${selected ? (isLight ? 'bg-white shadow-md ring-1 ring-amber-400/40' : 'bg-white/[0.04] ring-1 ring-amber-400/30') : 'hover:bg-zinc-500/[0.04]'}`}>
+                              <span className={`mb-1 min-h-[28px] text-center text-[9px] sm:text-[10px] font-data leading-tight ${!active ? 'text-zinc-400' : net >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>{active ? `${net >= 0 ? '+' : '−'}${formatMoneyShort(Math.abs(net))}` : '—'}</span>
+                              <div className="flex flex-1 items-end justify-center gap-1"><span className="w-2.5 sm:w-3 rounded-t-md bg-gradient-to-t from-emerald-600/70 to-emerald-300/90 transition-all" style={{height:`${incomeH}%`}} /><span className="w-2.5 sm:w-3 rounded-t-md bg-gradient-to-t from-red-700/65 to-red-400/85 transition-all" style={{height:`${expenseH}%`}} /></div>
+                              <span className="mt-2 text-center text-[9px] text-zinc-500">{point.label}</span>
+                            </button>;
+                          })}
+                        </div>
+                        {(() => { const fallback = [...historyTimeline.points].reverse().find((x) => x.income || x.expense)?.key || historyTimeline.points[historyTimeline.points.length - 1]?.key; const p = historyTimeline.points.find((x) => x.key === (freeTimelineSelected || fallback)); return p ? <div className={`mt-3 grid grid-cols-3 gap-2 rounded-xl border p-2.5 text-center ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/60'}`}><div><p className="text-[9px] text-zinc-500">{t('incomeLabel')}</p><p className="mt-1 text-xs font-data text-emerald-500">+{historyCurrencySymbol}{formatMoneyShort(p.income)}</p></div><div><p className="text-[9px] text-zinc-500">{t('expenseLabel')}</p><p className="mt-1 text-xs font-data text-red-400">−{historyCurrencySymbol}{formatMoneyShort(p.expense)}</p></div><div><p className="text-[9px] text-zinc-500">{t('result')} · {p.label} · {p.count}</p><p className={`mt-1 text-xs font-data ${p.net >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>{p.net >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoneyShort(Math.abs(p.net))}</p></div></div> : null; })()}
+                      </div>
+
+                      {/* Итог периода */}
+                      <div className="mt-4 grid grid-cols-3 gap-2 border-t border-zinc-500/10 pt-4">
+                        <div><p className="text-[10px] uppercase tracking-wide text-zinc-500">{t('incomeLabel')}</p><p className="mt-1 text-sm font-data text-emerald-500">+{historyCurrencySymbol}{formatMoneyShort(historyIncome)}</p></div>
+                        <div><p className="text-[10px] uppercase tracking-wide text-zinc-500">{t('expenseLabel')}</p><p className="mt-1 text-sm font-data text-red-500">−{historyCurrencySymbol}{formatMoneyShort(historyExpense)}</p></div>
+                        <div><p className="text-[10px] uppercase tracking-wide text-zinc-500">{t('recordsCount')}</p><p className={`mt-1 text-sm font-data ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>{historyTrades.length}</p></div>
+                      </div>
                     </div>
-                    {(() => { const fallback = [...historyTimeline.points].reverse().find((x) => x.income || x.expense)?.key || historyTimeline.points[historyTimeline.points.length - 1]?.key; const p = historyTimeline.points.find((x) => x.key === (freeTimelineSelected || fallback)); return p ? <div className={`mt-3 grid grid-cols-3 gap-2 rounded-xl border p-2.5 text-center ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/60'}`}><div><p className="text-[9px] text-zinc-500">Доход</p><p className="mt-1 text-xs font-data text-emerald-500">+{historyCurrencySymbol}{formatMoneyShort(p.income)}</p></div><div><p className="text-[9px] text-zinc-500">Расход</p><p className="mt-1 text-xs font-data text-red-400">−{historyCurrencySymbol}{formatMoneyShort(p.expense)}</p></div><div><p className="text-[9px] text-zinc-500">Итог · {p.label} · {p.count}</p><p className={`mt-1 text-xs font-data ${p.net >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>{p.net >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoneyShort(Math.abs(p.net))}</p></div></div> : null; })()}
-                  </div>
-                  <div className="mt-4 grid grid-cols-3 gap-2 border-t border-zinc-500/10 pt-4">
-                    <div><p className="text-[10px] uppercase tracking-wide text-zinc-500">Доходы</p><p className="mt-1 text-sm font-data text-emerald-500">+{historyCurrencySymbol}{formatMoneyShort(historyIncome)}</p></div>
-                    <div><p className="text-[10px] uppercase tracking-wide text-zinc-500">Расходы</p><p className="mt-1 text-sm font-data text-red-500">−{historyCurrencySymbol}{formatMoneyShort(historyExpense)}</p></div>
-                    <div><p className="text-[10px] uppercase tracking-wide text-zinc-500">Записей</p><p className={`mt-1 text-sm font-data ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>{historyTrades.length}</p></div>
-                  </div>
+                  )}
+                </section>
+              )}
+
+              {/* FREE — Обзор денег (анализ источников, всегда скрыт под toggle) */}
+              {!traderMode && historyTrades.length > 0 && (
+                <section className="mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setHistoryAnalysisOpen((v) => !v)}
+                    className={`w-full group relative overflow-hidden rounded-2xl border px-4 py-3.5 text-left transition-all duration-200 hover:-translate-y-0.5 ${
+                      historyAnalysisOpen
+                        ? isLight ? 'border-amber-300/60 bg-amber-50/60' : 'border-amber-400/30 bg-amber-400/[0.06]'
+                        : isLight ? 'border-zinc-300 bg-white hover:border-amber-400/40 hover:shadow-md' : 'border-zinc-800 bg-zinc-950/70 hover:border-amber-400/30 hover:bg-zinc-900'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="flex items-center gap-3">
+                        <span className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${historyAnalysisOpen ? 'border-amber-400/30 bg-amber-400/10 text-amber-500' : isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-400 group-hover:text-amber-500' : 'border-zinc-800 bg-zinc-900 text-zinc-500 group-hover:text-amber-500'}`}>
+                          <Sparkles className="h-4 w-4" />
+                        </span>
+                        <span>
+                          <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('freeAnalysisTitle')}</span>
+                          <span className="block mt-0.5 text-[11px] text-zinc-500">{t('freeAnalysisSub')}</span>
+                        </span>
+                      </span>
+                      <ChevronDown className={`h-4 w-4 text-amber-500 shrink-0 transition-transform duration-300 ${historyAnalysisOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                  </button>
+
+                  {historyAnalysisOpen && (
+                    <div className={`mt-2 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-amber-200/60 bg-white shadow-sm' : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.05] via-zinc-950 to-zinc-950'}`}>
+                      {/* Финансовый вывод */}
+                      <div className={`mb-4 rounded-xl border px-4 py-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500 mb-1">{t('financialSummary')}</p>
+                        <p className={`text-sm font-medium leading-relaxed ${historyIncome > historyExpense ? 'text-emerald-600' : historyExpense > 0 ? 'text-red-500' : (isLight ? 'text-zinc-600' : 'text-zinc-400')}`}>
+                          {historyIncome > historyExpense ? t('flowSummaryPositive') : historyExpense > 0 ? t('flowSummaryNegative') : t('flowSummaryEmpty')}
+                        </p>
+                      </div>
+                      {/* Мини-вкладки */}
+                      <div className="flex gap-1 mb-4 overflow-x-auto pb-0.5">
+                        {[['overview', t('overview')], ['income', t('fromWhere')], ['expense', t('whereGo')]].map(([key, label]) => (
+                          <button key={key} onClick={() => setHistoryAnalysisTab(key)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${historyAnalysisTab === key ? 'bg-amber-400/15 text-amber-600' : isLight ? 'text-zinc-500 hover:bg-zinc-100' : 'text-zinc-500 hover:bg-zinc-900'}`}>{label}</button>
+                        ))}
+                      </div>
+                      {historyAnalysisTab === 'overview' && (
+                        <>
+                          <div className="grid grid-cols-3 gap-2 mb-4">
+                            <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">{t('incomeLabel')}</p><p className="font-data text-xs text-emerald-600 tabular-nums truncate">+{historyCurrencySymbol}{formatMoney(historyIncome)}</p></div>
+                            <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">{t('expenseLabel')}</p><p className="font-data text-xs text-red-600 tabular-nums truncate">−{historyCurrencySymbol}{formatMoney(historyExpense)}</p></div>
+                            <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">{t('recordsCount')}</p><p className="font-data text-sm">{historyTrades.length}</p></div>
+                          </div>
+                          <div className={`flex items-end gap-1 h-24 rounded-xl border p-3 overflow-x-auto ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
+                            {historyAnalysis.dailyEntries.length ? historyAnalysis.dailyEntries.map(([date, stats]) => (
+                              <button key={date} title={date} className="group min-w-[18px] flex-1 h-full flex flex-col justify-end gap-0.5">
+                                <span className="w-full rounded-t bg-emerald-500/75 transition-all group-hover:bg-emerald-400" style={{ height: `${Math.max(4, (stats.income / historyAnalysis.maxDaily) * 100)}%` }} />
+                                <span className="w-full rounded-t bg-red-500/70 transition-all group-hover:bg-red-400" style={{ height: `${Math.max(3, (stats.expense / historyAnalysis.maxDaily) * 100)}%` }} />
+                              </button>
+                            )) : <p className="m-auto text-xs text-zinc-500">{t('noRecords')}</p>}
+                          </div>
+                        </>
+                      )}
+                      {historyAnalysisTab === 'income' && (
+                        <div className="space-y-3">
+                          {historyAnalysis.incomeSources.length ? historyAnalysis.incomeSources.slice(0,5).map(([name, value]) => (
+                            <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-emerald-600 tabular-nums">+{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-1.5 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{width:`${Math.max(5,(value/(historyIncome||1))*100)}%`}} /></div></div>
+                          )) : <p className="py-5 text-center text-sm text-zinc-500">{t('noIncomePeriod')}</p>}
+                        </div>
+                      )}
+                      {historyAnalysisTab === 'expense' && (
+                        <div className="space-y-3">
+                          {historyAnalysis.expenseCategories.length ? historyAnalysis.expenseCategories.slice(0,5).map(([name, value]) => (
+                            <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-red-600 tabular-nums">−{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-1.5 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-red-500 transition-all duration-500" style={{width:`${Math.max(5,(value/(historyExpense||1))*100)}%`}} /></div></div>
+                          )) : <p className="py-5 text-center text-sm text-zinc-500">{t('noExpensePeriod')}</p>}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </section>
               )}
 
@@ -1640,92 +1757,6 @@ export default function CalendarScreen() {
 
               {!traderMode ? (
                 <>
-                  {historyAnalysisOpen && (
-                    <>
-                  {/* Money summary — shown only inside analysis */}
-                  <div className={`rounded-2xl border p-4 sm:p-5 mb-4 ${
-                    isLight ? 'bg-white border-zinc-300 shadow-sm' : 'bg-zinc-950/70 border-zinc-800'
-                  }`}>
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <p className={`text-xs ${isLight ? 'text-zinc-600' : 'text-zinc-500'}`}>{t('resultForPeriod')}</p>
-                      <div className={`flex gap-0.5 shrink-0 rounded-lg border p-0.5 ${
-                        isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950/60'
-                      }`}>
-                        {[{ code: 'ALL', symbol: 'Все', label: 'Все валюты' }, ...CURRENCIES].map((c) => (
-                          <button
-                            key={c.code}
-                            onClick={() => setHistoryCurrency(c.code)}
-                            title={c.label}
-                            className={[
-                              'min-w-[30px] h-7 px-1.5 rounded-md text-sm font-data font-medium border transition-colors flex items-center justify-center',
-                              historyCurrency === c.code
-                                ? 'border-amber-400/60 bg-amber-400/15 text-amber-500'
-                                : isLight
-                                ? 'border-transparent text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100'
-                                : 'border-transparent text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/70',
-                            ].join(' ')}
-                          >
-                            {c.symbol}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    {historyCurrency === 'ALL' ? (
-                      <p className={`text-sm ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>Итоги показаны отдельно по валютам</p>
-                    ) : <div className={`font-display text-4xl sm:text-5xl font-semibold tracking-tight tabular-nums ${historyTotal >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {historyTotal >= 0 ? '+' : '-'}{historyCurrencySymbol}{formatMoney(historyTotal)}
-                    </div>}
-                  </div>
-                    </>
-                  )}
-
-                  {historyAnalysisOpen && (
-                    <div className={`relative overflow-hidden mb-4 rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-300 bg-white shadow-sm' : 'border-zinc-800 bg-zinc-950/70'}`}>
-                      {historyCurrency === 'ALL' ? (
-                        <div className="py-6 text-center">
-                          <Sparkles className="h-6 w-6 mx-auto mb-2 text-amber-500" />
-                          <p className={`text-sm font-medium ${isLight ? 'text-zinc-700' : 'text-zinc-200'}`}>Выбери валюту для анализа</p>
-                          <p className="mt-1 text-xs text-zinc-500">Так суммы разных валют не будут смешиваться.</p>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="absolute -right-4 -top-6 select-none pointer-events-none font-display text-7xl font-bold tracking-tighter text-zinc-500/[0.035]">ANALYSIS</div>
-                          <div className="relative flex items-end justify-between gap-3 mb-4">
-                            <div>
-                              <p className="font-data text-[10px] uppercase tracking-[0.22em] text-amber-500">Деньги в движении</p>
-                              <p className={`mt-1 text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Посмотри, откуда приходят и куда уходят деньги</p>
-                            </div>
-                          </div>
-                          <div className="relative flex gap-1 overflow-x-auto pb-1 mb-4">
-                            {[['overview','Обзор'],['income','Откуда деньги'],['expense','Куда уходят']].map(([key,label]) => (
-                              <button key={key} onClick={() => setHistoryAnalysisTab(key)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${historyAnalysisTab === key ? 'bg-amber-400/15 text-amber-600' : isLight ? 'text-zinc-500 hover:bg-zinc-100' : 'text-zinc-500 hover:bg-zinc-900'}`}>{label}</button>
-                            ))}
-                          </div>
-                          {historyAnalysisTab === 'overview' && (
-                            <>
-                              <div className="grid grid-cols-3 gap-2 mb-4">
-                                <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">Доходы</p><p className="font-data text-xs text-emerald-600 truncate">+{historyCurrencySymbol}{formatMoney(historyIncome)}</p></div>
-                                <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">Расходы</p><p className="font-data text-xs text-red-600 truncate">−{historyCurrencySymbol}{formatMoney(historyExpense)}</p></div>
-                                <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">Записей</p><p className="font-data text-sm">{historyTrades.length}</p></div>
-                              </div>
-                              <p className="text-xs font-medium mb-3">Динамика периода</p>
-                              <div className="flex items-end gap-1 h-28 rounded-xl border p-3 overflow-x-auto">
-                                {historyAnalysis.dailyEntries.length ? historyAnalysis.dailyEntries.map(([date, stats]) => (
-                                  <button key={date} title={`${date}: доход ${formatMoney(stats.income)}, расход ${formatMoney(stats.expense)}`} className="group min-w-[20px] flex-1 h-full flex flex-col justify-end gap-1">
-                                    <span className="w-full rounded-t bg-emerald-500/75 transition-all group-hover:bg-emerald-400" style={{ height: `${Math.max(4, (stats.income / historyAnalysis.maxDaily) * 100)}%` }} />
-                                    <span className="w-full rounded-t bg-red-500/70 transition-all group-hover:bg-red-400" style={{ height: `${Math.max(3, (stats.expense / historyAnalysis.maxDaily) * 100)}%` }} />
-                                  </button>
-                                )) : <p className="m-auto text-xs text-zinc-500">Пока недостаточно данных</p>}
-                              </div>
-                            </>
-                          )}
-                          {historyAnalysisTab === 'income' && <div className="relative space-y-3 overflow-hidden rounded-xl p-2"><div className="absolute -left-2 top-0 select-none pointer-events-none font-display text-5xl font-bold tracking-tighter text-emerald-500/[0.06]">ОТКУДА</div><p className="relative pt-9 pb-1 text-xs text-zinc-500">Источники, которые формируют твой денежный поток</p>{historyAnalysis.incomeSources.length ? historyAnalysis.incomeSources.map(([name,value]) => <div key={name} className="relative"><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-emerald-600">+{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{width: `${Math.max(5, (value / (historyIncome || 1)) * 100)}%`}} /></div></div>) : <p className="py-6 text-center text-sm text-zinc-500">Нет доходов</p>}</div>}
-                          {historyAnalysisTab === 'expense' && <div className="relative space-y-3 overflow-hidden rounded-xl p-2"><div className="absolute -left-2 top-0 select-none pointer-events-none font-display text-5xl font-bold tracking-tighter text-red-500/[0.06]">КУДА</div><p className="relative pt-9 pb-1 text-xs text-zinc-500">Направления, которые забирают больше всего денег</p>{historyAnalysis.expenseCategories.length ? historyAnalysis.expenseCategories.map(([name,value]) => <div key={name} className="relative"><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-red-600">−{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-red-500 transition-all duration-500" style={{width: `${Math.max(5, (value / (historyExpense || 1)) * 100)}%`}} /></div></div>) : <p className="py-6 text-center text-sm text-zinc-500">Нет расходов</p>}</div>}
-                        </>
-                      )}
-                    </div>
-                  )}
-
                   {/* Compact period selector */}
                   <div className="relative flex items-center gap-2 mb-3">
                     <button
