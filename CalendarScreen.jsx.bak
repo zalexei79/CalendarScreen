@@ -1826,7 +1826,7 @@ export default function CalendarScreen() {
                                 : 'border-zinc-800/80 hover:bg-zinc-900 text-zinc-100'
                             }`}
                           >
-                            <span className={`h-9 w-9 shrink-0 rounded-xl flex items-center justify-center ${entry.pnl >= 0 ? (isLight ? 'bg-emerald-100 text-emerald-600' : 'bg-emerald-500/15 text-emerald-400') : (isLight ? 'bg-red-100 text-red-600' : 'bg-red-500/15 text-red-400')}`}>
+                            <span className={`h-9 w-9 shrink-0 rounded-xl flex items-center justify-center ${entry.pnl >= 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
                               <Icon className="h-4 w-4" />
                             </span>
                             <span className="min-w-0 flex-1">
