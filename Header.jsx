@@ -20,7 +20,7 @@ export default function Header({
   return (
     <header className={`px-2 sm:px-8 pt-3 sm:pt-8 pb-3 sm:pb-4 border-b ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}>
       <div className="flex items-start justify-between gap-2 mb-2">
-        <p className={`font-data text-[10px] tracking-widest uppercase ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{traderMode ? t('titlePro') : t('titleMoney')}</p>
+        <p className={`font-data text-[11px] sm:text-[12px] tracking-[0.16em] uppercase ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{traderMode ? t('titlePro') : t('titleMoney')}</p>
     
         {/* Theme toggle + settings gear — compact on mobile, same control scales up on wider screens */}
         <div className="flex items-center gap-1.5 shrink-0">
@@ -67,18 +67,18 @@ export default function Header({
             {settingsOpen && (
               <div
                 className={[
-                  'absolute right-0 top-full mt-2 z-30 rounded-2xl border shadow-2xl p-3 origin-top-right backdrop-blur-xl',
-                  'w-[286px] sm:w-[280px]',
+                  'absolute right-0 top-full mt-3 z-30 rounded-3xl border shadow-2xl p-4 origin-top-right backdrop-blur-xl',
+                  'w-[320px] sm:w-[310px]',
                   'transition-all duration-200 ease-out',
                   settingsVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-1.5 scale-95',
-                  isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900',
+                  isLight ? 'border-zinc-200 bg-white shadow-[0_20px_60px_rgba(0,0,0,.14)]' : 'border-zinc-800 bg-zinc-900',
                 ].join(' ')}
               >
-                <p className={`font-data text-[10px] tracking-widest uppercase mb-3 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                <p className={`font-data text-[11px] tracking-[0.2em] uppercase mb-4 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
                   {t('settings')}
                 </p>
     
-                <div className={`mb-2 rounded-xl border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'}`}>
+                <div className={`mb-2 rounded-xl border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50/80' : 'border-zinc-800 bg-zinc-950'}`}>
                   <p className={`flex items-center gap-1.5 text-[11px] uppercase tracking-wide mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}><Languages className="h-3.5 w-3.5" /> {t('language')}</p>
                   <div className="flex gap-1.5">
                     {LANGUAGES.map((l) => (
@@ -86,7 +86,7 @@ export default function Header({
                         key={l.code}
                         onClick={() => setLanguage(l.code)}
                         className={[
-                          'flex-1 rounded-lg border px-2 py-3 text-sm font-data transition-colors',
+                          'flex-1 rounded-xl border px-2 py-3 text-sm font-data transition-all hover:-translate-y-px',
                           language === l.code
                             ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
                             : isLight
@@ -101,7 +101,7 @@ export default function Header({
                 </div>
     
                 {/* Account — visible on mobile inside the settings panel. */}
-                <div className={`mb-3 rounded-xl border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'}`}>
+                <div className={`mb-3 rounded-xl border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50/80' : 'border-zinc-800 bg-zinc-950'}`}>
                   <p className={`font-data text-[11px] uppercase tracking-wide mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>Аккаунт</p>
                   {user ? (
                     <div className="flex items-center gap-2">
@@ -133,7 +133,7 @@ export default function Header({
                   )}
                 </div>
     
-                <div className={`rounded-xl border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'}`}>
+                <div className={`rounded-xl border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50/80' : 'border-zinc-800 bg-zinc-950'}`}>
                   <p className={`flex items-center gap-1.5 text-[11px] uppercase tracking-wide mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}><CircleDollarSign className="h-3.5 w-3.5" /> {t('currency')}</p>
                   <div className="grid grid-cols-2 gap-1.5">
                     {CURRENCIES.map((c) => (
@@ -141,7 +141,7 @@ export default function Header({
                         key={c.code}
                         onClick={() => setCurrency(c.code)}
                         className={[
-                          'rounded-lg border px-2 py-3 text-sm font-data transition-colors',
+                          'rounded-xl border px-2 py-3 text-sm font-data transition-all hover:-translate-y-px',
                           currency === c.code
                             ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
                             : isLight
@@ -165,7 +165,7 @@ export default function Header({
             onClick={goToPrevMonth}
             aria-label="Предыдущий месяц"
             title="Предыдущий месяц"
-            className="rounded-lg border border-zinc-800 bg-zinc-900 h-10 w-10 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:border-zinc-600 transition-colors"
+            className={`rounded-lg border h-10 w-10 flex items-center justify-center transition-colors ${isLight ? 'border-zinc-300 bg-white text-zinc-600 hover:border-amber-400 hover:text-amber-700' : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-zinc-100 hover:border-zinc-600'}`}
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -173,7 +173,7 @@ export default function Header({
             <div className="relative" ref={monthMenuRef}>
               <button
                 onClick={() => { setMonthMenuOpen((v) => !v); setYearMenuOpen(false); }}
-                className="font-display text-2xl sm:text-2xl font-semibold text-zinc-50 hover:text-amber-400 transition-colors"
+                className={`font-display text-2xl sm:text-2xl font-semibold transition-colors ${isLight ? 'text-zinc-900 hover:text-amber-600' : 'text-zinc-50 hover:text-amber-400'}`}
               >
                 {monthsFor(language)[month]}
               </button>
@@ -198,7 +198,7 @@ export default function Header({
             <div className="relative" ref={yearMenuRef}>
               <button
                 onClick={() => { setYearMenuOpen((v) => !v); setMonthMenuOpen(false); }}
-                className="font-display text-2xl sm:text-2xl font-semibold text-zinc-500 hover:text-amber-400 transition-colors"
+                className={`font-display text-2xl sm:text-2xl font-semibold transition-colors ${isLight ? 'text-zinc-600 hover:text-amber-600' : 'text-zinc-500 hover:text-amber-400'}`}
               >
                 {year}
               </button>
@@ -224,7 +224,7 @@ export default function Header({
             onClick={goToNextMonth}
             aria-label="Следующий месяц"
             title="Следующий месяц"
-            className="rounded-lg border border-zinc-800 bg-zinc-900 h-10 w-10 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:border-zinc-600 transition-colors"
+            className={`rounded-lg border h-10 w-10 flex items-center justify-center transition-colors ${isLight ? 'border-zinc-300 bg-white text-zinc-600 hover:border-amber-400 hover:text-amber-700' : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-zinc-100 hover:border-zinc-600'}`}
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -315,33 +315,33 @@ export default function Header({
           </div>
     
           {/* install as app + offline pending-sync indicator */}
-          <div className="relative ml-1.5 hidden sm:block" ref={installInfoRef}>
+          <div className="relative ml-1.5 block" ref={installInfoRef}>
             <button
               onClick={handleInstallClick}
               title="Скачать / установить приложение"
-              className="group flex items-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900/70 px-2.5 py-1.5 text-zinc-400 shadow-sm transition-all hover:-translate-y-px hover:border-amber-400/35 hover:bg-zinc-900 hover:text-amber-300"
+              className={`group flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 shadow-sm transition-all hover:-translate-y-px hover:border-amber-400/45 ${isLight ? 'border-zinc-300 bg-white text-zinc-600 hover:bg-amber-50 hover:text-amber-700' : 'border-zinc-800 bg-zinc-900/70 text-zinc-400 hover:bg-zinc-900 hover:text-amber-300'}`}
             >
-              <span className="flex h-5 w-5 items-center justify-center rounded-md bg-zinc-800 text-amber-400 transition-colors group-hover:bg-amber-400/10"><Download className="h-3 w-3" /></span>
+              <span className={`flex h-5 w-5 items-center justify-center rounded-md text-amber-500 transition-colors ${isLight ? 'bg-amber-50 group-hover:bg-amber-100' : 'bg-zinc-800 group-hover:bg-amber-400/10'}`}><Download className="h-3 w-3" /></span>
               <span className="font-data text-[9px] tracking-[0.12em] uppercase">Приложение</span>
               {pendingSyncCount > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />}
             </button>
 
             {installInfoOpen && (
-              <div className="absolute right-0 top-full mt-3 w-[320px] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950/95 shadow-2xl backdrop-blur-xl z-30">
-                <div className="border-b border-zinc-800 bg-gradient-to-r from-amber-400/10 via-transparent to-transparent px-4 py-3.5">
+              <div className={`absolute right-0 top-full mt-3 w-[320px] overflow-hidden rounded-2xl border shadow-2xl backdrop-blur-xl z-30 ${isLight ? 'border-zinc-200 bg-white/95' : 'border-zinc-800 bg-zinc-950/95'}`}>
+                <div className={`border-b bg-gradient-to-r from-amber-400/10 via-transparent to-transparent px-4 py-3.5 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
                   <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/10 text-amber-400"><Download className="h-4 w-4" /></div>
-                    <div><p className="font-data text-[10px] tracking-[0.2em] text-amber-400 uppercase">AI Trade Journal</p><p className="mt-0.5 text-sm font-semibold text-zinc-100">Всегда под рукой</p></div>
+                    <div><p className="font-data text-[10px] tracking-[0.2em] text-amber-400 uppercase">AI Trade Journal</p><p className={`mt-0.5 text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Всегда под рукой</p></div>
                   </div>
                 </div>
                 <div className="space-y-3 px-4 py-3.5">
-                  <p className="text-xs leading-relaxed text-zinc-400">Установите журнал как приложение — быстрый запуск, полноэкранный режим и доступ к данным даже при нестабильном интернете.</p>
+                  <p className={`text-xs leading-relaxed ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>Установите журнал как приложение — быстрый запуск, полноэкранный режим и доступ к данным даже при нестабильном интернете.</p>
                   <div className="grid grid-cols-3 gap-2">
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-2"><Smartphone className="mb-1 h-3.5 w-3.5 text-amber-400"/><p className="text-[10px] text-zinc-300">Mobile</p></div>
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-2"><Monitor className="mb-1 h-3.5 w-3.5 text-amber-400"/><p className="text-[10px] text-zinc-300">Desktop</p></div>
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-2"><Cloud className="mb-1 h-3.5 w-3.5 text-amber-400"/><p className="text-[10px] text-zinc-300">Sync</p></div>
+                    <div className={`rounded-xl border p-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><Smartphone className="mb-1 h-3.5 w-3.5 text-amber-400"/><p className={`text-[10px] ${isLight ? 'text-zinc-600' : 'text-zinc-300'}`}>Mobile</p></div>
+                    <div className={`rounded-xl border p-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><Monitor className="mb-1 h-3.5 w-3.5 text-amber-400"/><p className={`text-[10px] ${isLight ? 'text-zinc-600' : 'text-zinc-300'}`}>Desktop</p></div>
+                    <div className={`rounded-xl border p-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><Cloud className="mb-1 h-3.5 w-3.5 text-amber-400"/><p className={`text-[10px] ${isLight ? 'text-zinc-600' : 'text-zinc-300'}`}>Sync</p></div>
                   </div>
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-2.5"><div className="flex gap-2"><Wifi className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400"/><p className="text-[11px] leading-relaxed text-zinc-400">{installInstructions}</p></div></div>
+                  <div className={`rounded-xl border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/40'}`}><div className="flex gap-2"><Wifi className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400"/><p className={`text-[11px] leading-relaxed ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>{installInstructions}</p></div></div>
                   {pendingSyncCount > 0 && <p className="border-t border-zinc-800 pt-2.5 text-[11px] leading-relaxed text-amber-300">{pendingSyncCount} {traderMode ? (pendingSyncCount === 1 ? 'сделка' : 'сделок') : (pendingSyncCount === 1 ? 'запись' : 'записей')} ждут синхронизации.</p>}
                 </div>
               </div>
