@@ -10,6 +10,11 @@ export function isRetryableNetworkError(error) {
   return /network|failed to fetch|fetch failed|load failed|networkerror|timeout|timed out|connection|offline/.test(message);
 }
 
+function normalizeCurrency(value) {
+  const code = String(value || '').trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(code) ? code : 'USD';
+}
+
 function createOperationId() {
   const generatedId = globalThis.crypto?.randomUUID
     ? globalThis.crypto.randomUUID()
@@ -30,23 +35,26 @@ export function useOfflineQueue({ user, onSyncedInsert }) {
       const parsed = JSON.parse(window.localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]');
       if (!Array.isArray(parsed)) return [];
 
-      // Give existing entries a stable identity before processing them. This
-      // keeps legacy queue data removable one operation at a time as well.
       let changed = false;
       const queue = parsed.map((item) => {
-        if (item?.operationId && typeof item.revision === 'number') return item;
-        changed = true;
-        return {
+        const normalizedTrade = item?.trade && typeof item.trade === 'object'
+          ? { ...item.trade, currency: normalizeCurrency(item.trade.currency) }
+          : item?.trade;
+        const normalized = {
           ...item,
+          ...(normalizedTrade ? { trade: normalizedTrade } : {}),
           operationId: item?.operationId || createOperationId(),
           revision: typeof item?.revision === 'number' ? item.revision : 0,
         };
+        if (
+          !item?.operationId ||
+          typeof item?.revision !== 'number' ||
+          (normalizedTrade && normalizedTrade.currency !== item?.trade?.currency)
+        ) changed = true;
+        return normalized;
       });
 
-      if (changed) {
-        window.localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
-      }
-
+      if (changed) window.localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
       return queue;
     } catch {
       return [];
@@ -153,7 +161,8 @@ export function useOfflineQueue({ user, onSyncedInsert }) {
         inFlightOperationIdsRef.current.add(item.operationId);
         try {
           if (item.action === 'insert') {
-            const { data, error } = await supabase.from('trades').insert(item.trade).select().single();
+            const safeTrade = { ...item.trade, currency: normalizeCurrency(item.trade?.currency) };
+            const { data, error } = await supabase.from('trades').insert(safeTrade).select().single();
             if (error) throw error;
 
             const latestQueue = readOfflineQueue();

@@ -1007,6 +1007,22 @@ export default function CalendarScreen() {
     };
   }, [historyTrades]);
 
+  const historyTimeline = useMemo(() => {
+    const end = parseDateKeyLocal(dateTo || keyFromDate(today));
+    const points = [];
+    for (let i = 6; i >= 0; i -= 1) {
+      const d = new Date(end);
+      d.setDate(d.getDate() - i);
+      const key = keyFromDate(d);
+      const day = historyTrades.filter((t) => t.dateKey === key);
+      const income = day.reduce((sum, t) => sum + (t.pnl > 0 ? t.pnl : 0), 0);
+      const expense = day.reduce((sum, t) => sum + (t.pnl < 0 ? Math.abs(t.pnl) : 0), 0);
+      points.push({ key, label: `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth()+1).padStart(2, '0')}`, income, expense, net: income - expense });
+    }
+    const max = Math.max(1, ...points.flatMap((p) => [p.income, p.expense]));
+    return { points, max };
+  }, [historyTrades, dateTo, today]);
+
   const getHistoryCategoryIcon = (instrument) => {
     const normalized = String(instrument || '').trim().toUpperCase();
     if (normalized.includes('СИГАРЕТ') || normalized.includes('ТАБАК')) return Cigarette;
@@ -1034,8 +1050,8 @@ export default function CalendarScreen() {
     setHistoryOpen(true);
     setHistoryFiltersOpen(false);
     setConfirmingClear(false);
-    // PRO history should immediately demonstrate its value — no hidden analytics.
-    setHistoryAnalysisOpen(true);
+    // PRO opens its premium layer immediately; FREE gets a compact dynamic snapshot.
+    setHistoryAnalysisOpen(Boolean(traderMode));
     setHistoryAnalysisTab('overview');
     requestAnimationFrame(() => setHistoryVisible(true));
   }
@@ -1181,6 +1197,8 @@ export default function CalendarScreen() {
         .calendar-days-grid > button:active { transform: scale(.985); }
         @keyframes premiumFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
         .history-fab { animation: premiumFloat 3.6s ease-in-out infinite; }
+        @keyframes proEmber { 0%,100% { opacity:.55; transform:scale(.85) } 50% { opacity:1; transform:scale(1.15) } }
+        .pro-ember { animation: proEmber 1.8s ease-in-out infinite; }
         @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
         @media (max-width: 639px) {
           .calendar-days-grid { flex: 1 1 auto; grid-auto-rows: minmax(76px, 1fr); }
@@ -1364,7 +1382,7 @@ export default function CalendarScreen() {
           }`}
         >
           <span className="h-7 w-7 rounded-full bg-amber-400/10 flex items-center justify-center group-hover:bg-amber-400/15 transition-colors"><History className="h-4 w-4 text-amber-500" /></span>
-          <span className="font-medium">{t('history')}</span>
+          <span className="relative font-medium">{t('history')}{traderMode && <><span className="ml-1 text-amber-400">✦</span><span className="absolute -right-2 -top-1 h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,.95)] animate-pulse" /></>}</span>
         </button>
       </div>
 
@@ -1407,7 +1425,31 @@ export default function CalendarScreen() {
             </div>
 
             <div className={`overflow-y-auto px-5 sm:px-6 py-5 max-h-[calc(90dvh-80px)] ${isLight ? 'bg-zinc-50/50' : ''}`}>
-              <button
+              {!traderMode && (
+                <section className={`mb-4 overflow-hidden rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950'}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div><p className="font-data text-[10px] uppercase tracking-[0.18em] text-emerald-500">Финансовый ритм</p><h3 className={`mt-1 text-base font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Последние 7 дней</h3><p className="mt-1 text-[11px] text-zinc-500">Живая картина периода без сложной аналитики.</p></div>
+                    <span className={`rounded-xl px-2.5 py-1.5 text-xs font-data ${historyTotal >= 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>{historyTotal >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoneyShort(Math.abs(historyTotal))}</span>
+                  </div>
+                  <div className="mt-5 flex h-28 items-end gap-1.5">
+                    {historyTimeline.points.map((point) => {
+                      const incomeH = Math.max(point.income ? 10 : 2, Math.round((point.income / historyTimeline.max) * 72));
+                      const expenseH = Math.max(point.expense ? 10 : 2, Math.round((point.expense / historyTimeline.max) * 72));
+                      return <div key={point.key} className="group flex min-w-0 flex-1 flex-col items-center justify-end gap-1">
+                        <div className="flex h-[76px] w-full items-end justify-center gap-0.5"><span title={`Доход: ${formatMoney(point.income)}`} className="w-[42%] rounded-t-md bg-emerald-500/75 transition-all duration-500 group-hover:bg-emerald-400" style={{height:`${incomeH}%`}} /><span title={`Расход: ${formatMoney(point.expense)}`} className="w-[42%] rounded-t-md bg-red-500/70 transition-all duration-500 group-hover:bg-red-400" style={{height:`${expenseH}%`}} /></div>
+                        <span className="text-[8px] font-data text-zinc-500">{point.label}</span>
+                      </div>;
+                    })}
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 border-t border-zinc-500/10 pt-3">
+                    <div><p className="text-[9px] uppercase tracking-wide text-zinc-500">Доходы</p><p className="mt-1 text-xs font-data text-emerald-500">+{historyCurrencySymbol}{formatMoneyShort(historyIncome)}</p></div>
+                    <div><p className="text-[9px] uppercase tracking-wide text-zinc-500">Расходы</p><p className="mt-1 text-xs font-data text-red-500">−{historyCurrencySymbol}{formatMoneyShort(historyExpense)}</p></div>
+                    <div><p className="text-[9px] uppercase tracking-wide text-zinc-500">Записей</p><p className="mt-1 text-xs font-data text-zinc-300">{historyTrades.length}</p></div>
+                  </div>
+                </section>
+              )}
+
+              {traderMode && <button
                 onClick={() => setHistoryAnalysisOpen((v) => !v)}
                 disabled={historyTrades.length === 0}
                 className={`mb-4 w-full group relative overflow-hidden rounded-2xl border px-4 py-3.5 text-left transition-all duration-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40 ${
@@ -1427,7 +1469,7 @@ export default function CalendarScreen() {
                   </span>
                   <ChevronDown className={`h-4 w-4 text-amber-500 transition-transform duration-300 ${historyAnalysisOpen ? 'rotate-180' : ''}`} />
                 </div>
-              </button>
+              </button>}
               {traderMode && historyAnalysisOpen && (
                 <section className={`relative overflow-hidden mb-5 rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-amber-300/70 bg-white shadow-sm' : 'border-amber-400/20 bg-gradient-to-br from-amber-400/[0.08] via-zinc-950 to-zinc-950 shadow-[0_18px_60px_rgba(0,0,0,.28)]'}`}>
                   <div className="absolute -right-8 -top-10 select-none pointer-events-none font-display text-8xl font-bold tracking-tighter text-amber-400/[0.045]">PRO</div>

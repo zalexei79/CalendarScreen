@@ -1,5 +1,10 @@
 import { textValue } from '../../../shared/lib/formatters';
 
+function normalizeCurrency(value) {
+  const code = textValue(value).trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(code) ? code : 'USD';
+}
+
 // Confirmed cloud contract for `trades`. Optional local fields stay out of
 // writes until the actual Supabase schema is available for verification.
 export function toSupabaseTradePayload(localTrade, dateKey, userId) {
@@ -12,7 +17,7 @@ export function toSupabaseTradePayload(localTrade, dateKey, userId) {
     pnl: localTrade.pnl,
     comment: localTrade.comment,
     platform: localTrade.platform,
-    currency: localTrade.currency || 'USD',
+    currency: normalizeCurrency(localTrade.currency),
   };
 }
 
@@ -30,7 +35,7 @@ export function fromSupabaseTradeRow(row) {
     pnl: Number(row.pnl),
     comment: row.comment || '',
     platform: textValue(row.platform) || 'Manual',
-    currency: textValue(row.currency) || 'USD',
+    currency: normalizeCurrency(row.currency),
     // Optional fields are preserved locally when present in the database row.
     take_profit: row.take_profit ?? null,
     stop_loss: row.stop_loss ?? null,

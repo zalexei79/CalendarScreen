@@ -5,6 +5,11 @@ import { getTradesCacheKey } from '../../../shared/config/constants';
 import { fromSupabaseTradeRow, toSupabaseTradePayload, toSupabaseTradeUpdates } from '../lib/tradeMapper';
 import { isRetryableNetworkError, useOfflineQueue } from './useOfflineQueue';
 
+function normalizeCurrency(value) {
+  const code = String(value || '').trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(code) ? code : 'USD';
+}
+
 function isTemporaryId(id) {
   const value = String(id || '');
   return value.startsWith('local-') || value.startsWith('guest-') || value.startsWith('offline-');
@@ -136,7 +141,7 @@ export function useTrades({ user }) {
     const localTrade = {
       id: isEditing ? editingTradeId : localId,
       time, instrument, direction, pnl: signedPnl, comment, platform,
-      currency: currency || 'USD',
+      currency: normalizeCurrency(currency),
       ...(traderMode ? { take_profit: takeProfit, stop_loss: stopLoss } : {}),
       pending: Boolean(cloudUserId),
     };

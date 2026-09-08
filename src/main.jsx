@@ -5,7 +5,7 @@ import CalendarScreen from '../CalendarScreen.jsx'
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((err) => console.error('[sw] регистрация не удалась:', err))
+    navigator.serviceWorker.register('/sw.js').then((registration) => registration.update()).catch((err) => console.error('[sw] регистрация не удалась:', err))
   })
 }
 

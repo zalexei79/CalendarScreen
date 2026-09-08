@@ -67,8 +67,8 @@ export default function Header({
             {settingsOpen && (
               <div
                 className={[
-                  'absolute right-0 top-full mt-2 z-30 rounded-xl border shadow-xl p-4 origin-top-right',
-                  'w-[290px] sm:w-[280px]',
+                  'absolute right-0 top-full mt-2 z-30 rounded-2xl border shadow-2xl p-3 origin-top-right backdrop-blur-xl',
+                  'w-[286px] sm:w-[280px]',
                   'transition-all duration-200 ease-out',
                   settingsVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-1.5 scale-95',
                   isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900',
@@ -78,7 +78,7 @@ export default function Header({
                   {t('settings')}
                 </p>
     
-                <div className={`mb-3 rounded-lg border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'}`}>
+                <div className={`mb-2 rounded-xl border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'}`}>
                   <p className={`flex items-center gap-1.5 text-[11px] uppercase tracking-wide mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}><Languages className="h-3.5 w-3.5" /> {t('language')}</p>
                   <div className="flex gap-1.5">
                     {LANGUAGES.map((l) => (
@@ -101,7 +101,7 @@ export default function Header({
                 </div>
     
                 {/* Account — visible on mobile inside the settings panel. */}
-                <div className={`mb-3 rounded-lg border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'}`}>
+                <div className={`mb-3 rounded-xl border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'}`}>
                   <p className={`font-data text-[11px] uppercase tracking-wide mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>Аккаунт</p>
                   {user ? (
                     <div className="flex items-center gap-2">
@@ -133,7 +133,7 @@ export default function Header({
                   )}
                 </div>
     
-                <div className={`rounded-lg border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'}`}>
+                <div className={`rounded-xl border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'}`}>
                   <p className={`flex items-center gap-1.5 text-[11px] uppercase tracking-wide mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}><CircleDollarSign className="h-3.5 w-3.5" /> {t('currency')}</p>
                   <div className="grid grid-cols-2 gap-1.5">
                     {CURRENCIES.map((c) => (
@@ -263,14 +263,14 @@ export default function Header({
               aria-checked={traderMode}
               onClick={() => setTraderMode(v => { const next = !v; if (!next) setPlatformFilter('ALL'); return next; })}
               title={traderMode ? 'PRO: LONG/SHORT, Take Profit и Stop Loss' : 'Денежный: доходы и расходы без трейдерских полей'}
-              className="relative h-8 sm:h-9 w-[88px] sm:w-[112px] shrink-0 rounded-full border border-zinc-800/90 bg-zinc-950/80 p-0.5 font-data text-[8px] sm:text-[9px] tracking-[0.14em] text-zinc-500 shadow-[inset_0_1px_0_rgba(255,255,255,.03),0_8px_24px_rgba(0,0,0,.16)] transition-all duration-300 hover:border-zinc-700 focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60"
+              className="relative h-10 sm:h-9 w-[116px] sm:w-[128px] shrink-0 rounded-full border border-zinc-700 bg-zinc-950 p-0.5 font-data text-[9px] sm:text-[10px] tracking-[0.12em] text-zinc-400 shadow-[inset_0_1px_0_rgba(255,255,255,.03),0_8px_24px_rgba(0,0,0,.16)] transition-all duration-300 hover:border-amber-400/40 focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60"
             >
               <span
                 aria-hidden="true"
                 className={[
-                  'absolute top-0.5 bottom-0.5 left-0.5 w-[42px] sm:w-[54px] rounded-full border transition-all duration-300 ease-out',
+                  'absolute top-0.5 bottom-0.5 left-0.5 w-[56px] sm:w-[62px] rounded-full border transition-all duration-300 ease-out',
                   traderMode
-                    ? 'translate-x-[42px] sm:translate-x-[54px] border-amber-400/50 bg-gradient-to-br from-amber-400/20 to-amber-500/5 shadow-[0_0_18px_rgba(251,191,36,0.12)]'
+                    ? 'translate-x-[56px] sm:translate-x-[62px] border-amber-400/70 bg-gradient-to-br from-amber-400/35 to-amber-500/10 shadow-[0_0_24px_rgba(251,191,36,0.22)]'
                     : isLight
                     ? 'translate-x-0 border-zinc-300 bg-zinc-200'
                     : 'translate-x-0 border-zinc-700 bg-zinc-800/90',
@@ -281,7 +281,7 @@ export default function Header({
                   'relative z-10 flex h-full items-center justify-center transition-colors duration-300',
                   !traderMode ? 'text-zinc-100' : 'text-zinc-600',
                 ].join(' ')}
-                style={{ width: '42px' }}
+                style={{ width: '56px' }}
               >
                 {t('freePlan')}
               </span>
@@ -290,9 +290,9 @@ export default function Header({
                   'absolute right-0.5 top-0.5 bottom-0.5 z-10 flex items-center justify-center transition-colors duration-300',
                   traderMode ? 'text-amber-400' : 'text-zinc-600',
                 ].join(' ')}
-                style={{ width: '42px' }}
+                style={{ width: '56px' }}
               >
-                PRO
+                <span className="flex items-center gap-1"><span className={traderMode ? 'text-amber-300' : ''}>✦</span>PRO</span>
               </span>
             </button>
     
