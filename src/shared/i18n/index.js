@@ -184,6 +184,14 @@ export const TRANSLATIONS = {
     inReportDetails: 'Дата · категория · доходы и расходы · сумма · комментарии',
     recordsWithFilter: 'записей с учётом текущей валюты и фильтров',
     downloadCashReport: 'Скачать денежный отчёт',
+    csvPeriodTitle: 'Все ваши записи за период',
+    csvPeriodSummary: 'ИТОГ ЗА ПЕРИОД',
+    csvDate: 'Дата',
+    csvTime: 'Время',
+    csvCategory: 'Категория',
+    csvType: 'Тип',
+    csvAmount: 'Сумма',
+    csvComment: 'Комментарий',
     
     // App Install PWA
     alwaysAtHand: 'Всегда под рукой',
@@ -380,6 +388,14 @@ export const TRANSLATIONS = {
     inReportDetails: 'Date · category · income/expense · amount · comments',
     recordsWithFilter: 'records matching current currency and filters',
     downloadCashReport: 'Download report',
+    csvPeriodTitle: 'All your records for the period',
+    csvPeriodSummary: 'PERIOD SUMMARY',
+    csvDate: 'Date',
+    csvTime: 'Time',
+    csvCategory: 'Category / Symbol',
+    csvType: 'Type',
+    csvAmount: 'Amount',
+    csvComment: 'Comment',
     
     // App Install PWA
     alwaysAtHand: 'Always at hand',
@@ -576,6 +592,14 @@ export const TRANSLATIONS = {
     inReportDetails: 'Data · categoria · venit/cheltuială · sumă · comentarii',
     recordsWithFilter: 'înregistrări conform valutei și filtrelor selectate',
     downloadCashReport: 'Descarcă raportul',
+    csvPeriodTitle: 'Toate înregistrările dvs. pentru perioadă',
+    csvPeriodSummary: 'REZUMAT PENTRU PERIOADĂ',
+    csvDate: 'Data',
+    csvTime: 'Ora',
+    csvCategory: 'Categorie / Simbol',
+    csvType: 'Tip',
+    csvAmount: 'Sumă',
+    csvComment: 'Comentariu',
     
     // App Install PWA
     alwaysAtHand: 'Mereu la îndemână',

@@ -48,25 +48,30 @@ export function getPresetRange(preset, today) {
   const m = today.getMonth();
 
   switch (preset) {
+    case 'today':
     case 'Сегодня': {
       const k = keyFromDate(today);
       return { from: k, to: k };
     }
+    case 'currentWeek':
     case 'Текущая неделя': {
       const start = startOfWeekMonday(today);
       const end = addDays(start, 6);
       return { from: keyFromDate(start), to: keyFromDate(end) };
     }
+    case 'currentMonth':
     case 'Текущий месяц': {
       const start = new Date(y, m, 1);
       const end = new Date(y, m + 1, 0);
       return { from: keyFromDate(start), to: keyFromDate(end) };
     }
+    case 'threeMonths':
     case '3 месяца': {
       const start = new Date(y, m - 2, 1);
       const end = new Date(y, m + 1, 0);
       return { from: keyFromDate(start), to: keyFromDate(end) };
     }
+    case 'allHistory':
     case 'Вся история':
       return { from: '0000-01-01', to: '9999-12-31' };
     default:

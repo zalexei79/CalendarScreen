@@ -946,7 +946,7 @@ export default function CalendarScreen() {
   const [freeTimelineOffset, setFreeTimelineOffset] = useState(0);
   const [freeDynamicsOpen, setFreeDynamicsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
-  const [exportPeriodPreset, setExportPeriodPreset] = useState('Текущий период');
+  const [exportPeriodPreset, setExportPeriodPreset] = useState('currentPeriod');
   const [confirmingClear, setConfirmingClear] = useState(false);
 
   const historyTrades = useMemo(() => {
@@ -1118,7 +1118,7 @@ export default function CalendarScreen() {
   }
 
   const exportTrades = useMemo(() => {
-    const range = exportPeriodPreset === 'Текущий период'
+    const range = (exportPeriodPreset === 'currentPeriod' || exportPeriodPreset === 'Текущий период')
       ? { from: dateFrom, to: dateTo }
       : getPresetRange(exportPeriodPreset, today);
     return Object.entries(manualTrades)
@@ -1129,16 +1129,16 @@ export default function CalendarScreen() {
   }, [manualTrades, exportPeriodPreset, dateFrom, dateTo, today, historyCurrency, historyWinLoss]);
 
   function handleExportCsv() {
-    const range = exportPeriodPreset === 'Текущий период'
+    const range = (exportPeriodPreset === 'currentPeriod' || exportPeriodPreset === 'Текущий период')
       ? { from: dateFrom, to: dateTo }
       : getPresetRange(exportPeriodPreset, today);
-    const title = `ДЕНЕЖНЫЙ КАЛЕНДАРЬ — Все ваши записи за период`;
+    const title = `${traderMode ? 'AI Trade Journal' : t('titleMoney')} — ${t('csvPeriodTitle')}`;
     const periodLabel = `${formatDateLabel(range.from)} — ${formatDateLabel(range.to)}`;
     const rows = exportTrades.map((item) => [
       formatDateLabel(item.dateKey),
       item.time || '',
-      item.instrument || 'Другое',
-      item.pnl >= 0 ? 'Доход' : 'Расход',
+      item.instrument || (traderMode ? 'Trade' : t('catOther')),
+      item.pnl >= 0 ? (traderMode ? t('profitTrade') : t('income')) : (traderMode ? t('lossTrade') : t('expense')),
       formatAmountInCurrency(item.pnl, item.currency || 'USD'),
       item.comment || '',
     ]);
@@ -1146,9 +1146,20 @@ export default function CalendarScreen() {
     const totalExpense = exportTrades.reduce((sum, item) => sum + (item.pnl < 0 ? Math.abs(item.pnl) : 0), 0);
     const currencyMeta = historyCurrency === 'ALL' ? null : getCurrencyMeta(historyCurrency);
     const summary = currencyMeta ? [
-      [], ['ИТОГ ЗА ПЕРИОД'], ['Доходы', `+${currencyMeta.symbol}${formatMoney(totalIncome)}`], ['Расходы', `−${currencyMeta.symbol}${formatMoney(totalExpense)}`], ['Баланс', `${totalIncome-totalExpense >= 0 ? '+' : '−'}${currencyMeta.symbol}${formatMoney(Math.abs(totalIncome-totalExpense))}`]
+      [],
+      [t('csvPeriodSummary')],
+      [t('income'), `+${currencyMeta.symbol}${formatMoney(totalIncome)}`],
+      [t('expense'), `−${currencyMeta.symbol}${formatMoney(totalExpense)}`],
+      [t('balanceLabel'), `${totalIncome - totalExpense >= 0 ? '+' : '−'}${currencyMeta.symbol}${formatMoney(Math.abs(totalIncome - totalExpense))}`]
     ] : [];
-    const csvRows = [[title], [`Период: ${periodLabel}`], [], ['Дата', 'Время', 'Категория', 'Тип', 'Сумма', 'Комментарий'], ...rows, ...summary];
+    const csvRows = [
+      [title],
+      [`${t('currentPeriod')}: ${periodLabel}`],
+      [],
+      [t('csvDate'), t('csvTime'), t('csvCategory'), t('csvType'), t('csvAmount'), t('csvComment')],
+      ...rows,
+      ...summary
+    ];
     const csv = csvRows.map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -1323,15 +1334,17 @@ export default function CalendarScreen() {
             </div>
           </div>
 
-          <div className={`inline-flex items-center self-start rounded-md border overflow-hidden ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-700 bg-zinc-900'}`}>
+          <div className="flex items-center self-start">
             <button
               onClick={() => openModal()}
               disabled={isFutureSelected}
               title={isFutureSelected ? (traderMode ? 'Нельзя добавить сделку на будущую дату' : t('recordFutureBlocked')) : undefined}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${isLight ? 'text-zinc-700 hover:bg-zinc-200' : 'text-zinc-200 hover:bg-zinc-800'}`}
+              className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 px-4 py-2.5 text-xs sm:text-sm font-bold text-zinc-950 shadow-md shadow-amber-500/25 hover:shadow-lg hover:shadow-amber-500/35 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <Plus className="h-4 w-4" />
-              {traderMode ? t('addTrade') : t('addRecord')}
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-black/10 transition-transform duration-200 group-hover:rotate-90">
+                <Plus className="h-3.5 w-3.5 stroke-[3] text-zinc-950" />
+              </span>
+              <span>{traderMode ? t('addTrade') : t('addRecord')}</span>
             </button>
           </div>
 
@@ -1410,7 +1423,7 @@ export default function CalendarScreen() {
             <div className="flex items-center justify-center py-16">
               <div className={`text-center max-w-sm border border-dashed rounded-xl px-10 py-10 ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}>
                 <Inbox className={`h-8 w-8 mx-auto mb-4 ${isLight ? 'text-zinc-300' : 'text-zinc-700'}`} />
-                <p className={`text-sm ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{traderMode ? 'Сделок за этот день пока нет' : 'Записей за этот день пока нет'}</p>
+                <p className={`text-sm ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{traderMode ? t('noTradesDay') : t('noRecordsDay')}</p>
               </div>
             </div>
           )}
@@ -1419,19 +1432,45 @@ export default function CalendarScreen() {
       </div>
       )}
 
-      {/* bottom "История" entry point — search/browse all saved trades */}
-      <div className="history-fab fixed bottom-4 sm:bottom-4 inset-x-0 flex justify-center z-30 pointer-events-none">
-        <button
-          onClick={openHistory}
-          className={`pointer-events-auto group flex items-center gap-2.5 rounded-full border backdrop-blur-xl px-5 py-3 text-base shadow-[0_14px_40px_rgba(0,0,0,.24)] transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 ${
-            isLight
-              ? 'border-zinc-300/90 bg-white/95 text-zinc-700 hover:border-amber-400/70 hover:text-amber-600'
-              : 'border-zinc-700/90 bg-zinc-900/95 text-zinc-100 hover:border-amber-400/70 hover:text-amber-300'
-          }`}
-        >
-          <span className="h-7 w-7 rounded-full bg-amber-400/10 flex items-center justify-center group-hover:bg-amber-400/15 transition-colors"><History className="h-4 w-4 text-amber-500" /></span>
-          <span className="relative font-medium">{t('history')}{traderMode && <span className="ml-1 text-amber-400">✦</span>}</span>
-        </button>
+      {/* Floating Action Dock: Prominent Center "+" Add Button + History */}
+      <div className="history-fab fixed bottom-4 sm:bottom-6 inset-x-0 flex justify-center items-center z-30 pointer-events-none px-4">
+        <div className={`pointer-events-auto flex items-center gap-1.5 sm:gap-2.5 rounded-full border p-1.5 sm:p-2 backdrop-blur-2xl transition-all duration-300 ${
+          isLight
+            ? 'border-zinc-200/90 bg-white/95 shadow-[0_16px_45px_rgba(0,0,0,0.14)]'
+            : 'border-zinc-800/90 bg-zinc-950/90 shadow-[0_16px_50px_rgba(0,0,0,0.45)]'
+        }`}>
+          {/* History Button */}
+          <button
+            type="button"
+            onClick={openHistory}
+            className={`group flex items-center gap-2 rounded-full px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all duration-200 ${
+              isLight
+                ? 'text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/80'
+                : 'text-zinc-300 hover:text-white hover:bg-zinc-900/90'
+            }`}
+          >
+            <span className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-amber-400/10 transition-colors group-hover:bg-amber-400/20">
+              <History className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-500 transition-transform duration-200 group-hover:-rotate-12" />
+            </span>
+            <span className="relative font-medium">{t('history')}{traderMode && <span className="ml-1 text-amber-400">✦</span>}</span>
+          </button>
+
+          {/* Central Eye-Catching Add '+' Button */}
+          <button
+            type="button"
+            onClick={() => openModal()}
+            title={traderMode ? t('addTrade') : t('addRecord')}
+            aria-label={traderMode ? t('addTrade') : t('addRecord')}
+            className="group relative flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 px-4 sm:px-5 py-2 sm:py-2.5 text-zinc-950 font-bold shadow-[0_4px_24px_rgba(245,158,11,0.45)] hover:shadow-[0_8px_34px_rgba(245,158,11,0.7)] hover:scale-[1.04] active:scale-[0.96] transition-all duration-200 border border-amber-200/60"
+          >
+            <span className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-black/10 transition-transform duration-300 group-hover:rotate-90">
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5 stroke-[2.8] text-zinc-950" />
+            </span>
+            <span className="text-xs sm:text-sm font-bold tracking-tight">
+              {traderMode ? t('addTrade') : t('addRecord')}
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* HISTORY MODAL — улучшен визуал для светлой темы + кнопка синхронизации cTrader */}
@@ -2109,25 +2148,36 @@ export default function CalendarScreen() {
               className={`absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
                 isLight ? 'text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200'
               }`}
-              aria-label="Закрыть"
+              aria-label={t('close')}
             >
               <X className="h-4 w-4" />
             </button>
 
-            <div className="pr-8">
-              <p className="font-data text-[10px] tracking-[0.18em] text-amber-400 uppercase">
-                {traderMode
-                  ? (editingTrade ? 'Редактировать сделку' : 'Новая сделка')
-                  : (editingTrade ? t('editRecord') : t('addRecord'))}
-              </p>
-              <p className={`mt-1 text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
-                {modalDateKey &&
-                  parseDateKeyLocal(modalDateKey).toLocaleDateString('ru-RU', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
-              </p>
+            <div className="flex items-center justify-between pr-8">
+              <div>
+                <p className="font-data text-[10px] tracking-[0.18em] text-amber-400 uppercase">
+                  {traderMode
+                    ? (editingTrade ? t('editTrade') : t('newTrade'))
+                    : (editingTrade ? t('editRecord') : t('addRecord'))}
+                </p>
+                <div className="mt-1 flex items-center gap-1.5">
+                  <input
+                    type="date"
+                    max={todayKey}
+                    value={modalDateKey || targetDateKey}
+                    onChange={(e) => {
+                      if (e.target.value && e.target.value <= todayKey) {
+                        setModalDateKey(e.target.value);
+                      }
+                    }}
+                    className={`rounded-lg border px-2 py-0.5 font-data text-xs outline-none transition-colors cursor-pointer ${
+                      isLight
+                        ? 'border-zinc-200 bg-zinc-100 text-zinc-800 hover:border-amber-400/60 focus:border-amber-500'
+                        : 'border-zinc-800 bg-zinc-900 text-zinc-200 hover:border-amber-400/50 focus:border-amber-400'
+                    }`}
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="mt-4">
@@ -2146,7 +2196,7 @@ export default function CalendarScreen() {
                   ].join(' ')}
                 >
                   <TrendingUp className="h-3.5 w-3.5" />
-                  {traderMode ? 'Профит' : 'Доход'}
+                  {traderMode ? t('profitTrade') : t('income')}
                 </button>
                 <button
                   type="button"
@@ -2159,7 +2209,7 @@ export default function CalendarScreen() {
                   ].join(' ')}
                 >
                   <TrendingDown className="h-3.5 w-3.5" />
-                  {traderMode ? 'Убыток' : 'Расход'}
+                  {traderMode ? t('lossTrade') : t('expense')}
                 </button>
               </div>
 
@@ -2178,7 +2228,7 @@ export default function CalendarScreen() {
                     isLight ? 'text-zinc-900' : 'text-zinc-100'
                   }`}
                   placeholder="0"
-                  aria-label={traderMode ? 'Результат' : 'Сумма'}
+                  aria-label={traderMode ? t('result') : t('amount')}
                 />
               </div>
 
@@ -2232,7 +2282,7 @@ export default function CalendarScreen() {
                 }`}
               >
                 <MoreHorizontal className="h-3.5 w-3.5" />
-                {detailsOpen ? 'Скрыть детали' : 'Дополнительно'}
+                {detailsOpen ? t('hideDetails') : t('moreDetails')}
                 <ChevronDown className={`h-3 w-3 transition-transform ${detailsOpen ? 'rotate-180' : ''}`} />
               </button>
 
@@ -2246,7 +2296,7 @@ export default function CalendarScreen() {
                         <label className={`mb-1.5 block font-data text-[10px] tracking-widest uppercase ${
                           isLight ? 'text-zinc-600' : 'text-zinc-600'
                         }`}>
-                          Инструмент
+                          {t('instrument')}
                         </label>
                         <div className="flex flex-wrap gap-1.5 mb-2">
                           {quickAssetTags.map((tag) => (
@@ -2276,7 +2326,7 @@ export default function CalendarScreen() {
                               ? 'bg-white border-zinc-300 text-zinc-900'
                               : 'bg-zinc-950 border-zinc-800 text-zinc-100'
                           }`}
-                          placeholder="Например, XAUUSD"
+                          placeholder={t('instrumentPlaceholder')}
                         />
                       </div>
 
@@ -2351,7 +2401,7 @@ export default function CalendarScreen() {
                       <label className={`mb-1.5 block font-data text-[10px] tracking-widest uppercase ${
                         isLight ? 'text-zinc-600' : 'text-zinc-600'
                       }`}>
-                        Категория
+                        {t('category')}
                       </label>
                       <div className="grid grid-cols-2 gap-1.5">
                         {moneyCategoriesWithIcons.map((category) => {
@@ -2386,7 +2436,7 @@ export default function CalendarScreen() {
                             ? 'bg-white border-zinc-300 text-zinc-900'
                             : 'bg-zinc-950 border-zinc-800 text-zinc-100'
                         }`}
-                        placeholder="Своя категория"
+                        placeholder={t('ownCategory')}
                       />
                     </div>
                   )}
@@ -2400,7 +2450,7 @@ export default function CalendarScreen() {
                         ? 'bg-white border-zinc-300 text-zinc-900'
                         : 'bg-zinc-950 border-zinc-800 text-zinc-100'
                     }`}
-                    placeholder={traderMode ? 'Заметка по сделке (необязательно)' : t('recordNotePlaceholder')}
+                    placeholder={traderMode ? t('notePlaceholderTrade') : t('recordNotePlaceholder')}
                   />
                 </div>
               )}
@@ -2412,7 +2462,7 @@ export default function CalendarScreen() {
                 disabled={isSaving}
                 className="sticky bottom-0 mt-3 block w-full rounded-xl bg-amber-400 px-4 py-3 text-base font-bold text-zinc-950 hover:bg-amber-300 transition-colors shadow-lg shadow-amber-500/20 disabled:opacity-60"
               >
-                {isSaving ? 'Сохранение...' : (editingTrade ? 'Сохранить изменения' : (traderMode ? 'Сохранить сделку' : t('saveRecord')))}
+                {isSaving ? t('saving') : (editingTrade ? t('saveChanges') : (traderMode ? t('saveTrade') : t('saveRecord')))}
               </button>
             </div>
           </div>
@@ -2424,23 +2474,57 @@ export default function CalendarScreen() {
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) setExportOpen(false); }}>
           <div className={`w-full max-w-md rounded-2xl border shadow-2xl ${isLight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-zinc-800 bg-zinc-950 text-zinc-100'}`}>
             <div className="flex items-center justify-between border-b border-zinc-800/70 px-5 py-4">
-              <div><p className="font-data text-[10px] uppercase tracking-[0.22em] text-amber-500">Денежный календарь</p><h3 className="mt-1 font-semibold">Скачать отчёт</h3></div>
-              <button onClick={() => setExportOpen(false)} className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-500/10"><X className="h-4 w-4" /></button>
+              <div>
+                <p className="font-data text-[10px] uppercase tracking-[0.22em] text-amber-500">
+                  {traderMode ? t('titlePro') : t('titleMoney')}
+                </p>
+                <h3 className="mt-1 font-semibold">{t('downloadReport')}</h3>
+              </div>
+              <button onClick={() => setExportOpen(false)} aria-label={t('close')} className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-500/10">
+                <X className="h-4 w-4" />
+              </button>
             </div>
             <div className="p-5">
-              <p className="text-sm font-medium">Все ваши записи за выбранный период</p>
-              <p className="mt-1 text-xs text-zinc-500">Выбери период — технические поля вроде Manual в обычный отчёт не попадут.</p>
+              <p className="text-sm font-medium">{t('allRecordsForPeriod')}</p>
+              <p className="mt-1 text-xs text-zinc-500">{t('exportNotice')}</p>
               <div className="mt-4 grid grid-cols-2 gap-2">
-                {['Текущий период', 'Сегодня', 'Текущая неделя', 'Текущий месяц', '3 месяца', 'Вся история'].map((preset) => (
-                  <button key={preset} onClick={() => setExportPeriodPreset(preset)} className={`rounded-xl border px-3 py-2.5 text-left text-xs transition-colors ${exportPeriodPreset === preset ? 'border-amber-400/50 bg-amber-400/10 text-amber-600' : isLight ? 'border-zinc-200 hover:bg-zinc-50' : 'border-zinc-800 hover:bg-zinc-900'}`}>{preset}</button>
-                ))}
+                {[
+                  { key: 'currentPeriod', label: t('currentPeriod') },
+                  { key: 'today', label: t('today') },
+                  { key: 'currentWeek', label: t('currentWeek') },
+                  { key: 'currentMonth', label: t('currentMonth') },
+                  { key: 'threeMonths', label: t('threeMonths') },
+                  { key: 'allHistory', label: t('allHistory') },
+                ].map((preset) => {
+                  const isSelected = exportPeriodPreset === preset.key || exportPeriodPreset === preset.label;
+                  return (
+                    <button
+                      key={preset.key}
+                      onClick={() => setExportPeriodPreset(preset.key)}
+                      className={`rounded-xl border px-3 py-2.5 text-left text-xs transition-colors ${
+                        isSelected
+                          ? 'border-amber-400/50 bg-amber-400/10 text-amber-600 font-semibold'
+                          : isLight ? 'border-zinc-200 hover:bg-zinc-50 text-zinc-700' : 'border-zinc-800 hover:bg-zinc-900 text-zinc-300'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
               </div>
               <div className={`mt-4 rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/40'}`}>
-                <p className="text-[10px] uppercase tracking-wider text-zinc-500">В отчёте</p>
-                <p className="mt-1 text-sm font-medium">Дата · категория · доходы и расходы · сумма · комментарии</p>
-                <p className="mt-1 text-xs text-zinc-500">{exportTrades.length} записей с учётом текущей валюты и фильтров</p>
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('inReport')}</p>
+                <p className="mt-1 text-sm font-medium">{t('inReportDetails')}</p>
+                <p className="mt-1 text-xs text-zinc-500">{exportTrades.length} {t('recordsWithFilter')}</p>
               </div>
-              <button onClick={handleExportCsv} disabled={!exportTrades.length} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"><Download className="h-4 w-4" />Скачать денежный отчёт</button>
+              <button
+                onClick={handleExportCsv}
+                disabled={!exportTrades.length}
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Download className="h-4 w-4" />
+                {t('downloadCashReport')}
+              </button>
             </div>
           </div>
         </div>
@@ -2467,17 +2551,17 @@ export default function CalendarScreen() {
               className={`absolute top-4 right-4 transition-colors ${
                 isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-200'
               }`}
-              aria-label="Закрыть"
+              aria-label={t('close')}
             >
               <X className="h-4 w-4" />
             </button>
 
-            <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">Подключить площадку</p>
-            <h2 className={`font-display text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'} mb-3`}>Источник сделок</h2>
+            <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">{t('connectPlatform')}</p>
+            <h2 className={`font-display text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'} mb-3`}>{t('tradesSource')}</h2>
 
             <div className="rounded-md border border-amber-400/30 bg-amber-400/5 px-3 py-2 mb-4">
               <p className="text-xs text-amber-400/90 leading-relaxed">
-                cTrader подключается по-настоящему. API-ключи бирж и импорт CSV — пока в разработке, данные не сохраняют.
+                {t('ctraderNotice')}
               </p>
             </div>
 
@@ -2515,7 +2599,7 @@ export default function CalendarScreen() {
                 ].join(' ')}
               >
                 <KeyRound className="h-3.5 w-3.5" />
-                API Ключи
+                {t('apiKeys')}
               </button>
               <button
                 onClick={() => setConnectTab('csv')}
@@ -2531,19 +2615,19 @@ export default function CalendarScreen() {
                 ].join(' ')}
               >
                 <UploadCloud className="h-3.5 w-3.5" />
-                Импорт CSV
+                {t('importCsv')}
               </button>
             </div>
 
             {connectTab === 'ctrader' ? (
               <div className="flex flex-col gap-4">
                 <p className={`text-xs ${isLight ? 'text-zinc-600' : 'text-zinc-500'} leading-relaxed`}>
-                  Подключите свой аккаунт cTrader через Spotware — это разрешит приложению видеть ваши сделки.
+                  {t('ctraderDesc')}
                 </p>
                 {ctraderConnected ? (
                   <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-emerald-600 text-sm">
                     <CheckCircle2 className="h-4 w-4" />
-                    cTrader подключён
+                    {t('ctraderConnected')}
                   </div>
                 ) : (
                   <button
@@ -2552,7 +2636,7 @@ export default function CalendarScreen() {
                     className="w-full flex items-center justify-center gap-2 rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-300 disabled:opacity-50 transition-colors"
                   >
                     {ctraderLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
-                    {ctraderLoading ? 'Подключение...' : 'Подключить cTrader'}
+                    {ctraderLoading ? t('connecting') : t('connectCtraderBtn')}
                   </button>
                 )}
               </div>
@@ -2562,7 +2646,7 @@ export default function CalendarScreen() {
                   <label className={`block font-data text-[11px] tracking-widest uppercase mb-1.5 ${
                     isLight ? 'text-zinc-600' : 'text-zinc-500'
                   }`}>
-                    Биржа / терминал
+                    {t('exchangeOrTerminal')}
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     {EXCHANGES.map((ex) => (
@@ -2624,7 +2708,7 @@ export default function CalendarScreen() {
                 </div>
 
                 <p className={`text-xs ${isLight ? 'text-zinc-600' : 'text-zinc-600'} leading-relaxed`}>
-                  Рекомендуем создавать ключ с правами только на чтение (read-only), без доступа к выводу средств.
+                  {t('readOnlyKeyNotice')}
                 </p>
 
                 <button
@@ -2632,7 +2716,7 @@ export default function CalendarScreen() {
                   disabled={!textValue(apiForm.key).trim() || !textValue(apiForm.secret).trim()}
                   className="w-full rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  Подключить {apiForm.exchange}
+                  {t('connectExchange')} {apiForm.exchange}
                 </button>
               </div>
             ) : (
@@ -2651,13 +2735,13 @@ export default function CalendarScreen() {
                     <>
                       <FileText className="h-6 w-6 text-amber-400" />
                       <p className={`text-sm font-medium ${isLight ? 'text-zinc-900' : 'text-zinc-200'}`}>{csvFile.name}</p>
-                      <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>Файл готов к импорту</p>
+                      <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('fileReadyToImport')}</p>
                     </>
                   ) : (
                     <>
                       <UploadCloud className={`h-6 w-6 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`} />
-                      <p className={`text-sm ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>Перетащите файл отчёта сюда</p>
-                      <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>или нажмите, чтобы выбрать .csv</p>
+                      <p className={`text-sm ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>{t('dragCsvHere')}</p>
+                      <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('orClickToSelect')}</p>
                     </>
                   )}
                 </label>
@@ -2667,7 +2751,7 @@ export default function CalendarScreen() {
                   disabled={!csvFile}
                   className="w-full rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  Импортировать
+                  {t('importBtn')}
                 </button>
               </div>
             )}
