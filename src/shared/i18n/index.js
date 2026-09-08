@@ -75,6 +75,12 @@ export const TRANSLATIONS = {
     freeAnalysisSub: 'Откуда приходят и куда уходят',
     incomeLabel: 'Доходы',
     expenseLabel: 'Расходы',
+    offlineTitle: 'Вы сейчас без интернета',
+    offlineDesc: 'Журнал работает в оффлайн-режиме. Все сделки и записи сохраняются на устройстве и будут синхронизированы при подключении к сети.',
+    goToOffline: 'Перейти в оффлайн',
+    onlineTitle: 'Подключение восстановлено',
+    onlineDesc: 'Вы снова в сети! Все сделки и данные успешно синхронизированы с облаком.',
+    onlineAction: 'Отлично',
     
     // PRO Analysis
     proFinancialPicture: 'PRO · Финансовая картина',
@@ -257,6 +263,12 @@ export const TRANSLATIONS = {
     freeAnalysisSub: 'Where it comes from and where it goes',
     incomeLabel: 'Income',
     expenseLabel: 'Expenses',
+    offlineTitle: 'No internet connection',
+    offlineDesc: 'Journal is running in offline mode. All entries and trades are saved locally and will automatically sync once connected.',
+    goToOffline: 'Continue offline',
+    onlineTitle: 'Connection restored',
+    onlineDesc: 'You are back online! All entries and data are synchronized with the cloud.',
+    onlineAction: 'Great',
     
     // PRO Analysis
     proFinancialPicture: 'PRO · Financial Picture',
@@ -439,6 +451,12 @@ export const TRANSLATIONS = {
     freeAnalysisSub: 'De unde vin și unde merg',
     incomeLabel: 'Venituri',
     expenseLabel: 'Cheltuieli',
+    offlineTitle: 'Fără conexiune la internet',
+    offlineDesc: 'Jurnalul funcționează offline. Toate înregistrările și tranzacțiile se salvează local și se vor sincroniza când apare conexiunea.',
+    goToOffline: 'Continuă offline',
+    onlineTitle: 'Conexiune restabilită',
+    onlineDesc: 'Sunteți din nou online! Toate datele s-au sincronizat cu succes în cloud.',
+    onlineAction: 'Excelent',
     
     // PRO Analysis
     proFinancialPicture: 'PRO · Imagine financiară',

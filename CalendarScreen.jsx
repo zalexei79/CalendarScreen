@@ -4,6 +4,7 @@ import {
   Calendar, ChevronDown, Link2, KeyRound, UploadCloud, FileText,
   CheckCircle2, RefreshCw, History, Download, Pencil,
   Wallet, ShoppingCart, Home, Briefcase, ShoppingBag, CreditCard, MoreHorizontal, Cigarette, Utensils, Car, Gift, Gamepad2, Fish, ChartCandlestick, Repeat2, CircleDollarSign,
+  Wifi, WifiOff,
 } from 'lucide-react';
 import { supabase } from './src/supabaseClient';
 
@@ -373,6 +374,36 @@ export default function CalendarScreen() {
     setInstallInfoOpen((v) => !v);
   }
 
+  // --- Offline / Online notifications ---------------------------------------
+  const [offlineNoticeOpen, setOfflineNoticeOpen] = useState(false);
+  const [onlineToastOpen, setOnlineToastOpen] = useState(false);
+
+  useEffect(() => {
+    function handleOffline() {
+      setOnlineToastOpen(false);
+      setOfflineNoticeOpen(true);
+    }
+    function handleOnline() {
+      setOfflineNoticeOpen(false);
+      setOnlineToastOpen(true);
+      const timer = setTimeout(() => {
+        setOnlineToastOpen(false);
+      }, 4500);
+      return () => clearTimeout(timer);
+    }
+
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setOfflineNoticeOpen(true);
+    }
+
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
 
   // --- Period filter state (compact popover) --------------------------------
   const [periodPreset, setPeriodPreset] = useState('Вся история');
@@ -2846,6 +2877,80 @@ export default function CalendarScreen() {
               className="w-full rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-300 transition-colors"
             >
               Продолжить
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* OFFLINE NOTICE MODAL */}
+      {offlineNoticeOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-4 backdrop-blur-sm transition-opacity duration-200">
+          <div
+            className={`relative w-full max-w-sm rounded-2xl border p-5 sm:p-6 shadow-2xl transition-all duration-200 ${
+              isLight ? 'border-amber-300/80 bg-white text-zinc-900' : 'border-amber-400/25 bg-zinc-900 text-zinc-100'
+            }`}
+          >
+            <div className="flex items-start gap-3.5 mb-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-400/30 bg-amber-400/10 text-amber-500">
+                <WifiOff className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="font-data text-[10px] uppercase tracking-[0.2em] text-amber-500 font-semibold mb-1">
+                  OFFLINE
+                </p>
+                <h3 className="font-display text-lg font-semibold leading-tight">
+                  {t('offlineTitle')}
+                </h3>
+              </div>
+            </div>
+
+            <p className={`text-xs leading-relaxed mb-5 ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>
+              {t('offlineDesc')}
+            </p>
+
+            <button
+              type="button"
+              onClick={() => setOfflineNoticeOpen(false)}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 shadow-md hover:from-amber-300 hover:to-amber-400 transition-all active:scale-[0.99]"
+            >
+              <span>{t('goToOffline')}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ONLINE TOAST / CONNECTED POPUP */}
+      {onlineToastOpen && (
+        <div className="fixed top-4 sm:top-6 inset-x-4 sm:inset-x-auto sm:right-6 z-50 sm:max-w-md pointer-events-auto transition-all duration-300">
+          <div
+            className={`flex items-start gap-3.5 rounded-2xl border p-4 shadow-[0_12px_40px_rgba(0,0,0,0.3)] backdrop-blur-xl ${
+              isLight
+                ? 'border-emerald-300/90 bg-white/95 text-zinc-900'
+                : 'border-emerald-500/30 bg-zinc-900/95 text-zinc-100'
+            }`}
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-emerald-500">
+              <CheckCircle2 className="h-5 w-5" />
+            </span>
+            <div className="flex-1 min-w-0 pr-2">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <h4 className="font-semibold text-sm leading-tight">
+                  {t('onlineTitle')}
+                </h4>
+              </div>
+              <p className={`text-xs leading-relaxed ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>
+                {t('onlineDesc')}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOnlineToastOpen(false)}
+              className={`rounded-lg px-2.5 py-1 text-xs font-semibold shrink-0 transition-colors ${
+                isLight ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800' : 'bg-white/10 hover:bg-white/15 text-zinc-200'
+              }`}
+            >
+              {t('onlineAction')}
             </button>
           </div>
         </div>
