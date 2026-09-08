@@ -24,6 +24,39 @@ export default function Header({
     
         {/* Theme toggle + settings gear — compact on mobile, same control scales up on wider screens */}
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* install as app + offline pending-sync indicator */}
+          <div className="relative shrink-0 block" ref={installInfoRef}>
+            <button
+              onClick={handleInstallClick}
+              title="Скачать / установить приложение"
+              className={`group flex h-10 w-10 sm:h-8 sm:w-auto items-center justify-center gap-1.5 rounded-full sm:rounded-xl border sm:px-2.5 shadow-sm transition-all hover:-translate-y-px hover:border-amber-400/45 ${isLight ? 'border-zinc-300 bg-white text-zinc-600 hover:bg-amber-50 hover:text-amber-700' : 'border-zinc-800 bg-zinc-900/70 text-zinc-400 hover:bg-zinc-900 hover:text-amber-300'}`}
+            >
+              <span className={`flex h-5 w-5 items-center justify-center rounded-md text-amber-500 transition-colors ${isLight ? 'bg-amber-50 group-hover:bg-amber-100' : 'bg-zinc-800 group-hover:bg-amber-400/10'}`}><Download className="h-3 w-3" /></span>
+              <span className="hidden sm:inline font-data text-[9px] tracking-[0.12em] uppercase">{t('app')}</span>
+              {pendingSyncCount > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />}
+            </button>
+
+            {installInfoOpen && (
+              <div className={`absolute right-0 top-full mt-3 w-[min(320px,calc(100vw-24px))] overflow-hidden rounded-2xl border shadow-2xl backdrop-blur-xl z-30 ${isLight ? 'border-zinc-200 bg-white/95' : 'border-zinc-800 bg-zinc-950/95'}`}>
+                <div className={`border-b bg-gradient-to-r from-amber-400/10 via-transparent to-transparent px-4 py-3.5 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/10 text-amber-400"><Download className="h-4 w-4" /></div>
+                    <div><p className="font-data text-[10px] tracking-[0.2em] text-amber-400 uppercase">AI Trade Journal</p><p className={`mt-0.5 text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Всегда под рукой</p></div>
+                  </div>
+                </div>
+                <div className="space-y-3 px-4 py-3.5">
+                  <p className={`text-xs leading-relaxed ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>Установите журнал как приложение — быстрый запуск, полноэкранный режим и доступ к данным даже при нестабильном интернете.</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className={`rounded-xl border p-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><Smartphone className="mb-1 h-3.5 w-3.5 text-amber-400"/><p className={`text-[10px] ${isLight ? 'text-zinc-600' : 'text-zinc-300'}`}>{t('mobile')}</p></div>
+                    <div className={`rounded-xl border p-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><Monitor className="mb-1 h-3.5 w-3.5 text-amber-400"/><p className={`text-[10px] ${isLight ? 'text-zinc-600' : 'text-zinc-300'}`}>{t('desktop')}</p></div>
+                    <div className={`rounded-xl border p-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><Cloud className="mb-1 h-3.5 w-3.5 text-amber-400"/><p className={`text-[10px] ${isLight ? 'text-zinc-600' : 'text-zinc-300'}`}>{t('sync')}</p></div>
+                  </div>
+                  <div className={`rounded-xl border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/40'}`}><div className="flex gap-2"><Wifi className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400"/><p className={`text-[11px] leading-relaxed ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>{installInstructions}</p></div></div>
+                  {pendingSyncCount > 0 && <p className="border-t border-zinc-800 pt-2.5 text-[11px] leading-relaxed text-amber-300">{pendingSyncCount} {traderMode ? (pendingSyncCount === 1 ? 'сделка' : 'сделок') : (pendingSyncCount === 1 ? 'запись' : 'записей')} ждут синхронизации.</p>}
+                </div>
+              </div>
+            )}
+          </div>
           <button
             type="button"
             onClick={() => setTheme((v) => (v === 'light' ? 'dark' : 'light'))}
@@ -102,7 +135,7 @@ export default function Header({
     
                 {/* Account — visible on mobile inside the settings panel. */}
                 <div className={`mb-3 rounded-xl border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50/80' : 'border-zinc-800 bg-zinc-950'}`}>
-                  <p className={`font-data text-[11px] uppercase tracking-wide mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>Аккаунт</p>
+                  <p className={`font-data text-[11px] uppercase tracking-wide mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{t('account')}</p>
                   {user ? (
                     <div className="flex items-center gap-2">
                       <div className="min-w-0 flex-1">
@@ -308,45 +341,13 @@ export default function Header({
                 className="flex h-8 sm:h-9 w-[88px] sm:w-[108px] items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-400/10 px-1 sm:px-2 font-data text-[10px] sm:text-[11px] tracking-wide text-amber-400 whitespace-nowrap hover:bg-amber-400/15 transition-colors"
               >
                 <Link2 className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />
-                <span className="hidden xs:inline">Площадка</span>
+                <span className="hidden xs:inline">{t('platform')}</span>
                 {ctraderConnected && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />}
               </button>
             </div>
           </div>
     
-          {/* install as app + offline pending-sync indicator */}
-          <div className="relative ml-1.5 block" ref={installInfoRef}>
-            <button
-              onClick={handleInstallClick}
-              title="Скачать / установить приложение"
-              className={`group flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 shadow-sm transition-all hover:-translate-y-px hover:border-amber-400/45 ${isLight ? 'border-zinc-300 bg-white text-zinc-600 hover:bg-amber-50 hover:text-amber-700' : 'border-zinc-800 bg-zinc-900/70 text-zinc-400 hover:bg-zinc-900 hover:text-amber-300'}`}
-            >
-              <span className={`flex h-5 w-5 items-center justify-center rounded-md text-amber-500 transition-colors ${isLight ? 'bg-amber-50 group-hover:bg-amber-100' : 'bg-zinc-800 group-hover:bg-amber-400/10'}`}><Download className="h-3 w-3" /></span>
-              <span className="font-data text-[9px] tracking-[0.12em] uppercase">Приложение</span>
-              {pendingSyncCount > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />}
-            </button>
 
-            {installInfoOpen && (
-              <div className={`absolute right-0 top-full mt-3 w-[320px] overflow-hidden rounded-2xl border shadow-2xl backdrop-blur-xl z-30 ${isLight ? 'border-zinc-200 bg-white/95' : 'border-zinc-800 bg-zinc-950/95'}`}>
-                <div className={`border-b bg-gradient-to-r from-amber-400/10 via-transparent to-transparent px-4 py-3.5 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/10 text-amber-400"><Download className="h-4 w-4" /></div>
-                    <div><p className="font-data text-[10px] tracking-[0.2em] text-amber-400 uppercase">AI Trade Journal</p><p className={`mt-0.5 text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Всегда под рукой</p></div>
-                  </div>
-                </div>
-                <div className="space-y-3 px-4 py-3.5">
-                  <p className={`text-xs leading-relaxed ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>Установите журнал как приложение — быстрый запуск, полноэкранный режим и доступ к данным даже при нестабильном интернете.</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className={`rounded-xl border p-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><Smartphone className="mb-1 h-3.5 w-3.5 text-amber-400"/><p className={`text-[10px] ${isLight ? 'text-zinc-600' : 'text-zinc-300'}`}>Mobile</p></div>
-                    <div className={`rounded-xl border p-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><Monitor className="mb-1 h-3.5 w-3.5 text-amber-400"/><p className={`text-[10px] ${isLight ? 'text-zinc-600' : 'text-zinc-300'}`}>Desktop</p></div>
-                    <div className={`rounded-xl border p-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><Cloud className="mb-1 h-3.5 w-3.5 text-amber-400"/><p className={`text-[10px] ${isLight ? 'text-zinc-600' : 'text-zinc-300'}`}>Sync</p></div>
-                  </div>
-                  <div className={`rounded-xl border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/40'}`}><div className="flex gap-2"><Wifi className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400"/><p className={`text-[11px] leading-relaxed ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>{installInstructions}</p></div></div>
-                  {pendingSyncCount > 0 && <p className="border-t border-zinc-800 pt-2.5 text-[11px] leading-relaxed text-amber-300">{pendingSyncCount} {traderMode ? (pendingSyncCount === 1 ? 'сделка' : 'сделок') : (pendingSyncCount === 1 ? 'запись' : 'записей')} ждут синхронизации.</p>}
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -355,7 +356,7 @@ export default function Header({
         <div className={`rounded-2xl border px-3 py-3 sm:px-4 ${isLight ? 'border-amber-300/60 bg-amber-50/70' : 'border-amber-400/20 bg-gradient-to-r from-amber-400/[0.07] via-zinc-950 to-zinc-950'}`}>
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <span className="shrink-0 font-data text-[9px] uppercase tracking-[0.18em] text-zinc-500">Площадки</span>
+              <span className="shrink-0 font-data text-[9px] uppercase tracking-[0.18em] text-zinc-500">{t('platforms')}</span>
               <div className="flex min-w-0 gap-1 overflow-x-auto pb-0.5">
                 {platformOptions.map((p) => (
                   <button key={p} onClick={() => setPlatformFilter(p)} className={`shrink-0 rounded-lg px-3 py-2 text-[10px] font-data transition-all ${platformFilter === p ? 'border border-amber-400/45 bg-amber-400/15 text-amber-400 shadow-[0_6px_18px_rgba(251,191,36,.08)]' : isLight ? 'text-zinc-500 hover:bg-white' : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'}`}>{p === 'ALL' ? 'Все' : p}</button>

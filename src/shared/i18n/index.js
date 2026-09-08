@@ -35,7 +35,7 @@ export const TRANSLATIONS = {
     recordFutureBlocked: 'Нельзя добавить запись на будущую дату',
     myMoney: 'Мои деньги',
     freePlan: 'FREE', history: 'История', filters: 'Фильтры', all: 'Все', entries: 'записей',
-    financialHistory: 'Финансовая история', resultForPeriod: 'Результат за выбранный период',
+    financialHistory: 'Финансовая история', resultForPeriod: 'Результат за выбранный период', app: 'Приложение', account: 'Аккаунт', mobile: 'Телефон', desktop: 'Компьютер', sync: 'Синхронизация', platform: 'Площадка', platforms: 'Площадки',
   },
   en: {
     titleMoney: 'Money Calendar', titlePro: 'Trading Calendar',
@@ -52,7 +52,7 @@ export const TRANSLATIONS = {
     recordFutureBlocked: "Can't add an entry for a future date",
     myMoney: 'My money',
     freePlan: 'FREE', history: 'History', filters: 'Filters', all: 'All', entries: 'entries',
-    financialHistory: 'Financial history', resultForPeriod: 'Result for selected period',
+    financialHistory: 'Financial history', resultForPeriod: 'Result for selected period', app: 'App', account: 'Account', mobile: 'Mobile', desktop: 'Desktop', sync: 'Sync', platform: 'Platform', platforms: 'Platforms',
   },
   md: {
     titleMoney: 'Calendar de bani', titlePro: 'Calendar de tranzacții',
@@ -69,7 +69,7 @@ export const TRANSLATIONS = {
     recordFutureBlocked: 'Nu se poate adăuga o înregistrare pentru o dată viitoare',
     myMoney: 'Banii mei',
     freePlan: 'FREE', history: 'Istoric', filters: 'Filtre', all: 'Toate', entries: 'înregistrări',
-    financialHistory: 'Istoric financiar', resultForPeriod: 'Rezultat pentru perioada selectată',
+    financialHistory: 'Istoric financiar', resultForPeriod: 'Rezultat pentru perioada selectată', app: 'Aplicație', account: 'Cont', mobile: 'Telefon', desktop: 'Computer', sync: 'Sincronizare', platform: 'Platformă', platforms: 'Platforme',
   },
 };
 
