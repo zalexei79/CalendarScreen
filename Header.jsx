@@ -75,7 +75,7 @@ export default function Header({
                 ].join(' ')}
               >
                 <p className={`font-data text-[11px] tracking-[0.2em] uppercase mb-4 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
-                  {t('settings')}
+                  {t('settings')} · ПРОФИЛЬ
                 </p>
     
                 <div className={`mb-2 rounded-xl border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50/80' : 'border-zinc-800 bg-zinc-950'}`}>

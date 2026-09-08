@@ -904,10 +904,11 @@ export default function CalendarScreen() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
   const [historyWinLoss, setHistoryWinLoss] = useState('all'); // 'all' | 'win' | 'loss'
-  const [historyCurrency, setHistoryCurrency] = useState('ALL');
+  const [historyCurrency, setHistoryCurrency] = useState(() => currency || 'USD');
   const [historyFiltersOpen, setHistoryFiltersOpen] = useState(false);
   const [historyPeriodMenuOpen, setHistoryPeriodMenuOpen] = useState(false);
   const [historyAnalysisOpen, setHistoryAnalysisOpen] = useState(false);
+  const [proFiltersOpen, setProFiltersOpen] = useState(false);
   const [historyAnalysisTab, setHistoryAnalysisTab] = useState('overview');
   const [freeTimelineSelected, setFreeTimelineSelected] = useState(null);
   const [exportOpen, setExportOpen] = useState(false);
@@ -1009,7 +1010,13 @@ export default function CalendarScreen() {
   }, [historyTrades]);
 
   const historyTimeline = useMemo(() => {
-    const end = parseDateKeyLocal(dateTo || keyFromDate(today));
+    // "Вся история" may end at 9999-12-31. Anchor the visual timeline to
+    // the last real operation instead, otherwise the chart would show empty future days.
+    const latestTradeKey = historyTrades.length
+      ? historyTrades.reduce((latest, trade) => trade.dateKey > latest ? trade.dateKey : latest, historyTrades[0].dateKey)
+      : null;
+    const safeEndKey = latestTradeKey || (dateTo && dateTo < '2100-01-01' ? dateTo : keyFromDate(today));
+    const end = parseDateKeyLocal(safeEndKey);
     const points = [];
     for (let i = 9; i >= 0; i -= 1) {
       const d = new Date(end);
@@ -1050,6 +1057,7 @@ export default function CalendarScreen() {
   function openHistory() {
     setHistoryOpen(true);
     setHistoryFiltersOpen(false);
+    setProFiltersOpen(false);
     setConfirmingClear(false);
     // PRO opens its premium layer immediately; FREE gets a compact dynamic snapshot.
     setHistoryAnalysisOpen(Boolean(traderMode));
@@ -1060,6 +1068,7 @@ export default function CalendarScreen() {
   function closeHistory() {
     setHistoryVisible(false);
     setHistoryFiltersOpen(false);
+    setProFiltersOpen(false);
     setConfirmingClear(false);
     setTimeout(() => setHistoryOpen(false), 180);
   }
@@ -1435,7 +1444,13 @@ export default function CalendarScreen() {
                     <div><p className="font-data text-[11px] uppercase tracking-[0.2em] text-emerald-500">Финансовый ритм</p><h3 className={`mt-1 text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Динамика периода</h3><p className="mt-1 text-xs text-zinc-500">Последние 10 календарных дней. Нажми на день — увидишь результат сразу.</p></div>
                     <span className={`rounded-xl px-3 py-2 text-sm font-data font-semibold ${historyTotal >= 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>{historyTotal >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoneyShort(Math.abs(historyTotal))}</span>
                   </div>
-                  <div className={`mt-5 rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50/70' : 'border-zinc-800 bg-black/20'}`}>
+                  <div className="mt-4 flex items-center gap-1.5 overflow-x-auto pb-1">
+                    <span className="mr-1 shrink-0 text-[10px] uppercase tracking-[0.16em] text-zinc-500">Валюта</span>
+                    {[...CURRENCIES].map((c) => (
+                      <button key={c.code} type="button" onClick={() => setHistoryCurrency(c.code)} className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-data transition-all ${historyCurrency === c.code ? 'border-amber-400/60 bg-amber-400/10 text-amber-500' : isLight ? 'border-zinc-200 bg-white text-zinc-500' : 'border-zinc-800 bg-zinc-950 text-zinc-500'}`}>{c.symbol} <span className="opacity-70">{c.code}</span></button>
+                    ))}
+                  </div>
+                  <div className={`mt-3 rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50/70' : 'border-zinc-800 bg-black/20'}`}>
                     <div className="mb-3 flex items-center justify-between gap-3"><div className="flex gap-3 text-[10px]"><span className="text-emerald-500">● Приход</span><span className="text-red-400">● Расход</span></div><span className="text-[10px] text-zinc-500">значение видно без наведения</span></div>
                     <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 items-end h-44 sm:h-48">
                       {historyTimeline.points.map((point) => {
@@ -1451,7 +1466,7 @@ export default function CalendarScreen() {
                         </button>;
                       })}
                     </div>
-                    {freeTimelineSelected && (() => { const p = historyTimeline.points.find((x) => x.key === freeTimelineSelected); return p ? <div className={`mt-3 grid grid-cols-3 gap-2 rounded-xl border p-2.5 text-center ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/60'}`}><div><p className="text-[9px] text-zinc-500">Доход</p><p className="mt-1 text-xs font-data text-emerald-500">+{historyCurrencySymbol}{formatMoneyShort(p.income)}</p></div><div><p className="text-[9px] text-zinc-500">Расход</p><p className="mt-1 text-xs font-data text-red-400">−{historyCurrencySymbol}{formatMoneyShort(p.expense)}</p></div><div><p className="text-[9px] text-zinc-500">Итог · {p.label}</p><p className={`mt-1 text-xs font-data ${p.net >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>{p.net >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoneyShort(Math.abs(p.net))}</p></div></div> : null; })()}
+                    {(() => { const fallback = [...historyTimeline.points].reverse().find((x) => x.income || x.expense)?.key || historyTimeline.points[historyTimeline.points.length - 1]?.key; const p = historyTimeline.points.find((x) => x.key === (freeTimelineSelected || fallback)); return p ? <div className={`mt-3 grid grid-cols-3 gap-2 rounded-xl border p-2.5 text-center ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/60'}`}><div><p className="text-[9px] text-zinc-500">Доход</p><p className="mt-1 text-xs font-data text-emerald-500">+{historyCurrencySymbol}{formatMoneyShort(p.income)}</p></div><div><p className="text-[9px] text-zinc-500">Расход</p><p className="mt-1 text-xs font-data text-red-400">−{historyCurrencySymbol}{formatMoneyShort(p.expense)}</p></div><div><p className="text-[9px] text-zinc-500">Итог · {p.label}</p><p className={`mt-1 text-xs font-data ${p.net >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>{p.net >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoneyShort(Math.abs(p.net))}</p></div></div> : null; })()}
                   </div>
                   <div className="mt-4 grid grid-cols-3 gap-2 border-t border-zinc-500/10 pt-4">
                     <div><p className="text-[10px] uppercase tracking-wide text-zinc-500">Доходы</p><p className="mt-1 text-sm font-data text-emerald-500">+{historyCurrencySymbol}{formatMoneyShort(historyIncome)}</p></div>
@@ -1899,62 +1914,16 @@ export default function CalendarScreen() {
                     )}
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    {PERIOD_PRESETS.map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => handlePresetChange(p)}
-                        className={[
-                          'rounded-full border px-2.5 py-1 font-data text-[11px] tracking-wide transition-colors',
-                          periodPreset === p
-                            ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
-                            : isLight
-                            ? 'border-zinc-300 bg-white text-zinc-600 hover:text-zinc-800 hover:border-zinc-400'
-                            : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
-                        ].join(' ')}
-                      >
-                        {p}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <input
-                      type="date"
-                      value={dateFrom}
-                      onChange={(e) => handleDateFromChange(e.target.value)}
-                      className={`flex-1 min-w-0 rounded-md border px-2 py-1.5 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
-                        isLight
-                          ? 'bg-white border-zinc-300 text-zinc-900'
-                          : 'bg-zinc-950 border-zinc-700 text-zinc-200'
-                      }`}
-                    />
-                    <span className={isLight ? 'text-zinc-400' : 'text-zinc-600'}>—</span>
-                    <input
-                      type="date"
-                      value={dateTo}
-                      onChange={(e) => handleDateToChange(e.target.value)}
-                      className={`flex-1 min-w-0 rounded-md border px-2 py-1.5 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
-                        isLight
-                          ? 'bg-white border-zinc-300 text-zinc-900'
-                          : 'bg-zinc-950 border-zinc-700 text-zinc-200'
-                      }`}
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <select
-                      value={platformFilter}
-                      onChange={(e) => setPlatformFilter(e.target.value)}
-                      className={`flex-1 rounded-md border px-2 py-1.5 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
-                        isLight
-                          ? 'bg-white border-zinc-300 text-zinc-900'
-                          : 'bg-zinc-950 border-zinc-700 text-zinc-200'
-                      }`}
-                    >
-                      <option value="ALL">Все источники</option>
-                      {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
-                    </select>
+                  <div className="mb-3">
+                    <button onClick={() => setProFiltersOpen((v) => !v)} className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-colors ${proFiltersOpen ? 'border-amber-400/45 bg-amber-400/10' : isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/70'}`}>
+                      <span><span className="block text-xs font-medium">Период и фильтры</span><span className="mt-0.5 block text-[10px] text-zinc-500">{periodPreset} · {platformFilter === 'ALL' ? 'Все источники' : platformFilter}</span></span>
+                      <ChevronDown className={`h-4 w-4 text-amber-500 transition-transform ${proFiltersOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {proFiltersOpen && <div className={`mt-2 space-y-3 rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50/70' : 'border-zinc-800 bg-black/20'}`}>
+                      <div className="flex flex-wrap gap-1.5">{PERIOD_PRESETS.map((p) => <button key={p} onClick={() => handlePresetChange(p)} className={`rounded-full border px-2.5 py-1.5 font-data text-[10px] ${periodPreset === p ? 'border-amber-400/60 bg-amber-400/10 text-amber-500' : isLight ? 'border-zinc-300 bg-white text-zinc-600' : 'border-zinc-700 bg-zinc-950 text-zinc-400'}`}>{p}</button>)}</div>
+                      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5"><input type="date" value={dateFrom} onChange={(e) => handleDateFromChange(e.target.value)} className={`min-w-0 rounded-xl border px-2 py-2 text-xs font-data ${isLight ? 'bg-white border-zinc-300 text-zinc-900' : 'bg-zinc-950 border-zinc-700 text-zinc-200'}`} /><span className="text-zinc-500">—</span><input type="date" value={dateTo} onChange={(e) => handleDateToChange(e.target.value)} className={`min-w-0 rounded-xl border px-2 py-2 text-xs font-data ${isLight ? 'bg-white border-zinc-300 text-zinc-900' : 'bg-zinc-950 border-zinc-700 text-zinc-200'}`} /></div>
+                      <select value={platformFilter} onChange={(e) => setPlatformFilter(e.target.value)} className={`w-full rounded-xl border px-3 py-2 text-xs font-data ${isLight ? 'bg-white border-zinc-300 text-zinc-900' : 'bg-zinc-950 border-zinc-700 text-zinc-200'}`}><option value="ALL">Все источники</option>{PLATFORMS.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+                    </div>}
                   </div>
 
                   <div className="flex gap-1.5 mb-4">
