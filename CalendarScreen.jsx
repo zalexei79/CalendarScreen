@@ -950,34 +950,12 @@ export default function CalendarScreen() {
   const [confirmingClear, setConfirmingClear] = useState(false);
 
   const historyTrades = useMemo(() => {
-    const source = manualTrades && typeof manualTrades === 'object' ? manualTrades : {};
-
-    return Object.entries(source)
-      .flatMap(([dateKey, value]) => {
-        if (!Array.isArray(value)) return [];
-        return value
-          .filter((trade) => trade && typeof trade === 'object')
-          .map((trade, index) => {
-            const rawPnl = Number(trade.pnl);
-            const safePnl = Number.isFinite(rawPnl) ? rawPnl : 0;
-            const safeDateKey = String(trade.dateKey || dateKey || '');
-            const safeTime = String(trade.time || '00:00');
-            return {
-              ...trade,
-              id: String(trade.id ?? `${safeDateKey}-${safeTime}-${index}`),
-              dateKey: safeDateKey,
-              time: safeTime,
-              pnl: safePnl,
-              currency: String(trade.currency || 'USD').toUpperCase(),
-              platform: String(trade.platform || 'Manual'),
-              instrument: String(trade.instrument || 'Другое'),
-            };
-          });
-      })
+    return Object.entries(manualTrades)
+      .flatMap(([dateKey, arr]) => arr.map((t) => ({ ...t, dateKey })))
       .filter((t) => t.dateKey >= dateFrom && t.dateKey <= dateTo)
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
-      .filter((t) => historyCurrency === 'ALL' || t.currency === historyCurrency)
-      .filter((t) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? t.pnl > 0 : t.pnl < 0))
+      .filter((t) => historyCurrency === 'ALL' || (t.currency || 'USD') === historyCurrency)
+      .filter((t) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? t.pnl >= 0 : t.pnl < 0))
       .sort((a, b) => (a.dateKey === b.dateKey ? b.time.localeCompare(a.time) : b.dateKey.localeCompare(a.dateKey)));
   }, [manualTrades, dateFrom, dateTo, platformFilter, historyWinLoss, historyCurrency]);
 
@@ -2019,51 +1997,30 @@ export default function CalendarScreen() {
                   {/* ── Luxury Donut + Stats Header ─────────────────────── */}
                   {(() => {
                     const hTrades = historyTrades;
-                    const hWin = hTrades.filter(t => t.pnl > 0).length;
-                    const hLoss = hTrades.filter(t => t.pnl < 0).length;
+                    const hWin = hTrades.filter(t => t.pnl >= 0).length;
+                    const hLoss = hTrades.length - hWin;
                     const hWinrate = hTrades.length > 0 ? Math.round((hWin / hTrades.length) * 100) : 0;
                     const hTotal = hTrades.reduce((s, t) => s + t.pnl, 0);
-                    const r = 38;
-                    const circ = 2 * Math.PI * r;
-                    const offset = circ - (hWinrate / 100) * circ;
-                    const lossOffset = circ - ((hLoss / (hTrades.length || 1)) * circ);
                     return (
                       <div className={`relative mb-4 overflow-hidden rounded-2xl border p-4 sm:p-5 ${
                         isLight
                           ? 'border-zinc-200 bg-gradient-to-br from-white to-zinc-50/80 shadow-sm'
                           : 'border-amber-400/15 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black shadow-[0_24px_60px_rgba(0,0,0,.4)]'
                       }`}>
-                        {/* Ambient glow */}
-                        <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-amber-400/[0.06] blur-3xl" />
-                        <div className="pointer-events-none absolute -left-6 -bottom-6 h-32 w-32 rounded-full bg-emerald-500/[0.05] blur-2xl" />
-
+                        {/* iOS/WebView-safe visual layer: no CSS blur + inline SVG combination. */}
                         <div className="relative flex items-center gap-5">
-                          {/* Donut SVG */}
-                          <div className="relative flex shrink-0 items-center justify-center" style={{width:96,height:96}}>
-                            <svg width="96" height="96" viewBox="0 0 96 96" className="-rotate-90">
-                              {/* Track */}
-                              <circle cx="48" cy="48" r={r} strokeWidth="9"
-                                stroke={isLight ? '#e2e8f0' : '#27272a'} fill="none" />
-                              {/* Loss arc (full if any losses) */}
-                              {hTrades.length > 0 && hLoss > 0 && (
-                                <circle cx="48" cy="48" r={r} strokeWidth="9"
-                                  stroke="rgb(239 68 68 / 0.75)"
-                                  strokeDasharray={circ}
-                                  strokeDashoffset="0"
-                                  fill="none" />
-                              )}
-                              {/* Win arc */}
-                              {hTrades.length > 0 && hWin > 0 && (
-                                <circle cx="48" cy="48" r={r} strokeWidth="9"
-                                  stroke="rgb(16 185 129)"
-                                  strokeDasharray={circ}
-                                  strokeDashoffset={offset}
-                                  strokeLinecap="round"
-                                  fill="none"
-                                  style={{transition:'stroke-dashoffset 0.8s cubic-bezier(.4,0,.2,1)'}} />
-                              )}
-                            </svg>
-                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center leading-none">
+                          {/* Donut — pure CSS, avoiding inline SVG rendering in Telegram/WKWebView. */}
+                          <div
+                            className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full"
+                            style={{
+                              background: hTrades.length === 0
+                                ? (isLight ? '#e2e8f0' : '#27272a')
+                                : `conic-gradient(from -90deg, rgb(16 185 129) 0 ${hWinrate}%, rgb(239 68 68 / 0.75) ${hWinrate}% 100%)`,
+                            }}
+                          >
+                            <div className={`absolute inset-2 flex flex-col items-center justify-center rounded-full text-center leading-none ${
+                              isLight ? 'bg-white' : 'bg-zinc-950'
+                            }`}>
                               <span className={`font-data text-xl font-bold tabular-nums ${
                                 hTrades.length === 0 ? 'text-zinc-500'
                                 : hWinrate >= 50 ? 'text-emerald-500' : 'text-red-500'
