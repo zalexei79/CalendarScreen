@@ -1379,13 +1379,13 @@ export default function CalendarScreen() {
             <div className={`rounded-lg border divide-y ${isLight ? 'border-zinc-300 bg-zinc-50 divide-zinc-200' : 'border-zinc-800 bg-zinc-900 divide-zinc-800'}`}>
               {selectedDayTrades.map((trade) => (
                 <div key={trade.id} className="px-4 py-3 group">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <span className={`font-data text-xs w-12 ${isLight ? 'text-zinc-400' : 'text-zinc-500'}`}>{trade.time}</span>
-                      <span className={`text-sm font-medium ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{trade.instrument}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-4 min-w-0 flex-wrap">
+                      <span className={`font-data text-xs w-12 shrink-0 ${isLight ? 'text-zinc-400' : 'text-zinc-500'}`}>{trade.time}</span>
+                      <span className={`text-sm font-medium truncate ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{trade.instrument}</span>
                       <span
                         className={[
-                          'font-data text-[11px] tracking-wider px-2 py-0.5 rounded-full',
+                          'font-data text-[11px] tracking-wider px-2 py-0.5 rounded-full shrink-0',
                           trade.pnl >= 0
                             ? 'bg-emerald-500/10 text-emerald-500'
                             : 'bg-red-500/10 text-red-500',
@@ -1393,10 +1393,10 @@ export default function CalendarScreen() {
                       >
                         {trade.pnl >= 0 ? (traderMode ? 'Прибыль' : 'Доход') : (traderMode ? 'Убыток' : 'Расход')}
                       </span>
-                      <span className={`font-data text-[10px] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{trade.platform}</span>
+                      <span className={`font-data text-[10px] shrink-0 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{trade.platform}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`font-data text-sm font-medium ${trade.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className={`font-data text-sm font-medium whitespace-nowrap tabular-nums ${trade.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                         {formatAmountInCurrency(trade.pnl, trade.currency || 'USD')}
                       </span>
                       <button
