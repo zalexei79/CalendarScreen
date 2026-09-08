@@ -25,20 +25,19 @@ export default function Header({
           <div className="relative shrink-0 flex items-center justify-center">
             <img
               src="/icon-180.png"
-              alt="AI Trade Journal"
+              alt="Logo"
               className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl shadow-md border border-amber-400/30 object-cover"
             />
-            <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-400 text-[8px] font-bold text-zinc-950 shadow-sm">
-              ✦
-            </span>
           </div>
           <div className="min-w-0">
             <h1 className={`font-display text-base sm:text-lg font-semibold tracking-tight truncate leading-tight ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>
-              AI Trade Journal
+              {traderMode ? 'AI Trade Journal' : t('titleMoney')}
             </h1>
-            <p className={`font-data text-[9px] sm:text-[10px] tracking-[0.16em] uppercase truncate ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
-              {traderMode ? t('titlePro') : t('titleMoney')}
-            </p>
+            {traderMode && (
+              <p className={`font-data text-[9px] sm:text-[10px] tracking-[0.16em] uppercase truncate ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                {t('titlePro')}
+              </p>
+            )}
           </div>
         </div>
 
@@ -262,27 +261,6 @@ export default function Header({
                     </div>
                   </div>
                 </div>
-
-                {/* 3. Platforms */}
-                <div className={`rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50/80' : 'border-zinc-800 bg-zinc-950/70'}`}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className={`flex items-center gap-1.5 font-data text-[10px] uppercase tracking-wide ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>
-                        <Link2 className="h-3.5 w-3.5 text-amber-500" />
-                        {t('platforms')}
-                      </p>
-                      <p className={`text-[11px] mt-0.5 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
-                        {ctraderConnected ? t('ctraderConnected') : 'cTrader, Bybit...'}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => { closeSettings(); openConnectModal(); }}
-                      className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-2.5 py-1.5 text-xs font-data font-semibold text-amber-500 hover:bg-amber-400/20 transition-colors"
-                    >
-                      {t('connectPlatform')}
-                    </button>
-                  </div>
-                </div>
               </div>
             )}
           </div>
@@ -436,51 +414,50 @@ export default function Header({
                 </span>
               </span>
             </button>
-
-            {/* Platform indicator / connect shortcut */}
-            <div
-              className={`overflow-hidden shrink-0 transition-[width,margin,opacity] duration-300 ease-out ${
-                traderMode ? 'ml-2 w-[88px] opacity-100 sm:w-[108px]' : 'ml-0 w-0 opacity-0'
-              }`}
-              aria-hidden={!traderMode}
-            >
-              <button
-                onClick={openConnectModal}
-                tabIndex={traderMode ? 0 : -1}
-                className="flex h-9 w-[88px] sm:w-[108px] items-center justify-center gap-1 rounded-xl border border-amber-400/40 bg-amber-400/10 px-1 sm:px-2 font-data text-[10px] sm:text-[11px] tracking-wide text-amber-500 whitespace-nowrap hover:bg-amber-400/20 transition-colors"
-              >
-                <Link2 className="h-3 w-3 shrink-0" />
-                <span className="hidden xs:inline">{t('platform')}</span>
-                {ctraderConnected && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />}
-              </button>
-            </div>
           </div>
         </div>
       </div>
 
       {/* PRO control center */}
-      <div className={`overflow-hidden transition-all duration-300 ${traderMode ? 'max-h-40 opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0 pointer-events-none'}`}>
+      <div className={`overflow-hidden transition-all duration-300 ${traderMode ? 'max-h-44 opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0 pointer-events-none'}`}>
         <div className={`rounded-2xl border px-3 py-3 sm:px-4 ${isLight ? 'border-amber-300/60 bg-amber-50/70' : 'border-amber-400/20 bg-gradient-to-r from-amber-400/[0.07] via-zinc-950 to-zinc-950'}`}>
           <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <span className="shrink-0 font-data text-[9px] uppercase tracking-[0.18em] text-zinc-500">{t('platforms')}</span>
-              <div className="flex min-w-0 gap-1 overflow-x-auto pb-0.5">
-                {platformOptions.map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPlatformFilter(p)}
-                    className={`shrink-0 rounded-lg px-3 py-2 text-[10px] font-data transition-all ${
-                      platformFilter === p
-                        ? 'border border-amber-400/45 bg-amber-400/15 text-amber-400 shadow-[0_6px_18px_rgba(251,191,36,.08)]'
-                        : isLight
-                        ? 'text-zinc-500 hover:bg-white'
-                        : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'
-                    }`}
-                  >
-                    {p === 'ALL' ? t('all') : p}
-                  </button>
-                ))}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                <span className="shrink-0 font-data text-[9px] uppercase tracking-[0.18em] text-zinc-500">{t('platforms')}</span>
+                <div className="flex min-w-0 gap-1 overflow-x-auto pb-0.5">
+                  {platformOptions.map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setPlatformFilter(p)}
+                      className={`shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-data transition-all ${
+                        platformFilter === p
+                          ? 'border border-amber-400/45 bg-amber-400/15 text-amber-400 shadow-[0_6px_18px_rgba(251,191,36,.08)]'
+                          : isLight
+                          ? 'text-zinc-500 hover:bg-white'
+                          : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'
+                      }`}
+                    >
+                      {p === 'ALL' ? t('all') : p}
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              {/* Connect platform button styled right next to platforms */}
+              <button
+                onClick={openConnectModal}
+                className={`shrink-0 flex items-center justify-center gap-1.5 rounded-xl border px-2.5 py-1.5 font-data text-[10px] tracking-wide font-medium transition-all hover:-translate-y-px shadow-sm ${
+                  isLight
+                    ? 'border-amber-400/50 bg-amber-400/10 text-amber-700 hover:bg-amber-400/20'
+                    : 'border-amber-400/40 bg-amber-400/10 text-amber-400 hover:bg-amber-400/20'
+                }`}
+                title={t('connectPlatform')}
+              >
+                <Link2 className="h-3 w-3 shrink-0" />
+                <span>{t('connectPlatform')}</span>
+                {ctraderConnected && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+              </button>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <span className="shrink-0 font-data text-[9px] uppercase tracking-[0.18em] text-zinc-500">{t('show')}</span>

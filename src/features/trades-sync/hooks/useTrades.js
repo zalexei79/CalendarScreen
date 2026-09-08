@@ -174,6 +174,17 @@ export function useTrades({ user }) {
       if (isEditing) {
         const { error } = await supabase.from('trades').update(updates).eq('id', editingTradeId).eq('user_id', cloudUserId);
         if (error) throw error;
+        // Targeted update: just clear pending flag — don't call refreshFromCloud which
+        // can race and overwrite the already-correct optimistic state (fixes sign-change bug)
+        setManualTrades((prev) => {
+          const day = [...(prev[dateKey] || [])];
+          const index = day.findIndex((t) => String(t.id) === String(editingTradeId));
+          if (index >= 0) day[index] = { ...day[index], ...localTrade, pending: false };
+          const next = { ...prev, [dateKey]: day };
+          manualTradesRef.current = next;
+          cacheTradesLocally(next, cloudUserId);
+          return next;
+        });
       } else {
         const { data, error } = await supabase.from('trades').insert(payload).select().single();
         if (error) throw error;
@@ -186,8 +197,8 @@ export function useTrades({ user }) {
           cacheTradesLocally(next, cloudUserId);
           return next;
         });
+        await refreshFromCloud();
       }
-      await refreshFromCloud();
     } catch (error) {
       console.warn('[cloud-sync] save deferred:', error?.message || error);
       if (isRetryableNetworkError(error)) enqueueOperation(operation);
