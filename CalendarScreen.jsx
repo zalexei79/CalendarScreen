@@ -339,6 +339,10 @@ export default function CalendarScreen() {
   // --- Install as app (PWA) ------------------------------------------------
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
   const [installInfoOpen, setInstallInfoOpen] = useState(false);
+  const [isPwaInstalled, setIsPwaInstalled] = useState(() => {
+    const standalone = window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    try { return standalone || window.localStorage.getItem('atj_pwa_installed') === 'true'; } catch { return standalone; }
+  });
   const installInfoRef = useRef(null);
   const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent);
 
@@ -347,8 +351,16 @@ export default function CalendarScreen() {
       e.preventDefault();
       setDeferredInstallPrompt(e);
     }
+    function onAppInstalled() {
+      setIsPwaInstalled(true);
+      try { window.localStorage.setItem('atj_pwa_installed', 'true'); } catch { /* ignore */ }
+    }
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
-    return () => window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+    window.addEventListener('appinstalled', onAppInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', onAppInstalled);
+    };
   }, []);
 
   useEffect(() => {
@@ -1290,7 +1302,7 @@ export default function CalendarScreen() {
         calendarTypeFilter={calendarTypeFilter} setCalendarTypeFilter={setCalendarTypeFilter}
         openConnectModal={openConnectModal} ctraderConnected={ctraderConnected}
         installInfoRef={installInfoRef} handleInstallClick={handleInstallClick}
-        pendingSyncCount={pendingSyncCount} installInfoOpen={installInfoOpen} installInstructions={installInstructions}
+        pendingSyncCount={pendingSyncCount} installInfoOpen={installInfoOpen} installInstructions={installInstructions} isPwaInstalled={isPwaInstalled}
         periodStats={periodStats} periodTrades={periodTrades} currencySymbol={currencySymbol} formatMoney={formatMoney}
       />
 

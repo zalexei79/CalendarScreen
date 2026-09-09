@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   ChevronLeft, ChevronRight, Link2, LogIn, LogOut, Download, Smartphone, Monitor, Wifi, Cloud,
-  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, CheckCircle2,
+  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal,
 } from 'lucide-react';
 import { LANGUAGES, CURRENCIES } from './src/shared/config/constants';
 import { monthsFor } from './src/shared/i18n';
@@ -14,7 +14,7 @@ export default function Header({
   yearMenuRef, yearMenuOpen, setYearMenuOpen, month, year, today,
   setViewMonth, setViewYear, setSelectedKey, setTraderMode, setPlatformFilter,
   openConnectModal, ctraderConnected, installInfoRef, handleInstallClick,
-  pendingSyncCount, installInfoOpen, installInstructions,
+  pendingSyncCount, installInfoOpen, installInstructions, isPwaInstalled,
   platformFilter, platformOptions = [], calendarTypeFilter, setCalendarTypeFilter,
   periodStats, periodTrades = [], currencySymbol = '$', formatMoney,
 }) {
@@ -46,8 +46,8 @@ export default function Header({
 
         {/* Action controls: [ Download ] [ Theme ] [ Settings ] */}
         <div className="flex items-center gap-1.5 shrink-0">
-          {/* Download / Install PWA */}
-          <div className="relative shrink-0 block" ref={installInfoRef}>
+          {/* Install is useful in the browser, not inside the installed app. */}
+          {!isPwaInstalled && <div className="relative shrink-0 block" ref={installInfoRef}>
             <button
               onClick={handleInstallClick}
               title={t('app')}
@@ -109,7 +109,7 @@ export default function Header({
                 </div>
               </div>
             )}
-          </div>
+          </div>}
 
           {/* Theme toggle */}
           <button
@@ -449,14 +449,13 @@ export default function Header({
 
               {/* Connected or Connect button */}
               {ctraderConnected ? (
-                <div className={`shrink-0 flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 font-data text-[10px] font-semibold ${
+                <div title={t('ctraderConnected')} className={`shrink-0 flex items-center gap-1.5 rounded-lg px-2 py-1.5 font-data text-[10px] font-semibold ${
                   isLight
-                    ? 'border-emerald-300/80 bg-emerald-50 text-emerald-700'
-                    : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : 'bg-emerald-500/[0.08] text-emerald-400'
                 }`}>
-                  <CheckCircle2 className="h-3 w-3 shrink-0" />
-                  <span>{t('connected') || 'Подключено'}</span>
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>cTrader</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-label={t('connected')} />
                 </div>
               ) : (
                 <button
