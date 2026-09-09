@@ -936,6 +936,7 @@ export default function CalendarScreen() {
   const [historyVisible, setHistoryVisible] = useState(false);
   const [historyWinLoss, setHistoryWinLoss] = useState('all'); // 'all' | 'win' | 'loss'
   const [historyCurrency, setHistoryCurrency] = useState(() => currency || 'USD');
+  const [historyNameFilter, setHistoryNameFilter] = useState('');
   const [historyFiltersOpen, setHistoryFiltersOpen] = useState(false);
   const [historyPeriodMenuOpen, setHistoryPeriodMenuOpen] = useState(false);
   const [historyAnalysisOpen, setHistoryAnalysisOpen] = useState(false);
@@ -955,9 +956,14 @@ export default function CalendarScreen() {
       .filter((t) => t.dateKey >= dateFrom && t.dateKey <= dateTo)
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
       .filter((t) => historyCurrency === 'ALL' || (t.currency || 'USD') === historyCurrency)
+      .filter((t) => !historyNameFilter || (t.instrument || '') === historyNameFilter)
       .filter((t) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? t.pnl >= 0 : t.pnl < 0))
       .sort((a, b) => (a.dateKey === b.dateKey ? b.time.localeCompare(a.time) : b.dateKey.localeCompare(a.dateKey)));
-  }, [manualTrades, dateFrom, dateTo, platformFilter, historyWinLoss, historyCurrency]);
+  }, [manualTrades, dateFrom, dateTo, platformFilter, historyWinLoss, historyCurrency, historyNameFilter]);
+
+  const historyNameOptions = useMemo(() => [...new Set(
+    Object.values(manualTrades).flat().map((trade) => trade.instrument).filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b, language)), [manualTrades, language]);
 
   const historyByCurrency = useMemo(() => Object.entries(historyTrades.reduce((groups, trade) => {
     const code = trade.currency || 'USD';
@@ -1559,14 +1565,6 @@ export default function CalendarScreen() {
                   {/* Содержимое аккордеона */}
                   {freeDynamicsOpen && (
                     <div className={`mt-2 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950'}`}>
-                      {/* Переключатель валюты */}
-                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 mb-3">
-                        <span className="mr-1 shrink-0 text-[10px] uppercase tracking-[0.16em] text-zinc-500">{t('show')}</span>
-                        {[{ code: 'ALL', symbol: t('all'), label: t('allCurrencies') }, ...CURRENCIES].map((c) => (
-                          <button key={c.code} type="button" onClick={() => setHistoryCurrency(c.code)} className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-data transition-all ${historyCurrency === c.code ? 'border-amber-400/60 bg-amber-400/10 text-amber-500' : isLight ? 'border-zinc-200 bg-white text-zinc-500' : 'border-zinc-800 bg-zinc-950 text-zinc-500'}`}>{c.symbol} <span className="opacity-70">{c.code === 'ALL' ? '' : c.code}</span></button>
-                        ))}
-                      </div>
-
                       <div className={`rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50/70' : 'border-zinc-800 bg-black/20'}`}>
                         <div className="mb-3 flex items-center justify-between gap-3">
                           <div className="flex gap-3 text-[10px]"><span className="text-emerald-500">● {t('incomeLabel')}</span><span className="text-red-400">● {t('expenseLabel')}</span></div>
@@ -1716,14 +1714,6 @@ export default function CalendarScreen() {
                     <Sparkles className="h-5 w-5 shrink-0 text-amber-500" />
                   </div>
 
-                  <div className="relative mb-5 overflow-x-auto pb-1">
-                    <div className={`inline-flex min-w-max gap-1 rounded-xl border p-1 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-white/5 bg-black/20'}`}>
-                      {[{ code: 'ALL', symbol: t('all'), label: t('allCurrencies') }, ...CURRENCIES].map((c) => (
-                        <button key={c.code} onClick={() => setHistoryCurrency(c.code)} title={c.label} className={`rounded-lg px-3 py-1.5 text-xs font-data transition-all ${historyCurrency === c.code ? 'bg-amber-400/15 text-amber-500 shadow-sm ring-1 ring-amber-400/20' : 'text-zinc-500 hover:text-zinc-300'}`}>{c.symbol} <span className="ml-1 opacity-60">{c.code === 'ALL' ? '' : c.code}</span></button>
-                      ))}
-                    </div>
-                  </div>
-
                   {historyCurrency === 'ALL' ? (
                     <div className="mb-5 space-y-3">
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -1863,28 +1853,33 @@ export default function CalendarScreen() {
                   </div>
 
                   {historyFiltersOpen && (
-                    <div className={`rounded-xl border p-3 mb-4 ${
-                      isLight ? 'bg-white border-zinc-300' : 'bg-zinc-950/60 border-zinc-800'
+                    <div className={`mb-4 overflow-hidden rounded-2xl border p-3.5 shadow-sm ${
+                      isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-gradient-to-br from-zinc-950 to-zinc-900/70'
                     }`}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <input
-                          type="date"
-                          value={dateFrom}
-                          onChange={(e) => handleDateFromChange(e.target.value)}
-                          className={`flex-1 min-w-0 rounded-lg border px-3 py-2 text-xs font-data focus:outline-none focus:border-emerald-400/50 ${
-                            isLight ? 'bg-white border-zinc-300 text-zinc-900' : 'bg-zinc-900 border-zinc-700 text-zinc-200'
-                          }`}
-                        />
-                        <span className={isLight ? 'text-zinc-400' : 'text-zinc-600'}>—</span>
-                        <input
-                          type="date"
-                          value={dateTo}
-                          onChange={(e) => handleDateToChange(e.target.value)}
-                          className={`flex-1 min-w-0 rounded-lg border px-3 py-2 text-xs font-data focus:outline-none focus:border-emerald-400/50 ${
-                            isLight ? 'bg-white border-zinc-300 text-zinc-900' : 'bg-zinc-900 border-zinc-700 text-zinc-200'
-                          }`}
-                        />
+                      <div className="mb-3 flex items-center justify-between">
+                        <span className="font-data text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-500">{t('period')}</span>
+                        <span className="text-[10px] text-zinc-500">{dateFrom} — {dateTo}</span>
                       </div>
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <label className={`rounded-xl border px-3 py-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
+                          <span className="mb-1 block text-[9px] font-data uppercase tracking-wider text-zinc-500">От</span>
+                          <input type="date" value={dateFrom} onChange={(e) => handleDateFromChange(e.target.value)}
+                            className={`w-full min-w-0 bg-transparent text-xs font-data focus:outline-none ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`} />
+                        </label>
+                        <label className={`rounded-xl border px-3 py-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
+                          <span className="mb-1 block text-[9px] font-data uppercase tracking-wider text-zinc-500">До</span>
+                          <input type="date" value={dateTo} onChange={(e) => handleDateToChange(e.target.value)}
+                            className={`w-full min-w-0 bg-transparent text-xs font-data focus:outline-none ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`} />
+                        </label>
+                      </div>
+                      <label className={`mb-3 flex items-center gap-2 rounded-xl border px-3 py-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
+                        <span className="shrink-0 text-[10px] uppercase tracking-wider text-zinc-500">{t('category')}</span>
+                        <select value={historyNameFilter} onChange={(e) => setHistoryNameFilter(e.target.value)}
+                          className={`min-w-0 flex-1 bg-transparent text-right text-xs font-data focus:outline-none ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>
+                          <option value="">{t('all')}</option>
+                          {historyNameOptions.map((name) => <option key={name} value={name}>{name}</option>)}
+                        </select>
+                      </label>
                       <div className="flex gap-2">
                         {[
                           { key: 'all', label: t('all') },
@@ -1910,16 +1905,29 @@ export default function CalendarScreen() {
                     </div>
                   )}
 
-                  <div className={`flex items-center justify-between mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
-                    <p className="text-xs">{historyTrades.length} {traderMode ? t('transactions') : t('records')}</p>
-                    {periodPreset !== 'Вся история' && (
-                      <button
-                        onClick={() => setHistoryFiltersOpen(true)}
-                        className={`text-xs ${isLight ? 'text-zinc-600 hover:text-zinc-900' : 'text-zinc-600 hover:text-zinc-300'} transition-colors`}
-                      >
-                        {t('changePeriod')}
-                      </button>
-                    )}
+                  <div className={`mb-2 flex items-center justify-between gap-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                    <div className="min-w-0">
+                      <p className="truncate text-xs">{historyTrades.length} {t('records')}{historyNameFilter ? ` · ${historyNameFilter}` : ''}</p>
+                      {periodPreset !== 'Вся история' && (
+                        <button onClick={() => setHistoryFiltersOpen(true)} className={`mt-0.5 text-[10px] ${isLight ? 'text-zinc-600 hover:text-zinc-900' : 'text-zinc-600 hover:text-zinc-300'} transition-colors`}>
+                          {t('changePeriod')}
+                        </button>
+                      )}
+                    </div>
+                    <div className={`inline-flex shrink-0 gap-1 rounded-xl border p-1 ${
+                      isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-zinc-950'
+                    }`}>
+                      {[{ code: 'ALL', symbol: t('all'), label: t('allCurrencies') }, ...CURRENCIES].map((c) => (
+                        <button key={c.code} type="button" onClick={() => setHistoryCurrency(c.code)} title={c.label}
+                          className={`rounded-lg px-2 py-1 text-[10px] font-data transition-all ${
+                            historyCurrency === c.code
+                              ? 'bg-amber-400/15 text-amber-500 ring-1 ring-amber-400/20 font-semibold'
+                              : isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-300'
+                          }`}>
+                          {c.symbol}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {historyTrades.length > 0 ? (
