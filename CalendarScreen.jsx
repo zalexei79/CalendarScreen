@@ -990,7 +990,7 @@ export default function CalendarScreen() {
   const historyNameOptions = useMemo(() => [...new Set(
     Object.values(manualTrades).flat().map((trade) => trade.instrument).filter(Boolean)
   )]
-    .filter((name) => traderMode || !isTradingInstrumentName(name))
+    .filter((name) => traderMode || [...MONEY_CATEGORIES.map((category) => category.key), 'Сигареты'].includes(name))
     .sort((a, b) => a.localeCompare(b, language)), [manualTrades, language, traderMode]);
 
   useEffect(() => {
@@ -1924,6 +1924,7 @@ export default function CalendarScreen() {
                         {PERIOD_PRESETS.map((p) => (
                           <button key={p} onClick={() => { handlePresetChange(p); setHistoryPeriodMenuOpen(false); }} className={`block w-full rounded-xl px-3 py-2 text-left text-xs transition-colors ${periodPreset === p ? 'bg-amber-400/10 text-amber-600' : isLight ? 'text-zinc-600 hover:bg-zinc-100' : 'text-zinc-400 hover:bg-zinc-900'}`}>{periodLabel(p)}</button>
                         ))}
+                        <button onClick={() => { setSelectedKey(null); setPeriodPreset('custom'); setHistoryPeriodMenuOpen(false); }} className={`block w-full rounded-xl px-3 py-2 text-left text-xs transition-colors ${periodPreset === 'custom' ? 'bg-amber-400/10 text-amber-600' : isLight ? 'text-zinc-600 hover:bg-zinc-100' : 'text-zinc-400 hover:bg-zinc-900'}`}>{t('customPeriod')}</button>
                       </div>
                     )}
                     <button
@@ -1939,21 +1940,20 @@ export default function CalendarScreen() {
                       isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-gradient-to-br from-zinc-950 to-zinc-900/70'
                     }`}>
                       <div className="mb-3 flex items-center justify-between">
-                        <span className="font-data text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-500">{t('dateRange')}</span>
-                        <span className="text-[10px] text-zinc-500">{dateFrom} — {dateTo}</span>
+                        <span className="font-data text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-500">{periodPreset === 'custom' ? t('dateRange') : periodButtonLabel}</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 mb-3">
-                        <label className={`rounded-xl border px-3 py-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
-                          <span className="mb-1 block text-[9px] font-data uppercase tracking-wider text-zinc-500">{t('fromDate')}</span>
-                          <input type="date" value={dateFrom} onChange={(e) => handleDateFromChange(e.target.value)}
-                            className={`w-full min-w-0 bg-transparent text-xs font-data focus:outline-none ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`} />
+                      {periodPreset === 'custom' && <div className="grid grid-cols-2 gap-2 mb-3">
+                        <label className={`relative rounded-xl border px-3 py-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
+                          <span className="block text-[9px] font-data uppercase tracking-wider text-zinc-500">{t('fromDate')}</span>
+                          <span className={`mt-1 block text-sm font-data font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-100'}`}>{formatDateLabel(dateFrom)}</span>
+                          <input aria-label={t('fromDate')} type="date" value={dateFrom} onChange={(e) => handleDateFromChange(e.target.value)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
                         </label>
-                        <label className={`rounded-xl border px-3 py-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
-                          <span className="mb-1 block text-[9px] font-data uppercase tracking-wider text-zinc-500">{t('toDate')}</span>
-                          <input type="date" value={dateTo} onChange={(e) => handleDateToChange(e.target.value)}
-                            className={`w-full min-w-0 bg-transparent text-xs font-data focus:outline-none ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`} />
+                        <label className={`relative rounded-xl border px-3 py-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
+                          <span className="block text-[9px] font-data uppercase tracking-wider text-zinc-500">{t('toDate')}</span>
+                          <span className={`mt-1 block text-sm font-data font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-100'}`}>{formatDateLabel(dateTo)}</span>
+                          <input aria-label={t('toDate')} type="date" value={dateTo} onChange={(e) => handleDateToChange(e.target.value)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
                         </label>
-                      </div>
+                      </div>}
                       <div className="mb-3">
                         <span className="mb-1.5 block text-[10px] uppercase tracking-wider text-zinc-500">{t('category')}</span>
                         {renderHistoryCategoryPicker()}
