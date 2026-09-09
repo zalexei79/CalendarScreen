@@ -4,6 +4,7 @@ import {
   Calendar, ChevronDown, Link2, KeyRound, UploadCloud, FileText,
   CheckCircle2, RefreshCw, History, Download, Pencil,
   Wallet, ShoppingCart, Home, Briefcase, ShoppingBag, CreditCard, MoreHorizontal, Cigarette, Utensils, Car, Gift, Gamepad2, Fish, ChartCandlestick, Repeat2, CircleDollarSign,
+  Wifi, WifiOff,
 } from 'lucide-react';
 import { supabase } from './src/supabaseClient';
 
@@ -373,6 +374,36 @@ export default function CalendarScreen() {
     setInstallInfoOpen((v) => !v);
   }
 
+  // --- Offline / Online notifications ---------------------------------------
+  const [offlineNoticeOpen, setOfflineNoticeOpen] = useState(false);
+  const [onlineToastOpen, setOnlineToastOpen] = useState(false);
+
+  useEffect(() => {
+    function handleOffline() {
+      setOnlineToastOpen(false);
+      setOfflineNoticeOpen(true);
+    }
+    function handleOnline() {
+      setOfflineNoticeOpen(false);
+      setOnlineToastOpen(true);
+      const timer = setTimeout(() => {
+        setOnlineToastOpen(false);
+      }, 4500);
+      return () => clearTimeout(timer);
+    }
+
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setOfflineNoticeOpen(true);
+    }
+
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
 
   // --- Period filter state (compact popover) --------------------------------
   const [periodPreset, setPeriodPreset] = useState('Вся история');
@@ -485,13 +516,13 @@ export default function CalendarScreen() {
   // it shows every record in every currency, while monetary totals stay scoped to
   // the interface currency so different currencies are never added together.
   const periodTrades = useMemo(() => {
-    return Object.entries(manualTrades || {})
-      .flatMap(([dateKey, arr]) => (Array.isArray(arr) ? arr : []).map((t) => ({ ...(t || {}), dateKey })))
+    return Object.entries(manualTrades)
+      .flatMap(([dateKey, arr]) => arr.map((t) => ({ ...t, dateKey })))
       .filter((t) => t.dateKey >= effectiveFrom && t.dateKey <= effectiveTo)
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
       .filter((t) => (t.currency || 'USD') === currency)
       .filter((t) => calendarTypeFilter === 'all' || (calendarTypeFilter === 'income' ? t.pnl >= 0 : t.pnl < 0))
-      .sort((a, b) => (a.dateKey === b.dateKey ? String(b.time || '').localeCompare(String(a.time || '')) : String(b.dateKey).localeCompare(String(a.dateKey))));
+      .sort((a, b) => (a.dateKey === b.dateKey ? b.time.localeCompare(a.time) : b.dateKey.localeCompare(a.dateKey)));
   }, [manualTrades, effectiveFrom, effectiveTo, platformFilter, currency, calendarTypeFilter]);
 
   const selectedDayTrades = useMemo(() => {
@@ -518,8 +549,8 @@ export default function CalendarScreen() {
   const [analysisPreset, setAnalysisPreset] = useState('Текущий период');
 
   const analysisTrades = useMemo(() => {
-    return Object.entries(manualTrades || {})
-      .flatMap(([dateKey, arr]) => (Array.isArray(arr) ? arr : []).map((t) => ({ ...(t || {}), dateKey })))
+    return Object.entries(manualTrades)
+      .flatMap(([dateKey, arr]) => arr.map((t) => ({ ...t, dateKey })))
       .filter((t) => t.dateKey >= analysisFrom && t.dateKey <= analysisTo)
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
       .filter((t) => (t.currency || 'USD') === currency);
@@ -913,18 +944,19 @@ export default function CalendarScreen() {
   const [freeTimelineSelected, setFreeTimelineSelected] = useState(null);
   // 0 = latest window, 1 = previous 10 days, etc. Keeps the timeline browsable.
   const [freeTimelineOffset, setFreeTimelineOffset] = useState(0);
+  const [freeDynamicsOpen, setFreeDynamicsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
-  const [exportPeriodPreset, setExportPeriodPreset] = useState('Текущий период');
+  const [exportPeriodPreset, setExportPeriodPreset] = useState('currentPeriod');
   const [confirmingClear, setConfirmingClear] = useState(false);
 
   const historyTrades = useMemo(() => {
-    return Object.entries(manualTrades || {})
-      .flatMap(([dateKey, arr]) => (Array.isArray(arr) ? arr : []).map((t) => ({ ...(t || {}), dateKey })))
+    return Object.entries(manualTrades)
+      .flatMap(([dateKey, arr]) => arr.map((t) => ({ ...t, dateKey })))
       .filter((t) => t.dateKey >= dateFrom && t.dateKey <= dateTo)
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
       .filter((t) => historyCurrency === 'ALL' || (t.currency || 'USD') === historyCurrency)
       .filter((t) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? t.pnl >= 0 : t.pnl < 0))
-      .sort((a, b) => (a.dateKey === b.dateKey ? String(b.time || '').localeCompare(String(a.time || '')) : String(b.dateKey).localeCompare(String(a.dateKey))));
+      .sort((a, b) => (a.dateKey === b.dateKey ? b.time.localeCompare(a.time) : b.dateKey.localeCompare(a.dateKey)));
   }, [manualTrades, dateFrom, dateTo, platformFilter, historyWinLoss, historyCurrency]);
 
   const historyByCurrency = useMemo(() => Object.entries(historyTrades.reduce((groups, trade) => {
@@ -1063,7 +1095,10 @@ export default function CalendarScreen() {
     setProFiltersOpen(false);
     setConfirmingClear(false);
     // PRO opens its premium layer immediately; FREE gets a compact dynamic snapshot.
-    setHistoryAnalysisOpen(Boolean(traderMode));
+    // PRO History: mount the heavy analytics panel only after the modal itself
+    // has rendered. Telegram iOS WebView can fail during the same frame when
+    // the modal and the large analytics tree are mounted together.
+    setHistoryAnalysisOpen(false);
     setHistoryAnalysisTab('overview');
     requestAnimationFrame(() => setHistoryVisible(true));
   }
@@ -1086,7 +1121,7 @@ export default function CalendarScreen() {
   }
 
   const exportTrades = useMemo(() => {
-    const range = exportPeriodPreset === 'Текущий период'
+    const range = (exportPeriodPreset === 'currentPeriod' || exportPeriodPreset === 'Текущий период')
       ? { from: dateFrom, to: dateTo }
       : getPresetRange(exportPeriodPreset, today);
     return Object.entries(manualTrades)
@@ -1097,16 +1132,16 @@ export default function CalendarScreen() {
   }, [manualTrades, exportPeriodPreset, dateFrom, dateTo, today, historyCurrency, historyWinLoss]);
 
   function handleExportCsv() {
-    const range = exportPeriodPreset === 'Текущий период'
+    const range = (exportPeriodPreset === 'currentPeriod' || exportPeriodPreset === 'Текущий период')
       ? { from: dateFrom, to: dateTo }
       : getPresetRange(exportPeriodPreset, today);
-    const title = `ДЕНЕЖНЫЙ КАЛЕНДАРЬ — Все ваши записи за период`;
+    const title = `${traderMode ? 'AI Trade Journal' : t('titleMoney')} — ${t('csvPeriodTitle')}`;
     const periodLabel = `${formatDateLabel(range.from)} — ${formatDateLabel(range.to)}`;
     const rows = exportTrades.map((item) => [
       formatDateLabel(item.dateKey),
       item.time || '',
-      item.instrument || 'Другое',
-      item.pnl >= 0 ? 'Доход' : 'Расход',
+      item.instrument || (traderMode ? 'Trade' : t('catOther')),
+      item.pnl >= 0 ? (traderMode ? t('profitTrade') : t('income')) : (traderMode ? t('lossTrade') : t('expense')),
       formatAmountInCurrency(item.pnl, item.currency || 'USD'),
       item.comment || '',
     ]);
@@ -1114,9 +1149,20 @@ export default function CalendarScreen() {
     const totalExpense = exportTrades.reduce((sum, item) => sum + (item.pnl < 0 ? Math.abs(item.pnl) : 0), 0);
     const currencyMeta = historyCurrency === 'ALL' ? null : getCurrencyMeta(historyCurrency);
     const summary = currencyMeta ? [
-      [], ['ИТОГ ЗА ПЕРИОД'], ['Доходы', `+${currencyMeta.symbol}${formatMoney(totalIncome)}`], ['Расходы', `−${currencyMeta.symbol}${formatMoney(totalExpense)}`], ['Баланс', `${totalIncome-totalExpense >= 0 ? '+' : '−'}${currencyMeta.symbol}${formatMoney(Math.abs(totalIncome-totalExpense))}`]
+      [],
+      [t('csvPeriodSummary')],
+      [t('income'), `+${currencyMeta.symbol}${formatMoney(totalIncome)}`],
+      [t('expense'), `−${currencyMeta.symbol}${formatMoney(totalExpense)}`],
+      [t('balanceLabel'), `${totalIncome - totalExpense >= 0 ? '+' : '−'}${currencyMeta.symbol}${formatMoney(Math.abs(totalIncome - totalExpense))}`]
     ] : [];
-    const csvRows = [[title], [`Период: ${periodLabel}`], [], ['Дата', 'Время', 'Категория', 'Тип', 'Сумма', 'Комментарий'], ...rows, ...summary];
+    const csvRows = [
+      [title],
+      [`${t('currentPeriod')}: ${periodLabel}`],
+      [],
+      [t('csvDate'), t('csvTime'), t('csvCategory'), t('csvType'), t('csvAmount'), t('csvComment')],
+      ...rows,
+      ...summary
+    ];
     const csv = csvRows.map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -1169,35 +1215,36 @@ export default function CalendarScreen() {
         .font-data { font-family: 'JetBrains Mono', monospace; }
         @keyframes cellGlowIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
         @keyframes themeIconPop { from { opacity: 0; transform: scale(0.4) rotate(-40deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
-        /* The screen was designed dark-first. These scoped replacements make
-           every remaining dark utility class legible in the light theme,
-           including the header, popovers and bottom sheets. */
+        /* Modern crisp, readable light theme palette */
+        .theme-light.premium-shell {
+          background-color: #f8fafc;
+          background-image: radial-gradient(circle at 15% -5%, rgba(251,191,36,.06), transparent 30%), radial-gradient(circle at 85% 0%, rgba(59,130,246,.03), transparent 25%);
+        }
         .theme-light .bg-zinc-950,
-        .theme-light .bg-zinc-900 { background-color: #faf3eb !important; }
-        .theme-light .bg-zinc-800 { background-color: #e8e0d8 !important; }
-        .theme-light .bg-zinc-100 { background-color: #f5f0e8 !important; }
-        .theme-light .bg-zinc-50 { background-color: #f8f2ea !important; }
-        .theme-light .bg-white { background-color: #faf3eb !important; }
+        .theme-light .bg-zinc-900 { background-color: #ffffff !important; }
+        .theme-light .bg-zinc-800 { background-color: #f1f5f9 !important; }
+        .theme-light .bg-zinc-100 { background-color: #f8fafc !important; }
+        .theme-light .bg-zinc-50 { background-color: #ffffff !important; }
+        .theme-light .bg-white { background-color: #ffffff !important; }
         .theme-light .text-zinc-50,
-        .theme-light .text-zinc-100 { color: #18181b !important; }
-        .theme-light .text-zinc-200 { color: #27272a !important; }
-        .theme-light .text-zinc-300 { color: #3f3f46 !important; }
-        .theme-light .text-zinc-400 { color: #52525b !important; }
-        .theme-light .text-zinc-500 { color: #52525b !important; }
-        .theme-light .text-zinc-600 { color: #3f3f46 !important; }
-        .theme-light .text-zinc-700 { color: #27272a !important; }
+        .theme-light .text-zinc-100 { color: #0f172a !important; }
+        .theme-light .text-zinc-200 { color: #1e293b !important; }
+        .theme-light .text-zinc-300 { color: #334155 !important; }
+        .theme-light .text-zinc-400 { color: #475569 !important; }
+        .theme-light .text-zinc-500 { color: #64748b !important; }
+        .theme-light .text-zinc-600 { color: #475569 !important; }
+        .theme-light .text-zinc-700 { color: #334155 !important; }
         .theme-light .border-zinc-800,
-        .theme-light .border-zinc-700 { border-color: #d4c8bc !important; }
-        .theme-light .border-zinc-200 { border-color: #d4c8bc !important; }
-        .theme-light .border-zinc-300 { border-color: #c8bcb0 !important; }
-        /* Dark, unobtrusive scrollbars everywhere instead of the default
-           bright OS scrollbar, which reads as a stray white line in this UI. */
+        .theme-light .border-zinc-700 { border-color: #e2e8f0 !important; }
+        .theme-light .border-zinc-200 { border-color: #e2e8f0 !important; }
+        .theme-light .border-zinc-300 { border-color: #e2e8f0 !important; }
+        /* Clean scrollbars */
         * { scrollbar-width: thin; scrollbar-color: #52525b transparent; }
         *::-webkit-scrollbar { height: 6px; width: 6px; }
         *::-webkit-scrollbar-track { background: transparent; }
         *::-webkit-scrollbar-thumb { background-color: #52525b; border-radius: 9999px; }
-        .theme-light *::-webkit-scrollbar-thumb { background-color: #a1a1aa; }
-        .theme-light { scrollbar-color: #a1a1aa transparent; }
+        .theme-light *::-webkit-scrollbar-thumb { background-color: #cbd5e1; }
+        .theme-light { scrollbar-color: #cbd5e1 transparent; }
         /* Mobile layout: use the available viewport instead of leaving a huge empty area. */
         /* Premium visual system */
         .premium-shell { background-image: radial-gradient(circle at 12% -10%, rgba(251,191,36,.10), transparent 28%), radial-gradient(circle at 90% 5%, rgba(59,130,246,.06), transparent 24%); }
@@ -1238,6 +1285,7 @@ export default function CalendarScreen() {
         openConnectModal={openConnectModal} ctraderConnected={ctraderConnected}
         installInfoRef={installInfoRef} handleInstallClick={handleInstallClick}
         pendingSyncCount={pendingSyncCount} installInfoOpen={installInfoOpen} installInstructions={installInstructions}
+        periodStats={periodStats} periodTrades={periodTrades} currencySymbol={currencySymbol} formatMoney={formatMoney}
       />
 
       {/* PRO controls live in Header: one clean control center, no floating duplicate block. */}
@@ -1291,15 +1339,17 @@ export default function CalendarScreen() {
             </div>
           </div>
 
-          <div className={`inline-flex items-center self-start rounded-md border overflow-hidden ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-700 bg-zinc-900'}`}>
+          <div className="flex items-center self-start">
             <button
               onClick={() => openModal()}
               disabled={isFutureSelected}
               title={isFutureSelected ? (traderMode ? 'Нельзя добавить сделку на будущую дату' : t('recordFutureBlocked')) : undefined}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${isLight ? 'text-zinc-700 hover:bg-zinc-200' : 'text-zinc-200 hover:bg-zinc-800'}`}
+              className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 px-4 py-2.5 text-xs sm:text-sm font-bold text-zinc-950 shadow-md shadow-amber-500/25 hover:shadow-lg hover:shadow-amber-500/35 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <Plus className="h-4 w-4" />
-              {traderMode ? t('addTrade') : t('addRecord')}
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-black/10 transition-transform duration-200 group-hover:rotate-90">
+                <Plus className="h-3.5 w-3.5 stroke-[3] text-zinc-950" />
+              </span>
+              <span>{traderMode ? t('addTrade') : t('addRecord')}</span>
             </button>
           </div>
 
@@ -1332,13 +1382,13 @@ export default function CalendarScreen() {
             <div className={`rounded-lg border divide-y ${isLight ? 'border-zinc-300 bg-zinc-50 divide-zinc-200' : 'border-zinc-800 bg-zinc-900 divide-zinc-800'}`}>
               {selectedDayTrades.map((trade) => (
                 <div key={trade.id} className="px-4 py-3 group">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <span className={`font-data text-xs w-12 ${isLight ? 'text-zinc-400' : 'text-zinc-500'}`}>{trade.time}</span>
-                      <span className={`text-sm font-medium ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{trade.instrument}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-4 min-w-0 flex-wrap">
+                      <span className={`font-data text-xs w-12 shrink-0 ${isLight ? 'text-zinc-400' : 'text-zinc-500'}`}>{trade.time}</span>
+                      <span className={`text-sm font-medium truncate ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{trade.instrument}</span>
                       <span
                         className={[
-                          'font-data text-[11px] tracking-wider px-2 py-0.5 rounded-full',
+                          'font-data text-[11px] tracking-wider px-2 py-0.5 rounded-full shrink-0',
                           trade.pnl >= 0
                             ? 'bg-emerald-500/10 text-emerald-500'
                             : 'bg-red-500/10 text-red-500',
@@ -1346,10 +1396,10 @@ export default function CalendarScreen() {
                       >
                         {trade.pnl >= 0 ? (traderMode ? 'Прибыль' : 'Доход') : (traderMode ? 'Убыток' : 'Расход')}
                       </span>
-                      <span className={`font-data text-[10px] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{trade.platform}</span>
+                      <span className={`font-data text-[10px] shrink-0 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{trade.platform}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`font-data text-sm font-medium ${trade.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className={`font-data text-sm font-medium whitespace-nowrap tabular-nums ${trade.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                         {formatAmountInCurrency(trade.pnl, trade.currency || 'USD')}
                       </span>
                       <button
@@ -1378,7 +1428,7 @@ export default function CalendarScreen() {
             <div className="flex items-center justify-center py-16">
               <div className={`text-center max-w-sm border border-dashed rounded-xl px-10 py-10 ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}>
                 <Inbox className={`h-8 w-8 mx-auto mb-4 ${isLight ? 'text-zinc-300' : 'text-zinc-700'}`} />
-                <p className={`text-sm ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{traderMode ? 'Сделок за этот день пока нет' : 'Записей за этот день пока нет'}</p>
+                <p className={`text-sm ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{traderMode ? t('noTradesDay') : t('noRecordsDay')}</p>
               </div>
             </div>
           )}
@@ -1387,41 +1437,78 @@ export default function CalendarScreen() {
       </div>
       )}
 
-      {/* bottom "История" entry point — search/browse all saved trades */}
-      <div className="history-fab fixed bottom-4 sm:bottom-4 inset-x-0 flex justify-center z-30 pointer-events-none">
-        <button
-          onClick={openHistory}
-          className={`pointer-events-auto group flex items-center gap-2.5 rounded-full border backdrop-blur-xl px-5 py-3 text-base shadow-[0_14px_40px_rgba(0,0,0,.24)] transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 ${
-            isLight
-              ? 'border-zinc-300/90 bg-white/95 text-zinc-700 hover:border-amber-400/70 hover:text-amber-600'
-              : 'border-zinc-700/90 bg-zinc-900/95 text-zinc-100 hover:border-amber-400/70 hover:text-amber-300'
-          }`}
-        >
-          <span className="h-7 w-7 rounded-full bg-amber-400/10 flex items-center justify-center group-hover:bg-amber-400/15 transition-colors"><History className="h-4 w-4 text-amber-500" /></span>
-          <span className="relative font-medium">{t('history')}{traderMode && <span className="ml-1 text-amber-400">✦</span>}</span>
-        </button>
+      {/* Floating Action Dock: Prominent Center "+" Add Button + History */}
+      <div className="history-fab fixed bottom-4 sm:bottom-6 inset-x-0 flex justify-center items-center z-30 pointer-events-none px-4">
+        <div className={`pointer-events-auto flex items-center gap-1.5 sm:gap-2.5 rounded-full border p-1.5 sm:p-2 backdrop-blur-2xl transition-all duration-300 ${
+          isLight
+            ? 'border-zinc-200/90 bg-white/95 shadow-[0_16px_45px_rgba(0,0,0,0.14)]'
+            : 'border-zinc-800/90 bg-zinc-950/90 shadow-[0_16px_50px_rgba(0,0,0,0.45)]'
+        }`}>
+          {/* History Button */}
+          <button
+            type="button"
+            onClick={openHistory}
+            className={`group flex items-center gap-2 rounded-full px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all duration-200 ${
+              isLight
+                ? 'text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/80'
+                : 'text-zinc-300 hover:text-white hover:bg-zinc-900/90'
+            }`}
+          >
+            <span className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-amber-400/10 transition-colors group-hover:bg-amber-400/20">
+              <History className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-500 transition-transform duration-200 group-hover:-rotate-12" />
+            </span>
+            <span className="relative font-medium">{t('history')}{traderMode && <span className="ml-1 text-amber-400">✦</span>}</span>
+          </button>
+
+          {/* Central Add '+' Button — sleek, elegant, calm */}
+          <button
+            type="button"
+            onClick={() => openModal()}
+            title={traderMode ? t('addTrade') : t('addRecord')}
+            aria-label={traderMode ? t('addTrade') : t('addRecord')}
+            className={`group relative flex items-center gap-2 rounded-full px-4 sm:px-5 py-2 sm:py-2.5 font-medium transition-all duration-200 active:scale-[0.97] border ${
+              isLight
+                ? 'border-slate-800 bg-slate-900 text-white hover:bg-slate-800 shadow-sm'
+                : 'border-zinc-700/80 bg-zinc-900 text-zinc-100 hover:border-amber-400/50 hover:bg-zinc-800 shadow-sm'
+            }`}
+          >
+            <span className={`flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full transition-transform duration-200 group-hover:rotate-90 ${
+              isLight ? 'bg-white/15 text-amber-300' : 'bg-amber-400/15 text-amber-400'
+            }`}>
+              <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 stroke-[2.5]" />
+            </span>
+            <span className="text-xs sm:text-sm font-semibold tracking-tight">
+              {traderMode ? t('addTrade') : t('addRecord')}
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* HISTORY MODAL — улучшен визуал для светлой темы + кнопка синхронизации cTrader */}
       {historyOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-3 py-4 sm:px-4"
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-3 sm:px-4 transition-opacity duration-200 ${
+            historyVisible ? 'opacity-100' : 'opacity-0'
+          }`}
           onMouseDown={handleBackdropMouseDown}
           onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) closeHistory(); }}
         >
           <div
-            className={`relative w-full ${traderMode ? 'max-w-2xl' : 'max-w-lg'} max-h-[calc(100vh-2rem)] overflow-hidden rounded-2xl border shadow-2xl ${
+            className={`relative w-full ${traderMode ? 'max-w-2xl' : 'max-w-lg'} flex flex-col overflow-hidden rounded-2xl border shadow-2xl transition-all duration-200 ${
+              historyVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+            } ${
               isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
             }`}
+            style={{ maxHeight: 'min(90svh, 90vh, calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px))' }}
           >
             <div className={`flex items-center justify-between px-5 sm:px-6 pt-5 pb-4 border-b ${isLight ? 'border-zinc-200' : 'border-zinc-800/80'}`}>
               <div>
                 <p className="font-data text-[10px] tracking-[0.22em] text-amber-400 uppercase mb-1">
-                  {traderMode ? 'История сделок' : t('myMoney')}
+                  {traderMode ? t('tradesHistory') : t('myMoney')}
                 </p>
                 <h2 className={`font-display text-xl font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>
                   {traderMode
-                    ? (periodPreset === 'Вся история' ? 'Вся история' : dateFrom === dateTo ? dateFrom : `${dateFrom} — ${dateTo}`)
+                    ? (periodPreset === 'Вся история' ? t('allHistory') : dateFrom === dateTo ? dateFrom : `${dateFrom} — ${dateTo}`)
                     : t('financialHistory')}
                 </h2>
               </div>
@@ -1430,54 +1517,169 @@ export default function CalendarScreen() {
                 className={`rounded-full p-2 transition-colors ${
                   isLight ? 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200'
                 }`}
-                aria-label="Закрыть"
+                aria-label={t('close')}
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className={`overflow-y-auto overscroll-contain px-5 sm:px-6 py-5 max-h-[calc(100vh-7rem)] ${isLight ? 'bg-zinc-50/50' : ''}`}>
+            <div className={`overflow-y-auto px-5 sm:px-6 py-5 flex-1 min-h-0 ${isLight ? 'bg-zinc-50/50' : ''}`} style={{ overscrollBehavior: 'contain' }}>
+              {/* FREE — Динамика периода (скрыта по умолчанию, раскрывается по кнопке) */}
               {!traderMode && (
-                <section className={`mb-4 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950'}`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div><p className="font-data text-[11px] uppercase tracking-[0.2em] text-emerald-500">Финансовый ритм</p><h3 className={`mt-1 text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Динамика периода</h3><p className="mt-1 text-xs text-zinc-500">10 дней за раз · листай назад и выбирай день для деталей.</p></div>
-                    <span className={`rounded-xl px-3 py-2 text-sm font-data font-semibold ${historyTotal >= 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>{historyCurrency === 'ALL' ? 'Все' : `${historyTotal >= 0 ? '+' : '−'}${historyCurrencySymbol}${formatMoneyShort(Math.abs(historyTotal))}`}</span>
-                  </div>
-                  <div className="mt-4 flex items-center gap-1.5 overflow-x-auto pb-1">
-                    <span className="mr-1 shrink-0 text-[10px] uppercase tracking-[0.16em] text-zinc-500">Показать</span>
-                    {[{ code: 'ALL', symbol: 'Все', label: 'Все валюты' }, ...CURRENCIES].map((c) => (
-                      <button key={c.code} type="button" onClick={() => setHistoryCurrency(c.code)} className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-data transition-all ${historyCurrency === c.code ? 'border-amber-400/60 bg-amber-400/10 text-amber-500' : isLight ? 'border-zinc-200 bg-white text-zinc-500' : 'border-zinc-800 bg-zinc-950 text-zinc-500'}`}>{c.symbol} <span className="opacity-70">{c.code}</span></button>
-                    ))}
-                  </div>
-                  <div className={`mt-3 rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50/70' : 'border-zinc-800 bg-black/20'}`}>
-                    <div className="mb-3 flex items-center justify-between gap-3"><div className="flex gap-3 text-[10px]"><span className="text-emerald-500">● Приход</span><span className="text-red-400">● Расход</span></div><span className="text-[10px] text-zinc-500">{historyTimeline.from} — {historyTimeline.to}</span></div>
-                    <div className="mb-3 flex items-center justify-between gap-2">
-                      <button type="button" onClick={() => setFreeTimelineOffset((v) => v + 1)} className={`rounded-lg border px-3 py-1.5 text-xs font-data transition-colors ${isLight ? 'border-zinc-200 bg-white text-zinc-600 hover:border-amber-400/50' : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-amber-400/40'}`}>← Раньше</button>
-                      <span className="text-[10px] text-zinc-500">Нажми на столбец — детали дня</span>
-                      <button type="button" disabled={freeTimelineOffset === 0} onClick={() => setFreeTimelineOffset((v) => Math.max(0, v - 1))} className={`rounded-lg border px-3 py-1.5 text-xs font-data transition-colors disabled:opacity-30 ${isLight ? 'border-zinc-200 bg-white text-zinc-600 hover:border-amber-400/50' : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-amber-400/40'}`}>Позже →</button>
+                <section className="mb-4">
+                  {/* Кнопка-аккордеон */}
+                  <button
+                    type="button"
+                    onClick={() => setFreeDynamicsOpen((v) => !v)}
+                    className={`w-full group relative overflow-hidden rounded-2xl border px-4 py-3.5 text-left transition-all duration-200 hover:-translate-y-0.5 ${
+                      freeDynamicsOpen
+                        ? isLight ? 'border-emerald-300/70 bg-emerald-50/60' : 'border-emerald-500/30 bg-emerald-500/[0.06]'
+                        : isLight ? 'border-zinc-300 bg-white hover:border-emerald-400/50 hover:shadow-md' : 'border-zinc-800 bg-zinc-950/70 hover:border-emerald-500/35 hover:bg-zinc-900'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="flex items-center gap-3">
+                        <span className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${freeDynamicsOpen ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-500' : isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-400 group-hover:border-emerald-300/50 group-hover:text-emerald-500' : 'border-zinc-800 bg-zinc-900 text-zinc-500 group-hover:border-emerald-500/25 group-hover:text-emerald-500'}`}>
+                          <TrendingUp className="h-4 w-4" />
+                        </span>
+                        <span>
+                          <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('freeDynamicsBtn')}</span>
+                          <span className="block mt-0.5 text-[11px] text-zinc-500">{t('freeDynamicsBtnSub')}</span>
+                        </span>
+                      </span>
+                      <span className="flex items-center gap-2 shrink-0">
+                        <span className={`font-data text-sm font-semibold tabular-nums ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          {historyCurrency === 'ALL' ? t('allCurrencies') : `${historyTotal >= 0 ? '+' : '−'}${historyCurrencySymbol}${formatMoneyShort(Math.abs(historyTotal))}`}
+                        </span>
+                        <ChevronDown className={`h-4 w-4 text-emerald-500 transition-transform duration-300 ${freeDynamicsOpen ? 'rotate-180' : ''}`} />
+                      </span>
                     </div>
-                    {historyCurrency === 'ALL' && <p className="mb-3 rounded-lg border border-amber-400/20 bg-amber-400/[0.05] px-2.5 py-2 text-[10px] leading-relaxed text-zinc-500">Все валюты показывают все записи. Для точных денежных сумм и сравнения выбери конкретную валюту.</p>}
-                    <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 items-end h-44 sm:h-48">
-                      {historyTimeline.points.map((point) => {
-                        const incomeH = point.income ? Math.max(7, Math.round((point.income / historyTimeline.max) * 100)) : 3;
-                        const expenseH = point.expense ? Math.max(7, Math.round((point.expense / historyTimeline.max) * 100)) : 3;
-                        const active = point.income || point.expense;
-                        const net = point.net;
-                        const selected = freeTimelineSelected === point.key;
-                        return <button type="button" key={point.key} onClick={() => setFreeTimelineSelected(selected ? null : point.key)} className={`group min-w-0 h-full rounded-xl px-1 pt-2 pb-1 flex flex-col justify-end transition-all ${selected ? (isLight ? 'bg-white shadow-md ring-1 ring-amber-400/40' : 'bg-white/[0.04] ring-1 ring-amber-400/30') : 'hover:bg-zinc-500/[0.04]'}`}>
-                          <span className={`mb-1 min-h-[28px] text-center text-[9px] sm:text-[10px] font-data leading-tight ${!active ? 'text-zinc-400' : net >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>{active ? `${net >= 0 ? '+' : '−'}${formatMoneyShort(Math.abs(net))}` : '—'}</span>
-                          <div className="flex flex-1 items-end justify-center gap-1"><span className="w-2.5 sm:w-3 rounded-t-md bg-gradient-to-t from-emerald-600/70 to-emerald-300/90 transition-all" style={{height:`${incomeH}%`}} /><span className="w-2.5 sm:w-3 rounded-t-md bg-gradient-to-t from-red-700/65 to-red-400/85 transition-all" style={{height:`${expenseH}%`}} /></div>
-                          <span className="mt-2 text-center text-[9px] text-zinc-500">{point.label}</span>
-                        </button>;
-                      })}
+                  </button>
+
+                  {/* Содержимое аккордеона */}
+                  {freeDynamicsOpen && (
+                    <div className={`mt-2 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950'}`}>
+                      {/* Переключатель валюты */}
+                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 mb-3">
+                        <span className="mr-1 shrink-0 text-[10px] uppercase tracking-[0.16em] text-zinc-500">{t('show')}</span>
+                        {[{ code: 'ALL', symbol: t('all'), label: t('allCurrencies') }, ...CURRENCIES].map((c) => (
+                          <button key={c.code} type="button" onClick={() => setHistoryCurrency(c.code)} className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-data transition-all ${historyCurrency === c.code ? 'border-amber-400/60 bg-amber-400/10 text-amber-500' : isLight ? 'border-zinc-200 bg-white text-zinc-500' : 'border-zinc-800 bg-zinc-950 text-zinc-500'}`}>{c.symbol} <span className="opacity-70">{c.code === 'ALL' ? '' : c.code}</span></button>
+                        ))}
+                      </div>
+
+                      <div className={`rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50/70' : 'border-zinc-800 bg-black/20'}`}>
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <div className="flex gap-3 text-[10px]"><span className="text-emerald-500">● {t('incomeLabel')}</span><span className="text-red-400">● {t('expenseLabel')}</span></div>
+                          <span className="text-[10px] text-zinc-500">{historyTimeline.from} — {historyTimeline.to}</span>
+                        </div>
+                        <div className="mb-3 flex items-center justify-between gap-2">
+                          <button type="button" onClick={() => setFreeTimelineOffset((v) => v + 1)} className={`rounded-lg border px-3 py-1.5 text-xs font-data transition-colors ${isLight ? 'border-zinc-200 bg-white text-zinc-600 hover:border-amber-400/50' : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-amber-400/40'}`}>{t('earlier')}</button>
+                          <span className="text-[10px] text-zinc-500">{t('clickColumnHint')}</span>
+                          <button type="button" disabled={freeTimelineOffset === 0} onClick={() => setFreeTimelineOffset((v) => Math.max(0, v - 1))} className={`rounded-lg border px-3 py-1.5 text-xs font-data transition-colors disabled:opacity-30 ${isLight ? 'border-zinc-200 bg-white text-zinc-600 hover:border-amber-400/50' : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-amber-400/40'}`}>{t('later')}</button>
+                        </div>
+                        {historyCurrency === 'ALL' && <p className="mb-3 rounded-lg border border-amber-400/20 bg-amber-400/[0.05] px-2.5 py-2 text-[10px] leading-relaxed text-zinc-500">{t('allCurrenciesNotice')}</p>}
+                        <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 items-end h-44 sm:h-48">
+                          {historyTimeline.points.map((point) => {
+                            const incomeH = point.income ? Math.max(7, Math.round((point.income / historyTimeline.max) * 100)) : 3;
+                            const expenseH = point.expense ? Math.max(7, Math.round((point.expense / historyTimeline.max) * 100)) : 3;
+                            const active = point.income || point.expense;
+                            const net = point.net;
+                            const selected = freeTimelineSelected === point.key;
+                            return <button type="button" key={point.key} onClick={() => setFreeTimelineSelected(selected ? null : point.key)} className={`group min-w-0 h-full rounded-xl px-1 pt-2 pb-1 flex flex-col justify-end transition-all ${selected ? (isLight ? 'bg-white shadow-md ring-1 ring-amber-400/40' : 'bg-white/[0.04] ring-1 ring-amber-400/30') : 'hover:bg-zinc-500/[0.04]'}`}>
+                              <span className={`mb-1 min-h-[28px] text-center text-[9px] sm:text-[10px] font-data leading-tight ${!active ? 'text-zinc-400' : net >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>{active ? `${net >= 0 ? '+' : '−'}${formatMoneyShort(Math.abs(net))}` : '—'}</span>
+                              <div className="flex flex-1 items-end justify-center gap-1"><span className="w-2.5 sm:w-3 rounded-t-md bg-gradient-to-t from-emerald-600/70 to-emerald-300/90 transition-all" style={{height:`${incomeH}%`}} /><span className="w-2.5 sm:w-3 rounded-t-md bg-gradient-to-t from-red-700/65 to-red-400/85 transition-all" style={{height:`${expenseH}%`}} /></div>
+                              <span className="mt-2 text-center text-[9px] text-zinc-500">{point.label}</span>
+                            </button>;
+                          })}
+                        </div>
+                        {(() => { const fallback = [...historyTimeline.points].reverse().find((x) => x.income || x.expense)?.key || historyTimeline.points[historyTimeline.points.length - 1]?.key; const p = historyTimeline.points.find((x) => x.key === (freeTimelineSelected || fallback)); return p ? <div className={`mt-3 grid grid-cols-3 gap-2 rounded-xl border p-2.5 text-center ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/60'}`}><div><p className="text-[9px] text-zinc-500">{t('incomeLabel')}</p><p className="mt-1 text-xs font-data text-emerald-500">+{historyCurrencySymbol}{formatMoneyShort(p.income)}</p></div><div><p className="text-[9px] text-zinc-500">{t('expenseLabel')}</p><p className="mt-1 text-xs font-data text-red-400">−{historyCurrencySymbol}{formatMoneyShort(p.expense)}</p></div><div><p className="text-[9px] text-zinc-500">{t('result')} · {p.label} · {p.count}</p><p className={`mt-1 text-xs font-data ${p.net >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>{p.net >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoneyShort(Math.abs(p.net))}</p></div></div> : null; })()}
+                      </div>
+
+                      {/* Итог периода */}
+                      <div className="mt-4 grid grid-cols-3 gap-2 border-t border-zinc-500/10 pt-4">
+                        <div><p className="text-[10px] uppercase tracking-wide text-zinc-500">{t('incomeLabel')}</p><p className="mt-1 text-sm font-data text-emerald-500">+{historyCurrencySymbol}{formatMoneyShort(historyIncome)}</p></div>
+                        <div><p className="text-[10px] uppercase tracking-wide text-zinc-500">{t('expenseLabel')}</p><p className="mt-1 text-sm font-data text-red-500">−{historyCurrencySymbol}{formatMoneyShort(historyExpense)}</p></div>
+                        <div><p className="text-[10px] uppercase tracking-wide text-zinc-500">{t('recordsCount')}</p><p className={`mt-1 text-sm font-data ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>{historyTrades.length}</p></div>
+                      </div>
                     </div>
-                    {(() => { const fallback = [...historyTimeline.points].reverse().find((x) => x.income || x.expense)?.key || historyTimeline.points[historyTimeline.points.length - 1]?.key; const p = historyTimeline.points.find((x) => x.key === (freeTimelineSelected || fallback)); return p ? <div className={`mt-3 grid grid-cols-3 gap-2 rounded-xl border p-2.5 text-center ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/60'}`}><div><p className="text-[9px] text-zinc-500">Доход</p><p className="mt-1 text-xs font-data text-emerald-500">+{historyCurrencySymbol}{formatMoneyShort(p.income)}</p></div><div><p className="text-[9px] text-zinc-500">Расход</p><p className="mt-1 text-xs font-data text-red-400">−{historyCurrencySymbol}{formatMoneyShort(p.expense)}</p></div><div><p className="text-[9px] text-zinc-500">Итог · {p.label} · {p.count}</p><p className={`mt-1 text-xs font-data ${p.net >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>{p.net >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoneyShort(Math.abs(p.net))}</p></div></div> : null; })()}
-                  </div>
-                  <div className="mt-4 grid grid-cols-3 gap-2 border-t border-zinc-500/10 pt-4">
-                    <div><p className="text-[10px] uppercase tracking-wide text-zinc-500">Доходы</p><p className="mt-1 text-sm font-data text-emerald-500">+{historyCurrencySymbol}{formatMoneyShort(historyIncome)}</p></div>
-                    <div><p className="text-[10px] uppercase tracking-wide text-zinc-500">Расходы</p><p className="mt-1 text-sm font-data text-red-500">−{historyCurrencySymbol}{formatMoneyShort(historyExpense)}</p></div>
-                    <div><p className="text-[10px] uppercase tracking-wide text-zinc-500">Записей</p><p className={`mt-1 text-sm font-data ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>{historyTrades.length}</p></div>
-                  </div>
+                  )}
+                </section>
+              )}
+
+              {/* FREE — Обзор денег (анализ источников, всегда скрыт под toggle) */}
+              {!traderMode && historyTrades.length > 0 && (
+                <section className="mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setHistoryAnalysisOpen((v) => !v)}
+                    className={`w-full group relative overflow-hidden rounded-2xl border px-4 py-3.5 text-left transition-all duration-200 hover:-translate-y-0.5 ${
+                      historyAnalysisOpen
+                        ? isLight ? 'border-amber-300/60 bg-amber-50/60' : 'border-amber-400/30 bg-amber-400/[0.06]'
+                        : isLight ? 'border-zinc-300 bg-white hover:border-amber-400/40 hover:shadow-md' : 'border-zinc-800 bg-zinc-950/70 hover:border-amber-400/30 hover:bg-zinc-900'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="flex items-center gap-3">
+                        <span className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${historyAnalysisOpen ? 'border-amber-400/30 bg-amber-400/10 text-amber-500' : isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-400 group-hover:text-amber-500' : 'border-zinc-800 bg-zinc-900 text-zinc-500 group-hover:text-amber-500'}`}>
+                          <Sparkles className="h-4 w-4" />
+                        </span>
+                        <span>
+                          <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('freeAnalysisTitle')}</span>
+                          <span className="block mt-0.5 text-[11px] text-zinc-500">{t('freeAnalysisSub')}</span>
+                        </span>
+                      </span>
+                      <ChevronDown className={`h-4 w-4 text-amber-500 shrink-0 transition-transform duration-300 ${historyAnalysisOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                  </button>
+
+                  {historyAnalysisOpen && (
+                    <div className={`mt-2 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-amber-200/60 bg-white shadow-sm' : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.05] via-zinc-950 to-zinc-950'}`}>
+                      {/* Финансовый вывод */}
+                      <div className={`mb-4 rounded-xl border px-4 py-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500 mb-1">{t('financialSummary')}</p>
+                        <p className={`text-sm font-medium leading-relaxed ${historyIncome > historyExpense ? 'text-emerald-600' : historyExpense > 0 ? 'text-red-500' : (isLight ? 'text-zinc-600' : 'text-zinc-400')}`}>
+                          {historyIncome > historyExpense ? t('flowSummaryPositive') : historyExpense > 0 ? t('flowSummaryNegative') : t('flowSummaryEmpty')}
+                        </p>
+                      </div>
+                      {/* Мини-вкладки */}
+                      <div className="flex gap-1 mb-4 overflow-x-auto pb-0.5">
+                        {[['overview', t('overview')], ['income', t('fromWhere')], ['expense', t('whereGo')]].map(([key, label]) => (
+                          <button key={key} onClick={() => setHistoryAnalysisTab(key)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${historyAnalysisTab === key ? 'bg-amber-400/15 text-amber-600' : isLight ? 'text-zinc-500 hover:bg-zinc-100' : 'text-zinc-500 hover:bg-zinc-900'}`}>{label}</button>
+                        ))}
+                      </div>
+                      {historyAnalysisTab === 'overview' && (
+                        <>
+                          <div className="grid grid-cols-3 gap-2 mb-4">
+                            <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">{t('incomeLabel')}</p><p className="font-data text-xs text-emerald-600 tabular-nums truncate">+{historyCurrencySymbol}{formatMoney(historyIncome)}</p></div>
+                            <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">{t('expenseLabel')}</p><p className="font-data text-xs text-red-600 tabular-nums truncate">−{historyCurrencySymbol}{formatMoney(historyExpense)}</p></div>
+                            <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">{t('recordsCount')}</p><p className="font-data text-sm">{historyTrades.length}</p></div>
+                          </div>
+                          <div className={`flex items-end gap-1 h-24 rounded-xl border p-3 overflow-x-auto ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
+                            {historyAnalysis.dailyEntries.length ? historyAnalysis.dailyEntries.map(([date, stats]) => (
+                              <button key={date} title={date} className="group min-w-[18px] flex-1 h-full flex flex-col justify-end gap-0.5">
+                                <span className="w-full rounded-t bg-emerald-500/75 transition-all group-hover:bg-emerald-400" style={{ height: `${Math.max(4, (stats.income / historyAnalysis.maxDaily) * 100)}%` }} />
+                                <span className="w-full rounded-t bg-red-500/70 transition-all group-hover:bg-red-400" style={{ height: `${Math.max(3, (stats.expense / historyAnalysis.maxDaily) * 100)}%` }} />
+                              </button>
+                            )) : <p className="m-auto text-xs text-zinc-500">{t('noRecords')}</p>}
+                          </div>
+                        </>
+                      )}
+                      {historyAnalysisTab === 'income' && (
+                        <div className="space-y-3">
+                          {historyAnalysis.incomeSources.length ? historyAnalysis.incomeSources.slice(0,5).map(([name, value]) => (
+                            <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-emerald-600 tabular-nums">+{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-1.5 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{width:`${Math.max(5,(value/(historyIncome||1))*100)}%`}} /></div></div>
+                          )) : <p className="py-5 text-center text-sm text-zinc-500">{t('noIncomePeriod')}</p>}
+                        </div>
+                      )}
+                      {historyAnalysisTab === 'expense' && (
+                        <div className="space-y-3">
+                          {historyAnalysis.expenseCategories.length ? historyAnalysis.expenseCategories.slice(0,5).map(([name, value]) => (
+                            <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-red-600 tabular-nums">−{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-1.5 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-red-500 transition-all duration-500" style={{width:`${Math.max(5,(value/(historyExpense||1))*100)}%`}} /></div></div>
+                          )) : <p className="py-5 text-center text-sm text-zinc-500">{t('noExpensePeriod')}</p>}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </section>
               )}
 
@@ -1492,11 +1694,11 @@ export default function CalendarScreen() {
               >
                 <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-amber-400/10 to-transparent pointer-events-none" />
                 <div className="relative flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-3">
+                    <span className="flex items-center gap-3">
                     <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/10 text-amber-500 group-hover:scale-110 transition-transform"><Sparkles className="h-4 w-4" /></span>
                     <span>
-                      <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{historyAnalysisOpen ? 'Анализ открыт' : 'Открыть анализ'}</span>
-                      <span className="block mt-0.5 text-[11px] text-zinc-500">Динамика · источники денег · структура расходов</span>
+                      <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{historyAnalysisOpen ? t('analysisOpenState') : t('openAnalysis')}</span>
+                      <span className="block mt-0.5 text-[11px] text-zinc-500">{t('analysisTeaser')}</span>
                     </span>
                   </span>
                   <ChevronDown className={`h-4 w-4 text-amber-500 transition-transform duration-300 ${historyAnalysisOpen ? 'rotate-180' : ''}`} />
@@ -1507,16 +1709,16 @@ export default function CalendarScreen() {
                   <div className="absolute -right-8 -top-10 select-none pointer-events-none font-display text-8xl font-bold tracking-tighter text-amber-400/[0.045]">PRO</div>
                   <div className="relative flex items-start justify-between gap-4 mb-4">
                     <div>
-                      <p className="font-data text-[10px] uppercase tracking-[0.24em] text-amber-500">PRO · Финансовая картина</p>
-                      <h3 className={`mt-1 text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Деньги в движении</h3>
-                      <p className="mt-1 text-xs text-zinc-500">Личный финансовый intelligence — без лишнего шума.</p>
+                      <p className="font-data text-[10px] uppercase tracking-[0.24em] text-amber-500">{t('proFinancialPicture')}</p>
+                      <h3 className={`mt-1 text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('moneyInMotion')}</h3>
+                      <p className="mt-1 text-xs text-zinc-500">{t('proSubtitle')}</p>
                     </div>
                     <Sparkles className="h-5 w-5 shrink-0 text-amber-500" />
                   </div>
 
                   <div className="relative mb-5 overflow-x-auto pb-1">
                     <div className={`inline-flex min-w-max gap-1 rounded-xl border p-1 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-white/5 bg-black/20'}`}>
-                      {[{ code: 'ALL', symbol: 'Все', label: 'Все валюты' }, ...CURRENCIES].map((c) => (
+                      {[{ code: 'ALL', symbol: t('all'), label: t('allCurrencies') }, ...CURRENCIES].map((c) => (
                         <button key={c.code} onClick={() => setHistoryCurrency(c.code)} title={c.label} className={`rounded-lg px-3 py-1.5 text-xs font-data transition-all ${historyCurrency === c.code ? 'bg-amber-400/15 text-amber-500 shadow-sm ring-1 ring-amber-400/20' : 'text-zinc-500 hover:text-zinc-300'}`}>{c.symbol} <span className="ml-1 opacity-60">{c.code === 'ALL' ? '' : c.code}</span></button>
                       ))}
                     </div>
@@ -1530,14 +1732,14 @@ export default function CalendarScreen() {
                           return <button key={code} onClick={() => setHistoryCurrency(code)} className={`rounded-xl border p-3 text-left transition-all hover:-translate-y-0.5 ${isLight ? 'border-zinc-200 bg-zinc-50 hover:border-amber-400/40' : 'border-zinc-800 bg-black/20 hover:border-amber-400/35'}`}>
                             <span className="text-[10px] text-zinc-500">{code}</span>
                             <span className={`mt-1 block font-data text-sm sm:text-base font-semibold tabular-nums leading-tight break-all ${stats.balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.balance >= 0 ? '+' : '−'}{meta.symbol}{formatMoneyShort(Math.abs(stats.balance))}</span>
-                            <span className="mt-1 block text-[10px] text-zinc-500">{stats.count} операций · открыть анализ</span>
+                            <span className="mt-1 block text-[10px] text-zinc-500">{stats.count} {t('transactions')} · {t('openAnalysisAction')}</span>
                           </button>;
-                        }) : <p className="col-span-full py-8 text-center text-sm text-zinc-500">За выбранный период пока нет данных.</p>}
+                        }) : <p className="col-span-full py-8 text-center text-sm text-zinc-500">{t('noRecords')}</p>}
                       </div>
                       <div className={`rounded-2xl border p-3 sm:p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-white/5 bg-black/20'}`}>
-                        <div className="mb-3 flex items-end justify-between gap-3"><div><p className="text-xs font-semibold">Динамика по валютам</p><p className="mt-1 text-[10px] text-zinc-500">Валюты не смешиваются — каждая сохраняет собственный масштаб.</p></div><span className="text-[10px] text-amber-500">PRO</span></div>
+                        <div className="mb-3 flex items-end justify-between gap-3"><div><p className="text-xs font-semibold">{t('currencyDynamics')}</p><p className="mt-1 text-[10px] text-zinc-500">{t('currenciesNotMixed')}</p></div><span className="text-[10px] text-amber-500">PRO</span></div>
                         <div className="grid gap-2">
-                          {historyByCurrency.map(([code, stats]) => { const meta = getCurrencyMeta(code); return <button key={code} onClick={() => setHistoryCurrency(code)} className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800/80 bg-zinc-900/40'}`}><span><span className="block text-xs font-medium">{meta.symbol} {code}</span><span className="mt-0.5 block text-[10px] text-zinc-500">{stats.count} операций за период</span></span><span className={`font-data text-sm ${stats.balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.balance >= 0 ? '+' : '−'}{meta.symbol}{formatMoney(Math.abs(stats.balance))}</span></button>; })}
+                          {historyByCurrency.map(([code, stats]) => { const meta = getCurrencyMeta(code); return <button key={code} onClick={() => setHistoryCurrency(code)} className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800/80 bg-zinc-900/40'}`}><span><span className="block text-xs font-medium">{meta.symbol} {code}</span><span className="mt-0.5 block text-[10px] text-zinc-500">{stats.count} {t('transactions')}</span></span><span className={`font-data text-sm ${stats.balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.balance >= 0 ? '+' : '−'}{meta.symbol}{formatMoney(Math.abs(stats.balance))}</span></button>; })}
                         </div>
                       </div>
                     </div>
@@ -1547,28 +1749,28 @@ export default function CalendarScreen() {
                         <div className="absolute -right-3 -bottom-6 select-none pointer-events-none font-display text-7xl sm:text-8xl font-bold tracking-tighter text-emerald-500/[0.045]">{historyCurrency}</div>
                         <div className="relative flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
-                            <p className="text-[10px] uppercase tracking-wider text-zinc-500">Результат за период</p>
+                            <p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('resultForPeriod')}</p>
                             <p className={`mt-2 font-display font-semibold tracking-tight tabular-nums leading-none break-all text-[clamp(1.75rem,9vw,3.5rem)] ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                               {historyTotal >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoney(Math.abs(historyTotal))}
                             </p>
-                            <p className="mt-3 text-[11px] text-zinc-500">{historyTrades.length} операций · {historyCurrency} · выбранный период</p>
+                            <p className="mt-3 text-[11px] text-zinc-500">{historyTrades.length} {t('transactions')} · {historyCurrency} · {t('currentPeriod')}</p>
                           </div>
                           <div className={`shrink-0 rounded-xl border px-3 py-2 text-right ${isLight ? 'border-amber-200 bg-white/80' : 'border-amber-400/15 bg-amber-400/[0.04]'}`}>
-                            <p className="text-[9px] uppercase tracking-wider text-zinc-500">Статус</p>
-                            <p className={`mt-1 text-xs font-semibold ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>{historyTotal >= 0 ? 'Положительный' : 'Требует внимания'}</p>
+                            <p className="text-[9px] uppercase tracking-wider text-zinc-500">{t('status')}</p>
+                            <p className={`mt-1 text-xs font-semibold ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>{historyTotal >= 0 ? t('positive') : t('needsAttention')}</p>
                           </div>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-5">
                         {[
-                          ['Доходы', historyIncome, 'text-emerald-500'],
-                          ['Расходы', historyExpense, 'text-red-500'],
-                          ['Баланс', Math.abs(historyTotal), historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'],
+                          [t('incomeLabel'), historyIncome, 'text-emerald-500'],
+                          [t('expenseLabel'), historyExpense, 'text-red-500'],
+                          [t('balanceLabel'), Math.abs(historyTotal), historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'],
                         ].map(([label, amount, color]) => (
                           <div key={label} className={`min-w-0 rounded-xl border p-2.5 sm:p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/50'}`}>
                             <p className="text-[9px] sm:text-[10px] text-zinc-500">{label}</p>
-                            <p className={`mt-1 font-data text-sm sm:text-xs font-semibold tabular-nums leading-tight whitespace-nowrap ${color}`}>{label === 'Расходы' ? '−' : label === 'Баланс' && historyTotal >= 0 ? '+' : '+'}{historyCurrencySymbol}{formatMoneyShort(amount)}</p>
+                            <p className={`mt-1 font-data text-sm sm:text-xs font-semibold tabular-nums leading-tight whitespace-nowrap ${color}`}>{label === t('expenseLabel') ? '−' : label === t('balanceLabel') && historyTotal >= 0 ? '+' : '+'}{historyCurrencySymbol}{formatMoneyShort(amount)}</p>
                           </div>
                         ))}
                       </div>
@@ -1576,7 +1778,7 @@ export default function CalendarScreen() {
                   )}
 
                   <div className="mb-4 flex gap-1 overflow-x-auto pb-1">
-                    {[['overview','Обзор'],['income','Откуда'],['expense','Куда'],['radar','Радар'],['habits','Привычки']].map(([key,label]) => <button key={key} onClick={() => setHistoryAnalysisTab(key)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${historyAnalysisTab === key ? 'bg-gradient-to-r from-amber-400/20 to-amber-500/5 text-amber-400 ring-1 ring-amber-400/25 shadow-[0_8px_24px_rgba(251,191,36,.08)]' : isLight ? 'text-zinc-500 hover:bg-zinc-100' : 'text-zinc-500 hover:bg-white/5'}`}>{label}</button>)}
+                    {[['overview', t('overview')], ['income', t('fromWhere')], ['expense', t('whereGo')], ['radar', t('radar')], ['habits', t('habits')]].map(([key, label]) => <button key={key} onClick={() => setHistoryAnalysisTab(key)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${historyAnalysisTab === key ? 'bg-gradient-to-r from-amber-400/20 to-amber-500/5 text-amber-400 ring-1 ring-amber-400/25 shadow-[0_8px_24px_rgba(251,191,36,.08)]' : isLight ? 'text-zinc-500 hover:bg-zinc-100' : 'text-zinc-500 hover:bg-white/5'}`}>{label}</button>)}
                   </div>
 
                   {historyAnalysisTab === 'overview' && (
@@ -1585,10 +1787,10 @@ export default function CalendarScreen() {
                         <div className="absolute inset-x-4 top-[52%] border-t border-dashed border-zinc-500/15 pointer-events-none" />
                         <div className="relative mb-4 flex items-end justify-between gap-3">
                           <div>
-                            <span className="text-sm font-semibold">Динамика периода</span>
-                            <p className="mt-1 text-[10px] text-zinc-500">Последние 10 календарных дней. Значение видно сразу — без наведения.</p>
+                            <span className="text-sm font-semibold">{t('periodDynamics')}</span>
+                            <p className="mt-1 text-[10px] text-zinc-500">{t('last10Days')}</p>
                           </div>
-                          <div className="flex shrink-0 gap-2 text-[9px]"><span className="text-emerald-500">● Приход</span><span className="text-red-400">● Расход</span></div>
+                          <div className="flex shrink-0 gap-2 text-[9px]"><span className="text-emerald-500">● {t('incomeLabel')}</span><span className="text-red-400">● {t('expenseLabel')}</span></div>
                         </div>
                         {historyAnalysis.chartEntries.length ? (
                           <div className="relative grid grid-cols-5 sm:grid-cols-10 gap-x-1.5 gap-y-3 items-end h-52 sm:h-44">
@@ -1607,121 +1809,35 @@ export default function CalendarScreen() {
                               </div>;
                             })}
                           </div>
-                        ) : <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-zinc-800 text-xs text-zinc-500">Добавь ещё несколько операций — здесь появится динамика периода.</div>}
+                        ) : <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-zinc-800 text-xs text-zinc-500">{t('emptyHistoryDesc')}</div>}
                       </div>
                       <div className="grid sm:grid-cols-3 gap-2">
-                        <button onClick={() => setHistoryAnalysisTab('income')} className={`text-left rounded-xl p-3 transition-transform hover:-translate-y-0.5 ${isLight ? 'bg-emerald-50' : 'bg-emerald-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">Главный источник</p><p className="mt-1 text-xs font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p><p className="mt-1 text-[10px] text-emerald-500">Открыть структуру →</p></button>
-                        <button onClick={() => setHistoryAnalysisTab('expense')} className={`text-left rounded-xl p-3 transition-transform hover:-translate-y-0.5 ${isLight ? 'bg-red-50' : 'bg-red-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">Зона расходов</p><p className="mt-1 text-xs font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p><p className="mt-1 text-[10px] text-red-400">Посмотреть детали →</p></button>
-                        <div className={`rounded-xl p-3 ${isLight ? 'bg-amber-50' : 'bg-amber-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">Финансовый вывод</p><p className="mt-1 text-xs font-semibold leading-relaxed">{historyIncome > historyExpense ? 'Поток положительный: доходы покрывают расходы.' : historyExpense > 0 ? 'Расходы сейчас сильнее — стоит посмотреть структуру.' : 'Данных пока мало для уверенного вывода.'}</p></div>
+                        <button onClick={() => setHistoryAnalysisTab('income')} className={`text-left rounded-xl p-3 transition-transform hover:-translate-y-0.5 ${isLight ? 'bg-emerald-50' : 'bg-emerald-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">{t('mainSource')}</p><p className="mt-1 text-xs font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p><p className="mt-1 text-[10px] text-emerald-500">{t('openStructure')}</p></button>
+                        <button onClick={() => setHistoryAnalysisTab('expense')} className={`text-left rounded-xl p-3 transition-transform hover:-translate-y-0.5 ${isLight ? 'bg-red-50' : 'bg-red-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">{t('expenseZone')}</p><p className="mt-1 text-xs font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p><p className="mt-1 text-[10px] text-red-400">{t('viewDetails')}</p></button>
+                        <div className={`rounded-xl p-3 ${isLight ? 'bg-amber-50' : 'bg-amber-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">{t('financialSummary')}</p><p className="mt-1 text-xs font-semibold leading-relaxed">{historyIncome > historyExpense ? t('flowPositivePro') : historyExpense > 0 ? t('flowNegativePro') : t('flowLittleData')}</p></div>
                       </div>
                     </div>
                   )}
-                  {historyAnalysisTab === 'income' && <div className="space-y-3">{historyAnalysis.incomeSources.length ? historyAnalysis.incomeSources.slice(0,6).map(([name,value]) => <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-emerald-500">+{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{width:`${Math.max(5,(value/(historyIncome||1))*100)}%`}} /></div></div>) : <p className="py-5 text-center text-sm text-zinc-500">Нет доходов за этот период</p>}</div>}
-                  {historyAnalysisTab === 'expense' && <div className="space-y-3">{historyAnalysis.expenseCategories.length ? historyAnalysis.expenseCategories.slice(0,6).map(([name,value]) => <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-red-500">−{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-red-500" style={{width:`${Math.max(5,(value/(historyExpense||1))*100)}%`}} /></div></div>) : <p className="py-5 text-center text-sm text-zinc-500">Нет расходов за этот период</p>}</div>}
+                  {historyAnalysisTab === 'income' && <div className="space-y-3">{historyAnalysis.incomeSources.length ? historyAnalysis.incomeSources.slice(0,6).map(([name,value]) => <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-emerald-500">+{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{width:`${Math.max(5,(value/(historyIncome||1))*100)}%`}} /></div></div>) : <p className="py-5 text-center text-sm text-zinc-500">{t('noIncomePeriod')}</p>}</div>}
+                  {historyAnalysisTab === 'expense' && <div className="space-y-3">{historyAnalysis.expenseCategories.length ? historyAnalysis.expenseCategories.slice(0,6).map(([name,value]) => <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-red-500">−{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-red-500" style={{width:`${Math.max(5,(value/(historyExpense||1))*100)}%`}} /></div></div>) : <p className="py-5 text-center text-sm text-zinc-500">{t('noExpensePeriod')}</p>}</div>}
                   {historyAnalysisTab === 'radar' && <div className="space-y-2">
-                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-amber-200 bg-amber-50/40' : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.07] to-transparent'}`}><p className="font-data text-[10px] uppercase tracking-[0.18em] text-amber-500">✦ Финансовый радар</p><div className="mt-3 grid gap-2 sm:grid-cols-2">
-                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">Сила периода</p><p className="mt-1 text-sm font-semibold">{historyExpense > 0 ? `Доходы выше расходов в ${(historyIncome / historyExpense).toFixed(1)}×` : historyIncome > 0 ? 'Период без расходов' : 'Нужны данные'}</p></div>
-                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">Главный источник</p><p className="mt-1 text-sm font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || 'Пока нет доходов'}</p></div>
-                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">Зона внимания</p><p className="mt-1 text-sm font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || 'Расходов пока нет'}</p></div>
-                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">Лучший день</p><p className="mt-1 text-sm font-semibold">{historyAnalysis.dailyEntries.length ? historyAnalysis.dailyEntries.reduce((best, item) => item[1].income - item[1].expense > best[1].income - best[1].expense ? item : best)[0] : 'Недостаточно данных'}</p></div>
+                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-amber-200 bg-amber-50/40' : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.07] to-transparent'}`}><p className="font-data text-[10px] uppercase tracking-[0.18em] text-amber-500">{t('financialRadar')}</p><div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">{t('periodPower')}</p><p className="mt-1 text-sm font-semibold">{historyExpense > 0 ? `${(historyIncome / historyExpense).toFixed(1)}×` : historyIncome > 0 ? t('positive') : '—'}</p></div>
+                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">{t('mainSource')}</p><p className="mt-1 text-sm font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p></div>
+                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">{t('attentionZone')}</p><p className="mt-1 text-sm font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p></div>
+                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">{t('bestDay')}</p><p className="mt-1 text-sm font-semibold">{historyAnalysis.dailyEntries.length ? historyAnalysis.dailyEntries.reduce((best, item) => item[1].income - item[1].expense > best[1].income - best[1].expense ? item : best)[0] : '—'}</p></div>
                     </div></div>
                   </div>}
                   {historyAnalysisTab === 'habits' && <div className="grid gap-2 sm:grid-cols-3">
-                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}><p className="text-[10px] uppercase tracking-wider text-zinc-500">Активность</p><p className="mt-2 text-lg font-semibold">{historyTrades.length}</p><p className="text-xs text-zinc-500">операций за период</p></div>
-                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}><p className="text-[10px] uppercase tracking-wider text-zinc-500">Частый доход</p><p className="mt-2 text-sm font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p><p className="text-xs text-zinc-500">формирует поток</p></div>
-                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}><p className="text-[10px] uppercase tracking-wider text-zinc-500">Паттерн расходов</p><p className="mt-2 text-sm font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p><p className="text-xs text-zinc-500">главная категория</p></div>
+                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}><p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('activity')}</p><p className="mt-2 text-lg font-semibold">{historyTrades.length}</p><p className="text-xs text-zinc-500">{t('transactions')}</p></div>
+                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}><p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('frequentIncome')}</p><p className="mt-2 text-sm font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p><p className="text-xs text-zinc-500">{t('incomeSources')}</p></div>
+                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}><p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('expensePattern')}</p><p className="mt-2 text-sm font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p><p className="text-xs text-zinc-500">{t('expenseStructure')}</p></div>
                   </div>}
                 </section>
               )}
 
               {!traderMode ? (
                 <>
-                  {historyAnalysisOpen && (
-                    <>
-                  {/* Money summary — shown only inside analysis */}
-                  <div className={`rounded-2xl border p-4 sm:p-5 mb-4 ${
-                    isLight ? 'bg-white border-zinc-300 shadow-sm' : 'bg-zinc-950/70 border-zinc-800'
-                  }`}>
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <p className={`text-xs ${isLight ? 'text-zinc-600' : 'text-zinc-500'}`}>{t('resultForPeriod')}</p>
-                      <div className={`flex gap-0.5 shrink-0 rounded-lg border p-0.5 ${
-                        isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950/60'
-                      }`}>
-                        {[{ code: 'ALL', symbol: 'Все', label: 'Все валюты' }, ...CURRENCIES].map((c) => (
-                          <button
-                            key={c.code}
-                            onClick={() => setHistoryCurrency(c.code)}
-                            title={c.label}
-                            className={[
-                              'min-w-[30px] h-7 px-1.5 rounded-md text-sm font-data font-medium border transition-colors flex items-center justify-center',
-                              historyCurrency === c.code
-                                ? 'border-amber-400/60 bg-amber-400/15 text-amber-500'
-                                : isLight
-                                ? 'border-transparent text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100'
-                                : 'border-transparent text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/70',
-                            ].join(' ')}
-                          >
-                            {c.symbol}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    {historyCurrency === 'ALL' ? (
-                      <p className={`text-sm ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>Итоги показаны отдельно по валютам</p>
-                    ) : <div className={`font-display text-4xl sm:text-5xl font-semibold tracking-tight tabular-nums ${historyTotal >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {historyTotal >= 0 ? '+' : '-'}{historyCurrencySymbol}{formatMoney(historyTotal)}
-                    </div>}
-                  </div>
-                    </>
-                  )}
-
-                  {historyAnalysisOpen && (
-                    <div className={`relative overflow-hidden mb-4 rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-300 bg-white shadow-sm' : 'border-zinc-800 bg-zinc-950/70'}`}>
-                      {historyCurrency === 'ALL' ? (
-                        <div className="py-6 text-center">
-                          <Sparkles className="h-6 w-6 mx-auto mb-2 text-amber-500" />
-                          <p className={`text-sm font-medium ${isLight ? 'text-zinc-700' : 'text-zinc-200'}`}>Выбери валюту для анализа</p>
-                          <p className="mt-1 text-xs text-zinc-500">Так суммы разных валют не будут смешиваться.</p>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="absolute -right-4 -top-6 select-none pointer-events-none font-display text-7xl font-bold tracking-tighter text-zinc-500/[0.035]">ANALYSIS</div>
-                          <div className="relative flex items-end justify-between gap-3 mb-4">
-                            <div>
-                              <p className="font-data text-[10px] uppercase tracking-[0.22em] text-amber-500">Деньги в движении</p>
-                              <p className={`mt-1 text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Посмотри, откуда приходят и куда уходят деньги</p>
-                            </div>
-                          </div>
-                          <div className="relative flex gap-1 overflow-x-auto pb-1 mb-4">
-                            {[['overview','Обзор'],['income','Откуда деньги'],['expense','Куда уходят']].map(([key,label]) => (
-                              <button key={key} onClick={() => setHistoryAnalysisTab(key)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${historyAnalysisTab === key ? 'bg-amber-400/15 text-amber-600' : isLight ? 'text-zinc-500 hover:bg-zinc-100' : 'text-zinc-500 hover:bg-zinc-900'}`}>{label}</button>
-                            ))}
-                          </div>
-                          {historyAnalysisTab === 'overview' && (
-                            <>
-                              <div className="grid grid-cols-3 gap-2 mb-4">
-                                <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">Доходы</p><p className="font-data text-xs text-emerald-600 truncate">+{historyCurrencySymbol}{formatMoney(historyIncome)}</p></div>
-                                <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">Расходы</p><p className="font-data text-xs text-red-600 truncate">−{historyCurrencySymbol}{formatMoney(historyExpense)}</p></div>
-                                <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">Записей</p><p className="font-data text-sm">{historyTrades.length}</p></div>
-                              </div>
-                              <p className="text-xs font-medium mb-3">Динамика периода</p>
-                              <div className="flex items-end gap-1 h-28 rounded-xl border p-3 overflow-x-auto">
-                                {historyAnalysis.dailyEntries.length ? historyAnalysis.dailyEntries.map(([date, stats]) => (
-                                  <button key={date} title={`${date}: доход ${formatMoney(stats.income)}, расход ${formatMoney(stats.expense)}`} className="group min-w-[20px] flex-1 h-full flex flex-col justify-end gap-1">
-                                    <span className="w-full rounded-t bg-emerald-500/75 transition-all group-hover:bg-emerald-400" style={{ height: `${Math.max(4, (stats.income / historyAnalysis.maxDaily) * 100)}%` }} />
-                                    <span className="w-full rounded-t bg-red-500/70 transition-all group-hover:bg-red-400" style={{ height: `${Math.max(3, (stats.expense / historyAnalysis.maxDaily) * 100)}%` }} />
-                                  </button>
-                                )) : <p className="m-auto text-xs text-zinc-500">Пока недостаточно данных</p>}
-                              </div>
-                            </>
-                          )}
-                          {historyAnalysisTab === 'income' && <div className="relative space-y-3 overflow-hidden rounded-xl p-2"><div className="absolute -left-2 top-0 select-none pointer-events-none font-display text-5xl font-bold tracking-tighter text-emerald-500/[0.06]">ОТКУДА</div><p className="relative pt-9 pb-1 text-xs text-zinc-500">Источники, которые формируют твой денежный поток</p>{historyAnalysis.incomeSources.length ? historyAnalysis.incomeSources.map(([name,value]) => <div key={name} className="relative"><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-emerald-600">+{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{width: `${Math.max(5, (value / (historyIncome || 1)) * 100)}%`}} /></div></div>) : <p className="py-6 text-center text-sm text-zinc-500">Нет доходов</p>}</div>}
-                          {historyAnalysisTab === 'expense' && <div className="relative space-y-3 overflow-hidden rounded-xl p-2"><div className="absolute -left-2 top-0 select-none pointer-events-none font-display text-5xl font-bold tracking-tighter text-red-500/[0.06]">КУДА</div><p className="relative pt-9 pb-1 text-xs text-zinc-500">Направления, которые забирают больше всего денег</p>{historyAnalysis.expenseCategories.length ? historyAnalysis.expenseCategories.map(([name,value]) => <div key={name} className="relative"><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-red-600">−{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-red-500 transition-all duration-500" style={{width: `${Math.max(5, (value / (historyExpense || 1)) * 100)}%`}} /></div></div>) : <p className="py-6 text-center text-sm text-zinc-500">Нет расходов</p>}</div>}
-                        </>
-                      )}
-                    </div>
-                  )}
-
                   {/* Compact period selector */}
                   <div className="relative flex items-center gap-2 mb-3">
                     <button
@@ -1795,13 +1911,13 @@ export default function CalendarScreen() {
                   )}
 
                   <div className={`flex items-center justify-between mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
-                    <p className="text-xs">{historyTrades.length} {traderMode ? 'операций' : 'записей'}</p>
+                    <p className="text-xs">{historyTrades.length} {traderMode ? t('transactions') : t('records')}</p>
                     {periodPreset !== 'Вся история' && (
                       <button
                         onClick={() => setHistoryFiltersOpen(true)}
                         className={`text-xs ${isLight ? 'text-zinc-600 hover:text-zinc-900' : 'text-zinc-600 hover:text-zinc-300'} transition-colors`}
                       >
-                        Изменить период
+                        {t('changePeriod')}
                       </button>
                     )}
                   </div>
@@ -1822,11 +1938,11 @@ export default function CalendarScreen() {
                                 : 'border-zinc-800/80 hover:bg-zinc-900 text-zinc-100'
                             }`}
                           >
-                            <span className={`h-9 w-9 shrink-0 rounded-xl flex items-center justify-center ${entry.pnl >= 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                            <span className={`h-9 w-9 shrink-0 rounded-xl flex items-center justify-center ${entry.pnl >= 0 ? (isLight ? 'bg-emerald-100 text-emerald-600' : 'bg-emerald-500/15 text-emerald-400') : (isLight ? 'bg-red-100 text-red-600' : 'bg-red-500/15 text-red-400')}`}>
                               <Icon className="h-4 w-4" />
                             </span>
                             <span className="min-w-0 flex-1">
-                              <span className={`block text-sm font-medium truncate ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{entry.instrument || 'Другое'}</span>
+                              <span className={`block text-sm font-medium truncate ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{entry.instrument || t('catOther')}</span>
                               <span className={`block text-[11px] mt-0.5 truncate ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{formatDateLabel(entry.dateKey)} · {entry.time}{entry.comment ? ` · ${entry.comment}` : ''}</span>
                             </span>
                             <span className={`font-data text-sm font-medium shrink-0 tabular-nums whitespace-nowrap ${entry.pnl >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -1841,8 +1957,8 @@ export default function CalendarScreen() {
                       isLight ? 'border-zinc-300 bg-white/50' : 'border-zinc-800'
                     }`}>
                       <Wallet className={`h-8 w-8 mx-auto mb-3 ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`} />
-                      <p className={`text-sm ${isLight ? 'text-zinc-600' : 'text-zinc-500'}`}>Пока здесь пусто</p>
-                      <p className={`text-xs mt-1 ${isLight ? 'text-zinc-500' : 'text-zinc-700'}`}>Добавляй доходы и расходы — календарь соберёт картину месяца.</p>
+                      <p className={`text-sm ${isLight ? 'text-zinc-600' : 'text-zinc-500'}`}>{t('emptyHistoryTitle')}</p>
+                      <p className={`text-xs mt-1 ${isLight ? 'text-zinc-500' : 'text-zinc-700'}`}>{t('emptyHistoryDesc')}</p>
                     </div>
                   )}
 
@@ -1858,9 +1974,9 @@ export default function CalendarScreen() {
                       }`}
                     >
                       <Download className="h-3.5 w-3.5" />
-                      Скачать отчёт
+                      {t('downloadReport')}
                     </button>
-                      <p className={`mt-1 px-1 text-[10px] leading-tight ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>Красивый денежный отчёт за выбранный период</p>
+                      <p className={`mt-1 px-1 text-[10px] leading-tight ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('downloadReportSubtitle')}</p>
                     </div>
                     <button
                       onClick={handleClearHistory}
@@ -1873,146 +1989,314 @@ export default function CalendarScreen() {
                           : 'border-zinc-800 text-zinc-600 hover:text-red-400 hover:border-red-500/40',
                       ].join(' ')}
                     >
-                      {confirmingClear ? 'Точно удалить?' : 'Очистить историю'}
+                      {confirmingClear ? t('confirmClearHistory') : t('clearHistory')}
                     </button>
                   </div>
                 </>
               ) : (
                 <>
-                  {/* PRO history — улучшен визуал для светлой темы */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <button
-                      onClick={() => {
-                        if (displayMode === 'usd' && depositSize <= 0) {
-                          handleEditDeposit();
-                          return;
-                        }
-                        setDisplayMode((m) => (m === 'usd' ? 'percent' : 'usd'));
-                      }}
-                      className={`rounded-md border px-2.5 py-1 font-data text-xs transition-colors ${
+                  {/* PRO HISTORY — Premium redesign with donut chart */}
+
+                  {/* ── Luxury Donut + Stats Header ─────────────────────── */}
+                  {(() => {
+                    const hTrades = historyTrades;
+                    const hWin = hTrades.filter(t => t.pnl >= 0).length;
+                    const hLoss = hTrades.length - hWin;
+                    const hWinrate = hTrades.length > 0 ? Math.round((hWin / hTrades.length) * 100) : 0;
+                    const hTotal = hTrades.reduce((s, t) => s + t.pnl, 0);
+                    const r = 38;
+                    const circ = 2 * Math.PI * r;
+                    const offset = circ - (hWinrate / 100) * circ;
+                    const lossOffset = circ - ((hLoss / (hTrades.length || 1)) * circ);
+                    return (
+                      <div className={`relative mb-4 overflow-hidden rounded-2xl border p-4 sm:p-5 ${
                         isLight
-                          ? 'border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400'
-                          : 'border-zinc-700 bg-zinc-950 text-zinc-300 hover:border-zinc-600'
-                      }`}
-                    >
-                      {displayMode === 'usd' ? '$' : '%'}
-                    </button>
-                    <button
-                      onClick={handleEditDeposit}
-                      className={`font-data text-xs ${isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-500 hover:text-zinc-300'} transition-colors`}
-                    >
-                      Депозит: {depositSize > 0 ? `${currencySymbol}${formatMoney(depositSize)}` : 'не задан'} ✎
-                    </button>
-                    {ctraderConnected && (
-                      <button
-                        onClick={handleSyncCtraderTrades}
-                        disabled={syncingCtrader}
-                        className={`ml-auto flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs transition-colors ${
-                          isLight
-                            ? 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                            : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
-                        }`}
-                      >
-                        <RefreshCw className={`h-3 w-3 ${syncingCtrader ? 'animate-spin' : ''}`} />
-                        {syncingCtrader ? 'Синхр...' : 'Синхронизировать'}
-                      </button>
-                    )}
+                          ? 'border-zinc-200 bg-gradient-to-br from-white to-zinc-50/80 shadow-sm'
+                          : 'border-amber-400/15 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black shadow-[0_24px_60px_rgba(0,0,0,.4)]'
+                      }`}>
+                        {/* Ambient glow */}
+                        <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-amber-400/[0.06] blur-3xl" />
+                        <div className="pointer-events-none absolute -left-6 -bottom-6 h-32 w-32 rounded-full bg-emerald-500/[0.05] blur-2xl" />
+
+                        <div className="relative flex items-center gap-5">
+                          {/* Donut SVG */}
+                          <div className="relative flex shrink-0 items-center justify-center" style={{width:96,height:96}}>
+                            <svg width="96" height="96" viewBox="0 0 96 96" className="-rotate-90">
+                              {/* Track */}
+                              <circle cx="48" cy="48" r={r} strokeWidth="9"
+                                stroke={isLight ? '#e2e8f0' : '#27272a'} fill="none" />
+                              {/* Loss arc (full if any losses) */}
+                              {hTrades.length > 0 && hLoss > 0 && (
+                                <circle cx="48" cy="48" r={r} strokeWidth="9"
+                                  stroke="rgb(239 68 68 / 0.75)"
+                                  strokeDasharray={circ}
+                                  strokeDashoffset="0"
+                                  fill="none" />
+                              )}
+                              {/* Win arc */}
+                              {hTrades.length > 0 && hWin > 0 && (
+                                <circle cx="48" cy="48" r={r} strokeWidth="9"
+                                  stroke="rgb(16 185 129)"
+                                  strokeDasharray={circ}
+                                  strokeDashoffset={offset}
+                                  strokeLinecap="round"
+                                  fill="none"
+                                  style={{transition:'stroke-dashoffset 0.8s cubic-bezier(.4,0,.2,1)'}} />
+                              )}
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center leading-none">
+                              <span className={`font-data text-xl font-bold tabular-nums ${
+                                hTrades.length === 0 ? 'text-zinc-500'
+                                : hWinrate >= 50 ? 'text-emerald-500' : 'text-red-500'
+                              }`}>{hWinrate}%</span>
+                              <span className={`mt-1 text-[9px] font-bold uppercase tracking-widest ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>WIN</span>
+                            </div>
+                          </div>
+
+                          {/* Stats */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="font-data text-[10px] uppercase tracking-[0.22em] text-amber-500 font-bold">PRO</span>
+                              <span className={`font-data text-[10px] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>·</span>
+                              <span className={`font-data text-[10px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{hTrades.length} {t('trades')}</span>
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                              <div className="flex items-center gap-2">
+                                <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                                <span className={`font-data text-xs font-semibold text-emerald-600`}>+{hWin} {t('profitTrade')}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="h-2 w-2 rounded-full bg-red-500 shrink-0" />
+                                <span className={`font-data text-xs font-semibold text-red-500`}>−{hLoss} {t('lossTrade')}</span>
+                              </div>
+                            </div>
+                            <div className={`mt-3 flex items-center justify-between rounded-xl border px-3 py-2 font-data ${
+                              isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/80'
+                            }`}>
+                              <span className={`text-[10px] uppercase tracking-wide ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('total')}:</span>
+                              <span className={`text-sm font-bold tabular-nums ${hTotal >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                {hTotal >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoney(Math.abs(hTotal))}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Win-rate bar */}
+                        {hTrades.length > 0 && (
+                          <div className="relative mt-4 overflow-hidden rounded-full" style={{height:4}}>
+                            <div className={`absolute inset-0 ${isLight ? 'bg-red-200' : 'bg-red-500/20'}`} />
+                            <div
+                              className="absolute inset-y-0 left-0 rounded-full bg-emerald-500 transition-all duration-700"
+                              style={{width:`${hWinrate}%`}}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* ── Compact Luxury Filter Bar ───────────────────────── */}
+                  <div className={`mb-4 rounded-2xl border p-3 ${
+                    isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800/80 bg-zinc-950/60'
+                  }`}>
+                    {/* Period row */}
+                    <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                      <span className={`shrink-0 font-data text-[9px] uppercase tracking-[0.18em] mr-1 ${isLight ? 'text-zinc-400 font-semibold' : 'text-zinc-600'}`}>{t('period') || 'Период'}</span>
+                      <div className="flex gap-1 overflow-x-auto pb-0.5 flex-wrap">
+                        {PERIOD_PRESETS.map((p) => (
+                          <button key={p} onClick={() => handlePresetChange(p)}
+                            className={`shrink-0 rounded-full border px-2.5 py-1 font-data text-[10px] transition-all ${
+                              periodPreset === p
+                                ? 'border-amber-400/60 bg-amber-400/12 text-amber-500 font-semibold shadow-[0_0_12px_rgba(251,191,36,.15)]'
+                                : isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-500 hover:border-amber-400/40 hover:text-zinc-700'
+                                : 'border-zinc-800 bg-zinc-900/50 text-zinc-500 hover:border-amber-400/30 hover:text-zinc-300'
+                            }`}>{p}</button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Date range */}
+                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 mb-3">
+                      <input type="date" value={dateFrom} onChange={(e) => handleDateFromChange(e.target.value)}
+                        className={`min-w-0 rounded-xl border px-2 py-1.5 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
+                          isLight ? 'bg-zinc-50 border-zinc-200 text-zinc-800' : 'bg-zinc-900 border-zinc-700 text-zinc-200'
+                        }`} />
+                      <span className={`text-center text-xs ${isLight ? 'text-zinc-300' : 'text-zinc-700'}`}>—</span>
+                      <input type="date" value={dateTo} onChange={(e) => handleDateToChange(e.target.value)}
+                        className={`min-w-0 rounded-xl border px-2 py-1.5 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
+                          isLight ? 'bg-zinc-50 border-zinc-200 text-zinc-800' : 'bg-zinc-900 border-zinc-700 text-zinc-200'
+                        }`} />
+                    </div>
+
+                    {/* Platform + Currency row */}
+                    <div className="flex gap-1.5 flex-wrap">
+                      {/* Platform select */}
+                      <div className="relative flex-1 min-w-[110px]">
+                        <select value={platformFilter} onChange={(e) => setPlatformFilter(e.target.value)}
+                          className={`w-full appearance-none rounded-xl border px-3 py-2 pr-7 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
+                            isLight ? 'bg-zinc-50 border-zinc-200 text-zinc-700' : 'bg-zinc-900 border-zinc-700 text-zinc-200'
+                          }`}>
+                          <option value="ALL">{t('allSources')}</option>
+                          {PLATFORMS.map((item) => <option key={item} value={item}>{item}</option>)}
+                        </select>
+                        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500">
+                          <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" /></svg>
+                        </span>
+                      </div>
+
+                      {/* Currency selector */}
+                      <div className={`inline-flex gap-1 rounded-xl border p-1 ${
+                        isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/50'
+                      }`}>
+                        {[{ code: 'ALL', symbol: t('all') }, ...CURRENCIES].map((c) => (
+                          <button key={c.code} onClick={() => setHistoryCurrency(c.code)}
+                            title={c.code}
+                            className={`rounded-lg px-2 py-1 text-[10px] font-data transition-all ${
+                              historyCurrency === c.code
+                                ? 'bg-amber-400/15 text-amber-500 ring-1 ring-amber-400/20 font-semibold'
+                                : isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-300'
+                            }`}>
+                            {c.symbol}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="mb-3">
-                    <button onClick={() => setProFiltersOpen((v) => !v)} className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-colors ${proFiltersOpen ? 'border-amber-400/45 bg-amber-400/10' : isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/70'}`}>
-                      <span><span className="block text-xs font-medium">Период и фильтры</span><span className="mt-0.5 block text-[10px] text-zinc-500">{periodPreset} · {platformFilter === 'ALL' ? 'Все источники' : platformFilter}</span></span>
-                      <ChevronDown className={`h-4 w-4 text-amber-500 transition-transform ${proFiltersOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    {proFiltersOpen && <div className={`mt-2 space-y-3 rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50/70' : 'border-zinc-800 bg-black/20'}`}>
-                      <div className="flex flex-wrap gap-1.5">{PERIOD_PRESETS.map((p) => <button key={p} onClick={() => handlePresetChange(p)} className={`rounded-full border px-2.5 py-1.5 font-data text-[10px] ${periodPreset === p ? 'border-amber-400/60 bg-amber-400/10 text-amber-500' : isLight ? 'border-zinc-300 bg-white text-zinc-600' : 'border-zinc-700 bg-zinc-950 text-zinc-400'}`}>{p}</button>)}</div>
-                      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5"><input type="date" value={dateFrom} onChange={(e) => handleDateFromChange(e.target.value)} className={`min-w-0 rounded-xl border px-2 py-2 text-xs font-data ${isLight ? 'bg-white border-zinc-300 text-zinc-900' : 'bg-zinc-950 border-zinc-700 text-zinc-200'}`} /><span className="text-zinc-500">—</span><input type="date" value={dateTo} onChange={(e) => handleDateToChange(e.target.value)} className={`min-w-0 rounded-xl border px-2 py-2 text-xs font-data ${isLight ? 'bg-white border-zinc-300 text-zinc-900' : 'bg-zinc-950 border-zinc-700 text-zinc-200'}`} /></div>
-                      <select value={platformFilter} onChange={(e) => setPlatformFilter(e.target.value)} className={`w-full rounded-xl border px-3 py-2 text-xs font-data ${isLight ? 'bg-white border-zinc-300 text-zinc-900' : 'bg-zinc-950 border-zinc-700 text-zinc-200'}`}><option value="ALL">Все источники</option>{PLATFORMS.map((item) => <option key={item} value={item}>{item}</option>)}</select>
-                    </div>}
-                  </div>
-
-                  <div className="flex gap-1.5 mb-4">
-                    {[{ key: 'all', label: 'Все' }, { key: 'win', label: 'Прибыль' }, { key: 'loss', label: 'Убыток' }].map((opt) => (
-                      <button
-                        key={opt.key}
-                        onClick={() => setHistoryWinLoss(opt.key)}
-                        className={[
-                          'flex-1 rounded-md border px-2 py-1.5 font-data text-xs transition-colors',
+                  {/* ── Win/Loss quick filter ───────────────────────────── */}
+                  <div className={`flex gap-1 mb-4 rounded-xl border p-1 ${
+                    isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'
+                  }`}>
+                    {[
+                      { key: 'all', label: t('all') },
+                      { key: 'win', label: `✦ ${t('profit')}` },
+                      { key: 'loss', label: `− ${t('loss')}` },
+                    ].map((opt) => (
+                      <button key={opt.key} onClick={() => setHistoryWinLoss(opt.key)}
+                        className={`flex-1 rounded-lg py-2 font-data text-xs font-medium transition-all ${
                           historyWinLoss === opt.key
-                            ? 'border-amber-400/60 bg-amber-400/10 text-amber-400'
-                            : isLight
-                            ? 'border-zinc-300 bg-white text-zinc-600 hover:text-zinc-800 hover:border-zinc-400'
-                            : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
-                        ].join(' ')}
-                      >
+                            ? opt.key === 'win'
+                              ? 'bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-400/25'
+                              : opt.key === 'loss'
+                              ? 'bg-red-500/15 text-red-500 ring-1 ring-red-400/20'
+                              : (isLight ? 'bg-white text-zinc-900 shadow-sm' : 'bg-amber-400/12 text-amber-400 ring-1 ring-amber-400/20')
+                            : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-500 hover:text-zinc-300'
+                        }`}>
                         {opt.label}
                       </button>
                     ))}
                   </div>
 
-                  <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'} mb-2`}>{historyTrades.length} сделок</p>
+                  {/* ── Display mode + deposit + sync ──────────────────── */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <button
+                      onClick={() => {
+                        if (displayMode === 'usd' && depositSize <= 0) { handleEditDeposit(); return; }
+                        setDisplayMode((m) => (m === 'usd' ? 'percent' : 'usd'));
+                      }}
+                      className={`rounded-lg border px-2.5 py-1 font-data text-xs font-semibold transition-all ${
+                        isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-amber-400/50'
+                        : 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-amber-400/40'
+                      }`}
+                    >
+                      {displayMode === 'usd' ? currencySymbol : '%'}
+                    </button>
+                    <button onClick={handleEditDeposit}
+                      className={`font-data text-xs transition-colors ${isLight ? 'text-zinc-400 hover:text-zinc-700' : 'text-zinc-600 hover:text-zinc-300'}`}>
+                      {t('deposit')}: {depositSize > 0 ? `${currencySymbol}${formatMoney(depositSize)}` : t('notSet')} ✎
+                    </button>
+                    {ctraderConnected && (
+                      <button onClick={handleSyncCtraderTrades} disabled={syncingCtrader}
+                        className={`ml-auto flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all ${
+                          isLight ? 'border-emerald-300/80 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                          : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                        }`}>
+                        <RefreshCw className={`h-3 w-3 ${syncingCtrader ? 'animate-spin' : ''}`} />
+                        {syncingCtrader ? t('syncing') : t('synchronize')}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* ── Trade count label ──────────────────────────────── */}
+                  <p className={`text-xs mb-2 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
+                    {historyTrades.length} {t('trades')} {periodPreset !== 'Вся история' ? `· ${periodPreset}` : ''}
+                    {platformFilter !== 'ALL' ? ` · ${platformFilter}` : ''}
+                    {historyCurrency !== 'ALL' ? ` · ${historyCurrency}` : ''}
+                  </p>
+
+                  {/* ── Trades list ────────────────────────────────────── */}
                   {historyTrades.length > 0 ? (
-                    <div className={`rounded-lg border divide-y overflow-y-auto ${
-                      isLight
-                        ? 'bg-white border-zinc-300 divide-zinc-200'
-                        : 'bg-zinc-950 border-zinc-800 divide-zinc-800'
+                    <div className={`rounded-2xl border overflow-hidden divide-y ${
+                      isLight ? 'border-zinc-200 bg-white divide-zinc-100' : 'border-zinc-800 bg-zinc-950 divide-zinc-800/70'
                     }`}>
                       {historyTrades.map((trade) => (
                         <button
                           key={trade.id}
                           onClick={() => jumpToTradeDate(trade.dateKey)}
-                          className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors ${
-                            isLight ? 'hover:bg-zinc-50' : 'hover:bg-zinc-900'
+                          className={`w-full flex items-center justify-between px-4 py-3 text-left transition-all group ${
+                            isLight ? 'hover:bg-zinc-50/80' : 'hover:bg-zinc-900/70'
                           }`}
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <span className={`font-data text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'} w-14 shrink-0`}>{formatDateLabel(trade.dateKey)}</span>
-                            <span className={`text-sm font-medium truncate ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{trade.instrument}</span>
+                            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border font-data text-[10px] font-bold transition-transform group-hover:scale-105 ${
+                              trade.pnl >= 0
+                                ? isLight ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
+                                : isLight ? 'border-red-200 bg-red-50 text-red-700' : 'border-red-500/20 bg-red-500/10 text-red-400'
+                            }`}>
+                              {trade.pnl >= 0 ? '+' : '−'}
+                            </span>
+                            <span className="min-w-0">
+                              <span className={`block text-sm font-medium truncate ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>
+                                {trade.instrument}
+                              </span>
+                              <span className={`block text-[11px] mt-0.5 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
+                                {formatDateLabel(trade.dateKey)} · {trade.time}
+                                {trade.platform && trade.platform !== 'Manual' ? ` · ${trade.platform}` : ''}
+                              </span>
+                            </span>
                           </div>
-                          <span className={`font-data text-sm font-medium shrink-0 ${trade.pnl >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          <span className={`font-data text-sm font-semibold shrink-0 tabular-nums ${trade.pnl >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
                             {formatPnlDisplay(trade.pnl)}
                           </span>
                         </button>
                       ))}
                     </div>
                   ) : (
-                    <p className={`text-sm text-center py-6 ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>Нет сделок за выбранный период</p>
+                    <div className={`rounded-2xl border border-dashed px-6 py-14 text-center ${
+                      isLight ? 'border-zinc-200' : 'border-zinc-800'
+                    }`}>
+                      <p className={`text-sm ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('noTradesPeriod')}</p>
+                    </div>
                   )}
 
-                  <div className={`flex items-center justify-between rounded-md border px-3 py-2.5 mt-3 ${
-                    isLight ? 'bg-white border-zinc-300' : 'bg-zinc-950 border-zinc-800'
+                  {/* ── Footer: Total + actions ─────────────────────────── */}
+                  <div className={`flex items-center justify-between rounded-xl border px-4 py-3 mt-3 ${
+                    isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-zinc-950 border-zinc-800'
                   }`}>
-                    <span className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>Итог</span>
-                    <span className={`font-data text-sm font-semibold ${historyTotal >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {historyTotal >= 0 ? '+' : '-'}{historyCurrencySymbol}{formatMoney(historyTotal)}
+                    <span className={`font-data text-xs uppercase tracking-wide ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('total')}</span>
+                    <span className={`font-data text-base font-bold tabular-nums ${historyTotal >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                      {historyTotal >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoney(Math.abs(historyTotal))}
                     </span>
                   </div>
 
-                  <div className="flex gap-2 mt-4">
-                    <button
-                      onClick={() => setExportOpen(true)}
-                      disabled={historyTrades.length === 0}
-                      className={`flex-1 flex items-center justify-center gap-1.5 rounded-md border px-3 py-2 font-data text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                        isLight
-                          ? 'border-zinc-300 bg-white text-zinc-600 hover:text-zinc-900 hover:border-zinc-400'
-                          : 'border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600'
-                      }`}
-                    >
+                  <div className="flex gap-2 mt-3">
+                    <button onClick={() => setExportOpen(true)} disabled={historyTrades.length === 0}
+                      className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 font-data text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                        isLight ? 'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:text-zinc-900'
+                        : 'border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+                      }`}>
                       <Download className="h-3.5 w-3.5" />
-                      Скачать отчёт
+                      {t('downloadReport')}
                     </button>
-                    <button
-                      onClick={handleClearHistory}
+                    <button onClick={handleClearHistory}
                       className={[
-                        'flex-1 rounded-md border px-3 py-2 font-data text-xs transition-colors',
+                        'flex-1 rounded-xl border px-3 py-2.5 font-data text-xs font-medium transition-all',
                         confirmingClear
-                          ? 'border-red-500 bg-red-500/10 text-red-600'
-                          : isLight
-                          ? 'border-zinc-300 bg-white text-zinc-600 hover:text-red-600 hover:border-red-500/40'
-                          : 'border-zinc-800 text-zinc-600 hover:text-red-400 hover:border-red-500/40',
-                      ].join(' ')}
-                    >
-                      {confirmingClear ? 'Точно удалить? Ещё раз' : 'Очистить историю'}
+                          ? 'border-red-500/60 bg-red-500/10 text-red-500'
+                          : isLight ? 'border-zinc-200 bg-white text-zinc-500 hover:border-red-400/50 hover:text-red-500'
+                          : 'border-zinc-800 text-zinc-600 hover:border-red-500/40 hover:text-red-400',
+                      ].join(' ')}>
+                      {confirmingClear ? t('confirmClearHistory') : t('clearHistory')}
                     </button>
                   </div>
                 </>
@@ -2021,6 +2305,7 @@ export default function CalendarScreen() {
           </div>
         </div>
       )}
+
 
       {/* ADD TRADE MODAL — compact quick-entry UI */}
       {modalOpen && (
@@ -2043,25 +2328,36 @@ export default function CalendarScreen() {
               className={`absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
                 isLight ? 'text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200'
               }`}
-              aria-label="Закрыть"
+              aria-label={t('close')}
             >
               <X className="h-4 w-4" />
             </button>
 
-            <div className="pr-8">
-              <p className="font-data text-[10px] tracking-[0.18em] text-amber-400 uppercase">
-                {traderMode
-                  ? (editingTrade ? 'Редактировать сделку' : 'Новая сделка')
-                  : (editingTrade ? t('editRecord') : t('addRecord'))}
-              </p>
-              <p className={`mt-1 text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
-                {modalDateKey &&
-                  parseDateKeyLocal(modalDateKey).toLocaleDateString('ru-RU', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
-              </p>
+            <div className="flex items-center justify-between pr-8">
+              <div>
+                <p className="font-data text-[10px] tracking-[0.18em] text-amber-400 uppercase">
+                  {traderMode
+                    ? (editingTrade ? t('editTrade') : t('newTrade'))
+                    : (editingTrade ? t('editRecord') : t('addRecord'))}
+                </p>
+                <div className="mt-1 flex items-center gap-1.5">
+                  <input
+                    type="date"
+                    max={todayKey}
+                    value={modalDateKey || targetDateKey}
+                    onChange={(e) => {
+                      if (e.target.value && e.target.value <= todayKey) {
+                        setModalDateKey(e.target.value);
+                      }
+                    }}
+                    className={`rounded-lg border px-2 py-0.5 font-data text-xs outline-none transition-colors cursor-pointer ${
+                      isLight
+                        ? 'border-zinc-200 bg-zinc-100 text-zinc-800 hover:border-amber-400/60 focus:border-amber-500'
+                        : 'border-zinc-800 bg-zinc-900 text-zinc-200 hover:border-amber-400/50 focus:border-amber-400'
+                    }`}
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="mt-4">
@@ -2080,7 +2376,7 @@ export default function CalendarScreen() {
                   ].join(' ')}
                 >
                   <TrendingUp className="h-3.5 w-3.5" />
-                  {traderMode ? 'Профит' : 'Доход'}
+                  {traderMode ? t('profitTrade') : t('income')}
                 </button>
                 <button
                   type="button"
@@ -2093,7 +2389,7 @@ export default function CalendarScreen() {
                   ].join(' ')}
                 >
                   <TrendingDown className="h-3.5 w-3.5" />
-                  {traderMode ? 'Убыток' : 'Расход'}
+                  {traderMode ? t('lossTrade') : t('expense')}
                 </button>
               </div>
 
@@ -2112,7 +2408,7 @@ export default function CalendarScreen() {
                     isLight ? 'text-zinc-900' : 'text-zinc-100'
                   }`}
                   placeholder="0"
-                  aria-label={traderMode ? 'Результат' : 'Сумма'}
+                  aria-label={traderMode ? t('result') : t('amount')}
                 />
               </div>
 
@@ -2166,7 +2462,7 @@ export default function CalendarScreen() {
                 }`}
               >
                 <MoreHorizontal className="h-3.5 w-3.5" />
-                {detailsOpen ? 'Скрыть детали' : 'Дополнительно'}
+                {detailsOpen ? t('hideDetails') : t('moreDetails')}
                 <ChevronDown className={`h-3 w-3 transition-transform ${detailsOpen ? 'rotate-180' : ''}`} />
               </button>
 
@@ -2180,7 +2476,7 @@ export default function CalendarScreen() {
                         <label className={`mb-1.5 block font-data text-[10px] tracking-widest uppercase ${
                           isLight ? 'text-zinc-600' : 'text-zinc-600'
                         }`}>
-                          Инструмент
+                          {t('instrument')}
                         </label>
                         <div className="flex flex-wrap gap-1.5 mb-2">
                           {quickAssetTags.map((tag) => (
@@ -2210,7 +2506,7 @@ export default function CalendarScreen() {
                               ? 'bg-white border-zinc-300 text-zinc-900'
                               : 'bg-zinc-950 border-zinc-800 text-zinc-100'
                           }`}
-                          placeholder="Например, XAUUSD"
+                          placeholder={t('instrumentPlaceholder')}
                         />
                       </div>
 
@@ -2285,7 +2581,7 @@ export default function CalendarScreen() {
                       <label className={`mb-1.5 block font-data text-[10px] tracking-widest uppercase ${
                         isLight ? 'text-zinc-600' : 'text-zinc-600'
                       }`}>
-                        Категория
+                        {t('category')}
                       </label>
                       <div className="grid grid-cols-2 gap-1.5">
                         {moneyCategoriesWithIcons.map((category) => {
@@ -2320,7 +2616,7 @@ export default function CalendarScreen() {
                             ? 'bg-white border-zinc-300 text-zinc-900'
                             : 'bg-zinc-950 border-zinc-800 text-zinc-100'
                         }`}
-                        placeholder="Своя категория"
+                        placeholder={t('ownCategory')}
                       />
                     </div>
                   )}
@@ -2334,7 +2630,7 @@ export default function CalendarScreen() {
                         ? 'bg-white border-zinc-300 text-zinc-900'
                         : 'bg-zinc-950 border-zinc-800 text-zinc-100'
                     }`}
-                    placeholder={traderMode ? 'Заметка по сделке (необязательно)' : t('recordNotePlaceholder')}
+                    placeholder={traderMode ? t('notePlaceholderTrade') : t('recordNotePlaceholder')}
                   />
                 </div>
               )}
@@ -2346,7 +2642,7 @@ export default function CalendarScreen() {
                 disabled={isSaving}
                 className="sticky bottom-0 mt-3 block w-full rounded-xl bg-amber-400 px-4 py-3 text-base font-bold text-zinc-950 hover:bg-amber-300 transition-colors shadow-lg shadow-amber-500/20 disabled:opacity-60"
               >
-                {isSaving ? 'Сохранение...' : (editingTrade ? 'Сохранить изменения' : (traderMode ? 'Сохранить сделку' : t('saveRecord')))}
+                {isSaving ? t('saving') : (editingTrade ? t('saveChanges') : (traderMode ? t('saveTrade') : t('saveRecord')))}
               </button>
             </div>
           </div>
@@ -2358,23 +2654,57 @@ export default function CalendarScreen() {
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) setExportOpen(false); }}>
           <div className={`w-full max-w-md rounded-2xl border shadow-2xl ${isLight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-zinc-800 bg-zinc-950 text-zinc-100'}`}>
             <div className="flex items-center justify-between border-b border-zinc-800/70 px-5 py-4">
-              <div><p className="font-data text-[10px] uppercase tracking-[0.22em] text-amber-500">Денежный календарь</p><h3 className="mt-1 font-semibold">Скачать отчёт</h3></div>
-              <button onClick={() => setExportOpen(false)} className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-500/10"><X className="h-4 w-4" /></button>
+              <div>
+                <p className="font-data text-[10px] uppercase tracking-[0.22em] text-amber-500">
+                  {traderMode ? t('titlePro') : t('titleMoney')}
+                </p>
+                <h3 className="mt-1 font-semibold">{t('downloadReport')}</h3>
+              </div>
+              <button onClick={() => setExportOpen(false)} aria-label={t('close')} className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-500/10">
+                <X className="h-4 w-4" />
+              </button>
             </div>
             <div className="p-5">
-              <p className="text-sm font-medium">Все ваши записи за выбранный период</p>
-              <p className="mt-1 text-xs text-zinc-500">Выбери период — технические поля вроде Manual в обычный отчёт не попадут.</p>
+              <p className="text-sm font-medium">{t('allRecordsForPeriod')}</p>
+              <p className="mt-1 text-xs text-zinc-500">{t('exportNotice')}</p>
               <div className="mt-4 grid grid-cols-2 gap-2">
-                {['Текущий период', 'Сегодня', 'Текущая неделя', 'Текущий месяц', '3 месяца', 'Вся история'].map((preset) => (
-                  <button key={preset} onClick={() => setExportPeriodPreset(preset)} className={`rounded-xl border px-3 py-2.5 text-left text-xs transition-colors ${exportPeriodPreset === preset ? 'border-amber-400/50 bg-amber-400/10 text-amber-600' : isLight ? 'border-zinc-200 hover:bg-zinc-50' : 'border-zinc-800 hover:bg-zinc-900'}`}>{preset}</button>
-                ))}
+                {[
+                  { key: 'currentPeriod', label: t('currentPeriod') },
+                  { key: 'today', label: t('today') },
+                  { key: 'currentWeek', label: t('currentWeek') },
+                  { key: 'currentMonth', label: t('currentMonth') },
+                  { key: 'threeMonths', label: t('threeMonths') },
+                  { key: 'allHistory', label: t('allHistory') },
+                ].map((preset) => {
+                  const isSelected = exportPeriodPreset === preset.key || exportPeriodPreset === preset.label;
+                  return (
+                    <button
+                      key={preset.key}
+                      onClick={() => setExportPeriodPreset(preset.key)}
+                      className={`rounded-xl border px-3 py-2.5 text-left text-xs transition-colors ${
+                        isSelected
+                          ? 'border-amber-400/50 bg-amber-400/10 text-amber-600 font-semibold'
+                          : isLight ? 'border-zinc-200 hover:bg-zinc-50 text-zinc-700' : 'border-zinc-800 hover:bg-zinc-900 text-zinc-300'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
               </div>
               <div className={`mt-4 rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/40'}`}>
-                <p className="text-[10px] uppercase tracking-wider text-zinc-500">В отчёте</p>
-                <p className="mt-1 text-sm font-medium">Дата · категория · доходы и расходы · сумма · комментарии</p>
-                <p className="mt-1 text-xs text-zinc-500">{exportTrades.length} записей с учётом текущей валюты и фильтров</p>
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('inReport')}</p>
+                <p className="mt-1 text-sm font-medium">{t('inReportDetails')}</p>
+                <p className="mt-1 text-xs text-zinc-500">{exportTrades.length} {t('recordsWithFilter')}</p>
               </div>
-              <button onClick={handleExportCsv} disabled={!exportTrades.length} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"><Download className="h-4 w-4" />Скачать денежный отчёт</button>
+              <button
+                onClick={handleExportCsv}
+                disabled={!exportTrades.length}
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Download className="h-4 w-4" />
+                {t('downloadCashReport')}
+              </button>
             </div>
           </div>
         </div>
@@ -2401,17 +2731,17 @@ export default function CalendarScreen() {
               className={`absolute top-4 right-4 transition-colors ${
                 isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-200'
               }`}
-              aria-label="Закрыть"
+              aria-label={t('close')}
             >
               <X className="h-4 w-4" />
             </button>
 
-            <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">Подключить площадку</p>
-            <h2 className={`font-display text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'} mb-3`}>Источник сделок</h2>
+            <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">{t('connectPlatform')}</p>
+            <h2 className={`font-display text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'} mb-3`}>{t('tradesSource')}</h2>
 
             <div className="rounded-md border border-amber-400/30 bg-amber-400/5 px-3 py-2 mb-4">
               <p className="text-xs text-amber-400/90 leading-relaxed">
-                cTrader подключается по-настоящему. API-ключи бирж и импорт CSV — пока в разработке, данные не сохраняют.
+                {t('ctraderNotice')}
               </p>
             </div>
 
@@ -2449,7 +2779,7 @@ export default function CalendarScreen() {
                 ].join(' ')}
               >
                 <KeyRound className="h-3.5 w-3.5" />
-                API Ключи
+                {t('apiKeys')}
               </button>
               <button
                 onClick={() => setConnectTab('csv')}
@@ -2465,19 +2795,19 @@ export default function CalendarScreen() {
                 ].join(' ')}
               >
                 <UploadCloud className="h-3.5 w-3.5" />
-                Импорт CSV
+                {t('importCsv')}
               </button>
             </div>
 
             {connectTab === 'ctrader' ? (
               <div className="flex flex-col gap-4">
                 <p className={`text-xs ${isLight ? 'text-zinc-600' : 'text-zinc-500'} leading-relaxed`}>
-                  Подключите свой аккаунт cTrader через Spotware — это разрешит приложению видеть ваши сделки.
+                  {t('ctraderDesc')}
                 </p>
                 {ctraderConnected ? (
                   <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-emerald-600 text-sm">
                     <CheckCircle2 className="h-4 w-4" />
-                    cTrader подключён
+                    {t('ctraderConnected')}
                   </div>
                 ) : (
                   <button
@@ -2486,7 +2816,7 @@ export default function CalendarScreen() {
                     className="w-full flex items-center justify-center gap-2 rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-300 disabled:opacity-50 transition-colors"
                   >
                     {ctraderLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
-                    {ctraderLoading ? 'Подключение...' : 'Подключить cTrader'}
+                    {ctraderLoading ? t('connecting') : t('connectCtraderBtn')}
                   </button>
                 )}
               </div>
@@ -2496,7 +2826,7 @@ export default function CalendarScreen() {
                   <label className={`block font-data text-[11px] tracking-widest uppercase mb-1.5 ${
                     isLight ? 'text-zinc-600' : 'text-zinc-500'
                   }`}>
-                    Биржа / терминал
+                    {t('exchangeOrTerminal')}
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     {EXCHANGES.map((ex) => (
@@ -2558,7 +2888,7 @@ export default function CalendarScreen() {
                 </div>
 
                 <p className={`text-xs ${isLight ? 'text-zinc-600' : 'text-zinc-600'} leading-relaxed`}>
-                  Рекомендуем создавать ключ с правами только на чтение (read-only), без доступа к выводу средств.
+                  {t('readOnlyKeyNotice')}
                 </p>
 
                 <button
@@ -2566,7 +2896,7 @@ export default function CalendarScreen() {
                   disabled={!textValue(apiForm.key).trim() || !textValue(apiForm.secret).trim()}
                   className="w-full rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  Подключить {apiForm.exchange}
+                  {t('connectExchange')} {apiForm.exchange}
                 </button>
               </div>
             ) : (
@@ -2585,13 +2915,13 @@ export default function CalendarScreen() {
                     <>
                       <FileText className="h-6 w-6 text-amber-400" />
                       <p className={`text-sm font-medium ${isLight ? 'text-zinc-900' : 'text-zinc-200'}`}>{csvFile.name}</p>
-                      <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>Файл готов к импорту</p>
+                      <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('fileReadyToImport')}</p>
                     </>
                   ) : (
                     <>
                       <UploadCloud className={`h-6 w-6 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`} />
-                      <p className={`text-sm ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>Перетащите файл отчёта сюда</p>
-                      <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>или нажмите, чтобы выбрать .csv</p>
+                      <p className={`text-sm ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>{t('dragCsvHere')}</p>
+                      <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('orClickToSelect')}</p>
                     </>
                   )}
                 </label>
@@ -2601,7 +2931,7 @@ export default function CalendarScreen() {
                   disabled={!csvFile}
                   className="w-full rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  Импортировать
+                  {t('importBtn')}
                 </button>
               </div>
             )}
@@ -2811,6 +3141,80 @@ export default function CalendarScreen() {
               className="w-full rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-300 transition-colors"
             >
               Продолжить
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* OFFLINE NOTICE MODAL */}
+      {offlineNoticeOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-4 backdrop-blur-sm transition-opacity duration-200">
+          <div
+            className={`relative w-full max-w-sm rounded-2xl border p-5 sm:p-6 shadow-2xl transition-all duration-200 ${
+              isLight ? 'border-amber-300/80 bg-white text-zinc-900' : 'border-amber-400/25 bg-zinc-900 text-zinc-100'
+            }`}
+          >
+            <div className="flex items-start gap-3.5 mb-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-400/30 bg-amber-400/10 text-amber-500">
+                <WifiOff className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="font-data text-[10px] uppercase tracking-[0.2em] text-amber-500 font-semibold mb-1">
+                  OFFLINE
+                </p>
+                <h3 className="font-display text-lg font-semibold leading-tight">
+                  {t('offlineTitle')}
+                </h3>
+              </div>
+            </div>
+
+            <p className={`text-xs leading-relaxed mb-5 ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>
+              {t('offlineDesc')}
+            </p>
+
+            <button
+              type="button"
+              onClick={() => setOfflineNoticeOpen(false)}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 shadow-md hover:from-amber-300 hover:to-amber-400 transition-all active:scale-[0.99]"
+            >
+              <span>{t('goToOffline')}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ONLINE TOAST / CONNECTED POPUP */}
+      {onlineToastOpen && (
+        <div className="fixed top-4 sm:top-6 inset-x-4 sm:inset-x-auto sm:right-6 z-50 sm:max-w-md pointer-events-auto transition-all duration-300">
+          <div
+            className={`flex items-start gap-3.5 rounded-2xl border p-4 shadow-[0_12px_40px_rgba(0,0,0,0.3)] backdrop-blur-xl ${
+              isLight
+                ? 'border-emerald-300/90 bg-white/95 text-zinc-900'
+                : 'border-emerald-500/30 bg-zinc-900/95 text-zinc-100'
+            }`}
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-emerald-500">
+              <CheckCircle2 className="h-5 w-5" />
+            </span>
+            <div className="flex-1 min-w-0 pr-2">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <h4 className="font-semibold text-sm leading-tight">
+                  {t('onlineTitle')}
+                </h4>
+              </div>
+              <p className={`text-xs leading-relaxed ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>
+                {t('onlineDesc')}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOnlineToastOpen(false)}
+              className={`rounded-lg px-2.5 py-1 text-xs font-semibold shrink-0 transition-colors ${
+                isLight ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800' : 'bg-white/10 hover:bg-white/15 text-zinc-200'
+              }`}
+            >
+              {t('onlineAction')}
             </button>
           </div>
         </div>
