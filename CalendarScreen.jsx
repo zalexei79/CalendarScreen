@@ -280,6 +280,14 @@ export default function CalendarScreen() {
   const t = (key) => translate(language, key);
   const currencySymbol = getCurrencyMeta(currency).symbol;
   const isLight = theme === 'light';
+  const periodLabel = (preset) => ({
+    'Сегодня': t('today'),
+    'Текущая неделя': t('currentWeek'),
+    'Текущий месяц': t('currentMonth'),
+    '3 месяца': t('threeMonths'),
+    'Вся история': t('allHistory'),
+    custom: t('customPeriod'),
+  }[preset] || preset);
 
   function formatPnlDisplay(amount, short) {
     if (displayMode === 'percent' && depositSize > 0) {
@@ -447,7 +455,7 @@ export default function CalendarScreen() {
     setPeriodPreset('custom');
   }
 
-  const periodButtonLabel = periodPreset === 'custom' ? 'Свой период' : periodPreset;
+  const periodButtonLabel = periodLabel(periodPreset);
 
   // --- Add-trade modal state ------------------------------------------------
   const [modalOpen, setModalOpen] = useState(false);
@@ -974,9 +982,20 @@ export default function CalendarScreen() {
       .sort((a, b) => (a.dateKey === b.dateKey ? b.time.localeCompare(a.time) : b.dateKey.localeCompare(a.dateKey)));
   }, [manualTrades, dateFrom, dateTo, platformFilter, historyWinLoss, historyCurrency, historyNameFilter]);
 
+  function isTradingInstrumentName(value) {
+    const normalized = String(value || '').trim().toUpperCase();
+    return DEFAULT_ASSET_TAGS.includes(normalized) || /BTC|ETH|SOL|XRP|DOGE|BNB|ADA|USDT|XAU|XAG|GOLD|SILVER|EURUSD|GBPUSD|USDJPY|NDX|NASDAQ|SPX|OIL|WTI|BRENT|КРИПТ|ЗОЛОТ|СЕРЕБР/.test(normalized);
+  }
+
   const historyNameOptions = useMemo(() => [...new Set(
     Object.values(manualTrades).flat().map((trade) => trade.instrument).filter(Boolean)
-  )].sort((a, b) => a.localeCompare(b, language)), [manualTrades, language]);
+  )]
+    .filter((name) => traderMode || !isTradingInstrumentName(name))
+    .sort((a, b) => a.localeCompare(b, language)), [manualTrades, language, traderMode]);
+
+  useEffect(() => {
+    if (!traderMode && historyNameFilter && isTradingInstrumentName(historyNameFilter)) setHistoryNameFilter('');
+  }, [traderMode, historyNameFilter]);
 
   const historyByCurrency = useMemo(() => Object.entries(historyTrades.reduce((groups, trade) => {
     const code = trade.currency || 'USD';
@@ -1903,7 +1922,7 @@ export default function CalendarScreen() {
                     {historyPeriodMenuOpen && (
                       <div className={`absolute left-0 top-full z-30 mt-2 min-w-[180px] rounded-2xl border p-1.5 shadow-2xl ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'}`}>
                         {PERIOD_PRESETS.map((p) => (
-                          <button key={p} onClick={() => { handlePresetChange(p); setHistoryPeriodMenuOpen(false); }} className={`block w-full rounded-xl px-3 py-2 text-left text-xs transition-colors ${periodPreset === p ? 'bg-amber-400/10 text-amber-600' : isLight ? 'text-zinc-600 hover:bg-zinc-100' : 'text-zinc-400 hover:bg-zinc-900'}`}>{p}</button>
+                          <button key={p} onClick={() => { handlePresetChange(p); setHistoryPeriodMenuOpen(false); }} className={`block w-full rounded-xl px-3 py-2 text-left text-xs transition-colors ${periodPreset === p ? 'bg-amber-400/10 text-amber-600' : isLight ? 'text-zinc-600 hover:bg-zinc-100' : 'text-zinc-400 hover:bg-zinc-900'}`}>{periodLabel(p)}</button>
                         ))}
                       </div>
                     )}
@@ -1916,21 +1935,21 @@ export default function CalendarScreen() {
                   </div>
 
                   {historyFiltersOpen && (
-                    <div className={`mb-4 overflow-hidden rounded-2xl border p-3.5 shadow-sm ${
+                    <div className={`mb-4 overflow-visible rounded-2xl border p-3.5 shadow-sm ${
                       isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-gradient-to-br from-zinc-950 to-zinc-900/70'
                     }`}>
                       <div className="mb-3 flex items-center justify-between">
-                        <span className="font-data text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-500">{t('period')}</span>
+                        <span className="font-data text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-500">{t('dateRange')}</span>
                         <span className="text-[10px] text-zinc-500">{dateFrom} — {dateTo}</span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 mb-3">
                         <label className={`rounded-xl border px-3 py-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
-                          <span className="mb-1 block text-[9px] font-data uppercase tracking-wider text-zinc-500">От</span>
+                          <span className="mb-1 block text-[9px] font-data uppercase tracking-wider text-zinc-500">{t('fromDate')}</span>
                           <input type="date" value={dateFrom} onChange={(e) => handleDateFromChange(e.target.value)}
                             className={`w-full min-w-0 bg-transparent text-xs font-data focus:outline-none ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`} />
                         </label>
                         <label className={`rounded-xl border px-3 py-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
-                          <span className="mb-1 block text-[9px] font-data uppercase tracking-wider text-zinc-500">До</span>
+                          <span className="mb-1 block text-[9px] font-data uppercase tracking-wider text-zinc-500">{t('toDate')}</span>
                           <input type="date" value={dateTo} onChange={(e) => handleDateToChange(e.target.value)}
                             className={`w-full min-w-0 bg-transparent text-xs font-data focus:outline-none ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`} />
                         </label>
@@ -2168,7 +2187,7 @@ export default function CalendarScreen() {
                   }`}>
                     {/* Period row: native select opens all presets with one tap. */}
                     <div className="flex items-center gap-2 mb-3">
-                      <span className={`shrink-0 font-data text-[9px] uppercase tracking-[0.18em] mr-1 ${isLight ? 'text-zinc-400 font-semibold' : 'text-zinc-600'}`}>{t('period') || 'Период'}</span>
+                      <span className={`shrink-0 font-data text-[9px] uppercase tracking-[0.18em] mr-1 ${isLight ? 'text-zinc-400 font-semibold' : 'text-zinc-600'}`}>{t('period')}</span>
                       <select
                         value={periodPreset}
                         onChange={(e) => e.target.value === 'custom' ? setPeriodPreset('custom') : handlePresetChange(e.target.value)}
@@ -2176,8 +2195,8 @@ export default function CalendarScreen() {
                           isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700' : 'border-zinc-800 bg-zinc-900/50 text-zinc-300'
                         }`}
                       >
-                        {PERIOD_PRESETS.map((p) => <option key={p} value={p}>{p}</option>)}
-                        <option value="custom">Свой период</option>
+                        {PERIOD_PRESETS.map((p) => <option key={p} value={p}>{periodLabel(p)}</option>)}
+                        <option value="custom">{t('customPeriod')}</option>
                       </select>
                     </div>
 

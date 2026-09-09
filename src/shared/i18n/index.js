@@ -47,6 +47,7 @@ export const TRANSLATIONS = {
     
     // Period presets
     today: 'Сегодня', currentWeek: 'Текущая неделя', currentMonth: 'Текущий месяц', threeMonths: '3 месяца', allHistory: 'Вся история', customPeriod: 'Свой период', currentPeriod: 'Текущий период',
+    period: 'Период', dateRange: 'Даты', fromDate: 'От', toDate: 'До',
     
     // Free History & Dynamics
     financialRhythm: 'Финансовый ритм',
@@ -251,6 +252,7 @@ export const TRANSLATIONS = {
     
     // Period presets
     today: 'Today', currentWeek: 'This week', currentMonth: 'This month', threeMonths: '3 months', allHistory: 'All history', customPeriod: 'Custom range', currentPeriod: 'Current period',
+    period: 'Period', dateRange: 'Dates', fromDate: 'From', toDate: 'To',
     
     // Free History & Dynamics
     financialRhythm: 'Financial rhythm',
@@ -455,6 +457,7 @@ export const TRANSLATIONS = {
     
     // Period presets
     today: 'Astăzi', currentWeek: 'Săptămâna curentă', currentMonth: 'Luna curentă', threeMonths: '3 luni', allHistory: 'Tot istoricul', customPeriod: 'Perioadă personalizată', currentPeriod: 'Perioada curentă',
+    period: 'Perioadă', dateRange: 'Date', fromDate: 'De la', toDate: 'Până la',
     
     // Free History & Dynamics
     financialRhythm: 'Ritm financiar',
