@@ -949,6 +949,7 @@ export default function CalendarScreen() {
   const [historyWinLoss, setHistoryWinLoss] = useState('all'); // 'all' | 'win' | 'loss'
   const [historyCurrency, setHistoryCurrency] = useState(() => currency || 'USD');
   const [historyNameFilter, setHistoryNameFilter] = useState('');
+  const [historyCategoryMenuOpen, setHistoryCategoryMenuOpen] = useState(false);
   const [historyFiltersOpen, setHistoryFiltersOpen] = useState(false);
   const [historyPeriodMenuOpen, setHistoryPeriodMenuOpen] = useState(false);
   const [historyAnalysisOpen, setHistoryAnalysisOpen] = useState(false);
@@ -1106,6 +1107,56 @@ export default function CalendarScreen() {
     }
     return base.map((item) => ({ ...item, icon: getHistoryCategoryIcon(item.key) }));
   }, []);
+
+  const renderHistoryCategoryPicker = (className = '') => {
+    const ActiveIcon = historyNameFilter ? getHistoryCategoryIcon(historyNameFilter) : CircleDollarSign;
+    return (
+      <div className={`relative ${className}`}>
+        <button
+          type="button"
+          onClick={() => setHistoryCategoryMenuOpen((open) => !open)}
+          className={`flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors ${
+            isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-amber-400/50' : 'border-zinc-800 bg-black/20 text-zinc-200 hover:border-amber-400/35'
+          }`}
+        >
+          <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${isLight ? 'bg-white text-amber-600 shadow-sm' : 'bg-zinc-900 text-amber-400'}`}>
+            <ActiveIcon className="h-3.5 w-3.5" />
+          </span>
+          <span className="min-w-0 flex-1 truncate text-xs font-data">{historyNameFilter || t('all')}</span>
+          <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-zinc-500 transition-transform ${historyCategoryMenuOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {historyCategoryMenuOpen && (
+          <div className={`absolute left-0 top-full z-40 mt-2 w-full min-w-[210px] overflow-hidden rounded-2xl border p-1.5 shadow-2xl ${
+            isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'
+          }`}>
+            <div className="max-h-64 overflow-y-auto pr-1">
+              {[{ name: '', Icon: CircleDollarSign, label: t('all') }, ...historyNameOptions.map((name) => ({ name, Icon: getHistoryCategoryIcon(name), label: name }))].map(({ name, Icon, label }) => {
+                const active = historyNameFilter === name;
+                return (
+                  <button
+                    key={name || '__all__'}
+                    type="button"
+                    onClick={() => { setHistoryNameFilter(name); setHistoryCategoryMenuOpen(false); }}
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs transition-colors ${
+                      active
+                        ? 'bg-amber-400/12 text-amber-600'
+                        : isLight ? 'text-zinc-700 hover:bg-zinc-50' : 'text-zinc-300 hover:bg-zinc-900'
+                    }`}
+                  >
+                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${active ? 'bg-amber-400/15 text-amber-600' : isLight ? 'bg-zinc-100 text-zinc-500' : 'bg-zinc-900 text-zinc-500'}`}>
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate font-medium">{label}</span>
+                    {active && <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   function openHistory() {
     setHistoryOpen(true);
@@ -1884,14 +1935,10 @@ export default function CalendarScreen() {
                             className={`w-full min-w-0 bg-transparent text-xs font-data focus:outline-none ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`} />
                         </label>
                       </div>
-                      <label className={`mb-3 flex items-center gap-2 rounded-xl border px-3 py-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
-                        <span className="shrink-0 text-[10px] uppercase tracking-wider text-zinc-500">{t('category')}</span>
-                        <select value={historyNameFilter} onChange={(e) => setHistoryNameFilter(e.target.value)}
-                          className={`min-w-0 flex-1 bg-transparent text-right text-xs font-data focus:outline-none ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>
-                          <option value="">{t('all')}</option>
-                          {historyNameOptions.map((name) => <option key={name} value={name}>{name}</option>)}
-                        </select>
-                      </label>
+                      <div className="mb-3">
+                        <span className="mb-1.5 block text-[10px] uppercase tracking-wider text-zinc-500">{t('category')}</span>
+                        {renderHistoryCategoryPicker()}
+                      </div>
                       <div className="flex gap-2">
                         {[
                           { key: 'all', label: t('all') },
@@ -2165,6 +2212,10 @@ export default function CalendarScreen() {
                         </span>
                       </div>
 
+                    </div>
+                    <div className="mt-2">
+                      <span className={`mb-1.5 block font-data text-[9px] uppercase tracking-[0.16em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('category')}</span>
+                      {renderHistoryCategoryPicker()}
                     </div>
                   </div>
 
