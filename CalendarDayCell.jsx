@@ -25,13 +25,13 @@ export default function CalendarDayCell({
     cell.inMonth && hasTrades && !isSelected
       ? {
           backgroundColor: isLight
-            ? (pnlTone === 'profit' ? `rgba(16,185,129,${(0.06 + effectiveIntensity * 0.12).toFixed(2)})` : `rgba(239,68,68,${(0.06 + effectiveIntensity * 0.12).toFixed(2)})`)
+            ? (pnlTone === 'profit' ? `rgba(16,185,129,${(0.13 + effectiveIntensity * 0.24).toFixed(2)})` : `rgba(239,68,68,${(0.13 + effectiveIntensity * 0.24).toFixed(2)})`)
             : `rgba(${glowRgb},${(0.08 + effectiveIntensity * 0.16).toFixed(2)})`,
           borderColor: isLight
-            ? (pnlTone === 'profit' ? `rgba(16,185,129,${(0.24 + effectiveIntensity * 0.28).toFixed(2)})` : `rgba(239,68,68,${(0.24 + effectiveIntensity * 0.28).toFixed(2)})`)
+            ? (pnlTone === 'profit' ? `rgba(5,150,105,${(0.40 + effectiveIntensity * 0.30).toFixed(2)})` : `rgba(225,29,72,${(0.40 + effectiveIntensity * 0.30).toFixed(2)})`)
             : `rgba(${glowRgb},${(0.28 + effectiveIntensity * 0.28).toFixed(2)})`,
           boxShadow: isLight
-            ? `0 2px 8px rgba(${glowRgb},${(0.06 + effectiveIntensity * 0.10).toFixed(2)})`
+            ? `0 4px 14px rgba(${glowRgb},${(0.12 + effectiveIntensity * 0.16).toFixed(2)})`
             : `0 0 ${Math.round(4 + effectiveIntensity * 12)}px rgba(${glowRgb},${(0.12 + effectiveIntensity * 0.16).toFixed(2)})`,
           animation: 'cellGlowIn 0.35s ease-out both',
           animationDelay: `${cellIndex * 18}ms`,
@@ -63,7 +63,7 @@ export default function CalendarDayCell({
     ].join(' ')}>
       {cell.isToday && <span className="absolute top-2 right-2 h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-amber-500 ring-2 ring-white shadow-sm" />}
       <span className={`font-data text-xs sm:text-base font-semibold ${cell.inMonth ? (isLight ? 'text-slate-800' : 'text-zinc-300') : (isLight ? 'text-slate-400' : 'text-zinc-600')}`}>{cell.date.getDate()}</span>
-      {hasTrades && <span className={`font-data text-[11px] sm:text-base font-bold tracking-tight whitespace-nowrap ${pnlTone === 'profit' ? (isLight ? 'text-emerald-600' : 'text-emerald-500') : pnlTone === 'loss' ? (isLight ? 'text-rose-600' : 'text-red-500') : (isLight ? 'text-slate-500' : 'text-zinc-500')}`}>{pnlText}</span>}
+      {hasTrades && <span className={`font-data text-[11px] sm:text-base font-extrabold tracking-tight whitespace-nowrap ${pnlTone === 'profit' ? (isLight ? 'text-emerald-800' : 'text-emerald-500') : pnlTone === 'loss' ? (isLight ? 'text-rose-800' : 'text-red-500') : (isLight ? 'text-slate-500' : 'text-zinc-500')}`}>{pnlText}</span>}
     </button>
   );
 }
