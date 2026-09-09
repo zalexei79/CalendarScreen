@@ -63,7 +63,7 @@ export default function CalendarDayCell({
     ].join(' ')}>
       {cell.isToday && <span className="absolute top-2 right-2 h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-amber-500 ring-2 ring-white shadow-sm" />}
       <span className={`font-data text-xs sm:text-base font-semibold ${cell.inMonth ? (isLight ? 'text-slate-800' : 'text-zinc-300') : (isLight ? 'text-slate-400' : 'text-zinc-600')}`}>{cell.date.getDate()}</span>
-      {hasTrades && <span className={`w-fit rounded-md px-1.5 py-0.5 font-data text-[11px] sm:text-base font-extrabold tracking-tight whitespace-nowrap ${pnlTone === 'profit' ? (isLight ? 'bg-white/70 text-emerald-800 shadow-sm' : 'text-emerald-500') : pnlTone === 'loss' ? (isLight ? 'bg-white/70 text-rose-800 shadow-sm' : 'text-red-500') : (isLight ? 'text-slate-500' : 'text-zinc-500')}`}>{pnlText}</span>}
+      {hasTrades && <span className={`font-data text-[11px] sm:text-base font-extrabold tracking-tight whitespace-nowrap ${pnlTone === 'profit' ? (isLight ? 'text-emerald-950 [text-shadow:0_1px_0_rgba(255,255,255,.42)]' : 'text-emerald-500') : pnlTone === 'loss' ? (isLight ? 'text-rose-950 [text-shadow:0_1px_0_rgba(255,255,255,.42)]' : 'text-red-500') : (isLight ? 'text-slate-500' : 'text-zinc-500')}`}>{pnlText}</span>}
     </button>
   );
 }
