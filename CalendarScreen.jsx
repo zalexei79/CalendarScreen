@@ -2099,36 +2099,37 @@ export default function CalendarScreen() {
                   <div className={`mb-4 rounded-2xl border p-3 ${
                     isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800/80 bg-zinc-950/60'
                   }`}>
-                    {/* Period row */}
-                    <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                    {/* Period row: native select opens all presets with one tap. */}
+                    <div className="flex items-center gap-2 mb-3">
                       <span className={`shrink-0 font-data text-[9px] uppercase tracking-[0.18em] mr-1 ${isLight ? 'text-zinc-400 font-semibold' : 'text-zinc-600'}`}>{t('period') || 'Период'}</span>
-                      <div className="flex gap-1 overflow-x-auto pb-0.5 flex-wrap">
-                        {PERIOD_PRESETS.map((p) => (
-                          <button key={p} onClick={() => handlePresetChange(p)}
-                            className={`shrink-0 rounded-full border px-2.5 py-1 font-data text-[10px] transition-all ${
-                              periodPreset === p
-                                ? 'border-amber-400/60 bg-amber-400/12 text-amber-500 font-semibold shadow-[0_0_12px_rgba(251,191,36,.15)]'
-                                : isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-500 hover:border-amber-400/40 hover:text-zinc-700'
-                                : 'border-zinc-800 bg-zinc-900/50 text-zinc-500 hover:border-amber-400/30 hover:text-zinc-300'
-                            }`}>{p}</button>
-                        ))}
+                      <select
+                        value={periodPreset}
+                        onChange={(e) => e.target.value === 'custom' ? setPeriodPreset('custom') : handlePresetChange(e.target.value)}
+                        className={`min-w-0 flex-1 appearance-none rounded-xl border px-3 py-2 pr-8 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
+                          isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700' : 'border-zinc-800 bg-zinc-900/50 text-zinc-300'
+                        }`}
+                      >
+                        {PERIOD_PRESETS.map((p) => <option key={p} value={p}>{p}</option>)}
+                        <option value="custom">Свой период</option>
+                      </select>
+                    </div>
+
+                    {/* Date range only appears for a custom period. */}
+                    {periodPreset === 'custom' && (
+                      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 mb-3">
+                        <input type="date" value={dateFrom} onChange={(e) => handleDateFromChange(e.target.value)}
+                          className={`min-w-0 rounded-xl border px-2 py-1.5 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
+                            isLight ? 'bg-zinc-50 border-zinc-200 text-zinc-800' : 'bg-zinc-900 border-zinc-700 text-zinc-200'
+                          }`} />
+                        <span className={`text-center text-xs ${isLight ? 'text-zinc-300' : 'text-zinc-700'}`}>—</span>
+                        <input type="date" value={dateTo} onChange={(e) => handleDateToChange(e.target.value)}
+                          className={`min-w-0 rounded-xl border px-2 py-1.5 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
+                            isLight ? 'bg-zinc-50 border-zinc-200 text-zinc-800' : 'bg-zinc-900 border-zinc-700 text-zinc-200'
+                          }`} />
                       </div>
-                    </div>
+                    )}
 
-                    {/* Date range */}
-                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 mb-3">
-                      <input type="date" value={dateFrom} onChange={(e) => handleDateFromChange(e.target.value)}
-                        className={`min-w-0 rounded-xl border px-2 py-1.5 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
-                          isLight ? 'bg-zinc-50 border-zinc-200 text-zinc-800' : 'bg-zinc-900 border-zinc-700 text-zinc-200'
-                        }`} />
-                      <span className={`text-center text-xs ${isLight ? 'text-zinc-300' : 'text-zinc-700'}`}>—</span>
-                      <input type="date" value={dateTo} onChange={(e) => handleDateToChange(e.target.value)}
-                        className={`min-w-0 rounded-xl border px-2 py-1.5 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
-                          isLight ? 'bg-zinc-50 border-zinc-200 text-zinc-800' : 'bg-zinc-900 border-zinc-700 text-zinc-200'
-                        }`} />
-                    </div>
-
-                    {/* Platform + Currency row */}
+                    {/* Platform row */}
                     <div className="flex gap-1.5 flex-wrap">
                       {/* Platform select */}
                       <div className="relative flex-1 min-w-[110px]">
@@ -2144,22 +2145,6 @@ export default function CalendarScreen() {
                         </span>
                       </div>
 
-                      {/* Currency selector */}
-                      <div className={`inline-flex gap-1 rounded-xl border p-1 ${
-                        isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/50'
-                      }`}>
-                        {[{ code: 'ALL', symbol: t('all') }, ...CURRENCIES].map((c) => (
-                          <button key={c.code} onClick={() => setHistoryCurrency(c.code)}
-                            title={c.code}
-                            className={`rounded-lg px-2 py-1 text-[10px] font-data transition-all ${
-                              historyCurrency === c.code
-                                ? 'bg-amber-400/15 text-amber-500 ring-1 ring-amber-400/20 font-semibold'
-                                : isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-300'
-                            }`}>
-                            {c.symbol}
-                          </button>
-                        ))}
-                      </div>
                     </div>
                   </div>
 
@@ -2217,12 +2202,28 @@ export default function CalendarScreen() {
                     )}
                   </div>
 
-                  {/* ── Trade count label ──────────────────────────────── */}
-                  <p className={`text-xs mb-2 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
-                    {historyTrades.length} {t('trades')} {periodPreset !== 'Вся история' ? `· ${periodPreset}` : ''}
-                    {platformFilter !== 'ALL' ? ` · ${platformFilter}` : ''}
-                    {historyCurrency !== 'ALL' ? ` · ${historyCurrency}` : ''}
-                  </p>
+                  {/* ── Trade count + currency, kept together with records ── */}
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className={`text-xs ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
+                      {historyTrades.length} {t('trades')} {periodPreset !== 'Вся история' ? `· ${periodButtonLabel}` : ''}
+                      {platformFilter !== 'ALL' ? ` · ${platformFilter}` : ''}
+                      {historyCurrency !== 'ALL' ? ` · ${historyCurrency}` : ''}
+                    </p>
+                    <div className={`inline-flex shrink-0 gap-1 rounded-xl border p-1 ${
+                      isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/50'
+                    }`}>
+                      {[{ code: 'ALL', symbol: t('all') }, ...CURRENCIES].map((c) => (
+                        <button key={c.code} onClick={() => setHistoryCurrency(c.code)} title={c.code}
+                          className={`rounded-lg px-2 py-1 text-[10px] font-data transition-all ${
+                            historyCurrency === c.code
+                              ? 'bg-amber-400/15 text-amber-500 ring-1 ring-amber-400/20 font-semibold'
+                              : isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-300'
+                          }`}>
+                          {c.symbol}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
                   {/* ── Trades list ────────────────────────────────────── */}
                   {historyTrades.length > 0 ? (
