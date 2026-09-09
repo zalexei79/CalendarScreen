@@ -25,7 +25,7 @@ export default function CalendarDayCell({
     cell.inMonth && hasTrades && !isSelected
       ? {
           backgroundColor: isLight
-            ? (pnlTone === 'profit' ? `rgba(16,185,129,${(0.13 + effectiveIntensity * 0.24).toFixed(2)})` : `rgba(239,68,68,${(0.13 + effectiveIntensity * 0.24).toFixed(2)})`)
+            ? (pnlTone === 'profit' ? `rgba(16,185,129,${(0.20 + effectiveIntensity * 0.25).toFixed(2)})` : `rgba(239,68,68,${(0.20 + effectiveIntensity * 0.25).toFixed(2)})`)
             : `rgba(${glowRgb},${(0.08 + effectiveIntensity * 0.16).toFixed(2)})`,
           borderColor: isLight
             ? (pnlTone === 'profit' ? `rgba(5,150,105,${(0.40 + effectiveIntensity * 0.30).toFixed(2)})` : `rgba(225,29,72,${(0.40 + effectiveIntensity * 0.30).toFixed(2)})`)
@@ -52,7 +52,7 @@ export default function CalendarDayCell({
       'relative rounded-xl border flex flex-col justify-between text-left transition-all duration-200 ease-out',
       'min-h-[64px] sm:min-h-[110px] p-2 sm:p-3.5',
       isLight
-        ? (cell.inMonth ? (hasTrades ? 'bg-white' : 'bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)]') : 'bg-slate-50/60')
+        ? (cell.inMonth ? (hasTrades ? 'bg-transparent' : 'bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)]') : 'bg-slate-50/60')
         : (cell.inMonth ? (hasTrades ? 'bg-zinc-900' : 'bg-zinc-900/20') : ''),
       isLight
         ? (cell.inMonth ? (hasTrades ? 'border-slate-300/80' : 'border-slate-200/90') : 'border-slate-100')
@@ -63,7 +63,7 @@ export default function CalendarDayCell({
     ].join(' ')}>
       {cell.isToday && <span className="absolute top-2 right-2 h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-amber-500 ring-2 ring-white shadow-sm" />}
       <span className={`font-data text-xs sm:text-base font-semibold ${cell.inMonth ? (isLight ? 'text-slate-800' : 'text-zinc-300') : (isLight ? 'text-slate-400' : 'text-zinc-600')}`}>{cell.date.getDate()}</span>
-      {hasTrades && <span className={`font-data text-[11px] sm:text-base font-extrabold tracking-tight whitespace-nowrap ${pnlTone === 'profit' ? (isLight ? 'text-emerald-800' : 'text-emerald-500') : pnlTone === 'loss' ? (isLight ? 'text-rose-800' : 'text-red-500') : (isLight ? 'text-slate-500' : 'text-zinc-500')}`}>{pnlText}</span>}
+      {hasTrades && <span className={`w-fit rounded-md px-1.5 py-0.5 font-data text-[11px] sm:text-base font-extrabold tracking-tight whitespace-nowrap ${pnlTone === 'profit' ? (isLight ? 'bg-white/70 text-emerald-800 shadow-sm' : 'text-emerald-500') : pnlTone === 'loss' ? (isLight ? 'bg-white/70 text-rose-800 shadow-sm' : 'text-red-500') : (isLight ? 'text-slate-500' : 'text-zinc-500')}`}>{pnlText}</span>}
     </button>
   );
 }
