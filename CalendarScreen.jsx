@@ -68,6 +68,7 @@ import { TRANSLATIONS, translate } from './src/shared/i18n';
 import { useAuth } from './src/features/auth/hooks/useAuth';
 import { useTrades } from './src/features/trades-sync/hooks/useTrades';
 import Header from './Header';
+import HistoryChart from './HistoryChart';
 import CalendarGrid from './CalendarGrid';
 
 export default function CalendarScreen() {
@@ -977,7 +978,7 @@ export default function CalendarScreen() {
       .filter((t) => t.dateKey >= dateFrom && t.dateKey <= dateTo)
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
       .filter((t) => historyCurrency === 'ALL' || (t.currency || 'USD') === historyCurrency)
-      .filter((t) => !historyNameFilter || (t.instrument || '') === historyNameFilter)
+      .filter((t) => !historyNameFilter || String(t.instrument || '').trim().toUpperCase() === historyNameFilter.trim().toUpperCase())
       .filter((t) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? t.pnl >= 0 : t.pnl < 0))
       .sort((a, b) => (a.dateKey === b.dateKey ? b.time.localeCompare(a.time) : b.dateKey.localeCompare(a.dateKey)));
   }, [manualTrades, dateFrom, dateTo, platformFilter, historyWinLoss, historyCurrency, historyNameFilter]);
@@ -990,7 +991,7 @@ export default function CalendarScreen() {
   const historyNameOptions = useMemo(() => [...new Set(
     Object.values(manualTrades).flat().map((trade) => trade.instrument).filter(Boolean)
   )]
-    .filter((name) => traderMode || [...MONEY_CATEGORIES.map((category) => category.key), 'Сигареты'].includes(name))
+    .filter((name) => traderMode || MONEY_CATEGORIES.some((category) => category.key.toUpperCase() === name.trim().toUpperCase()))
     .sort((a, b) => a.localeCompare(b, language)), [manualTrades, language, traderMode]);
 
   useEffect(() => {
@@ -1734,14 +1735,7 @@ export default function CalendarScreen() {
                             <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">{t('expenseLabel')}</p><p className="font-data text-xs text-red-600 tabular-nums truncate">−{historyCurrencySymbol}{formatMoney(historyExpense)}</p></div>
                             <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">{t('recordsCount')}</p><p className="font-data text-sm">{historyTrades.length}</p></div>
                           </div>
-                          <div className={`flex items-end gap-1 h-24 rounded-xl border p-3 overflow-x-auto ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
-                            {historyAnalysis.dailyEntries.length ? historyAnalysis.dailyEntries.map(([date, stats]) => (
-                              <button key={date} title={date} className="group min-w-[18px] flex-1 h-full flex flex-col justify-end gap-0.5">
-                                <span className="w-full rounded-t bg-emerald-500/75 transition-all group-hover:bg-emerald-400" style={{ height: `${Math.max(4, (stats.income / historyAnalysis.maxDaily) * 100)}%` }} />
-                                <span className="w-full rounded-t bg-red-500/70 transition-all group-hover:bg-red-400" style={{ height: `${Math.max(3, (stats.expense / historyAnalysis.maxDaily) * 100)}%` }} />
-                              </button>
-                            )) : <p className="m-auto text-xs text-zinc-500">{t('noRecords')}</p>}
-                          </div>
+                          {historyCurrency === 'ALL' ? <p className="text-xs text-zinc-500">{t('allCurrenciesNotice')}</p> : <HistoryChart entries={historyAnalysis.dailyEntries} isLight={isLight} t={t} formatAmount={(amount) => formatAmountInCurrency(amount, historyCurrency)} />}
                         </>
                       )}
                       {historyAnalysisTab === 'income' && (
@@ -2167,6 +2161,36 @@ export default function CalendarScreen() {
                           </div>
                         </div>
 
+                  {/* ── Display mode + deposit + sync ──────────────────── */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <button
+                      onClick={() => {
+                        if (displayMode === 'usd' && depositSize <= 0) { handleEditDeposit(); return; }
+                        setDisplayMode((m) => (m === 'usd' ? 'percent' : 'usd'));
+                      }}
+                      className={`rounded-lg border px-2.5 py-1 font-data text-xs font-semibold transition-all ${
+                        isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-amber-400/50'
+                        : 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-amber-400/40'
+                      }`}
+                    >
+                      {displayMode === 'usd' ? currencySymbol : '%'}
+                    </button>
+                    <button onClick={handleEditDeposit}
+                      className={`font-data text-xs transition-colors ${isLight ? 'text-zinc-400 hover:text-zinc-700' : 'text-zinc-600 hover:text-zinc-300'}`}>
+                      {t('deposit')}: {depositSize > 0 ? `${currencySymbol}${formatMoney(depositSize)}` : t('notSet')} ✎
+                    </button>
+                    {ctraderConnected && (
+                      <button onClick={handleSyncCtraderTrades} disabled={syncingCtrader}
+                        className={`ml-auto flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all ${
+                          isLight ? 'border-emerald-300/80 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                          : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                        }`}>
+                        <RefreshCw className={`h-3 w-3 ${syncingCtrader ? 'animate-spin' : ''}`} />
+                        {syncingCtrader ? t('syncing') : t('synchronize')}
+                      </button>
+                    )}
+                  </div>
+
                         {/* Win-rate bar */}
                         {hTrades.length > 0 && (
                           <div className="relative mt-4 overflow-hidden rounded-full" style={{height:4}}>
@@ -2181,8 +2205,57 @@ export default function CalendarScreen() {
                     );
                   })()}
 
-                  {/* ── Compact Luxury Filter Bar ───────────────────────── */}
-                  <div className={`mb-4 rounded-2xl border p-3 ${
+                  {/* ── Win/Loss quick filter ───────────────────────────── */}
+                  <div className={`flex gap-1 mb-4 rounded-xl border p-1 ${
+                    isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'
+                  }`}>
+                    {[
+                      { key: 'all', label: t('all') },
+                      { key: 'win', label: `✦ ${t('profit')}` },
+                      { key: 'loss', label: `− ${t('loss')}` },
+                    ].map((opt) => (
+                      <button key={opt.key} onClick={() => setHistoryWinLoss(opt.key)}
+                        className={`flex-1 rounded-lg py-2 font-data text-xs font-medium transition-all ${
+                          historyWinLoss === opt.key
+                            ? opt.key === 'win'
+                              ? 'bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-400/25'
+                              : opt.key === 'loss'
+                              ? 'bg-red-500/15 text-red-500 ring-1 ring-red-400/20'
+                              : (isLight ? 'bg-white text-zinc-900 shadow-sm' : 'bg-amber-400/12 text-amber-400 ring-1 ring-amber-400/20')
+                            : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-500 hover:text-zinc-300'
+                        }`}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* ── Trade count + currency, kept together with records ── */}
+                  <button type="button" aria-expanded={proFiltersOpen} onClick={() => setProFiltersOpen(v => !v)} className="mb-2 rounded-xl border border-amber-400/25 px-3 py-2 text-xs text-amber-500">{t('filters')} · {periodButtonLabel}</button>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className={`text-xs ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
+                      {historyTrades.length} {t('trades')} {periodPreset !== 'Вся история' ? `· ${periodButtonLabel}` : ''}
+                      {platformFilter !== 'ALL' ? ` · ${platformFilter}` : ''}
+                      {historyCurrency !== 'ALL' ? ` · ${historyCurrency}` : ''}
+                    </p>
+                    <div className={`inline-flex shrink-0 gap-1 rounded-xl border p-1 ${
+                      isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/50'
+                    }`}>
+                      {[{ code: 'ALL', symbol: t('all') }, ...CURRENCIES].map((c) => (
+                        <button key={c.code} onClick={() => setHistoryCurrency(c.code)} title={c.code}
+                          className={`rounded-lg px-2 py-1 text-[10px] font-data transition-all ${
+                            historyCurrency === c.code
+                              ? 'bg-amber-400/15 text-amber-500 ring-1 ring-amber-400/20 font-semibold'
+                              : isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-300'
+                          }`}>
+                          {c.symbol}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Expanded filters beside the currency toolbar */}
+                  {proFiltersOpen && (
+                  <div className={`mb-3 rounded-2xl border p-3 ${
                     isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800/80 bg-zinc-950/60'
                   }`}>
                     {/* Period row: native select opens all presets with one tap. */}
@@ -2238,83 +2311,7 @@ export default function CalendarScreen() {
                     </div>
                   </div>
 
-                  {/* ── Win/Loss quick filter ───────────────────────────── */}
-                  <div className={`flex gap-1 mb-4 rounded-xl border p-1 ${
-                    isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'
-                  }`}>
-                    {[
-                      { key: 'all', label: t('all') },
-                      { key: 'win', label: `✦ ${t('profit')}` },
-                      { key: 'loss', label: `− ${t('loss')}` },
-                    ].map((opt) => (
-                      <button key={opt.key} onClick={() => setHistoryWinLoss(opt.key)}
-                        className={`flex-1 rounded-lg py-2 font-data text-xs font-medium transition-all ${
-                          historyWinLoss === opt.key
-                            ? opt.key === 'win'
-                              ? 'bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-400/25'
-                              : opt.key === 'loss'
-                              ? 'bg-red-500/15 text-red-500 ring-1 ring-red-400/20'
-                              : (isLight ? 'bg-white text-zinc-900 shadow-sm' : 'bg-amber-400/12 text-amber-400 ring-1 ring-amber-400/20')
-                            : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-500 hover:text-zinc-300'
-                        }`}>
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* ── Display mode + deposit + sync ──────────────────── */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <button
-                      onClick={() => {
-                        if (displayMode === 'usd' && depositSize <= 0) { handleEditDeposit(); return; }
-                        setDisplayMode((m) => (m === 'usd' ? 'percent' : 'usd'));
-                      }}
-                      className={`rounded-lg border px-2.5 py-1 font-data text-xs font-semibold transition-all ${
-                        isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-amber-400/50'
-                        : 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-amber-400/40'
-                      }`}
-                    >
-                      {displayMode === 'usd' ? currencySymbol : '%'}
-                    </button>
-                    <button onClick={handleEditDeposit}
-                      className={`font-data text-xs transition-colors ${isLight ? 'text-zinc-400 hover:text-zinc-700' : 'text-zinc-600 hover:text-zinc-300'}`}>
-                      {t('deposit')}: {depositSize > 0 ? `${currencySymbol}${formatMoney(depositSize)}` : t('notSet')} ✎
-                    </button>
-                    {ctraderConnected && (
-                      <button onClick={handleSyncCtraderTrades} disabled={syncingCtrader}
-                        className={`ml-auto flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all ${
-                          isLight ? 'border-emerald-300/80 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                          : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
-                        }`}>
-                        <RefreshCw className={`h-3 w-3 ${syncingCtrader ? 'animate-spin' : ''}`} />
-                        {syncingCtrader ? t('syncing') : t('synchronize')}
-                      </button>
-                    )}
-                  </div>
-
-                  {/* ── Trade count + currency, kept together with records ── */}
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className={`text-xs ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
-                      {historyTrades.length} {t('trades')} {periodPreset !== 'Вся история' ? `· ${periodButtonLabel}` : ''}
-                      {platformFilter !== 'ALL' ? ` · ${platformFilter}` : ''}
-                      {historyCurrency !== 'ALL' ? ` · ${historyCurrency}` : ''}
-                    </p>
-                    <div className={`inline-flex shrink-0 gap-1 rounded-xl border p-1 ${
-                      isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/50'
-                    }`}>
-                      {[{ code: 'ALL', symbol: t('all') }, ...CURRENCIES].map((c) => (
-                        <button key={c.code} onClick={() => setHistoryCurrency(c.code)} title={c.code}
-                          className={`rounded-lg px-2 py-1 text-[10px] font-data transition-all ${
-                            historyCurrency === c.code
-                              ? 'bg-amber-400/15 text-amber-500 ring-1 ring-amber-400/20 font-semibold'
-                              : isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-300'
-                          }`}>
-                          {c.symbol}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
+                  )}
                   {/* ── Trades list ────────────────────────────────────── */}
                   {historyTrades.length > 0 ? (
                     <div className={`rounded-2xl border overflow-hidden divide-y ${
