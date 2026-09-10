@@ -113,7 +113,9 @@ export default function CalendarScreen() {
     // Only expose symbolic error codes, never response bodies or credentials.
     const code = /^[A-Z][A-Z0-9_]{1,63}$/.test(error?.message || '') ? error.message : 'REQUEST_FAILED';
     const status = Number.isInteger(error?.status) && error.status >= 100 && error.status <= 599 ? error.status : null;
-    setCtraderNotice({ kind: 'error', code, stage, status });
+    const backendStages = ['AUTH', 'LOAD_TOKEN', 'CONNECT_DEMO', 'CONNECT_LIVE', 'APP_AUTH_DEMO', 'APP_AUTH_LIVE', 'LIST_ACCOUNTS', 'SAVE_ACCOUNTS', 'SELECT_ACCOUNT', 'REFRESH_TOKEN', 'ACCOUNT_AUTH', 'GET_TRADER', 'GET_ASSETS', 'GET_SYMBOLS', 'GET_DEALS', 'MAP_DEALS', 'SAVE_TRADES'];
+    const backendStage = backendStages.includes(error?.backendStage) ? error.backendStage : null;
+    setCtraderNotice({ kind: 'error', code, stage, status, backendStage });
   }
 
   async function callCtrader(body) {
@@ -128,6 +130,7 @@ export default function CalendarScreen() {
       const details = response?.json ? await response.clone().json().catch(() => null) : null;
       const failure = new Error(details?.error || data?.error || 'REQUEST_FAILED');
       failure.status = response?.status;
+      failure.backendStage = details?.stage || data?.stage;
       throw failure;
     }
     return data;
@@ -1467,6 +1470,7 @@ export default function CalendarScreen() {
             <p>{t(ctraderNotice.code === 'RECONNECT_REQUIRED' ? 'ctReconnect' : ctraderNotice.code === 'UNAUTHORIZED' ? 'ctLogin' : ctraderNotice.code === 'OFFLINE' ? 'ctOffline' : 'ctError')}</p>
             <p className="mt-2 text-xs opacity-80">{t('ctStage')}: {t(ctraderNotice.stage === 'accounts' ? 'ctStageAccounts' : ctraderNotice.stage === 'select-account' ? 'ctStageSelect' : 'ctStageSync')}</p>
             <p className="mt-1 break-words font-mono text-xs">{ctraderNotice.stage} · {ctraderNotice.code}{ctraderNotice.status ? ` · HTTP ${ctraderNotice.status}` : ''}</p>
+            {ctraderNotice.backendStage && <p className="mt-1 font-mono text-xs">kalendar · {ctraderNotice.backendStage}</p>}
             <p className="mt-2 text-xs opacity-70">{t(ctraderNotice.stage === 'sync' ? 'ctImportUnconfirmed' : 'ctImportNotStarted')}</p>
           </div>}
         </div>

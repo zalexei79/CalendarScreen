@@ -16,7 +16,9 @@ const fail = (code) => { throw new Error(code); };
 const check = (result) => { if (result.error) fail('DATABASE_ERROR'); return result.data; };
 const tokenErrors = new Set(['CH_ACCESS_TOKEN_INVALID', 'CH_ACCESS_TOKEN_EXPIRED', 'ACCESS_TOKEN_EXPIRED', 'OA_AUTH_TOKEN_EXPIRED', 'INVALID_ACCESS_TOKEN']);
 
-async function connect(isLive, clientId, clientSecret) {
+async function connect(isLive, clientId, clientSecret, trace) {
+  const environment = isLive ? 'LIVE' : 'DEMO';
+  trace(`CONNECT_${environment}`);
   const ws = new WebSocket(`wss://${isLive ? 'live' : 'demo'}.ctraderapi.com:5036`);
   let heartbeat;
   const close = () => { clearInterval(heartbeat); ws.close(); };
@@ -62,6 +64,7 @@ async function connect(isLive, clientId, clientSecret) {
         catch { disconnected(); }
       });
     }
+    trace(`APP_AUTH_${environment}`);
     await request(2100, { clientId, clientSecret }, 2101);
     return { request, close };
   } catch (error) { close(); throw error; }
@@ -89,6 +92,8 @@ serve(async req => {
   if (req.method !== 'POST') return reply({ error: 'METHOD_NOT_ALLOWED' }, 405);
   let socket;
   let inserted = 0;
+  let stage = 'AUTH';
+  const trace = value => { stage = value; };
   try {
     const auth = req.headers.get('Authorization');
     if (!auth) return reply({ error: 'UNAUTHORIZED' }, 401);
@@ -102,6 +107,7 @@ serve(async req => {
     if (!['accounts', 'select-account', 'sync'].includes(action)) fail('INVALID_ACTION');
     const timeZone = body.timeZone || 'UTC';
     try { new Intl.DateTimeFormat('en', { timeZone }); } catch { fail('INVALID_TIMEZONE'); }
+    trace('LOAD_TOKEN');
     let token = check(await db.from('ctrader_tokens').select('access_token,refresh_token').eq('user_id', user.id).maybeSingle());
     if (!token) fail('RECONNECT_REQUIRED');
     const clientId = Deno.env.get('CTRADER_CLIENT_ID');
@@ -113,7 +119,8 @@ serve(async req => {
     // One refresh and one retry, only for a token-authentication failure.
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        socket = await connect(false, clientId, clientSecret);
+        socket = await connect(false, clientId, clientSecret, trace);
+        trace('LIST_ACCOUNTS');
         const result = await socket.request(2149, { accessToken: token.access_token }, 2150);
         available = result.ctidTraderAccount || [];
         break;
@@ -121,10 +128,12 @@ serve(async req => {
         socket?.close(); socket = null;
         if (err.message !== 'TOKEN_INVALID') throw err;
         if (attempt) fail('RECONNECT_REQUIRED');
+        trace('REFRESH_TOKEN');
         token = await refresh(db, user.id, token, clientId, clientSecret);
         refreshed = true;
       }
     }
+    trace('SAVE_ACCOUNTS');
     const saved = check(await db.from('ctrader_accounts').select('id,account_id,is_live,is_active,broker_name').eq('user_id', user.id));
     const rows = available.map(a => {
       const account_id = id(a.ctidTraderAccountId);
@@ -141,40 +150,50 @@ serve(async req => {
     const selected = body.accountId ? accounts.find(a => a.id === body.accountId) : accounts.find(a => a.is_active);
     if (!selected) fail('SELECT_ACCOUNT');
     if (action === 'select-account') {
+      trace('SELECT_ACCOUNT');
       // One upsert statement; only the validated available account can be selected.
       check(await db.from('ctrader_accounts').upsert(accounts.map(a => ({ ...a, user_id: user.id,
         is_active: a.id === selected.id })), { onConflict: 'user_id,account_id' }));
       return reply({ success: true, account: { ...selected, is_active: true } });
     }
     socket.close();
-    socket = await connect(selected.is_live, clientId, clientSecret);
+    socket = await connect(selected.is_live, clientId, clientSecret, trace);
     const account = { ctidTraderAccountId: selected.account_id };
     try {
+      trace('ACCOUNT_AUTH');
       await socket.request(2102, { ...account, accessToken: token.access_token }, 2103);
     } catch (err) {
       if (err.message !== 'TOKEN_INVALID' || refreshed) throw err;
       socket.close();
+      trace('REFRESH_TOKEN');
       token = await refresh(db, user.id, token, clientId, clientSecret);
-      socket = await connect(selected.is_live, clientId, clientSecret);
+      socket = await connect(selected.is_live, clientId, clientSecret, trace);
+      trace('ACCOUNT_AUTH');
       await socket.request(2102, { ...account, accessToken: token.access_token }, 2103);
     }
+    trace('GET_TRADER');
     const trader = await socket.request(2121, account, 2122);
+    trace('GET_ASSETS');
     const assets = await socket.request(2112, account, 2113);
     const currency = (assets.asset || []).find(a => id(a.assetId) === id(trader.trader.depositAssetId))?.name;
     if (!currency) fail('CURRENCY_UNKNOWN');
+    trace('GET_SYMBOLS');
     const symbolsRes = await socket.request(2114, { ...account, includeArchivedSymbols: true }, 2115);
     const symbols = new Map((symbolsRes.symbol || []).map(s => [id(s.symbolId), s.symbolName]));
     const started = Date.now();
+    trace('GET_DEALS');
     const deals = await readDeals(async (fromTimestamp, toTimestamp) => {
       if (Date.now() - started > 75000) fail('HISTORY_TOO_LARGE');
       return await socket.request(2133, { ...account, fromTimestamp, toTimestamp, maxRows: 1000 }, 2134);
     }, 0, started);
+    trace('MAP_DEALS');
     const trades = new Map();
     for (const deal of deals) {
       const row = mapDeal(deal, { userId: user.id, accountId: selected.id, currency, symbols, timeZone });
       if (row) trades.set(row.ctrader_deal_id, row);
     }
     const all = [...trades.values()];
+    trace('SAVE_TRADES');
     for (let i = 0; i < all.length; i += 200) {
       const added = check(await db.from('trades').upsert(all.slice(i, i + 200), {
         onConflict: 'user_id,ctrader_account_id,ctrader_deal_id', ignoreDuplicates: true,
@@ -190,7 +209,9 @@ serve(async req => {
       'CTRADER_REQUEST_FAILED', 'CURRENCY_UNKNOWN', 'HISTORY_TOO_LARGE', 'HISTORY_TRUNCATED',
       'ACCOUNT_ENVIRONMENT_CONFLICT']);
     const code = error.message === 'TOKEN_INVALID' ? 'RECONNECT_REQUIRED' : error.message;
-    return reply({ error: safe.has(code) ? code : 'SYNC_FAILED', inserted,
+    const safeCode = safe.has(code) ? code : 'SYNC_FAILED';
+    console.warn('[kalendar]', JSON.stringify({ error: safeCode, stage, inserted }));
+    return reply({ error: safeCode, stage, inserted,
       message: code === 'RECONNECT_REQUIRED' ? 'Нужно переподключить cTrader' : 'Не удалось завершить синхронизацию' }, 400);
   } finally { socket?.close(); }
 });
