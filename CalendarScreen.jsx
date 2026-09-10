@@ -307,11 +307,12 @@ export default function CalendarScreen() {
   }[preset] || preset);
 
   function formatPnlDisplay(amount, short) {
+    const num = Number(amount) || 0;
     if (displayMode === 'percent' && depositSize > 0) {
-      const pct = (amount / depositSize) * 100;
+      const pct = (num / depositSize) * 100;
       return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
     }
-    return `${amount >= 0 ? '+' : '-'}${currencySymbol}${short ? formatMoneyShort(amount) : formatMoney(amount)}`;
+    return `${num >= 0 ? '+' : '-'}${currencySymbol}${short ? formatMoneyShort(num) : formatMoney(num)}`;
   }
 
   function formatAmountInCurrency(amount, code, { signed = true, short = false } = {}) {
@@ -989,14 +990,14 @@ export default function CalendarScreen() {
   const [confirmingClear, setConfirmingClear] = useState(false);
 
   const historyTrades = useMemo(() => {
-    return Object.entries(manualTrades)
-      .flatMap(([dateKey, arr]) => arr.map((t) => ({ ...t, dateKey })))
-      .filter((t) => t.dateKey >= dateFrom && t.dateKey <= dateTo)
+    return Object.entries(manualTrades || {})
+      .flatMap(([dateKey, arr]) => (Array.isArray(arr) ? arr : []).map((t) => ({ ...t, dateKey })))
+      .filter((t) => t && t.dateKey >= dateFrom && t.dateKey <= dateTo)
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
       .filter((t) => historyCurrency === 'ALL' || (t.currency || 'USD') === historyCurrency)
       .filter((t) => !historyNameFilter || String(t.instrument || '').trim().toUpperCase() === historyNameFilter.trim().toUpperCase())
-      .filter((t) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? t.pnl >= 0 : t.pnl < 0))
-      .sort((a, b) => (a.dateKey === b.dateKey ? b.time.localeCompare(a.time) : b.dateKey.localeCompare(a.dateKey)));
+      .filter((t) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? (Number(t.pnl) || 0) >= 0 : (Number(t.pnl) || 0) < 0))
+      .sort((a, b) => (a.dateKey === b.dateKey ? (b.time || '').localeCompare(a.time || '') : (b.dateKey || '').localeCompare(a.dateKey || '')));
   }, [manualTrades, dateFrom, dateTo, platformFilter, historyWinLoss, historyCurrency, historyNameFilter]);
 
   function isTradingInstrumentName(value) {
@@ -1196,16 +1197,12 @@ export default function CalendarScreen() {
 
   function openHistory() {
     setHistoryOpen(true);
+    setHistoryVisible(true);
     setHistoryFiltersOpen(false);
     setProFiltersOpen(false);
     setConfirmingClear(false);
-    // PRO opens its premium layer immediately; FREE gets a compact dynamic snapshot.
-    // PRO History: mount the heavy analytics panel only after the modal itself
-    // has rendered. Telegram iOS WebView can fail during the same frame when
-    // the modal and the large analytics tree are mounted together.
     setHistoryAnalysisOpen(false);
     setHistoryAnalysisTab('overview');
-    requestAnimationFrame(() => setHistoryVisible(true));
   }
 
   function closeHistory() {
@@ -1280,10 +1277,15 @@ export default function CalendarScreen() {
   }
 
   function handleEditDeposit() {
-    const input = window.prompt('Размер депозита для расчёта %:', depositSize > 0 ? String(depositSize) : '1000');
-    const value = parseFloat(input);
-    if (!input || Number.isNaN(value) || value <= 0) return;
-    setDepositSize(value);
+    try {
+      const input = window.prompt('Размер депозита для расчёта %:', depositSize > 0 ? String(depositSize) : '1000');
+      if (!input) return;
+      const value = parseFloat(input);
+      if (Number.isNaN(value) || value <= 0) return;
+      setDepositSize(value);
+    } catch (e) {
+      console.warn('[AI Trade Journal] prompt not available:', e);
+    }
   }
 
   // --- Platform connect: API keys (stub — wire to your backend) -------------
@@ -1604,7 +1606,7 @@ export default function CalendarScreen() {
             } ${
               isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
             }`}
-            style={{ maxHeight: 'min(90svh, 90vh, calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px))' }}
+            style={{ maxHeight: 'min(90vh, calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 32px))' }}
           >
             <div className={`flex items-center justify-between px-5 sm:px-6 pt-5 pb-4 border-b ${isLight ? 'border-zinc-200' : 'border-zinc-800/80'}`}>
               <div>
@@ -2124,7 +2126,7 @@ export default function CalendarScreen() {
                               {/* Loss arc (full if any losses) */}
                               {hTrades.length > 0 && hLoss > 0 && (
                                 <circle cx="48" cy="48" r={r} strokeWidth="9"
-                                  stroke="rgb(239 68 68 / 0.75)"
+                                  stroke="rgba(239, 68, 68, 0.75)"
                                   strokeDasharray={circ}
                                   strokeDashoffset="0"
                                   fill="none" />
