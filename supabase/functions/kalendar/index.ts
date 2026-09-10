@@ -16,6 +16,16 @@ const fail = (code) => { throw new Error(code); };
 const check = (result) => { if (result.error) fail('DATABASE_ERROR'); return result.data; };
 const tokenErrors = new Set(['CH_ACCESS_TOKEN_INVALID', 'CH_ACCESS_TOKEN_EXPIRED', 'ACCESS_TOKEN_EXPIRED', 'OA_AUTH_TOKEN_EXPIRED', 'INVALID_ACCESS_TOKEN']);
 
+function encodeRequest(clientMsgId, payloadType, payload) {
+  // cTrader's JSON endpoint requires an integer token, not a quoted ID.
+  // Serialize validated digits directly to avoid rounding int64 IDs via Number.
+  const fields = Object.entries(payload).map(([key, value]) => {
+    const encoded = key === 'ctidTraderAccountId' ? BigInt(id(value)).toString() : JSON.stringify(value);
+    return `${JSON.stringify(key)}:${encoded}`;
+  });
+  return `{"clientMsgId":${JSON.stringify(clientMsgId)},"payloadType":${payloadType},"payload":{${fields.join(',')}}}`;
+}
+
 async function connect(isLive, clientId, clientSecret, trace) {
   const environment = isLive ? 'LIVE' : 'DEMO';
   trace(`CONNECT_${environment}`);
@@ -60,7 +70,7 @@ async function connect(isLive, clientId, clientSecret, trace) {
         ws.addEventListener('message', message);
         ws.addEventListener('close', disconnected);
         ws.addEventListener('error', disconnected);
-        try { ws.send(JSON.stringify({ clientMsgId, payloadType, payload })); }
+        try { ws.send(encodeRequest(clientMsgId, payloadType, payload)); }
         catch { disconnected(); }
       });
     }
