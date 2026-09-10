@@ -14,10 +14,12 @@ export default function CalendarGrid({
   onEmptyClick,
   onTouchStart,
   onTouchEnd,
+  slideDirection,
 }) {
+  const animClass = slideDirection === 'next' ? 'animate-slide-next' : slideDirection === 'prev' ? 'animate-slide-prev' : '';
   return (
     <section
-      className={`flex-1 min-h-0 flex flex-col px-2 sm:px-8 pt-3 sm:py-6 pb-20 sm:pb-6 border-b relative transition-colors duration-200 ${isLight ? 'border-slate-200/90 bg-slate-50/40' : 'border-zinc-800'}`}
+      className={`flex-1 min-h-0 flex flex-col px-2 sm:px-8 pt-3 sm:py-6 pb-20 sm:pb-6 border-b relative transition-colors duration-200 ${animClass} ${isLight ? 'border-slate-200/90 bg-slate-50/40' : 'border-zinc-800'}`}
       onClick={(e) => { if (e.target === e.currentTarget) onEmptyClick(); }}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}

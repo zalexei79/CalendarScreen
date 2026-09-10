@@ -191,11 +191,15 @@ export default function CalendarScreen() {
   // --- Displayed month/year (navigable), separate from the real "today" ----
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
+  const [slideDirection, setSlideDirection] = useState(null);
+  const [animKey, setAnimKey] = useState(0);
   const year = viewYear;
   const month = viewMonth;
 
   function goToPrevMonth() {
     setSelectedKey(null);
+    setSlideDirection('prev');
+    setAnimKey((k) => k + 1);
     setViewMonth((m) => {
       if (m === 0) {
         setViewYear((y) => y - 1);
@@ -207,6 +211,8 @@ export default function CalendarScreen() {
 
   function goToNextMonth() {
     setSelectedKey(null);
+    setSlideDirection('next');
+    setAnimKey((k) => k + 1);
     setViewMonth((m) => {
       if (m === 11) {
         setViewYear((y) => y + 1);
@@ -355,9 +361,29 @@ export default function CalendarScreen() {
       suppressNextHistoryPush.current = true;
       setSelectedKey(null);
     }
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
   }, []);
+
+  // Keyboard navigation for PC (ArrowLeft / ArrowRight to switch months)
+  useEffect(() => {
+    function handleKeyDown(e) {
+      const tag = e.target?.tagName?.toUpperCase();
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) {
+        return;
+      }
+      if (historyOpen || modalOpen || settingsOpen || connectOpen || installInfoOpen || selectedKey) {
+        return;
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        goToPrevMonth();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        goToNextMonth();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [historyOpen, modalOpen, settingsOpen, connectOpen, installInfoOpen, selectedKey]);
 
 
   // Trades data management via useTrades hook
@@ -1385,6 +1411,10 @@ export default function CalendarScreen() {
         @media (max-width: 640px) { .premium-shell { font-size: 16px; } .premium-shell p, .premium-shell button { -webkit-font-smoothing: antialiased; } }
         @keyframes proEmber { 0%,100% { opacity:.55; transform:scale(.85) } 50% { opacity:1; transform:scale(1.15) } }
         .pro-ember { animation: proEmber 1.8s ease-in-out infinite; }
+        @keyframes slideInNext { 0% { opacity: .25; transform: translateX(28px); } 100% { opacity: 1; transform: translateX(0); } }
+        @keyframes slideInPrev { 0% { opacity: .25; transform: translateX(-28px); } 100% { opacity: 1; transform: translateX(0); } }
+        .animate-slide-next { animation: slideInNext 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-slide-prev { animation: slideInPrev 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
         @media (max-width: 639px) {
           .calendar-days-grid { flex: 1 1 auto; grid-auto-rows: minmax(76px, 1fr); }
@@ -1413,6 +1443,8 @@ export default function CalendarScreen() {
 
       {/* PRO controls live in Header: one clean control center, no floating duplicate block. */}
       <CalendarGrid
+        key={`${year}-${month}-${animKey}`}
+        slideDirection={slideDirection}
         cells={cells} selectedKey={selectedKey} isLight={isLight} monthMaxAbsPnl={monthMaxAbsPnl}
         tradesForDayFiltered={tradesForDayFiltered} totalPnlForDay={totalPnlForDay}
         formatPnlDisplay={formatPnlDisplay} onSelectDay={setSelectedKey}
