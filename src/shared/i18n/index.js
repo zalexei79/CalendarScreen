@@ -641,7 +641,9 @@ Object.assign(TRANSLATIONS.ru, {
   ctChoose: 'Выберите счёт', ctEmpty: 'Нет доступных счетов. Переподключите cTrader и разрешите доступ к счёту.',
   ctAdded: 'Добавлено сделок: ', ctUpdated: 'Календарь, история и статистика обновлены.',
   ctRefresh: 'Импорт выполнен. Не удалось обновить экран — обновите страницу, не повторяя импорт.',
-  ctSkipped: 'Уже в истории: ', ctError: 'Не удалось завершить запрос. Импорт мог выполниться частично.',
+  ctSkipped: 'Уже в истории: ', ctError: 'Не удалось завершить запрос cTrader.',
+  ctStage: 'Этап', ctStageAccounts: 'Получение счетов', ctStageSelect: 'Выбор счёта', ctStageSync: 'Импорт сделок',
+  ctImportNotStarted: 'В этом запросе импорт ещё не запускался.', ctImportUnconfirmed: 'Результат импорта не подтверждён. Не повторяйте его до проверки ошибки.',
   ctReconnect: 'Нужно переподключить cTrader', ctOffline: 'Нет интернета. Подключитесь к сети.',
   ctHistory: 'Открыть историю', ctClose: 'Закрыть уведомление', ctLogin: 'Войдите в аккаунт заново',
 });
@@ -649,7 +651,9 @@ Object.assign(TRANSLATIONS.en, {
   ctChoose: 'Choose an account', ctEmpty: 'No accounts available. Reconnect cTrader and grant account access.',
   ctAdded: 'Trades added: ', ctUpdated: 'Calendar, history and statistics updated.',
   ctRefresh: 'Import completed. Could not refresh the screen — reload the page without repeating the import.',
-  ctSkipped: 'Already in history: ', ctError: 'Request could not complete. Some trades may have been imported.',
+  ctSkipped: 'Already in history: ', ctError: 'The cTrader request could not complete.',
+  ctStage: 'Stage', ctStageAccounts: 'Loading accounts', ctStageSelect: 'Selecting account', ctStageSync: 'Importing trades',
+  ctImportNotStarted: 'This request has not started an import.', ctImportUnconfirmed: 'Import outcome is unconfirmed. Do not repeat it until the error is checked.',
   ctReconnect: 'Reconnect cTrader', ctOffline: 'You are offline. Connect to the internet.',
   ctHistory: 'Open history', ctClose: 'Dismiss notification', ctLogin: 'Please sign in again',
 });
@@ -657,7 +661,9 @@ Object.assign(TRANSLATIONS.md, {
   ctChoose: 'Alegeți contul', ctEmpty: 'Nu există conturi disponibile. Reconectați cTrader și permiteți accesul la cont.',
   ctAdded: 'Tranzacții adăugate: ', ctUpdated: 'Calendarul, istoricul și statisticile au fost actualizate.',
   ctRefresh: 'Import finalizat. Ecranul nu a fost actualizat — reîncărcați pagina fără a repeta importul.',
-  ctSkipped: 'Deja în istoric: ', ctError: 'Cererea nu a putut fi finalizată. Importul poate fi parțial.',
+  ctSkipped: 'Deja în istoric: ', ctError: 'Cererea cTrader nu a putut fi finalizată.',
+  ctStage: 'Etapă', ctStageAccounts: 'Încărcarea conturilor', ctStageSelect: 'Selectarea contului', ctStageSync: 'Importul tranzacțiilor',
+  ctImportNotStarted: 'Această cerere nu a început un import.', ctImportUnconfirmed: 'Rezultatul importului nu este confirmat. Nu repetați importul înainte de verificarea erorii.',
   ctReconnect: 'Reconectați cTrader', ctOffline: 'Fără internet. Conectați-vă la rețea.',
   ctHistory: 'Deschide istoricul', ctClose: 'Închide notificarea', ctLogin: 'Autentificați-vă din nou',
 });

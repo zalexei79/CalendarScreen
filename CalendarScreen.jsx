@@ -109,6 +109,13 @@ export default function CalendarScreen() {
   const [ctraderNotice, setCtraderNotice] = useState(null);
   const ctraderBusy = useRef(false);
 
+  function showCtraderError(error, stage) {
+    // Only expose symbolic error codes, never response bodies or credentials.
+    const code = /^[A-Z][A-Z0-9_]{1,63}$/.test(error?.message || '') ? error.message : 'REQUEST_FAILED';
+    const status = Number.isInteger(error?.status) && error.status >= 100 && error.status <= 599 ? error.status : null;
+    setCtraderNotice({ kind: 'error', code, stage, status });
+  }
+
   async function callCtrader(body) {
     if (!navigator.onLine) throw new Error('OFFLINE');
     const { data: { session }, error: authError } = await supabase.auth.getSession();
@@ -117,8 +124,11 @@ export default function CalendarScreen() {
       body, headers: { Authorization: `Bearer ${session.access_token}` },
     });
     if (error || data?.error) {
-      const details = await error?.context?.json?.().catch(() => null);
-      throw new Error(details?.error || data?.error || 'REQUEST_FAILED');
+      const response = error?.context;
+      const details = response?.json ? await response.clone().json().catch(() => null) : null;
+      const failure = new Error(details?.error || data?.error || 'REQUEST_FAILED');
+      failure.status = response?.status;
+      throw failure;
     }
     return data;
   }
@@ -128,26 +138,15 @@ export default function CalendarScreen() {
       setCtraderConnected(false);
       return;
     }
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !session?.access_token || session.user.id !== userId) {
+    try {
+      const data = await callCtrader({ action: 'accounts' });
+      setCtraderConnected(true);
+      setCtraderAccounts(data.accounts || []);
+      setCtraderAccountId(data.accounts?.find(a => a.is_active)?.id || '');
+    } catch (error) {
+      showCtraderError(error, 'accounts');
       setCtraderConnected(false);
-      return;
     }
-    const { data, error } = await supabase.functions.invoke('kalendar', {
-      body: { action: 'accounts' },
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    });
-    if (error || data?.error) {
-      const response = error?.context;
-      const details = response?.json ? await response.json().catch(() => null) : null;
-      console.warn('[ctrader] accounts:', details?.error || data?.error || error?.message);
-      setCtraderNotice({ kind: 'error', code: details?.error || data?.error || 'REQUEST_FAILED' });
-      setCtraderConnected(false);
-      return;
-    }
-    setCtraderConnected(true);
-    setCtraderAccounts(data.accounts || []);
-    setCtraderAccountId(data.accounts?.find(a => a.is_active)?.id || '');
   }
 
   async function handleCtraderCallback(code) {
@@ -201,8 +200,10 @@ export default function CalendarScreen() {
     ctraderBusy.current = true;
     setSyncingCtrader(true);
     setCtraderNotice(null);
+    let stage = 'select-account';
     try {
       await callCtrader({ action: 'select-account', accountId: ctraderAccountId });
+      stage = 'sync';
       const data = await callCtrader({
         action: 'sync', accountId: ctraderAccountId,
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -210,7 +211,7 @@ export default function CalendarScreen() {
       const refreshed = await refreshFromCloud().catch(() => false);
       setCtraderNotice({ kind: 'success', inserted: data.inserted, skipped: data.skipped, refreshed });
     } catch (err) {
-      setCtraderNotice({ kind: 'error', code: err.message });
+      showCtraderError(err, stage);
     } finally {
       ctraderBusy.current = false;
       setSyncingCtrader(false);
@@ -1462,7 +1463,12 @@ export default function CalendarScreen() {
             <p className="mt-2 text-sm opacity-80">{t(ctraderNotice.refreshed ? 'ctUpdated' : 'ctRefresh')}</p>
             {ctraderNotice.skipped > 0 && <p className="mt-1 text-xs opacity-60">{t('ctSkipped')}{ctraderNotice.skipped}</p>}
             {ctraderNotice.refreshed && <button className="mt-3 text-sm font-semibold text-emerald-600" onClick={() => { closeConnectModal(); handlePresetChange('Вся история'); setPlatformFilter('ALL'); setHistoryCurrency('ALL'); setHistoryNameFilter(''); setHistoryWinLoss('all'); setHistoryOpen(true); setCtraderNotice(null); }}>{t('ctHistory')}</button>}
-          </> : <p className="pr-5 text-sm">{t(ctraderNotice.code === 'RECONNECT_REQUIRED' ? 'ctReconnect' : ctraderNotice.code === 'UNAUTHORIZED' ? 'ctLogin' : ctraderNotice.code === 'OFFLINE' ? 'ctOffline' : 'ctError')}</p>}
+          </> : <div className="pr-5 text-sm">
+            <p>{t(ctraderNotice.code === 'RECONNECT_REQUIRED' ? 'ctReconnect' : ctraderNotice.code === 'UNAUTHORIZED' ? 'ctLogin' : ctraderNotice.code === 'OFFLINE' ? 'ctOffline' : 'ctError')}</p>
+            <p className="mt-2 text-xs opacity-80">{t('ctStage')}: {t(ctraderNotice.stage === 'accounts' ? 'ctStageAccounts' : ctraderNotice.stage === 'select-account' ? 'ctStageSelect' : 'ctStageSync')}</p>
+            <p className="mt-1 break-words font-mono text-xs">{ctraderNotice.stage} · {ctraderNotice.code}{ctraderNotice.status ? ` · HTTP ${ctraderNotice.status}` : ''}</p>
+            <p className="mt-2 text-xs opacity-70">{t(ctraderNotice.stage === 'sync' ? 'ctImportUnconfirmed' : 'ctImportNotStarted')}</p>
+          </div>}
         </div>
       )}
       <Header
