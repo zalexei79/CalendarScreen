@@ -69,6 +69,7 @@ import { useAuth } from './src/features/auth/hooks/useAuth';
 import { useTrades } from './src/features/trades-sync/hooks/useTrades';
 import Header from './Header';
 import HistoryChart from './HistoryChart';
+import DayNote from './src/features/day-notes/DayNote';
 import PnlCurve from './src/features/trades-sync/components/PnlCurve';
 import CalendarGrid from './CalendarGrid';
 import CtraderControl from './src/features/ctrader/CtraderControl';
@@ -1661,6 +1662,8 @@ export default function CalendarScreen() {
               </div>
             </div>
           )}
+
+          {traderMode && <DayNote key={`${validUserId || 'guest'}:${selectedKey}`} userId={validUserId} dateKey={selectedKey} isLight={isLight} language={language} onLogin={handleGoogleLogin} />}
 
           {selectedDayTrades.length > 0 ? (
             <div className={`rounded-lg border divide-y ${isLight ? 'border-zinc-300 bg-zinc-50 divide-zinc-200' : 'border-zinc-800 bg-zinc-900 divide-zinc-800'}`}>
