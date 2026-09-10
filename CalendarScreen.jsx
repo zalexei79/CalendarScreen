@@ -116,6 +116,8 @@ export default function CalendarScreen() {
   const ctraderStatusVersion = useRef(0);
 
   function showCtraderError(error, stage) {
+    // Background account checks stay quiet; user-initiated failures belong in the control card.
+    if (stage === 'sync' || stage === 'oauth') openConnectModal();
     if (error?.message === 'RECONNECT_REQUIRED') {
       setCtraderReconnect(true);
       setCtraderConnected(false);
@@ -1516,7 +1518,10 @@ export default function CalendarScreen() {
         .calendar-days-grid > button:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0,0,0,.16); }
         .calendar-days-grid > button:active { transform: scale(.985); }
         @keyframes premiumFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
-        .history-fab { animation: premiumFloat 3.6s ease-in-out infinite; }
+        .premium-shell { min-height: 100dvh; }
+        /* Reserve the dock's space in the scrollable calendar, including iOS's home indicator. */
+        .calendar-section { padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
+        .history-fab { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
         .premium-shell { font-size: 15px; }
         .premium-shell .font-data { letter-spacing: .055em; }
         @media (max-width: 640px) { .premium-shell { font-size: 16px; } .premium-shell p, .premium-shell button { -webkit-font-smoothing: antialiased; } }
@@ -1528,27 +1533,21 @@ export default function CalendarScreen() {
         .animate-slide-prev { animation: slideInPrev 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
         @media (max-width: 639px) {
-          .calendar-days-grid { flex: 1 1 auto; grid-auto-rows: minmax(76px, 1fr); }
+          .calendar-days-grid { flex: 1 0 auto; grid-auto-rows: minmax(76px, 1fr); }
         }
       `}</style>
 
       {/* HEADER */}
-      {ctraderNotice && (
+      {ctraderNotice?.kind === 'success' && (
         <div role="status" aria-live="polite" className={`fixed bottom-24 left-4 right-4 sm:left-auto sm:w-96 z-[200] rounded-2xl border p-5 shadow-xl ${isLight ? 'bg-white text-zinc-900 border-zinc-200' : 'bg-zinc-900 text-zinc-100 border-zinc-700'}`}>
           <button aria-label={t('ctClose')} onClick={() => setCtraderNotice(null)} className="absolute right-2 top-2 p-2"><X className="h-4 w-4" /></button>
-          {ctraderNotice.kind === 'success' ? <>
+          <>
             <div className="flex items-center gap-2 pr-5 font-semibold"><CheckCircle2 className="h-5 w-5 text-emerald-500" />{ctraderNotice.inserted === 0 ? t('ctNoNew') : `${t('ctAdded')}${ctraderNotice.inserted}`}</div>
             <p className="mt-2 text-sm opacity-80">{t(ctraderNotice.refreshed ? 'ctUpdated' : 'ctRefresh')}</p>
             {ctraderNotice.skipped > 0 && <p className="mt-1 text-xs opacity-60">{t('ctSkipped')}{ctraderNotice.skipped}</p>}
             {ctraderNotice.refreshed && <button className="mt-3 text-sm font-semibold text-emerald-600" onClick={() => { closeConnectModal(); handlePresetChange('Вся история'); setPlatformFilter('ALL'); setHistoryCurrency('ALL'); setHistoryNameFilter(''); setHistoryWinLoss('all'); setHistoryOpen(true); setCtraderNotice(null); }}>{t('ctHistory')}</button>}
             {ctraderNotice.refreshed && <button className="mt-3 block text-sm font-semibold text-amber-600" onClick={showImportedCalendar}>{t('ctCalendar')}</button>}
-          </> : <div className="pr-5 text-sm">
-            <p>{t(ctraderNotice.code === 'RECONNECT_REQUIRED' ? 'ctReconnect' : ctraderNotice.code === 'UNAUTHORIZED' ? 'ctLogin' : ctraderNotice.code === 'OFFLINE' ? 'ctOffline' : 'ctError')}</p>
-            <p className="mt-2 text-xs opacity-80">{t('ctStage')}: {t(({ accounts: 'ctStageAccounts', 'select-account': 'ctStageSelect', sync: 'ctStageSync', disconnect: 'ctStageDisconnect', oauth: 'ctStageOauth' })[ctraderNotice.stage] || 'ctStageSync')}</p>
-            <p className="mt-1 break-words font-mono text-xs">{ctraderNotice.stage} · {ctraderNotice.code}{ctraderNotice.status ? ` · HTTP ${ctraderNotice.status}` : ''}</p>
-            {ctraderNotice.backendStage && <p className="mt-1 font-mono text-xs">kalendar · {ctraderNotice.backendStage}</p>}
-            <p className="mt-2 text-xs opacity-70">{t(ctraderNotice.stage === 'sync' ? 'ctImportUnconfirmed' : 'ctImportNotStarted')}</p>
-          </div>}
+          </>
         </div>
       )}
       <Header
@@ -1722,7 +1721,7 @@ export default function CalendarScreen() {
       )}
 
       {/* Floating Action Dock: Prominent Center "+" Add Button + History */}
-      <div className="history-fab fixed bottom-4 sm:bottom-6 inset-x-0 flex justify-center items-center z-30 pointer-events-none px-4">
+      <div className="history-fab fixed inset-x-0 flex justify-center items-center z-30 pointer-events-none px-4">
         <div className={`pointer-events-auto flex items-center gap-1.5 sm:gap-2.5 rounded-full border p-1.5 sm:p-2 backdrop-blur-2xl transition-all duration-300 ${
           isLight
             ? 'border-zinc-200/90 bg-white/95 shadow-[0_16px_45px_rgba(0,0,0,0.14)]'
@@ -2999,6 +2998,11 @@ export default function CalendarScreen() {
           <div role="dialog" aria-modal="true" aria-label="cTrader" className={`relative max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-3xl border p-5 shadow-2xl sm:p-6 ${isLight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-zinc-800 bg-zinc-950 text-zinc-100'}`}>
             <button onClick={closeConnectModal} aria-label={t('close')} className="absolute right-3 top-3 rounded-lg p-2 text-zinc-500 hover:text-amber-500"><X className="h-4 w-4" /></button>
             <CtraderControl t={t} isLight={isLight} connected={ctraderConnected} reconnect={ctraderReconnect} loading={ctraderLoading} syncing={syncingCtrader} accounts={ctraderAccounts} accountId={ctraderAccountId} onConnect={handleConnectCtrader} onSelect={handleSelectCtraderAccount} onSync={handleSyncCtraderTrades} onDisconnect={handleDisconnectCtrader} />
+            {ctraderNotice?.kind === 'error' && !(ctraderNotice.stage === 'accounts' && ctraderReconnect) && (
+              <p role="status" className="mt-4 text-sm leading-relaxed text-amber-600">
+                {t(ctraderNotice.code === 'RECONNECT_REQUIRED' ? 'ctReconnect' : ctraderNotice.code === 'UNAUTHORIZED' ? 'ctLogin' : ctraderNotice.code === 'OFFLINE' ? 'ctOffline' : 'ctError')}
+              </p>
+            )}
           </div>
         </div>
       )}
