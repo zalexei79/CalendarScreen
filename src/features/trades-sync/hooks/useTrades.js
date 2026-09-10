@@ -36,8 +36,12 @@ export function useTrades({ user }) {
   const [manualTrades, setManualTrades] = useState({});
   const manualTradesRef = useRef({});
   const tradesCacheOwnerRef = useRef('__loading__');
+  const [loadedOwner, setLoadedOwner] = useState(null);
+  const refreshVersion = useRef(0);
   const cloudUserId = getValidUserId(user);
   const owner = cloudUserId || 'guest';
+  const currentOwnerRef = useRef(owner);
+  currentOwnerRef.current = owner;
 
   const readCachedTrades = useCallback((userId) => {
     try {
@@ -67,6 +71,7 @@ export function useTrades({ user }) {
   const reconcileCloudRows = useCallback((rows) => {
     const cloud = groupRows(rows);
     setManualTrades((prev) => {
+      if (currentOwnerRef.current !== cloudUserId) return prev;
       const next = { ...cloud };
       // Preserve only records that do not exist on the server yet.
       for (const [dateKey, list] of Object.entries(prev || {})) {
@@ -82,6 +87,7 @@ export function useTrades({ user }) {
 
   const refreshFromCloud = useCallback(async () => {
     if (!cloudUserId || !navigator.onLine) return false;
+    const version = ++refreshVersion.current;
     const rows = [];
     for (let offset = 0; ; offset += 1000) {
       const { data, error } = await supabase.from('trades').select('*').eq('user_id', cloudUserId)
@@ -93,6 +99,7 @@ export function useTrades({ user }) {
       rows.push(...(data || []));
       if (!data || data.length < 1000) break;
     }
+    if (currentOwnerRef.current !== cloudUserId || version !== refreshVersion.current) return false;
     reconcileCloudRows(rows);
     return true;
   }, [cloudUserId, reconcileCloudRows]);
@@ -102,7 +109,11 @@ export function useTrades({ user }) {
     const cached = readCachedTrades(cloudUserId);
     manualTradesRef.current = cached;
     setManualTrades(cached);
+    setLoadedOwner(owner);
     tradesCacheOwnerRef.current = owner;
+  }, [cloudUserId, owner, readCachedTrades]);
+
+  useEffect(() => {
     if (!cloudUserId || !navigator.onLine) return;
 
     let cancelled = false;
@@ -110,13 +121,15 @@ export function useTrades({ user }) {
       await flushOfflineQueue();
       if (!cancelled) await refreshFromCloud();
     })();
-    return () => { cancelled = true; };
-  }, [cloudUserId, owner, readCachedTrades, flushOfflineQueue, refreshFromCloud]);
+    return () => { cancelled = true; refreshVersion.current++; };
+  }, [cloudUserId, flushOfflineQueue, refreshFromCloud]);
 
   useEffect(() => {
     manualTradesRef.current = manualTrades;
-    if (tradesCacheOwnerRef.current === owner) cacheTradesLocally(manualTrades, cloudUserId);
-  }, [manualTrades, cloudUserId, owner, cacheTradesLocally]);
+    // Hydration updates state asynchronously. Never write the previous user's
+    // (or initial empty) state into the cache we have just read.
+    if (loadedOwner === owner && tradesCacheOwnerRef.current === owner) cacheTradesLocally(manualTrades, cloudUserId);
+  }, [manualTrades, cloudUserId, owner, loadedOwner, cacheTradesLocally]);
 
   // Device-to-device sync: realtime when available, plus refresh on focus/online
   // as a reliable fallback for browsers/PWA sessions that suspend sockets.

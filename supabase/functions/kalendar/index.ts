@@ -3,6 +3,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { id, mapDeal, parseMessage, readDeals } from './core.mjs';
+import { disconnect } from './disconnect.mjs';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -114,7 +115,11 @@ serve(async req => {
     let body;
     try { body = await req.json(); } catch { return reply({ error: 'INVALID_REQUEST' }, 400); }
     const action = body.action || 'sync';
-    if (!['accounts', 'select-account', 'sync'].includes(action)) fail('INVALID_ACTION');
+    if (!['accounts', 'select-account', 'sync', 'disconnect'].includes(action)) fail('INVALID_ACTION');
+    if (action === 'disconnect') {
+      trace('DISCONNECT');
+      return reply(await disconnect(db, user.id));
+    }
     const timeZone = body.timeZone || 'UTC';
     try { new Intl.DateTimeFormat('en', { timeZone }); } catch { fail('INVALID_TIMEZONE'); }
     trace('LOAD_TOKEN');

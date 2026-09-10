@@ -29,6 +29,8 @@ export function toSupabaseTradeUpdates(localTrade, dateKey) {
 export function fromSupabaseTradeRow(row) {
   return {
     id: row.id,
+    ctrader_account_id: row.ctrader_account_id ?? null,
+    ctrader_deal_id: row.ctrader_deal_id ?? null,
     time: textValue(row.time),
     instrument: textValue(row.instrument),
     direction: textValue(row.direction),

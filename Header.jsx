@@ -449,14 +449,14 @@ export default function Header({
 
               {/* Connected or Connect button */}
               {ctraderConnected ? (
-                <div title={t('ctraderConnected')} className={`shrink-0 flex items-center gap-1.5 rounded-lg px-2 py-1.5 font-data text-[10px] font-semibold ${
+                <button onClick={openConnectModal} title={t('ctraderConnected')} className={`shrink-0 flex items-center gap-1.5 rounded-lg px-2 py-1.5 font-data text-[10px] font-semibold ${
                   isLight
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'bg-emerald-500/[0.08] text-emerald-400'
+                    ? 'text-zinc-700 hover:bg-zinc-50'
+                    : 'text-zinc-300 hover:bg-white/5'
                 }`}>
                   <span>cTrader</span>
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-label={t('connected')} />
-                </div>
+                </button>
               ) : (
                 <button
                   onClick={openConnectModal}
@@ -468,7 +468,7 @@ export default function Header({
                   title={t('connectPlatform')}
                 >
                   <Link2 className="h-3 w-3 shrink-0" />
-                  <span>{t('connectPlatform')}</span>
+                  <span>cTrader</span>
                 </button>
               )}
             </div>

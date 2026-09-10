@@ -638,6 +638,11 @@ export const TRANSLATIONS = {
 };
 
 Object.assign(TRANSLATIONS.ru, {
+  ctSwitch: 'Сменить счёт', ctDisconnect: 'Отключить', ctDisconnectTitle: 'Отключить cTrader?',
+  ctDisconnectBody: 'Связь с торговым аккаунтом будет удалена. Уже импортированные сделки останутся в календаре.',
+  ctConnectSubtitle: 'Подключите торговый аккаунт', ctSessionExpired: 'Сессия cTrader требует повторного подключения',
+  ctGrantAccounts: 'Разрешить доступ к другим счетам через cTrader', ctStageDisconnect: 'Отключение', ctStageOauth: 'Подключение',
+  ctNoNew: 'Всё актуально — новых сделок нет', ctCalendar: 'Показать в календаре',
   ctChoose: 'Выберите счёт', ctEmpty: 'Нет доступных счетов. Переподключите cTrader и разрешите доступ к счёту.',
   ctAdded: 'Добавлено сделок: ', ctUpdated: 'Календарь, история и статистика обновлены.',
   ctRefresh: 'Импорт выполнен. Не удалось обновить экран — обновите страницу, не повторяя импорт.',
@@ -648,6 +653,11 @@ Object.assign(TRANSLATIONS.ru, {
   ctHistory: 'Открыть историю', ctClose: 'Закрыть уведомление', ctLogin: 'Войдите в аккаунт заново',
 });
 Object.assign(TRANSLATIONS.en, {
+  ctSwitch: 'Switch account', ctDisconnect: 'Disconnect', ctDisconnectTitle: 'Disconnect cTrader?',
+  ctDisconnectBody: 'The trading connection will be removed. Previously imported trades will remain in the calendar.',
+  ctConnectSubtitle: 'Connect your trading account', ctSessionExpired: 'Your cTrader session needs reconnecting',
+  ctGrantAccounts: 'Grant access to more accounts via cTrader', ctStageDisconnect: 'Disconnecting', ctStageOauth: 'Connecting',
+  ctNoNew: 'Up to date — no new trades', ctCalendar: 'Show in calendar',
   ctChoose: 'Choose an account', ctEmpty: 'No accounts available. Reconnect cTrader and grant account access.',
   ctAdded: 'Trades added: ', ctUpdated: 'Calendar, history and statistics updated.',
   ctRefresh: 'Import completed. Could not refresh the screen — reload the page without repeating the import.',
@@ -658,6 +668,11 @@ Object.assign(TRANSLATIONS.en, {
   ctHistory: 'Open history', ctClose: 'Dismiss notification', ctLogin: 'Please sign in again',
 });
 Object.assign(TRANSLATIONS.md, {
+  ctSwitch: 'Schimbă contul', ctDisconnect: 'Deconectează', ctDisconnectTitle: 'Deconectați cTrader?',
+  ctDisconnectBody: 'Conexiunea cu contul de tranzacționare va fi eliminată. Tranzacțiile importate rămân în calendar.',
+  ctConnectSubtitle: 'Conectați contul de tranzacționare', ctSessionExpired: 'Sesiunea cTrader necesită reconectare',
+  ctGrantAccounts: 'Permiteți accesul la alte conturi prin cTrader', ctStageDisconnect: 'Deconectare', ctStageOauth: 'Conectare',
+  ctNoNew: 'Totul este actualizat — nicio tranzacție nouă', ctCalendar: 'Arată în calendar',
   ctChoose: 'Alegeți contul', ctEmpty: 'Nu există conturi disponibile. Reconectați cTrader și permiteți accesul la cont.',
   ctAdded: 'Tranzacții adăugate: ', ctUpdated: 'Calendarul, istoricul și statisticile au fost actualizate.',
   ctRefresh: 'Import finalizat. Ecranul nu a fost actualizat — reîncărcați pagina fără a repeta importul.',

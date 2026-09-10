@@ -1,7 +1,7 @@
 # Simple kalendar sync
 
 This replaces the existing deployed `kalendar`, not `bright-api` or `super-service`.
-Deploy `index.ts` AND `core.mjs`; do not deploy the test file. Keep JWT verification enabled.
+Deploy `index.ts`, `core.mjs` AND `disconnect.mjs`; do not deploy test files. Keep JWT verification enabled.
 Uses the existing SUPABASE_URL, SUPABASE_ANON_KEY, CTRADER_CLIENT_ID and
 CTRADER_CLIENT_SECRET environment secrets. Never send cTrader tokens from React.
 
@@ -10,6 +10,7 @@ Prerequisite: migration 202609090001_simple_ctrader_sync.sql (already applied by
 Authenticated POST bodies:
 
 - `{ "action": "accounts" }`: returns available persisted account rows (safe metadata only).
+- `{ "action": "disconnect" }`: deactivates own accounts and deletes the own connection token; preserves account IDs and all imported/manual trades. Returns `{ "success": true }`.
 - `{ "action": "select-account", "accountId": "<ctrader_accounts.id UUID>" }`: remembers selection.
 - `{ "action": "sync", "accountId": "<same UUID>", "timeZone": "Europe/Bucharest" }`:
   imports history, returns `inserted`, `dealsFound`, `skipped`, `accountId`, `currency`.
