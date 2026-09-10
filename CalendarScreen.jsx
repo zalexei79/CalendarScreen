@@ -143,7 +143,7 @@ export default function CalendarScreen() {
       console.error('[ctrader] ошибка подключения:', err);
       alert('Не удалось подключить cTrader: ' + err.message);
     } finally {
-      window.history.replaceState({}, document.title, window.location.pathname);
+      try { window.history.replaceState({}, document.title, window.location.pathname); } catch {}
       setCtraderLoading(false);
     }
   }
@@ -164,7 +164,7 @@ export default function CalendarScreen() {
     if (code && user) {
       handleCtraderCallback(code);
     } else if (code && !user) {
-      window.history.replaceState({}, document.title, window.location.pathname);
+      try { window.history.replaceState({}, document.title, window.location.pathname); } catch {}
     } else if (user) {
       checkCtraderStatus(validUserId);
     } else {
@@ -329,7 +329,7 @@ export default function CalendarScreen() {
   // system back button/swipe closes the day first instead of leaving the site
   useEffect(() => {
     if (selectedKey && !suppressNextHistoryPush.current) {
-      window.history.pushState({ calendarDay: selectedKey }, '');
+      try { window.history.pushState({ calendarDay: selectedKey }, ''); } catch {}
     }
     suppressNextHistoryPush.current = false;
   }, [selectedKey]);

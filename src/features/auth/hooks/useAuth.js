@@ -25,7 +25,7 @@ export function useAuth() {
         if (access_token && refresh_token) {
           const { error } = await supabase.auth.setSession({ access_token, refresh_token });
           console.log('[auth] setSession вручную →', error ? 'ошибка' : 'успех', error || '');
-          window.history.replaceState(null, '', window.location.pathname);
+          try { window.history.replaceState(null, '', window.location.pathname); } catch {}
         }
       }
 
