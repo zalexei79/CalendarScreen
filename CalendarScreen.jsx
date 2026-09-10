@@ -172,6 +172,22 @@ export default function CalendarScreen() {
     }
   }, [user, validUserId]);
 
+  async function handleSyncCtraderTrades() {
+    if (!validUserId || syncingCtrader) return;
+    setSyncingCtrader(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('kalendar', {
+        body: { user_id: validUserId },
+      });
+      if (error) throw error;
+      console.log('[ctrader] sync result:', data);
+    } catch (err) {
+      console.error('[ctrader] sync error:', err);
+    } finally {
+      setSyncingCtrader(false);
+    }
+  }
+
   // --- Displayed month/year (navigable), separate from the real "today" ----
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
