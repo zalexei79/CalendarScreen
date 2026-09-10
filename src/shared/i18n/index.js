@@ -637,6 +637,31 @@ export const TRANSLATIONS = {
   },
 };
 
+Object.assign(TRANSLATIONS.ru, {
+  ctChoose: 'Выберите счёт', ctEmpty: 'Нет доступных счетов. Переподключите cTrader и разрешите доступ к счёту.',
+  ctAdded: 'Добавлено сделок: ', ctUpdated: 'Календарь, история и статистика обновлены.',
+  ctRefresh: 'Импорт выполнен. Не удалось обновить экран — обновите страницу, не повторяя импорт.',
+  ctSkipped: 'Уже в истории: ', ctError: 'Не удалось завершить запрос. Импорт мог выполниться частично.',
+  ctReconnect: 'Нужно переподключить cTrader', ctOffline: 'Нет интернета. Подключитесь к сети.',
+  ctHistory: 'Открыть историю', ctClose: 'Закрыть уведомление', ctLogin: 'Войдите в аккаунт заново',
+});
+Object.assign(TRANSLATIONS.en, {
+  ctChoose: 'Choose an account', ctEmpty: 'No accounts available. Reconnect cTrader and grant account access.',
+  ctAdded: 'Trades added: ', ctUpdated: 'Calendar, history and statistics updated.',
+  ctRefresh: 'Import completed. Could not refresh the screen — reload the page without repeating the import.',
+  ctSkipped: 'Already in history: ', ctError: 'Request could not complete. Some trades may have been imported.',
+  ctReconnect: 'Reconnect cTrader', ctOffline: 'You are offline. Connect to the internet.',
+  ctHistory: 'Open history', ctClose: 'Dismiss notification', ctLogin: 'Please sign in again',
+});
+Object.assign(TRANSLATIONS.md, {
+  ctChoose: 'Alegeți contul', ctEmpty: 'Nu există conturi disponibile. Reconectați cTrader și permiteți accesul la cont.',
+  ctAdded: 'Tranzacții adăugate: ', ctUpdated: 'Calendarul, istoricul și statisticile au fost actualizate.',
+  ctRefresh: 'Import finalizat. Ecranul nu a fost actualizat — reîncărcați pagina fără a repeta importul.',
+  ctSkipped: 'Deja în istoric: ', ctError: 'Cererea nu a putut fi finalizată. Importul poate fi parțial.',
+  ctReconnect: 'Reconectați cTrader', ctOffline: 'Fără internet. Conectați-vă la rețea.',
+  ctHistory: 'Deschide istoricul', ctClose: 'Închide notificarea', ctLogin: 'Autentificați-vă din nou',
+});
+
 export function translate(language, key) {
   const langKey = language === 'ro' ? 'md' : language;
   return (TRANSLATIONS[langKey] && TRANSLATIONS[langKey][key]) || (TRANSLATIONS.en && TRANSLATIONS.en[key]) || TRANSLATIONS.ru[key] || key;

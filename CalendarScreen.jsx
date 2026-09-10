@@ -104,6 +104,24 @@ export default function CalendarScreen() {
   const [ctraderConnected, setCtraderConnected] = useState(false);
   const [ctraderLoading, setCtraderLoading] = useState(false);
   const [syncingCtrader, setSyncingCtrader] = useState(false);
+  const [ctraderAccounts, setCtraderAccounts] = useState([]);
+  const [ctraderAccountId, setCtraderAccountId] = useState('');
+  const [ctraderNotice, setCtraderNotice] = useState(null);
+  const ctraderBusy = useRef(false);
+
+  async function callCtrader(body) {
+    if (!navigator.onLine) throw new Error('OFFLINE');
+    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    if (authError || !session?.access_token || session.user.id !== validUserId) throw new Error('UNAUTHORIZED');
+    const { data, error } = await supabase.functions.invoke('kalendar', {
+      body, headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (error || data?.error) {
+      const details = await error?.context?.json?.().catch(() => null);
+      throw new Error(details?.error || data?.error || 'REQUEST_FAILED');
+    }
+    return data;
+  }
 
   async function checkCtraderStatus(userId) {
     if (!userId) {
@@ -123,11 +141,13 @@ export default function CalendarScreen() {
       const response = error?.context;
       const details = response?.json ? await response.json().catch(() => null) : null;
       console.warn('[ctrader] accounts:', details?.error || data?.error || error?.message);
+      setCtraderNotice({ kind: 'error', code: details?.error || data?.error || 'REQUEST_FAILED' });
       setCtraderConnected(false);
       return;
     }
     setCtraderConnected(true);
-    console.info('[ctrader] accounts:', data.accounts);
+    setCtraderAccounts(data.accounts || []);
+    setCtraderAccountId(data.accounts?.find(a => a.is_active)?.id || '');
   }
 
   async function handleCtraderCallback(code) {
@@ -138,7 +158,7 @@ export default function CalendarScreen() {
         body: { code, redirectUri },
       });
       if (error || data?.error) throw new Error(error?.message || data?.error);
-      setCtraderConnected(true);
+      await checkCtraderStatus(validUserId);
     } catch (err) {
       console.error('[ctrader] ошибка подключения:', err);
       alert('Не удалось подключить cTrader: ' + err.message);
@@ -164,26 +184,35 @@ export default function CalendarScreen() {
     if (code && user) {
       handleCtraderCallback(code);
     } else if (code && !user) {
-      try { window.history.replaceState({}, document.title, window.location.pathname); } catch {}
+      return; // Keep the OAuth code while the existing Supabase session restores.
     } else if (user) {
       checkCtraderStatus(validUserId);
     } else {
       setCtraderConnected(false);
+      setCtraderAccounts([]);
+      setCtraderAccountId('');
+      setCtraderNotice(null);
     }
   }, [user, validUserId]);
 
   async function handleSyncCtraderTrades() {
-    if (!validUserId || syncingCtrader) return;
+    if (!validUserId || ctraderBusy.current) return;
+    if (!ctraderAccountId) { openConnectModal(); return; }
+    ctraderBusy.current = true;
     setSyncingCtrader(true);
+    setCtraderNotice(null);
     try {
-      const { data, error } = await supabase.functions.invoke('kalendar', {
-        body: { user_id: validUserId },
+      await callCtrader({ action: 'select-account', accountId: ctraderAccountId });
+      const data = await callCtrader({
+        action: 'sync', accountId: ctraderAccountId,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       });
-      if (error) throw error;
-      console.log('[ctrader] sync result:', data);
+      const refreshed = await refreshFromCloud().catch(() => false);
+      setCtraderNotice({ kind: 'success', inserted: data.inserted, skipped: data.skipped, refreshed });
     } catch (err) {
-      console.error('[ctrader] sync error:', err);
+      setCtraderNotice({ kind: 'error', code: err.message });
     } finally {
+      ctraderBusy.current = false;
       setSyncingCtrader(false);
     }
   }
@@ -376,6 +405,7 @@ export default function CalendarScreen() {
     saveTrade: hookSaveTrade,
     deleteTrade: hookDeleteTrade,
     clearAllTrades: hookClearAllTrades,
+    refreshFromCloud,
   } = useTrades({ user });
 
   const [recentInstruments, setRecentInstruments] = useState([]); // most-recently-used instrument symbols
@@ -1424,6 +1454,17 @@ export default function CalendarScreen() {
       `}</style>
 
       {/* HEADER */}
+      {ctraderNotice && (
+        <div role="status" aria-live="polite" className={`fixed bottom-24 left-4 right-4 sm:left-auto sm:w-96 z-[200] rounded-2xl border p-5 shadow-xl ${isLight ? 'bg-white text-zinc-900 border-zinc-200' : 'bg-zinc-900 text-zinc-100 border-zinc-700'}`}>
+          <button aria-label={t('ctClose')} onClick={() => setCtraderNotice(null)} className="absolute right-2 top-2 p-2"><X className="h-4 w-4" /></button>
+          {ctraderNotice.kind === 'success' ? <>
+            <div className="flex items-center gap-2 pr-5 font-semibold"><CheckCircle2 className="h-5 w-5 text-emerald-500" />{t('ctAdded')}{ctraderNotice.inserted}</div>
+            <p className="mt-2 text-sm opacity-80">{t(ctraderNotice.refreshed ? 'ctUpdated' : 'ctRefresh')}</p>
+            {ctraderNotice.skipped > 0 && <p className="mt-1 text-xs opacity-60">{t('ctSkipped')}{ctraderNotice.skipped}</p>}
+            {ctraderNotice.refreshed && <button className="mt-3 text-sm font-semibold text-emerald-600" onClick={() => { closeConnectModal(); handlePresetChange('Вся история'); setPlatformFilter('ALL'); setHistoryCurrency('ALL'); setHistoryNameFilter(''); setHistoryWinLoss('all'); setHistoryOpen(true); setCtraderNotice(null); }}>{t('ctHistory')}</button>}
+          </> : <p className="pr-5 text-sm">{t(ctraderNotice.code === 'RECONNECT_REQUIRED' ? 'ctReconnect' : ctraderNotice.code === 'UNAUTHORIZED' ? 'ctLogin' : ctraderNotice.code === 'OFFLINE' ? 'ctOffline' : 'ctError')}</p>}
+        </div>
+      )}
       <Header
         isLight={isLight} traderMode={traderMode} t={t} theme={theme} setTheme={setTheme}
         settingsRef={settingsRef} settingsOpen={settingsOpen} closeSettings={closeSettings}
@@ -2961,9 +3002,21 @@ export default function CalendarScreen() {
                   {t('ctraderDesc')}
                 </p>
                 {ctraderConnected ? (
+                  <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-emerald-600 text-sm">
                     <CheckCircle2 className="h-4 w-4" />
                     {t('ctraderConnected')}
+                  </div>
+                  <label className="text-xs opacity-70" htmlFor="ctrader-account">{t('ctChoose')}</label>
+                  <select id="ctrader-account" value={ctraderAccountId} disabled={syncingCtrader} onChange={e => setCtraderAccountId(e.target.value)} className={`w-full rounded-xl border p-3 text-sm ${isLight ? 'bg-white border-zinc-200' : 'bg-zinc-950 border-zinc-700'}`}>
+                    <option value="">{t('ctChoose')}</option>
+                    {ctraderAccounts.map(a => <option key={a.id} value={a.id}>{a.broker_name || 'cTrader'} · {a.account_id} · {a.is_live ? 'Live' : 'Demo'}</option>)}
+                  </select>
+                  {!ctraderAccounts.length && <p className="text-xs opacity-70">{t('ctEmpty')}</p>}
+                  <button onClick={handleSyncCtraderTrades} disabled={!ctraderAccountId || syncingCtrader} className="flex items-center justify-center gap-2 rounded-xl bg-amber-400 p-3 text-sm font-semibold text-zinc-950 disabled:opacity-50">
+                    <RefreshCw className={`h-4 w-4 ${syncingCtrader ? 'animate-spin' : ''}`} />{t(syncingCtrader ? 'syncing' : 'synchronize')}
+                  </button>
+                  <button onClick={handleConnectCtrader} disabled={syncingCtrader} className="text-xs opacity-60">{t('ctReconnect')}</button>
                   </div>
                 ) : (
                   <button

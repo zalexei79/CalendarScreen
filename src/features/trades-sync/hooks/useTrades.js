@@ -81,13 +81,20 @@ export function useTrades({ user }) {
   }, [cacheTradesLocally, cloudUserId]);
 
   const refreshFromCloud = useCallback(async () => {
-    if (!cloudUserId || !navigator.onLine) return;
-    const { data, error } = await supabase.from('trades').select('*').eq('user_id', cloudUserId);
-    if (error) {
-      console.warn('[trades] cloud refresh failed:', error.message);
-      return;
+    if (!cloudUserId || !navigator.onLine) return false;
+    const rows = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await supabase.from('trades').select('*').eq('user_id', cloudUserId)
+        .order('id').range(offset, offset + 999);
+      if (error) {
+        console.warn('[trades] cloud refresh failed:', error.message);
+        return false;
+      }
+      rows.push(...(data || []));
+      if (!data || data.length < 1000) break;
     }
-    reconcileCloudRows(data || []);
+    reconcileCloudRows(rows);
+    return true;
   }, [cloudUserId, reconcileCloudRows]);
 
   useEffect(() => {
