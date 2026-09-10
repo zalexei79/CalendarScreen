@@ -69,6 +69,7 @@ import { useAuth } from './src/features/auth/hooks/useAuth';
 import { useTrades } from './src/features/trades-sync/hooks/useTrades';
 import Header from './Header';
 import HistoryChart from './HistoryChart';
+import PnlCurve from './src/features/trades-sync/components/PnlCurve';
 import CalendarGrid from './CalendarGrid';
 import CtraderControl from './src/features/ctrader/CtraderControl';
 
@@ -2270,6 +2271,7 @@ export default function CalendarScreen() {
               ) : (
                 <>
                   {/* PRO HISTORY — Premium redesign with donut chart */}
+                  <PnlCurve trades={historyTrades} accounts={ctraderAccounts} language={language} isLight={isLight} />
 
                   {/* ── Luxury Donut + Stats Header ─────────────────────── */}
                   {(() => {
