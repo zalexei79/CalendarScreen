@@ -363,27 +363,7 @@ export default function CalendarScreen() {
     }
   }, []);
 
-  // Keyboard navigation for PC (ArrowLeft / ArrowRight to switch months)
-  useEffect(() => {
-    function handleKeyDown(e) {
-      const tag = e.target?.tagName?.toUpperCase();
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) {
-        return;
-      }
-      if (historyOpen || modalOpen || settingsOpen || connectOpen || installInfoOpen || selectedKey) {
-        return;
-      }
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        goToPrevMonth();
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        goToNextMonth();
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [historyOpen, modalOpen, settingsOpen, connectOpen, installInfoOpen, selectedKey]);
+
 
 
   // Trades data management via useTrades hook
@@ -1030,6 +1010,28 @@ export default function CalendarScreen() {
   const [exportOpen, setExportOpen] = useState(false);
   const [exportPeriodPreset, setExportPeriodPreset] = useState('currentPeriod');
   const [confirmingClear, setConfirmingClear] = useState(false);
+
+  // Keyboard navigation for PC (ArrowLeft / ArrowRight to switch months)
+  useEffect(() => {
+    function handleKeyDown(e) {
+      const tag = e.target?.tagName?.toUpperCase();
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) {
+        return;
+      }
+      if (historyOpen || modalOpen || settingsOpen || connectOpen || installInfoOpen || selectedKey) {
+        return;
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        goToPrevMonth();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        goToNextMonth();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [historyOpen, modalOpen, settingsOpen, connectOpen, installInfoOpen, selectedKey]);
 
   const historyTrades = useMemo(() => {
     return Object.entries(manualTrades || {})
