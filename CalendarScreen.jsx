@@ -110,8 +110,24 @@ export default function CalendarScreen() {
       setCtraderConnected(false);
       return;
     }
-    const { data } = await supabase.from('ctrader_tokens').select('id').eq('user_id', userId).maybeSingle();
-    setCtraderConnected(!!data);
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.access_token || session.user.id !== userId) {
+      setCtraderConnected(false);
+      return;
+    }
+    const { data, error } = await supabase.functions.invoke('kalendar', {
+      body: { action: 'accounts' },
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (error || data?.error) {
+      const response = error?.context;
+      const details = response?.json ? await response.json().catch(() => null) : null;
+      console.warn('[ctrader] accounts:', details?.error || data?.error || error?.message);
+      setCtraderConnected(false);
+      return;
+    }
+    setCtraderConnected(true);
+    console.info('[ctrader] accounts:', data.accounts);
   }
 
   async function handleCtraderCallback(code) {
