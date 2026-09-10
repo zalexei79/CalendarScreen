@@ -1,3443 +1,853 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import {
-  Inbox, TrendingUp, TrendingDown, Sparkles, Plus, X, Trash2,
-  Calendar, ChevronDown, Link2, KeyRound, UploadCloud, FileText,
-  CheckCircle2, RefreshCw, History, Download, Pencil,
-  Wallet, ShoppingCart, Home, Briefcase, ShoppingBag, CreditCard, MoreHorizontal, Cigarette, Utensils, Car, Gift, Gamepad2, Fish, ChartCandlestick, Repeat2, CircleDollarSign,
-  Wifi, WifiOff,
-} from 'lucide-react';
-import { supabase } from './src/supabaseClient';
-
-/**
- * AI Trading Journal — Screen 01: Calendar + Trade Panel + Add Trade Modal + Platform Connect
- *
- * For your Next.js app:
- *  - rename to CalendarScreen.tsx
- *  - add "use client" as the first line (uses useState/useMemo/useEffect/useRef)
- *  - type the shared objects, e.g.:
- *      type DayCell = { date: Date; key: string; inMonth: boolean; isToday: boolean };
- *      type Trade = { id: string; time: string; instrument: string; direction: 'LONG' | 'SHORT'; pnl: number; comment: string; platform: string };
- *      type ManualTrades = Record<string, Trade[]>;
- *
- * All trade data is user-entered (`manualTrades`) — there is no mock/demo
- * generator. "Platform" connections (API keys / CSV import) are UI-complete
- * stubs: wire handleSaveApiKeys / handleImportCsv to your backend to actually
- * persist credentials or parse & ingest a broker export.
- */
-
-import {
-  currentTimeHHMM,
-  keyFromDate,
-  parseDateKeyLocal,
-  addDays,
-  startOfWeekMonday,
-  formatDateLabel,
-  getPresetRange,
-} from './src/shared/lib/dateUtils';
-import {
-  textValue,
-  formatMoney,
-  formatSignedShort,
-  formatMoneyShort,
-  getValidUserId,
-} from './src/shared/lib/formatters';
-import {
-  PERIOD_PRESETS,
-  DEFAULT_ASSET_TAGS,
-  INSTRUMENT_INFO,
-  MONEY_CATEGORIES,
-  EXCHANGES,
-  PLATFORMS,
-  MAX_CUSTOM_TAGS,
-  RECENT_INSTRUMENTS_STORAGE_KEY,
-  CUSTOM_TAGS_STORAGE_KEY,
-  DEPOSIT_SIZE_STORAGE_KEY,
-  TRADER_MODE_STORAGE_KEY,
-  LANGUAGE_STORAGE_KEY,
-  CURRENCY_STORAGE_KEY,
-  THEME_STORAGE_KEY,
-  GUEST_TRADES_CACHE_KEY,
-  OFFLINE_QUEUE_KEY,
-  LANGUAGES,
-  CURRENCIES,
-  getTradesCacheKey,
-  getMoneyCategoryMeta,
-  getCurrencyMeta,
-} from './src/shared/config/constants';
-import { TRANSLATIONS, translate } from './src/shared/i18n';
-import { useAuth } from './src/features/auth/hooks/useAuth';
-import { useTrades } from './src/features/trades-sync/hooks/useTrades';
-import Header from './Header';
-import HistoryChart from './HistoryChart';
-import CalendarGrid from './CalendarGrid';
-
-export default function CalendarScreen() {
-  const [today, setToday] = useState(() => new Date());
-  useEffect(() => {
-    function refreshToday() {
-      if (document.visibilityState === 'visible') setToday(new Date());
-    }
-    window.addEventListener('focus', refreshToday);
-    document.addEventListener('visibilitychange', refreshToday);
-    return () => {
-      window.removeEventListener('focus', refreshToday);
-      document.removeEventListener('visibilitychange', refreshToday);
-    };
-  }, []);
-
-  // Auth via useAuth hook
-  const {
-    user,
-    validUserId,
-    handleGoogleLogin,
-    handleGoogleLogout,
-    nicknameModalOpen,
-    nicknameModalVisible,
-    nicknameInput,
-    setNicknameInput,
-    handleSaveNickname,
-    setupStep,
-    setSetupStep,
-  } = useAuth();
-
-  // --- cTrader connection state ------------------------------------------
-  const [ctraderConnected, setCtraderConnected] = useState(false);
-  const [ctraderLoading, setCtraderLoading] = useState(false);
-  const [syncingCtrader, setSyncingCtrader] = useState(false);
-  const [ctraderAccounts, setCtraderAccounts] = useState([]);
-  const [ctraderAccountId, setCtraderAccountId] = useState('');
-  const [ctraderNotice, setCtraderNotice] = useState(null);
-  const ctraderBusy = useRef(false);
-
-  function showCtraderError(error, stage) {
-    // Only expose symbolic error codes, never response bodies or credentials.
-    const code = /^[A-Z][A-Z0-9_]{1,63}$/.test(error?.message || '') ? error.message : 'REQUEST_FAILED';
-    const status = Number.isInteger(error?.status) && error.status >= 100 && error.status <= 599 ? error.status : null;
-    const backendStages = ['AUTH', 'LOAD_TOKEN', 'CONNECT_DEMO', 'CONNECT_LIVE', 'APP_AUTH_DEMO', 'APP_AUTH_LIVE', 'LIST_ACCOUNTS', 'SAVE_ACCOUNTS', 'SELECT_ACCOUNT', 'REFRESH_TOKEN', 'ACCOUNT_AUTH', 'GET_TRADER', 'GET_ASSETS', 'GET_SYMBOLS', 'GET_DEALS', 'MAP_DEALS', 'SAVE_TRADES'];
-    const backendStage = backendStages.includes(error?.backendStage) ? error.backendStage : null;
-    setCtraderNotice({ kind: 'error', code, stage, status, backendStage });
-  }
-
-  async function callCtrader(body) {
-    if (!navigator.onLine) throw new Error('OFFLINE');
-    const { data: { session }, error: authError } = await supabase.auth.getSession();
-    if (authError || !session?.access_token || session.user.id !== validUserId) throw new Error('UNAUTHORIZED');
-    const { data, error } = await supabase.functions.invoke('kalendar', {
-      body, headers: { Authorization: `Bearer ${session.access_token}` },
-    });
-    if (error || data?.error) {
-      const response = error?.context;
-      const details = response?.json ? await response.clone().json().catch(() => null) : null;
-      const failure = new Error(details?.error || data?.error || 'REQUEST_FAILED');
-      failure.status = response?.status;
-      failure.backendStage = details?.stage || data?.stage;
-      throw failure;
-    }
-    return data;
-  }
-
-  async function checkCtraderStatus(userId) {
-    if (!userId) {
-      setCtraderConnected(false);
-      return;
-    }
-    try {
-      const data = await callCtrader({ action: 'accounts' });
-      setCtraderConnected(true);
-      setCtraderAccounts(data.accounts || []);
-      setCtraderAccountId(data.accounts?.find(a => a.is_active)?.id || '');
-    } catch (error) {
-      showCtraderError(error, 'accounts');
-      setCtraderConnected(false);
-    }
-  }
-
-  async function handleCtraderCallback(code) {
-    setCtraderLoading(true);
-    try {
-      const redirectUri = window.location.origin + '/';
-      const { data, error } = await supabase.functions.invoke('bright-api', {
-        body: { code, redirectUri },
-      });
-      if (error || data?.error) throw new Error(error?.message || data?.error);
-      await checkCtraderStatus(validUserId);
-    } catch (err) {
-      console.error('[ctrader] ошибка подключения:', err);
-      alert('Не удалось подключить cTrader: ' + err.message);
-    } finally {
-      try { window.history.replaceState({}, document.title, window.location.pathname); } catch {}
-      setCtraderLoading(false);
-    }
-  }
-
-  function handleConnectCtrader() {
-    if (!validUserId) {
-      handleGoogleLogin();
-      return;
-    }
-    const clientId = import.meta.env.VITE_CTRADER_CLIENT_ID;
-    const redirectUri = encodeURIComponent(window.location.origin + '/');
-    window.location.href = `https://connect.spotware.com/apps/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=trading`;
-  }
-
-  // Check cTrader status on user change and handle OAuth code return
-  useEffect(() => {
-    const code = new URLSearchParams(window.location.search).get('code');
-    if (code && user) {
-      handleCtraderCallback(code);
-    } else if (code && !user) {
-      return; // Keep the OAuth code while the existing Supabase session restores.
-    } else if (user) {
-      checkCtraderStatus(validUserId);
-    } else {
-      setCtraderConnected(false);
-      setCtraderAccounts([]);
-      setCtraderAccountId('');
-      setCtraderNotice(null);
-    }
-  }, [user, validUserId]);
-
-  async function handleSyncCtraderTrades() {
-    if (!validUserId || ctraderBusy.current) return;
-    if (!ctraderAccountId) { openConnectModal(); return; }
-    ctraderBusy.current = true;
-    setSyncingCtrader(true);
-    setCtraderNotice(null);
-    let stage = 'select-account';
-    try {
-      await callCtrader({ action: 'select-account', accountId: ctraderAccountId });
-      stage = 'sync';
-      const data = await callCtrader({
-        action: 'sync', accountId: ctraderAccountId,
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      });
-      const refreshed = await refreshFromCloud().catch(() => false);
-      setCtraderNotice({ kind: 'success', inserted: data.inserted, skipped: data.skipped, refreshed });
-    } catch (err) {
-      showCtraderError(err, stage);
-    } finally {
-      ctraderBusy.current = false;
-      setSyncingCtrader(false);
-    }
-  }
-
-  // --- Displayed month/year (navigable), separate from the real "today" ----
-  const [viewYear, setViewYear] = useState(today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(today.getMonth());
-  const [slideDirection, setSlideDirection] = useState(null);
-  const [animKey, setAnimKey] = useState(0);
-  const year = viewYear;
-  const month = viewMonth;
-
-  function goToPrevMonth() {
-    setSelectedKey(null);
-    setSlideDirection('prev');
-    setAnimKey((k) => k + 1);
-    setViewMonth((m) => {
-      if (m === 0) {
-        setViewYear((y) => y - 1);
-        return 11;
-      }
-      return m - 1;
-    });
-  }
-
-  function goToNextMonth() {
-    setSelectedKey(null);
-    setSlideDirection('next');
-    setAnimKey((k) => k + 1);
-    setViewMonth((m) => {
-      if (m === 11) {
-        setViewYear((y) => y + 1);
-        return 0;
-      }
-      return m + 1;
-    });
-  }
-
-  const [selectedKey, setSelectedKey] = useState(null);
-  const calendarTouchStart = useRef(null);
-  const [displayMode, setDisplayMode] = useState('usd'); // 'usd' | 'percent'
-  const [depositSize, setDepositSize] = useState(() => {
-    try {
-      return Number(window.localStorage.getItem(DEPOSIT_SIZE_STORAGE_KEY)) || 0;
-    } catch {
-      return 0;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(DEPOSIT_SIZE_STORAGE_KEY, String(depositSize));
-    } catch {
-      // ignore storage write failures
-    }
-  }, [depositSize]);
-
-  const [traderMode, setTraderMode] = useState(() => {
-    try {
-      return window.localStorage.getItem(TRADER_MODE_STORAGE_KEY) === '1';
-    } catch {
-      return false;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(TRADER_MODE_STORAGE_KEY, traderMode ? '1' : '0');
-    } catch {
-      // ignore storage write failures
-    }
-  }, [traderMode]);
-
-  // --- Settings: language / currency / theme ------------------------------
-  const [language, setLanguage] = useState(() => {
-    try {
-      const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
-      return LANGUAGES.some((l) => l.code === stored) ? stored : 'ru';
-    } catch {
-      return 'ru';
-    }
-  });
-  const [currency, setCurrency] = useState(() => {
-    try {
-      const stored = window.localStorage.getItem(CURRENCY_STORAGE_KEY);
-      return CURRENCIES.some((c) => c.code === stored) ? stored : 'USD';
-    } catch {
-      return 'USD';
-    }
-  });
-  const [theme, setTheme] = useState(() => {
-    try {
-      const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-      return stored === 'light' ? 'light' : 'dark';
-    } catch {
-      return 'dark';
-    }
-  });
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsVisible, setSettingsVisible] = useState(false);
-  const settingsRef = useRef(null);
-
-  function openSettings() {
-    setSettingsOpen(true);
-    requestAnimationFrame(() => setSettingsVisible(true));
-  }
-  function closeSettings() {
-    setSettingsVisible(false);
-    setTimeout(() => setSettingsOpen(false), 160);
-  }
-
-  useEffect(() => {
-    try { window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language); } catch { /* ignore */ }
-  }, [language]);
-
-  useEffect(() => {
-    try { window.localStorage.setItem(CURRENCY_STORAGE_KEY, currency); } catch { /* ignore */ }
-  }, [currency]);
-
-  useEffect(() => {
-    try { window.localStorage.setItem(THEME_STORAGE_KEY, theme); } catch { /* ignore */ }
-  }, [theme]);
-
-  useEffect(() => {
-    if (!settingsOpen) return;
-    function onDocClick(e) {
-      if (settingsRef.current && !settingsRef.current.contains(e.target)) closeSettings();
-    }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [settingsOpen]);
-
-  const t = (key) => translate(language, key);
-  const currencySymbol = getCurrencyMeta(currency).symbol;
-  const isLight = theme === 'light';
-  const periodLabel = (preset) => ({
-    'Сегодня': t('today'),
-    'Текущая неделя': t('currentWeek'),
-    'Текущий месяц': t('currentMonth'),
-    '3 месяца': t('threeMonths'),
-    'Вся история': t('allHistory'),
-    custom: t('customPeriod'),
-  }[preset] || preset);
-
-  function formatPnlDisplay(amount, short) {
-    const num = Number(amount) || 0;
-    if (displayMode === 'percent' && depositSize > 0) {
-      const pct = (num / depositSize) * 100;
-      return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
-    }
-    return `${num >= 0 ? '+' : '-'}${currencySymbol}${short ? formatMoneyShort(num) : formatMoney(num)}`;
-  }
-
-  function formatAmountInCurrency(amount, code, { signed = true, short = false } = {}) {
-    const symbol = getCurrencyMeta(code || 'USD').symbol;
-    const abs = Math.abs(Number(amount) || 0);
-    const value = short ? formatMoneyShort(abs) : formatMoney(abs);
-    if (!signed) return `${symbol}${value}`;
-    return `${amount >= 0 ? '+' : '−'}${symbol}${value}`;
-  }
-
-  const suppressNextHistoryPush = useRef(false);
-
-  // native "back" support: opening a day pushes a history entry, so the
-  // system back button/swipe closes the day first instead of leaving the site
-  useEffect(() => {
-    if (selectedKey && !suppressNextHistoryPush.current) {
-      try { window.history.pushState({ calendarDay: selectedKey }, ''); } catch {}
-    }
-    suppressNextHistoryPush.current = false;
-  }, [selectedKey]);
-
-  useEffect(() => {
-    function onPopState() {
-      suppressNextHistoryPush.current = true;
-      setSelectedKey(null);
-    }
-  }, []);
-
-
-
-
-  // Trades data management via useTrades hook
-  const {
-    manualTrades,
-    setManualTrades,
-    manualTradesRef,
-    cacheTradesLocally,
-    pendingSyncCount,
-    saveTrade: hookSaveTrade,
-    deleteTrade: hookDeleteTrade,
-    clearAllTrades: hookClearAllTrades,
-    refreshFromCloud,
-  } = useTrades({ user });
-
-  const [recentInstruments, setRecentInstruments] = useState([]); // most-recently-used instrument symbols
-  const [customTags, setCustomTags] = useState([]); // user-added instrument tags, max MAX_CUSTOM_TAGS
-  const [addingCustomTag, setAddingCustomTag] = useState(false);
-  const [customTagInput, setCustomTagInput] = useState('');
-  const dragTagIndex = useRef(null);
-
-  // --- Install as app (PWA) ------------------------------------------------
-  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
-  const [installInfoOpen, setInstallInfoOpen] = useState(false);
-  const [isPwaInstalled, setIsPwaInstalled] = useState(() => {
-    const standalone = window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    try { return standalone || window.localStorage.getItem('atj_pwa_installed') === 'true'; } catch { return standalone; }
-  });
-  const installInfoRef = useRef(null);
-  const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent);
-
-  useEffect(() => {
-    function onBeforeInstallPrompt(e) {
-      e.preventDefault();
-      setDeferredInstallPrompt(e);
-    }
-    function onAppInstalled() {
-      setIsPwaInstalled(true);
-      try { window.localStorage.setItem('atj_pwa_installed', 'true'); } catch { /* ignore */ }
-    }
-    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
-    window.addEventListener('appinstalled', onAppInstalled);
-    return () => {
-      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', onAppInstalled);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!installInfoOpen) return;
-    function onDocClick(e) {
-      if (installInfoRef.current && !installInfoRef.current.contains(e.target)) setInstallInfoOpen(false);
-    }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [installInfoOpen]);
-
-  const installInstructions = isIOS
-    ? 'Нажмите значок «Поделиться» внизу Safari, затем «На экран «Домой»» — приложение появится как иконка, будет открываться без адресной строки и работать офлайн.'
-    : 'Нажмите кнопку ниже (или значок установки в адресной строке браузера) — приложение появится на рабочем столе/телефоне и будет работать без интернета.';
-
-  async function handleInstallClick() {
-    if (deferredInstallPrompt) {
-      deferredInstallPrompt.prompt();
-      await deferredInstallPrompt.userChoice;
-      setDeferredInstallPrompt(null);
-      return;
-    }
-    setInstallInfoOpen((v) => !v);
-  }
-
-  // --- Offline / Online notifications ---------------------------------------
-  const [offlineNoticeOpen, setOfflineNoticeOpen] = useState(false);
-  const [onlineToastOpen, setOnlineToastOpen] = useState(false);
-
-  useEffect(() => {
-    function handleOffline() {
-      setOnlineToastOpen(false);
-      setOfflineNoticeOpen(true);
-    }
-    function handleOnline() {
-      setOfflineNoticeOpen(false);
-      setOnlineToastOpen(true);
-      const timer = setTimeout(() => {
-        setOnlineToastOpen(false);
-      }, 4500);
-      return () => clearTimeout(timer);
-    }
-
-    window.addEventListener('offline', handleOffline);
-    window.addEventListener('online', handleOnline);
-
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      setOfflineNoticeOpen(true);
-    }
-
-    return () => {
-      window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('online', handleOnline);
-    };
-  }, []);
-
-  // --- Period filter state (compact popover) --------------------------------
-  const [periodPreset, setPeriodPreset] = useState('Вся история');
-  const initialRange = useMemo(() => getPresetRange('Вся история', today), [today]);
-  const [dateFrom, setDateFrom] = useState(initialRange.from);
-  const [dateTo, setDateTo] = useState(initialRange.to);
-  const [platformFilter, setPlatformFilter] = useState('ALL');
-  const [calendarTypeFilter, setCalendarTypeFilter] = useState('all');
-  const [monthMenuOpen, setMonthMenuOpen] = useState(false);
-  const [yearMenuOpen, setYearMenuOpen] = useState(false);
-
-  function handlePresetChange(preset) {
-    setSelectedKey(null);
-    setPeriodPreset(preset);
-    const range = getPresetRange(preset, today);
-    setDateFrom(range.from);
-    setDateTo(range.to);
-  }
-
-  function handleDateFromChange(value) {
-    setSelectedKey(null);
-    setDateFrom(value);
-    setPeriodPreset('custom');
-  }
-
-  function handleDateToChange(value) {
-    setSelectedKey(null);
-    setDateTo(value);
-    setPeriodPreset('custom');
-  }
-
-  const periodButtonLabel = periodLabel(periodPreset);
-
-  // --- Add-trade modal state ------------------------------------------------
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalDateKey, setModalDateKey] = useState(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [form, setForm] = useState({
-    instrument: '', direction: 'LONG', sign: 'plus', pnl: '', time: currentTimeHHMM(), comment: '', platform: 'Manual', currency: 'USD',
-  });
-  const [formError, setFormError] = useState('');
-
-  // --- Connect-platform modal state (API keys / CSV import) -----------------
-  const [connectOpen, setConnectOpen] = useState(false);
-  const [connectVisible, setConnectVisible] = useState(false);
-  const [connectTab, setConnectTab] = useState('api'); // 'api' | 'csv'
-  const [apiForm, setApiForm] = useState({ exchange: 'Bybit', key: '', secret: '' });
-  const [csvFile, setCsvFile] = useState(null);
-  const [csvDragOver, setCsvDragOver] = useState(false);
-
-  // tracks whether mousedown actually started on the backdrop itself,
-  // so a text-selection drag that ends outside a modal doesn't close it
-  const mouseDownOnBackdrop = useRef(false);
-  const monthMenuRef = useRef(null);
-  const yearMenuRef = useRef(null);
-
-  const cells = useMemo(() => {
-    const firstOfMonth = new Date(year, month, 1);
-    const offset = (firstOfMonth.getDay() + 6) % 7; // Monday-start week
-    const start = new Date(year, month, 1 - offset);
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const cellCount = Math.ceil((offset + daysInMonth) / 7) * 7;
-    return Array.from({ length: cellCount }, (_, i) => {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      const key = keyFromDate(d);
-      return {
-        date: d,
-        key,
-        inMonth: d.getMonth() === month,
-        isToday: d.toDateString() === today.toDateString(),
-      };
-    });
-  }, [year, month, today]);
-
-  // filtered by the active platform selection, so the calendar always
-  // matches what the platform filter says (e.g. only Bybit trades)
-  function tradesForDayFiltered(key) {
-    return (manualTrades[key] || [])
-      .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
-      .filter((t) => (t.currency || 'USD') === currency)
-      .filter((t) => calendarTypeFilter === 'all' || (calendarTypeFilter === 'income' ? t.pnl >= 0 : t.pnl < 0));
-  }
-
-  function totalPnlForDay(key) {
-    return tradesForDayFiltered(key).reduce((sum, t) => sum + t.pnl, 0);
-  }
-
-  // heatmap scale: strongest color = the day with the biggest |PnL| this month
-  const monthMaxAbsPnl = useMemo(() => {
-    let max = 0;
-    for (const cell of cells) {
-      if (!cell.inMonth) continue;
-      const abs = Math.abs(totalPnlForDay(cell.key));
-      if (abs > max) max = abs;
-    }
-    return max;
-  }, [cells, manualTrades, platformFilter, currency, calendarTypeFilter]);
-
-  // Flatten every saved trade with its date, then keep only the ones inside
-  // the selected period AND matching the platform filter — this drives both
-  // the trade list and the compact stats bar.
-  // when a calendar day is selected it takes priority over the period
-  // range — the panel below then shows strictly that day's trades
-  const effectiveFrom = selectedKey || dateFrom;
-  const effectiveTo = selectedKey || dateTo;
-
-  // The selected-day sheet is intentionally different from the calendar totals:
-  // it shows every record in every currency, while monetary totals stay scoped to
-  // the interface currency so different currencies are never added together.
-  const periodTrades = useMemo(() => {
-    return Object.entries(manualTrades)
-      .flatMap(([dateKey, arr]) => arr.map((t) => ({ ...t, dateKey })))
-      .filter((t) => t.dateKey >= effectiveFrom && t.dateKey <= effectiveTo)
-      .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
-      .filter((t) => (t.currency || 'USD') === currency)
-      .filter((t) => calendarTypeFilter === 'all' || (calendarTypeFilter === 'income' ? t.pnl >= 0 : t.pnl < 0))
-      .sort((a, b) => (a.dateKey === b.dateKey ? b.time.localeCompare(a.time) : b.dateKey.localeCompare(a.dateKey)));
-  }, [manualTrades, effectiveFrom, effectiveTo, platformFilter, currency, calendarTypeFilter]);
-
-  const selectedDayTrades = useMemo(() => {
-    if (!selectedKey) return periodTrades;
-    return (manualTrades[selectedKey] || [])
-      .map((t) => ({ ...t, dateKey: selectedKey }))
-      .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
-      .filter((t) => calendarTypeFilter === 'all' || (calendarTypeFilter === 'income' ? t.pnl >= 0 : t.pnl < 0))
-      .sort((a, b) => b.time.localeCompare(a.time));
-  }, [selectedKey, manualTrades, periodTrades, platformFilter, calendarTypeFilter]);
-
-  const periodStats = useMemo(() => {
-    const count = selectedKey ? selectedDayTrades.length : periodTrades.length;
-    const pnl = periodTrades.reduce((sum, t) => sum + t.pnl, 0);
-    const wins = periodTrades.filter((t) => t.pnl >= 0).length;
-    const winrate = periodTrades.length ? Math.round((wins / periodTrades.length) * 100) : 0;
-    return { count, pnl, winrate };
-  }, [periodTrades, selectedDayTrades, selectedKey]);
-
-  // free, rule-based analysis — no AI call, just arithmetic. Has its own
-  // period, defaulting to whatever's currently selected when opened.
-  const [analysisFrom, setAnalysisFrom] = useState(effectiveFrom);
-  const [analysisTo, setAnalysisTo] = useState(effectiveTo);
-  const [analysisPreset, setAnalysisPreset] = useState('Текущий период');
-
-  const analysisTrades = useMemo(() => {
-    return Object.entries(manualTrades)
-      .flatMap(([dateKey, arr]) => arr.map((t) => ({ ...t, dateKey })))
-      .filter((t) => t.dateKey >= analysisFrom && t.dateKey <= analysisTo)
-      .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
-      .filter((t) => (t.currency || 'USD') === currency);
-  }, [manualTrades, analysisFrom, analysisTo, platformFilter, currency]);
-
-  const analysisStats = useMemo(() => {
-    const count = analysisTrades.length;
-    const pnl = analysisTrades.reduce((sum, t) => sum + t.pnl, 0);
-    const wins = analysisTrades.filter((t) => t.pnl >= 0).length;
-    const winrate = count ? Math.round((wins / count) * 100) : 0;
-    return { count, pnl, winrate };
-  }, [analysisTrades]);
-
-  const basicAnalysis = useMemo(() => {
-    if (analysisTrades.length === 0) return null;
-
-    const byDay = {};
-    for (const t of analysisTrades) byDay[t.dateKey] = (byDay[t.dateKey] || 0) + t.pnl;
-    const dayEntries = Object.entries(byDay);
-    const bestDay = dayEntries.reduce((a, b) => (b[1] > a[1] ? b : a));
-    const worstDay = dayEntries.reduce((a, b) => (b[1] < a[1] ? b : a));
-
-    const byInstrument = {};
-    for (const t of analysisTrades) byInstrument[t.instrument] = (byInstrument[t.instrument] || 0) + 1;
-    const topInstrument = Object.entries(byInstrument).sort((a, b) => b[1] - a[1])[0];
-
-    const avgPnl = analysisStats.pnl / analysisTrades.length;
-
-    const chronological = [...analysisTrades].sort((a, b) =>
-      a.dateKey === b.dateKey ? a.time.localeCompare(b.time) : a.dateKey.localeCompare(b.dateKey)
-    );
-    let longestLossStreak = 0;
-    let current = 0;
-    for (const t of chronological) {
-      if (t.pnl < 0) { current += 1; longestLossStreak = Math.max(longestLossStreak, current); }
-      else current = 0;
-    }
-
-    // Profit Factor / Payoff Ratio — pure math over analysisTrades, no new data needed
-    const winTrades = analysisTrades.filter((t) => t.pnl > 0);
-    const lossTrades = analysisTrades.filter((t) => t.pnl < 0);
-    const grossProfit = winTrades.reduce((acc, t) => acc + t.pnl, 0);
-    const grossLoss = Math.abs(lossTrades.reduce((acc, t) => acc + t.pnl, 0));
-    const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0;
-    const avgWin = winTrades.length > 0 ? grossProfit / winTrades.length : 0;
-    const avgLoss = lossTrades.length > 0 ? grossLoss / lossTrades.length : 0;
-    const payoffRatio = avgLoss > 0 ? avgWin / avgLoss : 0;
-
-    return { bestDay, worstDay, topInstrument, avgPnl, longestLossStreak, profitFactor, avgWin, avgLoss, payoffRatio };
-  }, [analysisTrades, analysisStats]);
-
-  const moneyAnalysis = useMemo(() => {
-    if (traderMode || analysisTrades.length === 0) return null;
-    const income = analysisTrades.filter((t) => t.pnl > 0).reduce((sum, t) => sum + t.pnl, 0);
-    const expenses = Math.abs(analysisTrades.filter((t) => t.pnl < 0).reduce((sum, t) => sum + t.pnl, 0));
-    const categories = {};
-    for (const t of analysisTrades.filter((t) => t.pnl < 0)) {
-      const category = textValue(t.instrument).trim() || 'Другое';
-      categories[category] = (categories[category] || 0) + Math.abs(t.pnl);
-    }
-    const topCategories = Object.entries(categories).sort((a, b) => b[1] - a[1]).slice(0, 5);
-    const incomeSources = {};
-    for (const t of analysisTrades.filter((t) => t.pnl > 0)) {
-      const source = textValue(t.instrument).trim() || 'Другое';
-      incomeSources[source] = (incomeSources[source] || 0) + t.pnl;
-    }
-    const topIncomeSources = Object.entries(incomeSources).sort((a, b) => b[1] - a[1]).slice(0, 5);
-    const cigarettes = categories['Сигареты'] || 0;
-    return { income, expenses, balance: income - expenses, topCategories, topIncomeSources, cigarettes, cigaretteShare: expenses ? Math.round((cigarettes / expenses) * 100) : 0 };
-  }, [analysisTrades, traderMode]);
-
-  const [analysisOpen, setAnalysisOpen] = useState(false);
-  const [analysisVisible, setAnalysisVisible] = useState(false);
-  const [analysisTab, setAnalysisTab] = useState('overview');
-
-  function openAnalysis() {
-    setAnalysisFrom(effectiveFrom);
-    setAnalysisTo(effectiveTo);
-    setAnalysisPreset('Текущий период');
-    setAnalysisTab('overview');
-    setAnalysisOpen(true);
-    requestAnimationFrame(() => setAnalysisVisible(true));
-  }
-
-  function closeAnalysis() {
-    setAnalysisVisible(false);
-    setTimeout(() => setAnalysisOpen(false), 180);
-  }
-
-  function handleAnalysisPreset(preset) {
-    setAnalysisPreset(preset);
-    const range = getPresetRange(preset, today);
-    setAnalysisFrom(range.from);
-    setAnalysisTo(range.to);
-  }
-
-  const selectedCell = cells.find((c) => c.key === selectedKey);
-  const targetDateKey = selectedCell ? selectedCell.key : keyFromDate(today);
-  const todayKey = keyFromDate(today);
-  const isFutureSelected = targetDateKey > todayKey;
-  const targetDateLabel = parseDateKeyLocal(targetDateKey).toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-
-  const [editingTrade, setEditingTrade] = useState(null); // { id, dateKey } | null
-
-  // ---- FIX: prevent double-save and improve id generation ----
-  const [isSaving, setIsSaving] = useState(false);
-
-  function openModal(tradeToEdit) {
-    if (tradeToEdit) {
-      setEditingTrade({ id: tradeToEdit.id, dateKey: tradeToEdit.dateKey || modalDateKey || targetDateKey });
-      setModalDateKey(tradeToEdit.dateKey || modalDateKey || targetDateKey);
-      setForm({
-        instrument: textValue(tradeToEdit.instrument),
-        direction: textValue(tradeToEdit.direction),
-        sign: tradeToEdit.pnl >= 0 ? 'plus' : 'minus',
-        pnl: String(Math.abs(tradeToEdit.pnl)),
-        time: textValue(tradeToEdit.time) || currentTimeHHMM(),
-        comment: tradeToEdit.comment || '',
-        platform: textValue(tradeToEdit.platform) || 'Manual',
-        currency: tradeToEdit.currency || currency,
-        takeProfit: tradeToEdit.take_profit != null ? String(tradeToEdit.take_profit) : '',
-        stopLoss: tradeToEdit.stop_loss != null ? String(tradeToEdit.stop_loss) : '',
-      });
-    } else {
-      if (isFutureSelected) return; // нельзя добавлять сделки на будущее
-      setEditingTrade(null);
-      setModalDateKey(targetDateKey);
-      setForm({
-        instrument: traderMode ? (recentInstruments[0] || '') : 'Зарплата',
-        direction: '',
-        sign: 'plus',
-        pnl: '',
-        time: currentTimeHHMM(),
-        comment: '',
-        platform: 'Manual',
-        currency,
-        takeProfit: '',
-        stopLoss: '',
-      });
-    }
-    setFormError('');
-    // Finance records need category controls immediately visible on mobile; otherwise the required category can be hidden below the fold.
-    setDetailsOpen(!traderMode || Boolean(traderMode && tradeToEdit));
-    setModalOpen(true);
-    requestAnimationFrame(() => setModalVisible(true));
-  }
-
-  function closeModal() {
-    setModalVisible(false);
-    setFormError('');
-    setEditingTrade(null);
-    setTimeout(() => setModalOpen(false), 180);
-  }
-
-  function openConnectModal() {
-    setConnectTab('ctrader');
-    setApiForm({ exchange: 'Bybit', key: '', secret: '' });
-    setCsvFile(null);
-    setConnectOpen(true);
-    requestAnimationFrame(() => setConnectVisible(true));
-  }
-
-  function closeConnectModal() {
-    setConnectVisible(false);
-    setTimeout(() => setConnectOpen(false), 180);
-  }
-
-  useEffect(() => {
-    if (!modalOpen && !connectOpen) return;
-    const onKey = (e) => {
-      if (e.key !== 'Escape') return;
-      if (connectOpen) closeConnectModal();
-      else if (modalOpen) closeModal();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [modalOpen, connectOpen]);
-
-  useEffect(() => {
-    if (!monthMenuOpen) return;
-    function onDocClick(e) {
-      if (monthMenuRef.current && !monthMenuRef.current.contains(e.target)) setMonthMenuOpen(false);
-    }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [monthMenuOpen]);
-
-  useEffect(() => {
-    if (!yearMenuOpen) return;
-    function onDocClick(e) {
-      if (yearMenuRef.current && !yearMenuRef.current.contains(e.target)) setYearMenuOpen(false);
-    }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [yearMenuOpen]);
-
-  // Load previously remembered "frequently used" instruments (client-only).
-  useEffect(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        const stored = window.localStorage.getItem(RECENT_INSTRUMENTS_STORAGE_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) setRecentInstruments(parsed.filter((v) => typeof v === 'string'));
-        }
-        const storedCustom = window.localStorage.getItem(CUSTOM_TAGS_STORAGE_KEY);
-        if (storedCustom) {
-          const parsedCustom = JSON.parse(storedCustom);
-          if (Array.isArray(parsedCustom)) setCustomTags(parsedCustom.filter((v) => typeof v === 'string'));
-        }
-      }
-    } catch {
-      // ignore malformed/unavailable storage
-    }
-  }, []);
-
-  useEffect(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(RECENT_INSTRUMENTS_STORAGE_KEY, JSON.stringify(recentInstruments));
-      }
-    } catch {
-      // ignore storage write failures (e.g. private mode)
-    }
-  }, [recentInstruments]);
-
-  useEffect(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(CUSTOM_TAGS_STORAGE_KEY, JSON.stringify(customTags));
-      }
-    } catch {
-      // ignore storage write failures
-    }
-  }, [customTags]);
-
-  function addCustomTag(raw) {
-    const tag = textValue(raw).trim().toUpperCase();
-    if (!tag) return;
-    if (DEFAULT_ASSET_TAGS.includes(tag) || customTags.includes(tag)) return;
-    if (customTags.length >= MAX_CUSTOM_TAGS) return;
-    setCustomTags((prev) => [...prev, tag]);
-  }
-
-  function removeCustomTag(tag) {
-    setCustomTags((prev) => prev.filter((t) => t !== tag));
-  }
-
-  function reorderCustomTag(fromIndex, toIndex) {
-    setCustomTags((prev) => {
-      const next = [...prev];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved);
-      return next;
-    });
-  }
-
-  // Quick-pick tags: the 3 most recently used instruments first, then the
-  // default popular assets — deduplicated so nothing appears twice.
-  const quickAssetTags = useMemo(() => {
-    const combined = [...recentInstruments.slice(0, 3), ...DEFAULT_ASSET_TAGS];
-    return Array.from(new Set(combined));
-  }, [recentInstruments]);
-
-  function handleBackdropMouseDown(e) {
-    mouseDownOnBackdrop.current = e.target === e.currentTarget;
-  }
-
-  function handleModalBackdropClick(e) {
-    if (e.target === e.currentTarget && mouseDownOnBackdrop.current) closeModal();
-  }
-
-  function handleConnectBackdropClick(e) {
-    if (e.target === e.currentTarget && mouseDownOnBackdrop.current) closeConnectModal();
-  }
-
-  async function handleSaveTrade() {
-    if (isSaving) return;
-    setIsSaving(true);
-
-    try {
-      const dateKey = modalDateKey || targetDateKey;
-
-      if (dateKey > todayKey) {
-        setFormError('Нельзя добавить запись на будущую дату.');
-        setIsSaving(false);
-        return;
-      }
-
-      const instrument = textValue(form.instrument).trim().toUpperCase();
-      if (!instrument) {
-        setFormError(traderMode ? 'Укажите символ инструмента.' : 'Выберите категорию или укажите свою.');
-        setIsSaving(false);
-        return;
-      }
-
-      const pnlText = textValue(form.pnl).trim();
-      if (!pnlText) {
-        setFormError('Укажите сумму в $.');
-        setIsSaving(false);
-        return;
-      }
-
-      const magnitude = parseFloat(pnlText);
-      if (Number.isNaN(magnitude) || magnitude < 0) {
-        setFormError('Сумма должна быть числом ≥ 0.');
-        setIsSaving(false);
-        return;
-      }
-
-      const signedPnl = form.sign === 'minus'
-        ? -Math.abs(magnitude)
-        : Math.abs(magnitude);
-
-      const finalDirection =
-        traderMode && form.direction
-          ? form.direction
-          : signedPnl >= 0 ? 'LONG' : 'SHORT';
-
-      const time = textValue(form.time) || currentTimeHHMM();
-      const comment = textValue(form.comment).trim();
-      const platform = textValue(form.platform) || 'Manual';
-
-      const tp = traderMode && textValue(form.takeProfit).trim() !== ''
-        ? parseFloat(form.takeProfit)
-        : null;
-
-      const sl = traderMode && textValue(form.stopLoss).trim() !== ''
-        ? parseFloat(form.stopLoss)
-        : null;
-
-      await hookSaveTrade({
-        dateKey,
-        isEditing: Boolean(editingTrade),
-        editingTradeId: editingTrade?.id,
-        time,
-        instrument,
-        direction: finalDirection,
-        signedPnl,
-        comment,
-        platform,
-        currency: form.currency || currency,
-        takeProfit: tp,
-        stopLoss: sl,
-        traderMode,
-      });
-
-      setRecentInstruments((prev) =>
-        [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5)
-      );
-
-      closeModal();
-    } catch (err) {
-      console.error('[save] unexpected error:', err);
-      setFormError(
-        navigator.onLine === false
-          ? 'Не удалось поставить запись в очередь офлайн-синхронизации. Попробуйте ещё раз.'
-          : (err?.message || 'Не удалось сохранить запись. Попробуйте ещё раз.')
-      );
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  async function handleDeleteTrade(dateKey, tradeId) {
-    await hookDeleteTrade(dateKey, tradeId);
-  }
-
-  function jumpToTradeDate(dateKey) {
-    const [y, m] = dateKey.split('-').map(Number);
-    setViewYear(y);
-    setViewMonth(m - 1);
-    setSelectedKey(dateKey);
-    setHistoryOpen(false);
-  }
-
-  // --- History browser: filterable, shows a total, click a trade to jump to its day
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const [historyVisible, setHistoryVisible] = useState(false);
-  const [historyWinLoss, setHistoryWinLoss] = useState('all'); // 'all' | 'win' | 'loss'
-  const [historyCurrency, setHistoryCurrency] = useState(() => currency || 'USD');
-  const [historyNameFilter, setHistoryNameFilter] = useState('');
-  const [historyCategoryMenuOpen, setHistoryCategoryMenuOpen] = useState(false);
-  const [historyFiltersOpen, setHistoryFiltersOpen] = useState(false);
-  const [historyPeriodMenuOpen, setHistoryPeriodMenuOpen] = useState(false);
-  const [historyAnalysisOpen, setHistoryAnalysisOpen] = useState(false);
-  const [proFiltersOpen, setProFiltersOpen] = useState(false);
-  const [historyAnalysisTab, setHistoryAnalysisTab] = useState('overview');
-  const [freeTimelineSelected, setFreeTimelineSelected] = useState(null);
-  // 0 = latest window, 1 = previous 10 days, etc. Keeps the timeline browsable.
-  const [freeTimelineOffset, setFreeTimelineOffset] = useState(0);
-  const [freeDynamicsOpen, setFreeDynamicsOpen] = useState(false);
-  const [exportOpen, setExportOpen] = useState(false);
-  const [exportPeriodPreset, setExportPeriodPreset] = useState('currentPeriod');
-  const [confirmingClear, setConfirmingClear] = useState(false);
-
-  // Keyboard navigation for PC (ArrowLeft / ArrowRight to switch months)
-  useEffect(() => {
-    function handleKeyDown(e) {
-      const tag = e.target?.tagName?.toUpperCase();
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) {
-        return;
-      }
-      if (historyOpen || modalOpen || settingsOpen || connectOpen || installInfoOpen || selectedKey) {
-        return;
-      }
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        goToPrevMonth();
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        goToNextMonth();
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [historyOpen, modalOpen, settingsOpen, connectOpen, installInfoOpen, selectedKey]);
-
-  const historyTrades = useMemo(() => {
-    return Object.entries(manualTrades || {})
-      .flatMap(([dateKey, arr]) => (Array.isArray(arr) ? arr : []).map((t) => ({ ...t, dateKey })))
-      .filter((t) => t && t.dateKey >= dateFrom && t.dateKey <= dateTo)
-      .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
-      .filter((t) => historyCurrency === 'ALL' || (t.currency || 'USD') === historyCurrency)
-      .filter((t) => !historyNameFilter || String(t.instrument || '').trim().toUpperCase() === historyNameFilter.trim().toUpperCase())
-      .filter((t) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? (Number(t.pnl) || 0) >= 0 : (Number(t.pnl) || 0) < 0))
-      .sort((a, b) => (a.dateKey === b.dateKey ? (b.time || '').localeCompare(a.time || '') : (b.dateKey || '').localeCompare(a.dateKey || '')));
-  }, [manualTrades, dateFrom, dateTo, platformFilter, historyWinLoss, historyCurrency, historyNameFilter]);
-
-  function isTradingInstrumentName(value) {
-    const normalized = String(value || '').trim().toUpperCase();
-    return DEFAULT_ASSET_TAGS.includes(normalized) || /BTC|ETH|SOL|XRP|DOGE|BNB|ADA|USDT|XAU|XAG|GOLD|SILVER|EURUSD|GBPUSD|USDJPY|NDX|NASDAQ|SPX|OIL|WTI|BRENT|КРИПТ|ЗОЛОТ|СЕРЕБР/.test(normalized);
-  }
-
-  const historyNameOptions = useMemo(() => [...new Set(
-    Object.values(manualTrades).flat().map((trade) => trade.instrument).filter(Boolean)
-  )]
-    .filter((name) => traderMode || MONEY_CATEGORIES.some((category) => category.key.toUpperCase() === name.trim().toUpperCase()))
-    .sort((a, b) => a.localeCompare(b, language)), [manualTrades, language, traderMode]);
-
-  useEffect(() => {
-    if (!traderMode && historyNameFilter && isTradingInstrumentName(historyNameFilter)) setHistoryNameFilter('');
-  }, [traderMode, historyNameFilter]);
-
-  const historyByCurrency = useMemo(() => Object.entries(historyTrades.reduce((groups, trade) => {
-    const code = trade.currency || 'USD';
-    groups[code] = groups[code] || { income: 0, expense: 0, balance: 0, count: 0 };
-    groups[code].income += trade.pnl > 0 ? trade.pnl : 0;
-    groups[code].expense += trade.pnl < 0 ? Math.abs(trade.pnl) : 0;
-    groups[code].balance += trade.pnl;
-    groups[code].count += 1;
-    return groups;
-  }, {})), [historyTrades]);
-
-  const historyTotal = useMemo(() => historyTrades.reduce((sum, t) => sum + t.pnl, 0), [historyTrades]);
-  const historyIncome = useMemo(() => historyTrades.reduce((sum, t) => sum + (t.pnl > 0 ? t.pnl : 0), 0), [historyTrades]);
-  const historyExpense = useMemo(() => historyTrades.reduce((sum, t) => sum + (t.pnl < 0 ? Math.abs(t.pnl) : 0), 0), [historyTrades]);
-  const historyCurrencySymbol = historyCurrency === 'ALL' ? '' : getCurrencyMeta(historyCurrency).symbol;
-  const historyInsights = useMemo(() => {
-    if (traderMode || historyExpense === 0) return [];
-    const expensesByCategory = {};
-    const latePurchases = historyTrades.filter((t) => t.pnl < 0 && t.instrument === 'Покупки' && Number(textValue(t.time).slice(0, 2)) >= 20);
-    for (const t of historyTrades.filter((t) => t.pnl < 0)) expensesByCategory[t.instrument || 'Другое'] = (expensesByCategory[t.instrument || 'Другое'] || 0) + Math.abs(t.pnl);
-    const [topCategory, topAmount] = Object.entries(expensesByCategory).sort((a, b) => b[1] - a[1])[0] || [];
-    const insights = topCategory ? [`${topCategory} — ${Math.round((topAmount / historyExpense) * 100)}% всех расходов.`] : [];
-    if (latePurchases.length >= 2) insights.push(`Есть ${latePurchases.length} поздних покупок после 20:00 — проверь, не импульсивные ли они.`);
-    return insights;
-  }, [historyTrades, historyExpense, traderMode]);
-
-  const historyAnalysis = useMemo(() => {
-    const incomeSources = {}, expenseCategories = {}, daily = {};
-    historyTrades.forEach((item) => {
-      const source = item.instrument || 'Другое';
-      daily[item.dateKey] = daily[item.dateKey] || { income: 0, expense: 0 };
-      if (item.pnl >= 0) {
-        incomeSources[source] = (incomeSources[source] || 0) + item.pnl;
-        daily[item.dateKey].income += item.pnl;
-      } else {
-        const value = Math.abs(item.pnl);
-        expenseCategories[source] = (expenseCategories[source] || 0) + value;
-        daily[item.dateKey].expense += value;
-      }
-    });
-
-    const sort = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]);
-    const existingEntries = Object.entries(daily).sort((a, b) => a[0].localeCompare(b[0]));
-
-    // Последовательная шкала: даже дни без операций остаются на графике.
-    // Так динамика читается как период, а не как случайный набор столбиков.
-    const toDate = (key) => {
-      const [y, m, d] = key.split('-').map(Number);
-      return new Date(y, m - 1, d);
-    };
-    const toKey = (date) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
-
-    let chartEntries = existingEntries;
-    if (existingEntries.length) {
-      const lastKey = existingEntries[existingEntries.length - 1][0];
-      const lastDate = toDate(lastKey);
-      const startDate = new Date(lastDate);
-      startDate.setDate(lastDate.getDate() - 9);
-      chartEntries = Array.from({ length: 10 }, (_, index) => {
-        const date = new Date(startDate);
-        date.setDate(startDate.getDate() + index);
-        const key = toKey(date);
-        return [key, daily[key] || { income: 0, expense: 0 }];
-      });
-    }
-
-    const maxDaily = Math.max(1, ...chartEntries.map(([, v]) => Math.max(v.income, v.expense)));
-    const totalIncome = Object.values(daily).reduce((sum, v) => sum + v.income, 0);
-    const totalExpense = Object.values(daily).reduce((sum, v) => sum + v.expense, 0);
-    const bestDay = existingEntries.length
-      ? existingEntries.reduce((best, item) => item[1].income - item[1].expense > best[1].income - best[1].expense ? item : best)
-      : null;
-
-    return {
-      incomeSources: sort(incomeSources),
-      expenseCategories: sort(expenseCategories),
-      dailyEntries: existingEntries,
-      chartEntries,
-      maxDaily,
-      totalIncome,
-      totalExpense,
-      bestDay,
-    };
-  }, [historyTrades]);
-
-  const historyTimeline = useMemo(() => {
-    // Anchor to the last real operation. For "Вся история" dateTo can be 9999-12-31.
-    const latestTradeKey = historyTrades.length
-      ? historyTrades.reduce((latest, trade) => trade.dateKey > latest ? trade.dateKey : latest, historyTrades[0].dateKey)
-      : null;
-    const safeEndKey = latestTradeKey || (dateTo && dateTo < '2100-01-01' ? dateTo : keyFromDate(today));
-    const end = parseDateKeyLocal(safeEndKey);
-    // Every click on "earlier" moves one complete 10-day window back.
-    end.setDate(end.getDate() - (freeTimelineOffset * 10));
-    const points = [];
-    for (let i = 9; i >= 0; i -= 1) {
-      const d = new Date(end);
-      d.setDate(d.getDate() - i);
-      const key = keyFromDate(d);
-      const day = historyTrades.filter((t) => t.dateKey === key);
-      const income = day.reduce((sum, t) => sum + (t.pnl > 0 ? t.pnl : 0), 0);
-      const expense = day.reduce((sum, t) => sum + (t.pnl < 0 ? Math.abs(t.pnl) : 0), 0);
-      points.push({ key, label: `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth()+1).padStart(2, '0')}`, income, expense, net: income - expense, count: day.length });
-    }
-    const max = Math.max(1, ...points.flatMap((p) => [p.income, p.expense]));
-    return { points, max, from: points[0]?.label, to: points[points.length - 1]?.label };
-  }, [historyTrades, dateTo, today, freeTimelineOffset]);
-
-  const getHistoryCategoryIcon = (instrument) => {
-    const normalized = String(instrument || '').trim().toUpperCase();
-    if (normalized.includes('СИГАРЕТ') || normalized.includes('ТАБАК')) return Cigarette;
-    if (normalized.includes('ЗАРПЛАТ') || normalized.includes('РАБОТ')) return Briefcase;
-    if (normalized.includes('ЖИЛ') || normalized.includes('ДОМ') || normalized.includes('КВАРТИР')) return Home;
-    if (normalized.includes('ПОДПИСК')) return Repeat2;
-    if (normalized.includes('ЕДА') || normalized.includes('ПРОДУКТ') || normalized.includes('КАФЕ')) return Utensils;
-    if (normalized.includes('ТРАНСПОРТ') || normalized.includes('ТАКСИ') || normalized.includes('АВТО')) return Car;
-    if (normalized.includes('ПОДАР')) return Gift;
-    if (normalized.includes('РАЗВЛЕЧ') || normalized.includes('ИГР')) return Gamepad2;
-    if (normalized.includes('РЫБ')) return Fish;
-    if (/BTC|ETH|XAU|NDX|NASDAQ|EURUSD|GBPUSD|USDJPY/.test(normalized)) return ChartCandlestick;
-    return getMoneyCategoryMeta(instrument)?.icon || CircleDollarSign || MoreHorizontal;
-  };
-
-  const moneyCategoriesWithIcons = useMemo(() => {
-    const base = Array.isArray(MONEY_CATEGORIES) ? MONEY_CATEGORIES.slice() : [];
-    if (!base.some((item) => String(item.key || '').toUpperCase().includes('СИГАРЕТ'))) {
-      base.push({ key: 'СИГАРЕТЫ', icon: Cigarette });
-    }
-    return base.map((item) => ({ ...item, icon: getHistoryCategoryIcon(item.key) }));
-  }, []);
-
-  const renderHistoryCategoryPicker = (className = '') => {
-    const ActiveIcon = historyNameFilter ? getHistoryCategoryIcon(historyNameFilter) : CircleDollarSign;
-    return (
-      <div className={`relative ${className}`}>
-        <button
-          type="button"
-          onClick={() => setHistoryCategoryMenuOpen((open) => !open)}
-          className={`flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors ${
-            isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-amber-400/50' : 'border-zinc-800 bg-black/20 text-zinc-200 hover:border-amber-400/35'
-          }`}
-        >
-          <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${isLight ? 'bg-white text-amber-600 shadow-sm' : 'bg-zinc-900 text-amber-400'}`}>
-            <ActiveIcon className="h-3.5 w-3.5" />
-          </span>
-          <span className="min-w-0 flex-1 truncate text-xs font-data">{historyNameFilter || t('all')}</span>
-          <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-zinc-500 transition-transform ${historyCategoryMenuOpen ? 'rotate-180' : ''}`} />
-        </button>
-        {historyCategoryMenuOpen && (
-          <div className={`absolute left-0 top-full z-40 mt-2 w-full min-w-[210px] overflow-hidden rounded-2xl border p-1.5 shadow-2xl ${
-            isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'
-          }`}>
-            <div className="max-h-64 overflow-y-auto pr-1">
-              {[{ name: '', Icon: CircleDollarSign, label: t('all') }, ...historyNameOptions.map((name) => ({ name, Icon: getHistoryCategoryIcon(name), label: name }))].map(({ name, Icon, label }) => {
-                const active = historyNameFilter === name;
-                return (
-                  <button
-                    key={name || '__all__'}
-                    type="button"
-                    onClick={() => { setHistoryNameFilter(name); setHistoryCategoryMenuOpen(false); }}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs transition-colors ${
-                      active
-                        ? 'bg-amber-400/12 text-amber-600'
-                        : isLight ? 'text-zinc-700 hover:bg-zinc-50' : 'text-zinc-300 hover:bg-zinc-900'
-                    }`}
-                  >
-                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${active ? 'bg-amber-400/15 text-amber-600' : isLight ? 'bg-zinc-100 text-zinc-500' : 'bg-zinc-900 text-zinc-500'}`}>
-                      <Icon className="h-3.5 w-3.5" />
-                    </span>
-                    <span className="min-w-0 flex-1 truncate font-medium">{label}</span>
-                    {active && <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  function openHistory() {
-    setHistoryOpen(true);
-    setHistoryVisible(true);
-    setHistoryFiltersOpen(false);
-    setProFiltersOpen(false);
-    setConfirmingClear(false);
-    setHistoryAnalysisOpen(false);
-    setHistoryAnalysisTab('overview');
-  }
-
-  function closeHistory() {
-    setHistoryVisible(false);
-    setHistoryFiltersOpen(false);
-    setProFiltersOpen(false);
-    setConfirmingClear(false);
-    setTimeout(() => setHistoryOpen(false), 180);
-  }
-
-  async function handleClearHistory() {
-    if (!confirmingClear) {
-      setConfirmingClear(true);
-      return;
-    }
-    await hookClearAllTrades();
-    setConfirmingClear(false);
-  }
-
-  const exportTrades = useMemo(() => {
-    const range = (exportPeriodPreset === 'currentPeriod' || exportPeriodPreset === 'Текущий период')
-      ? { from: dateFrom, to: dateTo }
-      : getPresetRange(exportPeriodPreset, today);
-    return Object.entries(manualTrades)
-      .flatMap(([dateKey, arr]) => (arr || []).map((item) => ({ ...item, dateKey })))
-      .filter((item) => item.dateKey >= range.from && item.dateKey <= range.to)
-      .filter((item) => historyCurrency === 'ALL' || (item.currency || 'USD') === historyCurrency)
-      .filter((item) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? item.pnl >= 0 : item.pnl < 0));
-  }, [manualTrades, exportPeriodPreset, dateFrom, dateTo, today, historyCurrency, historyWinLoss]);
-
-  function handleExportCsv() {
-    const range = (exportPeriodPreset === 'currentPeriod' || exportPeriodPreset === 'Текущий период')
-      ? { from: dateFrom, to: dateTo }
-      : getPresetRange(exportPeriodPreset, today);
-    const title = `${traderMode ? 'AI Trade Journal' : t('titleMoney')} — ${t('csvPeriodTitle')}`;
-    const periodLabel = `${formatDateLabel(range.from)} — ${formatDateLabel(range.to)}`;
-    const rows = exportTrades.map((item) => [
-      formatDateLabel(item.dateKey),
-      item.time || '',
-      item.instrument || (traderMode ? 'Trade' : t('catOther')),
-      item.pnl >= 0 ? (traderMode ? t('profitTrade') : t('income')) : (traderMode ? t('lossTrade') : t('expense')),
-      formatAmountInCurrency(item.pnl, item.currency || 'USD'),
-      item.comment || '',
-    ]);
-    const totalIncome = exportTrades.reduce((sum, item) => sum + (item.pnl > 0 ? item.pnl : 0), 0);
-    const totalExpense = exportTrades.reduce((sum, item) => sum + (item.pnl < 0 ? Math.abs(item.pnl) : 0), 0);
-    const currencyMeta = historyCurrency === 'ALL' ? null : getCurrencyMeta(historyCurrency);
-    const summary = currencyMeta ? [
-      [],
-      [t('csvPeriodSummary')],
-      [t('income'), `+${currencyMeta.symbol}${formatMoney(totalIncome)}`],
-      [t('expense'), `−${currencyMeta.symbol}${formatMoney(totalExpense)}`],
-      [t('balanceLabel'), `${totalIncome - totalExpense >= 0 ? '+' : '−'}${currencyMeta.symbol}${formatMoney(Math.abs(totalIncome - totalExpense))}`]
-    ] : [];
-    const csvRows = [
-      [title],
-      [`${t('currentPeriod')}: ${periodLabel}`],
-      [],
-      [t('csvDate'), t('csvTime'), t('csvCategory'), t('csvType'), t('csvAmount'), t('csvComment')],
-      ...rows,
-      ...summary
-    ];
-    const csv = csvRows.map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `money-calendar_${range.from}_${range.to}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    setExportOpen(false);
-  }
-
-  function handleEditDeposit() {
-    try {
-      const input = window.prompt('Размер депозита для расчёта %:', depositSize > 0 ? String(depositSize) : '1000');
-      if (!input) return;
-      const value = parseFloat(input);
-      if (Number.isNaN(value) || value <= 0) return;
-      setDepositSize(value);
-    } catch (e) {
-      console.warn('[AI Trade Journal] prompt not available:', e);
-    }
-  }
-
-  // --- Platform connect: API keys (stub — wire to your backend) -------------
-  function handleSaveApiKeys() {
-    // TODO: send apiForm.{exchange,key,secret} to your backend to store the
-    // connection securely and kick off the exchange sync job.
-    closeConnectModal();
-  }
-
-  // --- Platform connect: CSV import (stub — wire to your backend) -----------
-  function handleCsvDrop(e) {
-    e.preventDefault();
-    setCsvDragOver(false);
-    const file = e.dataTransfer.files && e.dataTransfer.files[0];
-    if (file) setCsvFile(file);
-  }
-
-  function handleCsvSelect(e) {
-    const file = e.target.files && e.target.files[0];
-    if (file) setCsvFile(file);
-  }
-
-  function handleImportCsv() {
-    // TODO: upload csvFile to your backend / parsing skill and ingest the
-    // resulting trades into manualTrades (or a dedicated store) once ready.
-    closeConnectModal();
-  }
-
-  return (
-    <div className={`premium-shell min-h-screen w-full flex flex-col transition-colors duration-300 ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
-        .font-display { font-family: 'Space Grotesk', sans-serif; }
-        .font-data { font-family: 'JetBrains Mono', monospace; }
-        @keyframes cellGlowIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
-        @keyframes themeIconPop { from { opacity: 0; transform: scale(0.4) rotate(-40deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
-        /* Modern crisp, readable light theme palette */
-        .theme-light.premium-shell {
-          background-color: #f8fafc;
-          background-image: radial-gradient(circle at 15% -5%, rgba(251,191,36,.06), transparent 30%), radial-gradient(circle at 85% 0%, rgba(59,130,246,.03), transparent 25%);
-        }
-        .theme-light .bg-zinc-950,
-        .theme-light .bg-zinc-900 { background-color: #ffffff !important; }
-        .theme-light .bg-zinc-800 { background-color: #f1f5f9 !important; }
-        .theme-light .bg-zinc-100 { background-color: #f8fafc !important; }
-        .theme-light .bg-zinc-50 { background-color: #ffffff !important; }
-        .theme-light .bg-white { background-color: #ffffff !important; }
-        .theme-light .text-zinc-50,
-        .theme-light .text-zinc-100 { color: #0f172a !important; }
-        .theme-light .text-zinc-200 { color: #1e293b !important; }
-        .theme-light .text-zinc-300 { color: #334155 !important; }
-        .theme-light .text-zinc-400 { color: #475569 !important; }
-        .theme-light .text-zinc-500 { color: #64748b !important; }
-        .theme-light .text-zinc-600 { color: #475569 !important; }
-        .theme-light .text-zinc-700 { color: #334155 !important; }
-        .theme-light .border-zinc-800,
-        .theme-light .border-zinc-700 { border-color: #e2e8f0 !important; }
-        .theme-light .border-zinc-200 { border-color: #e2e8f0 !important; }
-        .theme-light .border-zinc-300 { border-color: #e2e8f0 !important; }
-        /* Clean scrollbars */
-        * { scrollbar-width: thin; scrollbar-color: #52525b transparent; }
-        *::-webkit-scrollbar { height: 6px; width: 6px; }
-        *::-webkit-scrollbar-track { background: transparent; }
-        *::-webkit-scrollbar-thumb { background-color: #52525b; border-radius: 9999px; }
-        .theme-light *::-webkit-scrollbar-thumb { background-color: #cbd5e1; }
-        .theme-light { scrollbar-color: #cbd5e1 transparent; }
-        /* Mobile layout: use the available viewport instead of leaving a huge empty area. */
-        /* Premium visual system */
-        .premium-shell { background-image: radial-gradient(circle at 12% -10%, rgba(251,191,36,.10), transparent 28%), radial-gradient(circle at 90% 5%, rgba(59,130,246,.06), transparent 24%); }
-        .premium-surface { box-shadow: 0 18px 55px rgba(0,0,0,.18); }
-        button { -webkit-tap-highlight-color: transparent; }
-        button:focus-visible { outline: 2px solid rgba(251,191,36,.7); outline-offset: 2px; }
-        .calendar-days-grid > button { border-radius: 14px !important; overflow: hidden; }
-        @media (min-width: 640px) { .calendar-days-grid > button { border-radius: 18px !important; } }
-        .calendar-days-grid > button:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0,0,0,.16); }
-        .calendar-days-grid > button:active { transform: scale(.985); }
-        @keyframes premiumFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
-        .history-fab { animation: premiumFloat 3.6s ease-in-out infinite; }
-        .premium-shell { font-size: 15px; }
-        .premium-shell .font-data { letter-spacing: .055em; }
-        @media (max-width: 640px) { .premium-shell { font-size: 16px; } .premium-shell p, .premium-shell button { -webkit-font-smoothing: antialiased; } }
-        @keyframes proEmber { 0%,100% { opacity:.55; transform:scale(.85) } 50% { opacity:1; transform:scale(1.15) } }
-        .pro-ember { animation: proEmber 1.8s ease-in-out infinite; }
-        @keyframes slideInNext { 0% { opacity: .25; transform: translateX(28px); } 100% { opacity: 1; transform: translateX(0); } }
-        @keyframes slideInPrev { 0% { opacity: .25; transform: translateX(-28px); } 100% { opacity: 1; transform: translateX(0); } }
-        .animate-slide-next { animation: slideInNext 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .animate-slide-prev { animation: slideInPrev 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
-        @media (max-width: 639px) {
-          .calendar-days-grid { flex: 1 1 auto; grid-auto-rows: minmax(76px, 1fr); }
-        }
-      `}</style>
-
-      {/* HEADER */}
-      {ctraderNotice && (
-        <div role="status" aria-live="polite" className={`fixed bottom-24 left-4 right-4 sm:left-auto sm:w-96 z-[200] rounded-2xl border p-5 shadow-xl ${isLight ? 'bg-white text-zinc-900 border-zinc-200' : 'bg-zinc-900 text-zinc-100 border-zinc-700'}`}>
-          <button aria-label={t('ctClose')} onClick={() => setCtraderNotice(null)} className="absolute right-2 top-2 p-2"><X className="h-4 w-4" /></button>
-          {ctraderNotice.kind === 'success' ? <>
-            <div className="flex items-center gap-2 pr-5 font-semibold"><CheckCircle2 className="h-5 w-5 text-emerald-500" />{t('ctAdded')}{ctraderNotice.inserted}</div>
-            <p className="mt-2 text-sm opacity-80">{t(ctraderNotice.refreshed ? 'ctUpdated' : 'ctRefresh')}</p>
-            {ctraderNotice.skipped > 0 && <p className="mt-1 text-xs opacity-60">{t('ctSkipped')}{ctraderNotice.skipped}</p>}
-            {ctraderNotice.refreshed && <button className="mt-3 text-sm font-semibold text-emerald-600" onClick={() => { closeConnectModal(); handlePresetChange('Вся история'); setPlatformFilter('ALL'); setHistoryCurrency('ALL'); setHistoryNameFilter(''); setHistoryWinLoss('all'); setHistoryOpen(true); setCtraderNotice(null); }}>{t('ctHistory')}</button>}
-          </> : <div className="pr-5 text-sm">
-            <p>{t(ctraderNotice.code === 'RECONNECT_REQUIRED' ? 'ctReconnect' : ctraderNotice.code === 'UNAUTHORIZED' ? 'ctLogin' : ctraderNotice.code === 'OFFLINE' ? 'ctOffline' : 'ctError')}</p>
-            <p className="mt-2 text-xs opacity-80">{t('ctStage')}: {t(ctraderNotice.stage === 'accounts' ? 'ctStageAccounts' : ctraderNotice.stage === 'select-account' ? 'ctStageSelect' : 'ctStageSync')}</p>
-            <p className="mt-1 break-words font-mono text-xs">{ctraderNotice.stage} · {ctraderNotice.code}{ctraderNotice.status ? ` · HTTP ${ctraderNotice.status}` : ''}</p>
-            {ctraderNotice.backendStage && <p className="mt-1 font-mono text-xs">kalendar · {ctraderNotice.backendStage}</p>}
-            <p className="mt-2 text-xs opacity-70">{t(ctraderNotice.stage === 'sync' ? 'ctImportUnconfirmed' : 'ctImportNotStarted')}</p>
-          </div>}
-        </div>
-      )}
-      <Header
-        isLight={isLight} traderMode={traderMode} t={t} theme={theme} setTheme={setTheme}
-        settingsRef={settingsRef} settingsOpen={settingsOpen} closeSettings={closeSettings}
-        openSettings={openSettings} settingsVisible={settingsVisible} language={language}
-        setLanguage={setLanguage} currency={currency} setCurrency={setCurrency} user={user}
-        handleGoogleLogout={handleGoogleLogout} handleGoogleLogin={handleGoogleLogin}
-        goToPrevMonth={goToPrevMonth} goToNextMonth={goToNextMonth}
-        monthMenuRef={monthMenuRef} monthMenuOpen={monthMenuOpen} setMonthMenuOpen={setMonthMenuOpen}
-        yearMenuRef={yearMenuRef} yearMenuOpen={yearMenuOpen} setYearMenuOpen={setYearMenuOpen}
-        month={month} year={year} today={today} setViewMonth={setViewMonth} setViewYear={setViewYear}
-        setSelectedKey={setSelectedKey} setTraderMode={setTraderMode} setPlatformFilter={setPlatformFilter}
-        platformFilter={platformFilter} platformOptions={PLATFORMS}
-        calendarTypeFilter={calendarTypeFilter} setCalendarTypeFilter={setCalendarTypeFilter}
-        openConnectModal={openConnectModal} ctraderConnected={ctraderConnected}
-        installInfoRef={installInfoRef} handleInstallClick={handleInstallClick}
-        pendingSyncCount={pendingSyncCount} installInfoOpen={installInfoOpen} installInstructions={installInstructions} isPwaInstalled={isPwaInstalled}
-        periodStats={periodStats} periodTrades={periodTrades} currencySymbol={currencySymbol} formatMoney={formatMoney}
-      />
-
-      {/* PRO controls live in Header: one clean control center, no floating duplicate block. */}
-      <CalendarGrid
-        key={`${year}-${month}-${animKey}`}
-        slideDirection={slideDirection}
-        cells={cells} selectedKey={selectedKey} isLight={isLight} monthMaxAbsPnl={monthMaxAbsPnl}
-        tradesForDayFiltered={tradesForDayFiltered} totalPnlForDay={totalPnlForDay}
-        formatPnlDisplay={formatPnlDisplay} onSelectDay={setSelectedKey}
-        onEmptyClick={() => setSelectedKey(null)}
-        onTouchStart={(e) => { calendarTouchStart.current = e.touches[0]?.clientX ?? null; }}
-        onTouchEnd={(e) => {
-          const startX = calendarTouchStart.current;
-          const endX = e.changedTouches[0]?.clientX;
-          calendarTouchStart.current = null;
-          if (startX == null || endX == null || Math.abs(endX - startX) < 48) return;
-          if (endX < startX) goToNextMonth(); else goToPrevMonth();
-        }}
-      />
-
-      {/* DAY VIEW — bottom sheet, tap the dimmed backdrop anywhere to return to the calendar */}
-      {selectedKey && (
-      <div
-        className="fixed inset-0 z-40 bg-black/60"
-        onMouseDown={handleBackdropMouseDown}
-        onClick={(e) => { if (mouseDownOnBackdrop.current) setSelectedKey(null); }}
-      >
-      <div
-        className={`absolute inset-x-0 bottom-0 max-h-[82vh] rounded-t-2xl border-t shadow-2xl overflow-y-auto transition-colors duration-200 ${isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-950'}`}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="max-w-3xl mx-auto px-3 sm:px-8 py-4 sm:py-8 flex flex-col gap-4">
-          <div className={`mx-auto h-1 w-10 rounded-full -mt-1 mb-1 ${isLight ? 'bg-zinc-300' : 'bg-zinc-700'}`} />
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">{selectedKey}</p>
-              <p className="text-[11px] text-zinc-500 mb-0.5">{traderMode ? t('overallResult') : t('balanceOfDay')}</p>
-              <div className="flex items-center gap-2">
-                {periodStats.count > 0 &&
-                  (periodStats.pnl >= 0 ? (
-                    <TrendingUp className="h-4 w-4 text-emerald-400" />
-                  ) : (
-                    <TrendingDown className="h-4 w-4 text-red-400" />
-                  ))}
-                <span
-                  className={`font-data text-lg font-semibold ${
-                    periodStats.count === 0 ? 'text-zinc-600' : periodStats.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'
-                  }`}
-                >
-                  {periodStats.count === 0 ? '—' : `${periodStats.pnl >= 0 ? '+' : '-'}${currencySymbol}${formatMoney(periodStats.pnl)}`}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center self-start">
-            <button
-              onClick={() => openModal()}
-              disabled={isFutureSelected}
-              title={isFutureSelected ? (traderMode ? 'Нельзя добавить сделку на будущую дату' : t('recordFutureBlocked')) : undefined}
-              className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 px-4 py-2.5 text-xs sm:text-sm font-bold text-zinc-950 shadow-md shadow-amber-500/25 hover:shadow-lg hover:shadow-amber-500/35 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-black/10 transition-transform duration-200 group-hover:rotate-90">
-                <Plus className="h-3.5 w-3.5 stroke-[3] text-zinc-950" />
-              </span>
-              <span>{traderMode ? t('addTrade') : t('addRecord')}</span>
-            </button>
-          </div>
-
-          {traderMode ? (
-            <div className={`flex items-center gap-2 rounded-md border px-4 py-2 font-data text-xs ${isLight ? 'border-zinc-300 bg-zinc-50 text-zinc-500' : 'border-zinc-800 bg-zinc-900 text-zinc-400'}`}>
-              <span>{t('trades')}: <span className={isLight ? 'text-zinc-900 font-medium' : 'text-zinc-100 font-medium'}>{periodStats.count}</span></span>
-              <span className={isLight ? 'text-zinc-300' : 'text-zinc-700'}>•</span>
-              <span>PnL: <span className={`font-medium ${periodStats.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{periodStats.pnl >= 0 ? '+' : '-'}{currencySymbol}{formatMoney(periodStats.pnl)}</span></span>
-              <span className={isLight ? 'text-zinc-300' : 'text-zinc-700'}>•</span>
-              <span>{t('winrate')}: <span className={isLight ? 'text-zinc-900 font-medium' : 'text-zinc-100 font-medium'}>{periodStats.winrate}%</span></span>
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-2">
-              <div className={`rounded-lg border px-3 py-2.5 ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-900'}`}>
-                <p className={`text-[10px] uppercase tracking-wider mb-1 ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('operations')}</p>
-                <p className={`font-data text-sm ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{periodStats.count}</p>
-              </div>
-              <div className={`rounded-lg border px-3 py-2.5 ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-900'}`}>
-                <p className={`text-[10px] uppercase tracking-wider mb-1 ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('income')}</p>
-                <p className="font-data text-sm text-emerald-500">+{currencySymbol}{formatMoney(periodTrades.reduce((sum, t) => sum + (t.pnl > 0 ? t.pnl : 0), 0))}</p>
-              </div>
-              <div className={`rounded-lg border px-3 py-2.5 ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-900'}`}>
-                <p className={`text-[10px] uppercase tracking-wider mb-1 ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('expense')}</p>
-                <p className="font-data text-sm text-red-500">−{currencySymbol}{formatMoney(periodTrades.reduce((sum, t) => sum + (t.pnl < 0 ? Math.abs(t.pnl) : 0), 0))}</p>
-              </div>
-            </div>
-          )}
-
-          {selectedDayTrades.length > 0 ? (
-            <div className={`rounded-lg border divide-y ${isLight ? 'border-zinc-300 bg-zinc-50 divide-zinc-200' : 'border-zinc-800 bg-zinc-900 divide-zinc-800'}`}>
-              {selectedDayTrades.map((trade) => (
-                <div key={trade.id} className="px-4 py-3 group">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-4 min-w-0 flex-wrap">
-                      <span className={`font-data text-xs w-12 shrink-0 ${isLight ? 'text-zinc-400' : 'text-zinc-500'}`}>{trade.time}</span>
-                      <span className={`text-sm font-medium truncate ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{trade.instrument}</span>
-                      <span
-                        className={[
-                          'font-data text-[11px] tracking-wider px-2 py-0.5 rounded-full shrink-0',
-                          trade.pnl >= 0
-                            ? 'bg-emerald-500/10 text-emerald-500'
-                            : 'bg-red-500/10 text-red-500',
-                        ].join(' ')}
-                      >
-                        {trade.pnl >= 0 ? (traderMode ? 'Прибыль' : 'Доход') : (traderMode ? 'Убыток' : 'Расход')}
-                      </span>
-                      <span className={`font-data text-[10px] shrink-0 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{trade.platform}</span>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className={`font-data text-sm font-medium whitespace-nowrap tabular-nums ${trade.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {formatAmountInCurrency(trade.pnl, trade.currency || 'USD')}
-                      </span>
-                      <button
-                        onClick={() => openModal(trade)}
-                        className={`transition-colors opacity-0 group-hover:opacity-100 ${isLight ? 'text-zinc-400 hover:text-amber-500' : 'text-zinc-600 hover:text-amber-400'}`}
-                        aria-label={traderMode ? 'Редактировать сделку' : t('editRecord')}
-                        title={traderMode ? 'Редактировать сделку' : t('editRecord')}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteTrade(trade.dateKey, trade.id)}
-                        className={`transition-colors opacity-0 group-hover:opacity-100 ${isLight ? 'text-zinc-400 hover:text-red-500' : 'text-zinc-600 hover:text-red-400'}`}
-                        aria-label={traderMode ? 'Удалить сделку' : t('deleteRecord')}
-                        title={traderMode ? 'Удалить сделку' : t('deleteRecord')}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                  {trade.comment && <p className={`text-xs mt-1.5 pl-16 leading-relaxed ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{trade.comment}</p>}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center py-16">
-              <div className={`text-center max-w-sm border border-dashed rounded-xl px-10 py-10 ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}>
-                <Inbox className={`h-8 w-8 mx-auto mb-4 ${isLight ? 'text-zinc-300' : 'text-zinc-700'}`} />
-                <p className={`text-sm ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{traderMode ? t('noTradesDay') : t('noRecordsDay')}</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-      </div>
-      )}
-
-      {/* Floating Action Dock: Prominent Center "+" Add Button + History */}
-      <div className="history-fab fixed bottom-4 sm:bottom-6 inset-x-0 flex justify-center items-center z-30 pointer-events-none px-4">
-        <div className={`pointer-events-auto flex items-center gap-1.5 sm:gap-2.5 rounded-full border p-1.5 sm:p-2 backdrop-blur-2xl transition-all duration-300 ${
-          isLight
-            ? 'border-zinc-200/90 bg-white/95 shadow-[0_16px_45px_rgba(0,0,0,0.14)]'
-            : 'border-zinc-800/90 bg-zinc-950/90 shadow-[0_16px_50px_rgba(0,0,0,0.45)]'
-        }`}>
-          {/* History Button */}
-          <button
-            type="button"
-            onClick={openHistory}
-            className={`group flex items-center gap-2 rounded-full px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all duration-200 ${
-              isLight
-                ? 'text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/80'
-                : 'text-zinc-300 hover:text-white hover:bg-zinc-900/90'
-            }`}
-          >
-            <span className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-amber-400/10 transition-colors group-hover:bg-amber-400/20">
-              <History className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-500 transition-transform duration-200 group-hover:-rotate-12" />
-            </span>
-            <span className="relative font-medium">{t('history')}{traderMode && <span className="ml-1 text-amber-400">✦</span>}</span>
-          </button>
-
-          {/* Central Add '+' Button — sleek, elegant, calm */}
-          <button
-            type="button"
-            onClick={() => openModal()}
-            title={traderMode ? t('addTrade') : t('addRecord')}
-            aria-label={traderMode ? t('addTrade') : t('addRecord')}
-            className={`group relative flex items-center gap-2 rounded-full px-4 sm:px-5 py-2 sm:py-2.5 font-medium transition-all duration-200 active:scale-[0.97] border ${
-              isLight
-                ? 'border-slate-800 bg-slate-900 text-white hover:bg-slate-800 shadow-sm'
-                : 'border-zinc-700/80 bg-zinc-900 text-zinc-100 hover:border-amber-400/50 hover:bg-zinc-800 shadow-sm'
-            }`}
-          >
-            <span className={`flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full transition-transform duration-200 group-hover:rotate-90 ${
-              isLight ? 'bg-white/15 text-amber-300' : 'bg-amber-400/15 text-amber-400'
-            }`}>
-              <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 stroke-[2.5]" />
-            </span>
-            <span className="text-xs sm:text-sm font-semibold tracking-tight">
-              {traderMode ? t('addTrade') : t('addRecord')}
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* HISTORY MODAL — улучшен визуал для светлой темы + кнопка синхронизации cTrader */}
-      {historyOpen && (
-        <div
-          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-3 sm:px-4 transition-opacity duration-200 ${
-            historyVisible ? 'opacity-100' : 'opacity-0'
-          }`}
-          onMouseDown={handleBackdropMouseDown}
-          onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) closeHistory(); }}
-        >
-          <div
-            className={`relative w-full ${traderMode ? 'max-w-2xl' : 'max-w-lg'} flex flex-col overflow-hidden rounded-2xl border shadow-2xl transition-all duration-200 ${
-              historyVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-            } ${
-              isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
-            }`}
-            style={{ maxHeight: 'min(90vh, calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 32px))' }}
-          >
-            <div className={`flex items-center justify-between px-5 sm:px-6 pt-5 pb-4 border-b ${isLight ? 'border-zinc-200' : 'border-zinc-800/80'}`}>
-              <div>
-                <p className="font-data text-[10px] tracking-[0.22em] text-amber-400 uppercase mb-1">
-                  {traderMode ? t('tradesHistory') : t('myMoney')}
-                </p>
-                <h2 className={`font-display text-xl font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>
-                  {traderMode
-                    ? (periodPreset === 'Вся история' ? t('allHistory') : dateFrom === dateTo ? dateFrom : `${dateFrom} — ${dateTo}`)
-                    : t('financialHistory')}
-                </h2>
-              </div>
-              <button
-                onClick={closeHistory}
-                className={`rounded-full p-2 transition-colors ${
-                  isLight ? 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200'
-                }`}
-                aria-label={t('close')}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className={`overflow-y-auto px-5 sm:px-6 py-5 flex-1 min-h-0 ${isLight ? 'bg-zinc-50/50' : ''}`} style={{ overscrollBehavior: 'contain' }}>
-              {/* FREE — Динамика периода (скрыта по умолчанию, раскрывается по кнопке) */}
-              {!traderMode && (
-                <section className="mb-4">
-                  {/* Кнопка-аккордеон */}
-                  <button
-                    type="button"
-                    onClick={() => setFreeDynamicsOpen((v) => !v)}
-                    className={`w-full group relative overflow-hidden rounded-2xl border px-4 py-3.5 text-left transition-all duration-200 hover:-translate-y-0.5 ${
-                      freeDynamicsOpen
-                        ? isLight ? 'border-emerald-300/70 bg-emerald-50/60' : 'border-emerald-500/30 bg-emerald-500/[0.06]'
-                        : isLight ? 'border-zinc-300 bg-white hover:border-emerald-400/50 hover:shadow-md' : 'border-zinc-800 bg-zinc-950/70 hover:border-emerald-500/35 hover:bg-zinc-900'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="flex items-center gap-3">
-                        <span className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${freeDynamicsOpen ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-500' : isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-400 group-hover:border-emerald-300/50 group-hover:text-emerald-500' : 'border-zinc-800 bg-zinc-900 text-zinc-500 group-hover:border-emerald-500/25 group-hover:text-emerald-500'}`}>
-                          <TrendingUp className="h-4 w-4" />
-                        </span>
-                        <span>
-                          <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('freeDynamicsBtn')}</span>
-                          <span className="block mt-0.5 text-[11px] text-zinc-500">{t('freeDynamicsBtnSub')}</span>
-                        </span>
-                      </span>
-                      <span className="flex items-center gap-2 shrink-0">
-                        <span className={`font-data text-sm font-semibold tabular-nums ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                          {historyCurrency === 'ALL' ? t('allCurrencies') : `${historyTotal >= 0 ? '+' : '−'}${historyCurrencySymbol}${formatMoneyShort(Math.abs(historyTotal))}`}
-                        </span>
-                        <ChevronDown className={`h-4 w-4 text-emerald-500 transition-transform duration-300 ${freeDynamicsOpen ? 'rotate-180' : ''}`} />
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Содержимое аккордеона */}
-                  {freeDynamicsOpen && (
-                    <div className={`mt-2 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950'}`}>
-                      <div className={`rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50/70' : 'border-zinc-800 bg-black/20'}`}>
-                        <div className="mb-3 flex items-center justify-between gap-3">
-                          <div className="flex gap-3 text-[10px]"><span className="text-emerald-500">● {t('incomeLabel')}</span><span className="text-red-400">● {t('expenseLabel')}</span></div>
-                          <span className="text-[10px] text-zinc-500">{historyTimeline.from} — {historyTimeline.to}</span>
-                        </div>
-                        <div className="mb-3 flex items-center justify-between gap-2">
-                          <button type="button" onClick={() => setFreeTimelineOffset((v) => v + 1)} className={`rounded-lg border px-3 py-1.5 text-xs font-data transition-colors ${isLight ? 'border-zinc-200 bg-white text-zinc-600 hover:border-amber-400/50' : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-amber-400/40'}`}>{t('earlier')}</button>
-                          <span className="text-[10px] text-zinc-500">{t('clickColumnHint')}</span>
-                          <button type="button" disabled={freeTimelineOffset === 0} onClick={() => setFreeTimelineOffset((v) => Math.max(0, v - 1))} className={`rounded-lg border px-3 py-1.5 text-xs font-data transition-colors disabled:opacity-30 ${isLight ? 'border-zinc-200 bg-white text-zinc-600 hover:border-amber-400/50' : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-amber-400/40'}`}>{t('later')}</button>
-                        </div>
-                        {historyCurrency === 'ALL' && <p className="mb-3 rounded-lg border border-amber-400/20 bg-amber-400/[0.05] px-2.5 py-2 text-[10px] leading-relaxed text-zinc-500">{t('allCurrenciesNotice')}</p>}
-                        <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 items-end h-44 sm:h-48">
-                          {historyTimeline.points.map((point) => {
-                            const incomeH = point.income ? Math.max(7, Math.round((point.income / historyTimeline.max) * 100)) : 3;
-                            const expenseH = point.expense ? Math.max(7, Math.round((point.expense / historyTimeline.max) * 100)) : 3;
-                            const active = point.income || point.expense;
-                            const net = point.net;
-                            const selected = freeTimelineSelected === point.key;
-                            return <button type="button" key={point.key} onClick={() => setFreeTimelineSelected(selected ? null : point.key)} className={`group min-w-0 h-full rounded-xl px-1 pt-2 pb-1 flex flex-col justify-end transition-all ${selected ? (isLight ? 'bg-white shadow-md ring-1 ring-amber-400/40' : 'bg-white/[0.04] ring-1 ring-amber-400/30') : 'hover:bg-zinc-500/[0.04]'}`}>
-                              <span className={`mb-1 min-h-[28px] text-center text-[9px] sm:text-[10px] font-data leading-tight ${!active ? 'text-zinc-400' : net >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>{active ? `${net >= 0 ? '+' : '−'}${formatMoneyShort(Math.abs(net))}` : '—'}</span>
-                              <div className="flex flex-1 items-end justify-center gap-1"><span className="w-2.5 sm:w-3 rounded-t-md bg-gradient-to-t from-emerald-600/70 to-emerald-300/90 transition-all" style={{height:`${incomeH}%`}} /><span className="w-2.5 sm:w-3 rounded-t-md bg-gradient-to-t from-red-700/65 to-red-400/85 transition-all" style={{height:`${expenseH}%`}} /></div>
-                              <span className="mt-2 text-center text-[9px] text-zinc-500">{point.label}</span>
-                            </button>;
-                          })}
-                        </div>
-                        {(() => { const fallback = [...historyTimeline.points].reverse().find((x) => x.income || x.expense)?.key || historyTimeline.points[historyTimeline.points.length - 1]?.key; const p = historyTimeline.points.find((x) => x.key === (freeTimelineSelected || fallback)); return p ? <div className={`mt-3 grid grid-cols-3 gap-2 rounded-xl border p-2.5 text-center ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/60'}`}><div><p className="text-[9px] text-zinc-500">{t('incomeLabel')}</p><p className="mt-1 text-xs font-data text-emerald-500">+{historyCurrencySymbol}{formatMoneyShort(p.income)}</p></div><div><p className="text-[9px] text-zinc-500">{t('expenseLabel')}</p><p className="mt-1 text-xs font-data text-red-400">−{historyCurrencySymbol}{formatMoneyShort(p.expense)}</p></div><div><p className="text-[9px] text-zinc-500">{t('result')} · {p.label} · {p.count}</p><p className={`mt-1 text-xs font-data ${p.net >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>{p.net >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoneyShort(Math.abs(p.net))}</p></div></div> : null; })()}
-                      </div>
-
-                      {/* Итог периода */}
-                      <div className="mt-4 grid grid-cols-3 gap-2 border-t border-zinc-500/10 pt-4">
-                        <div><p className="text-[10px] uppercase tracking-wide text-zinc-500">{t('incomeLabel')}</p><p className="mt-1 text-sm font-data text-emerald-500">+{historyCurrencySymbol}{formatMoneyShort(historyIncome)}</p></div>
-                        <div><p className="text-[10px] uppercase tracking-wide text-zinc-500">{t('expenseLabel')}</p><p className="mt-1 text-sm font-data text-red-500">−{historyCurrencySymbol}{formatMoneyShort(historyExpense)}</p></div>
-                        <div><p className="text-[10px] uppercase tracking-wide text-zinc-500">{t('recordsCount')}</p><p className={`mt-1 text-sm font-data ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>{historyTrades.length}</p></div>
-                      </div>
-                    </div>
-                  )}
-                </section>
-              )}
-
-              {/* FREE — Обзор денег (анализ источников, всегда скрыт под toggle) */}
-              {!traderMode && historyTrades.length > 0 && (
-                <section className="mb-4">
-                  <button
-                    type="button"
-                    onClick={() => setHistoryAnalysisOpen((v) => !v)}
-                    className={`w-full group relative overflow-hidden rounded-2xl border px-4 py-3.5 text-left transition-all duration-200 hover:-translate-y-0.5 ${
-                      historyAnalysisOpen
-                        ? isLight ? 'border-amber-300/60 bg-amber-50/60' : 'border-amber-400/30 bg-amber-400/[0.06]'
-                        : isLight ? 'border-zinc-300 bg-white hover:border-amber-400/40 hover:shadow-md' : 'border-zinc-800 bg-zinc-950/70 hover:border-amber-400/30 hover:bg-zinc-900'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="flex items-center gap-3">
-                        <span className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${historyAnalysisOpen ? 'border-amber-400/30 bg-amber-400/10 text-amber-500' : isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-400 group-hover:text-amber-500' : 'border-zinc-800 bg-zinc-900 text-zinc-500 group-hover:text-amber-500'}`}>
-                          <Sparkles className="h-4 w-4" />
-                        </span>
-                        <span>
-                          <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('freeAnalysisTitle')}</span>
-                          <span className="block mt-0.5 text-[11px] text-zinc-500">{t('freeAnalysisSub')}</span>
-                        </span>
-                      </span>
-                      <ChevronDown className={`h-4 w-4 text-amber-500 shrink-0 transition-transform duration-300 ${historyAnalysisOpen ? 'rotate-180' : ''}`} />
-                    </div>
-                  </button>
-
-                  {historyAnalysisOpen && (
-                    <div className={`mt-2 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-amber-200/60 bg-white shadow-sm' : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.05] via-zinc-950 to-zinc-950'}`}>
-                      {/* Финансовый вывод */}
-                      <div className={`mb-4 rounded-xl border px-4 py-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
-                        <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500 mb-1">{t('financialSummary')}</p>
-                        <p className={`text-sm font-medium leading-relaxed ${historyIncome > historyExpense ? 'text-emerald-600' : historyExpense > 0 ? 'text-red-500' : (isLight ? 'text-zinc-600' : 'text-zinc-400')}`}>
-                          {historyIncome > historyExpense ? t('flowSummaryPositive') : historyExpense > 0 ? t('flowSummaryNegative') : t('flowSummaryEmpty')}
-                        </p>
-                      </div>
-                      {/* Мини-вкладки */}
-                      <div className="flex gap-1 mb-4 overflow-x-auto pb-0.5">
-                        {[['overview', t('overview')], ['income', t('fromWhere')], ['expense', t('whereGo')]].map(([key, label]) => (
-                          <button key={key} onClick={() => setHistoryAnalysisTab(key)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${historyAnalysisTab === key ? 'bg-amber-400/15 text-amber-600' : isLight ? 'text-zinc-500 hover:bg-zinc-100' : 'text-zinc-500 hover:bg-zinc-900'}`}>{label}</button>
-                        ))}
-                      </div>
-                      {historyAnalysisTab === 'overview' && (
-                        <>
-                          <div className="grid grid-cols-3 gap-2 mb-4">
-                            <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">{t('incomeLabel')}</p><p className="font-data text-xs text-emerald-600 tabular-nums truncate">+{historyCurrencySymbol}{formatMoney(historyIncome)}</p></div>
-                            <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">{t('expenseLabel')}</p><p className="font-data text-xs text-red-600 tabular-nums truncate">−{historyCurrencySymbol}{formatMoney(historyExpense)}</p></div>
-                            <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">{t('recordsCount')}</p><p className="font-data text-sm">{historyTrades.length}</p></div>
-                          </div>
-                          {historyCurrency === 'ALL' ? <p className="text-xs text-zinc-500">{t('allCurrenciesNotice')}</p> : <HistoryChart entries={historyAnalysis.dailyEntries} isLight={isLight} t={t} formatAmount={(amount) => formatAmountInCurrency(amount, historyCurrency)} />}
-                        </>
-                      )}
-                      {historyAnalysisTab === 'income' && (
-                        <div className="space-y-3">
-                          {historyAnalysis.incomeSources.length ? historyAnalysis.incomeSources.slice(0,5).map(([name, value]) => (
-                            <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-emerald-600 tabular-nums">+{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-1.5 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{width:`${Math.max(5,(value/(historyIncome||1))*100)}%`}} /></div></div>
-                          )) : <p className="py-5 text-center text-sm text-zinc-500">{t('noIncomePeriod')}</p>}
-                        </div>
-                      )}
-                      {historyAnalysisTab === 'expense' && (
-                        <div className="space-y-3">
-                          {historyAnalysis.expenseCategories.length ? historyAnalysis.expenseCategories.slice(0,5).map(([name, value]) => (
-                            <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-red-600 tabular-nums">−{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-1.5 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-red-500 transition-all duration-500" style={{width:`${Math.max(5,(value/(historyExpense||1))*100)}%`}} /></div></div>
-                          )) : <p className="py-5 text-center text-sm text-zinc-500">{t('noExpensePeriod')}</p>}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </section>
-              )}
-
-              {traderMode && <button
-                onClick={() => setHistoryAnalysisOpen((v) => !v)}
-                disabled={historyTrades.length === 0}
-                className={`mb-4 w-full group relative overflow-hidden rounded-2xl border px-4 py-3.5 text-left transition-all duration-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40 ${
-                  historyAnalysisOpen
-                    ? 'border-amber-400/50 bg-amber-400/10 shadow-[0_10px_30px_rgba(251,191,36,.08)]'
-                    : isLight ? 'border-zinc-300 bg-white hover:border-amber-400/50 hover:shadow-lg' : 'border-zinc-800 bg-zinc-950/70 hover:border-amber-400/45 hover:bg-zinc-900'
-                }`}
-              >
-                <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-amber-400/10 to-transparent pointer-events-none" />
-                <div className="relative flex items-center justify-between gap-3">
-                    <span className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/10 text-amber-500 group-hover:scale-110 transition-transform"><Sparkles className="h-4 w-4" /></span>
-                    <span>
-                      <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{historyAnalysisOpen ? t('analysisOpenState') : t('openAnalysis')}</span>
-                      <span className="block mt-0.5 text-[11px] text-zinc-500">{t('analysisTeaser')}</span>
-                    </span>
-                  </span>
-                  <ChevronDown className={`h-4 w-4 text-amber-500 transition-transform duration-300 ${historyAnalysisOpen ? 'rotate-180' : ''}`} />
-                </div>
-              </button>}
-              {traderMode && historyAnalysisOpen && (
-                <section className={`relative overflow-hidden mb-5 rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-amber-300/70 bg-white shadow-sm' : 'border-amber-400/20 bg-gradient-to-br from-amber-400/[0.08] via-zinc-950 to-zinc-950 shadow-[0_18px_60px_rgba(0,0,0,.28)]'}`}>
-                  <div className="absolute -right-8 -top-10 select-none pointer-events-none font-display text-8xl font-bold tracking-tighter text-amber-400/[0.045]">PRO</div>
-                  <div className="relative flex items-start justify-between gap-4 mb-4">
-                    <div>
-                      <p className="font-data text-[10px] uppercase tracking-[0.24em] text-amber-500">{t('proFinancialPicture')}</p>
-                      <h3 className={`mt-1 text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('moneyInMotion')}</h3>
-                      <p className="mt-1 text-xs text-zinc-500">{t('proSubtitle')}</p>
-                    </div>
-                    <Sparkles className="h-5 w-5 shrink-0 text-amber-500" />
-                  </div>
-
-                  {historyCurrency === 'ALL' ? (
-                    <div className="mb-5 space-y-3">
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        {historyByCurrency.length ? historyByCurrency.map(([code, stats]) => {
-                          const meta = getCurrencyMeta(code);
-                          return <button key={code} onClick={() => setHistoryCurrency(code)} className={`rounded-xl border p-3 text-left transition-all hover:-translate-y-0.5 ${isLight ? 'border-zinc-200 bg-zinc-50 hover:border-amber-400/40' : 'border-zinc-800 bg-black/20 hover:border-amber-400/35'}`}>
-                            <span className="text-[10px] text-zinc-500">{code}</span>
-                            <span className={`mt-1 block font-data text-sm sm:text-base font-semibold tabular-nums leading-tight break-all ${stats.balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.balance >= 0 ? '+' : '−'}{meta.symbol}{formatMoneyShort(Math.abs(stats.balance))}</span>
-                            <span className="mt-1 block text-[10px] text-zinc-500">{stats.count} {t('transactions')} · {t('openAnalysisAction')}</span>
-                          </button>;
-                        }) : <p className="col-span-full py-8 text-center text-sm text-zinc-500">{t('noRecords')}</p>}
-                      </div>
-                      <div className={`rounded-2xl border p-3 sm:p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-white/5 bg-black/20'}`}>
-                        <div className="mb-3 flex items-end justify-between gap-3"><div><p className="text-xs font-semibold">{t('currencyDynamics')}</p><p className="mt-1 text-[10px] text-zinc-500">{t('currenciesNotMixed')}</p></div><span className="text-[10px] text-amber-500">PRO</span></div>
-                        <div className="grid gap-2">
-                          {historyByCurrency.map(([code, stats]) => { const meta = getCurrencyMeta(code); return <button key={code} onClick={() => setHistoryCurrency(code)} className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800/80 bg-zinc-900/40'}`}><span><span className="block text-xs font-medium">{meta.symbol} {code}</span><span className="mt-0.5 block text-[10px] text-zinc-500">{stats.count} {t('transactions')}</span></span><span className={`font-data text-sm ${stats.balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.balance >= 0 ? '+' : '−'}{meta.symbol}{formatMoney(Math.abs(stats.balance))}</span></button>; })}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className={`relative mb-5 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-white/5 bg-black/20'}`}>
-                        <div className="absolute -right-3 -bottom-6 select-none pointer-events-none font-display text-7xl sm:text-8xl font-bold tracking-tighter text-emerald-500/[0.045]">{historyCurrency}</div>
-                        <div className="relative flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('resultForPeriod')}</p>
-                            <p className={`mt-2 font-display font-semibold tracking-tight tabular-nums leading-none break-all text-[clamp(1.75rem,9vw,3.5rem)] ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                              {historyTotal >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoney(Math.abs(historyTotal))}
-                            </p>
-                            <p className="mt-3 text-[11px] text-zinc-500">{historyTrades.length} {t('transactions')} · {historyCurrency} · {t('currentPeriod')}</p>
-                          </div>
-                          <div className={`shrink-0 rounded-xl border px-3 py-2 text-right ${isLight ? 'border-amber-200 bg-white/80' : 'border-amber-400/15 bg-amber-400/[0.04]'}`}>
-                            <p className="text-[9px] uppercase tracking-wider text-zinc-500">{t('status')}</p>
-                            <p className={`mt-1 text-xs font-semibold ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>{historyTotal >= 0 ? t('positive') : t('needsAttention')}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-5">
-                        {[
-                          [t('incomeLabel'), historyIncome, 'text-emerald-500'],
-                          [t('expenseLabel'), historyExpense, 'text-red-500'],
-                          [t('balanceLabel'), Math.abs(historyTotal), historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'],
-                        ].map(([label, amount, color]) => (
-                          <div key={label} className={`min-w-0 rounded-xl border p-2.5 sm:p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/50'}`}>
-                            <p className="text-[9px] sm:text-[10px] text-zinc-500">{label}</p>
-                            <p className={`mt-1 font-data text-sm sm:text-xs font-semibold tabular-nums leading-tight whitespace-nowrap ${color}`}>{label === t('expenseLabel') ? '−' : label === t('balanceLabel') && historyTotal >= 0 ? '+' : '+'}{historyCurrencySymbol}{formatMoneyShort(amount)}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-
-                  <div className="mb-4 flex gap-1 overflow-x-auto pb-1">
-                    {[['overview', t('overview')], ['income', t('fromWhere')], ['expense', t('whereGo')], ['radar', t('radar')], ['habits', t('habits')]].map(([key, label]) => <button key={key} onClick={() => setHistoryAnalysisTab(key)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${historyAnalysisTab === key ? 'bg-gradient-to-r from-amber-400/20 to-amber-500/5 text-amber-400 ring-1 ring-amber-400/25 shadow-[0_8px_24px_rgba(251,191,36,.08)]' : isLight ? 'text-zinc-500 hover:bg-zinc-100' : 'text-zinc-500 hover:bg-white/5'}`}>{label}</button>)}
-                  </div>
-
-                  {historyAnalysisTab === 'overview' && (
-                    <div>
-                      <div className={`relative overflow-hidden rounded-2xl border p-3 sm:p-4 mb-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}>
-                        <div className="absolute inset-x-4 top-[52%] border-t border-dashed border-zinc-500/15 pointer-events-none" />
-                        <div className="relative mb-4 flex items-end justify-between gap-3">
-                          <div>
-                            <span className="text-sm font-semibold">{t('periodDynamics')}</span>
-                            <p className="mt-1 text-[10px] text-zinc-500">{t('last10Days')}</p>
-                          </div>
-                          <div className="flex shrink-0 gap-2 text-[9px]"><span className="text-emerald-500">● {t('incomeLabel')}</span><span className="text-red-400">● {t('expenseLabel')}</span></div>
-                        </div>
-                        {historyAnalysis.chartEntries.length ? (
-                          <div className="relative grid grid-cols-5 sm:grid-cols-10 gap-x-1.5 gap-y-3 items-end h-52 sm:h-44">
-                            {historyAnalysis.chartEntries.map(([date, stats]) => {
-                              const net = stats.income - stats.expense;
-                              const active = stats.income > 0 || stats.expense > 0;
-                              return <div key={date} className="min-w-0 h-full flex flex-col justify-end">
-                                <div className={`mb-1 min-h-[14px] text-center text-[10px] sm:text-[11px] font-data tabular-nums ${!active ? 'text-zinc-700' : net >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>
-                                  {active ? `${net >= 0 ? '+' : '−'}${formatMoneyShort(Math.abs(net))}` : '—'}
-                                </div>
-                                <div className="relative flex flex-1 items-end justify-center gap-1">
-                                  <span className={`w-2.5 sm:w-3 rounded-t-md transition-all duration-500 ${stats.income > 0 ? 'bg-gradient-to-t from-emerald-600/70 to-emerald-300/90 shadow-[0_0_16px_rgba(16,185,129,.18)]' : 'bg-emerald-500/[0.06]'}`} style={{height:`${stats.income > 0 ? Math.max(6,(stats.income/historyAnalysis.maxDaily)*100) : 3}%`}} />
-                                  <span className={`w-2.5 sm:w-3 rounded-t-md transition-all duration-500 ${stats.expense > 0 ? 'bg-gradient-to-t from-red-700/65 to-red-400/85 shadow-[0_0_16px_rgba(248,113,113,.12)]' : 'bg-red-500/[0.05]'}`} style={{height:`${stats.expense > 0 ? Math.max(5,(stats.expense/historyAnalysis.maxDaily)*100) : 3}%`}} />
-                                </div>
-                                <span className={`mt-2 text-center text-[10px] sm:text-[11px] ${active ? 'text-zinc-500' : 'text-zinc-700'}`}>{date.slice(8,10)}</span>
-                              </div>;
-                            })}
-                          </div>
-                        ) : <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-zinc-800 text-xs text-zinc-500">{t('emptyHistoryDesc')}</div>}
-                      </div>
-                      <div className="grid sm:grid-cols-3 gap-2">
-                        <button onClick={() => setHistoryAnalysisTab('income')} className={`text-left rounded-xl p-3 transition-transform hover:-translate-y-0.5 ${isLight ? 'bg-emerald-50' : 'bg-emerald-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">{t('mainSource')}</p><p className="mt-1 text-xs font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p><p className="mt-1 text-[10px] text-emerald-500">{t('openStructure')}</p></button>
-                        <button onClick={() => setHistoryAnalysisTab('expense')} className={`text-left rounded-xl p-3 transition-transform hover:-translate-y-0.5 ${isLight ? 'bg-red-50' : 'bg-red-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">{t('expenseZone')}</p><p className="mt-1 text-xs font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p><p className="mt-1 text-[10px] text-red-400">{t('viewDetails')}</p></button>
-                        <div className={`rounded-xl p-3 ${isLight ? 'bg-amber-50' : 'bg-amber-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">{t('financialSummary')}</p><p className="mt-1 text-xs font-semibold leading-relaxed">{historyIncome > historyExpense ? t('flowPositivePro') : historyExpense > 0 ? t('flowNegativePro') : t('flowLittleData')}</p></div>
-                      </div>
-                    </div>
-                  )}
-                  {historyAnalysisTab === 'income' && <div className="space-y-3">{historyAnalysis.incomeSources.length ? historyAnalysis.incomeSources.slice(0,6).map(([name,value]) => <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-emerald-500">+{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{width:`${Math.max(5,(value/(historyIncome||1))*100)}%`}} /></div></div>) : <p className="py-5 text-center text-sm text-zinc-500">{t('noIncomePeriod')}</p>}</div>}
-                  {historyAnalysisTab === 'expense' && <div className="space-y-3">{historyAnalysis.expenseCategories.length ? historyAnalysis.expenseCategories.slice(0,6).map(([name,value]) => <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-red-500">−{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-red-500" style={{width:`${Math.max(5,(value/(historyExpense||1))*100)}%`}} /></div></div>) : <p className="py-5 text-center text-sm text-zinc-500">{t('noExpensePeriod')}</p>}</div>}
-                  {historyAnalysisTab === 'radar' && <div className="space-y-2">
-                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-amber-200 bg-amber-50/40' : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.07] to-transparent'}`}><p className="font-data text-[10px] uppercase tracking-[0.18em] text-amber-500">{t('financialRadar')}</p><div className="mt-3 grid gap-2 sm:grid-cols-2">
-                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">{t('periodPower')}</p><p className="mt-1 text-sm font-semibold">{historyExpense > 0 ? `${(historyIncome / historyExpense).toFixed(1)}×` : historyIncome > 0 ? t('positive') : '—'}</p></div>
-                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">{t('mainSource')}</p><p className="mt-1 text-sm font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p></div>
-                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">{t('attentionZone')}</p><p className="mt-1 text-sm font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p></div>
-                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">{t('bestDay')}</p><p className="mt-1 text-sm font-semibold">{historyAnalysis.dailyEntries.length ? historyAnalysis.dailyEntries.reduce((best, item) => item[1].income - item[1].expense > best[1].income - best[1].expense ? item : best)[0] : '—'}</p></div>
-                    </div></div>
-                  </div>}
-                  {historyAnalysisTab === 'habits' && <div className="grid gap-2 sm:grid-cols-3">
-                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}><p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('activity')}</p><p className="mt-2 text-lg font-semibold">{historyTrades.length}</p><p className="text-xs text-zinc-500">{t('transactions')}</p></div>
-                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}><p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('frequentIncome')}</p><p className="mt-2 text-sm font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p><p className="text-xs text-zinc-500">{t('incomeSources')}</p></div>
-                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}><p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('expensePattern')}</p><p className="mt-2 text-sm font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p><p className="text-xs text-zinc-500">{t('expenseStructure')}</p></div>
-                  </div>}
-                </section>
-              )}
-
-              {!traderMode ? (
-                <>
-                  {/* Compact period selector */}
-                  <div className="relative flex items-center gap-2 mb-3">
-                    <button
-                      onClick={() => setHistoryPeriodMenuOpen((v) => !v)}
-                      className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs transition-colors ${isLight ? 'border-zinc-300 bg-white text-zinc-700 hover:border-amber-400/40' : 'border-zinc-700 bg-zinc-950 text-zinc-300 hover:border-amber-400/30'}`}
-                    >
-                      {periodButtonLabel}
-                      <ChevronDown className={`h-3.5 w-3.5 transition-transform ${historyPeriodMenuOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    {historyPeriodMenuOpen && (
-                      <div className={`absolute left-0 top-full z-30 mt-2 min-w-[180px] rounded-2xl border p-1.5 shadow-2xl ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'}`}>
-                        {PERIOD_PRESETS.map((p) => (
-                          <button key={p} onClick={() => { handlePresetChange(p); setHistoryPeriodMenuOpen(false); }} className={`block w-full rounded-xl px-3 py-2 text-left text-xs transition-colors ${periodPreset === p ? 'bg-amber-400/10 text-amber-600' : isLight ? 'text-zinc-600 hover:bg-zinc-100' : 'text-zinc-400 hover:bg-zinc-900'}`}>{periodLabel(p)}</button>
-                        ))}
-                        <button onClick={() => { setSelectedKey(null); setPeriodPreset('custom'); setHistoryPeriodMenuOpen(false); }} className={`block w-full rounded-xl px-3 py-2 text-left text-xs transition-colors ${periodPreset === 'custom' ? 'bg-amber-400/10 text-amber-600' : isLight ? 'text-zinc-600 hover:bg-zinc-100' : 'text-zinc-400 hover:bg-zinc-900'}`}>{t('customPeriod')}</button>
-                      </div>
-                    )}
-                    <button
-                      onClick={() => setHistoryFiltersOpen((v) => !v)}
-                      className={`rounded-xl border px-3 py-2 text-xs transition-colors ${historyFiltersOpen ? 'border-amber-400/40 bg-amber-400/10 text-amber-600' : isLight ? 'border-zinc-300 bg-white text-zinc-600' : 'border-zinc-700 bg-zinc-950 text-zinc-400'}`}
-                    >
-                      {t('filters')}
-                    </button>
-                  </div>
-
-                  {historyFiltersOpen && (
-                    <div className={`mb-4 overflow-visible rounded-2xl border p-3.5 shadow-sm ${
-                      isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-gradient-to-br from-zinc-950 to-zinc-900/70'
-                    }`}>
-                      <div className="mb-3 flex items-center justify-between">
-                        <span className="font-data text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-500">{periodPreset === 'custom' ? t('dateRange') : periodButtonLabel}</span>
-                      </div>
-                      {periodPreset === 'custom' && <div className="grid grid-cols-2 gap-2 mb-3">
-                        <label className={`relative rounded-xl border px-3 py-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
-                          <span className="block text-[9px] font-data uppercase tracking-wider text-zinc-500">{t('fromDate')}</span>
-                          <span className={`mt-1 block text-sm font-data font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-100'}`}>{formatDateLabel(dateFrom)}</span>
-                          <input aria-label={t('fromDate')} type="date" value={dateFrom} onChange={(e) => handleDateFromChange(e.target.value)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
-                        </label>
-                        <label className={`relative rounded-xl border px-3 py-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
-                          <span className="block text-[9px] font-data uppercase tracking-wider text-zinc-500">{t('toDate')}</span>
-                          <span className={`mt-1 block text-sm font-data font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-100'}`}>{formatDateLabel(dateTo)}</span>
-                          <input aria-label={t('toDate')} type="date" value={dateTo} onChange={(e) => handleDateToChange(e.target.value)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
-                        </label>
-                      </div>}
-                      <div className="mb-3">
-                        <span className="mb-1.5 block text-[10px] uppercase tracking-wider text-zinc-500">{t('category')}</span>
-                        {renderHistoryCategoryPicker()}
-                      </div>
-                      <div className="flex gap-2">
-                        {[
-                          { key: 'all', label: t('all') },
-                          { key: 'win', label: t('income') },
-                          { key: 'loss', label: t('expense') },
-                        ].map((opt) => (
-                          <button
-                            key={opt.key}
-                            onClick={() => setHistoryWinLoss(opt.key)}
-                            className={[
-                              'flex-1 rounded-lg border px-3 py-2 text-xs transition-colors',
-                              historyWinLoss === opt.key
-                                ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-700'
-                                : isLight
-                                ? 'border-zinc-300 bg-white text-zinc-600 hover:text-zinc-800 hover:border-zinc-400'
-                                : 'border-zinc-700 bg-zinc-900 text-zinc-400 hover:text-zinc-200',
-                            ].join(' ')}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className={`mb-2 flex items-center justify-between gap-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
-                    <div className="min-w-0">
-                      <p className="truncate text-xs">{historyTrades.length} {t('records')}{historyNameFilter ? ` · ${historyNameFilter}` : ''}</p>
-                      {periodPreset !== 'Вся история' && (
-                        <button onClick={() => setHistoryFiltersOpen(true)} className={`mt-0.5 text-[10px] ${isLight ? 'text-zinc-600 hover:text-zinc-900' : 'text-zinc-600 hover:text-zinc-300'} transition-colors`}>
-                          {t('changePeriod')}
-                        </button>
-                      )}
-                    </div>
-                    <div className={`inline-flex shrink-0 gap-1 rounded-xl border p-1 ${
-                      isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-zinc-950'
-                    }`}>
-                      {[{ code: 'ALL', symbol: t('all'), label: t('allCurrencies') }, ...CURRENCIES].map((c) => (
-                        <button key={c.code} type="button" onClick={() => setHistoryCurrency(c.code)} title={c.label}
-                          className={`rounded-lg px-2 py-1 text-[10px] font-data transition-all ${
-                            historyCurrency === c.code
-                              ? 'bg-amber-400/15 text-amber-500 ring-1 ring-amber-400/20 font-semibold'
-                              : isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-300'
-                          }`}>
-                          {c.symbol}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {historyTrades.length > 0 ? (
-                    <div className={`rounded-2xl border overflow-hidden ${
-                      isLight ? 'bg-white border-zinc-300' : 'bg-zinc-950 border-zinc-800'
-                    }`}>
-                      {historyTrades.map((entry) => {
-                        const Icon = getHistoryCategoryIcon(entry.instrument);
-                        return (
-                          <button
-                            key={entry.id}
-                            onClick={() => jumpToTradeDate(entry.dateKey)}
-                            className={`w-full px-4 py-3.5 flex items-center gap-3 text-left border-b last:border-b-0 transition-colors ${
-                              isLight
-                                ? 'border-zinc-200 hover:bg-zinc-50 text-zinc-800'
-                                : 'border-zinc-800/80 hover:bg-zinc-900 text-zinc-100'
-                            }`}
-                          >
-                            <span className={`h-9 w-9 shrink-0 rounded-xl flex items-center justify-center ${entry.pnl >= 0 ? (isLight ? 'bg-emerald-100 text-emerald-600' : 'bg-emerald-500/15 text-emerald-400') : (isLight ? 'bg-red-100 text-red-600' : 'bg-red-500/15 text-red-400')}`}>
-                              <Icon className="h-4 w-4" />
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className={`block text-sm font-medium truncate ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{entry.instrument || t('catOther')}</span>
-                              <span className={`block text-[11px] mt-0.5 truncate ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{formatDateLabel(entry.dateKey)} · {entry.time}{entry.comment ? ` · ${entry.comment}` : ''}</span>
-                            </span>
-                            <span className={`font-data text-sm font-medium shrink-0 tabular-nums whitespace-nowrap ${entry.pnl >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                              {formatAmountInCurrency(entry.pnl, entry.currency || 'USD')}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className={`rounded-2xl border border-dashed px-6 py-12 text-center ${
-                      isLight ? 'border-zinc-300 bg-white/50' : 'border-zinc-800'
-                    }`}>
-                      <Wallet className={`h-8 w-8 mx-auto mb-3 ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`} />
-                      <p className={`text-sm ${isLight ? 'text-zinc-600' : 'text-zinc-500'}`}>{t('emptyHistoryTitle')}</p>
-                      <p className={`text-xs mt-1 ${isLight ? 'text-zinc-500' : 'text-zinc-700'}`}>{t('emptyHistoryDesc')}</p>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-2 mt-4">
-                    <div>
-                      <button
-                      onClick={() => setExportOpen(true)}
-                      disabled={historyTrades.length === 0}
-                      className={`w-full flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                        isLight
-                          ? 'border-zinc-300 bg-white text-zinc-600 hover:text-zinc-900 hover:border-zinc-400'
-                          : 'border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600'
-                      }`}
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      {t('downloadReport')}
-                    </button>
-                      <p className={`mt-1 px-1 text-[10px] leading-tight ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('downloadReportSubtitle')}</p>
-                    </div>
-                    <button
-                      onClick={handleClearHistory}
-                      className={[
-                        'h-fit rounded-xl border px-3 py-2.5 text-xs transition-colors',
-                        confirmingClear
-                          ? 'border-red-500 bg-red-500/10 text-red-600'
-                          : isLight
-                          ? 'border-zinc-300 bg-white text-zinc-600 hover:text-red-600 hover:border-red-500/40'
-                          : 'border-zinc-800 text-zinc-600 hover:text-red-400 hover:border-red-500/40',
-                      ].join(' ')}
-                    >
-                      {confirmingClear ? t('confirmClearHistory') : t('clearHistory')}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  {/* PRO HISTORY — Premium redesign with donut chart */}
-
-                  {/* ── Luxury Donut + Stats Header ─────────────────────── */}
-                  {(() => {
-                    const hTrades = historyTrades;
-                    const hWin = hTrades.filter(t => t.pnl >= 0).length;
-                    const hLoss = hTrades.length - hWin;
-                    const hWinrate = hTrades.length > 0 ? Math.round((hWin / hTrades.length) * 100) : 0;
-                    const hTotal = hTrades.reduce((s, t) => s + t.pnl, 0);
-                    const r = 38;
-                    const circ = 2 * Math.PI * r;
-                    const offset = circ - (hWinrate / 100) * circ;
-                    const lossOffset = circ - ((hLoss / (hTrades.length || 1)) * circ);
-                    return (
-                      <div className={`relative mb-4 overflow-hidden rounded-2xl border p-4 sm:p-5 ${
-                        isLight
-                          ? 'border-zinc-200 bg-gradient-to-br from-white to-zinc-50/80 shadow-sm'
-                          : 'border-amber-400/15 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black shadow-[0_24px_60px_rgba(0,0,0,.4)]'
-                      }`}>
-                        {/* Ambient glow */}
-                        <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-amber-400/[0.06] blur-3xl" />
-                        <div className="pointer-events-none absolute -left-6 -bottom-6 h-32 w-32 rounded-full bg-emerald-500/[0.05] blur-2xl" />
-
-                        <div className="relative flex items-center gap-5">
-                          {/* Donut SVG */}
-                          <div className="relative flex shrink-0 items-center justify-center" style={{width:96,height:96}}>
-                            <svg width="96" height="96" viewBox="0 0 96 96" className="-rotate-90">
-                              {/* Track */}
-                              <circle cx="48" cy="48" r={r} strokeWidth="9"
-                                stroke={isLight ? '#e2e8f0' : '#27272a'} fill="none" />
-                              {/* Loss arc (full if any losses) */}
-                              {hTrades.length > 0 && hLoss > 0 && (
-                                <circle cx="48" cy="48" r={r} strokeWidth="9"
-                                  stroke="rgba(239, 68, 68, 0.75)"
-                                  strokeDasharray={circ}
-                                  strokeDashoffset="0"
-                                  fill="none" />
-                              )}
-                              {/* Win arc */}
-                              {hTrades.length > 0 && hWin > 0 && (
-                                <circle cx="48" cy="48" r={r} strokeWidth="9"
-                                  stroke="rgb(16 185 129)"
-                                  strokeDasharray={circ}
-                                  strokeDashoffset={offset}
-                                  strokeLinecap="round"
-                                  fill="none"
-                                  style={{transition:'stroke-dashoffset 0.8s cubic-bezier(.4,0,.2,1)'}} />
-                              )}
-                            </svg>
-                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center leading-none">
-                              <span className={`font-data text-xl font-bold tabular-nums ${
-                                hTrades.length === 0 ? 'text-zinc-500'
-                                : hWinrate >= 50 ? 'text-emerald-500' : 'text-red-500'
-                              }`}>{hWinrate}%</span>
-                              <span className={`mt-1 text-[9px] font-bold uppercase tracking-widest ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>WIN</span>
-                            </div>
-                          </div>
-
-                          {/* Stats */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="font-data text-[10px] uppercase tracking-[0.22em] text-amber-500 font-bold">PRO</span>
-                              <span className={`font-data text-[10px] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>·</span>
-                              <span className={`font-data text-[10px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{hTrades.length} {t('trades')}</span>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                              <div className="flex items-center gap-2">
-                                <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                                <span className={`font-data text-xs font-semibold text-emerald-600`}>+{hWin} {t('profitTrade')}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="h-2 w-2 rounded-full bg-red-500 shrink-0" />
-                                <span className={`font-data text-xs font-semibold text-red-500`}>−{hLoss} {t('lossTrade')}</span>
-                              </div>
-                            </div>
-                            <div className={`mt-3 flex items-center justify-between rounded-xl border px-3 py-2 font-data ${
-                              isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/80'
-                            }`}>
-                              <span className={`text-[10px] uppercase tracking-wide ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('total')}:</span>
-                              <span className={`text-sm font-bold tabular-nums ${hTotal >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                {hTotal >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoney(Math.abs(hTotal))}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                  {/* ── Display mode + deposit + sync ──────────────────── */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <button
-                      onClick={() => {
-                        if (displayMode === 'usd' && depositSize <= 0) { handleEditDeposit(); return; }
-                        setDisplayMode((m) => (m === 'usd' ? 'percent' : 'usd'));
-                      }}
-                      className={`rounded-lg border px-2.5 py-1 font-data text-xs font-semibold transition-all ${
-                        isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-amber-400/50'
-                        : 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-amber-400/40'
-                      }`}
-                    >
-                      {displayMode === 'usd' ? currencySymbol : '%'}
-                    </button>
-                    <button onClick={handleEditDeposit}
-                      className={`font-data text-xs transition-colors ${isLight ? 'text-zinc-400 hover:text-zinc-700' : 'text-zinc-600 hover:text-zinc-300'}`}>
-                      {t('deposit')}: {depositSize > 0 ? `${currencySymbol}${formatMoney(depositSize)}` : t('notSet')} ✎
-                    </button>
-                    {ctraderConnected && (
-                      <button onClick={handleSyncCtraderTrades} disabled={syncingCtrader}
-                        className={`ml-auto flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all ${
-                          isLight ? 'border-emerald-300/80 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                          : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
-                        }`}>
-                        <RefreshCw className={`h-3 w-3 ${syncingCtrader ? 'animate-spin' : ''}`} />
-                        {syncingCtrader ? t('syncing') : t('synchronize')}
-                      </button>
-                    )}
-                  </div>
-
-                        {/* Win-rate bar */}
-                        {hTrades.length > 0 && (
-                          <div className="relative mt-4 overflow-hidden rounded-full" style={{height:4}}>
-                            <div className={`absolute inset-0 ${isLight ? 'bg-red-200' : 'bg-red-500/20'}`} />
-                            <div
-                              className="absolute inset-y-0 left-0 rounded-full bg-emerald-500 transition-all duration-700"
-                              style={{width:`${hWinrate}%`}}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {/* ── Win/Loss quick filter ───────────────────────────── */}
-                  <div className={`flex gap-1 mb-4 rounded-xl border p-1 ${
-                    isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'
-                  }`}>
-                    {[
-                      { key: 'all', label: t('all') },
-                      { key: 'win', label: `✦ ${t('profit')}` },
-                      { key: 'loss', label: `− ${t('loss')}` },
-                    ].map((opt) => (
-                      <button key={opt.key} onClick={() => setHistoryWinLoss(opt.key)}
-                        className={`flex-1 rounded-lg py-2 font-data text-xs font-medium transition-all ${
-                          historyWinLoss === opt.key
-                            ? opt.key === 'win'
-                              ? 'bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-400/25'
-                              : opt.key === 'loss'
-                              ? 'bg-red-500/15 text-red-500 ring-1 ring-red-400/20'
-                              : (isLight ? 'bg-white text-zinc-900 shadow-sm' : 'bg-amber-400/12 text-amber-400 ring-1 ring-amber-400/20')
-                            : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-500 hover:text-zinc-300'
-                        }`}>
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* ── Trade count + currency, kept together with records ── */}
-                  <button type="button" aria-expanded={proFiltersOpen} onClick={() => setProFiltersOpen(v => !v)} className="mb-2 rounded-xl border border-amber-400/25 px-3 py-2 text-xs text-amber-500">{t('filters')} · {periodButtonLabel}</button>
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className={`text-xs ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
-                      {historyTrades.length} {t('trades')} {periodPreset !== 'Вся история' ? `· ${periodButtonLabel}` : ''}
-                      {platformFilter !== 'ALL' ? ` · ${platformFilter}` : ''}
-                      {historyCurrency !== 'ALL' ? ` · ${historyCurrency}` : ''}
-                    </p>
-                    <div className={`inline-flex shrink-0 gap-1 rounded-xl border p-1 ${
-                      isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/50'
-                    }`}>
-                      {[{ code: 'ALL', symbol: t('all') }, ...CURRENCIES].map((c) => (
-                        <button key={c.code} onClick={() => setHistoryCurrency(c.code)} title={c.code}
-                          className={`rounded-lg px-2 py-1 text-[10px] font-data transition-all ${
-                            historyCurrency === c.code
-                              ? 'bg-amber-400/15 text-amber-500 ring-1 ring-amber-400/20 font-semibold'
-                              : isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-300'
-                          }`}>
-                          {c.symbol}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Expanded filters beside the currency toolbar */}
-                  {proFiltersOpen && (
-                  <div className={`mb-3 rounded-2xl border p-3 ${
-                    isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800/80 bg-zinc-950/60'
-                  }`}>
-                    {/* Period row: native select opens all presets with one tap. */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className={`shrink-0 font-data text-[9px] uppercase tracking-[0.18em] mr-1 ${isLight ? 'text-zinc-400 font-semibold' : 'text-zinc-600'}`}>{t('period')}</span>
-                      <select
-                        value={periodPreset}
-                        onChange={(e) => e.target.value === 'custom' ? setPeriodPreset('custom') : handlePresetChange(e.target.value)}
-                        className={`min-w-0 flex-1 appearance-none rounded-xl border px-3 py-2 pr-8 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
-                          isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700' : 'border-zinc-800 bg-zinc-900/50 text-zinc-300'
-                        }`}
-                      >
-                        {PERIOD_PRESETS.map((p) => <option key={p} value={p}>{periodLabel(p)}</option>)}
-                        <option value="custom">{t('customPeriod')}</option>
-                      </select>
-                    </div>
-
-                    {/* Date range only appears for a custom period. */}
-                    {periodPreset === 'custom' && (
-                      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 mb-3">
-                        <input type="date" value={dateFrom} onChange={(e) => handleDateFromChange(e.target.value)}
-                          className={`min-w-0 rounded-xl border px-2 py-1.5 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
-                            isLight ? 'bg-zinc-50 border-zinc-200 text-zinc-800' : 'bg-zinc-900 border-zinc-700 text-zinc-200'
-                          }`} />
-                        <span className={`text-center text-xs ${isLight ? 'text-zinc-300' : 'text-zinc-700'}`}>—</span>
-                        <input type="date" value={dateTo} onChange={(e) => handleDateToChange(e.target.value)}
-                          className={`min-w-0 rounded-xl border px-2 py-1.5 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
-                            isLight ? 'bg-zinc-50 border-zinc-200 text-zinc-800' : 'bg-zinc-900 border-zinc-700 text-zinc-200'
-                          }`} />
-                      </div>
-                    )}
-
-                    {/* Platform row */}
-                    <div className="flex gap-1.5 flex-wrap">
-                      {/* Platform select */}
-                      <div className="relative flex-1 min-w-[110px]">
-                        <select value={platformFilter} onChange={(e) => setPlatformFilter(e.target.value)}
-                          className={`w-full appearance-none rounded-xl border px-3 py-2 pr-7 text-xs font-data focus:outline-none focus:border-amber-400/60 ${
-                            isLight ? 'bg-zinc-50 border-zinc-200 text-zinc-700' : 'bg-zinc-900 border-zinc-700 text-zinc-200'
-                          }`}>
-                          <option value="ALL">{t('allSources')}</option>
-                          {PLATFORMS.map((item) => <option key={item} value={item}>{item}</option>)}
-                        </select>
-                        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500">
-                          <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" /></svg>
-                        </span>
-                      </div>
-
-                    </div>
-                    <div className="mt-2">
-                      <span className={`mb-1.5 block font-data text-[9px] uppercase tracking-[0.16em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('category')}</span>
-                      {renderHistoryCategoryPicker()}
-                    </div>
-                  </div>
-
-                  )}
-                  {/* ── Trades list ────────────────────────────────────── */}
-                  {historyTrades.length > 0 ? (
-                    <div className={`rounded-2xl border overflow-hidden divide-y ${
-                      isLight ? 'border-zinc-200 bg-white divide-zinc-100' : 'border-zinc-800 bg-zinc-950 divide-zinc-800/70'
-                    }`}>
-                      {historyTrades.map((trade) => (
-                        <button
-                          key={trade.id}
-                          onClick={() => jumpToTradeDate(trade.dateKey)}
-                          className={`w-full flex items-center justify-between px-4 py-3 text-left transition-all group ${
-                            isLight ? 'hover:bg-zinc-50/80' : 'hover:bg-zinc-900/70'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border font-data text-[10px] font-bold transition-transform group-hover:scale-105 ${
-                              trade.pnl >= 0
-                                ? isLight ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
-                                : isLight ? 'border-red-200 bg-red-50 text-red-700' : 'border-red-500/20 bg-red-500/10 text-red-400'
-                            }`}>
-                              {trade.pnl >= 0 ? '+' : '−'}
-                            </span>
-                            <span className="min-w-0">
-                              <span className={`block text-sm font-medium truncate ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>
-                                {trade.instrument}
-                              </span>
-                              <span className={`block text-[11px] mt-0.5 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
-                                {formatDateLabel(trade.dateKey)} · {trade.time}
-                                {trade.platform && trade.platform !== 'Manual' ? ` · ${trade.platform}` : ''}
-                              </span>
-                            </span>
-                          </div>
-                          <span className={`font-data text-sm font-semibold shrink-0 tabular-nums ${trade.pnl >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                            {formatPnlDisplay(trade.pnl)}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className={`rounded-2xl border border-dashed px-6 py-14 text-center ${
-                      isLight ? 'border-zinc-200' : 'border-zinc-800'
-                    }`}>
-                      <p className={`text-sm ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('noTradesPeriod')}</p>
-                    </div>
-                  )}
-
-                  {/* ── Footer: Total + actions ─────────────────────────── */}
-                  <div className={`flex items-center justify-between rounded-xl border px-4 py-3 mt-3 ${
-                    isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-zinc-950 border-zinc-800'
-                  }`}>
-                    <span className={`font-data text-xs uppercase tracking-wide ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('total')}</span>
-                    <span className={`font-data text-base font-bold tabular-nums ${historyTotal >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                      {historyTotal >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoney(Math.abs(historyTotal))}
-                    </span>
-                  </div>
-
-                  <div className="flex gap-2 mt-3">
-                    <button onClick={() => setExportOpen(true)} disabled={historyTrades.length === 0}
-                      className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 font-data text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
-                        isLight ? 'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:text-zinc-900'
-                        : 'border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
-                      }`}>
-                      <Download className="h-3.5 w-3.5" />
-                      {t('downloadReport')}
-                    </button>
-                    <button onClick={handleClearHistory}
-                      className={[
-                        'flex-1 rounded-xl border px-3 py-2.5 font-data text-xs font-medium transition-all',
-                        confirmingClear
-                          ? 'border-red-500/60 bg-red-500/10 text-red-500'
-                          : isLight ? 'border-zinc-200 bg-white text-zinc-500 hover:border-red-400/50 hover:text-red-500'
-                          : 'border-zinc-800 text-zinc-600 hover:border-red-500/40 hover:text-red-400',
-                      ].join(' ')}>
-                      {confirmingClear ? t('confirmClearHistory') : t('clearHistory')}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-
-      {/* ADD TRADE MODAL — compact quick-entry UI */}
-      {modalOpen && (
-        <div
-          className={`fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-black/60 px-3 py-3 transition-opacity duration-200 sm:items-center sm:px-4 ${
-            modalVisible ? 'opacity-100' : 'opacity-0'
-          }`}
-          onMouseDown={handleBackdropMouseDown}
-          onClick={handleModalBackdropClick}
-        >
-          <div
-            className={`relative my-auto w-full max-w-[360px] max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain rounded-2xl border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl transition-all duration-200 sm:px-5 sm:py-5 ${
-              modalVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-            } ${
-              isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
-            }`}
-          >
-            <button
-              onClick={closeModal}
-              className={`absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-                isLight ? 'text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200'
-              }`}
-              aria-label={t('close')}
-            >
-              <X className="h-4 w-4" />
-            </button>
-
-            <div className="flex items-center justify-between pr-8">
-              <div>
-                <p className="font-data text-[10px] tracking-[0.18em] text-amber-400 uppercase">
-                  {traderMode
-                    ? (editingTrade ? t('editTrade') : t('newTrade'))
-                    : (editingTrade ? t('editRecord') : t('addRecord'))}
-                </p>
-                <div className="mt-1 flex items-center gap-1.5">
-                  <input
-                    type="date"
-                    max={todayKey}
-                    value={modalDateKey || targetDateKey}
-                    onChange={(e) => {
-                      if (e.target.value && e.target.value <= todayKey) {
-                        setModalDateKey(e.target.value);
-                      }
-                    }}
-                    className={`rounded-lg border px-2 py-0.5 font-data text-xs outline-none transition-colors cursor-pointer ${
-                      isLight
-                        ? 'border-zinc-200 bg-zinc-100 text-zinc-800 hover:border-amber-400/60 focus:border-amber-500'
-                        : 'border-zinc-800 bg-zinc-900 text-zinc-200 hover:border-amber-400/50 focus:border-amber-400'
-                    }`}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              {/* Income / expense: the first and fastest decision */}
-              <div className={`grid grid-cols-2 gap-1 rounded-xl border p-1 ${
-                isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'
-              }`}>
-                <button
-                  type="button"
-                  onClick={() => { setForm((f) => ({ ...f, sign: 'plus' })); setFormError(''); }}
-                  className={[
-                    'flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-colors',
-                    form.sign === 'plus'
-                      ? 'bg-emerald-500/10 text-emerald-600'
-                      : isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-300',
-                  ].join(' ')}
-                >
-                  <TrendingUp className="h-3.5 w-3.5" />
-                  {traderMode ? t('profitTrade') : t('income')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setForm((f) => ({ ...f, sign: 'minus' })); setFormError(''); }}
-                  className={[
-                    'flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-colors',
-                    form.sign === 'minus'
-                      ? 'bg-red-500/10 text-red-600'
-                      : isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-300',
-                  ].join(' ')}
-                >
-                  <TrendingDown className="h-3.5 w-3.5" />
-                  {traderMode ? t('lossTrade') : t('expense')}
-                </button>
-              </div>
-
-              {/* Amount is the visual focus */}
-              <div className={`mt-3 rounded-xl border px-3 py-2 focus-within:border-amber-400/60 focus-within:ring-1 focus-within:ring-amber-400/20 ${
-                isLight ? 'border-zinc-300 bg-white' : 'border-zinc-700 bg-zinc-950'
-              }`}>
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  autoFocus
-                  value={form.pnl}
-                  onChange={(e) => { setForm((f) => ({ ...f, pnl: e.target.value })); setFormError(''); }}
-                  className={`w-full bg-transparent text-center font-data text-3xl font-semibold tracking-tight outline-none placeholder:text-zinc-700 ${
-                    isLight ? 'text-zinc-900' : 'text-zinc-100'
-                  }`}
-                  placeholder="0"
-                  aria-label={traderMode ? t('result') : t('amount')}
-                />
-              </div>
-
-              {/* Currency */}
-              <div className="mt-2 flex items-center justify-center gap-1">
-                {CURRENCIES.map((c) => (
-                  <button
-                    key={c.code}
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, currency: c.code }))}
-                    title={c.code}
-                    aria-label={`Валюта ${c.code}`}
-                    className={[
-                      'min-w-10 rounded-lg border px-3 py-1.5 font-data text-xs transition-colors',
-                      form.currency === c.code
-                        ? 'border-amber-400/60 bg-amber-400/10 text-amber-600'
-                        : isLight
-                        ? 'border-zinc-300 bg-white text-zinc-500 hover:border-zinc-400 hover:text-zinc-700'
-                        : 'border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300',
-                    ].join(' ')}
-                  >
-                    {c.symbol}
-                  </button>
-                ))}
-              </div>
-
-              {/* Time is available, but deliberately quiet */}
-              <div className="mt-2 flex justify-center">
-                <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] transition-colors ${
-                  isLight ? 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700' : 'text-zinc-600 hover:bg-zinc-800 hover:text-zinc-400'
-                }`}>
-                  <span>◷</span>
-                  <span>{form.time || currentTimeHHMM()}</span>
-                  <input
-                    type="time"
-                    value={form.time}
-                    onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* not supported */ } }}
-                    onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
-                    className="sr-only"
-                    aria-label="Время"
-                  />
-                </label>
-              </div>
-
-              {/* Details are intentionally hidden for quick entry */}
-              <button
-                type="button"
-                onClick={() => setDetailsOpen((v) => !v)}
-                className={`mx-auto mt-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ${
-                  isLight ? 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'
-                }`}
-              >
-                <MoreHorizontal className="h-3.5 w-3.5" />
-                {detailsOpen ? t('hideDetails') : t('moreDetails')}
-                <ChevronDown className={`h-3 w-3 transition-transform ${detailsOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {detailsOpen && (
-                <div className={`mt-2 space-y-3 rounded-xl border p-3 ${
-                  isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-950/60'
-                }`}>
-                  {traderMode ? (
-                    <>
-                      <div>
-                        <label className={`mb-1.5 block font-data text-[10px] tracking-widest uppercase ${
-                          isLight ? 'text-zinc-600' : 'text-zinc-600'
-                        }`}>
-                          {t('instrument')}
-                        </label>
-                        <div className="flex flex-wrap gap-1.5 mb-2">
-                          {quickAssetTags.map((tag) => (
-                            <button
-                              key={tag}
-                              type="button"
-                              onClick={() => { setForm((f) => ({ ...f, instrument: tag })); setFormError(''); }}
-                              className={[
-                                'rounded-full border px-2.5 py-1 font-data text-[11px] transition-colors',
-                                textValue(form.instrument).trim().toUpperCase() === tag
-                                  ? 'border-amber-400/60 bg-amber-400/10 text-amber-600'
-                                  : isLight
-                                  ? 'border-zinc-300 bg-white text-zinc-500 hover:text-zinc-700'
-                                  : 'border-zinc-800 text-zinc-500 hover:text-zinc-300',
-                              ].join(' ')}
-                            >
-                              {tag}
-                            </button>
-                          ))}
-                        </div>
-                        <input
-                          type="text"
-                          value={form.instrument}
-                          onChange={(e) => { setForm((f) => ({ ...f, instrument: e.target.value })); setFormError(''); }}
-                          className={`w-full rounded-lg border px-3 py-2 text-sm font-data outline-none focus:border-amber-400/60 ${
-                            isLight
-                              ? 'bg-white border-zinc-300 text-zinc-900'
-                              : 'bg-zinc-950 border-zinc-800 text-zinc-100'
-                          }`}
-                          placeholder={t('instrumentPlaceholder')}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setForm((f) => ({ ...f, direction: 'LONG' }))}
-                          className={[
-                            'rounded-lg border py-2 text-xs font-data transition-colors',
-                            form.direction === 'LONG'
-                              ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-600'
-                              : isLight
-                              ? 'border-zinc-300 bg-white text-zinc-500 hover:text-zinc-700'
-                              : 'border-zinc-800 text-zinc-500 hover:text-zinc-300',
-                          ].join(' ')}
-                        >LONG</button>
-                        <button
-                          type="button"
-                          onClick={() => setForm((f) => ({ ...f, direction: 'SHORT' }))}
-                          className={[
-                            'rounded-lg border py-2 text-xs font-data transition-colors',
-                            form.direction === 'SHORT'
-                              ? 'border-red-400/60 bg-red-500/10 text-red-600'
-                              : isLight
-                              ? 'border-zinc-300 bg-white text-zinc-500 hover:text-zinc-700'
-                              : 'border-zinc-800 text-zinc-500 hover:text-zinc-300',
-                          ].join(' ')}
-                        >SHORT</button>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <input
-                          type="number"
-                          step="any"
-                          value={form.takeProfit}
-                          onChange={(e) => setForm((f) => ({ ...f, takeProfit: e.target.value }))}
-                          className={`w-full rounded-lg border px-3 py-2 text-sm font-data outline-none focus:border-amber-400/60 ${
-                            isLight
-                              ? 'bg-white border-zinc-300 text-zinc-900'
-                              : 'bg-zinc-950 border-zinc-800 text-zinc-100'
-                          }`}
-                          placeholder="Take Profit"
-                        />
-                        <input
-                          type="number"
-                          step="any"
-                          value={form.stopLoss}
-                          onChange={(e) => setForm((f) => ({ ...f, stopLoss: e.target.value }))}
-                          className={`w-full rounded-lg border px-3 py-2 text-sm font-data outline-none focus:border-amber-400/60 ${
-                            isLight
-                              ? 'bg-white border-zinc-300 text-zinc-900'
-                              : 'bg-zinc-950 border-zinc-800 text-zinc-100'
-                          }`}
-                          placeholder="Stop Loss"
-                        />
-                      </div>
-
-                      <select
-                        value={form.platform}
-                        onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value }))}
-                        className={`w-full rounded-lg border px-3 py-2 text-sm font-data outline-none focus:border-amber-400/60 ${
-                          isLight
-                            ? 'bg-white border-zinc-300 text-zinc-900'
-                            : 'bg-zinc-950 border-zinc-800 text-zinc-100'
-                        }`}
-                      >
-                        {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
-                      </select>
-                    </>
-                  ) : (
-                    <div>
-                      <label className={`mb-1.5 block font-data text-[10px] tracking-widest uppercase ${
-                        isLight ? 'text-zinc-600' : 'text-zinc-600'
-                      }`}>
-                        {t('category')}
-                      </label>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {moneyCategoriesWithIcons.map((category) => {
-                          const Icon = category.icon;
-                          const active = textValue(form.instrument).trim() === category.key;
-                          return (
-                            <button
-                              key={category.key}
-                              type="button"
-                              onClick={() => { setForm((f) => ({ ...f, instrument: category.key })); setFormError(''); }}
-                              className={[
-                                'flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-colors',
-                                active
-                                  ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-600'
-                                  : isLight
-                                  ? 'border-zinc-300 bg-white text-zinc-500 hover:text-zinc-700'
-                                  : 'border-zinc-800 bg-zinc-950 text-zinc-500 hover:text-zinc-300',
-                              ].join(' ')}
-                            >
-                              <Icon className="h-3.5 w-3.5 shrink-0" />
-                              <span className="text-xs font-medium">{category.key}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <input
-                        type="text"
-                        value={form.instrument}
-                        onChange={(e) => { setForm((f) => ({ ...f, instrument: e.target.value })); setFormError(''); }}
-                        className={`mt-1.5 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-emerald-400/50 ${
-                          isLight
-                            ? 'bg-white border-zinc-300 text-zinc-900'
-                            : 'bg-zinc-950 border-zinc-800 text-zinc-100'
-                        }`}
-                        placeholder={t('ownCategory')}
-                      />
-                    </div>
-                  )}
-
-                  <textarea
-                    value={form.comment}
-                    onChange={(e) => setForm((f) => ({ ...f, comment: e.target.value }))}
-                    rows={2}
-                    className={`w-full resize-none rounded-lg border px-3 py-2 text-sm outline-none focus:border-amber-400/60 ${
-                      isLight
-                        ? 'bg-white border-zinc-300 text-zinc-900'
-                        : 'bg-zinc-950 border-zinc-800 text-zinc-100'
-                    }`}
-                    placeholder={traderMode ? t('notePlaceholderTrade') : t('recordNotePlaceholder')}
-                  />
-                </div>
-              )}
-
-              {formError && <p className="mt-2 text-center text-xs text-red-600">{formError}</p>}
-
-              <button
-                onClick={handleSaveTrade}
-                disabled={isSaving}
-                className="sticky bottom-0 mt-3 block w-full rounded-xl bg-amber-400 px-4 py-3 text-base font-bold text-zinc-950 hover:bg-amber-300 transition-colors shadow-lg shadow-amber-500/20 disabled:opacity-60"
-              >
-                {isSaving ? t('saving') : (editingTrade ? t('saveChanges') : (traderMode ? t('saveTrade') : t('saveRecord')))}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* EXPORT REPORT MODAL */}
-      {exportOpen && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) setExportOpen(false); }}>
-          <div className={`w-full max-w-md rounded-2xl border shadow-2xl ${isLight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-zinc-800 bg-zinc-950 text-zinc-100'}`}>
-            <div className="flex items-center justify-between border-b border-zinc-800/70 px-5 py-4">
-              <div>
-                <p className="font-data text-[10px] uppercase tracking-[0.22em] text-amber-500">
-                  {traderMode ? t('titlePro') : t('titleMoney')}
-                </p>
-                <h3 className="mt-1 font-semibold">{t('downloadReport')}</h3>
-              </div>
-              <button onClick={() => setExportOpen(false)} aria-label={t('close')} className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-500/10">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="p-5">
-              <p className="text-sm font-medium">{t('allRecordsForPeriod')}</p>
-              <p className="mt-1 text-xs text-zinc-500">{t('exportNotice')}</p>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                {[
-                  { key: 'currentPeriod', label: t('currentPeriod') },
-                  { key: 'today', label: t('today') },
-                  { key: 'currentWeek', label: t('currentWeek') },
-                  { key: 'currentMonth', label: t('currentMonth') },
-                  { key: 'threeMonths', label: t('threeMonths') },
-                  { key: 'allHistory', label: t('allHistory') },
-                ].map((preset) => {
-                  const isSelected = exportPeriodPreset === preset.key || exportPeriodPreset === preset.label;
-                  return (
-                    <button
-                      key={preset.key}
-                      onClick={() => setExportPeriodPreset(preset.key)}
-                      className={`rounded-xl border px-3 py-2.5 text-left text-xs transition-colors ${
-                        isSelected
-                          ? 'border-amber-400/50 bg-amber-400/10 text-amber-600 font-semibold'
-                          : isLight ? 'border-zinc-200 hover:bg-zinc-50 text-zinc-700' : 'border-zinc-800 hover:bg-zinc-900 text-zinc-300'
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className={`mt-4 rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/40'}`}>
-                <p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('inReport')}</p>
-                <p className="mt-1 text-sm font-medium">{t('inReportDetails')}</p>
-                <p className="mt-1 text-xs text-zinc-500">{exportTrades.length} {t('recordsWithFilter')}</p>
-              </div>
-              <button
-                onClick={handleExportCsv}
-                disabled={!exportTrades.length}
-                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Download className="h-4 w-4" />
-                {t('downloadCashReport')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CONNECT PLATFORM MODAL — API keys / CSV import */}
-      {connectOpen && (
-        <div
-          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${
-            connectVisible ? 'opacity-100' : 'opacity-0'
-          }`}
-          onMouseDown={handleBackdropMouseDown}
-          onClick={handleConnectBackdropClick}
-        >
-          <div
-            className={`relative w-full max-w-md rounded-xl border p-6 shadow-xl transition-all duration-200 ${
-              connectVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-            } ${
-              isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
-            }`}
-          >
-            <button
-              onClick={closeConnectModal}
-              className={`absolute top-4 right-4 transition-colors ${
-                isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-200'
-              }`}
-              aria-label={t('close')}
-            >
-              <X className="h-4 w-4" />
-            </button>
-
-            <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">{t('connectPlatform')}</p>
-            <h2 className={`font-display text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'} mb-3`}>{t('tradesSource')}</h2>
-
-            <div className="rounded-md border border-amber-400/30 bg-amber-400/5 px-3 py-2 mb-4">
-              <p className="text-xs text-amber-400/90 leading-relaxed">
-                {t('ctraderNotice')}
-              </p>
-            </div>
-
-            {/* tabs */}
-            <div className={`flex gap-1 rounded-md border p-1 mb-4 ${
-              isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'
-            }`}>
-              <button
-                onClick={() => setConnectTab('ctrader')}
-                className={[
-                  'flex-1 flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium transition-colors',
-                  connectTab === 'ctrader'
-                    ? isLight
-                      ? 'bg-white text-zinc-900 shadow-sm'
-                      : 'bg-zinc-800 text-zinc-100'
-                    : isLight
-                    ? 'text-zinc-500 hover:text-zinc-700'
-                    : 'text-zinc-500 hover:text-zinc-300',
-                ].join(' ')}
-              >
-                <Link2 className="h-3.5 w-3.5" />
-                cTrader
-              </button>
-              <button
-                onClick={() => setConnectTab('api')}
-                className={[
-                  'flex-1 flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium transition-colors',
-                  connectTab === 'api'
-                    ? isLight
-                      ? 'bg-white text-zinc-900 shadow-sm'
-                      : 'bg-zinc-800 text-zinc-100'
-                    : isLight
-                    ? 'text-zinc-500 hover:text-zinc-700'
-                    : 'text-zinc-500 hover:text-zinc-300',
-                ].join(' ')}
-              >
-                <KeyRound className="h-3.5 w-3.5" />
-                {t('apiKeys')}
-              </button>
-              <button
-                onClick={() => setConnectTab('csv')}
-                className={[
-                  'flex-1 flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium transition-colors',
-                  connectTab === 'csv'
-                    ? isLight
-                      ? 'bg-white text-zinc-900 shadow-sm'
-                      : 'bg-zinc-800 text-zinc-100'
-                    : isLight
-                    ? 'text-zinc-500 hover:text-zinc-700'
-                    : 'text-zinc-500 hover:text-zinc-300',
-                ].join(' ')}
-              >
-                <UploadCloud className="h-3.5 w-3.5" />
-                {t('importCsv')}
-              </button>
-            </div>
-
-            {connectTab === 'ctrader' ? (
-              <div className="flex flex-col gap-4">
-                <p className={`text-xs ${isLight ? 'text-zinc-600' : 'text-zinc-500'} leading-relaxed`}>
-                  {t('ctraderDesc')}
-                </p>
-                {ctraderConnected ? (
-                  <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-emerald-600 text-sm">
-                    <CheckCircle2 className="h-4 w-4" />
-                    {t('ctraderConnected')}
-                  </div>
-                  <label className="text-xs opacity-70" htmlFor="ctrader-account">{t('ctChoose')}</label>
-                  <select id="ctrader-account" value={ctraderAccountId} disabled={syncingCtrader} onChange={e => setCtraderAccountId(e.target.value)} className={`w-full rounded-xl border p-3 text-sm ${isLight ? 'bg-white border-zinc-200' : 'bg-zinc-950 border-zinc-700'}`}>
-                    <option value="">{t('ctChoose')}</option>
-                    {ctraderAccounts.map(a => <option key={a.id} value={a.id}>{a.broker_name || 'cTrader'} · {a.account_id} · {a.is_live ? 'Live' : 'Demo'}</option>)}
-                  </select>
-                  {!ctraderAccounts.length && <p className="text-xs opacity-70">{t('ctEmpty')}</p>}
-                  <button onClick={handleSyncCtraderTrades} disabled={!ctraderAccountId || syncingCtrader} className="flex items-center justify-center gap-2 rounded-xl bg-amber-400 p-3 text-sm font-semibold text-zinc-950 disabled:opacity-50">
-                    <RefreshCw className={`h-4 w-4 ${syncingCtrader ? 'animate-spin' : ''}`} />{t(syncingCtrader ? 'syncing' : 'synchronize')}
-                  </button>
-                  <button onClick={handleConnectCtrader} disabled={syncingCtrader} className="text-xs opacity-60">{t('ctReconnect')}</button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleConnectCtrader}
-                    disabled={ctraderLoading}
-                    className="w-full flex items-center justify-center gap-2 rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-300 disabled:opacity-50 transition-colors"
-                  >
-                    {ctraderLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
-                    {ctraderLoading ? t('connecting') : t('connectCtraderBtn')}
-                  </button>
-                )}
-              </div>
-            ) : connectTab === 'api' ? (
-              <div className="flex flex-col gap-4">
-                <div>
-                  <label className={`block font-data text-[11px] tracking-widest uppercase mb-1.5 ${
-                    isLight ? 'text-zinc-600' : 'text-zinc-500'
-                  }`}>
-                    {t('exchangeOrTerminal')}
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {EXCHANGES.map((ex) => (
-                      <button
-                        key={ex}
-                        type="button"
-                        onClick={() => setApiForm((f) => ({ ...f, exchange: ex }))}
-                        className={[
-                          'rounded-md border px-3 py-2 text-sm font-data transition-colors',
-                          apiForm.exchange === ex
-                            ? 'border-amber-400/60 bg-amber-400/10 text-amber-600'
-                            : isLight
-                            ? 'border-zinc-300 bg-white text-zinc-500 hover:text-zinc-700 hover:border-zinc-400'
-                            : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600',
-                        ].join(' ')}
-                      >
-                        {ex}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className={`block font-data text-[11px] tracking-widest uppercase mb-1.5 ${
-                    isLight ? 'text-zinc-600' : 'text-zinc-500'
-                  }`}>
-                    API Key
-                  </label>
-                  <input
-                    type="text"
-                    value={apiForm.key}
-                    onChange={(e) => setApiForm((f) => ({ ...f, key: e.target.value }))}
-                    placeholder="••••••••••••"
-                    className={`w-full rounded-md border px-3 py-2 text-sm font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40 ${
-                      isLight
-                        ? 'bg-white border-zinc-300 text-zinc-900'
-                        : 'bg-zinc-950 border-zinc-700 text-zinc-100'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className={`block font-data text-[11px] tracking-widest uppercase mb-1.5 ${
-                    isLight ? 'text-zinc-600' : 'text-zinc-500'
-                  }`}>
-                    API Secret
-                  </label>
-                  <input
-                    type="password"
-                    value={apiForm.secret}
-                    onChange={(e) => setApiForm((f) => ({ ...f, secret: e.target.value }))}
-                    placeholder="••••••••••••"
-                    className={`w-full rounded-md border px-3 py-2 text-sm font-data focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40 ${
-                      isLight
-                        ? 'bg-white border-zinc-300 text-zinc-900'
-                        : 'bg-zinc-950 border-zinc-700 text-zinc-100'
-                    }`}
-                  />
-                </div>
-
-                <p className={`text-xs ${isLight ? 'text-zinc-600' : 'text-zinc-600'} leading-relaxed`}>
-                  {t('readOnlyKeyNotice')}
-                </p>
-
-                <button
-                  onClick={handleSaveApiKeys}
-                  disabled={!textValue(apiForm.key).trim() || !textValue(apiForm.secret).trim()}
-                  className="w-full rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  {t('connectExchange')} {apiForm.exchange}
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-4">
-                <label
-                  onDragOver={(e) => { e.preventDefault(); setCsvDragOver(true); }}
-                  onDragLeave={() => setCsvDragOver(false)}
-                  onDrop={handleCsvDrop}
-                  className={[
-                    'flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-6 py-10 text-center cursor-pointer transition-colors',
-                    csvDragOver ? 'border-amber-400/60 bg-amber-400/5' : isLight ? 'border-zinc-300 hover:border-zinc-400' : 'border-zinc-700 hover:border-zinc-600',
-                  ].join(' ')}
-                >
-                  <input type="file" accept=".csv" className="hidden" onChange={handleCsvSelect} />
-                  {csvFile ? (
-                    <>
-                      <FileText className="h-6 w-6 text-amber-400" />
-                      <p className={`text-sm font-medium ${isLight ? 'text-zinc-900' : 'text-zinc-200'}`}>{csvFile.name}</p>
-                      <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('fileReadyToImport')}</p>
-                    </>
-                  ) : (
-                    <>
-                      <UploadCloud className={`h-6 w-6 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`} />
-                      <p className={`text-sm ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>{t('dragCsvHere')}</p>
-                      <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('orClickToSelect')}</p>
-                    </>
-                  )}
-                </label>
-
-                <button
-                  onClick={handleImportCsv}
-                  disabled={!csvFile}
-                  className="w-full rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  {t('importBtn')}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ANALYSIS MODAL — free basic stats now, paid deep AI analysis coming later */}
-      {analysisOpen && (
-        <div
-          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${
-            analysisVisible ? 'opacity-100' : 'opacity-0'
-          }`}
-          onMouseDown={handleBackdropMouseDown}
-          onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) closeAnalysis(); }}
-        >
-          <div
-            className={`relative w-full max-w-md rounded-xl border p-6 shadow-xl transition-all duration-200 ${
-              analysisVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-            } ${
-              isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
-            }`}
-          >
-            <button
-              onClick={closeAnalysis}
-              className={`absolute top-4 right-4 transition-colors ${
-                isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-200'
-              }`}
-              aria-label="Закрыть"
-            >
-              <X className="h-4 w-4" />
-            </button>
-
-            <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">Анализ периода</p>
-            <h2 className={`font-display text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'} mb-3`}>
-              {analysisFrom === '0000-01-01'
-                ? 'Вся история'
-                : analysisFrom === analysisTo
-                ? analysisFrom
-                : `${analysisFrom} — ${analysisTo}`}
-            </h2>
-
-            <div className={`grid grid-cols-3 gap-1 rounded-xl border p-1 mb-4 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'}`}>
-              {[
-                { key: 'overview', label: 'Обзор' },
-                { key: 'income', label: 'Откуда' },
-                { key: 'expense', label: 'Расходы' },
-              ].map((tab) => (
-                <button key={tab.key} onClick={() => setAnalysisTab(tab.key)} className={`rounded-lg px-2 py-2 text-xs font-medium transition-all ${analysisTab === tab.key ? 'bg-amber-400/15 text-amber-600 shadow-sm' : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-500 hover:text-zinc-200'}`}>
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-            <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'} mb-4`}>{analysisStats.count} {traderMode ? 'сделок' : 'операций'} в выборке</p>
-
-            {moneyAnalysis && (
-              <div className="mb-4 space-y-3">
-                {analysisTab === 'overview' && (
-                  <>
-                    <div className={`grid grid-cols-3 gap-2 rounded-xl border p-2 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'}`}>
-                      {[
-                        ['Доходы', moneyAnalysis.income, 'text-emerald-600'],
-                        ['Расходы', moneyAnalysis.expenses, 'text-red-600'],
-                        ['Баланс', moneyAnalysis.balance, moneyAnalysis.balance >= 0 ? 'text-emerald-600' : 'text-red-600'],
-                      ].map(([label, amount, color]) => (
-                        <button key={label} onClick={() => setAnalysisTab(label === 'Доходы' ? 'income' : label === 'Расходы' ? 'expense' : 'overview')} className={`min-w-0 rounded-lg border p-2 text-left transition-transform hover:-translate-y-0.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}>
-                          <p className={`text-[10px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{label}</p>
-                          <p className={`truncate font-data text-sm ${color}`}>{amount < 0 ? '-' : ''}{currencySymbol}{formatMoney(Math.abs(amount))}</p>
-                        </button>
-                      ))}
-                    </div>
-                    <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'}`}>
-                      <div className="mb-2 flex items-center justify-between"><p className={`text-xs font-medium ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>Динамика периода</p><span className="text-[10px] text-emerald-500">по операциям</span></div>
-                      <div className="flex h-24 items-end gap-1.5">
-                        {Object.entries(analysisTrades.reduce((acc, t) => { acc[t.dateKey] = (acc[t.dateKey] || 0) + t.pnl; return acc; }, {})).slice(-12).map(([day, amount]) => {
-                          const max = Math.max(1, ...Object.values(analysisTrades.reduce((acc, t) => { acc[t.dateKey] = (acc[t.dateKey] || 0) + Math.abs(t.pnl); return acc; }, {})));
-                          const h = Math.max(8, Math.round((Math.abs(amount) / max) * 100));
-                          return <button key={day} title={`${day}: ${amount >= 0 ? '+' : '-'}${currencySymbol}${formatMoney(Math.abs(amount))}`} className="group flex flex-1 flex-col justify-end"><div className={`w-full rounded-t-md transition-all duration-300 group-hover:opacity-70 ${amount >= 0 ? 'bg-emerald-500/80' : 'bg-red-500/80'}`} style={{ height: `${h}%` }} /></button>;
-                        })}
-                      </div>
-                    </div>
-                  </>
-                )}
-                {analysisTab === 'income' && (
-                  <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'}`}>
-                    <div className="mb-3"><p className={`text-sm font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>Откуда пришли деньги</p><p className="text-[11px] text-zinc-500">Источники дохода за выбранный период</p></div>
-                    <div className="space-y-3">{moneyAnalysis.topIncomeSources.length ? moneyAnalysis.topIncomeSources.map(([source, amount]) => <div key={source}><div className="mb-1 flex justify-between gap-3 text-xs"><span className="truncate text-zinc-500">{source}</span><span className="font-data text-emerald-500">+{currencySymbol}{formatMoney(amount)}</span></div><div className="h-2 overflow-hidden rounded-full bg-zinc-800/70"><div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${Math.max(6, Math.round((amount / moneyAnalysis.income) * 100))}%` }} /></div></div>) : <p className="py-6 text-center text-xs text-zinc-500">За период пока нет доходов</p>}</div>
-                  </div>
-                )}
-                {analysisTab === 'expense' && (
-                  <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'}`}>
-                    <div className="mb-3"><p className={`text-sm font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>Куда уходят деньги</p><p className="text-[11px] text-zinc-500">Самые крупные категории расходов</p></div>
-                    <div className="space-y-3">{moneyAnalysis.topCategories.length ? moneyAnalysis.topCategories.map(([category, amount]) => <div key={category}><div className="mb-1 flex justify-between gap-3 text-xs"><span className="truncate text-zinc-500">{category}</span><span className="font-data text-red-500">−{currencySymbol}{formatMoney(amount)}</span></div><div className="h-2 overflow-hidden rounded-full bg-zinc-800/70"><div className="h-full rounded-full bg-red-500 transition-all duration-500" style={{ width: `${Math.max(6, Math.round((amount / moneyAnalysis.expenses) * 100))}%` }} /></div></div>) : <p className="py-6 text-center text-xs text-zinc-500">За период пока нет расходов</p>}</div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {traderMode && basicAnalysis && (
-              <div className="mb-4">
-                <div className={`text-center rounded-lg border py-4 mb-3 ${
-                  isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-950'
-                }`}>
-                  <p className={`font-data text-[10px] tracking-widest ${isLight ? 'text-zinc-500' : 'text-zinc-500'} uppercase mb-1`}>Profit Factor</p>
-                  <p className={`font-display text-3xl font-semibold ${basicAnalysis.profitFactor >= 1.5 ? 'text-emerald-600' : basicAnalysis.profitFactor >= 1 ? 'text-zinc-800' : 'text-red-600'}`}>
-                    {basicAnalysis.profitFactor === Infinity ? 'MAX' : basicAnalysis.profitFactor.toFixed(2)}
-                  </p>
-                </div>
-
-                <p className={`text-xs ${isLight ? 'text-zinc-600' : 'text-zinc-500'} leading-relaxed`}>
-                  Средний:{' '}
-                  <span className="text-emerald-600 font-data">+${formatMoney(basicAnalysis.avgWin)}</span>
-                  {' / '}
-                  <span className="text-red-600 font-data">-${formatMoney(basicAnalysis.avgLoss)}</span>
-                  {basicAnalysis.payoffRatio > 0 && <span className="font-data"> (1:{basicAnalysis.payoffRatio.toFixed(2)})</span>}
-                  {' · Лучший день: '}
-                  <span className="text-emerald-600 font-data">{formatSignedShort(basicAnalysis.bestDay[1])}</span>
-                  {' ('}{formatDateLabel(basicAnalysis.bestDay[0])}{')'}
-                  {' · Худший: '}
-                  <span className="text-red-600 font-data">{formatSignedShort(basicAnalysis.worstDay[1])}</span>
-                  {' ('}{formatDateLabel(basicAnalysis.worstDay[0])}{')'}
-                  {' · Частый: '}
-                  <span className={`font-data ${isLight ? 'text-zinc-800' : 'text-zinc-300'}`}>{basicAnalysis.topInstrument[0]}</span>
-                  {basicAnalysis.longestLossStreak >= 2 && (
-                    <>
-                      {' · Серия убытков: '}
-                      <span className="text-red-600 font-data">{basicAnalysis.longestLossStreak}</span>
-                    </>
-                  )}
-                </p>
-              </div>
-            )}
-
-            <div className={`rounded-md border border-dashed px-3 py-3 flex items-start gap-2.5 ${
-              isLight ? 'border-zinc-300' : 'border-zinc-700'
-            }`}>
-              <Sparkles className={`h-4 w-4 ${isLight ? 'text-zinc-400' : 'text-zinc-600'} shrink-0 mt-0.5`} />
-              <div>
-                <p className={`text-sm font-medium mb-0.5 ${isLight ? 'text-zinc-700' : 'text-zinc-400'}`}>Глубокий AI-анализ — скоро</p>
-                <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-600'} leading-relaxed`}>
-                  Разбор эмоциональных паттернов, конкретных ошибок по каждой сделке и персональные рекомендации — по подписке.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-      {setupStep && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
-          <div className={`w-full max-w-sm rounded-2xl border p-6 shadow-2xl ${
-            isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
-          }`}>
-            <p className="font-data text-[10px] tracking-widest text-amber-400 uppercase mb-2">Настройка {setupStep === 'language' ? '1' : setupStep === 'currency' ? '2' : '3'} из 3</p>
-            <h2 className={`font-display text-xl font-semibold mb-4 ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>{setupStep === 'language' ? 'Выберите язык' : setupStep === 'currency' ? 'Выберите валюту' : 'Выберите тему'}</h2>
-            {setupStep === 'language' && <div className="grid grid-cols-3 gap-2">{LANGUAGES.map((item) => <button key={item.code} onClick={() => { setLanguage(item.code); setSetupStep('currency'); }} className={`rounded-lg border px-3 py-3 font-data text-sm hover:border-amber-400 ${
-              isLight ? 'border-zinc-300' : 'border-zinc-700'
-            }`}>{item.label}</button>)}</div>}
-            {setupStep === 'currency' && <div className="grid grid-cols-2 gap-2">{CURRENCIES.map((item) => <button key={item.code} onClick={() => { setCurrency(item.code); setSetupStep('theme'); }} className={`rounded-lg border px-3 py-3 font-data text-sm hover:border-amber-400 ${
-              isLight ? 'border-zinc-300' : 'border-zinc-700'
-            }`}>{item.symbol} {item.code}</button>)}</div>}
-            {setupStep === 'theme' && <div className="grid grid-cols-2 gap-2"><button onClick={() => { setTheme('light'); setSetupStep(null); }} className={`rounded-lg border px-3 py-3 hover:border-amber-400 ${
-              isLight ? 'border-zinc-300' : 'border-zinc-700'
-            }`}>☀ День</button><button onClick={() => { setTheme('dark'); setSetupStep(null); }} className={`rounded-lg border px-3 py-3 hover:border-amber-400 ${
-              isLight ? 'border-zinc-300' : 'border-zinc-700'
-            }`}>🌙 Ночь</button></div>}
-          </div>
-        </div>
-      )}
-
-      {nicknameModalOpen && (
-        <div
-          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${
-            nicknameModalVisible ? 'opacity-100' : 'opacity-0'
-          }`}
-        >
-          <div
-            className={`relative w-full max-w-sm rounded-xl border p-6 shadow-xl transition-all duration-200 ${
-              nicknameModalVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-            } ${
-              isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
-            }`}
-          >
-            <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">Добро пожаловать</p>
-            <h2 className={`font-display text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'} mb-1`}>Как вас называть?</h2>
-            <p className={`text-sm ${isLight ? 'text-zinc-600' : 'text-zinc-500'} mb-4`}>
-              Это имя будет отображаться в приложении. Можно оставить пустым — тогда возьмём имя из Google.
-            </p>
-
-            <input
-              type="text"
-              value={nicknameInput}
-              onChange={(e) => setNicknameInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSaveNickname()}
-              placeholder={user?.user_metadata?.full_name || user?.email || 'Ваш ник'}
-              autoFocus
-              className={`w-full rounded-md border px-3 py-2 text-sm font-data mb-4 focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40 ${
-                isLight
-                  ? 'bg-white border-zinc-300 text-zinc-900'
-                  : 'bg-zinc-950 border-zinc-700 text-zinc-100'
-              }`}
-            />
-
-            <button
-              onClick={handleSaveNickname}
-              className="w-full rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-300 transition-colors"
-            >
-              Продолжить
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* OFFLINE NOTICE MODAL */}
-      {offlineNoticeOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-4 backdrop-blur-sm transition-opacity duration-200">
-          <div
-            className={`relative w-full max-w-sm rounded-2xl border p-5 sm:p-6 shadow-2xl transition-all duration-200 ${
-              isLight ? 'border-amber-300/80 bg-white text-zinc-900' : 'border-amber-400/25 bg-zinc-900 text-zinc-100'
-            }`}
-          >
-            <div className="flex items-start gap-3.5 mb-4">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-400/30 bg-amber-400/10 text-amber-500">
-                <WifiOff className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="font-data text-[10px] uppercase tracking-[0.2em] text-amber-500 font-semibold mb-1">
-                  OFFLINE
-                </p>
-                <h3 className="font-display text-lg font-semibold leading-tight">
-                  {t('offlineTitle')}
-                </h3>
-              </div>
-            </div>
-
-            <p className={`text-xs leading-relaxed mb-5 ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>
-              {t('offlineDesc')}
-            </p>
-
-            <button
-              type="button"
-              onClick={() => setOfflineNoticeOpen(false)}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 shadow-md hover:from-amber-300 hover:to-amber-400 transition-all active:scale-[0.99]"
-            >
-              <span>{t('goToOffline')}</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ONLINE TOAST / CONNECTED POPUP */}
-      {onlineToastOpen && (
-        <div className="fixed top-4 sm:top-6 inset-x-4 sm:inset-x-auto sm:right-6 z-50 sm:max-w-md pointer-events-auto transition-all duration-300">
-          <div
-            className={`flex items-start gap-3.5 rounded-2xl border p-4 shadow-[0_12px_40px_rgba(0,0,0,0.3)] backdrop-blur-xl ${
-              isLight
-                ? 'border-emerald-300/90 bg-white/95 text-zinc-900'
-                : 'border-emerald-500/30 bg-zinc-900/95 text-zinc-100'
-            }`}
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-emerald-500">
-              <CheckCircle2 className="h-5 w-5" />
-            </span>
-            <div className="flex-1 min-w-0 pr-2">
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <h4 className="font-semibold text-sm leading-tight">
-                  {t('onlineTitle')}
-                </h4>
-              </div>
-              <p className={`text-xs leading-relaxed ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>
-                {t('onlineDesc')}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setOnlineToastOpen(false)}
-              className={`rounded-lg px-2.5 py-1 text-xs font-semibold shrink-0 transition-colors ${
-                isLight ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800' : 'bg-white/10 hover:bg-white/15 text-zinc-200'
-              }`}
-            >
-              {t('onlineAction')}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+﻿"AI Trade Journal — Все ваши записи за период"
+"Текущий период: 1 янв. — 31 дек."
+
+"Дата","Время","Категория","Тип","Сумма","Комментарий"
+"15 мая","08:32","XAUUSD","Убыток","−€116.42","Stop-Out: Balance=1495.52, Equity=242.20, Total Margin=870.84, Stop-Out Level=30%, Margin Level=27.81222727481512%"
+"15 мая","08:32","XAUUSD","Убыток","−€56.10","Stop-Out: Balance=1379.10, Equity=235.10, Total Margin=791.64, Stop-Out Level=30%, Margin Level=29.697842453640544%"
+"15 мая","08:18","XAUUSD","Убыток","−€48.82","Stop-Out: Balance=2680.65, Equity=533.37, Total Margin=1781.34, Stop-Out Level=30%, Margin Level=29.942066085082014%"
+"15 мая","08:19","XAUUSD","Убыток","−€51.37","Stop-Out: Balance=2235.04, Equity=426.02, Total Margin=1425.02, Stop-Out Level=30%, Margin Level=29.89572076181387%"
+"15 мая","08:18","XAUUSD","Убыток","−€48.31","Stop-Out: Balance=2777.60, Equity=556.61, Total Margin=1860.53, Stop-Out Level=30%, Margin Level=29.91674415354765%"
+"15 мая","08:11","XAUUSD","Убыток","−€91.78","Stop-Out: Balance=3340.69, Equity=682.87, Total Margin=2335.70, Stop-Out Level=30%, Margin Level=29.23620327953076%"
+"15 мая","08:31","XAUUSD","Убыток","−€110.15","Stop-Out: Balance=1822.77, Equity=313.91, Total Margin=1108.35, Stop-Out Level=30%, Margin Level=28.32228086795687%"
+"15 мая","08:11","XAUUSD","Убыток","−€93.33","Stop-Out: Balance=3202.71, Equity=642.67, Total Margin=2216.91, Stop-Out Level=30%, Margin Level=28.989449278500257%"
+"15 мая","08:20","XAUUSD","Убыток","−€53.65","Stop-Out: Balance=1928.04, Equity=355.76, Total Margin=1187.52, Stop-Out Level=30%, Margin Level=29.958232282403663%"
+"15 мая","08:08","XAUUSD","Убыток","−€84.57","Stop-Out: Balance=4217.16, Equity=926.28, Total Margin=3127.64, Stop-Out Level=30%, Margin Level=29.61594045350488%"
+"15 мая","08:34","XAUUSD","Убыток","−€61.19","Stop-Out: Balance=1148.16, Equity=189.10, Total Margin=633.34, Stop-Out Level=30%, Margin Level=29.857580446521614%"
+"15 мая","08:32","XAUUSD","Убыток","−€56.40","Stop-Out: Balance=1606.32, Equity=282.52, Total Margin=950.01, Stop-Out Level=30%, Margin Level=29.73863433016495%"
+"15 мая","08:32","XAUUSD","Убыток","−€54.40","Stop-Out: Balance=1549.92, Equity=271.66, Total Margin=910.41, Stop-Out Level=30%, Margin Level=29.839303171098736%"
+"15 мая","08:08","XAUUSD","Убыток","−€83.39","Stop-Out: Balance=4384.54, Equity=973.73, Total Margin=3286.03, Stop-Out Level=30%, Margin Level=29.632413581129813%"
+"15 мая","08:34","XAUUSD","Убыток","−€61.22","Stop-Out: Balance=963.50, Equity=153.06, Total Margin=514.57, Stop-Out Level=30%, Margin Level=29.745224167751716%"
+"15 мая","08:34","XAUUSD","Убыток","−€64.62","Stop-Out: Balance=902.28, Equity=141.92, Total Margin=475.00, Stop-Out Level=30%, Margin Level=29.877894736842103%"
+"15 мая","08:44","XAUUSD","Убыток","−€248.17",""
+"15 мая","08:31","XAUUSD","Убыток","−€53.27","Stop-Out: Balance=1659.59, Equity=291.54, Total Margin=989.59, Stop-Out Level=30%, Margin Level=29.460685738538184%"
+"15 мая","08:17","XAUUSD","Убыток","−€47.08","Stop-Out: Balance=3015.86, Equity=617.18, Total Margin=2058.52, Stop-Out Level=30%, Margin Level=29.981734449993197%"
+"15 мая","08:18","XAUUSD","Убыток","−€100.80","Stop-Out: Balance=2483.63, Equity=466.87, Total Margin=1622.95, Stop-Out Level=30%, Margin Level=28.76675190239995%"
+"15 мая","08:10","XAUUSD","Убыток","−€44.63","Stop-Out: Balance=3566.10, Equity=759.67, Total Margin=2533.68, Stop-Out Level=30%, Margin Level=29.982870765053204%"
+"15 мая","08:34","XAUUSD","Убыток","−€63.54","Stop-Out: Balance=1027.04, Equity=154.95, Total Margin=554.17, Stop-Out Level=30%, Margin Level=27.96073407077251%"
+"15 мая","08:38","XAUUSD","Убыток","−€65.83","Stop-Out: Balance=707.44, Equity=105.21, Total Margin=356.24, Stop-Out Level=30%, Margin Level=29.533460588367394%"
+"15 мая","08:11","XAUUSD","Убыток","−€46.66","Stop-Out: Balance=3109.38, Equity=639.30, Total Margin=2137.71, Stop-Out Level=30%, Margin Level=29.90583381281839%"
+"15 мая","08:19","XAUUSD","Убыток","−€48.66","Stop-Out: Balance=2283.70, Equity=439.00, Total Margin=1464.59, Stop-Out Level=30%, Margin Level=29.974259007640364%"
+"15 мая","08:10","XAUUSD","Убыток","−€43.89","Stop-Out: Balance=3786.81, Equity=808.08, Total Margin=2731.67, Stop-Out Level=30%, Margin Level=29.58190410994007%"
+"15 мая","08:35","XAUUSD","Убыток","−€67","Stop-Out: Balance=774.44, Equity=116.12, Total Margin=395.84, Stop-Out Level=30%, Margin Level=29.33508488278092%"
+"15 мая","08:19","XAUUSD","Убыток","−€50.40","Stop-Out: Balance=2029.27, Equity=379.50, Total Margin=1266.66, Stop-Out Level=30%, Margin Level=29.96068400360002%"
+"15 мая","08:32","XAUUSD","Убыток","−€59.88","Stop-Out: Balance=1266.22, Equity=210.88, Total Margin=712.50, Stop-Out Level=30%, Margin Level=29.59719298245614%"
+"15 мая","08:18","XAUUSD","Убыток","−€48.64","Stop-Out: Balance=2729.29, Equity=541.49, Total Margin=1820.93, Stop-Out Level=30%, Margin Level=29.737002520689976%"
+"15 мая","08:08","XAUUSD","Убыток","−€42.64","Stop-Out: Balance=4090.15, Equity=899.34, Total Margin=3008.85, Stop-Out Level=30%, Margin Level=29.889825016202204%"
+"15 мая","08:13","XAUUSD","Убыток","−€46.86","Stop-Out: Balance=3062.72, Equity=629.00, Total Margin=2098.11, Stop-Out Level=30%, Margin Level=29.979362378521623%"
+"15 мая","08:08","XAUUSD","Убыток","−€217.94","Stop-Out: Balance=4004.75, Equity=828.76, Total Margin=2929.65, Stop-Out Level=30%, Margin Level=28.28870342873722%"
+"15 мая","08:32","XAUUSD","Убыток","−€58.18","Stop-Out: Balance=1206.34, Equity=197.73, Total Margin=672.91, Stop-Out Level=30%, Margin Level=29.38431588176725%"
+"15 мая","08:18","XAUUSD","Убыток","−€49.65","Stop-Out: Balance=2533.28, Equity=497.48, Total Margin=1662.55, Stop-Out Level=30%, Margin Level=29.922709091455896%"
+"15 мая","08:18","XAUUSD","Убыток","−€49.09","Stop-Out: Balance=2631.83, Equity=519.80, Total Margin=1741.74, Stop-Out Level=30%, Margin Level=29.843719498891913%"
+"15 мая","08:17","XAUUSD","Убыток","−€48.16","Stop-Out: Balance=2825.76, Equity=567.18, Total Margin=1900.13, Stop-Out Level=30%, Margin Level=29.849536610652955%"
+"15 мая","08:10","XAUUSD","Убыток","−€43.96","Stop-Out: Balance=3742.92, Equity=803.31, Total Margin=2692.07, Stop-Out Level=30%, Margin Level=29.83986300504816%"
+"15 мая","08:17","XAUUSD","Убыток","−€47.46","Stop-Out: Balance=2968.78, Equity=602.30, Total Margin=2018.92, Stop-Out Level=30%, Margin Level=29.832781883383197%"
+"15 мая","08:17","XAUUSD","Убыток","−€47.63","Stop-Out: Balance=2921.32, Equity=589.74, Total Margin=1979.32, Stop-Out Level=30%, Margin Level=29.79508113897702%"
+"15 мая","08:18","XAUUSD","Убыток","−€49.46","Stop-Out: Balance=2582.74, Equity=505.80, Total Margin=1702.14, Stop-Out Level=30%, Margin Level=29.715534562374424%"
+"15 мая","08:11","XAUUSD","Убыток","−€90.44","Stop-Out: Balance=3476.65, Equity=722.74, Total Margin=2454.49, Stop-Out Level=30%, Margin Level=29.445628216044883%"
+"15 мая","08:11","XAUUSD","Убыток","−€45.52","Stop-Out: Balance=3386.21, Equity=704.66, Total Margin=2375.29, Stop-Out Level=30%, Margin Level=29.66627232885248%"
+"15 мая","08:31","XAUUSD","Убыток","−€51.62","Stop-Out: Balance=1874.39, Equity=343.01, Total Margin=1147.92, Stop-Out Level=30%, Margin Level=29.8810021604293%"
+"15 мая","08:11","XAUUSD","Убыток","−€46.20","Stop-Out: Balance=3248.91, Equity=665.28, Total Margin=2256.50, Stop-Out Level=30%, Margin Level=29.482827387547084%"
+"15 мая","08:08","XAUUSD","Убыток","−€42.76","Stop-Out: Balance=4047.51, Equity=890.30, Total Margin=2969.25, Stop-Out Level=30%, Margin Level=29.98400269428307%"
+"15 мая","08:35","XAUUSD","Убыток","−€63.22","Stop-Out: Balance=837.66, Equity=130.02, Total Margin=435.41, Stop-Out Level=30%, Margin Level=29.861509841299005%"
+"15 мая","08:19","XAUUSD","Убыток","−€51.07","Stop-Out: Balance=2334.77, Equity=441.24, Total Margin=1504.18, Stop-Out Level=30%, Margin Level=29.334255208818094%"
+"15 мая","08:19","XAUUSD","Убыток","−€105.02","Stop-Out: Balance=2134.29, Equity=391.32, Total Margin=1345.85, Stop-Out Level=30%, Margin Level=29.076048593825465%"
+"15 мая","08:08","XAUUSD","Убыток","−€83.99","Stop-Out: Balance=4301.15, Equity=949.32, Total Margin=3206.83, Stop-Out Level=30%, Margin Level=29.60306595609995%"
+"15 мая","08:10","XAUUSD","Убыток","−€44.47","Stop-Out: Balance=3610.57, Equity=769.57, Total Margin=2573.28, Stop-Out Level=30%, Margin Level=29.906189765590996%"
+"15 мая","08:17","XAUUSD","Убыток","−€47.93","Stop-Out: Balance=2873.69, Equity=575.01, Total Margin=1939.73, Stop-Out Level=30%, Margin Level=29.64381640743815%"
+"15 мая","08:34","XAUUSD","Убыток","−€59.93","Stop-Out: Balance=1086.97, Equity=170.96, Total Margin=593.74, Stop-Out Level=30%, Margin Level=28.79374810523125%"
+"15 мая","08:19","XAUUSD","Убыток","−€49.38","Stop-Out: Balance=2183.67, Equity=413.58, Total Margin=1385.42, Stop-Out Level=30%, Margin Level=29.85231915231482%"
+"15 мая","08:10","XAUUSD","Убыток","−€44.82","Stop-Out: Balance=3521.47, Equity=747.25, Total Margin=2494.09, Stop-Out Level=30%, Margin Level=29.960827395964057%"
+"15 мая","08:20","XAUUSD","Убыток","−€50.83","Stop-Out: Balance=1978.87, Equity=366.32, Total Margin=1227.09, Stop-Out Level=30%, Margin Level=29.852741037739694%"
+"15 мая","08:44","XAUUSD","Убыток","−€238.33",""
+"15 мая","08:32","XAUUSD","Убыток","−€56.78","Stop-Out: Balance=1323.00, Equity=222.20, Total Margin=752.07, Stop-Out Level=30%, Margin Level=29.545122129589%"
+"15 мая","08:18","XAUUSD","Убыток","−€48.06","Stop-Out: Balance=2382.83, Equity=461.80, Total Margin=1543.75, Stop-Out Level=30%, Margin Level=29.91417004048583%"
+"15 мая","08:08","XAUUSD","Убыток","−€42.44","Stop-Out: Balance=4132.59, Equity=914.35, Total Margin=3048.44, Stop-Out Level=30%, Margin Level=29.994029733240607%"
+"15 мая","08:10","XAUUSD","Убыток","−€44.11","Stop-Out: Balance=3698.96, Equity=793.53, Total Margin=2652.47, Stop-Out Level=30%, Margin Level=29.9166437320686%"
+"15 мая","08:08","XAUUSD","Убыток","−€290.57","Stop-Out: Balance=4675.11, Equity=988.75, Total Margin=3563.21, Stop-Out Level=30%, Margin Level=27.748855666660116%"
+"15 мая","08:10","XAUUSD","Убыток","−€44.28","Stop-Out: Balance=3654.85, Equity=781.77, Total Margin=2612.88, Stop-Out Level=30%, Margin Level=29.91985854689079%"
+"15 мая","08:31","XAUUSD","Убыток","−€53.03","Stop-Out: Balance=1712.62, Equity=304.40, Total Margin=1029.16, Stop-Out Level=30%, Margin Level=29.577519530490887%"
+"12 мар.","01:01","XAUUSD","Профит","+€53.21",""
+"12 мар.","14:25","XAUUSD","Профит","+€721.61",""
+"12 мар.","14:25","XAUUSD","Профит","+€0.59",""
+"12 мар.","14:25","XAUUSD","Профит","+€6.78",""
+"12 мар.","14:25","XAUUSD","Профит","+€6.76",""
+"12 мар.","14:03","XAUUSD","Профит","+€0.23",""
+"12 мар.","14:25","XAUUSD","Профит","+€0.82",""
+"12 мар.","14:25","XAUUSD","Профит","+€0.63",""
+"12 мар.","14:25","XAUUSD","Профит","+€5.74",""
+"12 мар.","14:25","XAUUSD","Профит","+€5.74",""
+"12 мар.","14:25","XAUUSD","Профит","+€6.78",""
+"12 мар.","14:02","XAUUSD","Убыток","−€4.54",""
+"12 мар.","14:25","XAUUSD","Профит","+€0.77",""
+"12 мар.","14:25","XAUUSD","Профит","+€0.93",""
+"12 мар.","14:25","XAUUSD","Профит","+€0.82",""
+"12 мар.","14:02","XAUUSD","Убыток","−€1.25",""
+"12 мар.","14:25","XAUUSD","Профит","+€6.78",""
+"12 мар.","14:25","XAUUSD","Профит","+€0.59",""
+"27 июн.","06:53","XAUUSD","Убыток","−€28.90",""
+"27 июн.","05:48","XAUUSD","Убыток","−€28.70",""
+"27 июн.","08:12","XAUUSD","Убыток","−€28.65",""
+"27 июн.","09:39","XAUUSD","Убыток","−€28.46",""
+"27 июн.","06:46","XAUUSD","Убыток","−€28.65",""
+"27 июн.","06:18","XAUUSD","Убыток","−€28.76",""
+"27 июн.","06:21","XAUUSD","Убыток","−€28.65",""
+"27 июн.","06:06","XAUUSD","Убыток","−€28.41",""
+"27 июн.","06:18","XAUUSD","Убыток","−€28.49",""
+"27 июн.","06:53","XAUUSD","Убыток","−€28.65",""
+"27 июн.","06:41","XAUUSD","Убыток","−€28.68",""
+"27 июн.","06:22","XAUUSD","Убыток","−€28.77",""
+"27 июн.","06:19","XAUUSD","Убыток","−€28.69",""
+"27 июн.","09:39","XAUUSD","Убыток","−€28.82",""
+"27 июн.","06:21","XAUUSD","Убыток","−€28.64",""
+"26 мар.","09:20","XAUUSD","Убыток","−€2.25",""
+"26 мар.","18:21","XAUUSD","Убыток","−€32.85","Stop-Out: Balance=425.69, Equity=102.60, Total Margin=384.67, Stop-Out Level=30%, Margin Level=26.67221254581849%"
+"26 мар.","09:08","XAUUSD","Убыток","−€14.95",""
+"26 мар.","18:22","XAUUSD","Убыток","−€38.28",""
+"26 мар.","09:20","XAUUSD","Убыток","−€437.99",""
+"26 мар.","18:22","XAUUSD","Убыток","−€36.84","Stop-Out: Balance=326.06, Equity=70.63, Total Margin=269.26, Stop-Out Level=30%, Margin Level=26.231152046349254%"
+"26 мар.","18:22","XAUUSD","Убыток","−€38.28",""
+"26 мар.","09:08","XAUUSD","Убыток","−€305.16",""
+"26 мар.","09:20","XAUUSD","Убыток","−€2.22",""
+"26 мар.","09:20","XAUUSD","Убыток","−€2.29",""
+"26 мар.","09:20","XAUUSD","Убыток","−€1.97",""
+"26 мар.","18:22","XAUUSD","Убыток","−€33.87","Stop-Out: Balance=359.93, Equity=91.58, Total Margin=307.73, Stop-Out Level=30%, Margin Level=29.759854417833814%"
+"26 мар.","18:22","XAUUSD","Убыток","−€38.28",""
+"26 мар.","18:22","XAUUSD","Убыток","−€38.28",""
+"26 мар.","18:22","XAUUSD","Убыток","−€37.96","Stop-Out: Balance=289.22, Equity=63.76, Total Margin=230.79, Stop-Out Level=30%, Margin Level=27.62684691711079%"
+"26 мар.","18:21","XAUUSD","Убыток","−€32.91","Stop-Out: Balance=392.84, Equity=102.50, Total Margin=346.20, Stop-Out Level=30%, Margin Level=29.60716348931254%"
+"26 мар.","18:22","XAUUSD","Убыток","−€38.28",""
+"26 мар.","09:20","XAUUSD","Убыток","−€3.06",""
+"12 авг.","15:01","XAUUSD","Профит","+€66.62",""
+"12 авг.","11:41","XAUUSD","Профит","+€235",""
+"12 авг.","15:58","XAUUSD","Профит","+€177.09",""
+"12 авг.","16:01","XAUUSD","Профит","+€27.22",""
+"12 авг.","18:28","XAUUSD","Убыток","−€865.93",""
+"12 авг.","15:13","XAUUSD","Профит","+€86.60",""
+"12 авг.","10:34","XAUUSD","Профит","+€619.10",""
+"12 авг.","16:46","XAUUSD","Профит","+€27.92",""
+"12 авг.","18:28","XAUUSD","Убыток","−€191.61",""
+"12 авг.","14:35","XAUUSD","Убыток","−€90.56",""
+"12 авг.","17:15","XAUUSD","Убыток","−€127.31",""
+"12 авг.","12:05","XAUUSD","Профит","+€393.30",""
+"12 авг.","17:12","XAUUSD","Убыток","−€182.52",""
+"12 авг.","17:20","XAUUSD","Убыток","−€114.24",""
+"12 авг.","15:30","XAUUSD","Профит","+€257.81",""
+"12 авг.","14:20","XAUUSD","Убыток","−€167.05",""
+"12 авг.","18:28","XAUUSD","Убыток","−€696.51",""
+"12 авг.","12:56","XAUUSD","Убыток","−€131.23",""
+"12 авг.","15:50","XAUUSD","Убыток","−€229.23",""
+"12 авг.","16:13","XAUUSD","Профит","+€282.79",""
+"12 авг.","11:41","XAUUSD","Профит","+€297.35",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.75",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.62",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.75",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.66",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.74",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.62",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.66",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.75",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.74",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.75",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.75",""
+"10 янв.","12:16","BTCUSD","Убыток","−€1.43",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.66",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.81",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.54",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.66",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.74",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.66",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.81",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.81",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.66",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.66",""
+"10 янв.","16:53","BTCUSD","Профит","+€0.73",""
+"17 мар.","16:59","XAUUSD","Убыток","−€1.38",""
+"17 мар.","17:25","XAUUSD","Профит","+€3.86",""
+"17 мар.","17:22","XAUUSD","Профит","+€8.44",""
+"17 мар.","17:22","XAUUSD","Профит","+€4.34",""
+"17 мар.","17:22","XAUUSD","Профит","+€28.43",""
+"17 мар.","17:22","XAUUSD","Профит","+€31.65",""
+"17 мар.","17:37","XAUUSD","Убыток","−€72.90",""
+"17 мар.","16:59","XAUUSD","Профит","+€1.50",""
+"17 мар.","16:54","XAUUSD","Профит","+€30.28",""
+"17 мар.","17:22","XAUUSD","Профит","+€11.28",""
+"17 мар.","17:22","XAUUSD","Профит","+€22.46",""
+"17 мар.","17:25","XAUUSD","Профит","+€4.97",""
+"17 мар.","17:22","XAUUSD","Профит","+€7.54",""
+"17 мар.","16:50","XAUUSD","Профит","+€30.69",""
+"17 мар.","16:59","XAUUSD","Убыток","−€1.31",""
+"17 мар.","17:22","XAUUSD","Профит","+€8.16",""
+"17 мар.","16:59","XAUUSD","Профит","+€1.91",""
+"17 мар.","17:25","XAUUSD","Профит","+€12.69",""
+"17 мар.","17:22","XAUUSD","Профит","+€29.63",""
+"17 мар.","17:25","XAUUSD","Профит","+€13.87",""
+"17 мар.","16:54","XAUUSD","Профит","+€28.96",""
+"17 мар.","16:59","XAUUSD","Профит","+€1.64",""
+"17 мар.","16:59","XAUUSD","Профит","+€0.84",""
+"17 мар.","17:22","XAUUSD","Профит","+€12.05",""
+"17 мар.","16:59","XAUUSD","Профит","+€2.33",""
+"17 мар.","16:59","XAUUSD","Профит","+€0.80",""
+"17 мар.","16:59","XAUUSD","Профит","+€0.25",""
+"17 мар.","17:22","XAUUSD","Профит","+€8.89",""
+"17 мар.","17:22","XAUUSD","Профит","+€8.34",""
+"17 мар.","16:50","XAUUSD","Профит","+€33.74",""
+"17 мар.","17:25","XAUUSD","Профит","+€4",""
+"17 мар.","17:37","XAUUSD","Убыток","−€65.96",""
+"17 мар.","17:22","XAUUSD","Профит","+€8.02",""
+"17 мар.","17:37","XAUUSD","Убыток","−€43.67",""
+"17 мар.","16:59","XAUUSD","Профит","+€3.82",""
+"17 мар.","17:22","XAUUSD","Профит","+€44.55",""
+"17 мар.","17:22","XAUUSD","Профит","+€2.82",""
+"17 мар.","17:25","XAUUSD","Профит","+€3.65",""
+"17 мар.","17:22","XAUUSD","Профит","+€25.72",""
+"17 мар.","17:25","XAUUSD","Профит","+€13.31",""
+"17 мар.","16:59","XAUUSD","Профит","+€2.64",""
+"17 мар.","17:25","XAUUSD","Профит","+€2.85",""
+"17 мар.","16:54","XAUUSD","Профит","+€26.74",""
+"17 мар.","17:22","XAUUSD","Профит","+€22.81",""
+"17 мар.","17:25","XAUUSD","Профит","+€2.68",""
+"17 мар.","16:59","XAUUSD","Профит","+€1.88",""
+"17 мар.","17:22","XAUUSD","Профит","+€27.84",""
+"17 мар.","17:37","XAUUSD","Убыток","−€40.41",""
+"17 мар.","16:59","XAUUSD","Профит","+€2.19",""
+"17 мар.","16:59","XAUUSD","Профит","+€1.08",""
+"17 мар.","17:37","XAUUSD","Убыток","−€55.13",""
+"17 мар.","17:22","XAUUSD","Профит","+€36.37",""
+"17 мар.","17:22","XAUUSD","Профит","+€22.15",""
+"17 мар.","17:37","XAUUSD","Убыток","−€81.72",""
+"17 мар.","17:22","XAUUSD","Профит","+€8.82",""
+"17 мар.","17:37","XAUUSD","Убыток","−€67.42",""
+"17 мар.","17:37","XAUUSD","Убыток","−€14.51",""
+"17 мар.","16:54","XAUUSD","Профит","+€28.54",""
+"17 мар.","16:59","XAUUSD","Убыток","−€0.76",""
+"17 мар.","16:59","XAUUSD","Убыток","−€0.20",""
+"17 мар.","17:37","XAUUSD","Убыток","−€43.61",""
+"17 мар.","16:59","XAUUSD","Убыток","−€1.48",""
+"17 мар.","17:25","XAUUSD","Профит","+€3.96",""
+"17 мар.","17:22","XAUUSD","Профит","+€21.42",""
+"17 мар.","16:59","XAUUSD","Убыток","−€1",""
+"17 мар.","17:37","XAUUSD","Убыток","−€18.26",""
+"17 мар.","17:25","XAUUSD","Профит","+€4.62",""
+"17 мар.","17:25","XAUUSD","Профит","+€11.92",""
+"17 мар.","17:37","XAUUSD","Убыток","−€69.09",""
+"17 мар.","17:22","XAUUSD","Профит","+€3.06",""
+"17 мар.","16:59","XAUUSD","Профит","+€2.23",""
+"17 мар.","17:37","XAUUSD","Убыток","−€66.86",""
+"17 мар.","17:37","XAUUSD","Убыток","−€67.28",""
+"17 мар.","16:59","XAUUSD","Убыток","−€1.28",""
+"17 мар.","17:22","XAUUSD","Профит","+€3.44",""
+"17 мар.","17:22","XAUUSD","Профит","+€23.53",""
+"17 мар.","16:59","XAUUSD","Убыток","−€2.39",""
+"17 мар.","17:22","XAUUSD","Профит","+€3.96",""
+"17 мар.","16:59","XAUUSD","Профит","+€0.63",""
+"17 мар.","17:22","XAUUSD","Профит","+€3.44",""
+"17 мар.","17:22","XAUUSD","Профит","+€46.15",""
+"17 мар.","17:37","XAUUSD","Профит","+€17.70",""
+"17 мар.","16:59","XAUUSD","Профит","+€5.14",""
+"17 мар.","17:22","XAUUSD","Профит","+€3.55",""
+"17 мар.","16:50","XAUUSD","Профит","+€33.56",""
+"17 мар.","17:37","XAUUSD","Убыток","−€61.03",""
+"17 мар.","17:22","XAUUSD","Профит","+€8.02",""
+"17 мар.","17:22","XAUUSD","Профит","+€31.55",""
+"17 мар.","16:50","XAUUSD","Профит","+€26.25",""
+"17 мар.","16:59","XAUUSD","Убыток","−€1.45",""
+"17 мар.","16:50","XAUUSD","Профит","+€32.04",""
+"17 мар.","16:59","XAUUSD","Убыток","−€2.80",""
+"17 мар.","17:22","XAUUSD","Профит","+€33.58",""
+"17 мар.","17:22","XAUUSD","Профит","+€5.56",""
+"17 мар.","17:22","XAUUSD","Профит","+€38.80",""
+"17 мар.","17:22","XAUUSD","Профит","+€1.95",""
+"17 мар.","17:22","XAUUSD","Профит","+€4.59",""
+"17 мар.","16:50","XAUUSD","Профит","+€31.42",""
+"17 мар.","17:37","XAUUSD","Убыток","−€39.37",""
+"17 мар.","17:25","XAUUSD","Профит","+€3.41",""
+"17 мар.","17:37","XAUUSD","Убыток","−€38.26",""
+"17 мар.","16:59","XAUUSD","Профит","+€3.61",""
+"17 мар.","16:59","XAUUSD","Убыток","−€1.38",""
+"17 мар.","16:59","XAUUSD","Профит","+€0.15",""
+"17 мар.","17:22","XAUUSD","Профит","+€44.63",""
+"17 мар.","17:22","XAUUSD","Профит","+€11.91",""
+"17 мар.","17:22","XAUUSD","Профит","+€2.82",""
+"17 мар.","17:22","XAUUSD","Профит","+€12.43",""
+"17 мар.","17:22","XAUUSD","Профит","+€11.81",""
+"17 мар.","17:37","XAUUSD","Убыток","−€79.78",""
+"17 мар.","17:22","XAUUSD","Профит","+€8.44",""
+"17 мар.","16:59","XAUUSD","Профит","+€0.28",""
+"17 мар.","17:22","XAUUSD","Профит","+€43.60",""
+"17 мар.","17:37","XAUUSD","Убыток","−€19.72",""
+"17 мар.","16:59","XAUUSD","Убыток","−€1.94",""
+"17 мар.","16:59","XAUUSD","Убыток","−€2.70",""
+"17 мар.","17:22","XAUUSD","Профит","+€4.45",""
+"17 мар.","16:59","XAUUSD","Профит","+€1.08",""
+"17 мар.","17:25","XAUUSD","Профит","+€5.56",""
+"17 мар.","17:22","XAUUSD","Профит","+€8.09",""
+"17 мар.","16:54","XAUUSD","Профит","+€32.08",""
+"17 мар.","17:22","XAUUSD","Профит","+€26.69",""
+"17 мар.","17:37","XAUUSD","Убыток","−€71.65",""
+"17 мар.","17:22","XAUUSD","Профит","+€11.25",""
+"17 мар.","17:22","XAUUSD","Профит","+€8.40",""
+"17 мар.","17:22","XAUUSD","Профит","+€9.38",""
+"12 февр.","11:50","XAUUSD","Убыток","−€118.68",""
+"12 февр.","18:10","XAUUSD","Профит","+€1 179.91",""
+"12 февр.","16:19","XAUUSD","Профит","+€721.03",""
+"10 сент.","12:36","XAUUSD","Убыток","−€1.79",""
+"17 апр.","13:59","XAUUSD","Профит","+€3.56",""
+"17 апр.","13:59","XAUUSD","Профит","+€3.58",""
+"17 апр.","13:59","XAUUSD","Профит","+€3.62",""
+"17 апр.","13:59","XAUUSD","Профит","+€3.78",""
+"17 апр.","13:59","XAUUSD","Профит","+€3.87",""
+"17 апр.","13:59","XAUUSD","Профит","+€3.56",""
+"17 апр.","13:59","XAUUSD","Профит","+€3.56",""
+"17 апр.","13:59","XAUUSD","Профит","+€3.90",""
+"17 апр.","13:59","XAUUSD","Профит","+€3.87",""
+"17 апр.","13:59","XAUUSD","Профит","+€3.87",""
+"17 апр.","13:19","XAUUSD","Профит","+€0.76",""
+"17 апр.","13:59","XAUUSD","Профит","+€3.56",""
+"17 апр.","13:59","XAUUSD","Профит","+€3.51",""
+"17 апр.","13:59","XAUUSD","Профит","+€3.82",""
+"17 апр.","13:59","XAUUSD","Профит","+€3.70",""
+"17 апр.","13:59","XAUUSD","Профит","+€3.90",""
+"17 апр.","13:59","XAUUSD","Профит","+€3.90",""
+"20 нояб.","18:54","XAUUSD","Убыток","−€78 240.86",""
+"20 нояб.","14:11","XAUUSD","Убыток","−€10 424.81",""
+"20 нояб.","10:30","XAUUSD","Профит","+€52 724.47",""
+"20 нояб.","18:27","XAUUSD","Убыток","−€63 311.91",""
+"20 нояб.","19:07","XAUUSD","Убыток","−€29 535.22",""
+"20 нояб.","19:08","XAUUSD","Убыток","−€19 260.49",""
+"20 нояб.","21:23","XAUUSD","Профит","+€1 379.37",""
+"20 нояб.","18:31","XAUUSD","Убыток","−€72 769.97",""
+"20 нояб.","19:09","XAUUSD","Профит","+€11 564.81",""
+"20 нояб.","18:59","XAUUSD","Профит","+€16 896.39",""
+"20 нояб.","18:26","XAUUSD","Убыток","−€30 257.36",""
+"20 нояб.","18:26","XAUUSD","Убыток","−€48 511.50",""
+"21 апр.","17:47","XAUUSD","Убыток","−€51.66","Stop-Out: Balance=190.84, Equity=35.86, Total Margin=121.77, Stop-Out Level=30%, Margin Level=29.44896115627823%"
+"21 апр.","17:46","XAUUSD","Убыток","−€40.88","Stop-Out: Balance=421.46, Equity=94.42, Total Margin=324.72, Stop-Out Level=30%, Margin Level=29.077358955407734%"
+"21 апр.","17:46","XAUUSD","Убыток","−€48.08","Stop-Out: Balance=286.87, Equity=48.17, Total Margin=202.95, Stop-Out Level=30%, Margin Level=23.734910076373492%"
+"21 апр.","17:46","XAUUSD","Убыток","−€47.74","Stop-Out: Balance=334.61, Equity=58.79, Total Margin=243.54, Stop-Out Level=30%, Margin Level=24.139771700747312%"
+"21 апр.","17:46","XAUUSD","Убыток","−€47.95","Stop-Out: Balance=238.79, Equity=46.47, Total Margin=162.36, Stop-Out Level=30%, Margin Level=28.621581670362156%"
+"21 апр.","20:11","XAUUSD","Убыток","−€69.58","Stop-Out: Balance=81.74, Equity=12.01, Total Margin=40.59, Stop-Out Level=30%, Margin Level=29.588568612958854%"
+"21 апр.","17:45","XAUUSD","Убыток","−€39.01","Stop-Out: Balance=460.47, Equity=109.54, Total Margin=365.31, Stop-Out Level=30%, Margin Level=29.98549177410966%"
+"21 апр.","17:46","XAUUSD","Убыток","−€45.97","Stop-Out: Balance=380.58, Equity=73.00, Total Margin=284.13, Stop-Out Level=30%, Margin Level=25.69246471685496%"
+"21 апр.","19:31","XAUUSD","Убыток","−€57.44","Stop-Out: Balance=139.18, Equity=24.30, Total Margin=81.18, Stop-Out Level=30%, Margin Level=29.933481152993346%"
+"4 нояб.","01:13","XAUUSD","Убыток","−€18.64",""
+"19 авг.","21:12","XAUUSD","Убыток","−€9.93",""
+"19 авг.","11:08","XAUUSD","Профит","+€163.65",""
+"19 авг.","10:15","XAUUSD","Профит","+€53.30",""
+"19 авг.","18:23","XAUUSD","Убыток","−€37.95",""
+"19 авг.","15:05","XAUUSD","Убыток","−€78.41",""
+"19 авг.","16:07","XAUUSD","Убыток","−€260.06",""
+"19 авг.","16:13","XAUUSD","Убыток","−€37.38",""
+"19 авг.","03:00","XAUUSD","Профит","+€191.08",""
+"19 авг.","16:13","XAUUSD","Профит","+€60.74",""
+"19 авг.","11:23","XAUUSD","Профит","+€119.69",""
+"19 авг.","03:00","XAUUSD","Профит","+€155.20",""
+"19 авг.","16:07","XAUUSD","Убыток","−€167.78",""
+"19 авг.","18:17","XAUUSD","Профит","+€22.15",""
+"19 авг.","19:25","XAUUSD","Профит","+€91.96",""
+"19 авг.","13:16","XAUUSD","Убыток","−€71.59",""
+"19 авг.","03:00","XAUUSD","Профит","+€179.13",""
+"19 авг.","10:33","XAUUSD","Профит","+€86.81",""
+"19 авг.","18:49","XAUUSD","Профит","+€62.10",""
+"19 авг.","18:49","XAUUSD","Профит","+€51.81",""
+"19 авг.","16:31","XAUUSD","Убыток","−€168.77",""
+"19 авг.","17:44","XAUUSD","Профит","+€764.20",""
+"19 авг.","13:04","XAUUSD","Профит","+€191.32",""
+"19 авг.","13:04","XAUUSD","Профит","+€11.09",""
+"19 авг.","15:05","XAUUSD","Убыток","−€56.94",""
+"19 авг.","17:44","XAUUSD","Профит","+€182.93",""
+"19 авг.","18:17","XAUUSD","Профит","+€109.56",""
+"19 авг.","03:12","XAUUSD","Убыток","−€89.71",""
+"19 авг.","14:41","XAUUSD","Профит","+€242.61",""
+"19 авг.","19:52","XAUUSD","Убыток","−€68.86",""
+"19 авг.","11:23","XAUUSD","Профит","+€99.65",""
+"19 авг.","16:10","XAUUSD","Убыток","−€481.66",""
+"19 авг.","13:16","XAUUSD","Убыток","−€115.25",""
+"19 авг.","17:47","XAUUSD","Убыток","−€110.73",""
+"19 авг.","14:48","XAUUSD","Профит","+€70.88",""
+"19 авг.","10:15","XAUUSD","Профит","+€100.32",""
+"19 авг.","16:10","XAUUSD","Убыток","−€382.56",""
+"19 авг.","13:04","XAUUSD","Профит","+€192.08",""
+"19 авг.","13:04","XAUUSD","Профит","+€113.14",""
+"19 мар.","14:45","XAUUSD","Убыток","−€119.65","Stop-Out: Balance=522.91, Equity=44.69, Total Margin=163.99, Stop-Out Level=30%, Margin Level=27.25166168668821%"
+"19 мар.","10:44","XAUUSD","Убыток","−€1 114.81",""
+"19 мар.","14:45","XAUUSD","Убыток","−€245.41",""
+"19 мар.","14:45","XAUUSD","Убыток","−€117.26","Stop-Out: Balance=640.17, Equity=58.29, Total Margin=204.99, Stop-Out Level=30%, Margin Level=28.43553344065564%"
+"19 мар.","14:45","XAUUSD","Убыток","−€122.32","Stop-Out: Balance=403.26, Equity=36.60, Total Margin=122.99, Stop-Out Level=30%, Margin Level=29.758516952597774%"
+"19 мар.","10:44","XAUUSD","Убыток","−€135.21",""
+"19 мар.","10:44","XAUUSD","Убыток","−€77.20",""
+"19 мар.","10:44","XAUUSD","Убыток","−€1 115.50",""
+"19 мар.","10:44","XAUUSD","Убыток","−€138.36",""
+"2 мар.","01:14","XAUUSD","Убыток","−€10 047.65",""
+"2 мар.","17:06","XAUUSD","Убыток","−€2 416.70",""
+"2 мар.","01:14","XAUUSD","Убыток","−€7 864.47",""
+"2 мар.","01:14","XAUUSD","Убыток","−€13 545.24",""
+"2 мар.","17:06","XAUUSD","Убыток","−€2 106.78",""
+"20 апр.","02:46","XAUUSD","Убыток","−€40.90","Stop-Out: Balance=583.09, Equity=133.35, Total Margin=446.49, Stop-Out Level=30%, Margin Level=29.866290398441175%"
+"20 апр.","02:45","XAUUSD","Убыток","−€37.16","Stop-Out: Balance=738.96, Equity=181.53, Total Margin=608.85, Stop-Out Level=30%, Margin Level=29.815225424981523%"
+"20 апр.","16:29","XAUUSD","Убыток","−€39.12",""
+"20 апр.","02:45","XAUUSD","Убыток","−€39.40","Stop-Out: Balance=663.09, Equity=150.97, Total Margin=527.67, Stop-Out Level=30%, Margin Level=28.61068470824568%"
+"20 апр.","02:46","XAUUSD","Убыток","−€40.60","Stop-Out: Balance=623.69, Equity=136.65, Total Margin=487.08, Stop-Out Level=30%, Margin Level=28.054939640305493%"
+"20 апр.","02:46","XAUUSD","Убыток","−€42.60","Stop-Out: Balance=542.19, Equity=116.35, Total Margin=405.90, Stop-Out Level=30%, Margin Level=28.66469573786647%"
+"20 апр.","02:45","XAUUSD","Убыток","−€38.71","Stop-Out: Balance=701.80, Equity=160.15, Total Margin=568.26, Stop-Out Level=30%, Margin Level=28.18252208496111%"
+"25 мар.","16:01","XAUUSD","Профит","+€5.07",""
+"25 мар.","17:38","XAUUSD","Убыток","−€6.38",""
+"25 мар.","17:38","XAUUSD","Профит","+€92.61",""
+"25 мар.","16:01","XAUUSD","Профит","+€0.46",""
+"25 мар.","00:26","XAUUSD","Убыток","−€115.94",""
+"25 мар.","16:00","XAUUSD","Убыток","−€4.98",""
+"25 мар.","17:38","XAUUSD","Профит","+€35.88",""
+"25 мар.","21:59","XAUUSD","Убыток","−€6.11",""
+"25 мар.","17:38","XAUUSD","Убыток","−€6.09",""
+"25 мар.","16:00","XAUUSD","Убыток","−€3.48",""
+"25 мар.","01:16","XAUUSD","Убыток","−€42.59",""
+"25 мар.","22:01","XAUUSD","Профит","+€134.06",""
+"25 мар.","17:38","XAUUSD","Убыток","−€6.35",""
+"25 мар.","22:01","XAUUSD","Профит","+€174.23",""
+"25 мар.","21:59","XAUUSD","Профит","+€2.04",""
+"25 мар.","21:59","XAUUSD","Убыток","−€2.68",""
+"25 мар.","17:38","XAUUSD","Профит","+€24",""
+"25 мар.","21:50","XAUUSD","Убыток","−€2.96",""
+"25 мар.","17:38","XAUUSD","Профит","+€98.78",""
+"24 мар.","12:45","XAUUSD","Профит","+€84.68",""
+"24 мар.","02:39","XAUUSD","Убыток","−€150.01",""
+"24 мар.","03:14","XAUUSD","Убыток","−€224.19",""
+"11 авг.","10:28","XAUUSD","Убыток","−€7.79",""
+"11 авг.","11:00","XAUUSD","Убыток","−€308.03",""
+"11 авг.","10:28","XAUUSD","Убыток","−€31.13",""
+"11 авг.","14:00","XAUUSD","Профит","+€20.79",""
+"11 авг.","10:28","XAUUSD","Профит","+€7.74",""
+"11 авг.","10:28","XAUUSD","Убыток","−€28.45",""
+"11 авг.","19:35","XAUUSD","Профит","+€1 209.95",""
+"11 авг.","10:28","XAUUSD","Убыток","−€238.35",""
+"11 авг.","09:29","XAUUSD","Убыток","−€29.27",""
+"11 авг.","10:28","XAUUSD","Профит","+€0.76",""
+"11 авг.","10:28","XAUUSD","Убыток","−€27.55",""
+"11 авг.","10:43","XAUUSD","Профит","+€52.44",""
+"15 июл.","16:27","XAUUSD","Убыток","−€29.02",""
+"15 июл.","19:08","XAUUSD","Убыток","−€29.02",""
+"15 июл.","19:13","XAUUSD","Убыток","−€29.05",""
+"15 июл.","18:32","XAUUSD","Убыток","−€29.80",""
+"15 июл.","19:08","XAUUSD","Убыток","−€29.06",""
+"15 июл.","16:35","XAUUSD","Убыток","−€28.96",""
+"15 июл.","19:08","XAUUSD","Убыток","−€29.08",""
+"7 мая","04:11","XAUUSD","Убыток","−€103.78",""
+"7 мая","19:37","XAUUSD","Профит","+€644.28",""
+"7 мая","09:43","XAUUSD","Убыток","−€11.38",""
+"7 мая","19:37","XAUUSD","Профит","+€112.27",""
+"7 мая","19:37","XAUUSD","Профит","+€1 844.88",""
+"7 мая","19:37","XAUUSD","Профит","+€127.57",""
+"7 мая","09:43","XAUUSD","Убыток","−€9.34",""
+"7 мая","19:37","XAUUSD","Профит","+€115.08",""
+"7 мая","19:37","XAUUSD","Профит","+€562.41",""
+"7 мая","09:43","XAUUSD","Убыток","−€9.25",""
+"7 мая","19:37","XAUUSD","Профит","+€602.45",""
+"20 авг.","13:15","XAUUSD","Профит","+€16.53",""
+"20 авг.","10:27","XAUUSD","Профит","+€82.08",""
+"20 авг.","13:15","XAUUSD","Профит","+€2.30",""
+"20 авг.","17:40","XAUUSD","Убыток","−€181.56",""
+"20 авг.","10:27","XAUUSD","Профит","+€83.45",""
+"20 авг.","10:30","XAUUSD","Профит","+€5",""
+"20 авг.","15:03","XAUUSD","Убыток","−€115.49",""
+"20 авг.","13:53","XAUUSD","Профит","+€40.06",""
+"20 авг.","11:29","XAUUSD","Убыток","−€73.34",""
+"20 авг.","15:03","XAUUSD","Убыток","−€153.73",""
+"20 авг.","17:40","XAUUSD","Убыток","−€512.64",""
+"20 авг.","12:14","XAUUSD","Профит","+€223.97",""
+"20 авг.","17:40","XAUUSD","Убыток","−€160.11",""
+"20 авг.","14:06","XAUUSD","Профит","+€45.99",""
+"20 авг.","11:29","XAUUSD","Убыток","−€29.78",""
+"20 авг.","13:22","XAUUSD","Убыток","−€47.24",""
+"20 авг.","13:23","XAUUSD","Убыток","−€34.72",""
+"20 авг.","17:40","XAUUSD","Убыток","−€234.53",""
+"20 авг.","11:24","XAUUSD","Убыток","−€103.19",""
+"20 авг.","13:29","XAUUSD","Профит","+€68.06",""
+"20 авг.","15:03","XAUUSD","Убыток","−€97.93",""
+"21 авг.","17:35","XAUUSD","Убыток","−€72.41",""
+"21 авг.","13:34","XAUUSD","Убыток","−€55.99",""
+"21 авг.","23:26","XAUUSD","Убыток","−€25.29",""
+"21 авг.","23:30","XAUUSD","Профит","+€20.89",""
+"5 мая","23:15","XAUUSD","Профит","+€111.23",""
+"5 мая","16:48","XAUUSD","Убыток","−€54.40",""
+"5 мая","16:48","XAUUSD","Профит","+€242.76",""
+"5 мая","16:48","XAUUSD","Убыток","−€18.04",""
+"5 мая","16:48","XAUUSD","Профит","+€274.05",""
+"5 мая","23:15","XAUUSD","Профит","+€87.89",""
+"5 мая","16:48","XAUUSD","Убыток","−€19.17",""
+"5 мая","16:48","XAUUSD","Профит","+€9.15",""
+"27 апр.","03:55","BTCUSD","Убыток","−€14.29",""
+"14 авг.","17:49","XAUUSD","Профит","+€3.60",""
+"14 авг.","20:29","XAUUSD","Убыток","−€13.57",""
+"14 авг.","16:25","XAUUSD","Профит","+€306.57",""
+"14 авг.","16:40","XAUUSD","Профит","+€62.15",""
+"14 авг.","23:52","XAUUSD","Убыток","−€0.27",""
+"14 авг.","12:41","XAUUSD","Профит","+€111.44",""
+"14 авг.","16:25","XAUUSD","Профит","+€130.44",""
+"14 авг.","16:33","XAUUSD","Профит","+€10.28",""
+"14 авг.","16:46","XAUUSD","Профит","+€11.51",""
+"14 авг.","17:18","XAUUSD","Профит","+€99.89",""
+"14 авг.","17:00","XAUUSD","Убыток","−€89.51",""
+"14 авг.","22:05","XAUUSD","Убыток","−€112.37",""
+"14 авг.","23:52","XAUUSD","Профит","+€32.82",""
+"14 авг.","15:30","XAUUSD","Профит","+€353.26",""
+"14 авг.","23:52","XAUUSD","Профит","+€144.64",""
+"14 авг.","16:33","XAUUSD","Убыток","−€0.53",""
+"14 авг.","15:32","XAUUSD","Профит","+€78.26",""
+"14 авг.","16:33","XAUUSD","Убыток","−€21.22",""
+"14 авг.","19:16","XAUUSD","Убыток","−€92.85",""
+"14 авг.","19:37","XAUUSD","Профит","+€82.19",""
+"14 авг.","17:44","XAUUSD","Профит","+€57.45",""
+"14 авг.","12:41","XAUUSD","Профит","+€34.43",""
+"14 авг.","16:25","XAUUSD","Профит","+€19.31",""
+"28 авг.","16:52","XAUUSD","Убыток","−€61.09","Stop-Out: Balance=4384.98, Equity=541.71, Total Margin=1812.37, Stop-Out Level=30%, Margin Level=29.889592081087196%"
+"28 авг.","16:52","XAUUSD","Убыток","−€60.46","Stop-Out: Balance=4627.84, Equity=576.86, Total Margin=1927.44, Stop-Out Level=30%, Margin Level=29.92881749885859%"
+"28 авг.","15:09","XAUUSD","Убыток","−€119.82","Stop-Out: Balance=4988.74, Equity=621.05, Total Margin=2100.04, Stop-Out Level=30%, Margin Level=29.57324622388145%"
+"28 авг.","16:52","XAUUSD","Убыток","−€3 650.62",""
+"28 авг.","16:52","XAUUSD","Убыток","−€61.29","Stop-Out: Balance=4323.89, Equity=526.76, Total Margin=1783.60, Stop-Out Level=30%, Margin Level=29.533527696793005%"
+"28 авг.","16:51","XAUUSD","Убыток","−€60.35","Stop-Out: Balance=4748.64, Equity=590.31, Total Margin=1984.97, Stop-Out Level=30%, Margin Level=29.738988498566726%"
+"28 авг.","16:52","XAUUSD","Убыток","−€61.34","Stop-Out: Balance=4262.60, Equity=525.79, Total Margin=1754.83, Stop-Out Level=30%, Margin Level=29.962446504789636%"
+"28 авг.","16:52","XAUUSD","Убыток","−€60.99","Stop-Out: Balance=4445.97, Equity=547.94, Total Margin=1841.13, Stop-Out Level=30%, Margin Level=29.76107064683102%"
+"28 авг.","15:11","XAUUSD","Убыток","−€60.12","Stop-Out: Balance=4868.92, Equity=606.12, Total Margin=2042.51, Stop-Out Level=30%, Margin Level=29.675252507943656%"
+"28 авг.","15:08","XAUUSD","Убыток","−€118.98","Stop-Out: Balance=5227.17, Equity=652.77, Total Margin=2215.11, Stop-Out Level=30%, Margin Level=29.468965423838994%"
+"28 авг.","16:51","XAUUSD","Убыток","−€60.16","Stop-Out: Balance=4808.80, Equity=603.28, Total Margin=2013.74, Stop-Out Level=30%, Margin Level=29.958187253567986%"
+"28 авг.","15:08","XAUUSD","Убыток","−€59.67","Stop-Out: Balance=5108.19, Equity=639.13, Total Margin=2157.58, Stop-Out Level=30%, Margin Level=29.622540068039194%"
+"28 авг.","14:33","XAUUSD","Убыток","−€59.12","Stop-Out: Balance=5345.54, Equity=681.51, Total Margin=2272.65, Stop-Out Level=30%, Margin Level=29.9874595736255%"
+"28 авг.","14:33","XAUUSD","Убыток","−€59.25","Stop-Out: Balance=5286.42, Equity=671.10, Total Margin=2243.88, Stop-Out Level=30%, Margin Level=29.90801647146906%"
+"28 авг.","14:33","XAUUSD","Убыток","−€59","Stop-Out: Balance=5404.54, Equity=689.00, Total Margin=2301.42, Stop-Out Level=30%, Margin Level=29.938038254642785%"
+"28 авг.","16:52","XAUUSD","Убыток","−€60.45","Stop-Out: Balance=4688.29, Equity=586.57, Total Margin=1956.20, Stop-Out Level=30%, Margin Level=29.98517533994479%"
+"28 авг.","16:52","XAUUSD","Убыток","−€121.41","Stop-Out: Balance=4567.38, Equity=553.70, Total Margin=1898.67, Stop-Out Level=30%, Margin Level=29.16251902647643%"
+"28 авг.","15:09","XAUUSD","Убыток","−€59.78","Stop-Out: Balance=5048.52, Equity=635.67, Total Margin=2128.81, Stop-Out Level=30%, Margin Level=29.860344511722514%"
+"21 нояб.","20:30","XAUUSD","Профит","+€181.48",""
+"21 нояб.","20:42","XAUUSD","Убыток","−€454.68",""
+"21 нояб.","16:47","XAUUSD","Профит","+€121.92",""
+"21 нояб.","20:24","XAUUSD","Профит","+€418.70",""
+"21 нояб.","20:16","XAUUSD","Убыток","−€235.78",""
+"21 нояб.","18:50","XAUUSD","Убыток","−€817.21",""
+"21 нояб.","16:47","XAUUSD","Профит","+€653.11",""
+"21 нояб.","18:50","XAUUSD","Убыток","−€977.71",""
+"21 нояб.","20:03","XAUUSD","Профит","+€6 227.85",""
+"21 нояб.","20:31","XAUUSD","Убыток","−€592.84",""
+"21 нояб.","20:04","XAUUSD","Убыток","−€297.87",""
+"21 нояб.","18:55","XAUUSD","Убыток","−€893.07",""
+"21 нояб.","01:10","XAUUSD","Профит","+€49.75",""
+"21 нояб.","20:25","XAUUSD","Профит","+€311.82",""
+"21 нояб.","20:15","XAUUSD","Убыток","−€389.66",""
+"21 нояб.","22:32","XAUUSD","Профит","+€3 879.61",""
+"21 нояб.","15:45","XAUUSD","Убыток","−€412.45",""
+"21 нояб.","13:20","XAUUSD","Профит","+€298.63",""
+"21 нояб.","20:14","XAUUSD","Профит","+€104.56",""
+"21 нояб.","12:30","XAUUSD","Профит","+€912.54",""
+"21 нояб.","20:29","XAUUSD","Убыток","−€618.99",""
+"21 нояб.","22:35","XAUUSD","Профит","+€20.02",""
+"21 нояб.","18:51","XAUUSD","Убыток","−€847.17",""
+"23 февр.","01:08","XAUUSD","Убыток","−€9 200.49",""
+"23 февр.","01:08","XAUUSD","Убыток","−€9 905.95",""
+"23 февр.","01:08","XAUUSD","Убыток","−€9 699.96",""
+"23 февр.","01:08","XAUUSD","Убыток","−€9 360.71",""
+"23 февр.","01:08","XAUUSD","Убыток","−€9 689.27",""
+"23 февр.","01:08","XAUUSD","Убыток","−€9 700.97",""
+"23 февр.","01:08","XAUUSD","Убыток","−€9 907.48",""
+"23 февр.","01:08","XAUUSD","Убыток","−€9 907.48",""
+"23 февр.","01:08","XAUUSD","Убыток","−€9 382.58",""
+"23 февр.","01:08","XAUUSD","Убыток","−€9 201.51",""
+"23 февр.","01:08","XAUUSD","Убыток","−€9 201.51",""
+"23 февр.","01:08","XAUUSD","Убыток","−€9 238.13",""
+"23 февр.","01:08","XAUUSD","Убыток","−€9 382.58",""
+"23 февр.","01:08","XAUUSD","Убыток","−€9 902.39",""
+"23 февр.","01:08","XAUUSD","Убыток","−€9 699.96",""
+"23 февр.","01:08","XAUUSD","Убыток","−€9 201",""
+"23 февр.","01:08","XAUUSD","Убыток","−€9 916.12",""
+"18 февр.","15:04","BTCUSD","Убыток","−€1 366.43",""
+"18 февр.","15:04","BTCUSD","Убыток","−€1 366.43",""
+"18 февр.","15:04","BTCUSD","Убыток","−€1 366.43",""
+"18 февр.","15:04","BTCUSD","Убыток","−€1 366.43",""
+"18 февр.","15:04","BTCUSD","Убыток","−€1 366.43",""
+"18 февр.","15:04","BTCUSD","Убыток","−€1 366.43",""
+"18 февр.","15:04","BTCUSD","Убыток","−€1 366.43",""
+"18 февр.","15:04","BTCUSD","Убыток","−€1 366.43",""
+"18 февр.","15:04","BTCUSD","Убыток","−€1 366.43",""
+"18 февр.","15:04","BTCUSD","Убыток","−€1 366.43",""
+"18 февр.","15:04","BTCUSD","Убыток","−€1 366.43",""
+"18 февр.","15:04","BTCUSD","Убыток","−€1 366.43",""
+"18 февр.","15:04","BTCUSD","Убыток","−€1 366.43",""
+"18 февр.","15:04","BTCUSD","Убыток","−€1 366.43",""
+"18 февр.","15:04","BTCUSD","Убыток","−€1 366.43",""
+"18 февр.","15:04","BTCUSD","Убыток","−€1 366.43",""
+"18 февр.","15:04","BTCUSD","Убыток","−€1 366.43",""
+"18 авг.","20:21","XAUUSD","Убыток","−€72.22",""
+"18 авг.","16:09","XAUUSD","Профит","+€133.45",""
+"18 авг.","11:50","XAUUSD","Убыток","−€37.07",""
+"18 авг.","10:22","XAUUSD","Профит","+€343.39",""
+"18 авг.","17:01","XAUUSD","Убыток","−€128.70",""
+"18 авг.","14:56","XAUUSD","Профит","+€95.75",""
+"18 авг.","10:02","XAUUSD","Убыток","−€401.03",""
+"18 авг.","20:45","XAUUSD","Убыток","−€60.84",""
+"18 авг.","13:06","XAUUSD","Профит","+€40.23",""
+"18 авг.","14:56","XAUUSD","Профит","+€70.10",""
+"18 авг.","11:05","XAUUSD","Убыток","−€181.89",""
+"18 авг.","20:45","XAUUSD","Убыток","−€74.72",""
+"18 авг.","19:07","XAUUSD","Убыток","−€150.94",""
+"18 авг.","16:09","XAUUSD","Профит","+€231.18",""
+"18 авг.","13:06","XAUUSD","Убыток","−€39.66",""
+"18 авг.","17:01","XAUUSD","Убыток","−€86.74",""
+"18 авг.","20:29","XAUUSD","Профит","+€24.57",""
+"22 окт.","03:10","XAUUSD","Убыток","−€68.71","Stop-Out: Balance=393.99, Equity=50.64, Total Margin=176.87, Stop-Out Level=30%, Margin Level=28.631198055068696%"
+"22 окт.","03:10","XAUUSD","Убыток","−€75.62","Stop-Out: Balance=252.99, Equity=26.31, Total Margin=106.12, Stop-Out Level=30%, Margin Level=24.792687523558235%"
+"22 окт.","03:10","XAUUSD","Убыток","−€72.29","Stop-Out: Balance=325.28, Equity=36.77, Total Margin=141.50, Stop-Out Level=30%, Margin Level=25.985865724381624%"
+"22 окт.","03:10","XAUUSD","Убыток","−€78.31","Stop-Out: Balance=177.37, Equity=21.06, Total Margin=70.74, Stop-Out Level=30%, Margin Level=29.770992366412213%"
+"22 окт.","20:36","XAUUSD","Убыток","−€11.35",""
+"22 окт.","03:10","XAUUSD","Убыток","−€66.31","Stop-Out: Balance=460.30, Equity=63.37, Total Margin=212.24, Stop-Out Level=30%, Margin Level=29.85770825480588%"
+"22 окт.","18:22","XAUUSD","Убыток","−€52.96",""
+"16 авг.","09:14","BTCUSD","Убыток","−€70.82",""
+"16 авг.","23:06","BTCUSD","Профит","+€84.95",""
+"16 авг.","09:37","BTCUSD","Убыток","−€34.84",""
+"16 авг.","15:52","BTCUSD","Профит","+€199.41",""
+"16 авг.","23:06","BTCUSD","Профит","+€11.93",""
+"29 апр.","16:44","XAUUSD","Убыток","−€42.97","Stop-Out: Balance=840.08, Equity=129.17, Total Margin=431.29, Stop-Out Level=30%, Margin Level=29.949685826242206%"
+"29 апр.","16:43","XAUUSD","Убыток","−€41.91","Stop-Out: Balance=881.99, Equity=140.84, Total Margin=470.31, Stop-Out Level=30%, Margin Level=29.946205694116645%"
+"29 апр.","12:50","XAUUSD","Убыток","−€38.75","Stop-Out: Balance=420.74, Equity=81.40, Total Margin=275.45, Stop-Out Level=30%, Margin Level=29.551642766382286%"
+"29 апр.","11:36","XAUUSD","Убыток","−€33.01","Stop-Out: Balance=631.43, Equity=129.73, Total Margin=433.19, Stop-Out Level=30%, Margin Level=29.947598051663243%"
+"29 апр.","12:50","XAUUSD","Убыток","−€69.73","Stop-Out: Balance=598.42, Equity=114.75, Total Margin=393.94, Stop-Out Level=30%, Margin Level=29.12880134030563%"
+"29 апр.","12:50","XAUUSD","Убыток","−€72.46","Stop-Out: Balance=493.20, Equity=91.89, Total Margin=315.07, Stop-Out Level=30%, Margin Level=29.16494747199035%"
+"29 апр.","16:45","XAUUSD","Убыток","−€45.48","Stop-Out: Balance=752.87, Equity=105.33, Total Margin=353.26, Stop-Out Level=30%, Margin Level=29.816565702315573%"
+"29 апр.","11:36","XAUUSD","Убыток","−€67.36","Stop-Out: Balance=698.79, Equity=139.43, Total Margin=472.80, Stop-Out Level=30%, Margin Level=29.49027072758037%"
+"29 апр.","16:45","XAUUSD","Убыток","−€44.24","Stop-Out: Balance=797.11, Equity=116.49, Total Margin=392.27, Stop-Out Level=30%, Margin Level=29.69638259362174%"
+"29 апр.","12:50","XAUUSD","Убыток","−€35.49","Stop-Out: Balance=528.69, Equity=105.90, Total Margin=354.32, Stop-Out Level=30%, Margin Level=29.88823662226236%"
+"6 февр.","15:50","XAUUSD","Профит","+€4.70",""
+"6 февр.","12:44","XAUUSD","Убыток","−€6.22",""
+"6 февр.","12:36","XAUUSD","Профит","+€11.46",""
+"26 июн.","16:35","XAUUSD","Убыток","−€29.31",""
+"18 мар.","21:23","XAUUSD","Убыток","−€1 036.93",""
+"18 мар.","21:23","XAUUSD","Убыток","−€251.23",""
+"18 мар.","21:23","XAUUSD","Убыток","−€989.45",""
+"18 мар.","21:23","XAUUSD","Убыток","−€1 062.59",""
+"18 мар.","21:23","XAUUSD","Убыток","−€914.98",""
+"18 мар.","21:23","XAUUSD","Убыток","−€267.20",""
+"18 мар.","21:23","XAUUSD","Убыток","−€274.24",""
+"18 мар.","21:23","XAUUSD","Убыток","−€270.61",""
+"18 мар.","21:23","XAUUSD","Убыток","−€1 037",""
+"18 мар.","21:23","XAUUSD","Убыток","−€277.44",""
+"18 мар.","21:23","XAUUSD","Убыток","−€908.42",""
+"6 нояб.","12:47","GBPAUD","Убыток","−€19.65",""
+"6 нояб.","21:07","XAUUSD","Убыток","−€99.23",""
+"6 нояб.","18:25","XAUUSD","Профит","+€6.78",""
+"11 июл.","03:32","XAUUSD","Профит","+€28.20",""
+"11 июл.","16:10","XAUUSD","Профит","+€28.36",""
+"11 июл.","14:37","XAUUSD","Профит","+€28.39",""
+"11 июл.","14:45","XAUUSD","Профит","+€28.27",""
+"11 июл.","17:42","XAUUSD","Профит","+€28.46",""
+"11 июл.","14:45","XAUUSD","Профит","+€28.22",""
+"11 июл.","13:27","XAUUSD","Профит","+€28.23",""
+"30 июн.","21:27","XAUUSD","Убыток","−€63.88",""
+"30 июн.","20:50","XAUUSD","Убыток","−€118.37",""
+"30 июн.","20:00","XAUUSD","Профит","+€13.06",""
+"30 июн.","19:02","XAUUSD","Убыток","−€244.91",""
+"30 июн.","13:29","XAUUSD","Убыток","−€68.76",""
+"14 февр.","19:13","BTCUSD","Убыток","−€9.96",""
+"14 февр.","19:13","BTCUSD","Убыток","−€37.99",""
+"5 нояб.","17:13","XAUUSD","Убыток","−€8.07",""
+"5 нояб.","02:30","AUDJPY","Убыток","−€0.93",""
+"5 нояб.","15:52","GBPAUD","Убыток","−€20.97",""
+"5 нояб.","00:01","GBPAUD","Убыток","−€13.63",""
+"5 нояб.","00:05","EURGBP","Убыток","−€8.15",""
+"5 нояб.","14:40","GBPNOK","Убыток","−€41.72",""
+"5 нояб.","00:07","EURCHF","Убыток","−€2.36",""
+"15 авг.","10:29","XAUUSD","Профит","+€85.65",""
+"15 авг.","16:00","XAUUSD","Убыток","−€64.75",""
+"15 авг.","13:57","XAUUSD","Убыток","−€173.71",""
+"15 авг.","11:15","XAUUSD","Убыток","−€105.07",""
+"15 авг.","13:57","XAUUSD","Убыток","−€111.03",""
+"15 авг.","15:34","XAUUSD","Профит","+€88.49",""
+"15 авг.","12:22","XAUUSD","Профит","+€151.42",""
+"15 авг.","17:30","XAUUSD","Профит","+€224.96",""
+"15 авг.","10:29","XAUUSD","Профит","+€151.56",""
+"15 авг.","16:00","XAUUSD","Убыток","−€93.85",""
+"15 авг.","16:05","XAUUSD","Профит","+€55.78",""
+"15 авг.","15:08","XAUUSD","Профит","+€115.96",""
+"15 авг.","12:22","XAUUSD","Профит","+€133.36",""
+"15 авг.","17:19","XAUUSD","Убыток","−€109.77",""
+"15 авг.","20:11","XAUUSD","Профит","+€61.74",""
+"15 авг.","14:38","XAUUSD","Профит","+€165.96",""
+"15 авг.","15:34","XAUUSD","Убыток","−€14.78",""
+"17 июл.","15:30","XAUUSD","Убыток","−€29.51",""
+"17 июл.","15:31","XAUUSD","Убыток","−€30.23",""
+"17 июл.","15:31","XAUUSD","Убыток","−€29.27",""
+"26 февр.","01:42","BTCUSD","Профит","+€98.68",""
+"26 февр.","01:42","BTCUSD","Профит","+€177.60",""
+"26 февр.","01:42","BTCUSD","Профит","+€148.15",""
+"26 февр.","01:42","BTCUSD","Профит","+€1 005.75",""
+"26 февр.","01:42","BTCUSD","Профит","+€2 399.32",""
+"26 февр.","01:42","BTCUSD","Профит","+€118.38",""
+"16 апр.","16:37","XAUUSD","Убыток","−€103.44",""
+"16 апр.","16:37","XAUUSD","Убыток","−€0.31",""
+"16 апр.","16:37","XAUUSD","Убыток","−€51.70",""
+"16 апр.","16:37","XAUUSD","Убыток","−€16.76",""
+"16 апр.","16:37","XAUUSD","Убыток","−€51.70",""
+"16 апр.","16:37","XAUUSD","Убыток","−€157.80",""
+"1 апр.","09:36","XAUUSD","Убыток","−€235.02",""
+"1 апр.","03:25","XAUUSD","Убыток","−€94.54","Stop-Out: Balance=734.28, Equity=67.99, Total Margin=239.50, Stop-Out Level=30%, Margin Level=28.38830897703549%"
+"1 апр.","03:30","XAUUSD","Убыток","−€99.12","Stop-Out: Balance=510.20, Equity=47.72, Total Margin=159.67, Stop-Out Level=30%, Margin Level=29.88664119746978%"
+"1 апр.","03:26","XAUUSD","Убыток","−€129.54","Stop-Out: Balance=639.74, Equity=59.03, Total Margin=199.52, Stop-Out Level=30%, Margin Level=29.586006415396954%"
+"1 апр.","09:36","XAUUSD","Убыток","−€84.31",""
+"22 авг.","17:30","XAUUSD","Убыток","−€45.27",""
+"1 июн.","17:20","XAUUSD","Убыток","−€11.74",""
+"1 июн.","17:22","XAUUSD","Убыток","−€32.91",""
+"1 июн.","17:22","XAUUSD","Убыток","−€2.35",""
+"1 июн.","17:19","XAUUSD","Профит","+€7.47",""
+"1 июн.","17:27","XAUUSD","Убыток","−€88.29",""
+"1 июн.","17:22","XAUUSD","Профит","+€7.72",""
+"12 мая","18:23","XAUUSD","Убыток","−€1 661.32",""
+"12 мая","18:23","XAUUSD","Убыток","−€1 914.36",""
+"12 мая","18:23","XAUUSD","Убыток","−€4 596.39",""
+"19 нояб.","13:53","BTCUSD","Убыток","−€75.30",""
+"19 нояб.","16:55","XAUUSD","Убыток","−€10 029.01",""
+"19 нояб.","22:42","XAUUSD","Убыток","−€5.71",""
+"19 нояб.","13:53","XAUUSD","Убыток","−€43.78",""
+"19 нояб.","13:53","XAUUSD","Убыток","−€44",""
+"19 нояб.","13:53","XAUUSD","Убыток","−€43.80",""
+"2 февр.","20:07","XAUUSD","Убыток","−€7 486.98",""
+"2 февр.","20:16","XAUUSD","Убыток","−€2 238.80",""
+"2 февр.","20:07","XAUUSD","Убыток","−€26 118.21",""
+"2 февр.","20:07","XAUUSD","Убыток","−€70 114.22",""
+"2 февр.","20:07","XAUUSD","Профит","+€602.46",""
+"2 февр.","20:07","XAUUSD","Профит","+€699.01",""
+"9 апр.","17:31","XAUUSD","Убыток","−€161.30",""
+"9 апр.","17:31","XAUUSD","Убыток","−€94.83",""
+"31 дек.","23:32","XAUUSD","Профит","+€129.92",""
+"31 дек.","23:32","XAUUSD","Профит","+€128.52",""
+"20 июн.","12:25","XAUUSD","Профит","+€8.67",""
+"14 нояб.","16:02","XAUUSD","Убыток","−€108.91","Stop-Out: Balance=831.10, Equity=72.17, Total Margin=250.60, Stop-Out Level=30%, Margin Level=28.79888268156425%"
+"14 нояб.","15:50","XAUUSD","Убыток","−€107.15","Stop-Out: Balance=938.25, Equity=85.60, Total Margin=286.40, Stop-Out Level=30%, Margin Level=29.88826815642458%"
+"14 нояб.","16:02","XAUUSD","Убыток","−€110.52","Stop-Out: Balance=722.19, Equity=63.80, Total Margin=214.80, Stop-Out Level=30%, Margin Level=29.702048417132215%"
+"14 нояб.","16:33","XAUUSD","Убыток","−€114.41","Stop-Out: Balance=499.67, Equity=42.88, Total Margin=143.20, Stop-Out Level=30%, Margin Level=29.94413407821229%"
+"14 нояб.","16:33","XAUUSD","Убыток","−€112","Stop-Out: Balance=611.67, Equity=53.68, Total Margin=179.00, Stop-Out Level=30%, Margin Level=29.988826815642455%"
+"3 нояб.","05:02","XAUUSD","Профит","+€36.03",""
+"3 нояб.","15:00","XAUUSD","Профит","+€0.26",""
+"3 нояб.","02:13","XAUUSD","Профит","+€19.77",""
+"16 янв.","17:28","XAUUSD","Убыток","−€140.09",""
+"16 янв.","15:14","XAUUSD","Профит","+€49.46",""
+"31 мар.","11:25","XAUUSD","Убыток","−€19.43",""
+"31 мар.","11:25","XAUUSD","Профит","+€45.42",""
+"24 апр.","23:07","XAUUSD","Профит","+€9.07",""
+"24 апр.","18:06","XAUUSD","Профит","+€45.17",""
+"13 авг.","11:46","XAUUSD","Убыток","−€234.80",""
+"5 сент.","15:28","XAUUSD","Профит","+€23.49",""
+"5 сент.","15:30","XAUUSD","Убыток","−€149.35",""
+"8 янв.","17:16","XAUUSD","Убыток","−€17.37",""
+"8 янв.","17:07","XAUUSD","Убыток","−€34.74",""
+"8 янв.","17:09","XAUUSD","Убыток","−€19.82",""
+"10 июл.","03:42","XAUUSD","Профит","+€28.06",""
+"10 июл.","04:33","XAUUSD","Профит","+€28",""
+"10 июл.","09:21","XAUUSD","Профит","+€28.02",""
+"10 июл.","10:08","XAUUSD","Профит","+€28.06",""
+"10 июл.","09:21","XAUUSD","Профит","+€28.12",""
+"21 окт.","22:21","XAUUSD","Профит","+€115.49",""
+"21 окт.","16:42","XAUUSD","Убыток","−€19.60",""
+"21 окт.","16:37","XAUUSD","Убыток","−€31.41",""
+"21 окт.","22:21","XAUUSD","Профит","+€118.96",""
+"21 окт.","16:37","XAUUSD","Убыток","−€31.46",""
+"21 окт.","17:24","XAUUSD","Профит","+€103.77",""
+"2 апр.","11:42","XAUUSD","Профит","+€4.09",""
+"2 апр.","16:10","XAUUSD","Профит","+€36.03",""
+"8 сент.","15:43","XAUUSD","Профит","+€0.04",""
+"8 сент.","15:53","XAUUSD","Убыток","−€1.51",""
+"8 сент.","01:01","XAUUSD","Убыток","−€154.83",""
+"8 сент.","15:55","XAUUSD","Убыток","−€2.34",""
+"8 сент.","16:02","XAUUSD","Убыток","−€3.57",""
+"27 мар.","16:57","XAUUSD","Профит","+€62.92",""
+"27 мар.","16:57","XAUUSD","Профит","+€0.49",""
+"27 мар.","16:57","XAUUSD","Профит","+€3.70",""
+"27 мар.","17:04","XAUUSD","Убыток","−€17.15",""
+"27 мар.","16:57","XAUUSD","Профит","+€2.41",""
+"27 мар.","16:57","XAUUSD","Профит","+€93.54",""
+"22 мая","17:00","XAUUSD","Убыток","−€250.47",""
+"22 мая","14:40","XAUUSD","Профит","+€125.51",""
+"5 мар.","20:03","XAUUSD","Профит","+€52.44",""
+"20 мая","17:22","XAUUSD","Убыток","−€109.91",""
+"25 нояб.","12:41","XAUUSD","Убыток","−€2 450.31",""
+"25 нояб.","12:57","XAUUSD","Профит","+€393.79",""
+"25 нояб.","13:11","XAUUSD","Профит","+€884.43",""
+"25 нояб.","14:33","XAUUSD","Профит","+€2 890.55",""
+"2 июл.","12:29","XAUUSD","Профит","+€1 883.07",""
+"30 мар.","09:09","XAUUSD","Убыток","−€6.06",""
+"30 мар.","09:09","XAUUSD","Убыток","−€66.65",""
+"30 мар.","09:09","XAUUSD","Убыток","−€23.66",""
+"30 мар.","09:09","XAUUSD","Убыток","−€23.64",""
+"30 мар.","09:09","XAUUSD","Убыток","−€71.49",""
+"30 мар.","09:09","XAUUSD","Убыток","−€105.98",""
+"4 мая","19:08","XAUUSD","Убыток","−€111.40","Stop-Out: Balance=707.39, Equity=93.91, Total Margin=314.24, Stop-Out Level=30%, Margin Level=29.884801425661917%"
+"4 мая","19:09","XAUUSD","Убыток","−€78.09","Stop-Out: Balance=519.25, Equity=69.85, Total Margin=235.38, Stop-Out Level=30%, Margin Level=29.675418472257625%"
+"4 мая","19:10","XAUUSD","Убыток","−€53.49","Stop-Out: Balance=441.16, Equity=54.67, Total Margin=196.15, Stop-Out Level=30%, Margin Level=27.871526892684173%"
+"4 мая","19:09","XAUUSD","Убыток","−€76.74","Stop-Out: Balance=595.99, Equity=82.17, Total Margin=274.63, Stop-Out Level=30%, Margin Level=29.92025634490041%"
+"28 февр.","22:25","BTCUSD","Профит","+€6 488.20",""
+"28 февр.","22:25","BTCUSD","Профит","+€6 479.01",""
+"27 нояб.","11:43","XAUUSD","Убыток","−€2 079.22",""
+"27 нояб.","11:52","XAUUSD","Убыток","−€2 027.79",""
+"13 нояб.","21:41","XAUUSD","Профит","+€53.93",""
+"13 нояб.","21:41","XAUUSD","Профит","+€53.94",""
+"13 нояб.","21:41","XAUUSD","Профит","+€53.93",""
+"13 нояб.","21:41","XAUUSD","Профит","+€54",""
+"13 нояб.","21:41","XAUUSD","Профит","+€54",""
+"13 нояб.","21:41","XAUUSD","Профит","+€54.06",""
+"13 нояб.","21:41","XAUUSD","Профит","+€54.06",""
+"13 нояб.","21:41","XAUUSD","Профит","+€53.99",""
+"13 нояб.","21:41","XAUUSD","Профит","+€53.92",""
+"13 нояб.","21:41","XAUUSD","Профит","+€54.11",""
+"25 авг.","08:27","XAUUSD","Профит","+€13.74",""
+"23 мая","15:01","BTCUSD","Убыток","−€3.06",""
+"23 мая","15:32","BTCUSD","Профит","+€1.68",""
+"23 мая","14:55","BTCUSD","Профит","+€0.20",""
+"23 мая","15:00","BTCUSD","Убыток","−€21.09",""
+"23 апр.","13:12","XAUUSD","Убыток","−€57.48",""
+"23 апр.","03:01","XAUUSD","Убыток","−€19.38",""
+"23 апр.","12:01","XAUUSD","Убыток","−€44.12",""
+"26 апр.","21:17","BTCUSD","Убыток","−€9.58",""
+"27 авг.","20:22","XAUUSD","Убыток","−€97",""
+"27 авг.","11:07","XAUUSD","Убыток","−€5.54",""
+"6 апр.","12:20","XAUUSD","Профит","+€278.75",""
+"6 апр.","12:20","XAUUSD","Профит","+€105.86",""
+"6 мая","01:20","XAUUSD","Убыток","−€49.15",""
+"8 июл.","18:10","XAUUSD","Убыток","−€29.05",""
+"22 апр.","21:48","XAUUSD","Профит","+€71.48",""
+"19 июн.","10:49","XAUUSD","Профит","+€7.32",""
+"26 нояб.","13:31","XAUUSD","Убыток","−€4 630.69",""
+"11 нояб.","10:03","GBPNOK","Убыток","−€85.87",""
+"11 нояб.","10:04","XAUUSD","Убыток","−€34.71",""
+"11 нояб.","17:22","XAUUSD","Убыток","−€163.93",""
+"3 февр.","14:03","XAUUSD","Убыток","−€10.98",""
+"3 февр.","14:03","XAUUSD","Убыток","−€20.11",""
+"23 окт.","16:26","XAUUSD","Убыток","−€27.12",""
+"23 окт.","14:02","XAUUSD","Профит","+€0.36",""
+"2 сент.","19:34","XAUUSD","Убыток","−€56.23",""
+"28 апр.","08:06","XAUUSD","Убыток","−€94.24",""
+"9 янв.","18:12","XAUUSD","Профит","+€60.82",""
+"15 янв.","18:46","XAUUSD","Профит","+€62.01",""
+"15 янв.","09:02","XAUUSD","Профит","+€1.84",""
+"4 мар.","23:32","XAUUSD","Убыток","−€32.57",""
+"11 февр.","02:16","XAUUSD","Профит","+€25.05",""
+"13 февр.","13:24","XAUUSD","Убыток","−€369.75",""
+"13 февр.","14:49","XAUUSD","Убыток","−€250.32",""
+"24 нояб.","14:35","XAUUSD","Убыток","−€524.28",""
+"24 нояб.","17:05","XAUUSD","Убыток","−€4 174.19",""
+"24 нояб.","12:17","XAUUSD","Профит","+€1 182.09",""
+"24 июн.","09:15","XAUUSD","Убыток","−€29.15",""
+"10 нояб.","19:50","XAUUSD","Убыток","−€4.66",""
