@@ -1140,6 +1140,7 @@ export default function CalendarScreen() {
   const [historyAnalysisOpen, setHistoryAnalysisOpen] = useState(false);
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
   const [proScorecardOpen, setProScorecardOpen] = useState(false);
+  const [proAnalyticsOpen, setProAnalyticsOpen] = useState(false);
   const [historyAnalysisTab, setHistoryAnalysisTab] = useState('overview');
   const [freeTimelineSelected, setFreeTimelineSelected] = useState(null);
   // 0 = latest window, 1 = previous 10 days, etc. Keeps the timeline browsable.
@@ -2150,41 +2151,11 @@ export default function CalendarScreen() {
                 </>
               ) : (
                 <>
-                  {/* PRO HISTORY — reorganized into tabs (Обзор / Аналитика / Сделки) so everything
-                      isn't dumped in one long scroll. Each tab reuses the exact same data/markup
-                      that existed before — nothing computational changed, only how it's grouped. */}
-                  <div className={`sticky top-0 z-10 -mx-5 sm:-mx-6 mb-4 flex gap-1 border-b px-5 py-2 sm:px-6 backdrop-blur ${
-                    isLight ? 'border-zinc-200 bg-zinc-50/90' : 'border-zinc-800 bg-zinc-900/90'
-                  }`}>
-                    {[
-                      { key: 'overview', label: t('proTabOverview') || 'Обзор', icon: Zap },
-                      { key: 'analytics', label: t('proTabAnalytics') || 'Аналитика', icon: Sparkles },
-                      { key: 'trades', label: t('proTabTrades') || 'Сделки', icon: History },
-                    ].map((tab) => {
-                      const TabIcon = tab.icon;
-                      const active = historyAnalysisTab === tab.key;
-                      return (
-                        <button
-                          key={tab.key}
-                          type="button"
-                          onClick={() => setHistoryAnalysisTab(tab.key)}
-                          className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium transition-all ${
-                            active
-                              ? isLight ? 'bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200' : 'bg-zinc-800 text-zinc-50 ring-1 ring-zinc-700'
-                              : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-500 hover:text-zinc-200'
-                          }`}
-                        >
-                          <TabIcon className={`h-3.5 w-3.5 ${active ? 'text-amber-500' : ''}`} />
-                          {tab.label}
-                          {tab.key === 'trades' && historyTrades.length > 0 && (
-                            <span className={`ml-0.5 rounded-full px-1.5 text-[10px] ${isLight ? 'bg-zinc-200 text-zinc-600' : 'bg-zinc-700 text-zinc-300'}`}>{historyTrades.length}</span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {/* PRO HISTORY — single seamless screen. Secondary detail (Scorecard, deep
+                      analytics) is tucked behind accordions so the screen opens calm and
+                      uncluttered; nothing about the underlying data or handlers changed. */}
 
-                  {/* ── Compact toolbar (currency · deposit · sync) — always visible above every tab ── */}
+                  {/* ── Compact toolbar (currency · deposit · sync) — always visible ── */}
                   <div className="flex flex-wrap items-center gap-2 mb-4">
                     <button
                       onClick={() => {
@@ -2214,8 +2185,6 @@ export default function CalendarScreen() {
                     )}
                   </div>
 
-                  {historyAnalysisTab === 'overview' && (
-                  <>
                   <PnlCurve trades={historyTrades} accounts={ctraderAccounts} language={language} isLight={isLight} />
 
                   {/* ── Luxury Donut + Stats Header ─────────────────────── */}
@@ -2365,6 +2334,31 @@ export default function CalendarScreen() {
 
                     return (
                       <div className="mb-4 space-y-3">
+                        <button
+                          type="button"
+                          onClick={() => setProScorecardOpen((v) => !v)}
+                          className={`w-full group relative overflow-hidden rounded-2xl border px-4 py-3.5 text-left transition-all duration-200 hover:-translate-y-0.5 ${
+                            proScorecardOpen
+                              ? isLight ? 'border-amber-300/60 bg-amber-50/50' : 'border-amber-400/25 bg-amber-400/[0.05]'
+                              : isLight ? 'border-zinc-200 bg-white hover:border-amber-400/40 hover:shadow-md' : 'border-zinc-800 bg-zinc-950/70 hover:border-amber-400/30 hover:bg-zinc-900'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="flex items-center gap-3">
+                              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border font-display text-sm font-bold ${
+                                score >= 80 ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-500' : score >= 60 ? 'border-amber-400/30 bg-amber-400/10 text-amber-500' : score >= 40 ? 'border-orange-400/30 bg-orange-500/10 text-orange-500' : 'border-red-400/30 bg-red-500/10 text-red-500'
+                              }`}>{grade}</span>
+                              <span>
+                                <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>PRO Scorecard · {score}</span>
+                                <span className="block mt-0.5 text-[11px] text-zinc-500">{scoreLabel}</span>
+                              </span>
+                            </span>
+                            <ChevronDown className={`h-4 w-4 text-amber-500 shrink-0 transition-transform duration-300 ${proScorecardOpen ? 'rotate-180' : ''}`} />
+                          </div>
+                        </button>
+
+                        {proScorecardOpen && (
+                        <div className="space-y-3">
                         <div className={`relative overflow-hidden rounded-2xl p-5 sm:p-7 ${isLight ? 'bg-gradient-to-br from-white to-zinc-50 shadow-[0_1px_0_rgba(0,0,0,.04),0_16px_40px_rgba(0,0,0,.06)]' : 'bg-gradient-to-br from-zinc-900 via-zinc-950 to-black shadow-[0_24px_70px_rgba(0,0,0,.5)]'}`}>
                           <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-amber-400/[0.07] blur-3xl" />
                           <div className="relative flex items-center justify-between mb-5">
@@ -2470,23 +2464,41 @@ export default function CalendarScreen() {
                           </button>
                         </div>
                       </div>
+                        )}
+                      </div>
                     );
                   })()}
 
-                  </>
-                  )}
+                  {/* ── Аналитика — collapsed by default, expand for the full money-movement breakdown ── */}
+                  <section className="mb-4">
+                    <button
+                      type="button"
+                      onClick={() => setProAnalyticsOpen((v) => !v)}
+                      className={`w-full group relative overflow-hidden rounded-2xl border px-4 py-3.5 text-left transition-all duration-200 hover:-translate-y-0.5 ${
+                        proAnalyticsOpen
+                          ? isLight ? 'border-amber-300/60 bg-amber-50/60' : 'border-amber-400/30 bg-amber-400/[0.06]'
+                          : isLight ? 'border-zinc-300 bg-white hover:border-amber-400/40 hover:shadow-md' : 'border-zinc-800 bg-zinc-950/70 hover:border-amber-400/30 hover:bg-zinc-900'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="flex items-center gap-3">
+                          <span className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${proAnalyticsOpen ? 'border-amber-400/30 bg-amber-400/10 text-amber-500' : isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-400 group-hover:text-amber-500' : 'border-zinc-800 bg-zinc-900 text-zinc-500 group-hover:text-amber-500'}`}>
+                            <Sparkles className="h-4 w-4" />
+                          </span>
+                          <span>
+                            <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('proFinancialPicture')}</span>
+                            <span className="block mt-0.5 text-[11px] text-zinc-500">{t('moneyInMotion')}</span>
+                          </span>
+                        </span>
+                        <ChevronDown className={`h-4 w-4 text-amber-500 shrink-0 transition-transform duration-300 ${proAnalyticsOpen ? 'rotate-180' : ''}`} />
+                      </div>
+                    </button>
 
-                  {historyAnalysisTab === 'analytics' && (
-                  <>
+                    {proAnalyticsOpen && (
+                    <div className="mt-2">
                   {/* ── Движение денег — депозиты/выводы по категориям ── */}
                   {historyTrades.length > 0 ? (
                   <div className="mb-4 pt-1">
-                    <div className={`mb-3 flex items-center gap-2 border-t pt-4 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
-                      <span className="flex items-center gap-1.5 font-data text-[10px] uppercase tracking-[0.28em] text-amber-500 font-bold">
-                        <Sparkles className="h-3 w-3" /> {t('proFinancialPicture')}
-                      </span>
-                      <span className={`font-data text-[10px] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>· {t('moneyInMotion')}</span>
-                    </div>
                     <div className="space-y-4">
                   {historyCurrency === 'ALL' ? (
                     <div className="mb-5 space-y-3">
@@ -2611,11 +2623,10 @@ export default function CalendarScreen() {
                       <p className={`text-sm ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('emptyHistoryDesc')}</p>
                     </div>
                   )}
-                  </>
-                  )}
+                    </div>
+                    )}
+                  </section>
 
-                  {historyAnalysisTab === 'trades' && (
-                  <>
                   {/* ── Сделки — единый блок фильтров: быстрый win/loss, "Фильтры" и валюта вместе ── */}
                   <div className={`mb-4 flex items-center gap-2 border-t pt-4 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
                     <span className="flex items-center gap-1.5 font-data text-[10px] uppercase tracking-[0.28em] text-amber-500 font-bold">
@@ -2803,8 +2814,6 @@ export default function CalendarScreen() {
                       {confirmingClear ? t('confirmClearHistory') : t('clearHistory')}
                     </button>
                   </div>
-                  </>
-                  )}
                 </>
               )}
             </div>
