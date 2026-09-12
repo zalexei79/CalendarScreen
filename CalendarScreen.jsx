@@ -4,7 +4,7 @@ import {
   Calendar, ChevronDown, Link2, KeyRound, UploadCloud, FileText,
   CheckCircle2, RefreshCw, History, Download, Pencil,
   Wallet, ShoppingCart, Home, Briefcase, ShoppingBag, CreditCard, MoreHorizontal, Cigarette, Utensils, Car, Gift, Gamepad2, Fish, ChartCandlestick, Repeat2, CircleDollarSign,
-  Wifi, WifiOff, Zap, Award, Lock, Flame,
+  Wifi, WifiOff, Zap, Award, Flame,
 } from 'lucide-react';
 import { supabase } from './src/supabaseClient';
 
@@ -789,10 +789,10 @@ export default function CalendarScreen() {
     return { score, grade, label };
   }, [basicAnalysis, analysisStats]);
 
-  // One free, rule-based coaching line — teases the paid "deep AI analysis" without needing it.
+  // Rule-based observations from the selected trades, not an AI assessment.
   const traderInsight = useMemo(() => {
     if (!basicAnalysis) return '';
-    if (basicAnalysis.longestLossStreak >= 3) return `Замечена серия из ${basicAnalysis.longestLossStreak} убыточных сделок подряд — риск «отыгрыша» эмоций. Стоит сокращать размер позиции после 2 убытков подряд.`;
+    if (basicAnalysis.longestLossStreak >= 3) return `Самая длинная серия убытков в выборке: ${basicAnalysis.longestLossStreak}. Сопоставьте этот период с заметками к торговым дням: по одним результатам сделок нельзя определить причины убытков или эмоциональное состояние.`;
     if (basicAnalysis.payoffRatio > 0 && basicAnalysis.payoffRatio < 1 && analysisStats.winrate >= 50) return 'Винрейт хороший, но средний убыток крупнее среднего профита — похоже, прибыль фиксируется слишком рано, а убытки пересиживаются.';
     if (basicAnalysis.profitFactor !== Infinity && basicAnalysis.profitFactor < 1) return 'Profit Factor ниже 1 — за период убытки перевешивают прибыль. Стоит пересмотреть risk/reward по сделкам.';
     if (basicAnalysis.profitFactor >= 1.5) return 'Сильный период: Profit Factor выше 1.5 говорит о стабильном преимуществе в текущей стратегии. Держите риск неизменным.';
@@ -2261,7 +2261,7 @@ export default function CalendarScreen() {
                     const scoreCirc = 238.76;
 
                     const insight = longestLossStreak >= 3
-                      ? `Серия из ${longestLossStreak} убыточных сделок подряд — риск «отыгрыша» эмоций. Сокращайте размер позиции после 2 убытков подряд.`
+                      ? `Самая длинная серия убытков в выборке: ${longestLossStreak}. Сопоставьте этот период с заметками к торговым дням: по одним результатам сделок нельзя определить причины убытков или эмоциональное состояние.`
                       : (payoffRatio > 0 && payoffRatio < 1 && winrate >= 50)
                       ? 'Винрейт хороший, но средний убыток крупнее среднего профита — похоже, прибыль фиксируется слишком рано.'
                       : (profitFactor !== Infinity && profitFactor < 1)
@@ -2371,38 +2371,16 @@ export default function CalendarScreen() {
                         </section>
 
                         <div className={`relative overflow-hidden rounded-2xl border p-4 ${isLight ? 'border-amber-300/70 bg-gradient-to-br from-amber-50 to-white' : 'border-amber-400/25 bg-gradient-to-br from-amber-400/[0.08] via-zinc-950 to-zinc-950'}`}>
-                          <div className="absolute -right-6 -top-8 select-none pointer-events-none font-display text-7xl font-bold tracking-tighter text-amber-400/[0.06]">AI</div>
+                          <div className="absolute -right-6 -top-8 select-none pointer-events-none font-display text-7xl font-bold tracking-tighter text-amber-400/[0.06]">PRO</div>
                           <div className="relative flex items-start gap-2.5 mb-3">
                             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-400/10 text-amber-500"><Sparkles className="h-4 w-4" /></span>
                             <div>
-                              <p className={`text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Инсайт по вашей торговле</p>
-                              <p className="text-[11px] text-zinc-500">Бесплатный разбор на основе текущей выборки</p>
+                              <p className={`text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Наблюдение по статистике</p>
+                              <p className="text-[11px] text-zinc-500">На основе сделок за выбранный период</p>
                             </div>
                           </div>
                           <p className={`relative rounded-xl border px-3 py-2.5 text-xs leading-relaxed mb-3 ${isLight ? 'border-zinc-200 bg-white text-zinc-700' : 'border-zinc-800 bg-black/25 text-zinc-300'}`}>{insight}</p>
 
-                          <div className={`relative overflow-hidden rounded-xl border mb-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/25'}`}>
-                            <div aria-hidden="true" className="px-3 py-2.5 space-y-2 blur-[3px] select-none opacity-70">
-                              <div className="flex items-center justify-between gap-3">
-                                <div className={`h-2.5 w-2/5 rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
-                                <div className={`h-2.5 w-10 rounded-full ${isLight ? 'bg-emerald-200' : 'bg-emerald-500/30'}`} />
-                              </div>
-                              <div className={`h-2.5 w-full rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
-                              <div className={`h-2.5 w-4/5 rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
-                              <div className="flex items-center justify-between gap-3">
-                                <div className={`h-2.5 w-1/3 rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
-                                <div className={`h-2.5 w-10 rounded-full ${isLight ? 'bg-red-200' : 'bg-red-500/30'}`} />
-                              </div>
-                            </div>
-                            <div className={`pointer-events-none absolute inset-0 bg-gradient-to-t ${isLight ? 'from-white via-white/40 to-transparent' : 'from-zinc-950 via-zinc-950/40 to-transparent'}`} />
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <span className={`flex h-9 w-9 items-center justify-center rounded-full border ${isLight ? 'border-zinc-200 bg-white text-zinc-400' : 'border-zinc-700 bg-zinc-900 text-zinc-500'}`}><Lock className="h-4 w-4" /></span>
-                            </div>
-                          </div>
-
-                          <button type="button" className="relative w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-4 py-2.5 text-xs font-semibold text-zinc-950 shadow-[0_8px_24px_rgba(251,191,36,.25)] hover:from-amber-300 hover:to-amber-400 active:scale-[0.99] transition-all">
-                            <Sparkles className="h-3.5 w-3.5" /> Разблокировать глубокий AI-разбор
-                          </button>
                         </div>
                       </div>
                       </div>
@@ -3341,46 +3319,18 @@ export default function CalendarScreen() {
               <div className={`relative overflow-hidden rounded-2xl border p-4 ${
                 isLight ? 'border-amber-300/70 bg-gradient-to-br from-amber-50 to-white' : 'border-amber-400/25 bg-gradient-to-br from-amber-400/[0.08] via-zinc-950 to-zinc-950'
               }`}>
-                <div className="absolute -right-6 -top-8 select-none pointer-events-none font-display text-7xl font-bold tracking-tighter text-amber-400/[0.06]">AI</div>
+                <div className="absolute -right-6 -top-8 select-none pointer-events-none font-display text-7xl font-bold tracking-tighter text-amber-400/[0.06]">PRO</div>
                 <div className="relative flex items-start gap-2.5 mb-3">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-400/10 text-amber-500"><Sparkles className="h-4 w-4" /></span>
                   <div>
-                    <p className={`text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Инсайт по вашей торговле</p>
-                    <p className="text-[11px] text-zinc-500">Бесплатный разбор на основе текущей выборки</p>
+                    <p className={`text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Наблюдение по статистике</p>
+                    <p className="text-[11px] text-zinc-500">На основе сделок за выбранный период</p>
                   </div>
                 </div>
                 <p className={`relative rounded-xl border px-3 py-2.5 text-xs leading-relaxed mb-3 ${isLight ? 'border-zinc-200 bg-white text-zinc-700' : 'border-zinc-800 bg-black/25 text-zinc-300'}`}>
                   {traderInsight}
                 </p>
 
-                {/* Locked deep-analysis preview — shows a shape of the real thing, blurred, instead of a placeholder button */}
-                <div className={`relative overflow-hidden rounded-xl border mb-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/25'}`}>
-                  <div aria-hidden="true" className="px-3 py-2.5 space-y-2 blur-[3px] select-none opacity-70">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className={`h-2.5 w-2/5 rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
-                      <div className={`h-2.5 w-10 rounded-full ${isLight ? 'bg-emerald-200' : 'bg-emerald-500/30'}`} />
-                    </div>
-                    <div className={`h-2.5 w-full rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
-                    <div className={`h-2.5 w-4/5 rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
-                    <div className="flex items-center justify-between gap-3">
-                      <div className={`h-2.5 w-1/3 rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
-                      <div className={`h-2.5 w-10 rounded-full ${isLight ? 'bg-red-200' : 'bg-red-500/30'}`} />
-                    </div>
-                  </div>
-                  <div className={`pointer-events-none absolute inset-0 bg-gradient-to-t ${isLight ? 'from-white via-white/40 to-transparent' : 'from-zinc-950 via-zinc-950/40 to-transparent'}`} />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className={`flex h-9 w-9 items-center justify-center rounded-full border ${isLight ? 'border-zinc-200 bg-white text-zinc-400' : 'border-zinc-700 bg-zinc-900 text-zinc-500'}`}>
-                      <Lock className="h-4 w-4" />
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  className="relative w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-4 py-2.5 text-xs font-semibold text-zinc-950 shadow-[0_8px_24px_rgba(251,191,36,.25)] hover:from-amber-300 hover:to-amber-400 active:scale-[0.99] transition-all"
-                >
-                  <Sparkles className="h-3.5 w-3.5" /> Разблокировать глубокий AI-разбор
-                </button>
               </div>
             ) : (
               <div className={`rounded-md border border-dashed px-3 py-3 flex items-start gap-2.5 ${
