@@ -821,13 +821,11 @@ export default function CalendarScreen() {
 
   const [analysisOpen, setAnalysisOpen] = useState(false);
   const [analysisVisible, setAnalysisVisible] = useState(false);
-  const [analysisTab, setAnalysisTab] = useState('overview');
 
   function openAnalysis() {
     setAnalysisFrom(effectiveFrom);
     setAnalysisTo(effectiveTo);
     setAnalysisPreset('Текущий период');
-    setAnalysisTab('overview');
     setAnalysisOpen(true);
     requestAnimationFrame(() => setAnalysisVisible(true));
   }
@@ -1137,15 +1135,11 @@ export default function CalendarScreen() {
   const [historyCategoryMenuOpen, setHistoryCategoryMenuOpen] = useState(false);
   const [historyFiltersOpen, setHistoryFiltersOpen] = useState(false);
   const [historyPeriodMenuOpen, setHistoryPeriodMenuOpen] = useState(false);
-  const [historyAnalysisOpen, setHistoryAnalysisOpen] = useState(false);
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
-  const [proScorecardOpen, setProScorecardOpen] = useState(false);
-  const [proAnalyticsOpen, setProAnalyticsOpen] = useState(false);
-  const [historyAnalysisTab, setHistoryAnalysisTab] = useState('overview');
+  const [instrumentBreakdownOpen, setInstrumentBreakdownOpen] = useState(false);
   const [freeTimelineSelected, setFreeTimelineSelected] = useState(null);
   // 0 = latest window, 1 = previous 10 days, etc. Keeps the timeline browsable.
   const [freeTimelineOffset, setFreeTimelineOffset] = useState(0);
-  const [freeDynamicsOpen, setFreeDynamicsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [exportPeriodPreset, setExportPeriodPreset] = useState('currentPeriod');
   const [confirmingClear, setConfirmingClear] = useState(false);
@@ -1385,7 +1379,6 @@ export default function CalendarScreen() {
     setProFiltersOpen(false);
     setConfirmingClear(false);
     setHistoryAnalysisOpen(false);
-    setHistoryAnalysisTab('overview');
   }
 
   function closeHistory() {
@@ -1837,41 +1830,12 @@ export default function CalendarScreen() {
             </div>
 
             <div className={`overflow-y-auto px-5 sm:px-6 py-5 flex-1 min-h-0 ${isLight ? 'bg-zinc-50/50' : ''}`} style={{ overscrollBehavior: 'contain' }}>
-              {/* FREE — Динамика периода (скрыта по умолчанию, раскрывается по кнопке) */}
+              {/* FREE — Динамика периода */}
               {!traderMode && (
                 <section className="mb-4">
-                  {/* Кнопка-аккордеон */}
-                  <button
-                    type="button"
-                    onClick={() => setFreeDynamicsOpen((v) => !v)}
-                    className={`w-full group relative overflow-hidden rounded-2xl border px-4 py-3.5 text-left transition-all duration-200 hover:-translate-y-0.5 ${
-                      freeDynamicsOpen
-                        ? isLight ? 'border-emerald-300/70 bg-emerald-50/60' : 'border-emerald-500/30 bg-emerald-500/[0.06]'
-                        : isLight ? 'border-zinc-300 bg-white hover:border-emerald-400/50 hover:shadow-md' : 'border-zinc-800 bg-zinc-950/70 hover:border-emerald-500/35 hover:bg-zinc-900'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="flex items-center gap-3">
-                        <span className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${freeDynamicsOpen ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-500' : isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-400 group-hover:border-emerald-300/50 group-hover:text-emerald-500' : 'border-zinc-800 bg-zinc-900 text-zinc-500 group-hover:border-emerald-500/25 group-hover:text-emerald-500'}`}>
-                          <TrendingUp className="h-4 w-4" />
-                        </span>
-                        <span>
-                          <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('freeDynamicsBtn')}</span>
-                          <span className="block mt-0.5 text-[11px] text-zinc-500">{t('freeDynamicsBtnSub')}</span>
-                        </span>
-                      </span>
-                      <span className="flex items-center gap-2 shrink-0">
-                        <span className={`font-data text-sm font-semibold tabular-nums ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                          {historyCurrency === 'ALL' ? t('allCurrencies') : `${historyTotal >= 0 ? '+' : '−'}${historyCurrencySymbol}${formatMoneyShort(Math.abs(historyTotal))}`}
-                        </span>
-                        <ChevronDown className={`h-4 w-4 text-emerald-500 transition-transform duration-300 ${freeDynamicsOpen ? 'rotate-180' : ''}`} />
-                      </span>
-                    </div>
-                  </button>
+                  <h3 className="mb-3 px-1 text-sm font-semibold tracking-tight">{t('freeDynamicsBtn')}</h3>
 
-                  {/* Содержимое аккордеона */}
-                  {freeDynamicsOpen && (
-                    <div className={`mt-2 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950'}`}>
+                  <div className={`mt-2 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950'}`}>
                       <div className={`rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50/70' : 'border-zinc-800 bg-black/20'}`}>
                         <div className="mb-3 flex items-center justify-between gap-3">
                           <div className="flex gap-3 text-[10px]"><span className="text-emerald-500">● {t('incomeLabel')}</span><span className="text-red-400">● {t('expenseLabel')}</span></div>
@@ -1907,38 +1871,15 @@ export default function CalendarScreen() {
                         <div><p className="text-[10px] uppercase tracking-wide text-zinc-500">{t('recordsCount')}</p><p className={`mt-1 text-sm font-data ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>{historyTrades.length}</p></div>
                       </div>
                     </div>
-                  )}
                 </section>
               )}
 
-              {/* FREE — Обзор денег (анализ источников, всегда скрыт под toggle) */}
+              {/* FREE — Обзор денег */}
               {!traderMode && historyTrades.length > 0 && (
                 <section className="mb-4">
-                  <button
-                    type="button"
-                    onClick={() => setHistoryAnalysisOpen((v) => !v)}
-                    className={`w-full group relative overflow-hidden rounded-2xl border px-4 py-3.5 text-left transition-all duration-200 hover:-translate-y-0.5 ${
-                      historyAnalysisOpen
-                        ? isLight ? 'border-amber-300/60 bg-amber-50/60' : 'border-amber-400/30 bg-amber-400/[0.06]'
-                        : isLight ? 'border-zinc-300 bg-white hover:border-amber-400/40 hover:shadow-md' : 'border-zinc-800 bg-zinc-950/70 hover:border-amber-400/30 hover:bg-zinc-900'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="flex items-center gap-3">
-                        <span className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${historyAnalysisOpen ? 'border-amber-400/30 bg-amber-400/10 text-amber-500' : isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-400 group-hover:text-amber-500' : 'border-zinc-800 bg-zinc-900 text-zinc-500 group-hover:text-amber-500'}`}>
-                          <Sparkles className="h-4 w-4" />
-                        </span>
-                        <span>
-                          <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('freeAnalysisTitle')}</span>
-                          <span className="block mt-0.5 text-[11px] text-zinc-500">{t('freeAnalysisSub')}</span>
-                        </span>
-                      </span>
-                      <ChevronDown className={`h-4 w-4 text-amber-500 shrink-0 transition-transform duration-300 ${historyAnalysisOpen ? 'rotate-180' : ''}`} />
-                    </div>
-                  </button>
+                  <h3 className="mb-3 px-1 text-sm font-semibold tracking-tight">{t('freeAnalysisTitle')}</h3>
 
-                  {historyAnalysisOpen && (
-                    <div className={`mt-2 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-amber-200/60 bg-white shadow-sm' : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.05] via-zinc-950 to-zinc-950'}`}>
+                  <div className={`mt-2 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-amber-200/60 bg-white shadow-sm' : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.05] via-zinc-950 to-zinc-950'}`}>
                       {/* Финансовый вывод */}
                       <div className={`mb-4 rounded-xl border px-4 py-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
                         <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500 mb-1">{t('financialSummary')}</p>
@@ -1974,7 +1915,6 @@ export default function CalendarScreen() {
                         </div>
                       </div>
                     </div>
-                  )}
                 </section>
               )}
 
@@ -2151,9 +2091,7 @@ export default function CalendarScreen() {
                 </>
               ) : (
                 <>
-                  {/* PRO HISTORY — single seamless screen. Secondary detail (Scorecard, deep
-                      analytics) is tucked behind accordions so the screen opens calm and
-                      uncluttered; nothing about the underlying data or handlers changed. */}
+                  {/* PRO HISTORY — one continuous feed; only the instrument breakdown collapses. */}
 
                   {/* ── Compact toolbar (currency · deposit · sync) — always visible ── */}
                   <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -2334,30 +2272,6 @@ export default function CalendarScreen() {
 
                     return (
                       <div className="mb-4 space-y-3">
-                        <button
-                          type="button"
-                          onClick={() => setProScorecardOpen((v) => !v)}
-                          className={`w-full group relative overflow-hidden rounded-2xl border px-4 py-3.5 text-left transition-all duration-200 hover:-translate-y-0.5 ${
-                            proScorecardOpen
-                              ? isLight ? 'border-amber-300/60 bg-amber-50/50' : 'border-amber-400/25 bg-amber-400/[0.05]'
-                              : isLight ? 'border-zinc-200 bg-white hover:border-amber-400/40 hover:shadow-md' : 'border-zinc-800 bg-zinc-950/70 hover:border-amber-400/30 hover:bg-zinc-900'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="flex items-center gap-3">
-                              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border font-display text-sm font-bold ${
-                                score >= 80 ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-500' : score >= 60 ? 'border-amber-400/30 bg-amber-400/10 text-amber-500' : score >= 40 ? 'border-orange-400/30 bg-orange-500/10 text-orange-500' : 'border-red-400/30 bg-red-500/10 text-red-500'
-                              }`}>{grade}</span>
-                              <span>
-                                <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>PRO Scorecard · {score}</span>
-                                <span className="block mt-0.5 text-[11px] text-zinc-500">{scoreLabel}</span>
-                              </span>
-                            </span>
-                            <ChevronDown className={`h-4 w-4 text-amber-500 shrink-0 transition-transform duration-300 ${proScorecardOpen ? 'rotate-180' : ''}`} />
-                          </div>
-                        </button>
-
-                        {proScorecardOpen && (
                         <div className="space-y-3">
                         <div className={`relative overflow-hidden rounded-2xl p-5 sm:p-7 ${isLight ? 'bg-gradient-to-br from-white to-zinc-50 shadow-[0_1px_0_rgba(0,0,0,.04),0_16px_40px_rgba(0,0,0,.06)]' : 'bg-gradient-to-br from-zinc-900 via-zinc-950 to-black shadow-[0_24px_70px_rgba(0,0,0,.5)]'}`}>
                           <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-amber-400/[0.07] blur-3xl" />
@@ -2429,6 +2343,33 @@ export default function CalendarScreen() {
                           )}
                         </div>
 
+                        <section className={`rounded-2xl border ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/50'}`}>
+                          <button type="button" aria-expanded={instrumentBreakdownOpen} aria-controls="history-instrument-breakdown"
+                            onClick={() => setInstrumentBreakdownOpen(v => !v)}
+                            className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left text-xs font-medium">
+                            {t('instrumentBreakdown')}
+                            <ChevronDown className={`h-4 w-4 text-zinc-500 transition-transform duration-300 motion-reduce:transition-none ${instrumentBreakdownOpen ? 'rotate-180' : ''}`} />
+                          </button>
+                          <div id="history-instrument-breakdown" aria-hidden={!instrumentBreakdownOpen}
+                            className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${instrumentBreakdownOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                            <div className="min-h-0 overflow-hidden">
+                              <div className="space-y-3 px-4 pb-4">
+                                {Object.entries(byInstrument).sort((a, b) => b[1] - a[1]).map(([name, count]) => (
+                                  <div key={name}>
+                                    <div className="mb-1.5 flex items-center justify-between gap-3 text-xs">
+                                      <span className="truncate font-medium">{name}</span>
+                                      <span className="shrink-0 font-data text-zinc-500">{count} {t('trades')}</span>
+                                    </div>
+                                    <div className="h-1 overflow-hidden rounded-full bg-zinc-500/10">
+                                      <div className="h-full rounded-full bg-amber-400/60" style={{ width: `${count / trades.length * 100}%` }} />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </section>
+
                         <div className={`relative overflow-hidden rounded-2xl border p-4 ${isLight ? 'border-amber-300/70 bg-gradient-to-br from-amber-50 to-white' : 'border-amber-400/25 bg-gradient-to-br from-amber-400/[0.08] via-zinc-950 to-zinc-950'}`}>
                           <div className="absolute -right-6 -top-8 select-none pointer-events-none font-display text-7xl font-bold tracking-tighter text-amber-400/[0.06]">AI</div>
                           <div className="relative flex items-start gap-2.5 mb-3">
@@ -2464,37 +2405,14 @@ export default function CalendarScreen() {
                           </button>
                         </div>
                       </div>
-                        )}
                       </div>
                     );
                   })()}
 
-                  {/* ── Аналитика — collapsed by default, expand for the full money-movement breakdown ── */}
+                  {/* ── Аналитика — непрерывная лента ── */}
                   <section className="mb-4">
-                    <button
-                      type="button"
-                      onClick={() => setProAnalyticsOpen((v) => !v)}
-                      className={`w-full group relative overflow-hidden rounded-2xl border px-4 py-3.5 text-left transition-all duration-200 hover:-translate-y-0.5 ${
-                        proAnalyticsOpen
-                          ? isLight ? 'border-amber-300/60 bg-amber-50/60' : 'border-amber-400/30 bg-amber-400/[0.06]'
-                          : isLight ? 'border-zinc-300 bg-white hover:border-amber-400/40 hover:shadow-md' : 'border-zinc-800 bg-zinc-950/70 hover:border-amber-400/30 hover:bg-zinc-900'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="flex items-center gap-3">
-                          <span className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${proAnalyticsOpen ? 'border-amber-400/30 bg-amber-400/10 text-amber-500' : isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-400 group-hover:text-amber-500' : 'border-zinc-800 bg-zinc-900 text-zinc-500 group-hover:text-amber-500'}`}>
-                            <Sparkles className="h-4 w-4" />
-                          </span>
-                          <span>
-                            <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('proFinancialPicture')}</span>
-                            <span className="block mt-0.5 text-[11px] text-zinc-500">{t('moneyInMotion')}</span>
-                          </span>
-                        </span>
-                        <ChevronDown className={`h-4 w-4 text-amber-500 shrink-0 transition-transform duration-300 ${proAnalyticsOpen ? 'rotate-180' : ''}`} />
-                      </div>
-                    </button>
+                    <h3 className="mb-3 px-1 text-sm font-semibold tracking-tight">{t('proFinancialPicture')}</h3>
 
-                    {proAnalyticsOpen && (
                     <div className="mt-2">
                   {/* ── Движение денег — депозиты/выводы по категориям ── */}
                   {historyTrades.length > 0 ? (
@@ -2624,7 +2542,6 @@ export default function CalendarScreen() {
                     </div>
                   )}
                     </div>
-                    )}
                   </section>
 
                   {/* ── Сделки — единый блок фильтров: быстрый win/loss, "Фильтры" и валюта вместе ── */}
@@ -3250,7 +3167,7 @@ export default function CalendarScreen() {
           onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) closeAnalysis(); }}
         >
           <div
-            className={`relative w-full max-w-md rounded-xl border p-6 shadow-xl transition-all duration-200 ${
+            className={`relative w-full max-w-md max-h-[85dvh] overflow-y-auto overscroll-contain rounded-xl border p-6 shadow-xl transition-all duration-200 ${
               analysisVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
             } ${
               isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
