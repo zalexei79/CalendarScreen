@@ -4,7 +4,7 @@ import {
   Calendar, ChevronDown, Link2, KeyRound, UploadCloud, FileText,
   CheckCircle2, RefreshCw, History, Download, Pencil,
   Wallet, ShoppingCart, Home, Briefcase, ShoppingBag, CreditCard, MoreHorizontal, Cigarette, Utensils, Car, Gift, Gamepad2, Fish, ChartCandlestick, Repeat2, CircleDollarSign,
-  Wifi, WifiOff,
+  Wifi, WifiOff, Zap, Award, Lock, Flame,
 } from 'lucide-react';
 import { supabase } from './src/supabaseClient';
 
@@ -774,6 +774,30 @@ export default function CalendarScreen() {
 
     return { bestDay, worstDay, topInstrument, avgPnl, longestLossStreak, profitFactor, avgWin, avgLoss, payoffRatio };
   }, [analysisTrades, analysisStats]);
+
+  // PRO Scorecard — composite 0-100 score from profit factor, winrate, payoff and loss streaks.
+  // Pure client-side math over data we already have, no new backend needed.
+  const traderScore = useMemo(() => {
+    if (!basicAnalysis) return null;
+    const pfComponent = Math.min(basicAnalysis.profitFactor === Infinity ? 3 : basicAnalysis.profitFactor, 3) / 3 * 40;
+    const winComponent = Math.min(Math.max(analysisStats.winrate, 0), 100) / 100 * 35;
+    const payoffComponent = Math.min(basicAnalysis.payoffRatio, 3) / 3 * 15;
+    const streakPenalty = Math.min(basicAnalysis.longestLossStreak, 6) * 1.5;
+    const score = Math.max(4, Math.min(99, Math.round(pfComponent + winComponent + payoffComponent - streakPenalty + 10)));
+    const grade = score >= 85 ? 'S' : score >= 70 ? 'A' : score >= 55 ? 'B' : score >= 40 ? 'C' : 'D';
+    const label = score >= 85 ? 'Элитный трейдер' : score >= 70 ? 'Уверенная рука' : score >= 55 ? 'Стабильная база' : score >= 40 ? 'Есть над чем работать' : 'Требует дисциплины';
+    return { score, grade, label };
+  }, [basicAnalysis, analysisStats]);
+
+  // One free, rule-based coaching line — teases the paid "deep AI analysis" without needing it.
+  const traderInsight = useMemo(() => {
+    if (!basicAnalysis) return '';
+    if (basicAnalysis.longestLossStreak >= 3) return `Замечена серия из ${basicAnalysis.longestLossStreak} убыточных сделок подряд — риск «отыгрыша» эмоций. Стоит сокращать размер позиции после 2 убытков подряд.`;
+    if (basicAnalysis.payoffRatio > 0 && basicAnalysis.payoffRatio < 1 && analysisStats.winrate >= 50) return 'Винрейт хороший, но средний убыток крупнее среднего профита — похоже, прибыль фиксируется слишком рано, а убытки пересиживаются.';
+    if (basicAnalysis.profitFactor !== Infinity && basicAnalysis.profitFactor < 1) return 'Profit Factor ниже 1 — за период убытки перевешивают прибыль. Стоит пересмотреть risk/reward по сделкам.';
+    if (basicAnalysis.profitFactor >= 1.5) return 'Сильный период: Profit Factor выше 1.5 говорит о стабильном преимуществе в текущей стратегии. Держите риск неизменным.';
+    return 'Данных пока немного для глубоких выводов — статистика станет точнее по мере накопления сделок.';
+  }, [basicAnalysis, analysisStats]);
 
   const moneyAnalysis = useMemo(() => {
     if (traderMode || analysisTrades.length === 0) return null;
@@ -3103,52 +3127,148 @@ export default function CalendarScreen() {
               </div>
             )}
 
-            {traderMode && basicAnalysis && (
-              <div className="mb-4">
-                <div className={`text-center rounded-lg border py-4 mb-3 ${
-                  isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-950'
+            {traderMode && basicAnalysis && traderScore && (
+              <div className="mb-4 space-y-3">
+                {/* ── PRO Scorecard hero ─────────────────────────────── */}
+                <div className={`relative overflow-hidden rounded-2xl border p-4 sm:p-5 ${
+                  isLight
+                    ? 'border-amber-300/60 bg-gradient-to-br from-white to-amber-50/60 shadow-sm'
+                    : 'border-amber-400/20 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black shadow-[0_20px_60px_rgba(0,0,0,.4)]'
                 }`}>
-                  <p className={`font-data text-[10px] tracking-widest ${isLight ? 'text-zinc-500' : 'text-zinc-500'} uppercase mb-1`}>Profit Factor</p>
-                  <p className={`font-display text-3xl font-semibold ${basicAnalysis.profitFactor >= 1.5 ? 'text-emerald-600' : basicAnalysis.profitFactor >= 1 ? 'text-zinc-800' : 'text-red-600'}`}>
-                    {basicAnalysis.profitFactor === Infinity ? 'MAX' : basicAnalysis.profitFactor.toFixed(2)}
-                  </p>
+                  <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-amber-400/[0.08] blur-3xl" />
+                  <div className="relative flex items-center justify-between mb-3">
+                    <span className="flex items-center gap-1.5 font-data text-[10px] uppercase tracking-[0.24em] text-amber-500 font-bold">
+                      <Zap className="h-3 w-3" /> PRO Scorecard
+                    </span>
+                    <span className={`rounded-full px-2.5 py-1 font-data text-[10px] font-bold tracking-wide ${
+                      traderScore.score >= 80 ? 'bg-emerald-500/15 text-emerald-500'
+                      : traderScore.score >= 60 ? 'bg-amber-400/15 text-amber-500'
+                      : traderScore.score >= 40 ? 'bg-orange-500/15 text-orange-500'
+                      : 'bg-red-500/15 text-red-500'
+                    }`}>
+                      Грейд {traderScore.grade}
+                    </span>
+                  </div>
+
+                  <div className="relative flex items-center gap-5">
+                    <div className="relative flex shrink-0 items-center justify-center" style={{ width: 96, height: 96 }}>
+                      <svg width="96" height="96" viewBox="0 0 96 96" className="-rotate-90">
+                        <circle cx="48" cy="48" r="38" strokeWidth="9" stroke={isLight ? '#e2e8f0' : '#27272a'} fill="none" />
+                        <circle
+                          cx="48" cy="48" r="38" strokeWidth="9"
+                          stroke={traderScore.score >= 80 ? '#10b981' : traderScore.score >= 60 ? '#f59e0b' : traderScore.score >= 40 ? '#f97316' : '#ef4444'}
+                          strokeDasharray={238.76}
+                          strokeDashoffset={238.76 - (traderScore.score / 100) * 238.76}
+                          strokeLinecap="round"
+                          fill="none"
+                          style={{ transition: 'stroke-dashoffset 0.9s cubic-bezier(.4,0,.2,1)' }}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-center leading-none">
+                        <span className={`font-display text-2xl font-bold tabular-nums ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>{traderScore.score}</span>
+                        <span className={`mt-1 text-[8px] font-bold uppercase tracking-widest ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>SCORE</span>
+                      </div>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-sm font-semibold leading-tight ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{traderScore.label}</p>
+                      <p className="mt-1 text-[11px] text-zinc-500 leading-relaxed">Композитная оценка на основе Profit Factor, винрейта, payoff и серий убытков за выбранный период.</p>
+                    </div>
+                  </div>
                 </div>
 
-                <p className={`text-xs ${isLight ? 'text-zinc-600' : 'text-zinc-500'} leading-relaxed`}>
-                  Средний:{' '}
-                  <span className="text-emerald-600 font-data">+${formatMoney(basicAnalysis.avgWin)}</span>
-                  {' / '}
-                  <span className="text-red-600 font-data">-${formatMoney(basicAnalysis.avgLoss)}</span>
-                  {basicAnalysis.payoffRatio > 0 && <span className="font-data"> (1:{basicAnalysis.payoffRatio.toFixed(2)})</span>}
-                  {' · Лучший день: '}
-                  <span className="text-emerald-600 font-data">{formatSignedShort(basicAnalysis.bestDay[1])}</span>
-                  {' ('}{formatDateLabel(basicAnalysis.bestDay[0])}{')'}
-                  {' · Худший: '}
-                  <span className="text-red-600 font-data">{formatSignedShort(basicAnalysis.worstDay[1])}</span>
-                  {' ('}{formatDateLabel(basicAnalysis.worstDay[0])}{')'}
-                  {' · Частый: '}
-                  <span className={`font-data ${isLight ? 'text-zinc-800' : 'text-zinc-300'}`}>{basicAnalysis.topInstrument[0]}</span>
+                {/* ── Metric tiles ───────────────────────────────────── */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className={`rounded-xl border p-3 transition-transform hover:-translate-y-0.5 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/60'}`}>
+                    <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1">Profit Factor</p>
+                    <p className={`font-display text-xl font-semibold ${basicAnalysis.profitFactor >= 1.5 ? 'text-emerald-500' : basicAnalysis.profitFactor >= 1 ? (isLight ? 'text-zinc-800' : 'text-zinc-200') : 'text-red-500'}`}>
+                      {basicAnalysis.profitFactor === Infinity ? 'MAX' : basicAnalysis.profitFactor.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className={`rounded-xl border p-3 transition-transform hover:-translate-y-0.5 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/60'}`}>
+                    <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1">Payoff (win:loss)</p>
+                    <p className={`font-display text-xl font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>
+                      {basicAnalysis.payoffRatio > 0 ? `1:${basicAnalysis.payoffRatio.toFixed(2)}` : '—'}
+                    </p>
+                  </div>
+                  <div className={`rounded-xl border p-3 flex items-center justify-between transition-transform hover:-translate-y-0.5 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/60'}`}>
+                    <div>
+                      <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1">Средний +</p>
+                      <p className="font-data text-sm font-semibold text-emerald-500">+${formatMoney(basicAnalysis.avgWin)}</p>
+                    </div>
+                    <TrendingUp className="h-4 w-4 text-emerald-500/70" />
+                  </div>
+                  <div className={`rounded-xl border p-3 flex items-center justify-between transition-transform hover:-translate-y-0.5 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/60'}`}>
+                    <div>
+                      <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1">Средний −</p>
+                      <p className="font-data text-sm font-semibold text-red-500">-${formatMoney(basicAnalysis.avgLoss)}</p>
+                    </div>
+                    <TrendingDown className="h-4 w-4 text-red-500/70" />
+                  </div>
+                </div>
+
+                {/* ── Best / worst day spotlight ─────────────────────── */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className={`overflow-hidden rounded-xl border p-3 ${isLight ? 'border-emerald-200 bg-emerald-50/60' : 'border-emerald-500/20 bg-emerald-500/[0.06]'}`}>
+                    <p className="text-[9px] uppercase tracking-wider text-emerald-600/80 mb-1">Лучший день</p>
+                    <p className="font-data text-sm font-bold text-emerald-500">{formatSignedShort(basicAnalysis.bestDay[1])}</p>
+                    <p className="mt-0.5 text-[10px] text-zinc-500">{formatDateLabel(basicAnalysis.bestDay[0])}</p>
+                  </div>
+                  <div className={`overflow-hidden rounded-xl border p-3 ${isLight ? 'border-red-200 bg-red-50/60' : 'border-red-500/20 bg-red-500/[0.06]'}`}>
+                    <p className="text-[9px] uppercase tracking-wider text-red-500/80 mb-1">Худший день</p>
+                    <p className="font-data text-sm font-bold text-red-500">{formatSignedShort(basicAnalysis.worstDay[1])}</p>
+                    <p className="mt-0.5 text-[10px] text-zinc-500">{formatDateLabel(basicAnalysis.worstDay[0])}</p>
+                  </div>
+                </div>
+
+                {/* ── Badges ──────────────────────────────────────────── */}
+                <div className="flex flex-wrap gap-2">
+                  <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-medium ${isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700' : 'border-zinc-800 bg-zinc-900/60 text-zinc-300'}`}>
+                    <Award className="h-3 w-3 text-amber-500" /> Частый инструмент: <span className="font-data">{basicAnalysis.topInstrument[0]}</span>
+                  </span>
                   {basicAnalysis.longestLossStreak >= 2 && (
-                    <>
-                      {' · Серия убытков: '}
-                      <span className="text-red-600 font-data">{basicAnalysis.longestLossStreak}</span>
-                    </>
+                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-medium ${isLight ? 'border-red-200 bg-red-50 text-red-600' : 'border-red-500/25 bg-red-500/10 text-red-400'}`}>
+                      <Flame className="h-3 w-3" /> Серия убытков: <span className="font-data">{basicAnalysis.longestLossStreak}</span>
+                    </span>
                   )}
-                </p>
+                </div>
               </div>
             )}
 
-            <div className={`rounded-md border border-dashed px-3 py-3 flex items-start gap-2.5 ${
-              isLight ? 'border-zinc-300' : 'border-zinc-700'
-            }`}>
-              <Sparkles className={`h-4 w-4 ${isLight ? 'text-zinc-400' : 'text-zinc-600'} shrink-0 mt-0.5`} />
-              <div>
-                <p className={`text-sm font-medium mb-0.5 ${isLight ? 'text-zinc-700' : 'text-zinc-400'}`}>Глубокий AI-анализ — скоро</p>
-                <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-600'} leading-relaxed`}>
-                  Разбор эмоциональных паттернов, конкретных ошибок по каждой сделке и персональные рекомендации — по подписке.
+            {traderMode ? (
+              <div className={`relative overflow-hidden rounded-2xl border p-4 ${
+                isLight ? 'border-amber-300/70 bg-gradient-to-br from-amber-50 to-white' : 'border-amber-400/25 bg-gradient-to-br from-amber-400/[0.08] via-zinc-950 to-zinc-950'
+              }`}>
+                <div className="absolute -right-6 -top-8 select-none pointer-events-none font-display text-7xl font-bold tracking-tighter text-amber-400/[0.06]">AI</div>
+                <div className="relative flex items-start gap-2.5 mb-3">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-400/10 text-amber-500"><Sparkles className="h-4 w-4" /></span>
+                  <div>
+                    <p className={`text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Инсайт по вашей торговле</p>
+                    <p className="text-[11px] text-zinc-500">Бесплатный разбор на основе текущей выборки</p>
+                  </div>
+                </div>
+                <p className={`relative rounded-xl border px-3 py-2.5 text-xs leading-relaxed mb-3 ${isLight ? 'border-zinc-200 bg-white text-zinc-700' : 'border-zinc-800 bg-black/25 text-zinc-300'}`}>
+                  {traderInsight}
                 </p>
+                <button
+                  type="button"
+                  className="relative w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-amber-400/40 px-4 py-2.5 text-xs font-semibold text-amber-500 hover:bg-amber-400/5 transition-colors"
+                >
+                  <Lock className="h-3.5 w-3.5" /> Глубокий AI-разбор по каждой сделке — скоро
+                </button>
               </div>
-            </div>
+            ) : (
+              <div className={`rounded-md border border-dashed px-3 py-3 flex items-start gap-2.5 ${
+                isLight ? 'border-zinc-300' : 'border-zinc-700'
+              }`}>
+                <Sparkles className={`h-4 w-4 ${isLight ? 'text-zinc-400' : 'text-zinc-600'} shrink-0 mt-0.5`} />
+                <div>
+                  <p className={`text-sm font-medium mb-0.5 ${isLight ? 'text-zinc-700' : 'text-zinc-400'}`}>Глубокий AI-анализ — скоро</p>
+                  <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-600'} leading-relaxed`}>
+                    Разбор эмоциональных паттернов, конкретных ошибок по каждой сделке и персональные рекомендации — по подписке.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
