@@ -1139,6 +1139,7 @@ export default function CalendarScreen() {
   const [historyPeriodMenuOpen, setHistoryPeriodMenuOpen] = useState(false);
   const [historyAnalysisOpen, setHistoryAnalysisOpen] = useState(false);
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
+  const [proScorecardOpen, setProScorecardOpen] = useState(false);
   const [historyAnalysisTab, setHistoryAnalysisTab] = useState('overview');
   const [freeTimelineSelected, setFreeTimelineSelected] = useState(null);
   // 0 = latest window, 1 = previous 10 days, etc. Keeps the timeline browsable.
@@ -2429,8 +2430,26 @@ export default function CalendarScreen() {
                   })()}
 
                   {/* ── PRO Scorecard — profit factor, payoff, best/worst day, streaks ── */}
-                  {(() => {
-                    if (historyTrades.length === 0) return null;
+                  {historyTrades.length > 0 && (!proScorecardOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => setProScorecardOpen(true)}
+                      className={`w-full mb-4 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3.5 text-left transition-all hover:-translate-y-0.5 ${
+                        isLight ? 'border-zinc-200 bg-white hover:border-amber-400/40 hover:shadow-md' : 'border-zinc-800 bg-zinc-950/70 hover:border-amber-400/30 hover:bg-zinc-900'
+                      }`}
+                    >
+                      <span className="flex items-center gap-3">
+                        <span className={`flex h-9 w-9 items-center justify-center rounded-xl border ${isLight ? 'border-zinc-200 bg-zinc-50 text-amber-500' : 'border-zinc-800 bg-zinc-900 text-amber-400'}`}>
+                          <Zap className="h-4 w-4" />
+                        </span>
+                        <span>
+                          <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Scorecard и AI-инсайт</span>
+                          <span className="block mt-0.5 text-[11px] text-zinc-500">Profit Factor, payoff, лучший/худший день</span>
+                        </span>
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-amber-500 shrink-0" />
+                    </button>
+                  ) : (() => {
                     const trades = historyTrades;
                     const wins = trades.filter((tr) => tr.pnl >= 0);
                     const losses = trades.filter((tr) => tr.pnl < 0);
@@ -2582,9 +2601,17 @@ export default function CalendarScreen() {
                             <Sparkles className="h-3.5 w-3.5" /> Разблокировать глубокий AI-разбор
                           </button>
                         </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setProScorecardOpen(false)}
+                          className={`w-full flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-colors ${isLight ? 'border-zinc-200 text-zinc-500 hover:text-zinc-800' : 'border-zinc-800 text-zinc-500 hover:text-zinc-200'}`}
+                        >
+                          Свернуть <ChevronDown className="h-3.5 w-3.5 rotate-180" />
+                        </button>
                       </div>
                     );
-                  })()}
+                  })())}
 
                   {/* ── Win/Loss quick filter ───────────────────────────── */}
                   <div className={`flex gap-1 mb-4 rounded-xl border p-1 ${
