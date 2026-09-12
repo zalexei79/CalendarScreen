@@ -2478,68 +2478,73 @@ export default function CalendarScreen() {
 
                     return (
                       <div className="mb-4 space-y-3">
-                        <div className={`relative overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-amber-300/60 bg-gradient-to-br from-white to-amber-50/60 shadow-sm' : 'border-amber-400/20 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black shadow-[0_20px_60px_rgba(0,0,0,.4)]'}`}>
-                          <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-amber-400/[0.08] blur-3xl" />
-                          <div className="relative flex items-center justify-between mb-3">
-                            <span className="flex items-center gap-1.5 font-data text-[10px] uppercase tracking-[0.24em] text-amber-500 font-bold"><Zap className="h-3 w-3" /> PRO Scorecard</span>
+                        <div className={`relative overflow-hidden rounded-2xl p-5 sm:p-7 ${isLight ? 'bg-gradient-to-br from-white to-zinc-50 shadow-[0_1px_0_rgba(0,0,0,.04),0_16px_40px_rgba(0,0,0,.06)]' : 'bg-gradient-to-br from-zinc-900 via-zinc-950 to-black shadow-[0_24px_70px_rgba(0,0,0,.5)]'}`}>
+                          <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-amber-400/[0.07] blur-3xl" />
+                          <div className="relative flex items-center justify-between mb-5">
+                            <span className="flex items-center gap-1.5 font-data text-[10px] uppercase tracking-[0.28em] text-amber-500 font-bold"><Zap className="h-3 w-3" /> PRO Scorecard</span>
                             <span className={`rounded-full px-2.5 py-1 font-data text-[10px] font-bold tracking-wide ${score >= 80 ? 'bg-emerald-500/15 text-emerald-500' : score >= 60 ? 'bg-amber-400/15 text-amber-500' : score >= 40 ? 'bg-orange-500/15 text-orange-500' : 'bg-red-500/15 text-red-500'}`}>Грейд {grade}</span>
                           </div>
-                          <div className="relative flex items-center gap-5">
-                            <div className="relative flex shrink-0 items-center justify-center" style={{ width: 96, height: 96 }}>
-                              <svg width="96" height="96" viewBox="0 0 96 96" className="-rotate-90">
-                                <circle cx="48" cy="48" r="38" strokeWidth="9" stroke={isLight ? '#e2e8f0' : '#27272a'} fill="none" />
-                                <circle cx="48" cy="48" r="38" strokeWidth="9" stroke={scoreColor}
+                          <div className="relative flex flex-col items-center text-center gap-4 sm:flex-row sm:text-left sm:gap-8">
+                            <div className="relative flex shrink-0 items-center justify-center" style={{ width: 132, height: 132 }}>
+                              <svg width="132" height="132" viewBox="0 0 96 96" className="-rotate-90">
+                                <circle cx="48" cy="48" r="38" strokeWidth="6" stroke={isLight ? '#eef0f3' : '#1c1c1f'} fill="none" />
+                                <circle cx="48" cy="48" r="38" strokeWidth="6" stroke={scoreColor}
                                   strokeDasharray={scoreCirc} strokeDashoffset={scoreCirc - (score / 100) * scoreCirc}
                                   strokeLinecap="round" fill="none" style={{ transition: 'stroke-dashoffset 0.9s cubic-bezier(.4,0,.2,1)' }} />
                               </svg>
                               <div className="absolute inset-0 flex flex-col items-center justify-center text-center leading-none">
-                                <span className={`font-display text-2xl font-bold tabular-nums ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>{score}</span>
-                                <span className={`mt-1 text-[8px] font-bold uppercase tracking-widest ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>SCORE</span>
+                                <span className={`font-display text-4xl font-bold tabular-nums tracking-tight ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>{score}</span>
+                                <span className={`mt-1.5 text-[8px] font-bold uppercase tracking-[0.2em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>SCORE</span>
                               </div>
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className={`text-sm font-semibold leading-tight ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{scoreLabel}</p>
-                              <p className="mt-1 text-[11px] text-zinc-500 leading-relaxed">На основе Profit Factor, винрейта, payoff и серий убытков за текущий фильтр истории.</p>
+                              <p className={`text-base font-semibold leading-tight ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{scoreLabel}</p>
+                              <p className="mt-1.5 text-[11px] text-zinc-500 leading-relaxed max-w-xs mx-auto sm:mx-0">На основе Profit Factor, винрейта, payoff и серий убытков за текущий фильтр истории.</p>
+                              <div className={`mt-4 inline-flex items-baseline gap-2 border-t pt-3 sm:border-t-0 sm:pt-0 sm:border-l sm:pl-5 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
+                                <span className="text-[10px] uppercase tracking-wider text-zinc-500">Profit Factor</span>
+                                <span className={`font-display text-2xl font-bold tabular-nums ${profitFactor >= 1.5 ? 'text-emerald-500' : profitFactor >= 1 ? (isLight ? 'text-zinc-800' : 'text-zinc-200') : 'text-red-500'}`}>{profitFactor === Infinity ? 'MAX' : profitFactor.toFixed(2)}</span>
+                              </div>
                             </div>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className={`rounded-xl border p-3 transition-transform hover:-translate-y-0.5 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/60'}`}>
-                            <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1">Profit Factor</p>
-                            <p className={`font-display text-xl font-semibold ${profitFactor >= 1.5 ? 'text-emerald-500' : profitFactor >= 1 ? (isLight ? 'text-zinc-800' : 'text-zinc-200') : 'text-red-500'}`}>{profitFactor === Infinity ? 'MAX' : profitFactor.toFixed(2)}</p>
+                        <div className={`grid grid-cols-3 divide-x rounded-2xl px-1 py-4 ${isLight ? 'divide-zinc-200' : 'divide-zinc-800'}`}>
+                          <div className="px-3 text-center">
+                            <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1.5">Payoff</p>
+                            <p className={`font-display text-lg font-semibold tabular-nums ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{payoffRatio > 0 ? `1:${payoffRatio.toFixed(2)}` : '—'}</p>
                           </div>
-                          <div className={`rounded-xl border p-3 transition-transform hover:-translate-y-0.5 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/60'}`}>
-                            <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1">Payoff (win:loss)</p>
-                            <p className={`font-display text-xl font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{payoffRatio > 0 ? `1:${payoffRatio.toFixed(2)}` : '—'}</p>
+                          <div className="px-3 text-center">
+                            <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1.5 flex items-center justify-center gap-1"><TrendingUp className="h-3 w-3 text-emerald-500/70" /> Средний +</p>
+                            <p className="font-data text-lg font-semibold text-emerald-500 tabular-nums">+{historyCurrencySymbol}{formatMoney(avgWin)}</p>
                           </div>
-                          <div className={`rounded-xl border p-3 flex items-center justify-between transition-transform hover:-translate-y-0.5 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/60'}`}>
-                            <div><p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1">Средний +</p><p className="font-data text-sm font-semibold text-emerald-500">+{historyCurrencySymbol}{formatMoney(avgWin)}</p></div>
-                            <TrendingUp className="h-4 w-4 text-emerald-500/70" />
-                          </div>
-                          <div className={`rounded-xl border p-3 flex items-center justify-between transition-transform hover:-translate-y-0.5 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/60'}`}>
-                            <div><p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1">Средний −</p><p className="font-data text-sm font-semibold text-red-500">-{historyCurrencySymbol}{formatMoney(avgLoss)}</p></div>
-                            <TrendingDown className="h-4 w-4 text-red-500/70" />
+                          <div className="px-3 text-center">
+                            <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1.5 flex items-center justify-center gap-1"><TrendingDown className="h-3 w-3 text-red-500/70" /> Средний −</p>
+                            <p className="font-data text-lg font-semibold text-red-500 tabular-nums">-{historyCurrencySymbol}{formatMoney(avgLoss)}</p>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className={`overflow-hidden rounded-xl border p-3 ${isLight ? 'border-emerald-200 bg-emerald-50/60' : 'border-emerald-500/20 bg-emerald-500/[0.06]'}`}>
-                            <p className="text-[9px] uppercase tracking-wider text-emerald-600/80 mb-1">Лучший день</p>
-                            <p className="font-data text-sm font-bold text-emerald-500">{formatSignedShort(bestDay[1])}</p>
-                            <p className="mt-0.5 text-[10px] text-zinc-500">{formatDateLabel(bestDay[0])}</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className={`relative overflow-hidden rounded-2xl p-4 bg-gradient-to-br ${isLight ? 'from-emerald-50 to-white' : 'from-emerald-500/[0.09] to-transparent'}`}>
+                            <TrendingUp className="absolute -right-2 -bottom-2 h-14 w-14 text-emerald-500/10" />
+                            <p className="relative text-[9px] uppercase tracking-wider text-emerald-600/80 mb-1.5">Лучший день</p>
+                            <p className="relative font-display text-xl font-bold text-emerald-500 tabular-nums">{formatSignedShort(bestDay[1])}</p>
+                            <p className="relative mt-1 text-[10px] text-zinc-500">{formatDateLabel(bestDay[0])}</p>
                           </div>
-                          <div className={`overflow-hidden rounded-xl border p-3 ${isLight ? 'border-red-200 bg-red-50/60' : 'border-red-500/20 bg-red-500/[0.06]'}`}>
-                            <p className="text-[9px] uppercase tracking-wider text-red-500/80 mb-1">Худший день</p>
-                            <p className="font-data text-sm font-bold text-red-500">{formatSignedShort(worstDay[1])}</p>
-                            <p className="mt-0.5 text-[10px] text-zinc-500">{formatDateLabel(worstDay[0])}</p>
+                          <div className={`relative overflow-hidden rounded-2xl p-4 bg-gradient-to-br ${isLight ? 'from-red-50 to-white' : 'from-red-500/[0.09] to-transparent'}`}>
+                            <TrendingDown className="absolute -right-2 -bottom-2 h-14 w-14 text-red-500/10" />
+                            <p className="relative text-[9px] uppercase tracking-wider text-red-500/80 mb-1.5">Худший день</p>
+                            <p className="relative font-display text-xl font-bold text-red-500 tabular-nums">{formatSignedShort(worstDay[1])}</p>
+                            <p className="relative mt-1 text-[10px] text-zinc-500">{formatDateLabel(worstDay[0])}</p>
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap gap-2">
-                          <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-medium ${isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700' : 'border-zinc-800 bg-zinc-900/60 text-zinc-300'}`}><Award className="h-3 w-3 text-amber-500" /> Частый инструмент: <span className="font-data">{topInstrument ? topInstrument[0] : '—'}</span></span>
+                        <div className={`flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t pt-3 text-[11px] font-data ${isLight ? 'border-zinc-200 text-zinc-600' : 'border-zinc-800 text-zinc-400'}`}>
+                          <span className="inline-flex items-center gap-1.5"><Award className="h-3 w-3 text-amber-500/80" /> Частый инструмент <span className={isLight ? 'text-zinc-900 font-semibold' : 'text-zinc-100 font-semibold'}>{topInstrument ? topInstrument[0] : '—'}</span></span>
                           {longestLossStreak >= 2 && (
-                            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-medium ${isLight ? 'border-red-200 bg-red-50 text-red-600' : 'border-red-500/25 bg-red-500/10 text-red-400'}`}><Flame className="h-3 w-3" /> Серия убытков: <span className="font-data">{longestLossStreak}</span></span>
+                            <>
+                              <span className="text-zinc-400/40">·</span>
+                              <span className="inline-flex items-center gap-1.5 text-red-400"><Flame className="h-3 w-3" /> Серия убытков <span className="font-semibold">{longestLossStreak}</span></span>
+                            </>
                           )}
                         </div>
 
@@ -2553,8 +2558,28 @@ export default function CalendarScreen() {
                             </div>
                           </div>
                           <p className={`relative rounded-xl border px-3 py-2.5 text-xs leading-relaxed mb-3 ${isLight ? 'border-zinc-200 bg-white text-zinc-700' : 'border-zinc-800 bg-black/25 text-zinc-300'}`}>{insight}</p>
-                          <button type="button" className="relative w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-amber-400/40 px-4 py-2.5 text-xs font-semibold text-amber-500 hover:bg-amber-400/5 transition-colors">
-                            <Lock className="h-3.5 w-3.5" /> Глубокий AI-разбор по каждой сделке — скоро
+
+                          <div className={`relative overflow-hidden rounded-xl border mb-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/25'}`}>
+                            <div aria-hidden="true" className="px-3 py-2.5 space-y-2 blur-[3px] select-none opacity-70">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className={`h-2.5 w-2/5 rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
+                                <div className={`h-2.5 w-10 rounded-full ${isLight ? 'bg-emerald-200' : 'bg-emerald-500/30'}`} />
+                              </div>
+                              <div className={`h-2.5 w-full rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
+                              <div className={`h-2.5 w-4/5 rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
+                              <div className="flex items-center justify-between gap-3">
+                                <div className={`h-2.5 w-1/3 rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
+                                <div className={`h-2.5 w-10 rounded-full ${isLight ? 'bg-red-200' : 'bg-red-500/30'}`} />
+                              </div>
+                            </div>
+                            <div className={`pointer-events-none absolute inset-0 bg-gradient-to-t ${isLight ? 'from-white via-white/40 to-transparent' : 'from-zinc-950 via-zinc-950/40 to-transparent'}`} />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className={`flex h-9 w-9 items-center justify-center rounded-full border ${isLight ? 'border-zinc-200 bg-white text-zinc-400' : 'border-zinc-700 bg-zinc-900 text-zinc-500'}`}><Lock className="h-4 w-4" /></span>
+                            </div>
+                          </div>
+
+                          <button type="button" className="relative w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-4 py-2.5 text-xs font-semibold text-zinc-950 shadow-[0_8px_24px_rgba(251,191,36,.25)] hover:from-amber-300 hover:to-amber-400 active:scale-[0.99] transition-all">
+                            <Sparkles className="h-3.5 w-3.5" /> Разблокировать глубокий AI-разбор
                           </button>
                         </div>
                       </div>
