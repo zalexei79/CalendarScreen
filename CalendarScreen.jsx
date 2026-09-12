@@ -2200,8 +2200,11 @@ export default function CalendarScreen() {
                     const avgWin = wins.length ? grossProfit / wins.length : 0;
                     const avgLoss = losses.length ? grossLoss / losses.length : 0;
                     const payoff = avgLoss > 0 ? avgWin / avgLoss : 0;
-                    const best = trades.length ? trades.reduce((a, b) => (Number(b.pnl) > Number(a.pnl) ? b : a), trades[0]) : null;
-                    const worst = trades.length ? trades.reduce((a, b) => (Number(b.pnl) < Number(a.pnl) ? b : a), trades[0]) : null;
+                    const best = trades.length ? trades.reduce((a, b) => (b.pnl > a.pnl ? b : a), trades[0]) : null;
+                    const worst = trades.length ? trades.reduce((a, b) => (b.pnl < a.pnl ? b : a), trades[0]) : null;
+                    const byInstrument = {};
+                    trades.forEach((tr) => { const key = tr.instrument || '—'; byInstrument[key] = (byInstrument[key] || 0) + 1; });
+                    const topInstrument = Object.entries(byInstrument).sort((a, b) => b[1] - a[1])[0];
                     const chronological = [...trades].sort((a, b) => a.dateKey === b.dateKey ? (a.time || '').localeCompare(b.time || '') : a.dateKey.localeCompare(b.dateKey));
                     let lossStreak = 0, currentStreak = 0;
                     for (const tr of chronological) {
@@ -2213,119 +2216,168 @@ export default function CalendarScreen() {
                     const payoffScore = Math.min(payoff, 3) / 3 * 15;
                     const score = Math.max(4, Math.min(99, Math.round(pfScore + wrScore + payoffScore - Math.min(lossStreak, 6) * 1.5 + 10)));
                     const grade = score >= 85 ? 'S' : score >= 70 ? 'A' : score >= 55 ? 'B' : score >= 40 ? 'C' : 'D';
-                    const insight = lossStreak >= 3
-                      ? `Серия из ${lossStreak} убыточных сделок подряд — это главный риск выбранного периода. После 2 убытков подряд лучше снижать размер позиции.`
-                      : payoff > 0 && payoff < 1 && winRate >= 50
-                        ? 'Винрейт выглядит хорошо, но средний убыток превышает среднюю прибыль. Следите за соотношением риска и результата.'
-                        : profitFactor < 1
-                          ? 'За выбранный период убытки превышают прибыль. Стоит отдельно посмотреть, какие инструменты и направления тянут результат вниз.'
-                          : profitFactor >= 1.5
-                            ? 'Сильный период: прибыль заметно превышает суммарные убытки. Проверьте, сохраняется ли результат на длинной выборке.'
-                            : 'Данных пока немного для уверенного вывода. Чем больше сделок, тем полезнее будет анализ закономерностей.';
+                    const scoreLabel = score >= 85 ? 'Элитный трейдер' : score >= 70 ? 'Уверенная рука' : score >= 55 ? 'Стабильная база' : score >= 40 ? 'Есть над чем работать' : 'Требует дисциплины';
 
-                    return <div className="space-y-3">
-                      {/* One-screen PRO command bar */}
-                      <div className={`rounded-2xl border ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'}`}>
-                        <div className="flex flex-wrap items-center gap-2 px-3 py-3 sm:px-4">
-                          <div className="flex min-w-0 items-center gap-2 mr-auto">
-                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-400/10 text-amber-500"><Zap className="h-4 w-4" /></span>
+                    const card = (label, value, tone = 'neutral', sub = '') => {
+                      const toneClass = tone === 'positive' ? 'text-emerald-500' : tone === 'negative' ? 'text-red-500' : tone === 'accent' ? 'text-amber-500' : (isLight ? 'text-zinc-900' : 'text-zinc-100');
+                      return <div className={`min-w-0 rounded-2xl border p-3.5 sm:p-4 ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-zinc-950/80'}`}>
+                        <p className="text-[9px] font-data uppercase tracking-[0.16em] text-zinc-500">{label}</p>
+                        <p className={`mt-2 truncate font-display text-xl sm:text-2xl font-bold tabular-nums tracking-tight ${toneClass}`}>{value}</p>
+                        {sub && <p className="mt-1 truncate text-[10px] text-zinc-500">{sub}</p>}
+                      </div>;
+                    };
+
+                    return <div className="space-y-4">
+                      {/* Header controls */}
+                      <div className={`rounded-2xl border p-3 sm:p-4 ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-zinc-950/80'}`}>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="mr-auto flex min-w-0 items-center gap-2">
+                            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-400/10 text-amber-500"><Zap className="h-4 w-4" /></span>
                             <div className="min-w-0">
-                              <div className="flex items-center gap-2"><span className="text-sm font-semibold">PRO History</span><span className="rounded-full bg-amber-400/10 px-1.5 py-0.5 text-[8px] font-bold tracking-wider text-amber-500">PRO</span></div>
-                              <p className="truncate text-[10px] text-zinc-500">{periodButtonLabel} · {trades.length} {trades.length === 1 ? 'сделка' : 'сделок'}</p>
+                              <p className="font-display text-sm font-bold tracking-tight">PRO Trading History</p>
+                              <p className="truncate text-[10px] text-zinc-500">{trades.length} сделок · {periodButtonLabel}</p>
                             </div>
                           </div>
-                          <button type="button" onClick={handleEditDeposit} className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 font-data text-[11px] font-semibold transition-colors ${isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-amber-400/50' : 'border-zinc-800 bg-zinc-900 text-zinc-200 hover:border-amber-400/40'}`}>
-                            <span className="text-amber-500">$</span> {t('deposit')}: {depositSize > 0 ? `${currencySymbol}${formatMoney(depositSize)}` : t('notSet')} <span className="text-zinc-400">✎</span>
-                          </button>
-                          {ctraderConnected && <button type="button" onClick={handleSyncCtraderTrades} disabled={syncingCtrader} className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[11px] font-semibold transition-colors ${isLight ? 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/15'}`}><RefreshCw className={`h-3.5 w-3.5 ${syncingCtrader ? 'animate-spin' : ''}`} />{syncingCtrader ? t('syncing') : t('synchronize')}</button>}
-                        </div>
-
-                        {/* Primary numbers: compact, no card wall */}
-                        <div className={`grid grid-cols-2 divide-x border-t sm:grid-cols-4 ${isLight ? 'divide-zinc-100 border-zinc-100' : 'divide-zinc-800/80 border-zinc-800/80'}`}>
-                          <div className="min-w-0 px-3 py-3 sm:px-4"><p className="text-[9px] uppercase tracking-wider text-zinc-500">P&L</p><p className={`mt-1 truncate font-data text-lg font-bold tabular-nums ${mixedCurrency ? 'text-zinc-400' : net >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{mixedCurrency ? '—' : `${net >= 0 ? '+' : '−'}${historyCurrencySymbol}${formatMoney(Math.abs(net))}`}</p></div>
-                          <div className="min-w-0 px-3 py-3 sm:px-4"><p className="text-[9px] uppercase tracking-wider text-zinc-500">Win rate</p><p className="mt-1 font-data text-lg font-bold tabular-nums">{winRate}%</p></div>
-                          <div className="min-w-0 px-3 py-3 sm:px-4"><p className="text-[9px] uppercase tracking-wider text-zinc-500">Profit factor</p><p className="mt-1 font-data text-lg font-bold tabular-nums">{profitFactor === Infinity ? 'MAX' : profitFactor.toFixed(2)}</p></div>
-                          <div className="min-w-0 px-3 py-3 sm:px-4"><p className="text-[9px] uppercase tracking-wider text-zinc-500">Серия убытков</p><p className={`mt-1 font-data text-lg font-bold tabular-nums ${lossStreak >= 3 ? 'text-red-500' : 'text-zinc-900 dark:text-zinc-100'}`}>{lossStreak}</p></div>
+                          <button type="button" onClick={() => { if (displayMode === 'usd' && depositSize <= 0) { handleEditDeposit(); return; } setDisplayMode((m) => m === 'usd' ? 'percent' : 'usd'); }}
+                            className={`rounded-xl border px-3 py-2 font-data text-[11px] font-semibold ${isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-amber-400/50' : 'border-zinc-800 bg-black/20 text-zinc-300 hover:border-amber-400/40'}`}>{displayMode === 'usd' ? currencySymbol : '%'}</button>
+                          <button type="button" onClick={handleEditDeposit} className={`rounded-xl border px-3 py-2 font-data text-[11px] ${isLight ? 'border-zinc-200 text-zinc-600 hover:text-zinc-900' : 'border-zinc-800 text-zinc-400 hover:text-zinc-200'}`}>Депозит {depositSize > 0 ? `${currencySymbol}${formatMoney(depositSize)}` : '—'}</button>
+                          {ctraderConnected && <button type="button" onClick={handleSyncCtraderTrades} disabled={syncingCtrader} className="flex items-center gap-1.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-[11px] font-semibold text-emerald-500 disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${syncingCtrader ? 'animate-spin' : ''}`} />{syncingCtrader ? t('syncing') : t('synchronize')}</button>}
                         </div>
                       </div>
 
-                      {/* Fast filters — visible, secondary filters one click away */}
-                      <div className={`rounded-2xl border p-2.5 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'}`}>
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <div className={`flex rounded-xl border p-1 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
-                            {[['all', t('all')], ['win', `+ ${t('profit')}`], ['loss', `− ${t('loss')}`]].map(([key, label]) => <button key={key} type="button" onClick={() => setHistoryWinLoss(key)} className={`rounded-lg px-2.5 py-1.5 text-[10px] font-semibold ${historyWinLoss === key ? key === 'win' ? 'bg-emerald-500/15 text-emerald-500' : key === 'loss' ? 'bg-red-500/15 text-red-500' : 'bg-amber-400/10 text-amber-500' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}`}>{label}</button>)}
-                          </div>
-                          <button type="button" onClick={() => setProFiltersOpen(v => !v)} className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[10px] font-semibold ${proFiltersOpen ? 'border-amber-400/40 bg-amber-400/10 text-amber-500' : isLight ? 'border-zinc-200 text-zinc-600 hover:border-amber-400/40' : 'border-zinc-800 text-zinc-400 hover:border-amber-400/30'}`}><History className="h-3.5 w-3.5" />{t('filters')}<ChevronDown className={`h-3.5 w-3.5 transition-transform ${proFiltersOpen ? 'rotate-180' : ''}`} /></button>
-                          <div className="ml-auto flex items-center gap-1.5">
-                            <span className="hidden text-[9px] text-zinc-500 sm:inline">Валюта</span>
-                            <div className={`flex rounded-xl border p-1 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
-                              {[{ code: 'ALL', symbol: t('all') }, ...CURRENCIES].map((c) => <button key={c.code} type="button" onClick={() => setHistoryCurrency(c.code)} className={`rounded-lg px-2 py-1.5 font-data text-[10px] ${historyCurrency === c.code ? 'bg-amber-400/15 text-amber-500 font-semibold' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}`}>{c.symbol}</button>)}
+                      {/* KPI hierarchy */}
+                      <div className={`rounded-3xl border p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-gradient-to-br from-white via-white to-zinc-50 shadow-sm' : 'border-amber-400/15 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black shadow-[0_24px_70px_rgba(0,0,0,.38)]'}`}>
+                        <div className="flex flex-col gap-5 lg:flex-row lg:items-center">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-data text-[9px] uppercase tracking-[0.24em] text-amber-500">NET PERFORMANCE</p>
+                            <div className="mt-2 flex flex-wrap items-end gap-x-3 gap-y-1">
+                              <span className={`font-display text-[clamp(2.4rem,8vw,4.5rem)] font-bold leading-none tracking-[-0.05em] tabular-nums ${net >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{mixedCurrency ? '—' : `${net >= 0 ? '+' : '−'}${historyCurrencySymbol}${formatMoney(Math.abs(net))}`}</span>
+                              <span className={`mb-1 rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-wider ${net >= 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>{net >= 0 ? 'POSITIVE' : 'NEGATIVE'}</span>
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-zinc-500">
+                              <span>{mixedCurrency ? 'Валюты не суммируются' : `Gross +${historyCurrencySymbol}${formatMoney(grossProfit)}`}</span><span>{mixedCurrency ? 'Выберите валюту для P&L' : `Loss −${historyCurrencySymbol}${formatMoney(grossLoss)}`}</span><span>{mixedCurrency ? 'ALL CURRENCIES' : historyCurrency}</span>
                             </div>
                           </div>
+                          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:w-[52%]">
+                            {card('Win rate', `${winRate}%`, winRate >= 50 ? 'positive' : 'negative', `${wins.length} / ${trades.length}`)}
+                            {card('Profit factor', profitFactor === Infinity ? 'MAX' : profitFactor.toFixed(2), profitFactor >= 1.5 ? 'positive' : profitFactor >= 1 ? 'neutral' : 'negative', 'gross profit / loss')}
+                            {card('Payoff', payoff ? `1:${payoff.toFixed(2)}` : '—', payoff >= 1 ? 'positive' : 'neutral', 'avg win / avg loss')}
+                            {card('Trades', String(trades.length), 'accent', topInstrument ? `${topInstrument[0]} · ${topInstrument[1]}` : 'no data')}
+                          </div>
                         </div>
-                        {proFiltersOpen && <div className={`mt-2 grid gap-2 rounded-xl border p-2.5 sm:grid-cols-2 lg:grid-cols-4 ${isLight ? 'border-zinc-200 bg-zinc-50/70' : 'border-zinc-800 bg-black/20'}`}>
-                          <label className="min-w-0"><span className="mb-1 block text-[9px] uppercase tracking-wider text-zinc-500">{t('period')}</span><select value={periodPreset} onChange={(e) => e.target.value === 'custom' ? setPeriodPreset('custom') : handlePresetChange(e.target.value)} className={`w-full rounded-lg border px-2.5 py-2 text-xs font-data ${isLight ? 'border-zinc-200 bg-white text-zinc-700' : 'border-zinc-800 bg-zinc-900 text-zinc-200'}`}>{PERIOD_PRESETS.map((p) => <option key={p} value={p}>{periodLabel(p)}</option>)}<option value="custom">{t('customPeriod')}</option></select></label>
-                          {periodPreset === 'custom' ? <div className="grid grid-cols-2 gap-2"><label><span className="mb-1 block text-[9px] uppercase tracking-wider text-zinc-500">{t('fromDate')}</span><input type="date" value={dateFrom} onChange={(e) => handleDateFromChange(e.target.value)} className={`w-full rounded-lg border px-2 py-2 text-xs font-data ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900'}`} /></label><label><span className="mb-1 block text-[9px] uppercase tracking-wider text-zinc-500">{t('toDate')}</span><input type="date" value={dateTo} onChange={(e) => handleDateToChange(e.target.value)} className={`w-full rounded-lg border px-2 py-2 text-xs font-data ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900'}`} /></label></div> : <div><span className="mb-1 block text-[9px] uppercase tracking-wider text-zinc-500">{t('range')}</span><div className={`rounded-lg border px-2.5 py-2 text-xs font-data ${isLight ? 'border-zinc-200 bg-white text-zinc-700' : 'border-zinc-800 bg-zinc-900 text-zinc-300'}`}>{dateFrom} — {dateTo}</div></div>}
-                          <label><span className="mb-1 block text-[9px] uppercase tracking-wider text-zinc-500">{t('source')}</span><select value={platformFilter} onChange={(e) => setPlatformFilter(e.target.value)} className={`w-full rounded-lg border px-2.5 py-2 text-xs font-data ${isLight ? 'border-zinc-200 bg-white text-zinc-700' : 'border-zinc-800 bg-zinc-900 text-zinc-200'}`}><option value="ALL">{t('allSources')}</option><option value="cTrader">cTrader</option></select></label>
+                      </div>
+
+                      {/* Performance curve */}
+                      <div className={`overflow-hidden rounded-3xl border ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-zinc-950/80'}`}>
+                        <div className={`flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-5 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
+                          <div><p className="text-sm font-semibold">Performance curve</p><p className="text-[10px] text-zinc-500">Накопленный результат по выбранной выборке</p></div>
+                          <span className="rounded-full bg-amber-400/10 px-2 py-1 font-data text-[9px] font-bold text-amber-500">PRO</span>
+                        </div>
+                        <div className="p-2 sm:p-3"><PnlCurve trades={historyTrades} accounts={ctraderAccounts} language={language} isLight={isLight} /></div>
+                      </div>
+
+                      {/* Filters: one command bar instead of scattered controls */}
+                      <div className={`rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-zinc-950/80'}`}>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button type="button" onClick={() => setProFiltersOpen(v => !v)} className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-[11px] font-semibold ${proFiltersOpen ? 'border-amber-400/40 bg-amber-400/10 text-amber-500' : isLight ? 'border-zinc-200 text-zinc-600 hover:border-amber-400/40' : 'border-zinc-800 text-zinc-400 hover:border-amber-400/30'}`}><History className="h-3.5 w-3.5" />{t('filters')}<ChevronDown className={`h-3.5 w-3.5 transition-transform ${proFiltersOpen ? 'rotate-180' : ''}`} /></button>
+                          <div className={`flex rounded-xl border p-1 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
+                            {[['all', t('all')], ['win', `+ ${t('profit')}`], ['loss', `− ${t('loss')}`]].map(([key, label]) => <button key={key} type="button" onClick={() => setHistoryWinLoss(key)} className={`rounded-lg px-3 py-1.5 text-[10px] font-semibold ${historyWinLoss === key ? key === 'win' ? 'bg-emerald-500/15 text-emerald-500' : key === 'loss' ? 'bg-red-500/15 text-red-500' : 'bg-amber-400/10 text-amber-500' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}`}>{label}</button>)}
+                          </div>
+                          <div className={`ml-auto flex gap-1 rounded-xl border p-1 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
+                            {[{ code: 'ALL', symbol: t('all') }, ...CURRENCIES].map((c) => <button key={c.code} type="button" onClick={() => setHistoryCurrency(c.code)} className={`rounded-lg px-2.5 py-1.5 font-data text-[10px] ${historyCurrency === c.code ? 'bg-amber-400/15 text-amber-500 font-semibold' : 'text-zinc-500 hover:text-zinc-300'}`}>{c.symbol}</button>)}
+                          </div>
+                        </div>
+                        {proFiltersOpen && <div className={`mt-3 grid gap-2 rounded-2xl border p-3 sm:grid-cols-2 lg:grid-cols-4 ${isLight ? 'border-zinc-200 bg-zinc-50/70' : 'border-zinc-800 bg-black/20'}`}>
+                          <label className="min-w-0"><span className="mb-1 block text-[9px] uppercase tracking-wider text-zinc-500">{t('period')}</span><select value={periodPreset} onChange={(e) => e.target.value === 'custom' ? setPeriodPreset('custom') : handlePresetChange(e.target.value)} className={`w-full rounded-xl border px-3 py-2 text-xs font-data ${isLight ? 'border-zinc-200 bg-white text-zinc-700' : 'border-zinc-800 bg-zinc-900 text-zinc-200'}`}>{PERIOD_PRESETS.map((p) => <option key={p} value={p}>{periodLabel(p)}</option>)}<option value="custom">{t('customPeriod')}</option></select></label>
+                          {periodPreset === 'custom' ? <div className="grid grid-cols-2 gap-2"><label><span className="mb-1 block text-[9px] uppercase tracking-wider text-zinc-500">{t('fromDate')}</span><input type="date" value={dateFrom} onChange={(e) => handleDateFromChange(e.target.value)} className={`w-full rounded-xl border px-2 py-2 text-xs font-data ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900'}`} /></label><label><span className="mb-1 block text-[9px] uppercase tracking-wider text-zinc-500">{t('toDate')}</span><input type="date" value={dateTo} onChange={(e) => handleDateToChange(e.target.value)} className={`w-full rounded-xl border px-2 py-2 text-xs font-data ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900'}`} /></label></div> : <div><span className="mb-1 block text-[9px] uppercase tracking-wider text-zinc-500">{t('range')}</span><div className={`rounded-xl border px-3 py-2 text-xs font-data ${isLight ? 'border-zinc-200 bg-white text-zinc-700' : 'border-zinc-800 bg-zinc-900 text-zinc-300'}`}>{dateFrom} — {dateTo}</div></div>}
+                          <label><span className="mb-1 block text-[9px] uppercase tracking-wider text-zinc-500">{t('source')}</span><select value={platformFilter} onChange={(e) => setPlatformFilter(e.target.value)} className={`w-full rounded-xl border px-3 py-2 text-xs font-data ${isLight ? 'border-zinc-200 bg-white text-zinc-700' : 'border-zinc-800 bg-zinc-900 text-zinc-200'}`}><option value="ALL">{t('allSources')}</option><option value="cTrader">cTrader</option></select></label>
                           <div><span className="mb-1 block text-[9px] uppercase tracking-wider text-zinc-500">{t('instrument')}</span>{renderHistoryCategoryPicker()}</div>
                         </div>}
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-zinc-500">
+                          <span>{trades.length} сделок</span><span>·</span><span>{periodButtonLabel}</span>{platformFilter !== 'ALL' && <><span>·</span><span>{platformFilter}</span></>}{historyNameFilter && <><span>·</span><span>{historyNameFilter}</span></>}
+                        </div>
                       </div>
 
-                      {/* Trades are the primary workspace */}
-                      <section className={`overflow-hidden rounded-2xl border ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'}`}>
-                        <div className={`flex items-center justify-between gap-3 border-b px-3 py-2.5 sm:px-4 ${isLight ? 'border-zinc-100' : 'border-zinc-800'}`}>
-                          <div><p className="text-sm font-semibold">Сделки</p><p className="text-[9px] text-zinc-500">Нажмите на сделку — откроется её редактирование</p></div>
+                      {/* Compact diagnostic row */}
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        {card('Average win', mixedCurrency ? '—' : `+${historyCurrencySymbol}${formatMoney(avgWin)}`, 'positive')}
+                        {card('Average loss', mixedCurrency ? '—' : `−${historyCurrencySymbol}${formatMoney(avgLoss)}`, 'negative')}
+                        {card('Best trade', best ? formatAmountInCurrency(best.pnl, best.currency || historyCurrency) : '—', 'positive', best ? `${best.instrument} · ${formatDateLabel(best.dateKey)}` : '')}
+                        {card('Worst trade', worst ? formatAmountInCurrency(worst.pnl, worst.currency || historyCurrency) : '—', 'negative', worst ? `${worst.instrument} · ${formatDateLabel(worst.dateKey)}` : '')}
+                      </div>
+
+                      {/* Scorecard */}
+                      {trades.length > 0 && <section className={`overflow-hidden rounded-3xl border ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-zinc-950/80'}`}>
+                        <button type="button" onClick={() => setProScorecardOpen(v => !v)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left sm:px-5">
+                          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border font-display text-sm font-bold ${score >= 80 ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-500' : score >= 60 ? 'border-amber-400/30 bg-amber-400/10 text-amber-500' : 'border-red-400/30 bg-red-500/10 text-red-500'}`}>{grade}</span>
+                          <span className="min-w-0 flex-1"><span className="block text-sm font-semibold">PRO Scorecard · {score}/99</span><span className="block text-[10px] text-zinc-500">{scoreLabel} · PF {profitFactor === Infinity ? 'MAX' : profitFactor.toFixed(2)} · loss streak {lossStreak}</span></span>
+                          <ChevronDown className={`h-4 w-4 text-amber-500 transition-transform ${proScorecardOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        {proScorecardOpen && <div className={`border-t p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-zinc-50/60' : 'border-zinc-800 bg-black/20'}`}>
+                          <div className="grid gap-3 sm:grid-cols-3">
+                            <div className={`rounded-2xl p-4 ${isLight ? 'bg-white' : 'bg-zinc-900/70'}`}><p className="text-[9px] uppercase tracking-wider text-zinc-500">Score</p><p className="mt-1 font-display text-4xl font-bold text-amber-500">{score}</p><p className="mt-1 text-[10px] text-zinc-500">{scoreLabel}</p></div>
+                            <div className={`rounded-2xl p-4 ${isLight ? 'bg-white' : 'bg-zinc-900/70'}`}><p className="text-[9px] uppercase tracking-wider text-zinc-500">Best / worst day</p><p className="mt-2 text-sm font-semibold text-emerald-500">{best ? formatSignedShort(best.pnl) : '—'}</p><p className="mt-1 text-sm font-semibold text-red-500">{worst ? formatSignedShort(worst.pnl) : '—'}</p></div>
+                            <div className={`rounded-2xl p-4 ${isLight ? 'bg-white' : 'bg-zinc-900/70'}`}><p className="text-[9px] uppercase tracking-wider text-zinc-500">Discipline</p><p className={`mt-2 font-display text-2xl font-bold ${lossStreak >= 3 ? 'text-red-500' : 'text-emerald-500'}`}>{lossStreak}</p><p className="mt-1 text-[10px] text-zinc-500">максимальная серия убытков</p></div>
+                          </div>
+                          <div className={`mt-3 rounded-2xl border p-3 text-xs leading-relaxed ${isLight ? 'border-amber-200 bg-amber-50 text-zinc-700' : 'border-amber-400/20 bg-amber-400/[0.05] text-zinc-300'}`}><Sparkles className="mr-1 inline h-3.5 w-3.5 text-amber-500" />{lossStreak >= 3 ? `Серия из ${lossStreak} убытков — после двух убытков подряд лучше снижать риск.` : payoff > 0 && payoff < 1 && winRate >= 50 ? 'Винрейт неплохой, но средний убыток превышает среднюю прибыль.' : profitFactor < 1 ? 'Profit Factor ниже 1: за выбранный период убытки перевешивают прибыль.' : profitFactor >= 1.5 ? 'Сильный период: Profit Factor выше 1.5.' : 'Данных пока немного для уверенного вывода.'}</div>
+                        </div>}
+                      </section>}
+
+                      {/* Deep analytics */}
+                      <section className={`overflow-hidden rounded-3xl border ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-zinc-950/80'}`}>
+                        <button type="button" onClick={() => setProAnalyticsOpen(v => !v)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left sm:px-5">
+                          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/10 text-amber-500"><ChartCandlestick className="h-4 w-4" /></span>
+                          <span className="min-w-0 flex-1"><span className="block text-sm font-semibold">Глубокая аналитика</span><span className="block text-[10px] text-zinc-500">инструменты, дни, движение результата</span></span>
+                          <ChevronDown className={`h-4 w-4 text-amber-500 transition-transform ${proAnalyticsOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        {proAnalyticsOpen && <div className={`border-t p-4 sm:p-5 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}><p className="text-[9px] uppercase tracking-wider text-zinc-500">Top instrument</p><p className="mt-2 text-lg font-semibold">{topInstrument ? topInstrument[0] : '—'}</p><p className="mt-1 text-[10px] text-zinc-500">{topInstrument ? `${topInstrument[1]} сделок` : 'Нет данных'}</p></div>
+                            <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}><p className="text-[9px] uppercase tracking-wider text-zinc-500">Best / worst</p><p className="mt-2 text-sm font-semibold text-emerald-500">{best ? `${best.instrument} · ${formatSignedShort(best.pnl)}` : '—'}</p><p className="mt-1 text-sm font-semibold text-red-500">{worst ? `${worst.instrument} · ${formatSignedShort(worst.pnl)}` : '—'}</p></div>
+                          </div>
+                          {historyAnalysis.chartEntries.length > 0 && <div className={`mt-3 rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
+                            <p className="mb-3 text-xs font-semibold">Динамика последних 10 дней</p>
+                            <div className="grid h-36 grid-cols-5 items-end gap-2 sm:grid-cols-10">{historyAnalysis.chartEntries.map(([date, stats]) => { const netDay = stats.income - stats.expense; const max = historyAnalysis.maxDaily || 1; return <div key={date} className="flex h-full min-w-0 flex-col justify-end"><span className={`mb-1 truncate text-center font-data text-[8px] ${netDay >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{(stats.income || stats.expense) ? `${netDay >= 0 ? '+' : '−'}${formatMoneyShort(Math.abs(netDay))}` : '—'}</span><div className="flex h-24 items-end justify-center gap-1"><span className="w-2 rounded-t bg-emerald-500/70" style={{height:`${stats.income ? Math.max(6, stats.income / max * 100) : 3}%`}} /><span className="w-2 rounded-t bg-red-500/70" style={{height:`${stats.expense ? Math.max(6, stats.expense / max * 100) : 3}%`}} /></div><span className="mt-1 text-center text-[8px] text-zinc-500">{date.slice(8)}</span></div>; })}</div>
+                          </div>}
+                          {historyByCurrency.length > 0 && <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                            {historyByCurrency.map(([code, stats]) => { const meta = getCurrencyMeta(code); return <button key={code} type="button" onClick={() => setHistoryCurrency(code)} className={`rounded-2xl border p-3 text-left transition-colors ${isLight ? 'border-zinc-200 bg-white hover:border-amber-300' : 'border-zinc-800 bg-zinc-950/70 hover:border-amber-400/30'}`}>
+                              <div className="flex items-center justify-between gap-2"><span className="font-data text-[10px] font-semibold">{meta.symbol} {code}</span><span className="text-[9px] text-zinc-500">{stats.count} сделок</span></div>
+                              <p className={`mt-2 font-display text-lg font-bold tabular-nums ${stats.balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.balance >= 0 ? '+' : '−'}{meta.symbol}{formatMoneyShort(Math.abs(stats.balance))}</p>
+                            </button>; })}
+                          </div>}
+                          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                            <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
+                              <p className="text-[9px] uppercase tracking-wider text-zinc-500">Доходные инструменты</p>
+                              <div className="mt-3 space-y-2">{historyAnalysis.incomeSources.slice(0, 5).map(([name, value]) => <div key={name}><div className="flex justify-between gap-2 text-[10px]"><span className="truncate">{name}</span><span className="font-data text-emerald-500">+{historyCurrencySymbol}{formatMoneyShort(value)}</span></div><div className="mt-1 h-1 rounded-full bg-zinc-500/10"><div className="h-full rounded-full bg-emerald-500" style={{width:`${Math.max(5, (value / (historyIncome || 1)) * 100)}%`}} /></div></div>)}{historyAnalysis.incomeSources.length === 0 && <p className="text-xs text-zinc-500">Нет данных</p>}</div>
+                            </div>
+                            <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
+                              <p className="text-[9px] uppercase tracking-wider text-zinc-500">Расходные инструменты</p>
+                              <div className="mt-3 space-y-2">{historyAnalysis.expenseCategories.slice(0, 5).map(([name, value]) => <div key={name}><div className="flex justify-between gap-2 text-[10px]"><span className="truncate">{name}</span><span className="font-data text-red-500">−{historyCurrencySymbol}{formatMoneyShort(value)}</span></div><div className="mt-1 h-1 rounded-full bg-zinc-500/10"><div className="h-full rounded-full bg-red-500" style={{width:`${Math.max(5, (value / (historyExpense || 1)) * 100)}%`}} /></div></div>)}{historyAnalysis.expenseCategories.length === 0 && <p className="text-xs text-zinc-500">Нет данных</p>}</div>
+                            </div>
+                          </div>
+                        </div>}
+                      </section>
+
+                      {/* Trades table / mobile cards */}
+                      <section className={`overflow-hidden rounded-3xl border ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-zinc-950/80'}`}>
+                        <div className={`flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-5 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
+                          <div><p className="text-sm font-semibold">Сделки</p><p className="text-[10px] text-zinc-500">Нажмите на строку, чтобы открыть день в календаре</p></div>
                           <span className="font-data text-[10px] text-zinc-500">{trades.length}</span>
                         </div>
                         {trades.length > 0 ? <div className={`divide-y ${isLight ? 'divide-zinc-100' : 'divide-zinc-800/70'}`}>
-                          {trades.map((trade) => <button key={trade.id} type="button" onClick={() => openModal(trade)} className={`group grid w-full grid-cols-[54px_minmax(0,1fr)_auto] items-center gap-2.5 px-3 py-2.5 text-left transition-colors sm:grid-cols-[70px_minmax(0,1fr)_100px_90px] sm:px-4 ${isLight ? 'hover:bg-zinc-50' : 'hover:bg-zinc-900/70'}`}>
+                          {trades.map((trade) => <button key={trade.id} type="button" onClick={() => jumpToTradeDate(trade.dateKey)} className={`group grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3 text-left transition-colors sm:grid-cols-[80px_1fr_110px_110px] sm:px-5 ${isLight ? 'hover:bg-zinc-50' : 'hover:bg-zinc-900/70'}`}>
                             <span className="font-data text-[10px] text-zinc-500">{trade.time || '—'}</span>
-                            <span className="min-w-0"><span className="flex min-w-0 items-center gap-2"><span className="truncate text-sm font-semibold">{trade.instrument || '—'}</span>{trade.direction && <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[8px] font-bold tracking-wider ${String(trade.direction).toUpperCase() === 'LONG' || String(trade.direction).toUpperCase() === 'BUY' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>{String(trade.direction).toUpperCase()}</span>}</span><span className="mt-0.5 block truncate text-[9px] text-zinc-500">{formatDateLabel(trade.dateKey)} · {trade.platform || 'Manual'}{trade.comment ? ` · ${trade.comment}` : ''}</span></span>
-                            <span className={`hidden font-data text-[10px] font-semibold sm:block ${Number(trade.pnl) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{Number(trade.pnl) >= 0 ? 'PROFIT' : 'LOSS'}</span>
-                            <span className={`font-data text-sm font-bold tabular-nums ${Number(trade.pnl) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{formatAmountInCurrency(trade.pnl, trade.currency || historyCurrency)}</span>
+                            <span className="min-w-0"><span className="block truncate text-sm font-semibold">{trade.instrument || '—'}</span><span className="mt-0.5 block truncate text-[9px] text-zinc-500">{formatDateLabel(trade.dateKey)} · {trade.platform || 'Manual'}{trade.direction ? ` · ${trade.direction}` : ''}</span></span>
+                            <span className={`hidden font-data text-[10px] font-semibold sm:block ${trade.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{trade.pnl >= 0 ? 'PROFIT' : 'LOSS'}</span>
+                            <span className={`font-data text-sm font-bold tabular-nums ${trade.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{formatPnlDisplay(trade.pnl)}</span>
                           </button>)}
                         </div> : <div className="px-6 py-14 text-center text-sm text-zinc-500">{t('noTradesPeriod')}</div>}
                       </section>
 
-                      {/* Compact insight: PRO means the insight is included, not locked */}
-                      {trades.length > 0 && <section className={`rounded-2xl border p-3.5 sm:p-4 ${isLight ? 'border-amber-200 bg-amber-50/60' : 'border-amber-400/15 bg-amber-400/[0.045]'}`}>
-                        <div className="flex items-start gap-3">
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-400/10 text-amber-500"><Sparkles className="h-4 w-4" /></span>
-                          <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-semibold">Инсайт по вашей торговле</p><span className="rounded-full bg-amber-400/10 px-1.5 py-0.5 text-[8px] font-bold tracking-wider text-amber-500">PRO</span></div><p className={`mt-1 text-xs leading-relaxed ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>{insight}</p></div>
-                        </div>
-                      </section>}
-
-                      {/* Everything secondary stays available, but out of the way */}
-                      <section className={`overflow-hidden rounded-2xl border ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'}`}>
-                        <button type="button" onClick={() => setProAnalyticsOpen(v => !v)} className="flex w-full items-center gap-3 px-3.5 py-3 text-left sm:px-4">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-400/10 text-amber-500"><ChartCandlestick className="h-4 w-4" /></span>
-                          <span className="min-w-0 flex-1"><span className="block text-sm font-semibold">Аналитика PRO</span><span className="block text-[9px] text-zinc-500">кривая результата, Scorecard, инструменты и подробная статистика</span></span>
-                          <ChevronDown className={`h-4 w-4 text-amber-500 transition-transform ${proAnalyticsOpen ? 'rotate-180' : ''}`} />
-                        </button>
-                        {proAnalyticsOpen && <div className={`border-t p-3.5 sm:p-4 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
-                          <div className="grid gap-2 sm:grid-cols-4">
-                            <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}><p className="text-[9px] uppercase tracking-wider text-zinc-500">Avg win</p><p className="mt-1 font-data text-sm font-semibold text-emerald-500">{mixedCurrency ? '—' : `+${historyCurrencySymbol}${formatMoney(avgWin)}`}</p></div>
-                            <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}><p className="text-[9px] uppercase tracking-wider text-zinc-500">Avg loss</p><p className="mt-1 font-data text-sm font-semibold text-red-500">{mixedCurrency ? '—' : `−${historyCurrencySymbol}${formatMoney(avgLoss)}`}</p></div>
-                            <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}><p className="text-[9px] uppercase tracking-wider text-zinc-500">Best trade</p><p className="mt-1 truncate font-data text-sm font-semibold text-emerald-500">{best ? formatAmountInCurrency(best.pnl, best.currency || historyCurrency) : '—'}</p></div>
-                            <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}><p className="text-[9px] uppercase tracking-wider text-zinc-500">Worst trade</p><p className="mt-1 truncate font-data text-sm font-semibold text-red-500">{worst ? formatAmountInCurrency(worst.pnl, worst.currency || historyCurrency) : '—'}</p></div>
-                          </div>
-                          <div className={`mt-2 overflow-hidden rounded-xl border ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/10'}`}>
-                            <div className="flex items-center justify-between gap-2 px-3 py-2.5"><div><p className="text-xs font-semibold">PRO Scorecard</p><p className="text-[9px] text-zinc-500">Оценка качества торговли за выбранный период</p></div><span className={`rounded-lg px-2.5 py-1 font-data text-xs font-bold ${score >= 70 ? 'bg-emerald-500/10 text-emerald-500' : score >= 50 ? 'bg-amber-500/10 text-amber-500' : 'bg-red-500/10 text-red-500'}`}>{grade} · {score}/99</span></div>
-                            <div className={`grid grid-cols-3 border-t ${isLight ? 'border-zinc-100' : 'border-zinc-800'}`}><div className="px-3 py-2"><p className="text-[8px] uppercase tracking-wider text-zinc-500">PF</p><p className="font-data text-xs font-semibold">{profitFactor === Infinity ? 'MAX' : profitFactor.toFixed(2)}</p></div><div className="px-3 py-2"><p className="text-[8px] uppercase tracking-wider text-zinc-500">Win rate</p><p className="font-data text-xs font-semibold">{winRate}%</p></div><div className="px-3 py-2"><p className="text-[8px] uppercase tracking-wider text-zinc-500">Payoff</p><p className="font-data text-xs font-semibold">{payoff ? payoff.toFixed(2) : '—'}</p></div></div>
-                          </div>
-                          <div className={`mt-2 rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}><p className="mb-2 text-xs font-semibold">Кривая результата</p><PnlCurve trades={historyTrades} accounts={ctraderAccounts} language={language} isLight={isLight} /></div>
-                          {historyByCurrency.length > 0 && <div className="mt-2 grid gap-2 sm:grid-cols-2">{historyByCurrency.map(([code, stats]) => { const meta = getCurrencyMeta(code); return <button key={code} type="button" onClick={() => setHistoryCurrency(code)} className={`rounded-xl border p-3 text-left ${isLight ? 'border-zinc-200 bg-zinc-50 hover:border-amber-300' : 'border-zinc-800 bg-black/20 hover:border-amber-400/30'}`}><div className="flex items-center justify-between"><span className="font-data text-[10px] font-semibold">{meta.symbol} {code}</span><span className="text-[9px] text-zinc-500">{stats.count} сделок</span></div><p className={`mt-1 font-data text-sm font-bold ${stats.balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.balance >= 0 ? '+' : '−'}{meta.symbol}{formatMoneyShort(Math.abs(stats.balance))}</p></button>; })}</div>}
-                          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                            <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}><p className="text-[9px] uppercase tracking-wider text-zinc-500">Доходные инструменты</p><div className="mt-2 space-y-2">{historyAnalysis.incomeSources.slice(0, 5).map(([name, value]) => <div key={name}><div className="flex justify-between gap-2 text-[10px]"><span className="truncate">{name}</span><span className="font-data text-emerald-500">+{historyCurrencySymbol}{formatMoneyShort(value)}</span></div><div className="mt-1 h-1 rounded-full bg-zinc-500/10"><div className="h-full rounded-full bg-emerald-500" style={{width:`${Math.max(5, (value / (historyIncome || 1)) * 100)}%`}} /></div></div>)}{historyAnalysis.incomeSources.length === 0 && <p className="text-xs text-zinc-500">Нет данных</p>}</div></div>
-                            <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}><p className="text-[9px] uppercase tracking-wider text-zinc-500">Расходные инструменты</p><div className="mt-2 space-y-2">{historyAnalysis.expenseCategories.slice(0, 5).map(([name, value]) => <div key={name}><div className="flex justify-between gap-2 text-[10px]"><span className="truncate">{name}</span><span className="font-data text-red-500">−{historyCurrencySymbol}{formatMoneyShort(value)}</span></div><div className="mt-1 h-1 rounded-full bg-zinc-500/10"><div className="h-full rounded-full bg-red-500" style={{width:`${Math.max(5, (value / (historyExpense || 1)) * 100)}%`}} /></div></div>)}{historyAnalysis.expenseCategories.length === 0 && <p className="text-xs text-zinc-500">Нет данных</p>}</div></div>
-                          </div>
-                        </div>}
-                      </section>
-
-                      {/* Existing actions retained */}
+                      {/* Footer actions */}
                       <div className="grid gap-2 sm:grid-cols-2">
-                        <button type="button" onClick={() => setExportOpen(true)} disabled={!trades.length} className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${isLight ? 'border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300' : 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-zinc-700'}`}><Download className="h-4 w-4" />{t('downloadReport')}</button>
-                        <button type="button" onClick={handleClearHistory} className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-semibold ${confirmingClear ? 'border-red-500/60 bg-red-500/10 text-red-500' : isLight ? 'border-zinc-200 bg-white text-zinc-500 hover:border-red-300 hover:text-red-500' : 'border-zinc-800 bg-zinc-950 text-zinc-500 hover:border-red-500/40 hover:text-red-400'}`}><Trash2 className="h-4 w-4" />{confirmingClear ? t('confirmClearHistory') : t('clearHistory')}</button>
+                        <button type="button" onClick={() => setExportOpen(true)} disabled={!trades.length} className={`flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${isLight ? 'border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300' : 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-zinc-700'}`}><Download className="h-4 w-4" />{t('downloadReport')}</button>
+                        <button type="button" onClick={handleClearHistory} className={`flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-xs font-semibold ${confirmingClear ? 'border-red-500/60 bg-red-500/10 text-red-500' : isLight ? 'border-zinc-200 bg-white text-zinc-500 hover:border-red-300 hover:text-red-500' : 'border-zinc-800 bg-zinc-950 text-zinc-500 hover:border-red-500/40 hover:text-red-400'}`}><Trash2 className="h-4 w-4" />{confirmingClear ? t('confirmClearHistory') : t('clearHistory')}</button>
                       </div>
                     </div>;
                   })()}
