@@ -4,7 +4,7 @@ import {
   Calendar, ChevronDown, Link2, KeyRound, UploadCloud, FileText,
   CheckCircle2, RefreshCw, History, Download, Pencil,
   Wallet, ShoppingCart, Home, Briefcase, ShoppingBag, CreditCard, MoreHorizontal, Cigarette, Utensils, Car, Gift, Gamepad2, Fish, ChartCandlestick, Repeat2, CircleDollarSign,
-  Wifi, WifiOff, Zap, Award, Lock, Flame,
+  Wifi, WifiOff, Zap, Award, Flame,
 } from 'lucide-react';
 import { supabase } from './src/supabaseClient';
 
@@ -789,10 +789,10 @@ export default function CalendarScreen() {
     return { score, grade, label };
   }, [basicAnalysis, analysisStats]);
 
-  // One free, rule-based coaching line — teases the paid "deep AI analysis" without needing it.
+  // Rule-based observations from the selected trades, not an AI assessment.
   const traderInsight = useMemo(() => {
     if (!basicAnalysis) return '';
-    if (basicAnalysis.longestLossStreak >= 3) return `Замечена серия из ${basicAnalysis.longestLossStreak} убыточных сделок подряд — риск «отыгрыша» эмоций. Стоит сокращать размер позиции после 2 убытков подряд.`;
+    if (basicAnalysis.longestLossStreak >= 3) return `Самая длинная серия убытков в выборке: ${basicAnalysis.longestLossStreak}. Сопоставьте этот период с заметками к торговым дням: по одним результатам сделок нельзя определить причины убытков или эмоциональное состояние.`;
     if (basicAnalysis.payoffRatio > 0 && basicAnalysis.payoffRatio < 1 && analysisStats.winrate >= 50) return 'Винрейт хороший, но средний убыток крупнее среднего профита — похоже, прибыль фиксируется слишком рано, а убытки пересиживаются.';
     if (basicAnalysis.profitFactor !== Infinity && basicAnalysis.profitFactor < 1) return 'Profit Factor ниже 1 — за период убытки перевешивают прибыль. Стоит пересмотреть risk/reward по сделкам.';
     if (basicAnalysis.profitFactor >= 1.5) return 'Сильный период: Profit Factor выше 1.5 говорит о стабильном преимуществе в текущей стратегии. Держите риск неизменным.';
@@ -1135,12 +1135,11 @@ export default function CalendarScreen() {
   const [historyCategoryMenuOpen, setHistoryCategoryMenuOpen] = useState(false);
   const [historyFiltersOpen, setHistoryFiltersOpen] = useState(false);
   const [historyPeriodMenuOpen, setHistoryPeriodMenuOpen] = useState(false);
-  const [historyAnalysisOpen, setHistoryAnalysisOpen] = useState(false);
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
+  const [instrumentBreakdownOpen, setInstrumentBreakdownOpen] = useState(false);
   const [freeTimelineSelected, setFreeTimelineSelected] = useState(null);
   // 0 = latest window, 1 = previous 10 days, etc. Keeps the timeline browsable.
   const [freeTimelineOffset, setFreeTimelineOffset] = useState(0);
-  const [freeDynamicsOpen, setFreeDynamicsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [exportPeriodPreset, setExportPeriodPreset] = useState('currentPeriod');
   const [confirmingClear, setConfirmingClear] = useState(false);
@@ -1380,7 +1379,6 @@ export default function CalendarScreen() {
     setProFiltersOpen(false);
     setConfirmingClear(false);
     setHistoryAnalysisOpen(false);
-    setHistoryAnalysisTab('overview');
   }
 
   function closeHistory() {
@@ -1832,41 +1830,12 @@ export default function CalendarScreen() {
             </div>
 
             <div className={`overflow-y-auto px-5 sm:px-6 py-5 flex-1 min-h-0 ${isLight ? 'bg-zinc-50/50' : ''}`} style={{ overscrollBehavior: 'contain' }}>
-              {/* FREE — Динамика периода (скрыта по умолчанию, раскрывается по кнопке) */}
+              {/* FREE — Динамика периода */}
               {!traderMode && (
                 <section className="mb-4">
-                  {/* Кнопка-аккордеон */}
-                  <button
-                    type="button"
-                    onClick={() => setFreeDynamicsOpen((v) => !v)}
-                    className={`w-full group relative overflow-hidden rounded-2xl border px-4 py-3.5 text-left transition-all duration-200 hover:-translate-y-0.5 ${
-                      freeDynamicsOpen
-                        ? isLight ? 'border-emerald-300/70 bg-emerald-50/60' : 'border-emerald-500/30 bg-emerald-500/[0.06]'
-                        : isLight ? 'border-zinc-300 bg-white hover:border-emerald-400/50 hover:shadow-md' : 'border-zinc-800 bg-zinc-950/70 hover:border-emerald-500/35 hover:bg-zinc-900'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="flex items-center gap-3">
-                        <span className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${freeDynamicsOpen ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-500' : isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-400 group-hover:border-emerald-300/50 group-hover:text-emerald-500' : 'border-zinc-800 bg-zinc-900 text-zinc-500 group-hover:border-emerald-500/25 group-hover:text-emerald-500'}`}>
-                          <TrendingUp className="h-4 w-4" />
-                        </span>
-                        <span>
-                          <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('freeDynamicsBtn')}</span>
-                          <span className="block mt-0.5 text-[11px] text-zinc-500">{t('freeDynamicsBtnSub')}</span>
-                        </span>
-                      </span>
-                      <span className="flex items-center gap-2 shrink-0">
-                        <span className={`font-data text-sm font-semibold tabular-nums ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                          {historyCurrency === 'ALL' ? t('allCurrencies') : `${historyTotal >= 0 ? '+' : '−'}${historyCurrencySymbol}${formatMoneyShort(Math.abs(historyTotal))}`}
-                        </span>
-                        <ChevronDown className={`h-4 w-4 text-emerald-500 transition-transform duration-300 ${freeDynamicsOpen ? 'rotate-180' : ''}`} />
-                      </span>
-                    </div>
-                  </button>
+                  <h3 className="mb-3 px-1 text-sm font-semibold tracking-tight">{t('freeDynamicsBtn')}</h3>
 
-                  {/* Содержимое аккордеона */}
-                  {freeDynamicsOpen && (
-                    <div className={`mt-2 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950'}`}>
+                  <div className={`mt-2 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950'}`}>
                       <div className={`rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50/70' : 'border-zinc-800 bg-black/20'}`}>
                         <div className="mb-3 flex items-center justify-between gap-3">
                           <div className="flex gap-3 text-[10px]"><span className="text-emerald-500">● {t('incomeLabel')}</span><span className="text-red-400">● {t('expenseLabel')}</span></div>
@@ -1902,38 +1871,15 @@ export default function CalendarScreen() {
                         <div><p className="text-[10px] uppercase tracking-wide text-zinc-500">{t('recordsCount')}</p><p className={`mt-1 text-sm font-data ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>{historyTrades.length}</p></div>
                       </div>
                     </div>
-                  )}
                 </section>
               )}
 
-              {/* FREE — Обзор денег (анализ источников, всегда скрыт под toggle) */}
+              {/* FREE — Обзор денег */}
               {!traderMode && historyTrades.length > 0 && (
                 <section className="mb-4">
-                  <button
-                    type="button"
-                    onClick={() => setHistoryAnalysisOpen((v) => !v)}
-                    className={`w-full group relative overflow-hidden rounded-2xl border px-4 py-3.5 text-left transition-all duration-200 hover:-translate-y-0.5 ${
-                      historyAnalysisOpen
-                        ? isLight ? 'border-amber-300/60 bg-amber-50/60' : 'border-amber-400/30 bg-amber-400/[0.06]'
-                        : isLight ? 'border-zinc-300 bg-white hover:border-amber-400/40 hover:shadow-md' : 'border-zinc-800 bg-zinc-950/70 hover:border-amber-400/30 hover:bg-zinc-900'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="flex items-center gap-3">
-                        <span className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${historyAnalysisOpen ? 'border-amber-400/30 bg-amber-400/10 text-amber-500' : isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-400 group-hover:text-amber-500' : 'border-zinc-800 bg-zinc-900 text-zinc-500 group-hover:text-amber-500'}`}>
-                          <Sparkles className="h-4 w-4" />
-                        </span>
-                        <span>
-                          <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('freeAnalysisTitle')}</span>
-                          <span className="block mt-0.5 text-[11px] text-zinc-500">{t('freeAnalysisSub')}</span>
-                        </span>
-                      </span>
-                      <ChevronDown className={`h-4 w-4 text-amber-500 shrink-0 transition-transform duration-300 ${historyAnalysisOpen ? 'rotate-180' : ''}`} />
-                    </div>
-                  </button>
+                  <h3 className="mb-3 px-1 text-sm font-semibold tracking-tight">{t('freeAnalysisTitle')}</h3>
 
-                  {historyAnalysisOpen && (
-                    <div className={`mt-2 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-amber-200/60 bg-white shadow-sm' : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.05] via-zinc-950 to-zinc-950'}`}>
+                  <div className={`mt-2 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-amber-200/60 bg-white shadow-sm' : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.05] via-zinc-950 to-zinc-950'}`}>
                       {/* Финансовый вывод */}
                       <div className={`mb-4 rounded-xl border px-4 py-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
                         <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500 mb-1">{t('financialSummary')}</p>
@@ -1941,183 +1887,34 @@ export default function CalendarScreen() {
                           {historyIncome > historyExpense ? t('flowSummaryPositive') : historyExpense > 0 ? t('flowSummaryNegative') : t('flowSummaryEmpty')}
                         </p>
                       </div>
-                      {/* Обзор */}
-                      <div className="grid grid-cols-3 gap-2 mb-4">
-                        <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">{t('incomeLabel')}</p><p className="font-data text-xs text-emerald-600 tabular-nums truncate">+{historyCurrencySymbol}{formatMoney(historyIncome)}</p></div>
-                        <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">{t('expenseLabel')}</p><p className="font-data text-xs text-red-600 tabular-nums truncate">−{historyCurrencySymbol}{formatMoney(historyExpense)}</p></div>
-                        <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">{t('recordsCount')}</p><p className="font-data text-sm">{historyTrades.length}</p></div>
-                      </div>
-                      {historyCurrency === 'ALL' ? <p className="text-xs text-zinc-500 mb-4">{t('allCurrenciesNotice')}</p> : <div className="mb-4"><HistoryChart entries={historyAnalysis.dailyEntries} isLight={isLight} t={t} formatAmount={(amount) => formatAmountInCurrency(amount, historyCurrency)} /></div>}
-
-                      {/* Откуда пришли деньги */}
-                      <div className={`mb-1.5 text-[11px] font-semibold uppercase tracking-wide ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{t('fromWhere')}</div>
-                      <div className="space-y-3 mb-4">
-                        {historyAnalysis.incomeSources.length ? historyAnalysis.incomeSources.slice(0,5).map(([name, value]) => (
-                          <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-emerald-600 tabular-nums">+{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-1.5 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{width:`${Math.max(5,(value/(historyIncome||1))*100)}%`}} /></div></div>
-                        )) : <p className="py-5 text-center text-sm text-zinc-500">{t('noIncomePeriod')}</p>}
-                      </div>
-
-                      {/* Куда уходят деньги */}
-                      <div className={`mb-1.5 text-[11px] font-semibold uppercase tracking-wide ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{t('whereGo')}</div>
-                      <div className="space-y-3">
-                        {historyAnalysis.expenseCategories.length ? historyAnalysis.expenseCategories.slice(0,5).map(([name, value]) => (
-                          <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-red-600 tabular-nums">−{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-1.5 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-red-500 transition-all duration-500" style={{width:`${Math.max(5,(value/(historyExpense||1))*100)}%`}} /></div></div>
-                        )) : <p className="py-5 text-center text-sm text-zinc-500">{t('noExpensePeriod')}</p>}
-                      </div>
-                    </div>
-                  )}
-                </section>
-              )}
-
-              {traderMode && <button
-                onClick={() => setHistoryAnalysisOpen((v) => !v)}
-                disabled={historyTrades.length === 0}
-                className={`mb-4 w-full group relative overflow-hidden rounded-2xl border px-4 py-3.5 text-left transition-all duration-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40 ${
-                  historyAnalysisOpen
-                    ? 'border-amber-400/50 bg-amber-400/10 shadow-[0_10px_30px_rgba(251,191,36,.08)]'
-                    : isLight ? 'border-zinc-300 bg-white hover:border-amber-400/50 hover:shadow-lg' : 'border-zinc-800 bg-zinc-950/70 hover:border-amber-400/45 hover:bg-zinc-900'
-                }`}
-              >
-                <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-amber-400/10 to-transparent pointer-events-none" />
-                <div className="relative flex items-center justify-between gap-3">
-                    <span className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/10 text-amber-500 group-hover:scale-110 transition-transform"><Sparkles className="h-4 w-4" /></span>
-                    <span>
-                      <span className={`block text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{historyAnalysisOpen ? t('analysisOpenState') : t('openAnalysis')}</span>
-                      <span className="block mt-0.5 text-[11px] text-zinc-500">{t('analysisTeaser')}</span>
-                    </span>
-                  </span>
-                  <ChevronDown className={`h-4 w-4 text-amber-500 transition-transform duration-300 ${historyAnalysisOpen ? 'rotate-180' : ''}`} />
-                </div>
-              </button>}
-              {traderMode && historyAnalysisOpen && (
-                <section className={`relative overflow-hidden mb-5 rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-amber-300/70 bg-white shadow-sm' : 'border-amber-400/20 bg-gradient-to-br from-amber-400/[0.08] via-zinc-950 to-zinc-950 shadow-[0_18px_60px_rgba(0,0,0,.28)]'}`}>
-                  <div className="absolute -right-8 -top-10 select-none pointer-events-none font-display text-8xl font-bold tracking-tighter text-amber-400/[0.045]">PRO</div>
-                  <div className="relative flex items-start justify-between gap-4 mb-4">
-                    <div>
-                      <p className="font-data text-[10px] uppercase tracking-[0.24em] text-amber-500">{t('proFinancialPicture')}</p>
-                      <h3 className={`mt-1 text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('moneyInMotion')}</h3>
-                      <p className="mt-1 text-xs text-zinc-500">{t('proSubtitle')}</p>
-                    </div>
-                    <Sparkles className="h-5 w-5 shrink-0 text-amber-500" />
-                  </div>
-
-                  {historyCurrency === 'ALL' ? (
-                    <div className="mb-5 space-y-3">
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        {historyByCurrency.length ? historyByCurrency.map(([code, stats]) => {
-                          const meta = getCurrencyMeta(code);
-                          return <button key={code} onClick={() => setHistoryCurrency(code)} className={`rounded-xl border p-3 text-left transition-all hover:-translate-y-0.5 ${isLight ? 'border-zinc-200 bg-zinc-50 hover:border-amber-400/40' : 'border-zinc-800 bg-black/20 hover:border-amber-400/35'}`}>
-                            <span className="text-[10px] text-zinc-500">{code}</span>
-                            <span className={`mt-1 block font-data text-sm sm:text-base font-semibold tabular-nums leading-tight break-all ${stats.balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.balance >= 0 ? '+' : '−'}{meta.symbol}{formatMoneyShort(Math.abs(stats.balance))}</span>
-                            <span className="mt-1 block text-[10px] text-zinc-500">{stats.count} {t('transactions')} · {t('openAnalysisAction')}</span>
-                          </button>;
-                        }) : <p className="col-span-full py-8 text-center text-sm text-zinc-500">{t('noRecords')}</p>}
-                      </div>
-                      <div className={`rounded-2xl border p-3 sm:p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-white/5 bg-black/20'}`}>
-                        <div className="mb-3 flex items-end justify-between gap-3"><div><p className="text-xs font-semibold">{t('currencyDynamics')}</p><p className="mt-1 text-[10px] text-zinc-500">{t('currenciesNotMixed')}</p></div><span className="text-[10px] text-amber-500">PRO</span></div>
-                        <div className="grid gap-2">
-                          {historyByCurrency.map(([code, stats]) => { const meta = getCurrencyMeta(code); return <button key={code} onClick={() => setHistoryCurrency(code)} className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800/80 bg-zinc-900/40'}`}><span><span className="block text-xs font-medium">{meta.symbol} {code}</span><span className="mt-0.5 block text-[10px] text-zinc-500">{stats.count} {t('transactions')}</span></span><span className={`font-data text-sm ${stats.balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.balance >= 0 ? '+' : '−'}{meta.symbol}{formatMoney(Math.abs(stats.balance))}</span></button>; })}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className={`relative mb-5 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-white/5 bg-black/20'}`}>
-                        <div className="absolute -right-3 -bottom-6 select-none pointer-events-none font-display text-7xl sm:text-8xl font-bold tracking-tighter text-emerald-500/[0.045]">{historyCurrency}</div>
-                        <div className="relative flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('resultForPeriod')}</p>
-                            <p className={`mt-2 font-display font-semibold tracking-tight tabular-nums leading-none break-all text-[clamp(1.75rem,9vw,3.5rem)] ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                              {historyTotal >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoney(Math.abs(historyTotal))}
-                            </p>
-                            <p className="mt-3 text-[11px] text-zinc-500">{historyTrades.length} {t('transactions')} · {historyCurrency} · {t('currentPeriod')}</p>
-                          </div>
-                          <div className={`shrink-0 rounded-xl border px-3 py-2 text-right ${isLight ? 'border-amber-200 bg-white/80' : 'border-amber-400/15 bg-amber-400/[0.04]'}`}>
-                            <p className="text-[9px] uppercase tracking-wider text-zinc-500">{t('status')}</p>
-                            <p className={`mt-1 text-xs font-semibold ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>{historyTotal >= 0 ? t('positive') : t('needsAttention')}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-5">
-                        {[
-                          [t('incomeLabel'), historyIncome, 'text-emerald-500'],
-                          [t('expenseLabel'), historyExpense, 'text-red-500'],
-                          [t('balanceLabel'), Math.abs(historyTotal), historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'],
-                        ].map(([label, amount, color]) => (
-                          <div key={label} className={`min-w-0 rounded-xl border p-2.5 sm:p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/50'}`}>
-                            <p className="text-[9px] sm:text-[10px] text-zinc-500">{label}</p>
-                            <p className={`mt-1 font-data text-sm sm:text-xs font-semibold tabular-nums leading-tight whitespace-nowrap ${color}`}>{label === t('expenseLabel') ? '−' : label === t('balanceLabel') && historyTotal >= 0 ? '+' : '+'}{historyCurrencySymbol}{formatMoneyShort(amount)}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-
-                  {/* Обзор */}
-                  <div className="mb-4">
-                    <div className={`relative overflow-hidden rounded-2xl border p-3 sm:p-4 mb-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}>
-                      <div className="absolute inset-x-4 top-[52%] border-t border-dashed border-zinc-500/15 pointer-events-none" />
-                      <div className="relative mb-4 flex items-end justify-between gap-3">
+                      {/* Всё подряд одним потоком — обзор, откуда, куда */}
+                      <div className="space-y-5">
                         <div>
-                          <span className="text-sm font-semibold">{t('periodDynamics')}</span>
-                          <p className="mt-1 text-[10px] text-zinc-500">{t('last10Days')}</p>
+                          <div className="grid grid-cols-3 gap-2 mb-4">
+                            <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">{t('incomeLabel')}</p><p className="font-data text-xs text-emerald-600 tabular-nums truncate">+{historyCurrencySymbol}{formatMoney(historyIncome)}</p></div>
+                            <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">{t('expenseLabel')}</p><p className="font-data text-xs text-red-600 tabular-nums truncate">−{historyCurrencySymbol}{formatMoney(historyExpense)}</p></div>
+                            <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}><p className="text-[10px] text-zinc-500 mb-1">{t('recordsCount')}</p><p className="font-data text-sm">{historyTrades.length}</p></div>
+                          </div>
+                          {historyCurrency === 'ALL' ? <p className="text-xs text-zinc-500">{t('allCurrenciesNotice')}</p> : <HistoryChart entries={historyAnalysis.dailyEntries} isLight={isLight} t={t} formatAmount={(amount) => formatAmountInCurrency(amount, historyCurrency)} />}
                         </div>
-                        <div className="flex shrink-0 gap-2 text-[9px]"><span className="text-emerald-500">● {t('incomeLabel')}</span><span className="text-red-400">● {t('expenseLabel')}</span></div>
+                        <div>
+                          <p className={`text-xs font-semibold mb-2 ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>{t('fromWhere')}</p>
+                          <div className="space-y-3">
+                            {historyAnalysis.incomeSources.length ? historyAnalysis.incomeSources.slice(0,5).map(([name, value]) => (
+                              <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-emerald-600 tabular-nums">+{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-1.5 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{width:`${Math.max(5,(value/(historyIncome||1))*100)}%`}} /></div></div>
+                            )) : <p className="py-5 text-center text-sm text-zinc-500">{t('noIncomePeriod')}</p>}
+                          </div>
+                        </div>
+                        <div>
+                          <p className={`text-xs font-semibold mb-2 ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>{t('whereGo')}</p>
+                          <div className="space-y-3">
+                            {historyAnalysis.expenseCategories.length ? historyAnalysis.expenseCategories.slice(0,5).map(([name, value]) => (
+                              <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-red-600 tabular-nums">−{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-1.5 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-red-500 transition-all duration-500" style={{width:`${Math.max(5,(value/(historyExpense||1))*100)}%`}} /></div></div>
+                            )) : <p className="py-5 text-center text-sm text-zinc-500">{t('noExpensePeriod')}</p>}
+                          </div>
+                        </div>
                       </div>
-                      {historyAnalysis.chartEntries.length ? (
-                        <div className="relative grid grid-cols-5 sm:grid-cols-10 gap-x-1.5 gap-y-3 items-end h-52 sm:h-44">
-                          {historyAnalysis.chartEntries.map(([date, stats]) => {
-                            const net = stats.income - stats.expense;
-                            const active = stats.income > 0 || stats.expense > 0;
-                            return <div key={date} className="min-w-0 h-full flex flex-col justify-end">
-                              <div className={`mb-1 min-h-[14px] text-center text-[10px] sm:text-[11px] font-data tabular-nums ${!active ? 'text-zinc-700' : net >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>
-                                {active ? `${net >= 0 ? '+' : '−'}${formatMoneyShort(Math.abs(net))}` : '—'}
-                              </div>
-                              <div className="relative flex flex-1 items-end justify-center gap-1">
-                                <span className={`w-2.5 sm:w-3 rounded-t-md transition-all duration-500 ${stats.income > 0 ? 'bg-gradient-to-t from-emerald-600/70 to-emerald-300/90 shadow-[0_0_16px_rgba(16,185,129,.18)]' : 'bg-emerald-500/[0.06]'}`} style={{height:`${stats.income > 0 ? Math.max(6,(stats.income/historyAnalysis.maxDaily)*100) : 3}%`}} />
-                                <span className={`w-2.5 sm:w-3 rounded-t-md transition-all duration-500 ${stats.expense > 0 ? 'bg-gradient-to-t from-red-700/65 to-red-400/85 shadow-[0_0_16px_rgba(248,113,113,.12)]' : 'bg-red-500/[0.05]'}`} style={{height:`${stats.expense > 0 ? Math.max(5,(stats.expense/historyAnalysis.maxDaily)*100) : 3}%`}} />
-                              </div>
-                              <span className={`mt-2 text-center text-[10px] sm:text-[11px] ${active ? 'text-zinc-500' : 'text-zinc-700'}`}>{date.slice(8,10)}</span>
-                            </div>;
-                          })}
-                        </div>
-                      ) : <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-zinc-800 text-xs text-zinc-500">{t('emptyHistoryDesc')}</div>}
                     </div>
-                    <div className="grid sm:grid-cols-3 gap-2">
-                      <div className={`text-left rounded-xl p-3 ${isLight ? 'bg-emerald-50' : 'bg-emerald-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">{t('mainSource')}</p><p className="mt-1 text-xs font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p></div>
-                      <div className={`text-left rounded-xl p-3 ${isLight ? 'bg-red-50' : 'bg-red-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">{t('expenseZone')}</p><p className="mt-1 text-xs font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p></div>
-                      <div className={`rounded-xl p-3 ${isLight ? 'bg-amber-50' : 'bg-amber-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">{t('financialSummary')}</p><p className="mt-1 text-xs font-semibold leading-relaxed">{historyIncome > historyExpense ? t('flowPositivePro') : historyExpense > 0 ? t('flowNegativePro') : t('flowLittleData')}</p></div>
-                    </div>
-                  </div>
-
-                  {/* Откуда пришли деньги */}
-                  <div className={`mb-1.5 text-[11px] font-semibold uppercase tracking-wide ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{t('fromWhere')}</div>
-                  <div className="space-y-3 mb-4">{historyAnalysis.incomeSources.length ? historyAnalysis.incomeSources.slice(0,6).map(([name,value]) => <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-emerald-500">+{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{width:`${Math.max(5,(value/(historyIncome||1))*100)}%`}} /></div></div>) : <p className="py-5 text-center text-sm text-zinc-500">{t('noIncomePeriod')}</p>}</div>
-
-                  {/* Куда уходят деньги */}
-                  <div className={`mb-1.5 text-[11px] font-semibold uppercase tracking-wide ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{t('whereGo')}</div>
-                  <div className="space-y-3 mb-4">{historyAnalysis.expenseCategories.length ? historyAnalysis.expenseCategories.slice(0,6).map(([name,value]) => <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-red-500">−{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-red-500" style={{width:`${Math.max(5,(value/(historyExpense||1))*100)}%`}} /></div></div>) : <p className="py-5 text-center text-sm text-zinc-500">{t('noExpensePeriod')}</p>}</div>
-
-                  {/* Радар */}
-                  <div className={`mb-1.5 text-[11px] font-semibold uppercase tracking-wide ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{t('radar')}</div>
-                  <div className="mb-4">
-                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-amber-200 bg-amber-50/40' : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.07] to-transparent'}`}><p className="font-data text-[10px] uppercase tracking-[0.18em] text-amber-500">{t('financialRadar')}</p><div className="mt-3 grid gap-2 sm:grid-cols-2">
-                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">{t('periodPower')}</p><p className="mt-1 text-sm font-semibold">{historyExpense > 0 ? `${(historyIncome / historyExpense).toFixed(1)}×` : historyIncome > 0 ? t('positive') : '—'}</p></div>
-                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">{t('mainSource')}</p><p className="mt-1 text-sm font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p></div>
-                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">{t('attentionZone')}</p><p className="mt-1 text-sm font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p></div>
-                      <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">{t('bestDay')}</p><p className="mt-1 text-sm font-semibold">{historyAnalysis.dailyEntries.length ? historyAnalysis.dailyEntries.reduce((best, item) => item[1].income - item[1].expense > best[1].income - best[1].expense ? item : best)[0] : '—'}</p></div>
-                    </div></div>
-                  </div>
-
-                  {/* Привычки */}
-                  <div className={`mb-1.5 text-[11px] font-semibold uppercase tracking-wide ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{t('habits')}</div>
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}><p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('activity')}</p><p className="mt-2 text-lg font-semibold">{historyTrades.length}</p><p className="text-xs text-zinc-500">{t('transactions')}</p></div>
-                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}><p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('frequentIncome')}</p><p className="mt-2 text-sm font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p><p className="text-xs text-zinc-500">{t('incomeSources')}</p></div>
-                    <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}><p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('expensePattern')}</p><p className="mt-2 text-sm font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p><p className="text-xs text-zinc-500">{t('expenseStructure')}</p></div>
-                  </div>
                 </section>
               )}
 
@@ -2294,7 +2091,38 @@ export default function CalendarScreen() {
                 </>
               ) : (
                 <>
-                  {/* PRO HISTORY — Premium redesign with donut chart */}
+                  {/* PRO HISTORY — one continuous feed; only the instrument breakdown collapses. */}
+
+                  {/* ── Compact toolbar (currency · deposit · sync) — always visible ── */}
+                  <div className="flex flex-wrap items-center gap-2 mb-4">
+                    <button
+                      onClick={() => {
+                        if (displayMode === 'usd' && depositSize <= 0) { handleEditDeposit(); return; }
+                        setDisplayMode((m) => (m === 'usd' ? 'percent' : 'usd'));
+                      }}
+                      className={`rounded-lg border px-2.5 py-1 font-data text-xs font-semibold transition-all ${
+                        isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-amber-400/50'
+                        : 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-amber-400/40'
+                      }`}
+                    >
+                      {displayMode === 'usd' ? currencySymbol : '%'}
+                    </button>
+                    <button onClick={handleEditDeposit}
+                      className={`font-data text-xs transition-colors ${isLight ? 'text-zinc-400 hover:text-zinc-700' : 'text-zinc-600 hover:text-zinc-300'}`}>
+                      {t('deposit')}: {depositSize > 0 ? `${currencySymbol}${formatMoney(depositSize)}` : t('notSet')} ✎
+                    </button>
+                    {ctraderConnected && (
+                      <button onClick={handleSyncCtraderTrades} disabled={syncingCtrader}
+                        className={`ml-auto flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all ${
+                          isLight ? 'border-emerald-300/80 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                          : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                        }`}>
+                        <RefreshCw className={`h-3 w-3 ${syncingCtrader ? 'animate-spin' : ''}`} />
+                        {syncingCtrader ? t('syncing') : t('synchronize')}
+                      </button>
+                    )}
+                  </div>
+
                   <PnlCurve trades={historyTrades} accounts={ctraderAccounts} language={language} isLight={isLight} />
 
                   {/* ── Luxury Donut + Stats Header ─────────────────────── */}
@@ -2381,36 +2209,6 @@ export default function CalendarScreen() {
                           </div>
                         </div>
 
-                  {/* ── Display mode + deposit + sync ──────────────────── */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <button
-                      onClick={() => {
-                        if (displayMode === 'usd' && depositSize <= 0) { handleEditDeposit(); return; }
-                        setDisplayMode((m) => (m === 'usd' ? 'percent' : 'usd'));
-                      }}
-                      className={`rounded-lg border px-2.5 py-1 font-data text-xs font-semibold transition-all ${
-                        isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-amber-400/50'
-                        : 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-amber-400/40'
-                      }`}
-                    >
-                      {displayMode === 'usd' ? currencySymbol : '%'}
-                    </button>
-                    <button onClick={handleEditDeposit}
-                      className={`font-data text-xs transition-colors ${isLight ? 'text-zinc-400 hover:text-zinc-700' : 'text-zinc-600 hover:text-zinc-300'}`}>
-                      {t('deposit')}: {depositSize > 0 ? `${currencySymbol}${formatMoney(depositSize)}` : t('notSet')} ✎
-                    </button>
-                    {ctraderConnected && (
-                      <button onClick={handleSyncCtraderTrades} disabled={syncingCtrader}
-                        className={`ml-auto flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all ${
-                          isLight ? 'border-emerald-300/80 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                          : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
-                        }`}>
-                        <RefreshCw className={`h-3 w-3 ${syncingCtrader ? 'animate-spin' : ''}`} />
-                        {syncingCtrader ? t('syncing') : t('synchronize')}
-                      </button>
-                    )}
-                  </div>
-
                         {/* Win-rate bar */}
                         {hTrades.length > 0 && (
                           <div className="relative mt-4 overflow-hidden rounded-full" style={{height:4}}>
@@ -2425,9 +2223,8 @@ export default function CalendarScreen() {
                     );
                   })()}
 
-                  {/* ── PRO Scorecard — profit factor, payoff, best/worst day, streaks ── */}
-                  {(() => {
-                    if (historyTrades.length === 0) return null;
+                  {/* ── PRO Scorecard — profit factor, payoff, best/worst day, streaks. Always visible, just scroll. ── */}
+                  {historyTrades.length > 0 && (() => {
                     const trades = historyTrades;
                     const wins = trades.filter((tr) => tr.pnl >= 0);
                     const losses = trades.filter((tr) => tr.pnl < 0);
@@ -2464,7 +2261,7 @@ export default function CalendarScreen() {
                     const scoreCirc = 238.76;
 
                     const insight = longestLossStreak >= 3
-                      ? `Серия из ${longestLossStreak} убыточных сделок подряд — риск «отыгрыша» эмоций. Сокращайте размер позиции после 2 убытков подряд.`
+                      ? `Самая длинная серия убытков в выборке: ${longestLossStreak}. Сопоставьте этот период с заметками к торговым дням: по одним результатам сделок нельзя определить причины убытков или эмоциональное состояние.`
                       : (payoffRatio > 0 && payoffRatio < 1 && winrate >= 50)
                       ? 'Винрейт хороший, но средний убыток крупнее среднего профита — похоже, прибыль фиксируется слишком рано.'
                       : (profitFactor !== Infinity && profitFactor < 1)
@@ -2475,6 +2272,7 @@ export default function CalendarScreen() {
 
                     return (
                       <div className="mb-4 space-y-3">
+                        <div className="space-y-3">
                         <div className={`relative overflow-hidden rounded-2xl p-5 sm:p-7 ${isLight ? 'bg-gradient-to-br from-white to-zinc-50 shadow-[0_1px_0_rgba(0,0,0,.04),0_16px_40px_rgba(0,0,0,.06)]' : 'bg-gradient-to-br from-zinc-900 via-zinc-950 to-black shadow-[0_24px_70px_rgba(0,0,0,.5)]'}`}>
                           <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-amber-400/[0.07] blur-3xl" />
                           <div className="relative flex items-center justify-between mb-5">
@@ -2545,46 +2343,194 @@ export default function CalendarScreen() {
                           )}
                         </div>
 
+                        <section className={`rounded-2xl border ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/50'}`}>
+                          <button type="button" aria-expanded={instrumentBreakdownOpen} aria-controls="history-instrument-breakdown"
+                            onClick={() => setInstrumentBreakdownOpen(v => !v)}
+                            className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left text-xs font-medium">
+                            {t('instrumentBreakdown')}
+                            <ChevronDown className={`h-4 w-4 text-zinc-500 transition-transform duration-300 motion-reduce:transition-none ${instrumentBreakdownOpen ? 'rotate-180' : ''}`} />
+                          </button>
+                          <div id="history-instrument-breakdown" aria-hidden={!instrumentBreakdownOpen}
+                            className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${instrumentBreakdownOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                            <div className="min-h-0 overflow-hidden">
+                              <div className="space-y-3 px-4 pb-4">
+                                {Object.entries(byInstrument).sort((a, b) => b[1] - a[1]).map(([name, count]) => (
+                                  <div key={name}>
+                                    <div className="mb-1.5 flex items-center justify-between gap-3 text-xs">
+                                      <span className="truncate font-medium">{name}</span>
+                                      <span className="shrink-0 font-data text-zinc-500">{count} {t('trades')}</span>
+                                    </div>
+                                    <div className="h-1 overflow-hidden rounded-full bg-zinc-500/10">
+                                      <div className="h-full rounded-full bg-amber-400/60" style={{ width: `${count / trades.length * 100}%` }} />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </section>
+
                         <div className={`relative overflow-hidden rounded-2xl border p-4 ${isLight ? 'border-amber-300/70 bg-gradient-to-br from-amber-50 to-white' : 'border-amber-400/25 bg-gradient-to-br from-amber-400/[0.08] via-zinc-950 to-zinc-950'}`}>
-                          <div className="absolute -right-6 -top-8 select-none pointer-events-none font-display text-7xl font-bold tracking-tighter text-amber-400/[0.06]">AI</div>
+                          <div className="absolute -right-6 -top-8 select-none pointer-events-none font-display text-7xl font-bold tracking-tighter text-amber-400/[0.06]">PRO</div>
                           <div className="relative flex items-start gap-2.5 mb-3">
                             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-400/10 text-amber-500"><Sparkles className="h-4 w-4" /></span>
                             <div>
-                              <p className={`text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Инсайт по вашей торговле</p>
-                              <p className="text-[11px] text-zinc-500">Бесплатный разбор на основе текущей выборки</p>
+                              <p className={`text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Наблюдение по статистике</p>
+                              <p className="text-[11px] text-zinc-500">На основе сделок за выбранный период</p>
                             </div>
                           </div>
                           <p className={`relative rounded-xl border px-3 py-2.5 text-xs leading-relaxed mb-3 ${isLight ? 'border-zinc-200 bg-white text-zinc-700' : 'border-zinc-800 bg-black/25 text-zinc-300'}`}>{insight}</p>
 
-                          <div className={`relative overflow-hidden rounded-xl border mb-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/25'}`}>
-                            <div aria-hidden="true" className="px-3 py-2.5 space-y-2 blur-[3px] select-none opacity-70">
-                              <div className="flex items-center justify-between gap-3">
-                                <div className={`h-2.5 w-2/5 rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
-                                <div className={`h-2.5 w-10 rounded-full ${isLight ? 'bg-emerald-200' : 'bg-emerald-500/30'}`} />
-                              </div>
-                              <div className={`h-2.5 w-full rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
-                              <div className={`h-2.5 w-4/5 rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
-                              <div className="flex items-center justify-between gap-3">
-                                <div className={`h-2.5 w-1/3 rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
-                                <div className={`h-2.5 w-10 rounded-full ${isLight ? 'bg-red-200' : 'bg-red-500/30'}`} />
-                              </div>
-                            </div>
-                            <div className={`pointer-events-none absolute inset-0 bg-gradient-to-t ${isLight ? 'from-white via-white/40 to-transparent' : 'from-zinc-950 via-zinc-950/40 to-transparent'}`} />
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <span className={`flex h-9 w-9 items-center justify-center rounded-full border ${isLight ? 'border-zinc-200 bg-white text-zinc-400' : 'border-zinc-700 bg-zinc-900 text-zinc-500'}`}><Lock className="h-4 w-4" /></span>
-                            </div>
-                          </div>
-
-                          <button type="button" className="relative w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-4 py-2.5 text-xs font-semibold text-zinc-950 shadow-[0_8px_24px_rgba(251,191,36,.25)] hover:from-amber-300 hover:to-amber-400 active:scale-[0.99] transition-all">
-                            <Sparkles className="h-3.5 w-3.5" /> Разблокировать глубокий AI-разбор
-                          </button>
                         </div>
+                      </div>
                       </div>
                     );
                   })()}
 
-                  {/* ── Win/Loss quick filter ───────────────────────────── */}
-                  <div className={`flex gap-1 mb-4 rounded-xl border p-1 ${
+                  {/* ── Аналитика — непрерывная лента ── */}
+                  <section className="mb-4">
+                    <h3 className="mb-3 px-1 text-sm font-semibold tracking-tight">{t('proFinancialPicture')}</h3>
+
+                    <div className="mt-2">
+                  {/* ── Движение денег — депозиты/выводы по категориям ── */}
+                  {historyTrades.length > 0 ? (
+                  <div className="mb-4 pt-1">
+                    <div className="space-y-4">
+                  {historyCurrency === 'ALL' ? (
+                    <div className="mb-5 space-y-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {historyByCurrency.length ? historyByCurrency.map(([code, stats]) => {
+                          const meta = getCurrencyMeta(code);
+                          return <button key={code} onClick={() => setHistoryCurrency(code)} className={`rounded-xl border p-3 text-left transition-all hover:-translate-y-0.5 ${isLight ? 'border-zinc-200 bg-zinc-50 hover:border-amber-400/40' : 'border-zinc-800 bg-black/20 hover:border-amber-400/35'}`}>
+                            <span className="text-[10px] text-zinc-500">{code}</span>
+                            <span className={`mt-1 block font-data text-sm sm:text-base font-semibold tabular-nums leading-tight break-all ${stats.balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.balance >= 0 ? '+' : '−'}{meta.symbol}{formatMoneyShort(Math.abs(stats.balance))}</span>
+                            <span className="mt-1 block text-[10px] text-zinc-500">{stats.count} {t('transactions')} · {t('openAnalysisAction')}</span>
+                          </button>;
+                        }) : <p className="col-span-full py-8 text-center text-sm text-zinc-500">{t('noRecords')}</p>}
+                      </div>
+                      <div className={`rounded-2xl border p-3 sm:p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-white/5 bg-black/20'}`}>
+                        <div className="mb-3 flex items-end justify-between gap-3"><div><p className="text-xs font-semibold">{t('currencyDynamics')}</p><p className="mt-1 text-[10px] text-zinc-500">{t('currenciesNotMixed')}</p></div><span className="text-[10px] text-amber-500">PRO</span></div>
+                        <div className="grid gap-2">
+                          {historyByCurrency.map(([code, stats]) => { const meta = getCurrencyMeta(code); return <button key={code} onClick={() => setHistoryCurrency(code)} className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800/80 bg-zinc-900/40'}`}><span><span className="block text-xs font-medium">{meta.symbol} {code}</span><span className="mt-0.5 block text-[10px] text-zinc-500">{stats.count} {t('transactions')}</span></span><span className={`font-data text-sm ${stats.balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.balance >= 0 ? '+' : '−'}{meta.symbol}{formatMoney(Math.abs(stats.balance))}</span></button>; })}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className={`relative mb-5 overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-white/5 bg-black/20'}`}>
+                        <div className="absolute -right-3 -bottom-6 select-none pointer-events-none font-display text-7xl sm:text-8xl font-bold tracking-tighter text-emerald-500/[0.045]">{historyCurrency}</div>
+                        <div className="relative flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('resultForPeriod')}</p>
+                            <p className={`mt-2 font-display font-semibold tracking-tight tabular-nums leading-none break-all text-[clamp(1.75rem,9vw,3.5rem)] ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                              {historyTotal >= 0 ? '+' : '−'}{historyCurrencySymbol}{formatMoney(Math.abs(historyTotal))}
+                            </p>
+                            <p className="mt-3 text-[11px] text-zinc-500">{historyTrades.length} {t('transactions')} · {historyCurrency} · {t('currentPeriod')}</p>
+                          </div>
+                          <div className={`shrink-0 rounded-xl border px-3 py-2 text-right ${isLight ? 'border-amber-200 bg-white/80' : 'border-amber-400/15 bg-amber-400/[0.04]'}`}>
+                            <p className="text-[9px] uppercase tracking-wider text-zinc-500">{t('status')}</p>
+                            <p className={`mt-1 text-xs font-semibold ${historyTotal >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>{historyTotal >= 0 ? t('positive') : t('needsAttention')}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-5">
+                        {[
+                          [t('incomeLabel'), historyIncome, 'text-emerald-500'],
+                          [t('expenseLabel'), historyExpense, 'text-red-500'],
+                          [t('balanceLabel'), Math.abs(historyTotal), historyTotal >= 0 ? 'text-emerald-500' : 'text-red-500'],
+                        ].map(([label, amount, color]) => (
+                          <div key={label} className={`min-w-0 rounded-xl border p-2.5 sm:p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/50'}`}>
+                            <p className="text-[9px] sm:text-[10px] text-zinc-500">{label}</p>
+                            <p className={`mt-1 font-data text-sm sm:text-xs font-semibold tabular-nums leading-tight whitespace-nowrap ${color}`}>{label === t('expenseLabel') ? '−' : label === t('balanceLabel') && historyTotal >= 0 ? '+' : '+'}{historyCurrencySymbol}{formatMoneyShort(amount)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Всё подряд одним потоком — обзор, откуда, куда, радар, привычки */}
+                  <div className="space-y-6">
+                    <div>
+                      <div className={`relative overflow-hidden rounded-2xl border p-3 sm:p-4 mb-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}>
+                        <div className="absolute inset-x-4 top-[52%] border-t border-dashed border-zinc-500/15 pointer-events-none" />
+                        <div className="relative mb-4 flex items-end justify-between gap-3">
+                          <div>
+                            <span className="text-sm font-semibold">{t('periodDynamics')}</span>
+                            <p className="mt-1 text-[10px] text-zinc-500">{t('last10Days')}</p>
+                          </div>
+                          <div className="flex shrink-0 gap-2 text-[9px]"><span className="text-emerald-500">● {t('incomeLabel')}</span><span className="text-red-400">● {t('expenseLabel')}</span></div>
+                        </div>
+                        {historyAnalysis.chartEntries.length ? (
+                          <div className="relative grid grid-cols-5 sm:grid-cols-10 gap-x-1.5 gap-y-3 items-end h-52 sm:h-44">
+                            {historyAnalysis.chartEntries.map(([date, stats]) => {
+                              const net = stats.income - stats.expense;
+                              const active = stats.income > 0 || stats.expense > 0;
+                              return <div key={date} className="min-w-0 h-full flex flex-col justify-end">
+                                <div className={`mb-1 min-h-[14px] text-center text-[10px] sm:text-[11px] font-data tabular-nums ${!active ? 'text-zinc-700' : net >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>
+                                  {active ? `${net >= 0 ? '+' : '−'}${formatMoneyShort(Math.abs(net))}` : '—'}
+                                </div>
+                                <div className="relative flex flex-1 items-end justify-center gap-1">
+                                  <span className={`w-2.5 sm:w-3 rounded-t-md transition-all duration-500 ${stats.income > 0 ? 'bg-gradient-to-t from-emerald-600/70 to-emerald-300/90 shadow-[0_0_16px_rgba(16,185,129,.18)]' : 'bg-emerald-500/[0.06]'}`} style={{height:`${stats.income > 0 ? Math.max(6,(stats.income/historyAnalysis.maxDaily)*100) : 3}%`}} />
+                                  <span className={`w-2.5 sm:w-3 rounded-t-md transition-all duration-500 ${stats.expense > 0 ? 'bg-gradient-to-t from-red-700/65 to-red-400/85 shadow-[0_0_16px_rgba(248,113,113,.12)]' : 'bg-red-500/[0.05]'}`} style={{height:`${stats.expense > 0 ? Math.max(5,(stats.expense/historyAnalysis.maxDaily)*100) : 3}%`}} />
+                                </div>
+                                <span className={`mt-2 text-center text-[10px] sm:text-[11px] ${active ? 'text-zinc-500' : 'text-zinc-700'}`}>{date.slice(8,10)}</span>
+                              </div>;
+                            })}
+                          </div>
+                        ) : <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-zinc-800 text-xs text-zinc-500">{t('emptyHistoryDesc')}</div>}
+                      </div>
+                      <div className="grid sm:grid-cols-3 gap-2">
+                        <div className={`text-left rounded-xl p-3 ${isLight ? 'bg-emerald-50' : 'bg-emerald-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">{t('mainSource')}</p><p className="mt-1 text-xs font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p></div>
+                        <div className={`text-left rounded-xl p-3 ${isLight ? 'bg-red-50' : 'bg-red-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">{t('expenseZone')}</p><p className="mt-1 text-xs font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p></div>
+                        <div className={`rounded-xl p-3 ${isLight ? 'bg-amber-50' : 'bg-amber-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">{t('financialSummary')}</p><p className="mt-1 text-xs font-semibold leading-relaxed">{historyIncome > historyExpense ? t('flowPositivePro') : historyExpense > 0 ? t('flowNegativePro') : t('flowLittleData')}</p></div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className={`text-xs font-semibold mb-2 ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>{t('fromWhere')}</p>
+                      <div className="space-y-3">{historyAnalysis.incomeSources.length ? historyAnalysis.incomeSources.slice(0,6).map(([name,value]) => <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-emerald-500">+{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{width:`${Math.max(5,(value/(historyIncome||1))*100)}%`}} /></div></div>) : <p className="py-5 text-center text-sm text-zinc-500">{t('noIncomePeriod')}</p>}</div>
+                    </div>
+
+                    <div>
+                      <p className={`text-xs font-semibold mb-2 ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>{t('whereGo')}</p>
+                      <div className="space-y-3">{historyAnalysis.expenseCategories.length ? historyAnalysis.expenseCategories.slice(0,6).map(([name,value]) => <div key={name}><div className="flex justify-between gap-3 text-xs mb-1"><span className="truncate font-medium">{name}</span><span className="font-data text-red-500">−{historyCurrencySymbol}{formatMoney(value)}</span></div><div className="h-2 rounded-full bg-zinc-500/10 overflow-hidden"><div className="h-full rounded-full bg-red-500" style={{width:`${Math.max(5,(value/(historyExpense||1))*100)}%`}} /></div></div>) : <p className="py-5 text-center text-sm text-zinc-500">{t('noExpensePeriod')}</p>}</div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className={`rounded-2xl border p-4 ${isLight ? 'border-amber-200 bg-amber-50/40' : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.07] to-transparent'}`}><p className="font-data text-[10px] uppercase tracking-[0.18em] text-amber-500">{t('financialRadar')}</p><div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">{t('periodPower')}</p><p className="mt-1 text-sm font-semibold">{historyExpense > 0 ? `${(historyIncome / historyExpense).toFixed(1)}×` : historyIncome > 0 ? t('positive') : '—'}</p></div>
+                        <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">{t('mainSource')}</p><p className="mt-1 text-sm font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p></div>
+                        <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">{t('attentionZone')}</p><p className="mt-1 text-sm font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p></div>
+                        <div className={`rounded-xl p-3 ${isLight ? 'bg-white/80' : 'bg-black/20'}`}><p className="text-xs text-zinc-500">{t('bestDay')}</p><p className="mt-1 text-sm font-semibold">{historyAnalysis.dailyEntries.length ? historyAnalysis.dailyEntries.reduce((best, item) => item[1].income - item[1].expense > best[1].income - best[1].expense ? item : best)[0] : '—'}</p></div>
+                      </div></div>
+                    </div>
+
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}><p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('activity')}</p><p className="mt-2 text-lg font-semibold">{historyTrades.length}</p><p className="text-xs text-zinc-500">{t('transactions')}</p></div>
+                      <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}><p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('frequentIncome')}</p><p className="mt-2 text-sm font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p><p className="text-xs text-zinc-500">{t('incomeSources')}</p></div>
+                      <div className={`rounded-2xl border p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}><p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('expensePattern')}</p><p className="mt-2 text-sm font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p><p className="text-xs text-zinc-500">{t('expenseStructure')}</p></div>
+                    </div>
+                  </div>
+                    </div>
+                  </div>
+                  ) : (
+                    <div className={`rounded-2xl border border-dashed px-6 py-14 text-center ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
+                      <p className={`text-sm ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('emptyHistoryDesc')}</p>
+                    </div>
+                  )}
+                    </div>
+                  </section>
+
+                  {/* ── Сделки — единый блок фильтров: быстрый win/loss, "Фильтры" и валюта вместе ── */}
+                  <div className={`mb-4 flex items-center gap-2 border-t pt-4 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
+                    <span className="flex items-center gap-1.5 font-data text-[10px] uppercase tracking-[0.28em] text-amber-500 font-bold">
+                      <History className="h-3 w-3" /> {t('trades')}
+                    </span>
+                    <button type="button" aria-expanded={proFiltersOpen} onClick={() => setProFiltersOpen(v => !v)} className={`ml-auto rounded-lg border px-2.5 py-1 text-[11px] font-medium transition-colors ${isLight ? 'border-zinc-200 text-zinc-600 hover:border-amber-400/40 hover:text-amber-600' : 'border-zinc-800 text-zinc-400 hover:border-amber-400/30 hover:text-amber-400'}`}>{t('filters')} · {periodButtonLabel}</button>
+                  </div>
+
+                  <div className={`flex gap-1 mb-2 rounded-xl border p-1 ${
                     isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'
                   }`}>
                     {[
@@ -2607,8 +2553,6 @@ export default function CalendarScreen() {
                     ))}
                   </div>
 
-                  {/* ── Trade count + currency, kept together with records ── */}
-                  <button type="button" aria-expanded={proFiltersOpen} onClick={() => setProFiltersOpen(v => !v)} className="mb-2 rounded-xl border border-amber-400/25 px-3 py-2 text-xs text-amber-500">{t('filters')} · {periodButtonLabel}</button>
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <p className={`text-xs ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
                       {historyTrades.length} {t('trades')} {periodPreset !== 'Вся история' ? `· ${periodButtonLabel}` : ''}
@@ -3201,7 +3145,7 @@ export default function CalendarScreen() {
           onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) closeAnalysis(); }}
         >
           <div
-            className={`relative w-full max-w-md rounded-xl border p-6 shadow-xl transition-all duration-200 ${
+            className={`relative w-full max-w-md max-h-[85dvh] overflow-y-auto overscroll-contain rounded-xl border p-6 shadow-xl transition-all duration-200 ${
               analysisVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
             } ${
               isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
@@ -3229,7 +3173,7 @@ export default function CalendarScreen() {
             <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'} mb-4`}>{analysisStats.count} {traderMode ? 'сделок' : 'операций'} в выборке</p>
 
             {moneyAnalysis && (
-              <div className="mb-4 space-y-3">
+              <div className="mb-4 space-y-5">
                 <>
                     <div className={`grid grid-cols-3 gap-2 rounded-xl border p-2 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'}`}>
                       {[
@@ -3253,15 +3197,15 @@ export default function CalendarScreen() {
                         })}
                       </div>
                     </div>
-                </>
+                  </>
                 <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'}`}>
                     <div className="mb-3"><p className={`text-sm font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>Откуда пришли деньги</p><p className="text-[11px] text-zinc-500">Источники дохода за выбранный период</p></div>
                     <div className="space-y-3">{moneyAnalysis.topIncomeSources.length ? moneyAnalysis.topIncomeSources.map(([source, amount]) => <div key={source}><div className="mb-1 flex justify-between gap-3 text-xs"><span className="truncate text-zinc-500">{source}</span><span className="font-data text-emerald-500">+{currencySymbol}{formatMoney(amount)}</span></div><div className="h-2 overflow-hidden rounded-full bg-zinc-800/70"><div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${Math.max(6, Math.round((amount / moneyAnalysis.income) * 100))}%` }} /></div></div>) : <p className="py-6 text-center text-xs text-zinc-500">За период пока нет доходов</p>}</div>
-                </div>
+                  </div>
                 <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'}`}>
                     <div className="mb-3"><p className={`text-sm font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>Куда уходят деньги</p><p className="text-[11px] text-zinc-500">Самые крупные категории расходов</p></div>
                     <div className="space-y-3">{moneyAnalysis.topCategories.length ? moneyAnalysis.topCategories.map(([category, amount]) => <div key={category}><div className="mb-1 flex justify-between gap-3 text-xs"><span className="truncate text-zinc-500">{category}</span><span className="font-data text-red-500">−{currencySymbol}{formatMoney(amount)}</span></div><div className="h-2 overflow-hidden rounded-full bg-zinc-800/70"><div className="h-full rounded-full bg-red-500 transition-all duration-500" style={{ width: `${Math.max(6, Math.round((amount / moneyAnalysis.expenses) * 100))}%` }} /></div></div>) : <p className="py-6 text-center text-xs text-zinc-500">За период пока нет расходов</p>}</div>
-                </div>
+                  </div>
               </div>
             )}
 
@@ -3375,46 +3319,18 @@ export default function CalendarScreen() {
               <div className={`relative overflow-hidden rounded-2xl border p-4 ${
                 isLight ? 'border-amber-300/70 bg-gradient-to-br from-amber-50 to-white' : 'border-amber-400/25 bg-gradient-to-br from-amber-400/[0.08] via-zinc-950 to-zinc-950'
               }`}>
-                <div className="absolute -right-6 -top-8 select-none pointer-events-none font-display text-7xl font-bold tracking-tighter text-amber-400/[0.06]">AI</div>
+                <div className="absolute -right-6 -top-8 select-none pointer-events-none font-display text-7xl font-bold tracking-tighter text-amber-400/[0.06]">PRO</div>
                 <div className="relative flex items-start gap-2.5 mb-3">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-400/10 text-amber-500"><Sparkles className="h-4 w-4" /></span>
                   <div>
-                    <p className={`text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Инсайт по вашей торговле</p>
-                    <p className="text-[11px] text-zinc-500">Бесплатный разбор на основе текущей выборки</p>
+                    <p className={`text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Наблюдение по статистике</p>
+                    <p className="text-[11px] text-zinc-500">На основе сделок за выбранный период</p>
                   </div>
                 </div>
                 <p className={`relative rounded-xl border px-3 py-2.5 text-xs leading-relaxed mb-3 ${isLight ? 'border-zinc-200 bg-white text-zinc-700' : 'border-zinc-800 bg-black/25 text-zinc-300'}`}>
                   {traderInsight}
                 </p>
 
-                {/* Locked deep-analysis preview — shows a shape of the real thing, blurred, instead of a placeholder button */}
-                <div className={`relative overflow-hidden rounded-xl border mb-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/25'}`}>
-                  <div aria-hidden="true" className="px-3 py-2.5 space-y-2 blur-[3px] select-none opacity-70">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className={`h-2.5 w-2/5 rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
-                      <div className={`h-2.5 w-10 rounded-full ${isLight ? 'bg-emerald-200' : 'bg-emerald-500/30'}`} />
-                    </div>
-                    <div className={`h-2.5 w-full rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
-                    <div className={`h-2.5 w-4/5 rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
-                    <div className="flex items-center justify-between gap-3">
-                      <div className={`h-2.5 w-1/3 rounded-full ${isLight ? 'bg-zinc-200' : 'bg-zinc-700'}`} />
-                      <div className={`h-2.5 w-10 rounded-full ${isLight ? 'bg-red-200' : 'bg-red-500/30'}`} />
-                    </div>
-                  </div>
-                  <div className={`pointer-events-none absolute inset-0 bg-gradient-to-t ${isLight ? 'from-white via-white/40 to-transparent' : 'from-zinc-950 via-zinc-950/40 to-transparent'}`} />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className={`flex h-9 w-9 items-center justify-center rounded-full border ${isLight ? 'border-zinc-200 bg-white text-zinc-400' : 'border-zinc-700 bg-zinc-900 text-zinc-500'}`}>
-                      <Lock className="h-4 w-4" />
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  className="relative w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-4 py-2.5 text-xs font-semibold text-zinc-950 shadow-[0_8px_24px_rgba(251,191,36,.25)] hover:from-amber-300 hover:to-amber-400 active:scale-[0.99] transition-all"
-                >
-                  <Sparkles className="h-3.5 w-3.5" /> Разблокировать глубокий AI-разбор
-                </button>
               </div>
             ) : (
               <div className={`rounded-md border border-dashed px-3 py-3 flex items-start gap-2.5 ${
