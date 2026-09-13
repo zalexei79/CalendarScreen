@@ -70,6 +70,7 @@ import { useTrades } from './src/features/trades-sync/hooks/useTrades';
 import Header from './Header';
 import HistoryChart from './HistoryChart';
 import DayNote from './src/features/day-notes/DayNote';
+import NoteInsights from './src/features/day-notes/NoteInsights';
 import { useCurveNotes } from './src/features/day-notes/useCurveNotes';
 import PnlCurve from './src/features/trades-sync/components/PnlCurve';
 import PeriodDynamics from './src/features/trades-sync/components/PeriodDynamics';
@@ -1675,6 +1676,12 @@ export default function CalendarScreen() {
       <div
         className={`absolute inset-x-0 bottom-0 max-h-[82vh] rounded-t-2xl border-t shadow-2xl overflow-y-auto transition-colors duration-200 ${isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-950'}`}
         onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          if (e.target.closest('button, input, textarea, select, a, label, summary, [role="button"], [contenteditable="true"]')) return;
+          if (window.getSelection()?.toString()) return;
+          e.stopPropagation();
+          setSelectedKey(null);
+        }}
       >
         <div className="max-w-3xl mx-auto px-3 sm:px-8 py-4 sm:py-8 flex flex-col gap-4">
           <div className={`mx-auto h-1 w-10 rounded-full -mt-1 mb-1 ${isLight ? 'bg-zinc-300' : 'bg-zinc-700'}`} />
@@ -2193,6 +2200,7 @@ export default function CalendarScreen() {
                   </div>
 
                   <PnlCurve key={validUserId || 'guest'} userId={validUserId} trades={historyTrades} comparisonTrades={historyFilteredTrades} dateFrom={periodPreset === 'Вся история' ? null : dateFrom} dateTo={dateTo} accounts={ctraderAccounts} language={language} isLight={isLight} />
+                  <NoteInsights userId={validUserId} trades={historyTrades} revision={notesRevision} language={language} isLight={isLight} onDay={jumpToTradeDate} />
 
                   {/* ── Luxury Donut + Stats Header ─────────────────────── */}
                   {(() => {
