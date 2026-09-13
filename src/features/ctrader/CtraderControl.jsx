@@ -8,7 +8,7 @@ export default function CtraderControl({ t, isLight, connected, reconnect, loadi
   const selected = accounts.find(a => a.id === accountId);
   const renderBalance = account => <span className="block min-w-0 text-right">
     <span className="block text-[10px] font-normal opacity-50">{t('ctBalance')}</span>
-    <span className="mt-1 block break-words text-sm font-semibold tabular-nums">{account.balance != null && account.currency && Number.isFinite(Number(account.balance)) ? `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(Number(account.balance))} ${account.currency}` : t('ctBalanceUnavailable')}</span>
+    <span className="mt-1 block break-words text-sm font-semibold tabular-nums">{account.balance != null && account.currency && Number.isFinite(Number(account.balance)) ? `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(Number(account.balance))} ${account.currency}` : <span className="text-[11px] font-normal text-zinc-500">{t('ctBalanceUnavailable')}</span>}</span>
   </span>;
   const secondary = `rounded-xl border px-4 py-3 text-sm disabled:opacity-40 ${isLight ? 'border-zinc-200 hover:bg-zinc-50' : 'border-zinc-800 hover:bg-white/5'}`;
   return <section className="min-w-0" aria-label="cTrader">
@@ -25,10 +25,10 @@ export default function CtraderControl({ t, isLight, connected, reconnect, loadi
       </div>
     </div> : <>
       {selected && <div className={`mt-5 rounded-2xl border px-4 py-3 ${isLight ? 'border-zinc-200 bg-zinc-50/70' : 'border-zinc-800 bg-black/20'}`}>
-        <p className="break-words text-sm font-medium">{selected.broker_name || 'cTrader'}</p>
-        <p className="mt-1 break-all font-mono text-xs opacity-60">{selected.account_id} · {selected.is_live ? 'Live' : 'Demo'}</p>
-        <div className="mt-3 border-t border-zinc-500/15 pt-3">{renderBalance(selected)}</div>
-        <p className="mt-2 text-[10px] opacity-50">{t('ctBalanceHint')}</p>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0"><p className="break-words text-sm font-medium">{selected.broker_name || 'cTrader'}</p><p className="mt-1 break-all font-mono text-xs opacity-60">{selected.account_id} · {selected.is_live ? 'Live' : 'Demo'}</p></div>
+          <div className="min-w-0 max-w-[48%]">{renderBalance(selected)}</div>
+        </div>
       </div>}
       {connected && !reconnect && (selecting || !selected) && <div className="mt-4" role="group" aria-label={t('ctChoose')}>
         <p className="mb-2 text-xs opacity-60">{t('ctChoose')}</p>
@@ -48,6 +48,7 @@ export default function CtraderControl({ t, isLight, connected, reconnect, loadi
         <button disabled={busy} onClick={() => setConfirming(true)} className="min-h-11 px-3 text-sm text-zinc-500 hover:text-red-500 disabled:opacity-40">{t('ctDisconnect')}</button>
       </div>}
       {connected && !reconnect && selecting && <button disabled={busy} onClick={onConnect} className="mt-3 min-h-11 text-xs opacity-60">{t('ctGrantAccounts')}</button>}
+      {connected && <p className="mt-3 text-[10px] leading-relaxed text-zinc-500">{t('ctBalanceHint')}</p>}
     </>}
   </section>;
 }
