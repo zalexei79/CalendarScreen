@@ -1128,6 +1128,7 @@ export default function CalendarScreen() {
 
   // --- History browser: filterable, shows a total, click a trade to jump to its day
   const [historyOpen, setHistoryOpen] = useState(false);
+  const historyDealsRef = useRef(null);
   const [historyVisible, setHistoryVisible] = useState(false);
   const [historyWinLoss, setHistoryWinLoss] = useState('all'); // 'all' | 'win' | 'loss'
   const [historyCurrency, setHistoryCurrency] = useState(() => currency || 'USD');
@@ -1166,16 +1167,16 @@ export default function CalendarScreen() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [historyOpen, modalOpen, settingsOpen, connectOpen, installInfoOpen, selectedKey]);
 
-  const historyTrades = useMemo(() => {
+  const historyFilteredTrades = useMemo(() => {
     return Object.entries(manualTrades || {})
       .flatMap(([dateKey, arr]) => (Array.isArray(arr) ? arr : []).map((t) => ({ ...t, dateKey })))
-      .filter((t) => t && t.dateKey >= dateFrom && t.dateKey <= dateTo)
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
       .filter((t) => historyCurrency === 'ALL' || (t.currency || 'USD') === historyCurrency)
       .filter((t) => !historyNameFilter || String(t.instrument || '').trim().toUpperCase() === historyNameFilter.trim().toUpperCase())
       .filter((t) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? (Number(t.pnl) || 0) >= 0 : (Number(t.pnl) || 0) < 0))
       .sort((a, b) => (a.dateKey === b.dateKey ? (b.time || '').localeCompare(a.time || '') : (b.dateKey || '').localeCompare(a.dateKey || '')));
-  }, [manualTrades, dateFrom, dateTo, platformFilter, historyWinLoss, historyCurrency, historyNameFilter]);
+  }, [manualTrades, platformFilter, historyWinLoss, historyCurrency, historyNameFilter]);
+  const historyTrades = useMemo(() => historyFilteredTrades.filter(t => t.dateKey >= dateFrom && t.dateKey <= dateTo), [historyFilteredTrades, dateFrom, dateTo]);
 
   function isTradingInstrumentName(value) {
     const normalized = String(value || '').trim().toUpperCase();
@@ -1829,6 +1830,11 @@ export default function CalendarScreen() {
               </button>
             </div>
 
+            {traderMode && <div className={`flex shrink-0 items-center justify-between border-b px-5 py-2 sm:px-6 ${isLight ? 'border-zinc-100' : 'border-white/5'}`}>
+              <span className="text-[10px] text-zinc-500">{t('tradesHistory')}</span>
+              <button type="button" onClick={() => { historyDealsRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); historyDealsRef.current?.focus({ preventScroll: true }); }} className={`min-h-9 rounded-lg px-3 text-xs font-medium transition-colors ${isLight ? 'text-zinc-700 hover:bg-zinc-100' : 'text-zinc-300 hover:bg-white/5'}`}>{t('jumpToTrades')} ↓</button>
+            </div>}
+
             <div className={`overflow-y-auto px-5 sm:px-6 py-5 flex-1 min-h-0 ${isLight ? 'bg-zinc-50/50' : ''}`} style={{ overscrollBehavior: 'contain' }}>
               {/* FREE — Динамика периода */}
               {!traderMode && (
@@ -2123,7 +2129,7 @@ export default function CalendarScreen() {
                     )}
                   </div>
 
-                  <PnlCurve trades={historyTrades} accounts={ctraderAccounts} language={language} isLight={isLight} />
+                  <PnlCurve key={validUserId || 'guest'} userId={validUserId} trades={historyTrades} comparisonTrades={historyFilteredTrades} dateFrom={periodPreset === 'Вся история' ? null : dateFrom} dateTo={dateTo} accounts={ctraderAccounts} language={language} isLight={isLight} />
 
                   {/* ── Luxury Donut + Stats Header ─────────────────────── */}
                   {(() => {
@@ -2523,7 +2529,7 @@ export default function CalendarScreen() {
                   </section>
 
                   {/* ── Сделки — единый блок фильтров: быстрый win/loss, "Фильтры" и валюта вместе ── */}
-                  <div className={`mb-4 flex items-center gap-2 border-t pt-4 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
+                  <div ref={historyDealsRef} tabIndex={-1} className={`mb-4 flex scroll-mt-4 items-center gap-2 border-t pt-4 outline-none ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
                     <span className="flex items-center gap-1.5 font-data text-[10px] uppercase tracking-[0.28em] text-amber-500 font-bold">
                       <History className="h-3 w-3" /> {t('trades')}
                     </span>
@@ -3129,6 +3135,7 @@ export default function CalendarScreen() {
             {ctraderNotice?.kind === 'error' && !(ctraderNotice.stage === 'accounts' && ctraderReconnect) && (
               <p role="status" className="mt-4 text-sm leading-relaxed text-amber-600">
                 {t(ctraderNotice.code === 'RECONNECT_REQUIRED' ? 'ctReconnect' : ctraderNotice.code === 'UNAUTHORIZED' ? 'ctLogin' : ctraderNotice.code === 'OFFLINE' ? 'ctOffline' : 'ctError')}
+                {ctraderNotice.stage === 'disconnect' && <span className="mt-2 block font-mono text-[11px] opacity-70">disconnect · {ctraderNotice.code}{ctraderNotice.status ? ` · HTTP ${ctraderNotice.status}` : ''}{ctraderNotice.backendStage ? ` · ${ctraderNotice.backendStage}` : ''}</span>}
               </p>
             )}
           </div>
