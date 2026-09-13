@@ -272,6 +272,13 @@ export default function Header({
       </div>
 
       {/* Second row: Calendar month navigation + Free/PRO switch */}
+      <div
+        className={isLight && traderMode ? 'rounded-2xl border border-amber-200/70 p-3 sm:p-4' : undefined}
+        style={isLight && traderMode ? {
+          background: 'radial-gradient(ellipse at 12% 0%, rgba(251,191,36,0.20), transparent 65%), radial-gradient(ellipse at 95% 100%, rgba(186,211,238,0.20), transparent 65%), linear-gradient(120deg, #fffaf0, #f8fafc)',
+          boxShadow: '0 8px 28px -14px rgba(180,130,45,0.24), inset 0 1px 0 rgba(255,255,255,0.95)',
+        } : undefined}
+      >
       <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 mb-2 sm:mb-4">
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <button
@@ -431,7 +438,7 @@ export default function Header({
 
       {/* PRO control center */}
       <div className={`overflow-hidden transition-all duration-300 ${traderMode ? 'max-h-52 opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0 pointer-events-none'}`}>
-        <div className={`rounded-2xl border px-3 py-3 sm:px-4 ${isLight ? 'border-slate-200/90 bg-white shadow-xs' : 'border-amber-400/20 bg-gradient-to-r from-amber-400/[0.07] via-zinc-950 to-zinc-950'}`}>
+        <div className={`rounded-2xl border px-3 py-3 sm:px-4 ${isLight ? 'border-amber-200/70 bg-white/75 shadow-xs' : 'border-amber-400/20 bg-gradient-to-r from-amber-400/[0.07] via-zinc-950 to-zinc-950'}`}>
           <div className="flex flex-col gap-2.5">
             {/* Platforms row */}
             <div className="flex flex-wrap items-center gap-2 min-w-0">
@@ -507,6 +514,7 @@ export default function Header({
         </div>
       </div>
 
+      </div>
     </header>
   );
 }
