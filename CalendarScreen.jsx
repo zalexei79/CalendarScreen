@@ -1670,7 +1670,7 @@ export default function CalendarScreen() {
       <div
         className="fixed inset-0 z-40 bg-black/60"
         onMouseDown={handleBackdropMouseDown}
-        onClick={(e) => { if (mouseDownOnBackdrop.current) setSelectedKey(null); }}
+        onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) setSelectedKey(null); }}
       >
       <div
         className={`absolute inset-x-0 bottom-0 max-h-[82vh] rounded-t-2xl border-t shadow-2xl overflow-y-auto transition-colors duration-200 ${isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-950'}`}
