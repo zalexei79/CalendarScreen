@@ -1129,6 +1129,24 @@ export default function CalendarScreen() {
   // --- History browser: filterable, shows a total, click a trade to jump to its day
   const [historyOpen, setHistoryOpen] = useState(false);
   const historyDealsRef = useRef(null);
+  const historyScrollRef = useRef(null);
+  const [historyAtDeals, setHistoryAtDeals] = useState(false);
+  useEffect(() => { setHistoryAtDeals(false); }, [historyOpen]);
+
+  function handleHistoryScroll(event) {
+    const panel = event.currentTarget;
+    const target = historyDealsRef.current;
+    if (!target || panel.scrollTop <= 8) { setHistoryAtDeals(false); return; }
+    const nearDeals = target.getBoundingClientRect().top <= panel.getBoundingClientRect().top + panel.clientHeight * 0.35;
+    const atBottom = panel.scrollHeight - panel.clientHeight - panel.scrollTop <= 8;
+    setHistoryAtDeals(nearDeals || atBottom);
+  }
+
+  function jumpHistorySection() {
+    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+    if (historyAtDeals) historyScrollRef.current?.scrollTo({ top: 0, behavior });
+    else historyDealsRef.current?.scrollIntoView({ behavior, block: 'start' });
+  }
   const [historyVisible, setHistoryVisible] = useState(false);
   const [historyWinLoss, setHistoryWinLoss] = useState('all'); // 'all' | 'win' | 'loss'
   const [historyCurrency, setHistoryCurrency] = useState(() => currency || 'USD');
@@ -1832,10 +1850,10 @@ export default function CalendarScreen() {
 
             {traderMode && <div className={`flex shrink-0 items-center justify-between border-b px-5 py-2 sm:px-6 ${isLight ? 'border-zinc-100' : 'border-white/5'}`}>
               <span className="text-[10px] text-zinc-500">{t('tradesHistory')}</span>
-              <button type="button" onClick={() => { historyDealsRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); historyDealsRef.current?.focus({ preventScroll: true }); }} className={`min-h-9 rounded-lg px-3 text-xs font-medium transition-colors ${isLight ? 'text-zinc-700 hover:bg-zinc-100' : 'text-zinc-300 hover:bg-white/5'}`}>{t('jumpToTrades')} ↓</button>
+              <button type="button" onClick={jumpHistorySection} className={`min-h-9 rounded-lg px-3 text-xs font-medium transition-colors ${isLight ? 'text-zinc-700 hover:bg-zinc-100' : 'text-zinc-300 hover:bg-white/5'}`}>{t(historyAtDeals ? 'jumpToStats' : 'jumpToTrades')} {historyAtDeals ? '↑' : '↓'}</button>
             </div>}
 
-            <div className={`overflow-y-auto px-5 sm:px-6 py-5 flex-1 min-h-0 ${isLight ? 'bg-zinc-50/50' : ''}`} style={{ overscrollBehavior: 'contain' }}>
+            <div ref={historyScrollRef} onScroll={handleHistoryScroll} className={`overflow-y-auto px-5 sm:px-6 py-5 flex-1 min-h-0 ${isLight ? 'bg-zinc-50/50' : ''}`} style={{ overscrollBehavior: 'contain' }}>
               {/* FREE — Динамика периода */}
               {!traderMode && (
                 <section className="mb-4">
