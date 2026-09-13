@@ -111,6 +111,14 @@ export default function CalendarScreen() {
   const [ctraderAccounts, setCtraderAccounts] = useState([]);
   const [ctraderAccountId, setCtraderAccountId] = useState('');
   const [ctraderNotice, setCtraderNotice] = useState(null);
+  useEffect(() => {
+    // Keep errors and incomplete calendar refresh warnings visible.
+    if (ctraderNotice?.kind !== 'success' || !ctraderNotice.refreshed) return;
+    const timer = window.setTimeout(() => {
+      setCtraderNotice(current => current === ctraderNotice ? null : current);
+    }, 3000);
+    return () => window.clearTimeout(timer);
+  }, [ctraderNotice]);
   const ctraderBusy = useRef(false);
   const [ctraderReconnect, setCtraderReconnect] = useState(false);
   const ctraderOwner = useRef(validUserId);
