@@ -4,6 +4,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { id, mapDeal, parseMessage, readDeals } from './core.mjs';
 import { disconnect } from './disconnect.mjs';
+import { accountBalances } from './balances.mjs';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -161,7 +162,11 @@ serve(async req => {
     if (rows.length) check(await db.from('ctrader_accounts').upsert(rows, { onConflict: 'user_id,account_id' }));
     const accounts = check(await db.from('ctrader_accounts').select('id,account_id,is_live,is_active,broker_name').eq('user_id', user.id))
       .filter(a => rows.some(r => r.account_id === a.account_id));
-    if (action === 'accounts') return reply({ success: true, accounts });
+    if (action === 'accounts') {
+      socket.close(); socket = null;
+      const snapshots = await accountBalances(accounts, isLive => connect(isLive, clientId, clientSecret, () => {}), token.access_token);
+      return reply({ success: true, accounts: snapshots });
+    }
     const selected = body.accountId ? accounts.find(a => a.id === body.accountId) : accounts.find(a => a.is_active);
     if (!selected) fail('SELECT_ACCOUNT');
     if (action === 'select-account') {

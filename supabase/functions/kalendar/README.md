@@ -1,7 +1,7 @@
 # Simple kalendar sync
 
 This replaces the existing deployed `kalendar`, not `bright-api` or `super-service`.
-Deploy `index.ts`, `core.mjs` AND `disconnect.mjs`; do not deploy test files. Keep JWT verification enabled.
+Deploy `index.ts`, `core.mjs`, `disconnect.mjs` AND `balances.mjs`; do not deploy test files. Keep JWT verification enabled.
 Uses the existing SUPABASE_URL, SUPABASE_ANON_KEY, CTRADER_CLIENT_ID and
 CTRADER_CLIENT_SECRET environment secrets. Never send cTrader tokens from React.
 

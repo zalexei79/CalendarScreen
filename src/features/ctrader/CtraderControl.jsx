@@ -6,6 +6,10 @@ export default function CtraderControl({ t, isLight, connected, reconnect, loadi
   const [confirming, setConfirming] = useState(false);
   const busy = loading || syncing;
   const selected = accounts.find(a => a.id === accountId);
+  const renderBalance = account => <span className="block min-w-0 text-right">
+    <span className="block text-[10px] font-normal opacity-50">{t('ctBalance')}</span>
+    <span className="mt-1 block break-words text-sm font-semibold tabular-nums">{account.balance != null && account.currency && Number.isFinite(Number(account.balance)) ? `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(Number(account.balance))} ${account.currency}` : t('ctBalanceUnavailable')}</span>
+  </span>;
   const secondary = `rounded-xl border px-4 py-3 text-sm disabled:opacity-40 ${isLight ? 'border-zinc-200 hover:bg-zinc-50' : 'border-zinc-800 hover:bg-white/5'}`;
   return <section className="min-w-0" aria-label="cTrader">
     <div className="flex items-center gap-3 pr-7">
@@ -23,12 +27,14 @@ export default function CtraderControl({ t, isLight, connected, reconnect, loadi
       {selected && <div className={`mt-5 rounded-2xl border px-4 py-3 ${isLight ? 'border-zinc-200 bg-zinc-50/70' : 'border-zinc-800 bg-black/20'}`}>
         <p className="break-words text-sm font-medium">{selected.broker_name || 'cTrader'}</p>
         <p className="mt-1 break-all font-mono text-xs opacity-60">{selected.account_id} · {selected.is_live ? 'Live' : 'Demo'}</p>
+        <div className="mt-3 border-t border-zinc-500/15 pt-3">{renderBalance(selected)}</div>
+        <p className="mt-2 text-[10px] opacity-50">{t('ctBalanceHint')}</p>
       </div>}
       {connected && !reconnect && (selecting || !selected) && <div className="mt-4" role="group" aria-label={t('ctChoose')}>
         <p className="mb-2 text-xs opacity-60">{t('ctChoose')}</p>
         <div className="max-h-56 space-y-2 overflow-y-auto">
           {accounts.map(a => <button key={a.id} disabled={busy} aria-pressed={accountId === a.id} onClick={async () => { if (await onSelect(a.id)) setSelecting(false); }} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left disabled:opacity-50 ${accountId === a.id ? 'border-amber-400/60 bg-amber-400/10' : isLight ? 'border-zinc-200 hover:bg-zinc-50' : 'border-zinc-800 hover:bg-white/5'}`}>
-            <span className="min-w-0 flex-1"><span className="block break-words text-sm">{a.broker_name || 'cTrader'}</span><span className="mt-1 block break-all font-mono text-xs opacity-60">{a.account_id} · {a.is_live ? 'Live' : 'Demo'}</span></span>{accountId === a.id && <Check className="h-4 w-4 shrink-0 text-amber-500" />}
+            <span className="min-w-0 flex-1"><span className="block break-words text-sm">{a.broker_name || 'cTrader'}</span><span className="mt-1 block break-all font-mono text-xs opacity-60">{a.account_id} · {a.is_live ? 'Live' : 'Demo'}</span></span><span className="min-w-0 max-w-[48%]">{renderBalance(a)}</span>{accountId === a.id && <Check className="h-4 w-4 shrink-0 text-amber-500" />}
           </button>)}
           {!accounts.length && <p className="text-sm opacity-60">{t('ctEmpty')}</p>}
         </div>
