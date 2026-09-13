@@ -1,7 +1,10 @@
 import React from 'react';
+import { StickyNote } from 'lucide-react';
 
 export default function CalendarDayCell({
   traderMode = false,
+  hasNote = false,
+  noteLabel,
   cell,
   cellIndex,
   isSelected,
@@ -80,6 +83,7 @@ export default function CalendarDayCell({
         : isLight ? 'hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm' : 'hover:border-zinc-600 hover:bg-zinc-800/60',
     ].join(' ')}>
       {cell.isToday && <span className="absolute top-2 right-2 h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-amber-500 ring-2 ring-white shadow-sm" />}
+      {traderMode && hasNote && <span title={noteLabel} className={`absolute right-2 ${cell.isToday ? 'top-6' : 'top-2'} text-amber-600/80`}><StickyNote aria-label={noteLabel} role="img" className="h-3 w-3 sm:h-3.5 sm:w-3.5" /></span>}
       <span className={`font-data text-xs sm:text-base font-semibold ${cell.inMonth ? (isLight ? 'text-slate-800' : 'text-zinc-300') : (isLight ? 'text-slate-400' : 'text-zinc-600')}`}>{cell.date.getDate()}</span>
       {hasTrades && <span title={formatPnlDisplay(pnl, false)} className={`day-amount font-data text-[11px] sm:text-base font-extrabold tracking-tight whitespace-nowrap ${pnlTone === 'profit' ? (isLight ? 'text-emerald-950 [text-shadow:0_1px_0_rgba(255,255,255,.42)]' : 'text-emerald-500') : pnlTone === 'loss' ? (isLight ? 'text-rose-950 [text-shadow:0_1px_0_rgba(255,255,255,.42)]' : 'text-red-500') : (isLight ? 'text-slate-500' : 'text-zinc-500')}`}>{traderMode ? <><span className="day-amount-short">{pnlText}</span><span className="day-amount-full">{formatPnlDisplay(pnl, false)}</span></> : pnlText}</span>}
     </button>

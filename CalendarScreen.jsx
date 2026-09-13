@@ -70,6 +70,7 @@ import { useTrades } from './src/features/trades-sync/hooks/useTrades';
 import Header from './Header';
 import HistoryChart from './HistoryChart';
 import DayNote from './src/features/day-notes/DayNote';
+import { useCurveNotes } from './src/features/day-notes/useCurveNotes';
 import PnlCurve from './src/features/trades-sync/components/PnlCurve';
 import PeriodDynamics from './src/features/trades-sync/components/PeriodDynamics';
 import CalendarGrid from './CalendarGrid';
@@ -661,6 +662,19 @@ export default function CalendarScreen() {
       };
     });
   }, [year, month, today]);
+
+  const [notesRevision, setNotesRevision] = useState(0);
+  const { notes: calendarNotes } = useCurveNotes(traderMode ? validUserId : null, cells[0]?.key, cells.at(-1)?.key, notesRevision);
+  const monthSummary = useMemo(() => {
+    let total = 0, days = 0;
+    for (const cell of cells) {
+      if (!cell.inMonth) continue;
+      const entries = tradesForDayFiltered(cell.key);
+      if (entries.length) days++;
+      total += entries.reduce((sum, trade) => sum + (Number(trade.pnl) || 0), 0);
+    }
+    return { total, days };
+  }, [cells, manualTrades, platformFilter, currency, calendarTypeFilter]);
 
   // filtered by the active platform selection, so the calendar always
   // matches what the platform filter says (e.g. only Bybit trades)
@@ -1610,6 +1624,7 @@ export default function CalendarScreen() {
         </div>
       )}
       <Header
+        monthSummary={monthSummary}
         isLight={isLight} traderMode={traderMode} t={t} theme={theme} setTheme={setTheme}
         settingsRef={settingsRef} settingsOpen={settingsOpen} closeSettings={closeSettings}
         openSettings={openSettings} settingsVisible={settingsVisible} language={language}
@@ -1630,6 +1645,7 @@ export default function CalendarScreen() {
 
       {/* PRO controls live in Header: one clean control center, no floating duplicate block. */}
       <CalendarGrid
+        notes={calendarNotes} noteLabel={t('calendarDayNote')}
         traderMode={traderMode}
         onNextMonth={goToNextMonth}
         onPreviousMonth={goToPrevMonth}
@@ -1723,7 +1739,7 @@ export default function CalendarScreen() {
             </div>
           )}
 
-          {traderMode && <DayNote key={`${validUserId || 'guest'}:${selectedKey}`} userId={validUserId} dateKey={selectedKey} isLight={isLight} language={language} onLogin={handleGoogleLogin} />}
+          {traderMode && <DayNote key={`${validUserId || 'guest'}:${selectedKey}`} userId={validUserId} dateKey={selectedKey} isLight={isLight} language={language} onLogin={handleGoogleLogin} onSaved={() => setNotesRevision(v => v + 1)} />}
 
           {selectedDayTrades.length > 0 ? (
             <div className={`rounded-lg border divide-y ${isLight ? 'border-zinc-300 bg-zinc-50 divide-zinc-200' : 'border-zinc-800 bg-zinc-900 divide-zinc-800'}`}>

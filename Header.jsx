@@ -17,6 +17,7 @@ export default function Header({
   pendingSyncCount, installInfoOpen, installInstructions, isPwaInstalled,
   platformFilter, platformOptions = [], calendarTypeFilter, setCalendarTypeFilter,
   periodStats, periodTrades = [], currencySymbol = '$', formatMoney,
+  monthSummary,
 }) {
 
 
@@ -344,6 +345,12 @@ export default function Header({
           >
             <ChevronRight className="h-4 w-4" />
           </button>
+
+          {(month !== today.getMonth() || year !== today.getFullYear()) && <button type="button" onClick={() => { const now = new Date(); setViewMonth(now.getMonth()); setViewYear(now.getFullYear()); setSelectedKey(null); setMonthMenuOpen(false); setYearMenuOpen(false); }} className={`min-h-10 rounded-xl px-3 text-xs font-medium transition-colors ${isLight ? 'text-amber-700 hover:bg-amber-50' : 'text-amber-400 hover:bg-amber-400/10'}`}>{t('today')}</button>}
+          {traderMode && monthSummary && <div className="flex basis-full flex-wrap items-center gap-x-2 gap-y-1 py-1 text-[11px] sm:basis-auto sm:px-2" title={t('calendarSummaryHint')}>
+            <span className={`font-data font-semibold tabular-nums ${monthSummary.total < 0 ? 'text-red-500' : monthSummary.total > 0 ? 'text-emerald-500' : 'text-zinc-500'}`}>{monthSummary.total > 0 ? '+' : monthSummary.total < 0 ? '−' : ''}{formatMoney(Math.abs(monthSummary.total))} {currency}</span>
+            <span className="text-zinc-500">· {t('calendarTradingDays')}: {monthSummary.days}</span>
+          </div>}
 
           {/* Account badge on desktop */}
           <div className={`ml-2 hidden sm:flex items-center rounded-lg border font-data text-[10px] tracking-wide overflow-hidden ${isLight ? 'border-zinc-300 bg-zinc-100' : 'border-zinc-800 bg-zinc-900'}`}>

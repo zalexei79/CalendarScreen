@@ -8,7 +8,7 @@ const COPY = {
   md: ['Cum ai tranzacționat?', 'După plan', 'M-am grăbit', 'Obosit', 'Am încălcat regulile', 'Ce a mers bine? Ce ai face diferit?', 'Salvează', 'Se salvează…', 'Salvat', 'Autentifică-te pentru a păstra notițele pe toate dispozitivele.', 'Autentificare', 'Notița nu a putut fi încărcată. Încearcă din nou.', 'Reîncearcă', 'Salvarea a eșuat. Textul rămâne aici — verifică conexiunea și reîncearcă.', 'Se încarcă…', 'Modificări nesalvate', 'O notiță personală pentru întreaga zi, independentă de cont și filtre.'],
 };
 
-export default function DayNote({ userId, dateKey, isLight, language, onLogin }) {
+export default function DayNote({ userId, dateKey, isLight, language, onLogin, onSaved }) {
   const c = COPY[language === 'ro' ? 'md' : language] || COPY.en;
   const [note, setNote] = useState('');
   const [tags, setTags] = useState([]);
@@ -42,7 +42,7 @@ export default function DayNote({ userId, dateKey, isLight, language, onLogin })
     try {
       const { error } = await supabase.from('trading_day_notes').upsert({ user_id: userId, date_key: dateKey, note, tags }, { onConflict: 'user_id,date_key' });
       if (error) throw error;
-      if (alive.current) setState('saved');
+      if (alive.current) { setState('saved'); onSaved?.(); }
     } catch { if (alive.current) setState('save-error'); }
     finally { busy.current = false; }
   }

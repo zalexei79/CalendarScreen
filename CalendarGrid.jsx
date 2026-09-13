@@ -4,6 +4,8 @@ import { WEEKDAYS } from './src/shared/config/constants';
 
 export default function CalendarGrid({
   traderMode = false,
+  notes = {},
+  noteLabel,
   cells,
   selectedKey,
   isLight,
@@ -66,7 +68,7 @@ export default function CalendarGrid({
           const isSelected = cell.key === selectedKey;
           const hasTrades = tradesForDayFiltered(cell.key).length > 0;
           const pnl = totalPnlForDay(cell.key);
-          return <CalendarDayCell key={cell.key} traderMode={traderMode} cell={cell} cellIndex={cellIndex} isSelected={isSelected} hasTrades={hasTrades} pnl={pnl} monthMaxAbsPnl={monthMaxAbsPnl} isLight={isLight} formatPnlDisplay={formatPnlDisplay} onSelect={() => onSelectDay(isSelected ? null : cell.key)} />;
+          return <CalendarDayCell key={cell.key} hasNote={!!notes[cell.key]} noteLabel={noteLabel} traderMode={traderMode} cell={cell} cellIndex={cellIndex} isSelected={isSelected} hasTrades={hasTrades} pnl={pnl} monthMaxAbsPnl={monthMaxAbsPnl} isLight={isLight} formatPnlDisplay={formatPnlDisplay} onSelect={() => onSelectDay(isSelected ? null : cell.key)} />;
         })}
       </div>
     </section>
