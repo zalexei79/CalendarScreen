@@ -71,6 +71,7 @@ import Header from './Header';
 import HistoryChart from './HistoryChart';
 import DayNote from './src/features/day-notes/DayNote';
 import PnlCurve from './src/features/trades-sync/components/PnlCurve';
+import PeriodDynamics from './src/features/trades-sync/components/PeriodDynamics';
 import CalendarGrid from './CalendarGrid';
 import CtraderControl from './src/features/ctrader/CtraderControl';
 
@@ -2483,34 +2484,7 @@ export default function CalendarScreen() {
                   {/* Всё подряд одним потоком — обзор, откуда, куда, радар, привычки */}
                   <div className="space-y-6">
                     <div>
-                      <div className={`relative overflow-hidden rounded-2xl border p-3 sm:p-4 mb-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}>
-                        <div className="absolute inset-x-4 top-[52%] border-t border-dashed border-zinc-500/15 pointer-events-none" />
-                        <div className="relative mb-4 flex items-end justify-between gap-3">
-                          <div>
-                            <span className="text-sm font-semibold">{t('periodDynamics')}</span>
-                            <p className="mt-1 text-[10px] text-zinc-500">{t('last10Days')}</p>
-                          </div>
-                          <div className="flex shrink-0 gap-2 text-[9px]"><span className="text-emerald-500">● {t('incomeLabel')}</span><span className="text-red-400">● {t('expenseLabel')}</span></div>
-                        </div>
-                        {historyAnalysis.chartEntries.length ? (
-                          <div className="relative grid grid-cols-5 sm:grid-cols-10 gap-x-1.5 gap-y-3 items-end h-52 sm:h-44">
-                            {historyAnalysis.chartEntries.map(([date, stats]) => {
-                              const net = stats.income - stats.expense;
-                              const active = stats.income > 0 || stats.expense > 0;
-                              return <div key={date} className="min-w-0 h-full flex flex-col justify-end">
-                                <div className={`mb-1 min-h-[14px] text-center text-[10px] sm:text-[11px] font-data tabular-nums ${!active ? 'text-zinc-700' : net >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>
-                                  {active ? `${net >= 0 ? '+' : '−'}${formatMoneyShort(Math.abs(net))}` : '—'}
-                                </div>
-                                <div className="relative flex flex-1 items-end justify-center gap-1">
-                                  <span className={`w-2.5 sm:w-3 rounded-t-md transition-all duration-500 ${stats.income > 0 ? 'bg-gradient-to-t from-emerald-600/70 to-emerald-300/90 shadow-[0_0_16px_rgba(16,185,129,.18)]' : 'bg-emerald-500/[0.06]'}`} style={{height:`${stats.income > 0 ? Math.max(6,(stats.income/historyAnalysis.maxDaily)*100) : 3}%`}} />
-                                  <span className={`w-2.5 sm:w-3 rounded-t-md transition-all duration-500 ${stats.expense > 0 ? 'bg-gradient-to-t from-red-700/65 to-red-400/85 shadow-[0_0_16px_rgba(248,113,113,.12)]' : 'bg-red-500/[0.05]'}`} style={{height:`${stats.expense > 0 ? Math.max(5,(stats.expense/historyAnalysis.maxDaily)*100) : 3}%`}} />
-                                </div>
-                                <span className={`mt-2 text-center text-[10px] sm:text-[11px] ${active ? 'text-zinc-500' : 'text-zinc-700'}`}>{date.slice(8,10)}</span>
-                              </div>;
-                            })}
-                          </div>
-                        ) : <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-zinc-800 text-xs text-zinc-500">{t('emptyHistoryDesc')}</div>}
-                      </div>
+                      <PeriodDynamics trades={historyTrades} language={language} isLight={isLight} />
                       <div className="grid sm:grid-cols-3 gap-2">
                         <div className={`text-left rounded-xl p-3 ${isLight ? 'bg-emerald-50' : 'bg-emerald-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">{t('mainSource')}</p><p className="mt-1 text-xs font-semibold truncate">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p></div>
                         <div className={`text-left rounded-xl p-3 ${isLight ? 'bg-red-50' : 'bg-red-500/[0.07]'}`}><p className="text-[10px] text-zinc-500">{t('expenseZone')}</p><p className="mt-1 text-xs font-semibold truncate">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p></div>
