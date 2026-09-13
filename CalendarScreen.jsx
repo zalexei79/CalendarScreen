@@ -1558,6 +1558,16 @@ export default function CalendarScreen() {
         @media (min-width: 640px) { .calendar-days-grid > button { border-radius: 18px !important; } }
         .calendar-days-grid > button:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0,0,0,.16); }
         .calendar-days-grid > button:active { transform: scale(.985); }
+        .pro-calendar-day .day-amount { position: absolute; left: 8px; right: 8px; bottom: 8px; transition: bottom .24s ease, transform .24s ease; }
+        .pro-calendar-day .day-amount-full { display: none; }
+        @media (min-width: 640px) { .pro-calendar-day .day-amount { left: 14px; right: 14px; bottom: 14px; } }
+        @media (hover: hover) and (pointer: fine) {
+          .pro-calendar-day:hover { z-index: 2; }
+          .pro-calendar-day:hover .day-amount { bottom: 50%; transform: translateY(50%); text-align: center; font-size: clamp(12px, 1.25vw, 20px); }
+          .pro-calendar-day:hover .day-amount-short { display: none; }
+          .pro-calendar-day:hover .day-amount-full { display: block; overflow: hidden; text-overflow: ellipsis; }
+        }
+        @media (prefers-reduced-motion: reduce) { .pro-calendar-day .day-amount { transition: none; } }
         @keyframes premiumFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
         .premium-shell { min-height: 100dvh; }
         /* Reserve the dock's space in the scrollable calendar, including iOS's home indicator. */
@@ -1613,6 +1623,8 @@ export default function CalendarScreen() {
       {/* PRO controls live in Header: one clean control center, no floating duplicate block. */}
       <CalendarGrid
         traderMode={traderMode}
+        onNextMonth={goToNextMonth}
+        onPreviousMonth={goToPrevMonth}
         key={`${year}-${month}-${animKey}`}
         slideDirection={slideDirection}
         cells={cells} selectedKey={selectedKey} isLight={isLight} monthMaxAbsPnl={monthMaxAbsPnl}

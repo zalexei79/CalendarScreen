@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import CalendarDayCell from './CalendarDayCell';
 import { WEEKDAYS } from './src/shared/config/constants';
 
@@ -16,7 +16,11 @@ export default function CalendarGrid({
   onTouchStart,
   onTouchEnd,
   slideDirection,
+  onNextMonth,
+  onPreviousMonth,
 }) {
+  const drag = useRef(null);
+  const suppressClick = useRef(false);
   const animClass = slideDirection === 'next' ? 'animate-slide-next' : slideDirection === 'prev' ? 'animate-slide-prev' : '';
   return (
     <section
@@ -24,6 +28,35 @@ export default function CalendarGrid({
       onClick={(e) => { if (e.target === e.currentTarget) onEmptyClick(); }}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
+      onPointerDown={e => {
+        if (e.pointerType !== 'mouse' || e.button !== 0) return;
+        suppressClick.current = false;
+        drag.current = { x: e.clientX, y: e.clientY, id: e.pointerId, moved: false };
+      }}
+      onPointerMove={e => {
+        const start = drag.current;
+        if (!start || start.id !== e.pointerId) return;
+        if (Math.abs(e.clientX - start.x) > 8) {
+          start.moved = true;
+          suppressClick.current = true;
+          e.currentTarget.setPointerCapture(e.pointerId);
+        }
+      }}
+      onPointerUp={e => {
+        const start = drag.current;
+        drag.current = null;
+        if (!start) return;
+        const dx = e.clientX - start.x, dy = e.clientY - start.y;
+        if (start.moved && Math.abs(dx) >= 64 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+          if (dx < 0) onNextMonth?.(); else onPreviousMonth?.();
+        }
+        if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+      }}
+      onPointerCancel={() => { drag.current = null; }}
+      onLostPointerCapture={() => { drag.current = null; }}
+      onClickCapture={e => { if (suppressClick.current && e.detail !== 0) { e.preventDefault(); e.stopPropagation(); suppressClick.current = false; } }}
+      onDragStart={e => e.preventDefault()}
+      style={{ userSelect: 'none' }}
     >
       <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-3" onClick={(e) => { if (e.target === e.currentTarget) onEmptyClick(); }}>
         {WEEKDAYS.map((w) => <div key={w} className={`font-data text-[11px] sm:text-xs font-semibold tracking-wider text-center uppercase pb-1 ${isLight ? 'text-slate-600' : 'text-zinc-500'}`}>{w}</div>)}

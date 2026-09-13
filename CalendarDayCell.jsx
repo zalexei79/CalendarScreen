@@ -56,15 +56,16 @@ export default function CalendarDayCell({
       ? { backgroundColor: isLight ? '#f8fafc' : '#131418', borderColor: isLight ? '#e2e8f0' : '#292a30', boxShadow: 'none' }
       : {
           backgroundColor: isLight ? '#fff' : '#101114',
-          backgroundImage: `radial-gradient(ellipse at 50% 115%, rgba(${proRgb},${isLight ? 0.14 + proStrength * 0.10 : 0.16 + proStrength * 0.13}) 0%, rgba(${proRgb},${isLight ? 0.035 : 0.025}) 70%, transparent 100%)`,
+          backgroundImage: 'none',
           borderColor: `rgba(${proRgb},${isLight ? 0.30 : 0.25 + proStrength * 0.12})`,
-          boxShadow: `0 7px ${18 + Math.round(proStrength * 12)}px -7px rgba(${proRgb},${isLight ? 0.15 : 0.20 + proStrength * 0.10}), inset 0 1px 0 rgba(255,255,255,${isLight ? 0.65 : 0.035})`,
+          boxShadow: `0 9px ${22 + Math.round(proStrength * 14)}px -5px rgba(${proRgb},${isLight ? 0.22 : 0.30 + proStrength * 0.10}), 0 0 12px -3px rgba(${proRgb},0.16)`,
         }
     : {};
 
   return (
     <button onClick={onSelect} style={{ ...heatmapStyle, ...proStyle }} className={[
       'relative rounded-xl border flex flex-col justify-between text-left transition-all duration-200 ease-out',
+      traderMode ? 'pro-calendar-day' : '',
       'min-h-[64px] sm:min-h-[110px] p-2 sm:p-3.5',
       isLight
         ? (cell.inMonth ? (hasTrades ? 'bg-transparent' : 'bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)]') : 'bg-slate-50/60')
@@ -78,7 +79,7 @@ export default function CalendarDayCell({
     ].join(' ')}>
       {cell.isToday && <span className="absolute top-2 right-2 h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-amber-500 ring-2 ring-white shadow-sm" />}
       <span className={`font-data text-xs sm:text-base font-semibold ${cell.inMonth ? (isLight ? 'text-slate-800' : 'text-zinc-300') : (isLight ? 'text-slate-400' : 'text-zinc-600')}`}>{cell.date.getDate()}</span>
-      {hasTrades && <span className={`font-data text-[11px] sm:text-base font-extrabold tracking-tight whitespace-nowrap ${pnlTone === 'profit' ? (isLight ? 'text-emerald-950 [text-shadow:0_1px_0_rgba(255,255,255,.42)]' : 'text-emerald-500') : pnlTone === 'loss' ? (isLight ? 'text-rose-950 [text-shadow:0_1px_0_rgba(255,255,255,.42)]' : 'text-red-500') : (isLight ? 'text-slate-500' : 'text-zinc-500')}`}>{pnlText}</span>}
+      {hasTrades && <span title={formatPnlDisplay(pnl, false)} className={`day-amount font-data text-[11px] sm:text-base font-extrabold tracking-tight whitespace-nowrap ${pnlTone === 'profit' ? (isLight ? 'text-emerald-950 [text-shadow:0_1px_0_rgba(255,255,255,.42)]' : 'text-emerald-500') : pnlTone === 'loss' ? (isLight ? 'text-rose-950 [text-shadow:0_1px_0_rgba(255,255,255,.42)]' : 'text-red-500') : (isLight ? 'text-slate-500' : 'text-zinc-500')}`}>{traderMode ? <><span className="day-amount-short">{pnlText}</span><span className="day-amount-full">{formatPnlDisplay(pnl, false)}</span></> : pnlText}</span>}
     </button>
   );
 }
