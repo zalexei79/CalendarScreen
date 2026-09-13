@@ -2101,22 +2101,29 @@ export default function CalendarScreen() {
 
                   {/* ── Compact toolbar (currency · deposit · sync) — always visible ── */}
                   <div className="flex flex-wrap items-center gap-2 mb-4">
+                    <div className={`inline-flex min-w-0 max-w-full items-center gap-1 rounded-2xl border p-1 ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-white/10 bg-zinc-950/50'}`}>
                     <button
+                      type="button"
                       onClick={() => {
                         if (displayMode === 'usd' && depositSize <= 0) { handleEditDeposit(); return; }
                         setDisplayMode((m) => (m === 'usd' ? 'percent' : 'usd'));
                       }}
-                      className={`rounded-lg border px-2.5 py-1 font-data text-xs font-semibold transition-all ${
-                        isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-amber-400/50'
-                        : 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-amber-400/40'
+                      className={`flex h-11 min-w-11 shrink-0 items-center justify-center rounded-xl font-data text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${
+                        isLight ? 'bg-zinc-100 text-zinc-700 hover:bg-amber-50'
+                        : 'bg-white/5 text-zinc-300 hover:bg-amber-400/10'
                       }`}
                     >
                       {displayMode === 'usd' ? currencySymbol : '%'}
                     </button>
-                    <button onClick={handleEditDeposit}
-                      className={`font-data text-xs transition-colors ${isLight ? 'text-zinc-400 hover:text-zinc-700' : 'text-zinc-600 hover:text-zinc-300'}`}>
-                      {t('deposit')}: {depositSize > 0 ? `${currencySymbol}${formatMoney(depositSize)}` : t('notSet')} ✎
+                    <button type="button" onClick={handleEditDeposit}
+                      className={`group flex min-h-11 min-w-0 items-center gap-4 rounded-xl px-3 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${isLight ? 'hover:bg-zinc-50' : 'hover:bg-white/5'}`}>
+                      <span className="min-w-0">
+                        <span className="block text-[10px] leading-4 text-zinc-500">{t('deposit')}</span>
+                        <span className={`block break-all font-data text-sm font-semibold tabular-nums leading-5 ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{depositSize > 0 ? `${currencySymbol}${formatMoney(depositSize)}` : t('notSet')}</span>
+                      </span>
+                      <Pencil aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-zinc-500 transition-colors group-hover:text-amber-500" />
                     </button>
+                    </div>
                     {ctraderConnected && (
                       <button onClick={handleSyncCtraderTrades} disabled={syncingCtrader}
                         className={`ml-auto flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all ${
