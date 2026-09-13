@@ -1612,6 +1612,7 @@ export default function CalendarScreen() {
 
       {/* PRO controls live in Header: one clean control center, no floating duplicate block. */}
       <CalendarGrid
+        traderMode={traderMode}
         key={`${year}-${month}-${animKey}`}
         slideDirection={slideDirection}
         cells={cells} selectedKey={selectedKey} isLight={isLight} monthMaxAbsPnl={monthMaxAbsPnl}

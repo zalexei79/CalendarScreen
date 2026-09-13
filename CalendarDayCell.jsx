@@ -1,6 +1,7 @@
 import React from 'react';
 
 export default function CalendarDayCell({
+  traderMode = false,
   cell,
   cellIndex,
   isSelected,
@@ -47,8 +48,22 @@ export default function CalendarDayCell({
         }
       : { ...adjacentBaseStyle, animation: 'cellGlowIn 0.35s ease-out both', animationDelay: `${cellIndex * 18}ms` };
 
+  // Pro: jewel-toned light under the surface, never a flashing animation.
+  const proRgb = pnl > 0 ? '16,155,115' : '190,35,75';
+  const proStrength = Math.sqrt(intensity);
+  const proStyle = traderMode && cell.inMonth && hasTrades && !isSelected
+    ? pnl === 0
+      ? { backgroundColor: isLight ? '#f8fafc' : '#131418', borderColor: isLight ? '#e2e8f0' : '#292a30', boxShadow: 'none' }
+      : {
+          backgroundColor: isLight ? '#fff' : '#101114',
+          backgroundImage: `radial-gradient(ellipse at 50% 115%, rgba(${proRgb},${isLight ? 0.14 + proStrength * 0.10 : 0.16 + proStrength * 0.13}) 0%, rgba(${proRgb},${isLight ? 0.035 : 0.025}) 70%, transparent 100%)`,
+          borderColor: `rgba(${proRgb},${isLight ? 0.30 : 0.25 + proStrength * 0.12})`,
+          boxShadow: `0 7px ${18 + Math.round(proStrength * 12)}px -7px rgba(${proRgb},${isLight ? 0.15 : 0.20 + proStrength * 0.10}), inset 0 1px 0 rgba(255,255,255,${isLight ? 0.65 : 0.035})`,
+        }
+    : {};
+
   return (
-    <button onClick={onSelect} style={heatmapStyle} className={[
+    <button onClick={onSelect} style={{ ...heatmapStyle, ...proStyle }} className={[
       'relative rounded-xl border flex flex-col justify-between text-left transition-all duration-200 ease-out',
       'min-h-[64px] sm:min-h-[110px] p-2 sm:p-3.5',
       isLight
