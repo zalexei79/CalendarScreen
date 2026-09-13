@@ -57,8 +57,10 @@ export default function CalendarDayCell({
       : {
           backgroundColor: isLight ? '#fff' : '#101114',
           backgroundImage: 'none',
-          borderColor: `rgba(${proRgb},${isLight ? 0.30 : 0.25 + proStrength * 0.12})`,
-          boxShadow: `0 9px ${22 + Math.round(proStrength * 14)}px -5px rgba(${proRgb},${isLight ? 0.22 : 0.30 + proStrength * 0.10}), 0 0 12px -3px rgba(${proRgb},0.16)`,
+          borderColor: `rgba(${proRgb},${isLight ? 0.45 + proStrength * 0.12 : 0.25 + proStrength * 0.12})`,
+          boxShadow: isLight
+            ? `0 2px 0 rgba(${proRgb},0.18), 0 5px 10px -3px rgba(${proRgb},${0.32 + proStrength * 0.12}), 0 12px 22px -9px rgba(${proRgb},${0.38 + proStrength * 0.12}), 0 1px 3px rgba(15,23,42,0.04)`
+            : `0 9px ${22 + Math.round(proStrength * 14)}px -5px rgba(${proRgb},${0.30 + proStrength * 0.10}), 0 0 12px -3px rgba(${proRgb},0.16)`,
         }
     : {};
 
