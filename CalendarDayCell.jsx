@@ -22,7 +22,7 @@ export default function CalendarDayCell({
 
     const handleTodayPulse = () => {
       setTodayPulse(true);
-      window.setTimeout(() => setTodayPulse(false), 1200);
+      window.setTimeout(() => setTodayPulse(false), 1500);
     };
 
     window.addEventListener('dk:today-pulse', handleTodayPulse);
@@ -91,7 +91,7 @@ export default function CalendarDayCell({
           border-color: rgba(56, 189, 248, .62) !important;
           box-shadow:
             0 0 0 1px rgba(56, 189, 248, .16),
-            0 0 18px rgba(56, 189, 248, .14);
+            0 0 18px rgba(56, 189, 248, .14) !important;
           z-index: 3;
         }
 
@@ -102,45 +102,37 @@ export default function CalendarDayCell({
         .today-pulse-ring {
           position: absolute;
           inset: 2px;
-          border: 1px solid rgba(56, 189, 248, .82);
+          border: 1px solid rgba(56, 189, 248, .9);
           border-radius: inherit;
           pointer-events: none;
           z-index: 20;
-          animation: todayPulse 1.2s ease-out both;
+          animation: todayPulse .5s ease-in-out 3;
         }
 
         .today-calendar-pulse {
-          animation: todayCellPulse 1.2s ease-out both !important;
+          animation: todayCellPulse .5s ease-in-out 3 !important;
         }
 
         @keyframes todayPulse {
           0% {
             opacity: 0;
-            transform: scale(.96);
+            transform: scale(.94);
             box-shadow: 0 0 0 0 rgba(56, 189, 248, 0);
           }
 
-          22% {
+          35% {
             opacity: 1;
-            transform: scale(1);
+            transform: scale(1.015);
             box-shadow:
-              0 0 0 3px rgba(56, 189, 248, .20),
-              0 0 20px rgba(56, 189, 248, .28);
-          }
-
-          55% {
-            opacity: .72;
-            transform: scale(1.01);
-            box-shadow:
-              0 0 0 6px rgba(56, 189, 248, .12),
-              0 0 24px rgba(56, 189, 248, .20);
+              0 0 0 4px rgba(56, 189, 248, .38),
+              0 0 26px rgba(125, 211, 252, .55);
           }
 
           100% {
             opacity: 0;
-            transform: scale(1.035);
+            transform: scale(1.03);
             box-shadow:
-              0 0 0 10px rgba(56, 189, 248, 0),
+              0 0 0 9px rgba(56, 189, 248, 0),
               0 0 0 rgba(56, 189, 248, 0);
           }
         }
@@ -150,12 +142,8 @@ export default function CalendarDayCell({
             transform: scale(1);
           }
 
-          22% {
-            transform: scale(1.018);
-          }
-
-          55% {
-            transform: scale(.998);
+          35% {
+            transform: scale(1.022);
           }
         }
 
