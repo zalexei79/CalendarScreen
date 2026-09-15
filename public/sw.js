@@ -54,14 +54,11 @@ self.addEventListener('fetch', (event) => {
       fetch(event.request)
         .then((response) => {
           if (response && response.status === 200) {
-            // Клонируем ТРИЖДЫ от оригинала, а не цепочкой clone().clone()
-            const cloneForRequest = response.clone();
-            const cloneForRoot = response.clone();
-            const cloneForIndex = response.clone();
+            const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, cloneForRequest);
-              cache.put('/', cloneForRoot);
-              cache.put('/index.html', cloneForIndex);
+              cache.put(event.request, clone);
+              cache.put('/', clone.clone());
+              cache.put('/index.html', clone.clone());
             });
           }
           return response;
