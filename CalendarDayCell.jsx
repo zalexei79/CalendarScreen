@@ -22,7 +22,7 @@ export default function CalendarDayCell({
 
     const handleTodayPulse = () => {
       setTodayPulse(true);
-      window.setTimeout(() => setTodayPulse(false), 1500);
+      window.setTimeout(() => setTodayPulse(false), 1000);
     };
 
     window.addEventListener('dk:today-pulse', handleTodayPulse);
@@ -106,44 +106,21 @@ export default function CalendarDayCell({
           border-radius: inherit;
           pointer-events: none;
           z-index: 20;
-          animation: todayPulse .5s ease-in-out 3;
+          box-shadow: 0 0 0 4px rgba(56, 189, 248, .35), 0 0 22px rgba(125, 211, 252, .55);
+          animation: todayPulse .5s ease-in-out 2;
         }
 
         .today-calendar-pulse {
-          animation: todayCellPulse .5s ease-in-out 3 !important;
+          /* сама ячейка больше не масштабируется — мигает только кольцо выше */
         }
 
         @keyframes todayPulse {
-          0% {
-            opacity: 0;
-            transform: scale(.94);
-            box-shadow: 0 0 0 0 rgba(56, 189, 248, 0);
-          }
-
-          35% {
-            opacity: 1;
-            transform: scale(1.015);
-            box-shadow:
-              0 0 0 4px rgba(56, 189, 248, .38),
-              0 0 26px rgba(125, 211, 252, .55);
-          }
-
-          100% {
-            opacity: 0;
-            transform: scale(1.03);
-            box-shadow:
-              0 0 0 9px rgba(56, 189, 248, 0),
-              0 0 0 rgba(56, 189, 248, 0);
-          }
-        }
-
-        @keyframes todayCellPulse {
           0%, 100% {
-            transform: scale(1);
+            opacity: 0;
           }
 
-          35% {
-            transform: scale(1.022);
+          50% {
+            opacity: 1;
           }
         }
 
