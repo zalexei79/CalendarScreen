@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StickyNote } from 'lucide-react';
 
 export default function CalendarDayCell({
@@ -15,6 +15,23 @@ export default function CalendarDayCell({
   onSelect,
   formatPnlDisplay,
 }) {
+  const [todayPulse, setTodayPulse] = useState(false);
+
+  useEffect(() => {
+    if (!cell.isToday) return undefined;
+
+    const handleTodayPulse = () => {
+      setTodayPulse(true);
+      window.setTimeout(() => setTodayPulse(false), 1200);
+    };
+
+    window.addEventListener('dk:today-pulse', handleTodayPulse);
+
+    return () => {
+      window.removeEventListener('dk:today-pulse', handleTodayPulse);
+    };
+  }, [cell.isToday]);
+
   const pnlTone = pnl > 0 ? 'profit' : pnl < 0 ? 'loss' : 'neutral';
   const pnlText = formatPnlDisplay(pnl, true);
   const intensity = monthMaxAbsPnl > 0 ? Math.min(Math.abs(pnl) / monthMaxAbsPnl, 1) : 0;
@@ -68,24 +85,176 @@ export default function CalendarDayCell({
     : {};
 
   return (
-    <button onClick={onSelect} style={{ ...heatmapStyle, ...proStyle }} className={[
-      'relative rounded-xl border flex flex-col justify-between text-left transition-all duration-200 ease-out',
-      traderMode ? 'pro-calendar-day' : '',
-      'min-h-[64px] sm:min-h-[110px] p-2 sm:p-3.5',
-      isLight
-        ? (cell.inMonth ? (hasTrades ? 'bg-transparent' : 'bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)]') : 'bg-slate-50/60')
-        : (cell.inMonth ? (hasTrades ? 'bg-zinc-900' : 'bg-zinc-900/20') : ''),
-      isLight
-        ? (cell.inMonth ? (hasTrades ? 'border-slate-300/80' : 'border-slate-200/90') : 'border-slate-100')
-        : (cell.inMonth ? (hasTrades ? 'border-zinc-800' : 'border-zinc-800/30') : ''),
-      isSelected
-        ? `border-amber-400 ring-2 ring-amber-400/60 scale-[1.02] sm:scale-[1.03] shadow-lg shadow-amber-500/10 z-10 ${isLight ? 'bg-amber-50/60' : 'bg-zinc-800'}`
-        : isLight ? 'hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm' : 'hover:border-zinc-600 hover:bg-zinc-800/60',
-    ].join(' ')}>
-      {cell.isToday && <span className="absolute top-2 right-2 h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-amber-500 ring-2 ring-white shadow-sm" />}
-      {traderMode && hasNote && <span title={noteLabel} className={`absolute right-2 ${cell.isToday ? 'top-6' : 'top-2'} text-amber-600/80`}><StickyNote aria-label={noteLabel} role="img" className="h-3 w-3 sm:h-3.5 sm:w-3.5" /></span>}
-      <span className={`font-data text-xs sm:text-base font-semibold ${cell.inMonth ? (isLight ? 'text-slate-800' : 'text-zinc-300') : (isLight ? 'text-slate-400' : 'text-zinc-600')}`}>{cell.date.getDate()}</span>
-      {hasTrades && <span title={formatPnlDisplay(pnl, false)} className={`day-amount font-data text-[11px] sm:text-base font-extrabold tracking-tight whitespace-nowrap ${pnlTone === 'profit' ? (isLight ? 'text-emerald-950 [text-shadow:0_1px_0_rgba(255,255,255,.42)]' : 'text-emerald-500') : pnlTone === 'loss' ? (isLight ? 'text-rose-950 [text-shadow:0_1px_0_rgba(255,255,255,.42)]' : 'text-red-500') : (isLight ? 'text-slate-500' : 'text-zinc-500')}`}>{traderMode ? <><span className="day-amount-short">{pnlText}</span><span className="day-amount-full">{formatPnlDisplay(pnl, false)}</span></> : pnlText}</span>}
-    </button>
+    <>
+      <style>{`
+        .today-calendar-cell {
+          border-color: rgba(56, 189, 248, .62) !important;
+          box-shadow:
+            0 0 0 1px rgba(56, 189, 248, .16),
+            0 0 18px rgba(56, 189, 248, .14);
+          z-index: 3;
+        }
+
+        .today-calendar-cell:hover {
+          border-color: rgba(56, 189, 248, .82) !important;
+        }
+
+        .today-pulse-ring {
+          position: absolute;
+          inset: 2px;
+          border: 1px solid rgba(56, 189, 248, .82);
+          border-radius: inherit;
+          pointer-events: none;
+          z-index: 20;
+          animation: todayPulse 1.2s ease-out both;
+        }
+
+        .today-calendar-pulse {
+          animation: todayCellPulse 1.2s ease-out both !important;
+        }
+
+        @keyframes todayPulse {
+          0% {
+            opacity: 0;
+            transform: scale(.96);
+            box-shadow: 0 0 0 0 rgba(56, 189, 248, 0);
+          }
+
+          22% {
+            opacity: 1;
+            transform: scale(1);
+            box-shadow:
+              0 0 0 3px rgba(56, 189, 248, .20),
+              0 0 20px rgba(56, 189, 248, .28);
+          }
+
+          55% {
+            opacity: .72;
+            transform: scale(1.01);
+            box-shadow:
+              0 0 0 6px rgba(56, 189, 248, .12),
+              0 0 24px rgba(56, 189, 248, .20);
+          }
+
+          100% {
+            opacity: 0;
+            transform: scale(1.035);
+            box-shadow:
+              0 0 0 10px rgba(56, 189, 248, 0),
+              0 0 0 rgba(56, 189, 248, 0);
+          }
+        }
+
+        @keyframes todayCellPulse {
+          0%, 100% {
+            transform: scale(1);
+          }
+
+          22% {
+            transform: scale(1.018);
+          }
+
+          55% {
+            transform: scale(.998);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .today-pulse-ring,
+          .today-calendar-pulse {
+            animation: none !important;
+          }
+        }
+      `}</style>
+
+      <button
+        onClick={onSelect}
+        style={{ ...heatmapStyle, ...proStyle }}
+        className={[
+          'relative rounded-xl border flex flex-col justify-between text-left transition-all duration-200 ease-out',
+          traderMode ? 'pro-calendar-day' : '',
+          cell.isToday ? 'today-calendar-cell' : '',
+          todayPulse ? 'today-calendar-pulse' : '',
+          'min-h-[64px] sm:min-h-[110px] p-2 sm:p-3.5',
+          isLight
+            ? (cell.inMonth ? (hasTrades ? 'bg-transparent' : 'bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)]') : 'bg-slate-50/60')
+            : (cell.inMonth ? (hasTrades ? 'bg-zinc-900' : 'bg-zinc-900/20') : ''),
+          isLight
+            ? (cell.inMonth ? (hasTrades ? 'border-slate-300/80' : 'border-slate-200/90') : 'border-slate-100')
+            : (cell.inMonth ? (hasTrades ? 'border-zinc-800' : 'border-zinc-800/30') : ''),
+          isSelected
+            ? `border-amber-400 ring-2 ring-amber-400/60 scale-[1.02] sm:scale-[1.03] shadow-lg shadow-amber-500/10 z-10 ${isLight ? 'bg-amber-50/60' : 'bg-zinc-800'}`
+            : isLight ? 'hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm' : 'hover:border-zinc-600 hover:bg-zinc-800/60',
+        ].join(' ')}
+      >
+        {cell.isToday && (
+          <>
+            {todayPulse && (
+              <span
+                className="today-pulse-ring"
+                aria-hidden="true"
+              />
+            )}
+
+            <span
+              className={`absolute top-2 right-2 h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full shadow-sm ${
+                isLight
+                  ? 'bg-sky-600 ring-2 ring-white'
+                  : 'bg-sky-400 ring-2 ring-zinc-900'
+              }`}
+            />
+          </>
+        )}
+
+        {traderMode && hasNote && (
+          <span
+            title={noteLabel}
+            className={`absolute right-2 ${cell.isToday ? 'top-6' : 'top-2'} text-amber-600/80`}
+          >
+            <StickyNote
+              aria-label={noteLabel}
+              role="img"
+              className="h-3 w-3 sm:h-3.5 sm:w-3.5"
+            />
+          </span>
+        )}
+
+        <span
+          className={`font-data text-xs sm:text-base font-semibold ${
+            cell.inMonth
+              ? (isLight ? 'text-slate-800' : 'text-zinc-300')
+              : (isLight ? 'text-slate-400' : 'text-zinc-600')
+          }`}
+        >
+          {cell.date.getDate()}
+        </span>
+
+        {hasTrades && (
+          <span
+            title={formatPnlDisplay(pnl, false)}
+            className={`day-amount font-data text-[11px] sm:text-base font-extrabold tracking-tight whitespace-nowrap ${
+              pnlTone === 'profit'
+                ? (isLight
+                  ? 'text-emerald-950 [text-shadow:0_1px_0_rgba(255,255,255,.42)]'
+                  : 'text-emerald-500')
+                : pnlTone === 'loss'
+                  ? (isLight
+                    ? 'text-rose-950 [text-shadow:0_1px_0_rgba(255,255,255,.42)]'
+                    : 'text-red-500')
+                  : (isLight ? 'text-slate-500' : 'text-zinc-500')
+            }`}
+          >
+            {traderMode ? (
+              <>
+                <span className="day-amount-short">{pnlText}</span>
+                <span className="day-amount-full">{formatPnlDisplay(pnl, false)}</span>
+              </>
+            ) : (
+              pnlText
+            )}
+          </span>
+        )}
+      </button>
+    </>
   );
 }
