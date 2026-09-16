@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { StickyNote } from 'lucide-react';
 
 export default function CalendarDayCell({
   traderMode = false,
@@ -188,14 +187,12 @@ export default function CalendarDayCell({
         {traderMode && hasNote && (
           <span
             title={noteLabel}
-            className={`absolute right-2 ${cell.isToday ? 'top-6' : 'top-2'} text-amber-600/80`}
-          >
-            <StickyNote
-              aria-label={noteLabel}
-              role="img"
-              className="h-3 w-3 sm:h-3.5 sm:w-3.5"
-            />
-          </span>
+            aria-label={noteLabel}
+            role="img"
+            className={`absolute right-2 ${cell.isToday ? 'top-6' : 'top-2'} h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full transition-opacity duration-200 ${
+              isLight ? 'bg-slate-400/55' : 'bg-zinc-500/55'
+            }`}
+          />
         )}
 
         <span
