@@ -88,30 +88,43 @@ export default function CalendarDayCell({
     <>
       <style>{`
         .today-calendar-cell {
-          border-color: rgba(56, 189, 248, .62) !important;
+          border-color: rgba(251, 191, 36, .58) !important;
           box-shadow:
-            0 0 0 1px rgba(56, 189, 248, .16),
-            0 0 18px rgba(56, 189, 248, .14) !important;
+            0 0 0 1px rgba(251, 191, 36, .12),
+            0 0 18px rgba(245, 158, 11, .12) !important;
+          animation: todayAmbientGlow 4s ease-in-out infinite;
           z-index: 3;
         }
 
         .today-calendar-cell:hover {
-          border-color: rgba(56, 189, 248, .82) !important;
+          border-color: rgba(251, 191, 36, .82) !important;
+          box-shadow:
+            0 0 0 1px rgba(251, 191, 36, .18),
+            0 0 24px rgba(245, 158, 11, .20) !important;
         }
 
         .today-pulse-ring {
           position: absolute;
           inset: 2px;
-          border: 1px solid rgba(56, 189, 248, .9);
+          border: 1px solid rgba(251, 191, 36, .9);
           border-radius: inherit;
           pointer-events: none;
           z-index: 20;
-          box-shadow: 0 0 0 4px rgba(56, 189, 248, .35), 0 0 22px rgba(125, 211, 252, .55);
+          box-shadow: 0 0 0 4px rgba(251, 191, 36, .28), 0 0 22px rgba(245, 158, 11, .42);
           animation: todayPulse .5s ease-in-out 2;
         }
 
         .today-calendar-pulse {
           /* сама ячейка больше не масштабируется — мигает только кольцо выше */
+        }
+
+        @keyframes todayAmbientGlow {
+          0%, 100% {
+            box-shadow: 0 0 0 1px rgba(251, 191, 36, .10), 0 0 14px rgba(245, 158, 11, .08);
+          }
+          50% {
+            box-shadow: 0 0 0 1px rgba(251, 191, 36, .18), 0 0 24px rgba(245, 158, 11, .18);
+          }
         }
 
         @keyframes todayPulse {
@@ -125,6 +138,7 @@ export default function CalendarDayCell({
         }
 
         @media (prefers-reduced-motion: reduce) {
+          .today-calendar-cell,
           .today-pulse-ring,
           .today-calendar-pulse {
             animation: none !important;
@@ -164,8 +178,8 @@ export default function CalendarDayCell({
             <span
               className={`absolute top-2 right-2 h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full shadow-sm ${
                 isLight
-                  ? 'bg-sky-600 ring-2 ring-white'
-                  : 'bg-sky-400 ring-2 ring-zinc-900'
+                  ? 'bg-amber-500 ring-2 ring-white'
+                  : 'bg-amber-400 ring-2 ring-zinc-900'
               }`}
             />
           </>

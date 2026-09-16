@@ -1601,8 +1601,8 @@ export default function CalendarScreen() {
         @media (max-width: 640px) { .premium-shell { font-size: 16px; } .premium-shell p, .premium-shell button { -webkit-font-smoothing: antialiased; } }
         @keyframes proEmber { 0%,100% { opacity:.55; transform:scale(.85) } 50% { opacity:1; transform:scale(1.15) } }
         .pro-ember { animation: proEmber 1.8s ease-in-out infinite; }
-        @keyframes slideInNext { 0% { opacity: .25; transform: translateX(28px); } 100% { opacity: 1; transform: translateX(0); } }
-        @keyframes slideInPrev { 0% { opacity: .25; transform: translateX(-28px); } 100% { opacity: 1; transform: translateX(0); } }
+        @keyframes slideInNext { 0% { opacity: .12; transform: translateX(36px) scale(.985); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+        @keyframes slideInPrev { 0% { opacity: .12; transform: translateX(-36px) scale(.985); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
         .animate-slide-next { animation: slideInNext 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .animate-slide-prev { animation: slideInPrev 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
