@@ -2163,28 +2163,26 @@ export default function CalendarScreen() {
                   {/* PRO HISTORY — one continuous feed; only the instrument breakdown collapses. */}
 
                   {/* ── Compact toolbar (currency · deposit · sync) — always visible ── */}
-                  <div className="flex flex-wrap items-center gap-2 mb-4">
-                    <div className={`inline-flex min-w-0 max-w-full items-center gap-1 rounded-2xl border p-1 ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-white/10 bg-zinc-950/50'}`}>
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <div className={`inline-flex min-w-0 max-w-full items-center rounded-xl border ${isLight ? 'border-zinc-200 bg-white/80 shadow-sm' : 'border-white/10 bg-zinc-950/40'}`}>
                     <button
                       type="button"
                       onClick={() => {
                         if (displayMode === 'usd' && depositSize <= 0) { handleEditDeposit(); return; }
                         setDisplayMode((m) => (m === 'usd' ? 'percent' : 'usd'));
                       }}
-                      className={`flex h-11 min-w-11 shrink-0 items-center justify-center rounded-xl font-data text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${
-                        isLight ? 'bg-zinc-100 text-zinc-700 hover:bg-amber-50'
-                        : 'bg-white/5 text-zinc-300 hover:bg-amber-400/10'
+                      className={`flex h-9 min-w-9 shrink-0 items-center justify-center rounded-l-xl border-r font-data text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${
+                        isLight ? 'border-zinc-200 text-zinc-600 hover:bg-amber-50 hover:text-amber-700'
+                        : 'border-white/10 text-zinc-400 hover:bg-amber-400/10 hover:text-amber-400'
                       }`}
                     >
                       {displayMode === 'usd' ? currencySymbol : '%'}
                     </button>
                     <button type="button" onClick={handleEditDeposit}
-                      className={`group flex min-h-11 min-w-0 items-center gap-4 rounded-xl px-3 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${isLight ? 'hover:bg-zinc-50' : 'hover:bg-white/5'}`}>
-                      <span className="min-w-0">
-                        <span className="block text-[10px] leading-4 text-zinc-500">{t('deposit')}</span>
-                        <span className={`block break-all font-data text-sm font-semibold tabular-nums leading-5 ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{depositSize > 0 ? `${currencySymbol}${formatMoney(depositSize)}` : t('notSet')}</span>
-                      </span>
-                      <Pencil aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-zinc-500 transition-colors group-hover:text-amber-500" />
+                      className={`group flex h-9 min-w-0 items-center gap-2 rounded-r-xl px-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${isLight ? 'hover:bg-zinc-50' : 'hover:bg-white/5'}`}>
+                      <span className="text-[10px] text-zinc-500">{t('deposit')}</span>
+                      <span className={`truncate font-data text-xs font-semibold tabular-nums ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{depositSize > 0 ? `${currencySymbol}${formatMoney(depositSize)}` : t('notSet')}</span>
+                      <Pencil aria-hidden="true" className="h-3 w-3 shrink-0 text-zinc-600 transition-colors group-hover:text-amber-500" />
                     </button>
                     </div>
                     {ctraderConnected && (
