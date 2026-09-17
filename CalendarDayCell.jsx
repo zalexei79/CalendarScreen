@@ -146,6 +146,7 @@ export default function CalendarDayCell({
       `}</style>
 
       <button
+        data-today-cell={cell.isToday ? 'true' : undefined}
         onClick={onSelect}
         style={{ ...heatmapStyle, ...proStyle }}
         className={[

@@ -352,6 +352,7 @@ export default function CalendarScreen() {
   }
 
   const [selectedKey, setSelectedKey] = useState(null);
+  const [firstRunGuideStep, setFirstRunGuideStep] = useState(0); // 0 off, 1 today, 2 form, 3 success
   const calendarTouchStart = useRef(null);
   const [displayMode, setDisplayMode] = useState('usd'); // 'usd' | 'percent'
   const [depositSize, setDepositSize] = useState(() => {
@@ -472,6 +473,15 @@ export default function CalendarScreen() {
       total: 'Итого за день',
       create: 'Создать первую запись →',
       skip: 'Пропустить',
+      guideTapToday: 'Нажми на сегодняшний день',
+      guideTapTodayHint: 'Попробуй создать настоящую запись прямо в календаре.',
+      guideExpense: 'Расход',
+      guideIncome: 'Доход',
+      guideNote: 'Заметка',
+      guideChooseType: 'С чего начнём?',
+      guideChooseTypeHint: 'Выбери вариант — я подготовлю форму, дальше ты всё сделаешь сам.',
+      guideSuccess: 'Готово. Теперь этот день хранит твою историю.',
+      guideSkip: 'Я разберусь сам',
     },
     en: {
       setup: 'Setup',
@@ -493,6 +503,15 @@ export default function CalendarScreen() {
       total: 'Total for the day',
       create: 'Create first entry →',
       skip: 'Skip',
+      guideTapToday: 'Tap today',
+      guideTapTodayHint: 'Create a real entry right in your calendar.',
+      guideExpense: 'Expense',
+      guideIncome: 'Income',
+      guideNote: 'Note',
+      guideChooseType: 'What should we start with?',
+      guideChooseTypeHint: 'Pick one and I’ll prepare the form. You do the rest.',
+      guideSuccess: 'Done. This day now keeps part of your story.',
+      guideSkip: 'I’ll figure it out',
     },
     ro: {
       setup: 'Configurare',
@@ -514,8 +533,23 @@ export default function CalendarScreen() {
       total: 'Total pe zi',
       create: 'Creează prima înregistrare →',
       skip: 'Omite',
+      guideTapToday: 'Apasă pe ziua de azi',
+      guideTapTodayHint: 'Creează o înregistrare reală direct în calendar.',
+      guideExpense: 'Cheltuială',
+      guideIncome: 'Venit',
+      guideNote: 'Notiță',
+      guideChooseType: 'Cu ce începem?',
+      guideChooseTypeHint: 'Alege o variantă și pregătesc formularul. Mai departe continui tu.',
+      guideSuccess: 'Gata. Ziua aceasta păstrează acum o parte din povestea ta.',
+      guideSkip: 'Mă descurc singur',
     },
   }[onboardingLanguage];
+
+  useEffect(() => {
+    if (firstRunGuideStep !== 3) return undefined;
+    const timer = window.setTimeout(() => setFirstRunGuideStep(0), 3600);
+    return () => window.clearTimeout(timer);
+  }, [firstRunGuideStep]);
 
   const currencySymbol = getCurrencyMeta(currency).symbol;
   const isLight = theme === 'light';
@@ -958,7 +992,7 @@ export default function CalendarScreen() {
   // ---- FIX: prevent double-save and improve id generation ----
   const [isSaving, setIsSaving] = useState(false);
 
-  function openModal(tradeToEdit) {
+  function openModal(tradeToEdit, dateKeyOverride = null) {
     if (tradeToEdit) {
       setEditingTrade({ id: tradeToEdit.id, dateKey: tradeToEdit.dateKey || modalDateKey || targetDateKey });
       setModalDateKey(tradeToEdit.dateKey || modalDateKey || targetDateKey);
@@ -975,9 +1009,11 @@ export default function CalendarScreen() {
         stopLoss: tradeToEdit.stop_loss != null ? String(tradeToEdit.stop_loss) : '',
       });
     } else {
-      if (isFutureSelected) return; // нельзя добавлять сделки на будущее
+      if (!dateKeyOverride && isFutureSelected) return; // нельзя добавлять сделки на будущее
       setEditingTrade(null);
-      setModalDateKey(targetDateKey);
+      const newEntryDateKey = dateKeyOverride || targetDateKey;
+      if (newEntryDateKey > todayKey) return;
+      setModalDateKey(newEntryDateKey);
       setForm({
         instrument: traderMode ? (recentInstruments[0] || '') : 'Зарплата',
         direction: '',
@@ -1001,6 +1037,7 @@ export default function CalendarScreen() {
   function closeModal() {
     setModalVisible(false);
     setFormError('');
+    if (firstRunGuideStep === 2 && !editingTrade) setFirstRunGuideStep(1);
     setEditingTrade(null);
     setTimeout(() => setModalOpen(false), 180);
   }
@@ -1202,7 +1239,9 @@ export default function CalendarScreen() {
         [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5)
       );
 
+      const completedFirstRunGuide = firstRunGuideStep === 2 && !editingTrade && dateKey === todayKey && !traderMode;
       closeModal();
+      if (completedFirstRunGuide) setFirstRunGuideStep(3);
     } catch (err) {
       console.error('[save] unexpected error:', err);
       setFormError(
@@ -1731,7 +1770,14 @@ export default function CalendarScreen() {
         slideDirection={slideDirection}
         cells={cells} selectedKey={selectedKey} isLight={isLight} monthMaxAbsPnl={monthMaxAbsPnl}
         tradesForDayFiltered={tradesForDayFiltered} totalPnlForDay={totalPnlForDay}
-        formatPnlDisplay={formatPnlDisplay} onSelectDay={setSelectedKey}
+        formatPnlDisplay={formatPnlDisplay} onSelectDay={(dateKey) => {
+          if (firstRunGuideStep === 1 && dateKey === todayKey && !traderMode) {
+            setFirstRunGuideStep(2);
+            openModal(null, todayKey);
+            return;
+          }
+          setSelectedKey(dateKey);
+        }}
         onEmptyClick={() => setSelectedKey(null)}
         onTouchStart={(e) => { calendarTouchStart.current = e.touches[0]?.clientX ?? null; }}
         onTouchEnd={(e) => {
@@ -1742,6 +1788,59 @@ export default function CalendarScreen() {
           if (endX < startX) goToNextMonth(); else goToPrevMonth();
         }}
       />
+
+      {firstRunGuideStep === 1 && !traderMode && (
+        <>
+          <style>{`
+            [data-today-cell="true"] {
+              border-color: rgba(251,191,36,.95) !important;
+              box-shadow: 0 0 0 3px rgba(251,191,36,.20), 0 0 34px rgba(245,158,11,.34) !important;
+              animation: firstRunGuidePulse 1.5s ease-in-out infinite !important;
+              z-index: 25 !important;
+            }
+            @keyframes firstRunGuidePulse {
+              0%,100% { transform: scale(1); }
+              50% { transform: scale(1.035); }
+            }
+            @media (prefers-reduced-motion: reduce) {
+              [data-today-cell="true"] { animation: none !important; }
+            }
+          `}</style>
+          <div className="pointer-events-none fixed inset-x-0 bottom-5 z-[70] flex justify-center px-4 sm:bottom-8">
+            <div className={`pointer-events-auto w-full max-w-sm rounded-2xl border p-4 shadow-2xl backdrop-blur-xl ${
+              isLight ? 'border-amber-200 bg-white/95 text-zinc-900' : 'border-amber-400/25 bg-zinc-950/95 text-zinc-100'
+            }`}>
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-400 text-zinc-950">
+                  <Calendar className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">{onboardingCopy.guideTapToday}</p>
+                  <p className={`mt-1 text-xs leading-relaxed ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>{onboardingCopy.guideTapTodayHint}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFirstRunGuideStep(0)}
+                className={`mt-3 w-full rounded-xl px-3 py-2 text-xs transition-colors ${isLight ? 'text-zinc-500 hover:bg-zinc-100' : 'text-zinc-500 hover:bg-zinc-900'}`}
+              >
+                {onboardingCopy.guideSkip}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {firstRunGuideStep === 3 && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-5 z-[95] flex justify-center px-4 sm:bottom-8">
+          <div className={`flex w-full max-w-sm items-center gap-3 rounded-2xl border px-4 py-3 shadow-2xl ${
+            isLight ? 'border-emerald-200 bg-white text-zinc-800' : 'border-emerald-500/20 bg-zinc-950 text-zinc-100'
+          }`}>
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
+            <p className="text-sm font-medium leading-snug">{onboardingCopy.guideSuccess}</p>
+          </div>
+        </div>
+      )}
 
       {/* DAY VIEW — bottom sheet, tap the dimmed backdrop anywhere to return to the calendar */}
       {selectedKey && (
@@ -2896,7 +2995,51 @@ export default function CalendarScreen() {
             </div>
 
             <div className="mt-4">
-              {/* Income / expense: the first and fastest decision */}
+              {firstRunGuideStep === 2 && !editingTrade && !traderMode && (
+              <div className={`mb-4 rounded-2xl border p-3 ${
+                isLight ? 'border-amber-200 bg-amber-50/70' : 'border-amber-400/20 bg-amber-400/[0.06]'
+              }`}>
+                <p className={`text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{onboardingCopy.guideChooseType}</p>
+                <p className={`mt-1 text-xs leading-relaxed ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>{onboardingCopy.guideChooseTypeHint}</p>
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, sign: 'minus', instrument: 'Продукты', pnl: '' }))}
+                    className={`rounded-xl border px-2 py-2.5 text-xs font-semibold transition-colors ${
+                      form.sign === 'minus' && form.instrument === 'Продукты'
+                        ? 'border-red-400/60 bg-red-500/10 text-red-500'
+                        : isLight ? 'border-zinc-200 bg-white text-zinc-700 hover:border-red-300' : 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-red-500/40'
+                    }`}
+                  >
+                    − {onboardingCopy.guideExpense}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, sign: 'plus', instrument: 'Зарплата', pnl: '' }))}
+                    className={`rounded-xl border px-2 py-2.5 text-xs font-semibold transition-colors ${
+                      form.sign === 'plus' && form.instrument === 'Зарплата'
+                        ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-600'
+                        : isLight ? 'border-zinc-200 bg-white text-zinc-700 hover:border-emerald-300' : 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-emerald-500/40'
+                    }`}
+                  >
+                    + {onboardingCopy.guideIncome}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, sign: 'plus', instrument: 'Заметка', pnl: '0' }))}
+                    className={`rounded-xl border px-2 py-2.5 text-xs font-semibold transition-colors ${
+                      form.instrument === 'Заметка'
+                        ? 'border-amber-400/60 bg-amber-400/10 text-amber-600'
+                        : isLight ? 'border-zinc-200 bg-white text-zinc-700 hover:border-amber-300' : 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-amber-500/40'
+                    }`}
+                  >
+                    💭 {onboardingCopy.guideNote}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Income / expense: the first and fastest decision */}
               <div className={`grid grid-cols-2 gap-1 rounded-xl border p-1 ${
                 isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'
               }`}>
@@ -3536,14 +3679,14 @@ export default function CalendarScreen() {
 
                   <button
                     type="button"
-                    onClick={() => { setSetupStep(null); openModal(); }}
+                    onClick={() => { setTraderMode(false); setSetupStep(null); setFirstRunGuideStep(1); }}
                     className="mt-5 w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-amber-300 active:scale-[0.99]"
                   >
                     {onboardingCopy.create}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSetupStep(null)}
+                    onClick={() => { setSetupStep(null); setFirstRunGuideStep(0); }}
                     className={`mt-2 w-full rounded-xl px-4 py-2.5 text-sm transition-colors ${
                       isLight ? 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800' : 'text-zinc-500 hover:bg-zinc-800/70 hover:text-zinc-300'
                     }`}
