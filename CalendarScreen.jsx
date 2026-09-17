@@ -3400,23 +3400,82 @@ export default function CalendarScreen() {
 
 
       {setupStep && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4 py-6">
           <div className={`w-full max-w-sm rounded-2xl border p-6 shadow-2xl ${
             isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
           }`}>
-            <p className="font-data text-[10px] tracking-widest text-amber-400 uppercase mb-2">Настройка {setupStep === 'language' ? '1' : setupStep === 'currency' ? '2' : '3'} из 3</p>
-            <h2 className={`font-display text-xl font-semibold mb-4 ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>{setupStep === 'language' ? 'Выберите язык' : setupStep === 'currency' ? 'Выберите валюту' : 'Выберите тему'}</h2>
+            <p className="font-data text-[10px] tracking-widest text-amber-400 uppercase mb-2">
+              Настройка {setupStep === 'language' ? '1' : setupStep === 'currency' ? '2' : setupStep === 'theme' ? '3' : '4'} из 4
+            </p>
+
+            {setupStep !== 'intro' && (
+              <h2 className={`font-display text-xl font-semibold mb-4 ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>
+                {setupStep === 'language' ? 'Выберите язык' : setupStep === 'currency' ? 'Выберите валюту' : 'Выберите тему'}
+              </h2>
+            )}
+
             {setupStep === 'language' && <div className="grid grid-cols-3 gap-2">{LANGUAGES.map((item) => <button key={item.code} onClick={() => { setLanguage(item.code); setSetupStep('currency'); }} className={`rounded-lg border px-3 py-3 font-data text-sm hover:border-amber-400 ${
               isLight ? 'border-zinc-300' : 'border-zinc-700'
             }`}>{item.label}</button>)}</div>}
             {setupStep === 'currency' && <div className="grid grid-cols-2 gap-2">{CURRENCIES.map((item) => <button key={item.code} onClick={() => { setCurrency(item.code); setSetupStep('theme'); }} className={`rounded-lg border px-3 py-3 font-data text-sm hover:border-amber-400 ${
               isLight ? 'border-zinc-300' : 'border-zinc-700'
             }`}>{item.symbol} {item.code}</button>)}</div>}
-            {setupStep === 'theme' && <div className="grid grid-cols-2 gap-2"><button onClick={() => { setTheme('light'); setSetupStep(null); }} className={`rounded-lg border px-3 py-3 hover:border-amber-400 ${
+            {setupStep === 'theme' && <div className="grid grid-cols-2 gap-2"><button onClick={() => { setTheme('light'); setSetupStep('intro'); }} className={`rounded-lg border px-3 py-3 hover:border-amber-400 ${
               isLight ? 'border-zinc-300' : 'border-zinc-700'
-            }`}>☀ День</button><button onClick={() => { setTheme('dark'); setSetupStep(null); }} className={`rounded-lg border px-3 py-3 hover:border-amber-400 ${
+            }`}>☀ День</button><button onClick={() => { setTheme('dark'); setSetupStep('intro'); }} className={`rounded-lg border px-3 py-3 hover:border-amber-400 ${
               isLight ? 'border-zinc-300' : 'border-zinc-700'
             }`}>🌙 Ночь</button></div>}
+
+            {setupStep === 'intro' && (() => {
+              const selectedCurrency = CURRENCIES.find((item) => item.code === currency);
+              const currencyLabel = selectedCurrency?.symbol || currency;
+              return (
+                <div>
+                  <h2 className={`font-display text-2xl font-semibold leading-tight ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>
+                    Каждый день — своя история.
+                  </h2>
+                  <p className={`mt-2 text-sm leading-relaxed ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>
+                    Записывай то, что важно именно тебе.
+                  </p>
+
+                  <div className={`mt-5 overflow-hidden rounded-2xl border ${
+                    isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950/60'
+                  }`}>
+                    <div className={`flex items-center justify-between border-b px-4 py-3 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
+                      <span className={`font-display text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>16 сентября</span>
+                      <span className="font-data text-[10px] uppercase tracking-widest text-zinc-500">пример дня</span>
+                    </div>
+                    <div className="space-y-3 px-4 py-4 text-sm">
+                      <div className="flex items-center justify-between gap-3"><span>☕ Кофе</span><span className="font-data font-semibold text-red-400">−45 {currencyLabel}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span>🛒 Продукты</span><span className="font-data font-semibold text-red-400">−380 {currencyLabel}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span>💰 Подработка</span><span className="font-data font-semibold text-emerald-500">+487 {currencyLabel}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span>💭 Отличный день</span><span className="text-zinc-500">без суммы</span></div>
+                    </div>
+                    <div className={`flex items-center justify-between border-t px-4 py-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/70'}`}>
+                      <span className={`text-xs font-medium ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>Итого за день</span>
+                      <span className="font-data text-sm font-bold text-emerald-500">+62 {currencyLabel}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => { setSetupStep(null); openModal(); }}
+                    className="mt-5 w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-amber-300 active:scale-[0.99]"
+                  >
+                    Создать первую запись →
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSetupStep(null)}
+                    className={`mt-2 w-full rounded-xl px-4 py-2.5 text-sm transition-colors ${
+                      isLight ? 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800' : 'text-zinc-500 hover:bg-zinc-800/70 hover:text-zinc-300'
+                    }`}
+                  >
+                    Пропустить
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
