@@ -106,6 +106,12 @@ export default function CalendarScreen() {
     setSetupStep,
   } = useAuth();
 
+  // TEST ONLY: force onboarding for an existing signed-in account.
+  // Remove this effect before production.
+  useEffect(() => {
+    if (user) setSetupStep('language');
+  }, [user, setSetupStep]);
+
   // --- cTrader connection state ------------------------------------------
   const [ctraderConnected, setCtraderConnected] = useState(false);
   const [ctraderLoading, setCtraderLoading] = useState(false);
