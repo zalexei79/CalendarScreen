@@ -3740,14 +3740,25 @@ export default function CalendarScreen() {
             isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
           }`}>
             <p className="font-data text-[10px] tracking-widest text-amber-400 uppercase mb-2">
-              {onboardingCopy.setup} {setupStep === 'language' ? '1' : setupStep === 'currency' ? '2' : setupStep === 'theme' ? '3' : '4'} {onboardingCopy.of} 4
+              {setupStep === 'language'
+                ? '1 / 4'
+                : `${onboardingCopy.setup} ${setupStep === 'currency' ? '2' : setupStep === 'theme' ? '3' : '4'} ${onboardingCopy.of} 4`}
             </p>
 
-            {setupStep !== 'intro' && (
+            {setupStep === 'language' ? (
+              <div className="mb-4">
+                <h2 className={`font-display text-xl font-semibold leading-snug ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>
+                  Выберите язык · Choose language · Alege limba
+                </h2>
+                <p className={`mt-2 text-xs leading-relaxed ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                  Язык интерфейса · Interface language · Limba interfeței
+                </p>
+              </div>
+            ) : setupStep !== 'intro' ? (
               <h2 className={`font-display text-xl font-semibold mb-4 ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>
-                {setupStep === 'language' ? onboardingCopy.chooseLanguage : setupStep === 'currency' ? onboardingCopy.chooseCurrency : onboardingCopy.chooseTheme}
+                {setupStep === 'currency' ? onboardingCopy.chooseCurrency : onboardingCopy.chooseTheme}
               </h2>
-            )}
+            ) : null}
 
             {setupStep === 'language' && <div className="grid grid-cols-3 gap-2">{LANGUAGES.map((item) => <button key={item.code} onClick={() => handleOnboardingLanguageSelect(item)} className={`rounded-lg border px-3 py-3 font-data text-sm hover:border-amber-400 ${
               isLight ? 'border-zinc-300' : 'border-zinc-700'
