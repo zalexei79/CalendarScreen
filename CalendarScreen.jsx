@@ -3068,7 +3068,7 @@ export default function CalendarScreen() {
           onClick={handleModalBackdropClick}
         >
           <div
-            className={`relative my-auto w-full max-w-[360px] max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain rounded-2xl border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl transition-all duration-200 sm:px-5 sm:py-5 ${
+            className={`relative my-auto w-full max-w-[360px] max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain rounded-2xl border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl transition-all duration-200 sm:flex sm:max-h-[calc(100vh-3rem)] sm:max-w-[560px] sm:flex-col sm:overflow-hidden sm:px-5 sm:py-5 ${
               modalVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
             } ${
               isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
@@ -3111,9 +3111,9 @@ export default function CalendarScreen() {
               </div>
             </div>
 
-            <div className="mt-4">
+            <div className="mt-4 sm:min-h-0 sm:overflow-y-auto sm:overscroll-contain sm:pr-1">
               {firstRunGuideStep === 2 && !editingTrade && !traderMode && (
-                <div className={`mb-4 rounded-2xl border p-3 ${
+                <div className={`mb-4 rounded-2xl border p-3 sm:p-4 ${
                   isLight ? 'border-amber-200 bg-amber-50/70' : 'border-amber-400/20 bg-amber-400/[0.06]'
                 }`}>
                   <div className="flex items-start justify-between gap-3">
@@ -3133,7 +3133,7 @@ export default function CalendarScreen() {
                         key={type}
                         type="button"
                         onClick={() => chooseFirstRunGuideType(type)}
-                        className={`flex min-h-14 items-center gap-2 rounded-xl border px-3 py-2.5 text-left transition-all ${
+                        className={`flex min-h-14 items-center gap-2 rounded-xl border px-3 py-2.5 text-left transition-all sm:min-h-16 sm:justify-center sm:px-4 ${
                           firstRunGuideChoice === type
                             ? 'border-amber-400 bg-amber-400/10 ring-1 ring-amber-400/20'
                             : isLight ? 'border-zinc-200 bg-white hover:border-amber-300' : 'border-zinc-800 bg-zinc-950 hover:border-amber-500/40'
