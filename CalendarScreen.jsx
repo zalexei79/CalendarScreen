@@ -3660,11 +3660,26 @@ export default function CalendarScreen() {
             {setupStep === 'currency' && <div className="grid grid-cols-2 gap-2">{CURRENCIES.map((item) => <button key={item.code} onClick={() => { setCurrency(item.code); setSetupStep('theme'); }} className={`rounded-lg border px-3 py-3 font-data text-sm hover:border-amber-400 ${
               isLight ? 'border-zinc-300' : 'border-zinc-700'
             }`}>{item.symbol} {item.code}</button>)}</div>}
-            {setupStep === 'theme' && <div className="grid grid-cols-2 gap-2"><button onClick={() => { setTheme('light'); setSetupStep('intro'); }} className={`rounded-lg border px-3 py-3 hover:border-amber-400 ${
-              isLight ? 'border-zinc-300' : 'border-zinc-700'
-            }`>☀ {onboardingCopy.light}</button><button onClick={() => { setTheme('dark'); setSetupStep('intro'); }} className={`rounded-lg border px-3 py-3 hover:border-amber-400 ${
-              isLight ? 'border-zinc-300' : 'border-zinc-700'
-            }`>🌙 {onboardingCopy.dark}</button></div>}
+            {setupStep === 'theme' && (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => { setTheme('light'); setSetupStep('intro'); }}
+                  className={`rounded-lg border px-3 py-3 hover:border-amber-400 ${
+                    isLight ? 'border-zinc-300' : 'border-zinc-700'
+                  }`}
+                >
+                  ☀ {onboardingCopy.light}
+                </button>
+                <button
+                  onClick={() => { setTheme('dark'); setSetupStep('intro'); }}
+                  className={`rounded-lg border px-3 py-3 hover:border-amber-400 ${
+                    isLight ? 'border-zinc-300' : 'border-zinc-700'
+                  }`}
+                >
+                  🌙 {onboardingCopy.dark}
+                </button>
+              </div>
+            )}
 
             {setupStep === 'intro' && (() => {
               const selectedCurrency = CURRENCIES.find((item) => item.code === currency);
