@@ -448,10 +448,30 @@ export default function CalendarScreen() {
 
   const t = (key) => translate(language, key);
 
-  // Onboarding copy follows the language selected on step 1 immediately.
-  // Keep a couple of aliases so this stays compatible if the language code
-  // for Romanian/Moldovan is named differently in constants.
-  const onboardingLanguage = ['ro', 'md', 'mo'].includes(language) ? 'ro' : language === 'en' ? 'en' : 'ru';
+  // Keep onboarding language independent from the app language state so the
+  // very next onboarding screen switches immediately after the user's tap,
+  // regardless of the exact language codes used in LANGUAGES.
+  function resolveOnboardingLanguage(itemOrCode, label = '') {
+    const code = typeof itemOrCode === 'object'
+      ? String(itemOrCode?.code || '').toLowerCase()
+      : String(itemOrCode || '').toLowerCase();
+    const name = typeof itemOrCode === 'object'
+      ? String(itemOrCode?.label || '').toLowerCase()
+      : String(label || '').toLowerCase();
+
+    if (code === 'en' || code.startsWith('en-') || name.includes('english') || name.includes('англ')) return 'en';
+    if (['ro', 'md', 'mo', 'ron', 'rum'].includes(code) || code.startsWith('ro-') || name.includes('rom') || name.includes('mold')) return 'ro';
+    return 'ru';
+  }
+
+  const [onboardingLang, setOnboardingLang] = useState(() => resolveOnboardingLanguage(language));
+
+  function handleOnboardingLanguageSelect(item) {
+    setOnboardingLang(resolveOnboardingLanguage(item));
+    setLanguage(item.code);
+    setSetupStep('currency');
+  }
+
   const onboardingCopy = {
     ru: {
       setup: 'Настройка',
@@ -543,7 +563,7 @@ export default function CalendarScreen() {
       guideSuccess: 'Gata. Ziua aceasta păstrează acum o parte din povestea ta.',
       guideSkip: 'Mă descurc singur',
     },
-  }[onboardingLanguage];
+  }[onboardingLang];
 
   useEffect(() => {
     if (firstRunGuideStep !== 3) return undefined;
@@ -3634,7 +3654,7 @@ export default function CalendarScreen() {
               </h2>
             )}
 
-            {setupStep === 'language' && <div className="grid grid-cols-3 gap-2">{LANGUAGES.map((item) => <button key={item.code} onClick={() => { setLanguage(item.code); setSetupStep('currency'); }} className={`rounded-lg border px-3 py-3 font-data text-sm hover:border-amber-400 ${
+            {setupStep === 'language' && <div className="grid grid-cols-3 gap-2">{LANGUAGES.map((item) => <button key={item.code} onClick={() => handleOnboardingLanguageSelect(item)} className={`rounded-lg border px-3 py-3 font-data text-sm hover:border-amber-400 ${
               isLight ? 'border-zinc-300' : 'border-zinc-700'
             }`}>{item.label}</button>)}</div>}
             {setupStep === 'currency' && <div className="grid grid-cols-2 gap-2">{CURRENCIES.map((item) => <button key={item.code} onClick={() => { setCurrency(item.code); setSetupStep('theme'); }} className={`rounded-lg border px-3 py-3 font-data text-sm hover:border-amber-400 ${
