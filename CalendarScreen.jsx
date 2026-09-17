@@ -446,6 +446,77 @@ export default function CalendarScreen() {
   }, [settingsOpen]);
 
   const t = (key) => translate(language, key);
+
+  // Onboarding copy follows the language selected on step 1 immediately.
+  // Keep a couple of aliases so this stays compatible if the language code
+  // for Romanian/Moldovan is named differently in constants.
+  const onboardingLanguage = ['ro', 'md', 'mo'].includes(language) ? 'ro' : language === 'en' ? 'en' : 'ru';
+  const onboardingCopy = {
+    ru: {
+      setup: 'Настройка',
+      of: 'из',
+      chooseLanguage: 'Выберите язык',
+      chooseCurrency: 'Выберите валюту',
+      chooseTheme: 'Выберите тему',
+      light: 'День',
+      dark: 'Ночь',
+      title: 'Каждый день — своя история.',
+      subtitle: 'Записывай то, что важно именно тебе.',
+      exampleDate: '16 сентября',
+      exampleDay: 'пример дня',
+      coffee: 'Кофе',
+      groceries: 'Продукты',
+      sideJob: 'Подработка',
+      greatDay: 'Отличный день',
+      noAmount: 'без суммы',
+      total: 'Итого за день',
+      create: 'Создать первую запись →',
+      skip: 'Пропустить',
+    },
+    en: {
+      setup: 'Setup',
+      of: 'of',
+      chooseLanguage: 'Choose language',
+      chooseCurrency: 'Choose currency',
+      chooseTheme: 'Choose theme',
+      light: 'Day',
+      dark: 'Night',
+      title: 'Every day has its own story.',
+      subtitle: 'Record what matters to you.',
+      exampleDate: 'September 16',
+      exampleDay: 'example day',
+      coffee: 'Coffee',
+      groceries: 'Groceries',
+      sideJob: 'Side job',
+      greatDay: 'Great day',
+      noAmount: 'no amount',
+      total: 'Total for the day',
+      create: 'Create first entry →',
+      skip: 'Skip',
+    },
+    ro: {
+      setup: 'Configurare',
+      of: 'din',
+      chooseLanguage: 'Alege limba',
+      chooseCurrency: 'Alege moneda',
+      chooseTheme: 'Alege tema',
+      light: 'Zi',
+      dark: 'Noapte',
+      title: 'Fiecare zi are propria poveste.',
+      subtitle: 'Notează ceea ce contează pentru tine.',
+      exampleDate: '16 septembrie',
+      exampleDay: 'exemplu de zi',
+      coffee: 'Cafea',
+      groceries: 'Produse alimentare',
+      sideJob: 'Venit suplimentar',
+      greatDay: 'O zi minunată',
+      noAmount: 'fără sumă',
+      total: 'Total pe zi',
+      create: 'Creează prima înregistrare →',
+      skip: 'Omite',
+    },
+  }[onboardingLanguage];
+
   const currencySymbol = getCurrencyMeta(currency).symbol;
   const isLight = theme === 'light';
   const periodLabel = (preset) => ({
@@ -3411,12 +3482,12 @@ export default function CalendarScreen() {
             isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
           }`}>
             <p className="font-data text-[10px] tracking-widest text-amber-400 uppercase mb-2">
-              Настройка {setupStep === 'language' ? '1' : setupStep === 'currency' ? '2' : setupStep === 'theme' ? '3' : '4'} из 4
+              {onboardingCopy.setup} {setupStep === 'language' ? '1' : setupStep === 'currency' ? '2' : setupStep === 'theme' ? '3' : '4'} {onboardingCopy.of} 4
             </p>
 
             {setupStep !== 'intro' && (
               <h2 className={`font-display text-xl font-semibold mb-4 ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>
-                {setupStep === 'language' ? 'Выберите язык' : setupStep === 'currency' ? 'Выберите валюту' : 'Выберите тему'}
+                {setupStep === 'language' ? onboardingCopy.chooseLanguage : setupStep === 'currency' ? onboardingCopy.chooseCurrency : onboardingCopy.chooseTheme}
               </h2>
             )}
 
@@ -3428,9 +3499,9 @@ export default function CalendarScreen() {
             }`}>{item.symbol} {item.code}</button>)}</div>}
             {setupStep === 'theme' && <div className="grid grid-cols-2 gap-2"><button onClick={() => { setTheme('light'); setSetupStep('intro'); }} className={`rounded-lg border px-3 py-3 hover:border-amber-400 ${
               isLight ? 'border-zinc-300' : 'border-zinc-700'
-            }`}>☀ День</button><button onClick={() => { setTheme('dark'); setSetupStep('intro'); }} className={`rounded-lg border px-3 py-3 hover:border-amber-400 ${
+            }`>☀ {onboardingCopy.light}</button><button onClick={() => { setTheme('dark'); setSetupStep('intro'); }} className={`rounded-lg border px-3 py-3 hover:border-amber-400 ${
               isLight ? 'border-zinc-300' : 'border-zinc-700'
-            }`}>🌙 Ночь</button></div>}
+            }`>🌙 {onboardingCopy.dark}</button></div>}
 
             {setupStep === 'intro' && (() => {
               const selectedCurrency = CURRENCIES.find((item) => item.code === currency);
@@ -3438,27 +3509,27 @@ export default function CalendarScreen() {
               return (
                 <div>
                   <h2 className={`font-display text-2xl font-semibold leading-tight ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>
-                    Каждый день — своя история.
+                    {onboardingCopy.title}
                   </h2>
                   <p className={`mt-2 text-sm leading-relaxed ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>
-                    Записывай то, что важно именно тебе.
+                    {onboardingCopy.subtitle}
                   </p>
 
                   <div className={`mt-5 overflow-hidden rounded-2xl border ${
                     isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950/60'
                   }`}>
                     <div className={`flex items-center justify-between border-b px-4 py-3 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
-                      <span className={`font-display text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>16 сентября</span>
-                      <span className="font-data text-[10px] uppercase tracking-widest text-zinc-500">пример дня</span>
+                      <span className={`font-display text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{onboardingCopy.exampleDate}</span>
+                      <span className="font-data text-[10px] uppercase tracking-widest text-zinc-500">{onboardingCopy.exampleDay}</span>
                     </div>
                     <div className="space-y-3 px-4 py-4 text-sm">
-                      <div className="flex items-center justify-between gap-3"><span>☕ Кофе</span><span className="font-data font-semibold text-red-400">−45 {currencyLabel}</span></div>
-                      <div className="flex items-center justify-between gap-3"><span>🛒 Продукты</span><span className="font-data font-semibold text-red-400">−380 {currencyLabel}</span></div>
-                      <div className="flex items-center justify-between gap-3"><span>💰 Подработка</span><span className="font-data font-semibold text-emerald-500">+487 {currencyLabel}</span></div>
-                      <div className="flex items-center justify-between gap-3"><span>💭 Отличный день</span><span className="text-zinc-500">без суммы</span></div>
+                      <div className="flex items-center justify-between gap-3"><span>☕ {onboardingCopy.coffee}</span><span className="font-data font-semibold text-red-400">−45 {currencyLabel}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span>🛒 {onboardingCopy.groceries}</span><span className="font-data font-semibold text-red-400">−380 {currencyLabel}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span>💰 {onboardingCopy.sideJob}</span><span className="font-data font-semibold text-emerald-500">+487 {currencyLabel}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span>💭 {onboardingCopy.greatDay}</span><span className="text-zinc-500">{onboardingCopy.noAmount}</span></div>
                     </div>
                     <div className={`flex items-center justify-between border-t px-4 py-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/70'}`}>
-                      <span className={`text-xs font-medium ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>Итого за день</span>
+                      <span className={`text-xs font-medium ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>{onboardingCopy.total}</span>
                       <span className="font-data text-sm font-bold text-emerald-500">+62 {currencyLabel}</span>
                     </div>
                   </div>
@@ -3468,7 +3539,7 @@ export default function CalendarScreen() {
                     onClick={() => { setSetupStep(null); openModal(); }}
                     className="mt-5 w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-amber-300 active:scale-[0.99]"
                   >
-                    Создать первую запись →
+                    {onboardingCopy.create}
                   </button>
                   <button
                     type="button"
@@ -3477,7 +3548,7 @@ export default function CalendarScreen() {
                       isLight ? 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800' : 'text-zinc-500 hover:bg-zinc-800/70 hover:text-zinc-300'
                     }`}
                   >
-                    Пропустить
+                    {onboardingCopy.skip}
                   </button>
                 </div>
               );
