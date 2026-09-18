@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ChevronLeft, ChevronRight, Link2, LogIn, LogOut, Download, Smartphone, Monitor, Wifi, Cloud,
-  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal,
+  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, ChevronDown,
 } from 'lucide-react';
 import { LANGUAGES, CURRENCIES } from './src/shared/config/constants';
 import { monthsFor } from './src/shared/i18n';
@@ -19,6 +19,7 @@ export default function Header({
   periodStats, periodTrades = [], currencySymbol = '$', formatMoney,
   monthSummary,
 }) {
+  const [proFiltersOpen, setProFiltersOpen] = useState(false);
 
 
   return (
@@ -456,8 +457,36 @@ export default function Header({
       </div>
 
 
+      {traderMode && (
+        <button
+          type="button"
+          onClick={() => setProFiltersOpen((value) => !value)}
+          aria-expanded={proFiltersOpen}
+          className={`mt-1.5 flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left transition-colors ${
+            isLight
+              ? 'border-slate-200 bg-white/70 text-slate-600 hover:border-amber-300'
+              : 'border-zinc-800 bg-zinc-950/35 text-zinc-400 hover:border-amber-400/25'
+          }`}
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <SlidersHorizontal className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+            <span className="font-data text-[9px] uppercase tracking-[0.16em]">{t('platforms')}</span>
+            <span className={`truncate text-[10px] ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>
+              {platformFilter === 'ALL' ? t('all') : platformFilter}
+              {' · '}
+              {calendarTypeFilter === 'all'
+                ? t('all')
+                : calendarTypeFilter === 'income'
+                  ? `+ ${t('income')}`
+                  : `− ${t('expense')}`}
+            </span>
+          </span>
+          <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${proFiltersOpen ? 'rotate-180' : ''}`} />
+        </button>
+      )}
+
       {/* PRO control center */}
-      <div className={`overflow-hidden transition-all duration-300 ${traderMode ? 'max-h-52 opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0 pointer-events-none'}`}>
+      <div className={`overflow-hidden transition-all duration-300 ${traderMode && proFiltersOpen ? 'max-h-52 opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0 pointer-events-none'}`}>
         <div className={`rounded-2xl border px-3 py-3 sm:px-4 ${isLight ? 'border-amber-200/70 bg-white/75 shadow-xs' : 'border-amber-400/20 bg-gradient-to-r from-amber-400/[0.07] via-zinc-950 to-zinc-950'}`}>
           <div className="flex flex-col gap-2.5">
             {/* Platforms row */}
