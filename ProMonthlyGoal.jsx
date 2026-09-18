@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Pencil, Sparkles, Target, X } from 'lucide-react';
+import { Check, ChevronDown, Pencil, Sparkles, Target, X } from 'lucide-react';
 
 const COPY = {
   ru: {
@@ -89,6 +89,7 @@ export default function ProMonthlyGoal({
 
   const [goal, setGoal] = useState(readGoal);
   const [editing, setEditing] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [draft, setDraft] = useState(goal ? String(goal) : '');
   const [error, setError] = useState('');
   const [celebrating, setCelebrating] = useState(false);
@@ -99,6 +100,7 @@ export default function ProMonthlyGoal({
     setGoal(next);
     setDraft(next ? String(next) : '');
     setEditing(false);
+    setDetailsOpen(false);
     setError('');
   }, [goalStorageKey]);
 
@@ -161,6 +163,7 @@ export default function ProMonthlyGoal({
     setDraft(goal ? String(goal) : '');
     setError('');
     setEditing(true);
+    setDetailsOpen(true);
   }
 
   function cancelEditing() {
@@ -211,137 +214,130 @@ export default function ProMonthlyGoal({
 
   return (
     <>
-      <section className={`relative mx-auto mt-2 mb-3 overflow-hidden rounded-2xl border px-4 py-3 sm:px-5 sm:py-4 ${panelClass}`}>
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
+      <section className={`relative mx-auto mt-1.5 mb-2 overflow-hidden rounded-xl border px-3 py-2.5 sm:px-4 ${panelClass}`}>
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/45 to-transparent" />
 
-        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${isLight ? 'bg-amber-50 text-amber-600' : 'bg-amber-400/10 text-amber-300'}`}>
-              <Target className="h-4 w-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <p className="text-sm font-semibold">{copy.title}</p>
-                <span className={`font-data text-[10px] uppercase tracking-[0.18em] ${mutedClass}`}>
-                  {monthKey}
-                </span>
-              </div>
-              {goal > 0 && !editing && (
-                <p className={`mt-0.5 text-[11px] ${mutedClass}`}>
-                  {achieved ? copy.achieved : `${copy.remaining}: ${formatGoalNumber(remaining, language)} ${currency}`}
-                </p>
-              )}
-            </div>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${isLight ? 'bg-amber-50 text-amber-600' : 'bg-amber-400/10 text-amber-300'}`}>
+            <Target className="h-3.5 w-3.5" />
           </div>
 
-          {!editing && (
-            <button
-              type="button"
-              onClick={startEditing}
-              className={`inline-flex min-h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition ${
-                isLight
-                  ? 'border-zinc-200 bg-white hover:border-amber-300'
-                  : 'border-white/10 bg-white/5 hover:border-amber-400/40'
-              }`}
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              {goal > 0 ? copy.editGoal : copy.setGoal}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setDetailsOpen((value) => !value)}
+            className="flex min-w-0 flex-1 items-center gap-2 text-left"
+            aria-expanded={detailsOpen}
+          >
+            <span className="shrink-0 text-xs font-semibold sm:text-sm">{copy.title}</span>
+
+            {goal > 0 ? (
+              <span className="min-w-0 truncate font-data text-[11px] font-semibold sm:text-xs">
+                {formatGoalNumber(netPnl, language)} / {formatGoalNumber(goal, language)} {currency}
+              </span>
+            ) : (
+              <span className={`min-w-0 truncate text-[11px] ${mutedClass}`}>{copy.setGoal}</span>
+            )}
+
+            {goal > 0 && (
+              <span className={`ml-auto shrink-0 font-data text-[11px] font-bold ${achieved ? 'text-emerald-500' : 'text-amber-500'}`}>
+                {Math.round(progress)}%
+              </span>
+            )}
+
+            <ChevronDown
+              className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${mutedClass} ${detailsOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
         </div>
 
-        {editing ? (
-          <form onSubmit={saveGoal} className="mt-4">
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <div className="relative min-w-0 flex-1">
-                <input
-                  autoFocus
-                  inputMode="decimal"
-                  value={draft}
-                  onChange={(event) => {
-                    setDraft(event.target.value);
-                    if (error) setError('');
-                  }}
-                  placeholder={copy.placeholder}
-                  className={`h-11 w-full rounded-xl border px-3 pr-16 text-base outline-none transition focus:border-amber-400 ${
-                    isLight ? 'border-zinc-200 bg-white' : 'border-white/10 bg-black/20'
-                  }`}
-                />
-                <span className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-data text-xs ${mutedClass}`}>
-                  {currency}
-                </span>
-              </div>
+        <div className={`relative mt-2 h-1.5 overflow-hidden rounded-full ${trackClass}`}>
+          <div
+            className={`absolute inset-y-0 left-0 rounded-full transition-[width] duration-700 ease-out ${
+              achieved
+                ? 'bg-gradient-to-r from-emerald-500 via-emerald-400 to-amber-400'
+                : 'bg-gradient-to-r from-amber-500 to-amber-300'
+            }`}
+            style={{ width: `${progress}%` }}
+          />
+        </div>
 
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-4 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 sm:flex-none"
-                >
-                  <Check className="h-4 w-4" />
-                  {copy.save}
-                </button>
+        <div className={`grid transition-[grid-template-rows,opacity,margin] duration-200 ${
+          detailsOpen || editing ? 'mt-2.5 grid-rows-[1fr] opacity-100' : 'mt-0 grid-rows-[0fr] opacity-0'
+        }`}>
+          <div className="min-h-0 overflow-hidden">
+            {editing ? (
+              <form onSubmit={saveGoal} className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                <div className="min-w-0 flex-1">
+                  <div className="relative">
+                    <input
+                      autoFocus
+                      inputMode="decimal"
+                      value={draft}
+                      onChange={(event) => {
+                        setDraft(event.target.value);
+                        if (error) setError('');
+                      }}
+                      placeholder={copy.placeholder}
+                      className={`h-9 w-full rounded-lg border px-3 pr-16 text-base outline-none transition focus:border-amber-400 ${
+                        isLight ? 'border-zinc-200 bg-white' : 'border-white/10 bg-black/20'
+                      }`}
+                    />
+                    <span className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-data text-[10px] ${mutedClass}`}>
+                      {currency}
+                    </span>
+                  </div>
+                  {error && <p className="mt-1.5 text-[11px] text-red-500">{error}</p>}
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-amber-400 px-3 text-xs font-semibold text-zinc-950 transition hover:bg-amber-300 sm:flex-none"
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    {copy.save}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelEditing}
+                    aria-label={copy.cancel}
+                    title={copy.cancel}
+                    className={`grid h-9 w-9 place-items-center rounded-lg border transition ${
+                      isLight ? 'border-zinc-200 hover:bg-zinc-50' : 'border-white/10 hover:bg-white/5'
+                    }`}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className={`flex flex-wrap items-center justify-between gap-2 border-t pt-2.5 ${
+                isLight ? 'border-zinc-200' : 'border-white/5'
+              }`}>
+                <p className={`text-[10px] ${mutedClass}`}>
+                  {goal > 0
+                    ? achieved
+                      ? copy.achieved
+                      : `${copy.remaining}: ${formatGoalNumber(remaining, language)} ${currency}`
+                    : `${copy.setGoal}: 30 000 ${currency}`}
+                </p>
+
                 <button
                   type="button"
-                  onClick={cancelEditing}
-                  aria-label={copy.cancel}
-                  title={copy.cancel}
-                  className={`grid min-h-11 min-w-11 place-items-center rounded-xl border transition ${
-                    isLight ? 'border-zinc-200 hover:bg-zinc-50' : 'border-white/10 hover:bg-white/5'
+                  onClick={startEditing}
+                  className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[10px] font-semibold transition ${
+                    isLight
+                      ? 'border-zinc-200 bg-white hover:border-amber-300'
+                      : 'border-white/10 bg-white/5 hover:border-amber-400/40'
                   }`}
                 >
-                  <X className="h-4 w-4" />
+                  <Pencil className="h-3 w-3" />
+                  {goal > 0 ? copy.editGoal : copy.setGoal}
                 </button>
               </div>
-            </div>
-            {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
-          </form>
-        ) : goal > 0 ? (
-          <div className="mt-4">
-            <div className="mb-2 flex min-w-0 items-end justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate font-data text-sm font-semibold sm:text-base">
-                  {formatGoalNumber(netPnl, language)} / {formatGoalNumber(goal, language)} {currency}
-                </p>
-              </div>
-              <p className={`shrink-0 font-data text-xs font-semibold ${achieved ? 'text-emerald-500' : 'text-amber-500'}`}>
-                {Math.round(progress)}%
-              </p>
-            </div>
-
-            <div className={`relative h-2.5 overflow-hidden rounded-full ${trackClass}`}>
-              <div
-                className={`absolute inset-y-0 left-0 rounded-full transition-[width] duration-700 ease-out ${
-                  achieved
-                    ? 'bg-gradient-to-r from-emerald-500 to-amber-400'
-                    : 'bg-gradient-to-r from-amber-500 to-amber-300'
-                }`}
-                style={{ width: `${progress}%` }}
-              />
-              {progress > 0 && progress < 100 && (
-                <div
-                  className="absolute inset-y-0 w-10 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-60"
-                  style={{ left: `${progress}%` }}
-                />
-              )}
-            </div>
-
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <span className={`text-[10px] uppercase tracking-[0.16em] ${mutedClass}`}>
-                {Math.round(progress)}% {copy.progress}
-              </span>
-              {achieved && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-500">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  {copy.achieved}
-                </span>
-              )}
-            </div>
+            )}
           </div>
-        ) : (
-          <div className={`mt-3 rounded-xl border border-dashed px-3 py-2.5 text-xs ${isLight ? 'border-zinc-200 text-zinc-500' : 'border-white/10 text-zinc-400'}`}>
-            {copy.setGoal}: 30 000 {currency}
-          </div>
-        )}
+        </div>
       </section>
 
       {celebrating && (
