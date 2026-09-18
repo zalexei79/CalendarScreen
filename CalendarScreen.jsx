@@ -3206,12 +3206,19 @@ export default function CalendarScreen() {
               }`}>
                 <input
                   ref={guideAmountRef}
-                  type="number"
-                  min="0"
-                  step="any"
+                  type="text"
+                  inputMode="decimal"
+                  pattern="[0-9]*[.,]?[0-9]*"
+                  enterKeyHint="done"
+                  autoComplete="off"
                   autoFocus
                   value={form.pnl}
-                  onChange={(e) => { setForm((f) => ({ ...f, pnl: e.target.value })); setFormError(''); }}
+                  onChange={(e) => {
+                    const nextValue = e.target.value.replace(',', '.');
+                    if (!/^\d*(?:\.\d*)?$/.test(nextValue)) return;
+                    setForm((f) => ({ ...f, pnl: nextValue }));
+                    setFormError('');
+                  }}
                   className={`w-full bg-transparent text-center font-data text-3xl font-semibold tracking-tight outline-none placeholder:text-zinc-700 ${
                     isLight ? 'text-zinc-900' : 'text-zinc-100'
                   }`}
