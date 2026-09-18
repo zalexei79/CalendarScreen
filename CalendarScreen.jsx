@@ -75,6 +75,7 @@ import { useCurveNotes } from './src/features/day-notes/useCurveNotes';
 import PnlCurve from './src/features/trades-sync/components/PnlCurve';
 import PeriodDynamics from './src/features/trades-sync/components/PeriodDynamics';
 import CalendarGrid from './CalendarGrid';
+import ProMonthlyGoal from './ProMonthlyGoal';
 import CtraderControl from './src/features/ctrader/CtraderControl';
 
 export default function CalendarScreen() {
@@ -1826,6 +1827,21 @@ export default function CalendarScreen() {
         pendingSyncCount={pendingSyncCount} installInfoOpen={installInfoOpen} installInstructions={installInstructions} isPwaInstalled={isPwaInstalled}
         periodStats={periodStats} periodTrades={periodTrades} currencySymbol={currencySymbol} formatMoney={formatMoney}
       />
+
+      {traderMode && (
+        <div className="px-3 sm:px-5">
+          <ProMonthlyGoal
+            year={year}
+            month={month}
+            currency={currency}
+            currencySymbol={currencySymbol}
+            currentPnl={monthSummary.total}
+            language={language}
+            isLight={isLight}
+            userId={validUserId}
+          />
+        </div>
+      )}
 
       {/* PRO controls live in Header: one clean control center, no floating duplicate block. */}
       <CalendarGrid
