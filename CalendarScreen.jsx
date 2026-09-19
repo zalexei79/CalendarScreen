@@ -416,6 +416,11 @@ export default function CalendarScreen() {
     setTraderModeInternal(requested);
   }
 
+  function openReferralHub() {
+    setProOfferTab('invites');
+    setProAccessPromptOpen(true);
+  }
+
   useEffect(() => {
     try {
       window.localStorage.setItem(TRADER_MODE_STORAGE_KEY, traderMode ? '1' : '0');
@@ -722,6 +727,8 @@ export default function CalendarScreen() {
       eyebrow: 'AI TRADE JOURNAL PRO',
       title: 'Открой AI Trade Journal PRO',
       body: 'Больше аналитики. Подключение площадок. Меньше ручной работы.',
+      invitesHubTitle: 'Мои приглашения',
+      invitesHubBody: 'Следи за приглашёнными, статусами и заработанными днями PRO.',
       featuresTitle: 'Что откроется в PRO',
       featurePlatform: 'Подключение площадки',
       featurePlatformHint: 'cTrader: синхронизация аккаунтов и сделок',
@@ -771,6 +778,8 @@ export default function CalendarScreen() {
       eyebrow: 'AI TRADE JOURNAL PRO',
       title: 'Unlock AI Trade Journal PRO',
       body: 'More analytics. Platform connections. Less manual work.',
+      invitesHubTitle: 'My invitations',
+      invitesHubBody: 'Track invited users, their status, and the PRO days you have earned.',
       featuresTitle: 'What PRO unlocks',
       featurePlatform: 'Platform connection',
       featurePlatformHint: 'cTrader account and trade sync',
@@ -820,6 +829,8 @@ export default function CalendarScreen() {
       eyebrow: 'AI TRADE JOURNAL PRO',
       title: 'Deblochează AI Trade Journal PRO',
       body: 'Mai multă analiză. Conectarea platformelor. Mai puțină muncă manuală.',
+      invitesHubTitle: 'Invitațiile mele',
+      invitesHubBody: 'Urmărește invitațiile, starea lor și zilele PRO câștigate.',
       featuresTitle: 'Ce deblochează PRO',
       featurePlatform: 'Conectarea platformei',
       featurePlatformHint: 'cTrader: sincronizarea conturilor și tranzacțiilor',
@@ -2926,6 +2937,7 @@ export default function CalendarScreen() {
         installInfoRef={installInfoRef} handleInstallClick={handleInstallClick}
         pendingSyncCount={pendingSyncCount} installInfoOpen={installInfoOpen} installInstructions={installInstructions} isPwaInstalled={isPwaInstalled}
         proAccessActive={proAccessActive} proAccessLoading={proAccessLoading} proAccessUntil={proAccessUntil}
+        openReferralHub={openReferralHub} invitedCount={invitedCount} referralLabel={proAccessCopy.invitesTab}
         periodStats={periodStats} periodTrades={periodTrades} currencySymbol={currencySymbol} formatMoney={formatMoney}
       />
 
@@ -5282,12 +5294,12 @@ export default function CalendarScreen() {
                 </div>
 
                 <h3 className="mt-3 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">
-                  {proAccessCopy.title}
+                  {proOfferTab === 'invites' ? proAccessCopy.invitesHubTitle : proAccessCopy.title}
                 </h3>
                 <p className={`mt-2 max-w-lg text-sm leading-6 ${
                   isLight ? 'text-zinc-600' : 'text-zinc-400'
                 }`}>
-                  {proAccessCopy.body}
+                  {proOfferTab === 'invites' ? proAccessCopy.invitesHubBody : proAccessCopy.body}
                 </p>
               </div>
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   ChevronLeft, ChevronRight, Link2, LogIn, LogOut, Download, Smartphone, Monitor, Wifi, Cloud,
-  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, ChevronDown, LockKeyhole,
+  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, ChevronDown, LockKeyhole, Gift,
 } from 'lucide-react';
 import { LANGUAGES, CURRENCIES } from './src/shared/config/constants';
 import { monthsFor } from './src/shared/i18n';
@@ -19,6 +19,7 @@ export default function Header({
   periodStats, periodTrades = [], currencySymbol = '$', formatMoney,
   monthSummary,
   proAccessActive = false, proAccessLoading = false, proAccessUntil = null,
+  openReferralHub = () => {}, invitedCount = 0, referralLabel = 'Invites',
 }) {
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
 
@@ -39,11 +40,14 @@ export default function Header({
             <h1 className={`font-display text-base sm:text-lg font-semibold tracking-tight truncate leading-tight ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>
               {traderMode ? 'AI Trade Journal' : t('titleMoney')}
             </h1>
-            {traderMode && (
-              <p className={`font-data text-[9px] sm:text-[10px] tracking-[0.16em] uppercase truncate ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
-                {t('titlePro')}
-              </p>
-            )}
+            <p
+              className={`h-[14px] font-data text-[9px] sm:text-[10px] tracking-[0.16em] uppercase truncate transition-opacity duration-300 ${
+                traderMode ? 'opacity-100' : 'opacity-0'
+              } ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}
+              aria-hidden={!traderMode}
+            >
+              {traderMode ? t('titlePro') : '\u00A0'}
+            </p>
           </div>
         </div>
 
@@ -274,13 +278,7 @@ export default function Header({
       </div>
 
       {/* Second row: Calendar month navigation + Free/PRO switch */}
-      <div
-        className={isLight && traderMode ? 'rounded-2xl border border-amber-200/70 p-3 sm:p-4' : undefined}
-        style={isLight && traderMode ? {
-          background: 'radial-gradient(ellipse at 12% 0%, rgba(251,191,36,0.20), transparent 65%), radial-gradient(ellipse at 95% 100%, rgba(186,211,238,0.20), transparent 65%), linear-gradient(120deg, #fffaf0, #f8fafc)',
-          boxShadow: '0 8px 28px -14px rgba(180,130,45,0.24), inset 0 1px 0 rgba(255,255,255,0.95)',
-        } : undefined}
-      >
+      <div className="relative">
       <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 mb-2 sm:mb-4">
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <button
@@ -376,11 +374,6 @@ export default function Header({
               {t('today')}
             </button>
           )}
-          {traderMode && monthSummary && <div className="flex basis-full flex-wrap items-center gap-x-2 gap-y-1 py-1 text-[11px] sm:basis-auto sm:px-2" title={t('calendarSummaryHint')}>
-            <span className={`font-data font-semibold tabular-nums ${monthSummary.total < 0 ? 'text-red-500' : monthSummary.total > 0 ? 'text-emerald-500' : 'text-zinc-500'}`}>{monthSummary.total > 0 ? '+' : monthSummary.total < 0 ? '−' : ''}{formatMoney(Math.abs(monthSummary.total))} {currency}</span>
-            <span className="text-zinc-500">· {t('calendarTradingDays')}: {monthSummary.days}</span>
-          </div>}
-
           {/* Account badge on desktop */}
           <div className={`ml-2 hidden sm:flex items-center rounded-lg border font-data text-[10px] tracking-wide overflow-hidden ${isLight ? 'border-zinc-300 bg-zinc-100' : 'border-zinc-800 bg-zinc-900'}`}>
             {user ? (
@@ -456,38 +449,93 @@ export default function Header({
                 </span>
               </span>
             </button>
+
+            <div className={`overflow-hidden transition-[max-width,opacity,margin] duration-300 ease-out ${
+              traderMode
+                ? 'ml-2 max-w-[190px] opacity-100'
+                : 'ml-0 max-w-0 opacity-0 pointer-events-none'
+            }`}>
+              <button
+                type="button"
+                onClick={openReferralHub}
+                title={referralLabel}
+                aria-label={referralLabel}
+                className={`flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 font-data text-[10px] font-semibold transition-colors ${
+                  isLight
+                    ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                    : 'border-amber-400/15 bg-amber-400/[0.06] text-amber-300 hover:bg-amber-400/[0.10]'
+                }`}
+              >
+                <Gift className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden sm:inline max-w-[110px] truncate">{referralLabel}</span>
+                <span className={`min-w-5 rounded-full px-1.5 py-0.5 text-center text-[9px] ${
+                  invitedCount > 0
+                    ? 'bg-amber-400/15 text-amber-500'
+                    : isLight ? 'bg-white text-zinc-500' : 'bg-white/[0.06] text-zinc-500'
+                }`}>
+                  {invitedCount}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* PRO extras slide out below the static FREE / PRO switch. */}
+      <div className={`grid transition-[grid-template-rows,opacity,margin,transform] duration-300 ease-out ${
+        traderMode
+          ? 'grid-rows-[1fr] opacity-100 mt-1.5 translate-y-0'
+          : 'grid-rows-[0fr] opacity-0 mt-0 -translate-y-1 pointer-events-none'
+      }`}>
+        <div className="min-h-0 overflow-hidden">
+          {monthSummary && (
+            <div
+              className={`mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg px-2.5 py-1.5 text-[11px] ${
+                isLight ? 'bg-zinc-50 text-zinc-600' : 'bg-white/[0.025] text-zinc-500'
+              }`}
+              title={t('calendarSummaryHint')}
+            >
+              <span className={`font-data font-semibold tabular-nums ${
+                monthSummary.total < 0
+                  ? 'text-red-500'
+                  : monthSummary.total > 0
+                    ? 'text-emerald-500'
+                    : 'text-zinc-500'
+              }`}>
+                {monthSummary.total > 0 ? '+' : monthSummary.total < 0 ? '−' : ''}
+                {formatMoney(Math.abs(monthSummary.total))} {currency}
+              </span>
+              <span>· {t('calendarTradingDays')}: {monthSummary.days}</span>
+            </div>
+          )}
 
-      {traderMode && (
-        <button
-          type="button"
-          onClick={() => setProFiltersOpen((value) => !value)}
-          aria-expanded={proFiltersOpen}
-          className={`mt-1.5 flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left transition-colors ${
-            isLight
-              ? 'border-slate-200 bg-white/70 text-slate-600 hover:border-amber-300'
-              : 'border-zinc-800 bg-zinc-950/35 text-zinc-400 hover:border-amber-400/25'
-          }`}
-        >
-          <span className="flex min-w-0 items-center gap-2">
-            <SlidersHorizontal className="h-3.5 w-3.5 shrink-0 text-amber-400" />
-            <span className="font-data text-[9px] uppercase tracking-[0.16em]">{t('platforms')}</span>
-            <span className={`truncate text-[10px] ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>
-              {platformFilter === 'ALL' ? t('all') : platformFilter}
-              {' · '}
-              {calendarTypeFilter === 'all'
-                ? t('all')
-                : calendarTypeFilter === 'income'
-                  ? `+ ${t('income')}`
-                  : `− ${t('expense')}`}
+          <button
+            type="button"
+            onClick={() => setProFiltersOpen((value) => !value)}
+            aria-expanded={proFiltersOpen}
+            className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left transition-colors ${
+              isLight
+                ? 'border-slate-200 bg-white/70 text-slate-600 hover:border-amber-300'
+                : 'border-zinc-800 bg-zinc-950/35 text-zinc-400 hover:border-amber-400/25'
+            }`}
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              <SlidersHorizontal className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+              <span className="font-data text-[9px] uppercase tracking-[0.16em]">{t('platforms')}</span>
+              <span className={`truncate text-[10px] ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>
+                {platformFilter === 'ALL' ? t('all') : platformFilter}
+                {' · '}
+                {calendarTypeFilter === 'all'
+                  ? t('all')
+                  : calendarTypeFilter === 'income'
+                    ? `+ ${t('income')}`
+                    : `− ${t('expense')}`}
+              </span>
             </span>
-          </span>
-          <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${proFiltersOpen ? 'rotate-180' : ''}`} />
-        </button>
-      )}
+            <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${proFiltersOpen ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
+      </div>
 
       {/* PRO control center */}
       <div className={`overflow-hidden transition-all duration-300 ${traderMode && proFiltersOpen ? 'max-h-52 opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0 pointer-events-none'}`}>
