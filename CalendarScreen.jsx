@@ -707,80 +707,87 @@ export default function CalendarScreen() {
 
   const proAccessCopy = {
     ru: {
-      eyebrow: 'ДОСТУП К PRO',
-      title: 'PRO открывается за приглашение',
-      body: 'Пригласи одного нового пользователя. Когда он создаст первую настоящую запись, ты получишь 26 дней PRO.',
-      reward: '+26 дней PRO',
-      rewardHint: 'за каждого активного приглашённого',
-      share: 'Пригласить друга',
-      signIn: 'Войти и получить ссылку',
-      preparing: 'Готовим твою ссылку…',
-      copied: 'Ссылка скопирована',
+      eyebrow: 'PRO БЕСПЛАТНО',
+      title: 'Пригласи друга — PRO получат оба',
+      body: 'Когда друг установит приложение по твоей ссылке и создаст первую настоящую запись, награда активируется автоматически.',
+      reward: '+26 дней PRO тебе',
+      rewardHint: '+7 дней PRO другу на старт',
+      share: 'Создать приглашение',
+      signIn: 'Войти и получить приглашение',
+      preparing: 'Готовим твоё приглашение…',
       close: 'Не сейчас',
-      inviteText: 'Попробуй AI Trade Journal. Установи приложение по моей ссылке — это займёт пару секунд.',
     },
     en: {
-      eyebrow: 'PRO ACCESS',
-      title: 'Unlock PRO by inviting a friend',
-      body: 'Invite one new user. When they create their first real entry, you get 26 days of PRO.',
-      reward: '+26 days PRO',
-      rewardHint: 'for every active referral',
-      share: 'Invite a friend',
-      signIn: 'Sign in to get your link',
-      preparing: 'Preparing your link…',
-      copied: 'Link copied',
+      eyebrow: 'FREE PRO',
+      title: 'Invite a friend — both of you get PRO',
+      body: 'When your friend installs from your link and creates their first real entry, both rewards activate automatically.',
+      reward: '+26 days PRO for you',
+      rewardHint: '+7 days PRO for your friend',
+      share: 'Create invitation',
+      signIn: 'Sign in to get an invitation',
+      preparing: 'Preparing your invitation…',
       close: 'Not now',
-      inviteText: 'Try AI Trade Journal. Install the app from my link — it only takes a few seconds.',
     },
     ro: {
-      eyebrow: 'ACCES PRO',
-      title: 'Deblochează PRO invitând un prieten',
-      body: 'Invită un utilizator nou. Când creează prima înregistrare reală, primești 26 de zile PRO.',
-      reward: '+26 zile PRO',
-      rewardHint: 'pentru fiecare invitație activă',
-      share: 'Invită un prieten',
-      signIn: 'Autentifică-te pentru link',
-      preparing: 'Pregătim linkul tău…',
-      copied: 'Link copiat',
+      eyebrow: 'PRO GRATUIT',
+      title: 'Invită un prieten — amândoi primiți PRO',
+      body: 'Când prietenul instalează aplicația din linkul tău și creează prima înregistrare reală, recompensele se activează automat.',
+      reward: '+26 zile PRO pentru tine',
+      rewardHint: '+7 zile PRO pentru prieten',
+      share: 'Creează invitația',
+      signIn: 'Autentifică-te pentru invitație',
+      preparing: 'Pregătim invitația…',
       close: 'Nu acum',
-      inviteText: 'Încearcă AI Trade Journal. Instalează aplicația din linkul meu — durează doar câteva secunde.',
     },
   }[resolveOnboardingLanguage(language)];
 
-  async function shareReferralInvite() {
-    if (!user) {
-      handleGoogleLogin();
-      return;
-    }
-    if (!referralCode) return;
-
-    const inviteUrl = new URL('/?install=1', window.location.origin);
-    inviteUrl.searchParams.set('ref', referralCode);
-    const url = inviteUrl.toString();
-
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: 'AI Trade Journal',
-          text: proAccessCopy.inviteText,
-          url,
-        });
-        setReferralShareStatus('');
-        return;
-      }
-
-      await navigator.clipboard.writeText(url);
-      setReferralShareStatus('copied');
-    } catch (error) {
-      if (error?.name === 'AbortError') return;
-      try {
-        await navigator.clipboard.writeText(url);
-        setReferralShareStatus('copied');
-      } catch {
-        setReferralShareStatus('');
-      }
-    }
-  }
+  const referralShareCopy = {
+    ru: {
+      preview: 'ПЕРСОНАЛЬНОЕ ПРИГЛАШЕНИЕ',
+      shareTitle: 'Пригласить в AI Trade Journal',
+      hero: 'Присоединяйся — будем считать дни вместе',
+      tagline: 'Следи за деньгами красиво и просто',
+      friendBonus: '7 ДНЕЙ PRO',
+      friendBonusHint: 'на старт после первой записи',
+      qrHint: 'Сканируй QR и установи приложение',
+      honestLine: 'После твоей первой записи я тоже получу бонус PRO.',
+      saveImage: 'Сохранить PNG',
+      share: 'Поделиться',
+      preparing: 'Создаём приглашение…',
+      close: 'Закрыть',
+      shareText: 'Следи за деньгами красиво и просто. По моей ссылке ты получишь 7 дней PRO после первой записи.',
+    },
+    en: {
+      preview: 'PERSONAL INVITATION',
+      shareTitle: 'Invite to AI Trade Journal',
+      hero: 'Join me — let’s count the days together',
+      tagline: 'Track your money beautifully and simply',
+      friendBonus: '7 DAYS PRO',
+      friendBonusHint: 'to get started after your first entry',
+      qrHint: 'Scan the QR code and install the app',
+      honestLine: 'After your first entry, I’ll get a PRO bonus too.',
+      saveImage: 'Save PNG',
+      share: 'Share',
+      preparing: 'Creating invitation…',
+      close: 'Close',
+      shareText: 'Track your money beautifully and simply. My link gives you 7 days of PRO after your first entry.',
+    },
+    ro: {
+      preview: 'INVITAȚIE PERSONALĂ',
+      shareTitle: 'Invită în AI Trade Journal',
+      hero: 'Alătură-te — numărăm zilele împreună',
+      tagline: 'Urmărește-ți banii simplu și frumos',
+      friendBonus: '7 ZILE PRO',
+      friendBonusHint: 'pentru început, după prima înregistrare',
+      qrHint: 'Scanează QR-ul și instalează aplicația',
+      honestLine: 'După prima ta înregistrare, primesc și eu un bonus PRO.',
+      saveImage: 'Salvează PNG',
+      share: 'Distribuie',
+      preparing: 'Creăm invitația…',
+      close: 'Închide',
+      shareText: 'Urmărește-ți banii simplu și frumos. Din linkul meu primești 7 zile PRO după prima înregistrare.',
+    },
+  }[resolveOnboardingLanguage(language)];
 
   function markFirstRunGuideComplete() {
     try { window.localStorage.setItem('calendar_guide_completed', '1'); } catch { /* ignore */ }
@@ -1571,6 +1578,11 @@ export default function CalendarScreen() {
   const [historyShareUrl, setHistoryShareUrl] = useState('');
   const historyShareBlobRef = useRef(null);
 
+  const [referralShareOpen, setReferralShareOpen] = useState(false);
+  const [referralShareBusy, setReferralShareBusy] = useState(false);
+  const [referralShareUrl, setReferralShareUrl] = useState('');
+  const referralShareBlobRef = useRef(null);
+
   // Keyboard navigation for PC (ArrowLeft / ArrowRight to switch months)
   useEffect(() => {
     function handleKeyDown(e) {
@@ -1640,6 +1652,12 @@ export default function CalendarScreen() {
     };
   }, [historyShareUrl]);
 
+  useEffect(() => {
+    return () => {
+      if (referralShareUrl) URL.revokeObjectURL(referralShareUrl);
+    };
+  }, [referralShareUrl]);
+
   function roundedCanvasRect(ctx, x, y, width, height, radius) {
     const r = Math.min(radius, width / 2, height / 2);
     ctx.beginPath();
@@ -1660,6 +1678,39 @@ export default function CalendarScreen() {
       size -= 2;
     }
     return minSize;
+  }
+
+  function drawWrappedCanvasText(ctx, value, x, y, maxWidth, lineHeight, maxLines = 3) {
+    const words = String(value || '').split(/\s+/).filter(Boolean);
+    const lines = [];
+    let line = '';
+
+    for (const word of words) {
+      const test = line ? `${line} ${word}` : word;
+      if (line && ctx.measureText(test).width > maxWidth) {
+        lines.push(line);
+        line = word;
+        if (lines.length >= maxLines - 1) break;
+      } else {
+        line = test;
+      }
+    }
+
+    if (line && lines.length < maxLines) {
+      const usedWords = lines.join(' ').split(/\s+/).filter(Boolean).length;
+      const remaining = words.slice(usedWords);
+      let last = remaining.join(' ') || line;
+      while (last && ctx.measureText(last).width > maxWidth) {
+        last = `${last.slice(0, -2).trim()}…`;
+      }
+      lines.push(last);
+    }
+
+    lines.slice(0, maxLines).forEach((item, index) => {
+      ctx.fillText(item, x, y + index * lineHeight);
+    });
+
+    return Math.min(lines.length, maxLines);
   }
 
   function getHistorySharePeriodText() {
@@ -1688,6 +1739,259 @@ export default function CalendarScreen() {
       return `${from.getDate()}–${to.getDate()} ${monthYear.format(from)}`;
     }
     return `${dayMonthYear.format(from)} — ${dayMonthYear.format(to)}`;
+  }
+
+  function createReferralShareBlob() {
+    return new Promise((resolve, reject) => {
+      try {
+        if (!referralCode) throw new Error('REFERRAL_CODE_MISSING');
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 1080;
+        canvas.height = 1350;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('CANVAS_UNAVAILABLE');
+
+        const dark = !isLight;
+        const background = dark ? '#08090b' : '#f6f7f9';
+        const panel = dark ? '#111318' : '#ffffff';
+        const border = dark ? '#282c34' : '#e1e5e9';
+        const textMain = dark ? '#f5f7fa' : '#17191d';
+        const textMuted = dark ? '#9097a4' : '#6f7782';
+        const amber = '#f5b91f';
+        const green = '#10b981';
+
+        const inviteUrlObject = new URL('/?install=1', window.location.origin);
+        inviteUrlObject.searchParams.set('ref', referralCode);
+        const inviteUrl = inviteUrlObject.toString();
+
+        // Premium background.
+        const gradient = ctx.createLinearGradient(0, 0, 1080, 1350);
+        if (dark) {
+          gradient.addColorStop(0, '#08090b');
+          gradient.addColorStop(0.65, '#0b0c0f');
+          gradient.addColorStop(1, '#121006');
+        } else {
+          gradient.addColorStop(0, '#ffffff');
+          gradient.addColorStop(0.68, '#f6f7f9');
+          gradient.addColorStop(1, '#fff8df');
+        }
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 1080, 1350);
+
+        const glow = ctx.createRadialGradient(900, 120, 0, 900, 120, 440);
+        glow.addColorStop(0, dark ? 'rgba(245,185,31,.18)' : 'rgba(245,185,31,.16)');
+        glow.addColorStop(1, 'rgba(245,185,31,0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(460, 0, 620, 560);
+
+        // Brand mark.
+        roundedCanvasRect(ctx, 72, 72, 92, 92, 24);
+        ctx.fillStyle = dark ? '#13151a' : '#ffffff';
+        ctx.fill();
+        ctx.strokeStyle = dark ? '#3a3219' : '#eadba8';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        const tile = 29;
+        const gap = 8;
+        const startX = 84;
+        const startY = 84;
+        [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(([cx, cy], index) => {
+          roundedCanvasRect(ctx, startX + cx * (tile + gap), startY + cy * (tile + gap), tile, tile, 8);
+          ctx.fillStyle = index === 1 ? green : (dark ? '#25282f' : '#e7eaee');
+          ctx.fill();
+        });
+
+        ctx.fillStyle = textMain;
+        ctx.font = '700 40px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText('AI Trade Journal', 190, 116);
+
+        ctx.fillStyle = amber;
+        ctx.font = '700 19px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(referralShareCopy.preview, 190, 151);
+
+        // Hero copy.
+        ctx.fillStyle = textMain;
+        ctx.font = '760 62px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        drawWrappedCanvasText(ctx, referralShareCopy.hero, 72, 278, 936, 72, 3);
+
+        ctx.fillStyle = textMuted;
+        ctx.font = '600 31px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(referralShareCopy.tagline, 72, 474);
+
+        // Bonus card.
+        roundedCanvasRect(ctx, 72, 540, 936, 185, 34);
+        ctx.fillStyle = panel;
+        ctx.fill();
+        ctx.strokeStyle = border;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = amber;
+        ctx.font = '800 51px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(referralShareCopy.friendBonus, 116, 620);
+
+        ctx.fillStyle = textMuted;
+        ctx.font = '600 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(referralShareCopy.friendBonusHint, 116, 669);
+
+        roundedCanvasRect(ctx, 834, 578, 124, 108, 28);
+        ctx.fillStyle = dark ? 'rgba(245,185,31,.08)' : '#fff8df';
+        ctx.fill();
+        ctx.strokeStyle = dark ? 'rgba(245,185,31,.20)' : '#f3d66f';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = amber;
+        ctx.textAlign = 'center';
+        ctx.font = '800 29px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText('+7', 896, 625);
+        ctx.font = '700 19px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText('PRO', 896, 655);
+        ctx.textAlign = 'left';
+
+        // QR panel.
+        roundedCanvasRect(ctx, 72, 774, 936, 402, 38);
+        ctx.fillStyle = panel;
+        ctx.fill();
+        ctx.strokeStyle = border;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // QR always uses a white field for reliable scanning.
+        roundedCanvasRect(ctx, 112, 812, 326, 326, 28);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+
+        const qrMatrix = createQrMatrix(inviteUrl);
+        drawQrToCanvas(ctx, qrMatrix, 132, 832, 286, {
+          foreground: '#09090b',
+          background: '#ffffff',
+        });
+
+        ctx.fillStyle = textMain;
+        ctx.font = '760 31px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        drawWrappedCanvasText(ctx, referralShareCopy.qrHint, 490, 866, 458, 42, 3);
+
+        ctx.fillStyle = textMuted;
+        ctx.font = '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        drawWrappedCanvasText(ctx, referralShareCopy.honestLine, 490, 1002, 458, 31, 3);
+
+        ctx.fillStyle = amber;
+        ctx.font = '700 18px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+        ctx.fillText(`REF · ${referralCode}`, 490, 1116);
+
+        // Footer.
+        ctx.fillStyle = amber;
+        roundedCanvasRect(ctx, 72, 1262, 72, 5, 3);
+        ctx.fill();
+
+        ctx.fillStyle = textMuted;
+        ctx.font = '600 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText('AI TRADE JOURNAL', 160, 1271);
+
+        ctx.textAlign = 'right';
+        ctx.fillText(new URL(window.location.origin).host, 1008, 1271);
+        ctx.textAlign = 'left';
+
+        canvas.toBlob((blob) => {
+          if (!blob) reject(new Error('IMAGE_EXPORT_FAILED'));
+          else resolve(blob);
+        }, 'image/png', 0.96);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  async function openReferralShare() {
+    if (!user) {
+      handleGoogleLogin();
+      return;
+    }
+    if (!referralCode) return;
+
+    setReferralShareOpen(true);
+    setReferralShareBusy(true);
+
+    try {
+      const blob = await createReferralShareBlob();
+      referralShareBlobRef.current = blob;
+      if (referralShareUrl) URL.revokeObjectURL(referralShareUrl);
+      setReferralShareUrl(URL.createObjectURL(blob));
+    } catch (error) {
+      console.error('Referral share image error:', error);
+      setReferralShareOpen(false);
+    } finally {
+      setReferralShareBusy(false);
+    }
+  }
+
+  function closeReferralShare() {
+    setReferralShareOpen(false);
+  }
+
+  function downloadReferralShareImage() {
+    const blob = referralShareBlobRef.current;
+    if (!blob) return;
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ai-trade-journal-invite-${referralCode || 'ref'}.png`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function shareReferralCard() {
+    const blob = referralShareBlobRef.current;
+    if (!blob || !referralCode) return;
+
+    const inviteUrlObject = new URL('/?install=1', window.location.origin);
+    inviteUrlObject.searchParams.set('ref', referralCode);
+    const inviteUrl = inviteUrlObject.toString();
+    const file = new File(
+      [blob],
+      `ai-trade-journal-invite-${referralCode}.png`,
+      { type: 'image/png' },
+    );
+
+    try {
+      if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+        await navigator.share({
+          title: referralShareCopy.shareTitle,
+          text: referralShareCopy.shareText,
+          url: inviteUrl,
+          files: [file],
+        });
+        return;
+      }
+
+      if (navigator.share) {
+        await navigator.share({
+          title: referralShareCopy.shareTitle,
+          text: referralShareCopy.shareText,
+          url: inviteUrl,
+        });
+        downloadReferralShareImage();
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(inviteUrl);
+      } catch {
+        // Image download below remains a usable fallback.
+      }
+      downloadReferralShareImage();
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        console.error('Referral native share error:', error);
+        downloadReferralShareImage();
+      }
+    }
   }
 
   function createHistoryShareBlob() {
@@ -4721,7 +5025,7 @@ export default function CalendarScreen() {
 
               <button
                 type="button"
-                onClick={shareReferralInvite}
+                onClick={openReferralShare}
                 disabled={Boolean(user) && !referralCode}
                 className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-4 text-sm font-bold text-zinc-950 shadow-lg shadow-amber-500/10 transition-all hover:from-amber-300 hover:to-amber-400 active:scale-[0.99] disabled:cursor-wait disabled:opacity-55"
               >
@@ -4729,7 +5033,7 @@ export default function CalendarScreen() {
                 {!user
                   ? proAccessCopy.signIn
                   : referralCode
-                    ? (referralShareStatus === 'copied' ? proAccessCopy.copied : proAccessCopy.share)
+                    ? proAccessCopy.share
                     : proAccessCopy.preparing}
               </button>
 
@@ -4741,6 +5045,96 @@ export default function CalendarScreen() {
                 }`}
               >
                 {proAccessCopy.close}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REFERRAL INVITATION — personal QR share card */}
+      {referralShareOpen && (
+        <div
+          className="fixed inset-0 z-[97] flex items-end justify-center bg-black/75 px-0 pt-10 backdrop-blur-sm sm:items-center sm:px-4 sm:pt-0"
+          onClick={(event) => { if (event.target === event.currentTarget) closeReferralShare(); }}
+        >
+          <div className={`w-full max-w-md overflow-hidden rounded-t-[28px] border shadow-2xl sm:rounded-3xl ${
+            isLight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-white/[0.08] bg-zinc-950 text-zinc-100'
+          }`}>
+            <div className="flex justify-center pt-2.5 sm:hidden" aria-hidden="true">
+              <span className={`h-1 w-11 rounded-full ${isLight ? 'bg-zinc-300' : 'bg-zinc-700'}`} />
+            </div>
+
+            <div className={`flex items-center justify-between border-b px-5 py-4 ${
+              isLight ? 'border-zinc-200' : 'border-white/[0.06]'
+            }`}>
+              <div>
+                <p className="font-data text-[9px] font-semibold uppercase tracking-[0.22em] text-amber-500">
+                  {referralShareCopy.preview}
+                </p>
+                <h3 className="mt-1 font-display text-lg font-semibold">{referralShareCopy.shareTitle}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={closeReferralShare}
+                className={`grid h-10 w-10 place-items-center rounded-xl border ${
+                  isLight
+                    ? 'border-zinc-200 bg-zinc-50 text-zinc-500'
+                    : 'border-white/[0.08] bg-white/[0.04] text-zinc-400'
+                }`}
+                aria-label={referralShareCopy.close}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className={`max-h-[70dvh] overflow-y-auto p-4 sm:p-5 ${
+              isLight ? 'bg-zinc-50/70' : 'bg-black/20'
+            }`}>
+              {referralShareBusy ? (
+                <div className={`grid aspect-[4/5] place-items-center rounded-2xl border ${
+                  isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-zinc-900'
+                }`}>
+                  <div className="text-center">
+                    <RefreshCw className="mx-auto h-5 w-5 animate-spin text-amber-500" />
+                    <p className="mt-3 text-xs text-zinc-500">{referralShareCopy.preparing}</p>
+                  </div>
+                </div>
+              ) : referralShareUrl ? (
+                <img
+                  src={referralShareUrl}
+                  alt={referralShareCopy.shareTitle}
+                  className={`block w-full rounded-2xl border object-cover shadow-xl ${
+                    isLight ? 'border-zinc-200' : 'border-white/[0.08]'
+                  }`}
+                />
+              ) : null}
+            </div>
+
+            <div className={`grid grid-cols-2 gap-2 border-t px-4 pt-3 pb-[max(14px,env(safe-area-inset-bottom))] sm:px-5 sm:pb-5 ${
+              isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-zinc-950'
+            }`}>
+              <button
+                type="button"
+                onClick={downloadReferralShareImage}
+                disabled={referralShareBusy || !referralShareUrl}
+                className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-colors disabled:opacity-40 ${
+                  isLight
+                    ? 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100'
+                    : 'border-white/[0.08] bg-white/[0.04] text-zinc-300 hover:bg-white/[0.07]'
+                }`}
+              >
+                <Download className="h-4 w-4 stroke-[1.8]" />
+                {referralShareCopy.saveImage}
+              </button>
+
+              <button
+                type="button"
+                onClick={shareReferralCard}
+                disabled={referralShareBusy || !referralShareUrl}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-3 text-sm font-semibold text-zinc-950 shadow-lg shadow-amber-500/10 transition-all hover:from-amber-300 hover:to-amber-400 active:scale-[0.99] disabled:opacity-40"
+              >
+                <Share2 className="h-4 w-4 stroke-[2]" />
+                {referralShareCopy.share}
               </button>
             </div>
           </div>
