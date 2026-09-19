@@ -126,6 +126,7 @@ export default function CalendarScreen() {
     active: proAccessActive,
     until: proAccessUntil,
     loading: proAccessLoading,
+    refresh: refreshProAccess,
   } = useProAccess({ user });
 
   const proDaysRemaining = useMemo(() => {
@@ -402,6 +403,8 @@ export default function CalendarScreen() {
   const [traderMode, setTraderModeInternal] = useState(false);
   const [proAccessPromptOpen, setProAccessPromptOpen] = useState(false);
   const [proOfferTab, setProOfferTab] = useState('offer');
+  const [proCheckoutLoading, setProCheckoutLoading] = useState(false);
+  const [proCheckoutError, setProCheckoutError] = useState('');
   const [referralShareStatus, setReferralShareStatus] = useState('');
   const [referralNotice, setReferralNotice] = useState(null);
 
@@ -424,8 +427,54 @@ export default function CalendarScreen() {
   }
 
   function openReferralHub() {
+    setProCheckoutError('');
     setProOfferTab('invites');
     setProAccessPromptOpen(true);
+  }
+
+  async function handleStartProCheckout() {
+    if (proCheckoutLoading) return;
+
+    setProCheckoutError('');
+
+    if (!user) {
+      setProAccessPromptOpen(false);
+      await handleGoogleLogin();
+      return;
+    }
+
+    // Do not start another paid subscription while any PRO access is active.
+    // This also protects users who already have referral/admin PRO from paying
+    // before their current access expires.
+    if (proAccessActive) return;
+
+    setProCheckoutLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('lemon-checkout', {
+        body: {},
+      });
+
+      if (error) throw error;
+
+      const checkoutUrl = data?.url;
+      if (!checkoutUrl) throw new Error('CHECKOUT_URL_MISSING');
+
+      // Never navigate to an arbitrary URL returned by a compromised endpoint.
+      const parsed = new URL(checkoutUrl);
+      const lemonHost = parsed.hostname === 'lemonsqueezy.com'
+        || parsed.hostname.endsWith('.lemonsqueezy.com');
+
+      if (parsed.protocol !== 'https:' || !lemonHost) {
+        throw new Error('INVALID_CHECKOUT_URL');
+      }
+
+      window.location.assign(parsed.toString());
+    } catch (error) {
+      console.error('[pro] checkout failed:', error);
+      setProCheckoutError('CHECKOUT_FAILED');
+      setProCheckoutLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -775,7 +824,13 @@ export default function CalendarScreen() {
       buyPeriod: '/ месяц',
       buyBody: 'Помесячный доступ к PRO — без приглашений.',
       buyButton: 'Подключить PRO',
-      comingSoon: 'Оплату подключим следующим шагом',
+      buyLoading: 'Открываем оплату…',
+      buySignIn: 'Войти и подключить PRO',
+      buyActive: 'PRO уже активен',
+      buyError: 'Не удалось открыть оплату. Попробуй ещё раз.',
+      comingSoon: 'Безопасная оплата через Lemon Squeezy',
+      paymentSuccessTitle: 'PRO активирован',
+      paymentSuccessBody: 'Подписка подтверждена. Доступ PRO уже включён.',
       invitedLabel: 'Приглашено',
       offerTab: 'PRO и бонусы',
       invitesTab: 'Мои приглашения',
@@ -833,7 +888,13 @@ export default function CalendarScreen() {
       buyPeriod: '/ month',
       buyBody: 'Monthly PRO access — no invitation required.',
       buyButton: 'Get PRO',
-      comingSoon: 'Payments are the next step',
+      buyLoading: 'Opening checkout…',
+      buySignIn: 'Sign in to get PRO',
+      buyActive: 'PRO is already active',
+      buyError: 'Could not open checkout. Please try again.',
+      comingSoon: 'Secure checkout by Lemon Squeezy',
+      paymentSuccessTitle: 'PRO activated',
+      paymentSuccessBody: 'Your subscription is confirmed. PRO access is now active.',
       invitedLabel: 'Invited',
       offerTab: 'PRO & rewards',
       invitesTab: 'My invites',
@@ -891,7 +952,13 @@ export default function CalendarScreen() {
       buyPeriod: '/ lună',
       buyBody: 'Acces PRO lunar — fără invitații.',
       buyButton: 'Activează PRO',
-      comingSoon: 'Plățile sunt următorul pas',
+      buyLoading: 'Deschidem plata…',
+      buySignIn: 'Autentifică-te pentru PRO',
+      buyActive: 'PRO este deja activ',
+      buyError: 'Nu am putut deschide plata. Încearcă din nou.',
+      comingSoon: 'Plată securizată prin Lemon Squeezy',
+      paymentSuccessTitle: 'PRO activat',
+      paymentSuccessBody: 'Abonamentul este confirmat. Accesul PRO este activ.',
       invitedLabel: 'Invitați',
       offerTab: 'PRO și bonusuri',
       invitesTab: 'Invitațiile mele',
@@ -1085,6 +1152,57 @@ export default function CalendarScreen() {
       tradesBody: 'Filtrează, deschide și modifică tranzacțiile fără zgomot vizual.',
     },
   }[resolveOnboardingLanguage(language)];
+
+  useEffect(() => {
+    if (!user?.id) return undefined;
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') !== 'success') return undefined;
+
+    let cancelled = false;
+    let confirmed = false;
+    const timers = [];
+
+    const cleanPaymentParam = () => {
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.delete('payment');
+      window.history.replaceState({}, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+    };
+
+    const checkAccess = async () => {
+      const isActive = await refreshProAccess();
+      if (cancelled || confirmed || !isActive) return;
+
+      confirmed = true;
+      cleanPaymentParam();
+      setReferralNotice({
+        title: proAccessCopy.paymentSuccessTitle,
+        body: proAccessCopy.paymentSuccessBody,
+      });
+    };
+
+    // The checkout redirect can beat the Lemon webhook by a moment. Retry
+    // quietly so the user does not need to reload or wait for the 2-minute poll.
+    [0, 1500, 3500, 7000].forEach((delay) => {
+      timers.push(window.setTimeout(checkAccess, delay));
+    });
+
+    // Do not leave a stale payment marker in the URL forever. If the webhook
+    // is unusually slow, the normal focus/online polling will still refresh PRO.
+    timers.push(window.setTimeout(() => {
+      if (!cancelled && !confirmed) cleanPaymentParam();
+    }, 9000));
+
+    return () => {
+      cancelled = true;
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [
+    user?.id,
+    refreshProAccess,
+    proAccessCopy.paymentSuccessTitle,
+    proAccessCopy.paymentSuccessBody,
+  ]);
 
   const referralNoticeCopy = {
     ru: {
@@ -5984,21 +6102,33 @@ export default function CalendarScreen() {
 
                     <button
                       type="button"
-                      disabled
-                      className={`mt-3 inline-flex min-h-11 w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold opacity-70 ${
+                      onClick={handleStartProCheckout}
+                      disabled={proCheckoutLoading || proAccessActive}
+                      aria-busy={proCheckoutLoading}
+                      className={`mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-3 text-sm font-bold transition-all active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 ${
                         isLight
-                          ? 'border-zinc-200 bg-zinc-100 text-zinc-500'
-                          : 'border-white/[0.08] bg-white/[0.04] text-zinc-500'
+                          ? 'border-zinc-900 bg-zinc-900 text-white shadow-lg shadow-zinc-900/10 hover:bg-zinc-800'
+                          : 'border-white/80 bg-white text-zinc-950 shadow-lg shadow-black/20 hover:bg-zinc-100'
                       }`}
                     >
-                      <CreditCard className="h-4 w-4 stroke-[1.8]" />
-                      {proAccessCopy.buyButton}
+                      {proCheckoutLoading
+                        ? <RefreshCw className="h-4 w-4 animate-spin stroke-[1.8]" />
+                        : <CreditCard className="h-4 w-4 stroke-[1.8]" />}
+                      {!user
+                        ? proAccessCopy.buySignIn
+                        : proAccessActive
+                          ? proAccessCopy.buyActive
+                          : proCheckoutLoading
+                            ? proAccessCopy.buyLoading
+                            : `${proAccessCopy.buyButton} — ${proAccessCopy.buyPrice}`}
                     </button>
 
                     <p className={`mt-2 text-center text-[10px] leading-4 ${
-                      isLight ? 'text-zinc-400' : 'text-zinc-600'
+                      proCheckoutError
+                        ? 'text-red-500'
+                        : isLight ? 'text-zinc-400' : 'text-zinc-600'
                     }`}>
-                      {proAccessCopy.comingSoon}
+                      {proCheckoutError ? proAccessCopy.buyError : proAccessCopy.comingSoon}
                     </p>
                   </div>
                 </div>
