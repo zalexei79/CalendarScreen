@@ -488,128 +488,114 @@ export default function Header({
           : 'grid-rows-[0fr] opacity-0 mt-0 -translate-y-1 pointer-events-none'
       }`}>
         <div className="min-h-0 overflow-hidden">
-          {monthSummary && (
-            <div
-              className={`mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg px-2.5 py-1.5 text-[11px] ${
-                isLight ? 'bg-zinc-50 text-zinc-600' : 'bg-white/[0.025] text-zinc-500'
-              }`}
-              title={t('calendarSummaryHint')}
-            >
-              <span className={`font-data font-semibold tabular-nums ${
-                monthSummary.total < 0
-                  ? 'text-red-500'
-                  : monthSummary.total > 0
-                    ? 'text-emerald-500'
-                    : 'text-zinc-500'
-              }`}>
-                {monthSummary.total > 0 ? '+' : monthSummary.total < 0 ? '−' : ''}
-                {formatMoney(Math.abs(monthSummary.total))} {currency}
-              </span>
-              <span>· {t('calendarTradingDays')}: {monthSummary.days}</span>
-            </div>
-          )}
+          <div className={`rounded-2xl border px-3 py-3 sm:px-4 ${
+            isLight
+              ? 'border-slate-200 bg-white shadow-sm'
+              : 'border-white/[0.07] bg-white/[0.025]'
+          }`}>
+            <div className="flex flex-col gap-3">
+              {/* cTrader is currently the single supported platform — show it directly. */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl border ${
+                    ctraderConnected
+                      ? isLight
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
+                        : 'border-emerald-400/15 bg-emerald-500/[0.08] text-emerald-400'
+                      : isLight
+                        ? 'border-amber-200 bg-amber-50 text-amber-700'
+                        : 'border-amber-400/15 bg-amber-400/[0.07] text-amber-300'
+                  }`}>
+                    <Link2 className="h-4 w-4 stroke-[1.8]" />
+                  </span>
 
-          <button
-            type="button"
-            onClick={() => setProFiltersOpen((value) => !value)}
-            aria-expanded={proFiltersOpen}
-            className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left transition-colors ${
-              isLight
-                ? 'border-slate-200 bg-white/70 text-slate-600 hover:border-amber-300'
-                : 'border-zinc-800 bg-zinc-950/35 text-zinc-400 hover:border-amber-400/25'
-            }`}
-          >
-            <span className="flex min-w-0 items-center gap-2">
-              <SlidersHorizontal className="h-3.5 w-3.5 shrink-0 text-amber-400" />
-              <span className="font-data text-[9px] uppercase tracking-[0.16em]">{t('platforms')}</span>
-              <span className={`truncate text-[10px] ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>
-                {platformFilter === 'ALL' ? t('all') : platformFilter}
-                {' · '}
-                {calendarTypeFilter === 'all'
-                  ? t('all')
-                  : calendarTypeFilter === 'income'
-                    ? `+ ${t('income')}`
-                    : `− ${t('expense')}`}
-              </span>
-            </span>
-            <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${proFiltersOpen ? 'rotate-180' : ''}`} />
-          </button>
-        </div>
-      </div>
+                  <div className="min-w-0">
+                    <p className={`text-xs font-semibold ${
+                      isLight ? 'text-slate-900' : 'text-zinc-200'
+                    }`}>
+                      cTrader
+                    </p>
+                    <p className={`mt-0.5 text-[10px] ${
+                      ctraderConnected
+                        ? 'text-emerald-500'
+                        : isLight ? 'text-slate-500' : 'text-zinc-500'
+                    }`}>
+                      {ctraderConnected ? t('connected') : t('connectPlatform')}
+                    </p>
+                  </div>
+                </div>
 
-      {/* PRO control center */}
-      <div className={`overflow-hidden transition-all duration-300 ${traderMode && proFiltersOpen ? 'max-h-52 opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0 pointer-events-none'}`}>
-        <div className={`rounded-2xl border px-3 py-3 sm:px-4 ${isLight ? 'border-amber-200/70 bg-white/75 shadow-xs' : 'border-amber-400/20 bg-gradient-to-r from-amber-400/[0.07] via-zinc-950 to-zinc-950'}`}>
-          <div className="flex flex-col gap-2.5">
-            {/* Platforms row */}
-            <div className="flex flex-wrap items-center gap-2 min-w-0">
-              <span className={`shrink-0 font-data text-[9px] uppercase tracking-[0.18em] ${isLight ? 'text-slate-500 font-semibold' : 'text-zinc-500'}`}>{t('platforms')}</span>
-              <div className="flex min-w-0 gap-1 overflow-x-auto pb-0.5 flex-1">
-                {platformOptions.map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPlatformFilter(p)}
-                    className={`shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-data transition-all ${
-                      platformFilter === p
-                        ? (isLight ? 'border border-amber-500/50 bg-amber-50 text-amber-800 font-bold shadow-xs' : 'border border-amber-400/45 bg-amber-400/15 text-amber-400 shadow-[0_6px_18px_rgba(251,191,36,.08)]')
-                        : isLight
-                        ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'
-                    }`}
-                  >
-                    {p === 'ALL' ? t('all') : p}
-                  </button>
-                ))}
-              </div>
-
-              {/* Connected or Connect button */}
-              {ctraderConnected ? (
-                <button onClick={openConnectModal} title={t('ctraderConnected')} className={`shrink-0 flex items-center gap-1.5 rounded-lg px-2 py-1.5 font-data text-[10px] font-semibold ${
-                  isLight
-                    ? 'text-zinc-700 hover:bg-zinc-50'
-                    : 'text-zinc-300 hover:bg-white/5'
-                }`}>
-                  <span>cTrader</span>
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-label={t('connected')} />
-                </button>
-              ) : (
                 <button
+                  type="button"
                   onClick={openConnectModal}
-                  className={`shrink-0 flex items-center justify-center gap-1.5 rounded-xl border px-2.5 py-1.5 font-data text-[10px] tracking-wide font-medium transition-all hover:-translate-y-px shadow-sm ${
-                    isLight
-                      ? 'border-amber-400/60 bg-amber-50 text-amber-800 hover:bg-amber-100'
-                      : 'border-amber-400/40 bg-amber-400/10 text-amber-400 hover:bg-amber-400/20'
+                  className={`shrink-0 rounded-xl border px-3 py-2 font-data text-[10px] font-semibold transition-all ${
+                    ctraderConnected
+                      ? isLight
+                        ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                        : 'border-white/[0.07] bg-white/[0.035] text-zinc-300 hover:bg-white/[0.06]'
+                      : isLight
+                        ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                        : 'border-amber-400/25 bg-amber-400/[0.08] text-amber-300 hover:bg-amber-400/[0.12]'
                   }`}
-                  title={t('connectPlatform')}
                 >
-                  <Link2 className="h-3 w-3 shrink-0" />
-                  <span>cTrader</span>
+                  {ctraderConnected ? 'cTrader' : t('connectPlatform')}
                 </button>
-              )}
-            </div>
-
-            {/* Show filter row */}
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <span className={`shrink-0 font-data text-[9px] uppercase tracking-[0.18em] ${isLight ? 'text-slate-500 font-semibold' : 'text-zinc-500'}`}>{t('show')}</span>
-              <div className={`inline-flex w-fit gap-1 rounded-xl border p-1 ${isLight ? 'border-slate-200 bg-slate-100/70' : 'border-zinc-800 bg-black/20'}`}>
-                {[
-                  ['all', t('all')],
-                  ['income', `+ ${t('income')}`],
-                  ['expense', `− ${t('expense')}`],
-                ].map(([key, label]) => (
-                  <button
-                    key={key}
-                    onClick={() => setCalendarTypeFilter(key)}
-                    className={`rounded-lg px-3 py-1.5 text-[10px] font-data transition-all ${
-                      calendarTypeFilter === key
-                        ? (isLight ? 'bg-white text-slate-900 shadow-xs font-bold' : 'bg-amber-400/15 text-amber-500 ring-1 ring-amber-400/20 font-medium')
-                        : (isLight ? 'text-slate-600 hover:text-slate-900' : 'text-zinc-500 hover:text-zinc-300')
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
               </div>
+
+              <div className={`h-px ${isLight ? 'bg-slate-200' : 'bg-white/[0.06]'}`} />
+
+              {/* Keep only the useful income / expense visibility filter. */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className={`font-data text-[9px] uppercase tracking-[0.16em] ${
+                  isLight ? 'text-slate-500 font-semibold' : 'text-zinc-500'
+                }`}>
+                  {t('show')}
+                </span>
+
+                <div className={`inline-flex gap-1 rounded-xl border p-1 ${
+                  isLight ? 'border-slate-200 bg-slate-100' : 'border-white/[0.07] bg-black/20'
+                }`}>
+                  {[
+                    ['all', t('all')],
+                    ['income', `+ ${t('income')}`],
+                    ['expense', `− ${t('expense')}`],
+                  ].map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => setCalendarTypeFilter(key)}
+                      className={`rounded-lg px-3 py-1.5 text-[10px] font-data transition-all ${
+                        calendarTypeFilter === key
+                          ? isLight
+                            ? 'bg-white text-slate-950 shadow-sm'
+                            : 'bg-amber-400/15 text-amber-400 ring-1 ring-amber-400/20'
+                          : isLight
+                            ? 'text-slate-600 hover:text-slate-950'
+                            : 'text-zinc-500 hover:text-zinc-300'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {monthSummary && (
+                <div className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] ${
+                  isLight ? 'text-slate-500' : 'text-zinc-500'
+                }`}>
+                  <span className={`font-data font-semibold tabular-nums ${
+                    monthSummary.total < 0
+                      ? 'text-red-500'
+                      : monthSummary.total > 0
+                        ? 'text-emerald-500'
+                        : 'text-zinc-500'
+                  }`}>
+                    {monthSummary.total > 0 ? '+' : monthSummary.total < 0 ? '−' : ''}
+                    {formatMoney(Math.abs(monthSummary.total))} {currency}
+                  </span>
+                  <span>· {t('calendarTradingDays')}: {monthSummary.days}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

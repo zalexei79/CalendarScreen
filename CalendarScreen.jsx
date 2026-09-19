@@ -128,6 +128,13 @@ export default function CalendarScreen() {
     loading: proAccessLoading,
   } = useProAccess({ user });
 
+  const proDaysRemaining = useMemo(() => {
+    if (!proAccessActive || !proAccessUntil) return 0;
+    const until = new Date(proAccessUntil).getTime();
+    if (!Number.isFinite(until)) return 0;
+    return Math.max(0, Math.ceil((until - Date.now()) / 86400000));
+  }, [proAccessActive, proAccessUntil]);
+
   // --- cTrader connection state ------------------------------------------
   const [ctraderConnected, setCtraderConnected] = useState(false);
   const [ctraderLoading, setCtraderLoading] = useState(false);
@@ -777,6 +784,13 @@ export default function CalendarScreen() {
       waitingPeople: 'Ждём запись',
       earnedDays: 'Заработано PRO',
       daysShort: 'дн.',
+      myPro: 'Мой PRO',
+      proRemaining: 'Осталось',
+      proUntil: 'до',
+      proInactive: 'PRO не активен',
+      currencyTitle: 'Валюта аналитики',
+      currencyHint: 'Выбранная валюта применяется к Обзору, Аналитике, Сделкам и карточке «Поделиться».',
+      mixedCurrencyHint: 'Для точных цифр выбери одну валюту. Смешивать разные валюты в один результат некорректно.',
       historyTitle: 'Последние приглашения',
       noInvitesTitle: 'Пока приглашений нет',
       noInvitesBody: 'Создай персональное приглашение — здесь появится прогресс каждого нового пользователя.',
@@ -828,6 +842,13 @@ export default function CalendarScreen() {
       waitingPeople: 'Waiting',
       earnedDays: 'PRO earned',
       daysShort: 'days',
+      myPro: 'My PRO',
+      proRemaining: 'Remaining',
+      proUntil: 'until',
+      proInactive: 'PRO is not active',
+      currencyTitle: 'Analytics currency',
+      currencyHint: 'The selected currency applies to Overview, Analytics, Trades and the Share card.',
+      mixedCurrencyHint: 'Choose one currency for exact numbers. Different currencies should not be combined into one result.',
       historyTitle: 'Recent invitations',
       noInvitesTitle: 'No invitations yet',
       noInvitesBody: 'Create a personal invitation and each new user’s progress will appear here.',
@@ -879,6 +900,13 @@ export default function CalendarScreen() {
       waitingPeople: 'Așteptăm',
       earnedDays: 'PRO câștigat',
       daysShort: 'zile',
+      myPro: 'PRO-ul meu',
+      proRemaining: 'Au rămas',
+      proUntil: 'până la',
+      proInactive: 'PRO nu este activ',
+      currencyTitle: 'Moneda analizei',
+      currencyHint: 'Moneda selectată se aplică la Rezumat, Analiză, Tranzacții și cardul „Distribuie”.',
+      mixedCurrencyHint: 'Pentru cifre exacte alege o singură monedă. Monedele diferite nu trebuie adunate într-un singur rezultat.',
       historyTitle: 'Invitații recente',
       noInvitesTitle: 'Încă nu ai invitații',
       noInvitesBody: 'Creează o invitație personală și aici va apărea progresul fiecărui utilizator nou.',
@@ -943,6 +971,24 @@ export default function CalendarScreen() {
       shareText: 'Urmărește-ți banii simplu și frumos. Din linkul meu primești 7 zile PRO după prima înregistrare.',
     },
   }[resolveOnboardingLanguage(language)];
+
+  function formatProUntilDate(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+
+    const locale = resolveOnboardingLanguage(language) === 'ru'
+      ? 'ru-RU'
+      : resolveOnboardingLanguage(language) === 'ro'
+        ? 'ro-RO'
+        : 'en-US';
+
+    return new Intl.DateTimeFormat(locale, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).format(date);
+  }
 
   function formatReferralHistoryDate(value) {
     if (!value) return '';
@@ -3023,6 +3069,31 @@ export default function CalendarScreen() {
         .theme-light .pro-history-premium input[type="range"] {
           color: #172033;
         }
+
+        /* Extra light-theme contrast for glassy/low-opacity surfaces. */
+        .theme-light .bg-white\/\[0\.025\],
+        .theme-light .bg-white\/\[0\.02\],
+        .theme-light .bg-white\/\[0\.035\],
+        .theme-light .bg-white\/\[0\.04\],
+        .theme-light .bg-white\/\[0\.045\] {
+          background-color: #ffffff !important;
+        }
+        .theme-light .bg-black\/20,
+        .theme-light .bg-black\/10,
+        .theme-light .bg-black\/15 {
+          background-color: #f4f7fb !important;
+        }
+        .theme-light .pro-history-premium .text-zinc-500 {
+          color: #475569 !important;
+        }
+        .theme-light .pro-history-premium .text-zinc-400 {
+          color: #334155 !important;
+        }
+        .theme-light .pro-history-premium .border-white\/\[0\.06\],
+        .theme-light .pro-history-premium .border-white\/\[0\.07\],
+        .theme-light .pro-history-premium .border-white\/\[0\.08\] {
+          border-color: #d7e0ea !important;
+        }
         /* Clean scrollbars */
         * { scrollbar-width: thin; scrollbar-color: #52525b transparent; }
         *::-webkit-scrollbar { height: 6px; width: 6px; }
@@ -3537,7 +3608,50 @@ export default function CalendarScreen() {
                     </button>
                   ))}
                 </div>
+
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                    isLight ? 'text-slate-500' : 'text-zinc-500'
+                  }`}>
+                    {proAccessCopy.currencyTitle}
+                  </p>
+                  <p className={`mt-0.5 text-[10px] leading-4 ${
+                    isLight ? 'text-slate-500' : 'text-zinc-600'
+                  }`}>
+                    {historyCurrency === 'ALL' && historyByCurrency.length > 1
+                      ? proAccessCopy.mixedCurrencyHint
+                      : proAccessCopy.currencyHint}
+                  </p>
+                </div>
+
+                <div className={`inline-flex shrink-0 gap-1 rounded-xl border p-1 ${
+                  isLight
+                    ? 'border-slate-200 bg-slate-100'
+                    : 'border-white/[0.07] bg-white/[0.035]'
+                }`}>
+                  {[{ code: 'ALL', symbol: t('all'), label: t('allCurrencies') }, ...CURRENCIES].map((c) => (
+                    <button
+                      key={c.code}
+                      type="button"
+                      onClick={() => setHistoryCurrency(c.code)}
+                      title={c.label || c.code}
+                      className={`rounded-lg px-2.5 py-1.5 text-[10px] font-data transition-all ${
+                        historyCurrency === c.code
+                          ? isLight
+                            ? 'bg-white text-amber-700 shadow-sm ring-1 ring-amber-300/70'
+                            : 'bg-amber-400/15 text-amber-400 ring-1 ring-amber-400/20'
+                          : isLight
+                            ? 'text-slate-600 hover:bg-white hover:text-slate-950'
+                            : 'text-zinc-500 hover:text-zinc-200'
+                      }`}
+                    >
+                      {c.symbol}
+                    </button>
+                  ))}
+                </div>
               </div>
+            </div>
             )}
 
             <div
@@ -4583,20 +4697,6 @@ export default function CalendarScreen() {
                       {platformFilter !== 'ALL' ? ` · ${platformFilter}` : ''}
                       {historyCurrency !== 'ALL' ? ` · ${historyCurrency}` : ''}
                     </p>
-                    <div className={`inline-flex shrink-0 gap-1 rounded-xl border p-1 ${
-                      isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/50'
-                    }`}>
-                      {[{ code: 'ALL', symbol: t('all') }, ...CURRENCIES].map((c) => (
-                        <button key={c.code} onClick={() => setHistoryCurrency(c.code)} title={c.code}
-                          className={`rounded-lg px-2 py-1 text-[10px] font-data transition-all ${
-                            historyCurrency === c.code
-                              ? 'bg-amber-400/15 text-amber-500 ring-1 ring-amber-400/20 font-semibold'
-                              : isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-300'
-                          }`}>
-                          {c.symbol}
-                        </button>
-                      ))}
-                    </div>
                   </div>
 
                   {/* Expanded filters beside the currency toolbar */}
@@ -5924,6 +6024,52 @@ export default function CalendarScreen() {
                     </div>
                   ) : (
                     <>
+                      <div className={`mb-4 overflow-hidden rounded-2xl border ${
+                        isLight
+                          ? 'border-amber-200 bg-gradient-to-br from-amber-50 via-white to-white'
+                          : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.08] via-white/[0.025] to-transparent'
+                      }`}>
+                        <div className="flex items-center justify-between gap-4 px-4 py-4">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <Zap className="h-4 w-4 text-amber-500" />
+                              <p className="text-sm font-semibold">{proAccessCopy.myPro}</p>
+                            </div>
+
+                            {proAccessActive ? (
+                              <>
+                                <p className="mt-2 font-data text-2xl font-bold text-amber-500">
+                                  {proAccessCopy.proRemaining}: {proDaysRemaining} {proAccessCopy.daysShort}
+                                </p>
+                                <p className={`mt-1 text-[10px] ${
+                                  isLight ? 'text-slate-500' : 'text-zinc-500'
+                                }`}>
+                                  {proAccessCopy.proUntil} {formatProUntilDate(proAccessUntil)}
+                                </p>
+                              </>
+                            ) : (
+                              <p className={`mt-2 text-sm ${
+                                isLight ? 'text-slate-600' : 'text-zinc-400'
+                              }`}>
+                                {proAccessCopy.proInactive}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl border ${
+                            proAccessActive
+                              ? isLight
+                                ? 'border-amber-200 bg-white text-amber-600 shadow-sm'
+                                : 'border-amber-400/20 bg-amber-400/[0.08] text-amber-300'
+                              : isLight
+                                ? 'border-slate-200 bg-slate-50 text-slate-400'
+                                : 'border-white/[0.06] bg-white/[0.03] text-zinc-600'
+                          }`}>
+                            <Award className="h-5 w-5" />
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
                         {[
                           [Inbox, proAccessCopy.invitedPeople, invitedCount, 'text-amber-500'],
