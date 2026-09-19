@@ -77,6 +77,7 @@ import PeriodDynamics from './src/features/trades-sync/components/PeriodDynamics
 import CalendarGrid from './CalendarGrid';
 import MonthlyGoal from './MonthlyGoal';
 import CtraderControl from './src/features/ctrader/CtraderControl';
+import { createQrMatrix, drawQrToCanvas } from './qrCode.js';
 
 export default function CalendarScreen() {
   const [today, setToday] = useState(() => new Date());
@@ -605,6 +606,9 @@ export default function CalendarScreen() {
       createdWith: 'Собрано в AI Trade Journal',
       close: 'Закрыть',
       mixedCurrencies: 'Все валюты',
+      allHistory: 'За всё время',
+      installCta: 'Начни вести свой календарь',
+      scanToInstall: 'Сканируй QR и установи приложение на главный экран',
     },
     en: {
       share: 'Share',
@@ -626,6 +630,9 @@ export default function CalendarScreen() {
       createdWith: 'Created with AI Trade Journal',
       close: 'Close',
       mixedCurrencies: 'All currencies',
+      allHistory: 'All time',
+      installCta: 'Start your own calendar',
+      scanToInstall: 'Scan the QR code and install the app on your Home Screen',
     },
     ro: {
       share: 'Distribuie',
@@ -647,6 +654,9 @@ export default function CalendarScreen() {
       createdWith: 'Creat cu AI Trade Journal',
       close: 'Închide',
       mixedCurrencies: 'Toate monedele',
+      allHistory: 'Toată perioada',
+      installCta: 'Începe propriul tău calendar',
+      scanToInstall: 'Scanează codul QR și instalează aplicația pe ecranul principal',
     },
   }[resolveOnboardingLanguage(language)];
 
@@ -1530,6 +1540,34 @@ export default function CalendarScreen() {
     return minSize;
   }
 
+  function getHistorySharePeriodText() {
+    if (dateFrom === '0000-01-01' && dateTo === '9999-12-31') return historyShareCopy.allHistory;
+
+    const locale = resolveOnboardingLanguage(language) === 'ru'
+      ? 'ru-RU'
+      : resolveOnboardingLanguage(language) === 'ro'
+        ? 'ro-RO'
+        : 'en-US';
+    const from = parseDateKeyLocal(dateFrom);
+    const to = parseDateKeyLocal(dateTo);
+    if (!(from instanceof Date) || Number.isNaN(from.getTime()) || !(to instanceof Date) || Number.isNaN(to.getTime())) {
+      return historyShareCopy.allHistory;
+    }
+
+    const monthYear = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' });
+    const dayMonthYear = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' });
+    const sameDay = dateFrom === dateTo;
+    const sameMonth = from.getFullYear() === to.getFullYear() && from.getMonth() === to.getMonth();
+
+    if (sameDay) return dayMonthYear.format(from);
+    if (sameMonth) {
+      const daysInMonth = new Date(to.getFullYear(), to.getMonth() + 1, 0).getDate();
+      if (from.getDate() === 1 && to.getDate() === daysInMonth) return monthYear.format(from);
+      return `${from.getDate()}–${to.getDate()} ${monthYear.format(from)}`;
+    }
+    return `${dayMonthYear.format(from)} — ${dayMonthYear.format(to)}`;
+  }
+
   function createHistoryShareBlob() {
     return new Promise((resolve, reject) => {
       try {
@@ -1540,62 +1578,72 @@ export default function CalendarScreen() {
         if (!ctx) throw new Error('CANVAS_UNAVAILABLE');
 
         const dark = !isLight;
-        const background = dark ? '#09090b' : '#f7f8fa';
-        const panel = dark ? '#121216' : '#ffffff';
-        const panel2 = dark ? '#17171c' : '#f4f5f7';
-        const border = dark ? '#28282f' : '#e2e5e9';
-        const textMain = dark ? '#f4f4f5' : '#18181b';
-        const textMuted = dark ? '#8b8b95' : '#71717a';
+        const background = dark ? '#08090b' : '#f7f8fa';
+        const panel = dark ? '#111318' : '#ffffff';
+        const panelSoft = dark ? '#15171d' : '#f3f5f7';
+        const border = dark ? '#262a31' : '#e1e5e9';
+        const textMain = dark ? '#f5f7fa' : '#17191d';
+        const textMuted = dark ? '#8f96a3' : '#707783';
         const amber = '#f5b91f';
         const green = '#10b981';
         const red = '#ef4444';
+        const periodText = getHistorySharePeriodText();
+        const hasMixedCurrencies = historyCurrency === 'ALL' && historyByCurrency.length > 1;
+        const sign = historyTotal >= 0 ? '+' : '−';
+        const amount = hasMixedCurrencies
+          ? historyShareCopy.mixedCurrencies
+          : `${sign}${historyCurrencySymbol}${formatMoney(Math.abs(historyTotal))}`;
+        const amountColor = hasMixedCurrencies ? amber : historyTotal >= 0 ? green : red;
+        const wins = historyTrades.filter((item) => Number(item.pnl) >= 0).length;
+        const losses = historyTrades.filter((item) => Number(item.pnl) < 0).length;
+        const winrate = historyTrades.length ? Math.round((wins / historyTrades.length) * 100) : 0;
+        const installUrl = `${window.location.origin}/?install=1`;
 
         const gradient = ctx.createLinearGradient(0, 0, 1080, 1350);
         if (dark) {
-          gradient.addColorStop(0, '#0b0b0e');
-          gradient.addColorStop(0.62, '#09090b');
-          gradient.addColorStop(1, '#11100b');
+          gradient.addColorStop(0, '#090a0d');
+          gradient.addColorStop(0.64, '#08090b');
+          gradient.addColorStop(1, '#111007');
         } else {
           gradient.addColorStop(0, '#ffffff');
-          gradient.addColorStop(0.72, '#f7f8fa');
-          gradient.addColorStop(1, '#fff9e8');
+          gradient.addColorStop(0.66, '#f7f8fa');
+          gradient.addColorStop(1, '#fff8e4');
         }
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, 1080, 1350);
 
-        // Soft accent glow.
-        const glow = ctx.createRadialGradient(910, 120, 0, 910, 120, 390);
-        glow.addColorStop(0, dark ? 'rgba(245,185,31,.17)' : 'rgba(245,185,31,.13)');
+        const glow = ctx.createRadialGradient(930, 120, 0, 930, 120, 420);
+        glow.addColorStop(0, dark ? 'rgba(245,185,31,.15)' : 'rgba(245,185,31,.12)');
         glow.addColorStop(1, 'rgba(245,185,31,0)');
         ctx.fillStyle = glow;
         ctx.fillRect(500, 0, 580, 500);
 
-        // Brand mark — same four-tile language as the app icon, but drawn natively.
-        roundedCanvasRect(ctx, 72, 72, 92, 92, 24);
-        ctx.fillStyle = dark ? '#141418' : '#ffffff';
+        // Brand mark.
+        roundedCanvasRect(ctx, 72, 72, 86, 86, 23);
+        ctx.fillStyle = dark ? '#14171b' : '#ffffff';
         ctx.fill();
-        ctx.strokeStyle = dark ? '#3a3219' : '#eadba8';
+        ctx.strokeStyle = dark ? '#3b331a' : '#eadba8';
         ctx.lineWidth = 3;
         ctx.stroke();
-
-        const tile = 29, gap = 8, startX = 84, startY = 84;
+        const tile = 27, gap = 7, startX = 84, startY = 84;
         [[0,0],[1,0],[0,1],[1,1]].forEach(([cx, cy], idx) => {
-          roundedCanvasRect(ctx, startX + cx*(tile+gap), startY + cy*(tile+gap), tile, tile, 8);
-          ctx.fillStyle = idx === 1 ? '#10b981' : dark ? '#24242a' : '#e8eaee';
+          roundedCanvasRect(ctx, startX + cx*(tile+gap), startY + cy*(tile+gap), tile, tile, 7);
+          ctx.fillStyle = idx === 1 ? green : dark ? '#262a31' : '#e8ebef';
           ctx.fill();
         });
 
         ctx.fillStyle = textMain;
-        ctx.font = '700 42px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-        ctx.fillText(traderMode ? 'AI Trade Journal' : (resolveOnboardingLanguage(language) === 'ru' ? 'Денежный календарь' : 'AI Trade Journal'), 190, 115);
+        ctx.font = '750 39px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText('AI Trade Journal', 188, 112);
         ctx.fillStyle = textMuted;
-        ctx.font = '500 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-        ctx.fillText(historyShareCopy.myResults, 190, 151);
+        ctx.font = '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        const productLine = traderMode
+          ? `${historyShareCopy.myResults} · PRO`
+          : `${resolveOnboardingLanguage(language) === 'ru' ? 'Денежный календарь' : historyShareCopy.myResults} · FREE`;
+        ctx.fillText(productLine, 188, 148);
 
-        const periodText = dateFrom === dateTo ? dateFrom : `${dateFrom} — ${dateTo}`;
-
-        // Main result card.
-        roundedCanvasRect(ctx, 72, 230, 936, 390, 42);
+        // Hero result — one obvious focal point.
+        roundedCanvasRect(ctx, 72, 225, 936, 380, 42);
         ctx.fillStyle = panel;
         ctx.fill();
         ctx.strokeStyle = border;
@@ -1603,36 +1651,24 @@ export default function CalendarScreen() {
         ctx.stroke();
 
         ctx.fillStyle = amber;
-        ctx.font = '700 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-        ctx.fillText(historyShareCopy.period.toUpperCase(), 120, 294);
-
+        ctx.font = '750 21px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(historyShareCopy.myResults.toUpperCase(), 120, 288);
         ctx.fillStyle = textMuted;
-        ctx.font = '500 28px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-        ctx.fillText(periodText, 120, 340);
+        ctx.font = '520 28px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(periodText, 120, 335);
 
-        const hasMixedCurrencies = historyCurrency === 'ALL' && Object.keys(historyCurrencyGroups || {}).length > 1;
-        const sign = historyTotal >= 0 ? '+' : '−';
-        const amount = hasMixedCurrencies
-          ? historyShareCopy.mixedCurrencies
-          : `${sign}${historyCurrencySymbol}${formatMoney(Math.abs(historyTotal))}`;
-        const amountColor = hasMixedCurrencies ? amber : historyTotal >= 0 ? green : red;
-
-        ctx.fillStyle = textMuted;
-        ctx.font = '600 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-        ctx.fillText(historyShareCopy.result, 120, 425);
-
-        const amountSize = fitCanvasText(ctx, amount, 820, 82, 42, 760);
-        ctx.font = `760 ${amountSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif`;
+        const amountSize = fitCanvasText(ctx, amount, 830, 92, 44, 780);
+        ctx.font = `780 ${amountSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif`;
         ctx.fillStyle = amountColor;
-        ctx.fillText(amount, 120, 518);
+        ctx.fillText(amount, 120, 465);
 
         ctx.fillStyle = textMuted;
-        ctx.font = '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-        ctx.fillText(traderMode ? `${historyTrades.length} ${historyShareCopy.trades}` : `${historyTrades.length} ${historyShareCopy.records}`, 120, 570);
-
-        const wins = historyTrades.filter((item) => Number(item.pnl) >= 0).length;
-        const losses = historyTrades.filter((item) => Number(item.pnl) < 0).length;
-        const winrate = historyTrades.length ? Math.round((wins / historyTrades.length) * 100) : 0;
+        ctx.font = '520 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(
+          traderMode ? `${historyTrades.length} ${historyShareCopy.trades}` : `${historyTrades.length} ${historyShareCopy.records}`,
+          120,
+          535,
+        );
 
         const cards = traderMode
           ? [
@@ -1646,54 +1682,80 @@ export default function CalendarScreen() {
               [historyShareCopy.records, String(historyTrades.length), amber],
             ];
 
-        const cardY = 670, cardW = 292, cardH = 220, cardGap = 30;
+        const cardY = 655, cardW = 292, cardH = 205, cardGap = 30;
         cards.forEach(([label, value, color], index) => {
           const x = 72 + index * (cardW + cardGap);
           roundedCanvasRect(ctx, x, cardY, cardW, cardH, 30);
-          ctx.fillStyle = panel2;
+          ctx.fillStyle = panelSoft;
           ctx.fill();
           ctx.strokeStyle = border;
           ctx.lineWidth = 2;
           ctx.stroke();
-
           ctx.fillStyle = textMuted;
-          ctx.font = '600 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-          ctx.fillText(label, x + 28, cardY + 62);
-
-          const valueSize = fitCanvasText(ctx, value, cardW - 56, 42, 28, 760);
+          ctx.font = '620 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+          ctx.fillText(label, x + 28, cardY + 58);
+          const valueSize = fitCanvasText(ctx, value, cardW - 56, 43, 27, 760);
           ctx.font = `760 ${valueSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif`;
           ctx.fillStyle = color;
           ctx.fillText(value, x + 28, cardY + 132);
         });
 
-        // Caption area.
-        roundedCanvasRect(ctx, 72, 940, 936, 210, 34);
-        ctx.fillStyle = dark ? '#111115' : '#ffffff';
+        // Viral install CTA + QR. No duplicate result block.
+        roundedCanvasRect(ctx, 72, 925, 936, 310, 38);
+        ctx.fillStyle = dark ? '#101216' : '#ffffff';
         ctx.fill();
         ctx.strokeStyle = border;
         ctx.lineWidth = 2;
         ctx.stroke();
 
         ctx.fillStyle = amber;
-        ctx.font = '700 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-        ctx.fillText(historyShareCopy.caption.toUpperCase(), 116, 1000);
-
+        ctx.font = '760 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(historyShareCopy.installCta.toUpperCase(), 116, 998);
         ctx.fillStyle = textMain;
-        ctx.font = '650 34px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-        const captionResult = hasMixedCurrencies ? historyShareCopy.mixedCurrencies : amount;
-        ctx.fillText(`${captionResult} · ${periodText}`, 116, 1060);
-
+        ctx.font = '700 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText('AI Trade Journal', 116, 1050);
         ctx.fillStyle = textMuted;
-        ctx.font = '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-        ctx.fillText(historyShareCopy.createdWith, 116, 1110);
+        ctx.font = '520 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        const hint = historyShareCopy.scanToInstall;
+        const maxHintWidth = 555;
+        const words = hint.split(' ');
+        let line = '';
+        let y = 1100;
+        for (const word of words) {
+          const candidate = line ? `${line} ${word}` : word;
+          if (ctx.measureText(candidate).width > maxHintWidth && line) {
+            ctx.fillText(line, 116, y);
+            line = word;
+            y += 34;
+          } else {
+            line = candidate;
+          }
+        }
+        if (line) ctx.fillText(line, 116, y);
 
-        // Footer signature line.
+        const qrMatrix = createQrMatrix(installUrl);
+        roundedCanvasRect(ctx, 750, 955, 224, 224, 26);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        drawQrToCanvas(ctx, qrMatrix, 756, 961, 212, { quiet: 4, background: '#ffffff', foreground: '#111111' });
+
+        let installHost = '';
+        try { installHost = new URL(installUrl).host; } catch { installHost = 'AI Trade Journal'; }
+        ctx.textAlign = 'center';
+        ctx.fillStyle = textMuted;
+        ctx.font = '600 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(installHost, 862, 1207);
+        ctx.textAlign = 'left';
+
         ctx.fillStyle = amber;
-        roundedCanvasRect(ctx, 72, 1236, 70, 5, 3);
+        roundedCanvasRect(ctx, 72, 1280, 70, 5, 3);
         ctx.fill();
         ctx.fillStyle = textMuted;
-        ctx.font = '600 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-        ctx.fillText(traderMode ? 'PRO' : 'FREE', 158, 1245);
+        ctx.font = '620 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(traderMode ? 'PRO' : 'FREE', 158, 1288);
+        ctx.textAlign = 'right';
+        ctx.fillText(historyShareCopy.createdWith, 1008, 1288);
+        ctx.textAlign = 'left';
 
         canvas.toBlob((blob) => {
           if (!blob) reject(new Error('IMAGE_EXPORT_FAILED'));
@@ -1732,7 +1794,7 @@ export default function CalendarScreen() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `ai-trade-journal-${dateFrom}-${dateTo}.png`;
+    link.download = 'ai-trade-journal-results.png';
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -1743,13 +1805,13 @@ export default function CalendarScreen() {
     const blob = historyShareBlobRef.current;
     if (!blob) return;
 
-    const periodText = dateFrom === dateTo ? dateFrom : `${dateFrom} — ${dateTo}`;
-    const hasMixedCurrencies = historyCurrency === 'ALL' && Object.keys(historyCurrencyGroups || {}).length > 1;
+    const periodText = getHistorySharePeriodText();
+    const hasMixedCurrencies = historyCurrency === 'ALL' && historyByCurrency.length > 1;
     const resultText = hasMixedCurrencies
       ? historyShareCopy.mixedCurrencies
       : `${historyTotal >= 0 ? '+' : '−'}${historyCurrencySymbol}${formatMoney(Math.abs(historyTotal))}`;
     const shareText = `${historyShareCopy.caption}: ${resultText} · ${periodText}`;
-    const file = new File([blob], `ai-trade-journal-${dateFrom}-${dateTo}.png`, { type: 'image/png' });
+    const file = new File([blob], 'ai-trade-journal-results.png', { type: 'image/png' });
 
     try {
       if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {

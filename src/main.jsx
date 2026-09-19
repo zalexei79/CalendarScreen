@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import CalendarScreen from '../CalendarScreen.jsx'
+import InstallPage from './InstallPage.jsx'
 
 class AppErrorBoundary extends React.Component {
   constructor(props) {
@@ -44,16 +45,32 @@ class AppErrorBoundary extends React.Component {
   }
 }
 
+// Capture the Android/Chromium PWA install prompt as early as possible so the
+// dedicated install screen can trigger the native dialog later on a user tap.
+window.__atjInstallPrompt = window.__atjInstallPrompt || null
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault()
+  window.__atjInstallPrompt = event
+  window.dispatchEvent(new Event('atj-install-ready'))
+})
+window.addEventListener('appinstalled', () => {
+  window.__atjInstallPrompt = null
+})
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').then((registration) => registration.update()).catch((err) => console.error('[sw] регистрация не удалась:', err))
   })
 }
 
+const params = new URLSearchParams(window.location.search)
+const normalizedPath = window.location.pathname.replace(/\/+$/, '') || '/'
+const showInstallPage = params.get('install') === '1' || normalizedPath === '/install'
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AppErrorBoundary>
-      <CalendarScreen />
+      {showInstallPage ? <InstallPage /> : <CalendarScreen />}
     </AppErrorBoundary>
   </React.StrictMode>
 )

@@ -1,8 +1,10 @@
 {
-  "name": "AI Trading Journal",
+  "id": "/",
+  "name": "AI Trade Journal",
   "short_name": "Trade Journal",
-  "description": "Автоматический торговый журнал и календарь сделок для аналитики",
+  "description": "Денежный календарь и торговый журнал для ежедневных записей и аналитики",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#09090b",
   "theme_color": "#09090b",
