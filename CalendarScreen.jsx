@@ -118,7 +118,7 @@ export default function CalendarScreen() {
     invitedCount,
     rewardedCount,
     pendingCount,
-    recentInvites,
+    recentInvites = [],
     myReferralStatus,
     myReferralRewardedAt,
   } = useReferral({ user });

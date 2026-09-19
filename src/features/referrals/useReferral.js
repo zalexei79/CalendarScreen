@@ -76,6 +76,7 @@ export function useReferral({ user }) {
   const [invitedCount, setInvitedCount] = useState(0);
   const [rewardedCount, setRewardedCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
+  const [recentInvites, setRecentInvites] = useState([]);
   const [myReferralStatus, setMyReferralStatus] = useState(null);
   const [myReferralRewardedAt, setMyReferralRewardedAt] = useState(null);
   const [statusLoading, setStatusLoading] = useState(Boolean(userId));
@@ -85,6 +86,7 @@ export function useReferral({ user }) {
       setInvitedCount(0);
       setRewardedCount(0);
       setPendingCount(0);
+      setRecentInvites([]);
       setMyReferralStatus(null);
       setMyReferralRewardedAt(null);
       setStatusLoading(false);
@@ -112,6 +114,7 @@ export function useReferral({ user }) {
       setInvitedCount(outgoing.length);
       setRewardedCount(outgoing.filter((item) => item.status === 'rewarded').length);
       setPendingCount(outgoing.filter((item) => item.status === 'pending' || item.status === 'qualified').length);
+      setRecentInvites(outgoing.slice(0, 20));
     } else {
       console.warn('[referral] outgoing status failed:', outgoingResult.error.message);
     }
@@ -228,6 +231,7 @@ export function useReferral({ user }) {
     invitedCount,
     rewardedCount,
     pendingCount,
+    recentInvites,
 
     myReferralStatus,
     myReferralRewardedAt,

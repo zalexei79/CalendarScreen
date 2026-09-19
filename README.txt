@@ -1,27 +1,22 @@
-REFERRAL STEP 5 — PRO VALUE SCREEN
+STEP 7 HOTFIX — "Мои приглашения"
 
-Replace ONLY:
-D:\ai-trade-journal\CalendarScreen.jsx
+Причина ошибки:
+CalendarScreen.jsx уже ожидал recentInvites,
+а useReferral.js в проекте остался от Step 6 и recentInvites не возвращал.
 
-No SQL in this step.
-Do not replace src/ or public/.
-Header stays unchanged.
+Из-за этого при открытии вкладки выполнялось recentInvites.length,
+но recentInvites был undefined.
 
-What changed:
-- Locked PRO screen now sells the VALUE before asking for an invite.
-- Four visible PRO benefits:
-  1) cTrader platform connection / sync
-  2) Advanced analytics: PnL curve, period dynamics, statistics
-  3) Trading journal: instrument, direction, TP/SL, notes
-  4) Results review through history and notes
-- Two clear paths:
-  A) Get PRO free -> existing referral flow
-     inviter +26 days, friend +7 days after the friend's first real entry
-  B) PRO without invitation -> $1.99/month
-- The $1.99 checkout button is intentionally visual-only and disabled.
-  No fake payment flow has been added. Payment provider comes next.
-- RU / EN / RO copy included.
-- Mobile bottom-sheet is scrollable and desktop remains centered.
+Замени ОБА файла:
+1) D:\ai-trade-journal\CalendarScreen.jsx
+2) D:\ai-trade-journal\src\features\referrals\useReferral.js
 
-Run:
+CalendarScreen дополнительно защищён:
+recentInvites = []
+так что подобный mismatch больше не уронит экран.
+
+Потом:
 npm.cmd run build
+
+Ожидаемо:
+✓ built in ...
