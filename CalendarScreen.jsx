@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Inbox, TrendingUp, TrendingDown, Sparkles, Plus, X, Trash2,
   Calendar, ChevronDown, Link2, KeyRound, UploadCloud, FileText,
-  CheckCircle2, RefreshCw, History, Download, Pencil,
+  CheckCircle2, RefreshCw, History, Download, Pencil, Share2,
   Wallet, ShoppingCart, Home, Briefcase, ShoppingBag, CreditCard, MoreHorizontal, Cigarette, Utensils, Car, Gift, Gamepad2, Fish, ChartCandlestick, Repeat2, CircleDollarSign,
   Wifi, WifiOff, Zap, Award, Flame,
 } from 'lucide-react';
@@ -106,12 +106,6 @@ export default function CalendarScreen() {
     setupStep,
     setSetupStep,
   } = useAuth();
-
-  // TEST ONLY: force onboarding for an existing signed-in account.
-  // Remove this effect before production.
-  useEffect(() => {
-    if (user) setSetupStep('language');
-  }, [user, setSetupStep]);
 
   // --- cTrader connection state ------------------------------------------
   const [ctraderConnected, setCtraderConnected] = useState(false);
@@ -482,6 +476,7 @@ export default function CalendarScreen() {
       of: 'из',
       chooseLanguage: 'Выберите язык',
       chooseCurrency: 'Выберите валюту',
+      currencyHint: 'Не переживай — валюту можно изменить позже в настройках.',
       chooseTheme: 'Выберите тему',
       light: 'День',
       dark: 'Ночь',
@@ -518,6 +513,7 @@ export default function CalendarScreen() {
       of: 'of',
       chooseLanguage: 'Choose language',
       chooseCurrency: 'Choose currency',
+      currencyHint: 'No worries — you can change the currency later in Settings.',
       chooseTheme: 'Choose theme',
       light: 'Day',
       dark: 'Night',
@@ -554,6 +550,7 @@ export default function CalendarScreen() {
       of: 'din',
       chooseLanguage: 'Alege limba',
       chooseCurrency: 'Alege moneda',
+      currencyHint: 'Nu-ți face griji — poți schimba moneda mai târziu din Setări.',
       chooseTheme: 'Alege tema',
       light: 'Zi',
       dark: 'Noapte',
@@ -586,6 +583,72 @@ export default function CalendarScreen() {
       guideSkip: 'Mă descurc singur',
     },
   }[onboardingLang];
+
+  const historyShareCopy = {
+    ru: {
+      share: 'Поделиться',
+      shareTitle: 'Поделиться результатами',
+      preview: 'Предпросмотр',
+      myResults: 'Мои результаты',
+      period: 'Период',
+      result: 'Результат',
+      income: 'Доходы',
+      expense: 'Расходы',
+      records: 'Записей',
+      trades: 'Сделок',
+      winrate: 'Winrate',
+      profitable: 'В плюс',
+      losing: 'В минус',
+      saveImage: 'Сохранить PNG',
+      preparing: 'Готовим карточку…',
+      caption: 'Посмотри мои результаты',
+      createdWith: 'Собрано в AI Trade Journal',
+      close: 'Закрыть',
+      mixedCurrencies: 'Все валюты',
+    },
+    en: {
+      share: 'Share',
+      shareTitle: 'Share results',
+      preview: 'Preview',
+      myResults: 'My results',
+      period: 'Period',
+      result: 'Result',
+      income: 'Income',
+      expense: 'Expenses',
+      records: 'Entries',
+      trades: 'Trades',
+      winrate: 'Win rate',
+      profitable: 'Profitable',
+      losing: 'Losing',
+      saveImage: 'Save PNG',
+      preparing: 'Preparing card…',
+      caption: 'Check out my results',
+      createdWith: 'Created with AI Trade Journal',
+      close: 'Close',
+      mixedCurrencies: 'All currencies',
+    },
+    ro: {
+      share: 'Distribuie',
+      shareTitle: 'Distribuie rezultatele',
+      preview: 'Previzualizare',
+      myResults: 'Rezultatele mele',
+      period: 'Perioadă',
+      result: 'Rezultat',
+      income: 'Venituri',
+      expense: 'Cheltuieli',
+      records: 'Înregistrări',
+      trades: 'Tranzacții',
+      winrate: 'Rată de succes',
+      profitable: 'Pe plus',
+      losing: 'Pe minus',
+      saveImage: 'Salvează PNG',
+      preparing: 'Pregătim cardul…',
+      caption: 'Uite rezultatele mele',
+      createdWith: 'Creat cu AI Trade Journal',
+      close: 'Închide',
+      mixedCurrencies: 'Toate monedele',
+    },
+  }[resolveOnboardingLanguage(language)];
 
   function markFirstRunGuideComplete() {
     try { window.localStorage.setItem('calendar_guide_completed', '1'); } catch { /* ignore */ }
@@ -1371,6 +1434,10 @@ export default function CalendarScreen() {
   const [exportOpen, setExportOpen] = useState(false);
   const [exportPeriodPreset, setExportPeriodPreset] = useState('currentPeriod');
   const [confirmingClear, setConfirmingClear] = useState(false);
+  const [historyShareOpen, setHistoryShareOpen] = useState(false);
+  const [historyShareBusy, setHistoryShareBusy] = useState(false);
+  const [historyShareUrl, setHistoryShareUrl] = useState('');
+  const historyShareBlobRef = useRef(null);
 
   // Keyboard navigation for PC (ArrowLeft / ArrowRight to switch months)
   useEffect(() => {
@@ -1434,6 +1501,279 @@ export default function CalendarScreen() {
   const historyIncome = useMemo(() => historyTrades.reduce((sum, t) => sum + (t.pnl > 0 ? t.pnl : 0), 0), [historyTrades]);
   const historyExpense = useMemo(() => historyTrades.reduce((sum, t) => sum + (t.pnl < 0 ? Math.abs(t.pnl) : 0), 0), [historyTrades]);
   const historyCurrencySymbol = historyCurrency === 'ALL' ? '' : getCurrencyMeta(historyCurrency).symbol;
+
+  useEffect(() => {
+    return () => {
+      if (historyShareUrl) URL.revokeObjectURL(historyShareUrl);
+    };
+  }, [historyShareUrl]);
+
+  function roundedCanvasRect(ctx, x, y, width, height, radius) {
+    const r = Math.min(radius, width / 2, height / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + width, y, x + width, y + height, r);
+    ctx.arcTo(x + width, y + height, x, y + height, r);
+    ctx.arcTo(x, y + height, x, y, r);
+    ctx.arcTo(x, y, x + width, y, r);
+    ctx.closePath();
+  }
+
+  function fitCanvasText(ctx, value, maxWidth, startSize, minSize = 34, weight = 700) {
+    let size = startSize;
+    const family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+    while (size > minSize) {
+      ctx.font = `${weight} ${size}px ${family}`;
+      if (ctx.measureText(value).width <= maxWidth) return size;
+      size -= 2;
+    }
+    return minSize;
+  }
+
+  function createHistoryShareBlob() {
+    return new Promise((resolve, reject) => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1080;
+        canvas.height = 1350;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('CANVAS_UNAVAILABLE');
+
+        const dark = !isLight;
+        const background = dark ? '#09090b' : '#f7f8fa';
+        const panel = dark ? '#121216' : '#ffffff';
+        const panel2 = dark ? '#17171c' : '#f4f5f7';
+        const border = dark ? '#28282f' : '#e2e5e9';
+        const textMain = dark ? '#f4f4f5' : '#18181b';
+        const textMuted = dark ? '#8b8b95' : '#71717a';
+        const amber = '#f5b91f';
+        const green = '#10b981';
+        const red = '#ef4444';
+
+        const gradient = ctx.createLinearGradient(0, 0, 1080, 1350);
+        if (dark) {
+          gradient.addColorStop(0, '#0b0b0e');
+          gradient.addColorStop(0.62, '#09090b');
+          gradient.addColorStop(1, '#11100b');
+        } else {
+          gradient.addColorStop(0, '#ffffff');
+          gradient.addColorStop(0.72, '#f7f8fa');
+          gradient.addColorStop(1, '#fff9e8');
+        }
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Soft accent glow.
+        const glow = ctx.createRadialGradient(910, 120, 0, 910, 120, 390);
+        glow.addColorStop(0, dark ? 'rgba(245,185,31,.17)' : 'rgba(245,185,31,.13)');
+        glow.addColorStop(1, 'rgba(245,185,31,0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(500, 0, 580, 500);
+
+        // Brand mark — same four-tile language as the app icon, but drawn natively.
+        roundedCanvasRect(ctx, 72, 72, 92, 92, 24);
+        ctx.fillStyle = dark ? '#141418' : '#ffffff';
+        ctx.fill();
+        ctx.strokeStyle = dark ? '#3a3219' : '#eadba8';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        const tile = 29, gap = 8, startX = 84, startY = 84;
+        [[0,0],[1,0],[0,1],[1,1]].forEach(([cx, cy], idx) => {
+          roundedCanvasRect(ctx, startX + cx*(tile+gap), startY + cy*(tile+gap), tile, tile, 8);
+          ctx.fillStyle = idx === 1 ? '#10b981' : dark ? '#24242a' : '#e8eaee';
+          ctx.fill();
+        });
+
+        ctx.fillStyle = textMain;
+        ctx.font = '700 42px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(traderMode ? 'AI Trade Journal' : (resolveOnboardingLanguage(language) === 'ru' ? 'Денежный календарь' : 'AI Trade Journal'), 190, 115);
+        ctx.fillStyle = textMuted;
+        ctx.font = '500 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(historyShareCopy.myResults, 190, 151);
+
+        const periodText = dateFrom === dateTo ? dateFrom : `${dateFrom} — ${dateTo}`;
+
+        // Main result card.
+        roundedCanvasRect(ctx, 72, 230, 936, 390, 42);
+        ctx.fillStyle = panel;
+        ctx.fill();
+        ctx.strokeStyle = border;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = amber;
+        ctx.font = '700 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(historyShareCopy.period.toUpperCase(), 120, 294);
+
+        ctx.fillStyle = textMuted;
+        ctx.font = '500 28px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(periodText, 120, 340);
+
+        const hasMixedCurrencies = historyCurrency === 'ALL' && Object.keys(historyCurrencyGroups || {}).length > 1;
+        const sign = historyTotal >= 0 ? '+' : '−';
+        const amount = hasMixedCurrencies
+          ? historyShareCopy.mixedCurrencies
+          : `${sign}${historyCurrencySymbol}${formatMoney(Math.abs(historyTotal))}`;
+        const amountColor = hasMixedCurrencies ? amber : historyTotal >= 0 ? green : red;
+
+        ctx.fillStyle = textMuted;
+        ctx.font = '600 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(historyShareCopy.result, 120, 425);
+
+        const amountSize = fitCanvasText(ctx, amount, 820, 82, 42, 760);
+        ctx.font = `760 ${amountSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif`;
+        ctx.fillStyle = amountColor;
+        ctx.fillText(amount, 120, 518);
+
+        ctx.fillStyle = textMuted;
+        ctx.font = '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(traderMode ? `${historyTrades.length} ${historyShareCopy.trades}` : `${historyTrades.length} ${historyShareCopy.records}`, 120, 570);
+
+        const wins = historyTrades.filter((item) => Number(item.pnl) >= 0).length;
+        const losses = historyTrades.filter((item) => Number(item.pnl) < 0).length;
+        const winrate = historyTrades.length ? Math.round((wins / historyTrades.length) * 100) : 0;
+
+        const cards = traderMode
+          ? [
+              [historyShareCopy.profitable, String(wins), green],
+              [historyShareCopy.losing, String(losses), red],
+              [historyShareCopy.winrate, `${winrate}%`, amber],
+            ]
+          : [
+              [historyShareCopy.income, hasMixedCurrencies ? '—' : `+${historyCurrencySymbol}${formatMoneyShort(historyIncome)}`, green],
+              [historyShareCopy.expense, hasMixedCurrencies ? '—' : `−${historyCurrencySymbol}${formatMoneyShort(historyExpense)}`, red],
+              [historyShareCopy.records, String(historyTrades.length), amber],
+            ];
+
+        const cardY = 670, cardW = 292, cardH = 220, cardGap = 30;
+        cards.forEach(([label, value, color], index) => {
+          const x = 72 + index * (cardW + cardGap);
+          roundedCanvasRect(ctx, x, cardY, cardW, cardH, 30);
+          ctx.fillStyle = panel2;
+          ctx.fill();
+          ctx.strokeStyle = border;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.fillStyle = textMuted;
+          ctx.font = '600 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+          ctx.fillText(label, x + 28, cardY + 62);
+
+          const valueSize = fitCanvasText(ctx, value, cardW - 56, 42, 28, 760);
+          ctx.font = `760 ${valueSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif`;
+          ctx.fillStyle = color;
+          ctx.fillText(value, x + 28, cardY + 132);
+        });
+
+        // Caption area.
+        roundedCanvasRect(ctx, 72, 940, 936, 210, 34);
+        ctx.fillStyle = dark ? '#111115' : '#ffffff';
+        ctx.fill();
+        ctx.strokeStyle = border;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = amber;
+        ctx.font = '700 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(historyShareCopy.caption.toUpperCase(), 116, 1000);
+
+        ctx.fillStyle = textMain;
+        ctx.font = '650 34px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        const captionResult = hasMixedCurrencies ? historyShareCopy.mixedCurrencies : amount;
+        ctx.fillText(`${captionResult} · ${periodText}`, 116, 1060);
+
+        ctx.fillStyle = textMuted;
+        ctx.font = '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(historyShareCopy.createdWith, 116, 1110);
+
+        // Footer signature line.
+        ctx.fillStyle = amber;
+        roundedCanvasRect(ctx, 72, 1236, 70, 5, 3);
+        ctx.fill();
+        ctx.fillStyle = textMuted;
+        ctx.font = '600 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(traderMode ? 'PRO' : 'FREE', 158, 1245);
+
+        canvas.toBlob((blob) => {
+          if (!blob) reject(new Error('IMAGE_EXPORT_FAILED'));
+          else resolve(blob);
+        }, 'image/png', 0.96);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  async function openHistoryShare() {
+    if (!historyTrades.length) return;
+    setHistoryShareOpen(true);
+    setHistoryShareBusy(true);
+    try {
+      const blob = await createHistoryShareBlob();
+      historyShareBlobRef.current = blob;
+      if (historyShareUrl) URL.revokeObjectURL(historyShareUrl);
+      setHistoryShareUrl(URL.createObjectURL(blob));
+    } catch (error) {
+      console.error('Share image error:', error);
+      setHistoryShareOpen(false);
+    } finally {
+      setHistoryShareBusy(false);
+    }
+  }
+
+  function closeHistoryShare() {
+    setHistoryShareOpen(false);
+  }
+
+  function downloadHistoryShareImage() {
+    const blob = historyShareBlobRef.current;
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ai-trade-journal-${dateFrom}-${dateTo}.png`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function shareHistoryResult() {
+    const blob = historyShareBlobRef.current;
+    if (!blob) return;
+
+    const periodText = dateFrom === dateTo ? dateFrom : `${dateFrom} — ${dateTo}`;
+    const hasMixedCurrencies = historyCurrency === 'ALL' && Object.keys(historyCurrencyGroups || {}).length > 1;
+    const resultText = hasMixedCurrencies
+      ? historyShareCopy.mixedCurrencies
+      : `${historyTotal >= 0 ? '+' : '−'}${historyCurrencySymbol}${formatMoney(Math.abs(historyTotal))}`;
+    const shareText = `${historyShareCopy.caption}: ${resultText} · ${periodText}`;
+    const file = new File([blob], `ai-trade-journal-${dateFrom}-${dateTo}.png`, { type: 'image/png' });
+
+    try {
+      if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+        await navigator.share({
+          title: historyShareCopy.shareTitle,
+          text: shareText,
+          files: [file],
+        });
+        return;
+      }
+      if (navigator.share) {
+        await navigator.share({ title: historyShareCopy.shareTitle, text: shareText });
+        downloadHistoryShareImage();
+        return;
+      }
+      downloadHistoryShareImage();
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        console.error('Native share error:', error);
+        downloadHistoryShareImage();
+      }
+    }
+  }
+
   const historyInsights = useMemo(() => {
     if (traderMode || historyExpense === 0) return [];
     const expensesByCategory = {};
@@ -1561,8 +1901,12 @@ export default function CalendarScreen() {
             isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-amber-400/50' : 'border-zinc-800 bg-black/20 text-zinc-200 hover:border-amber-400/35'
           }`}
         >
-          <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${isLight ? 'bg-white text-amber-600 shadow-sm' : 'bg-zinc-900 text-amber-400'}`}>
-            <ActiveIcon className="h-3.5 w-3.5" />
+          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${
+            isLight
+              ? 'border-amber-200/80 bg-gradient-to-br from-amber-50 to-white text-amber-600 shadow-sm'
+              : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.10] to-zinc-950 text-amber-400'
+          }`}>
+            <ActiveIcon className="h-4 w-4 stroke-[1.8]" />
           </span>
           <span className="min-w-0 flex-1 truncate text-xs font-data">{historyNameFilter || t('all')}</span>
           <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-zinc-500 transition-transform ${historyCategoryMenuOpen ? 'rotate-180' : ''}`} />
@@ -1585,8 +1929,14 @@ export default function CalendarScreen() {
                         : isLight ? 'text-zinc-700 hover:bg-zinc-50' : 'text-zinc-300 hover:bg-zinc-900'
                     }`}
                   >
-                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${active ? 'bg-amber-400/15 text-amber-600' : isLight ? 'bg-zinc-100 text-zinc-500' : 'bg-zinc-900 text-zinc-500'}`}>
-                      <Icon className="h-3.5 w-3.5" />
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
+                      active
+                        ? 'border-amber-400/25 bg-amber-400/[0.12] text-amber-600'
+                        : isLight
+                          ? 'border-zinc-200 bg-white text-zinc-500 shadow-sm'
+                          : 'border-white/[0.06] bg-white/[0.03] text-zinc-400'
+                    }`}>
+                      <Icon className="h-4 w-4 stroke-[1.8]" />
                     </span>
                     <span className="min-w-0 flex-1 truncate font-medium">{label}</span>
                     {active && <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />}
@@ -2212,15 +2562,34 @@ export default function CalendarScreen() {
                     : t('financialHistory')}
                 </h2>
               </div>
-              <button
-                onClick={closeHistory}
-                className={`rounded-full p-2 transition-colors ${
-                  isLight ? 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200'
-                }`}
-                aria-label={t('close')}
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={openHistoryShare}
+                  disabled={historyTrades.length === 0}
+                  className={`group inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-35 ${
+                    isLight
+                      ? 'border-zinc-200 bg-white text-zinc-600 shadow-sm hover:border-amber-300 hover:text-amber-700'
+                      : 'border-white/[0.08] bg-white/[0.035] text-zinc-300 hover:border-amber-400/25 hover:text-amber-300'
+                  }`}
+                  aria-label={historyShareCopy.share}
+                  title={historyShareCopy.share}
+                >
+                  <Share2 className="h-4 w-4 stroke-[1.8] transition-transform group-hover:-translate-y-0.5" />
+                  <span className="hidden sm:inline">{historyShareCopy.share}</span>
+                </button>
+                <button
+                  onClick={closeHistory}
+                  className={`grid h-10 w-10 place-items-center rounded-xl border transition-colors ${
+                    isLight
+                      ? 'border-zinc-200 bg-white text-zinc-500 shadow-sm hover:bg-zinc-100 hover:text-zinc-800'
+                      : 'border-white/[0.08] bg-white/[0.035] text-zinc-500 hover:bg-white/[0.07] hover:text-zinc-200'
+                  }`}
+                  aria-label={t('close')}
+                >
+                  <X className="h-4 w-4 stroke-[1.8]" />
+                </button>
+              </div>
             </div>
 
             {traderMode && <div className={`flex shrink-0 items-center justify-between border-b px-5 py-2 sm:px-6 ${isLight ? 'border-zinc-100' : 'border-white/5'}`}>
@@ -2250,7 +2619,13 @@ export default function CalendarScreen() {
                       }`}
                     >
                       <span className="flex items-center gap-2">
-                        <TrendingUp className={`h-4 w-4 ${freeHistoryPanel === 'dynamics' ? 'text-amber-500' : 'text-zinc-500'}`} />
+                        <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg border ${
+                          freeHistoryPanel === 'dynamics'
+                            ? 'border-amber-400/20 bg-amber-400/[0.10] text-amber-500'
+                            : isLight ? 'border-zinc-200 bg-white text-zinc-500' : 'border-white/[0.06] bg-white/[0.03] text-zinc-500'
+                        }`}>
+                          <TrendingUp className="h-3.5 w-3.5 stroke-[1.8]" />
+                        </span>
                         <span className="text-xs font-semibold">{t('freeDynamicsBtn')}</span>
                         <ChevronDown className={`ml-auto h-3.5 w-3.5 transition-transform ${freeHistoryPanel === 'dynamics' ? 'rotate-180' : ''}`} />
                       </span>
@@ -2275,7 +2650,13 @@ export default function CalendarScreen() {
                       }`}
                     >
                       <span className="flex items-center gap-2">
-                        <Wallet className={`h-4 w-4 ${freeHistoryPanel === 'analysis' ? 'text-amber-500' : 'text-zinc-500'}`} />
+                        <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg border ${
+                          freeHistoryPanel === 'analysis'
+                            ? 'border-amber-400/20 bg-amber-400/[0.10] text-amber-500'
+                            : isLight ? 'border-zinc-200 bg-white text-zinc-500' : 'border-white/[0.06] bg-white/[0.03] text-zinc-500'
+                        }`}>
+                          <Wallet className="h-3.5 w-3.5 stroke-[1.8]" />
+                        </span>
                         <span className="text-xs font-semibold">{t('freeAnalysisTitle')}</span>
                         <ChevronDown className={`ml-auto h-3.5 w-3.5 transition-transform ${freeHistoryPanel === 'analysis' ? 'rotate-180' : ''}`} />
                       </span>
@@ -2588,8 +2969,12 @@ export default function CalendarScreen() {
                                 : 'border-zinc-800/80 hover:bg-zinc-900 active:bg-zinc-800/80 text-zinc-100'
                             }`}
                           >
-                            <span className={`h-10 w-10 shrink-0 rounded-xl flex items-center justify-center ${entry.pnl >= 0 ? (isLight ? 'bg-emerald-100 text-emerald-600' : 'bg-emerald-500/15 text-emerald-400') : (isLight ? 'bg-red-100 text-red-600' : 'bg-red-500/15 text-red-400')}`}>
-                              <Icon className="h-4 w-4" />
+                            <span className={`h-11 w-11 shrink-0 rounded-2xl border flex items-center justify-center shadow-sm ${
+                              entry.pnl >= 0
+                                ? (isLight ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-white text-emerald-600' : 'border-emerald-400/15 bg-gradient-to-br from-emerald-500/[0.12] to-zinc-950 text-emerald-400')
+                                : (isLight ? 'border-rose-200 bg-gradient-to-br from-rose-50 to-white text-rose-600' : 'border-red-400/15 bg-gradient-to-br from-red-500/[0.12] to-zinc-950 text-red-400')
+                            }`}>
+                              <Icon className="h-[18px] w-[18px] stroke-[1.8]" />
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className={`block text-sm font-medium truncate ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{entry.instrument || t('catOther')}</span>
@@ -3972,6 +4357,14 @@ export default function CalendarScreen() {
             {setupStep === 'language' && <div className="grid grid-cols-3 gap-2">{LANGUAGES.map((item) => <button key={item.code} onClick={() => handleOnboardingLanguageSelect(item)} className={`rounded-lg border px-3 py-3 font-data text-sm hover:border-amber-400 ${
               isLight ? 'border-zinc-300' : 'border-zinc-700'
             }`}>{item.label}</button>)}</div>}
+            {setupStep === 'currency' && (
+              <div className={`mb-3 flex items-start gap-2 rounded-xl border px-3 py-2.5 ${
+                isLight ? 'border-amber-200/80 bg-amber-50/70 text-zinc-600' : 'border-amber-400/15 bg-amber-400/[0.05] text-zinc-400'
+              }`}>
+                <CircleDollarSign className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                <p className="text-xs leading-relaxed">{onboardingCopy.currencyHint}</p>
+              </div>
+            )}
             {setupStep === 'currency' && <div className="grid grid-cols-2 gap-2">{CURRENCIES.map((item) => <button key={item.code} onClick={() => { setCurrency(item.code); setSetupStep('theme'); }} className={`rounded-lg border px-3 py-3 font-data text-sm hover:border-amber-400 ${
               isLight ? 'border-zinc-300' : 'border-zinc-700'
             }`}>{item.symbol} {item.code}</button>)}</div>}
@@ -4089,6 +4482,85 @@ export default function CalendarScreen() {
             >
               Продолжить
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* SHARE RESULTS — native image preview + Web Share API */}
+      {historyShareOpen && (
+        <div
+          className="fixed inset-0 z-[95] flex items-end justify-center bg-black/75 px-0 pt-10 backdrop-blur-sm sm:items-center sm:px-4 sm:pt-0"
+          onClick={(event) => { if (event.target === event.currentTarget) closeHistoryShare(); }}
+        >
+          <div className={`w-full max-w-md overflow-hidden rounded-t-[28px] border shadow-2xl sm:rounded-3xl ${
+            isLight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-white/[0.08] bg-zinc-950 text-zinc-100'
+          }`}>
+            <div className="flex justify-center pt-2.5 sm:hidden" aria-hidden="true">
+              <span className={`h-1 w-11 rounded-full ${isLight ? 'bg-zinc-300' : 'bg-zinc-700'}`} />
+            </div>
+
+            <div className={`flex items-center justify-between border-b px-5 py-4 ${isLight ? 'border-zinc-200' : 'border-white/[0.06]'}`}>
+              <div>
+                <p className="font-data text-[9px] font-semibold uppercase tracking-[0.22em] text-amber-500">{historyShareCopy.preview}</p>
+                <h3 className="mt-1 font-display text-lg font-semibold">{historyShareCopy.shareTitle}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={closeHistoryShare}
+                className={`grid h-10 w-10 place-items-center rounded-xl border ${
+                  isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-500' : 'border-white/[0.08] bg-white/[0.04] text-zinc-400'
+                }`}
+                aria-label={historyShareCopy.close}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className={`max-h-[70dvh] overflow-y-auto p-4 sm:p-5 ${isLight ? 'bg-zinc-50/70' : 'bg-black/20'}`}>
+              {historyShareBusy ? (
+                <div className={`grid aspect-[4/5] place-items-center rounded-2xl border ${
+                  isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-zinc-900'
+                }`}>
+                  <div className="text-center">
+                    <RefreshCw className="mx-auto h-5 w-5 animate-spin text-amber-500" />
+                    <p className="mt-3 text-xs text-zinc-500">{historyShareCopy.preparing}</p>
+                  </div>
+                </div>
+              ) : historyShareUrl ? (
+                <img
+                  src={historyShareUrl}
+                  alt={historyShareCopy.shareTitle}
+                  className={`block w-full rounded-2xl border object-cover shadow-xl ${
+                    isLight ? 'border-zinc-200' : 'border-white/[0.08]'
+                  }`}
+                />
+              ) : null}
+            </div>
+
+            <div className={`grid grid-cols-2 gap-2 border-t px-4 pt-3 pb-[max(14px,env(safe-area-inset-bottom))] sm:px-5 sm:pb-5 ${
+              isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-zinc-950'
+            }`}>
+              <button
+                type="button"
+                onClick={downloadHistoryShareImage}
+                disabled={historyShareBusy || !historyShareUrl}
+                className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-colors disabled:opacity-40 ${
+                  isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100' : 'border-white/[0.08] bg-white/[0.04] text-zinc-300 hover:bg-white/[0.07]'
+                }`}
+              >
+                <Download className="h-4 w-4 stroke-[1.8]" />
+                {historyShareCopy.saveImage}
+              </button>
+              <button
+                type="button"
+                onClick={shareHistoryResult}
+                disabled={historyShareBusy || !historyShareUrl}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-3 text-sm font-semibold text-zinc-950 shadow-lg shadow-amber-500/10 transition-all hover:from-amber-300 hover:to-amber-400 active:scale-[0.99] disabled:opacity-40"
+              >
+                <Share2 className="h-4 w-4 stroke-[2]" />
+                {historyShareCopy.share}
+              </button>
+            </div>
           </div>
         </div>
       )}
