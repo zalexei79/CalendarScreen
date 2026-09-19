@@ -78,6 +78,8 @@ import CalendarGrid from './CalendarGrid';
 import MonthlyGoal from './MonthlyGoal';
 import CtraderControl from './src/features/ctrader/CtraderControl';
 import { createQrMatrix, drawQrToCanvas } from './qrCode.js';
+import { useReferral } from './src/features/referrals/useReferral.js';
+import { useProAccess } from './src/features/pro/useProAccess.js';
 
 export default function CalendarScreen() {
   const [today, setToday] = useState(() => new Date());
@@ -107,6 +109,15 @@ export default function CalendarScreen() {
     setupStep,
     setSetupStep,
   } = useAuth();
+
+  // Referral code belongs to the signed-in account. The hook also claims any
+  // referral that was saved before/through Google OAuth.
+  const { referralCode } = useReferral({ user });
+  const {
+    active: proAccessActive,
+    until: proAccessUntil,
+    loading: proAccessLoading,
+  } = useProAccess({ user });
 
   // --- cTrader connection state ------------------------------------------
   const [ctraderConnected, setCtraderConnected] = useState(false);
@@ -370,21 +381,55 @@ export default function CalendarScreen() {
     }
   }, [depositSize]);
 
-  const [traderMode, setTraderMode] = useState(() => {
-    try {
-      return window.localStorage.getItem(TRADER_MODE_STORAGE_KEY) === '1';
-    } catch {
-      return false;
+  // PRO mode is now a UI preference only. Permission itself comes from
+  // Supabase get_my_pro_status(); localStorage can no longer unlock PRO.
+  const [traderMode, setTraderModeInternal] = useState(false);
+  const [proAccessPromptOpen, setProAccessPromptOpen] = useState(false);
+  const [referralShareStatus, setReferralShareStatus] = useState('');
+
+  function setTraderMode(valueOrUpdater) {
+    const requested = typeof valueOrUpdater === 'function'
+      ? Boolean(valueOrUpdater(traderMode))
+      : Boolean(valueOrUpdater);
+
+    if (requested) {
+      if (proAccessLoading) return;
+      if (!proAccessActive) {
+        setReferralShareStatus('');
+        setProAccessPromptOpen(true);
+        return;
+      }
     }
-  });
+
+    setTraderModeInternal(requested);
+  }
 
   useEffect(() => {
     try {
       window.localStorage.setItem(TRADER_MODE_STORAGE_KEY, traderMode ? '1' : '0');
     } catch {
-      // ignore storage write failures
+      // localStorage remembers only the preferred view, never the entitlement.
     }
   }, [traderMode]);
+
+  useEffect(() => {
+    if (proAccessLoading) return;
+
+    if (!proAccessActive) {
+      setTraderModeInternal(false);
+      try { window.localStorage.setItem(TRADER_MODE_STORAGE_KEY, '0'); } catch { /* ignore */ }
+      return;
+    }
+
+    // Restore the user's preferred view only after the server confirms access.
+    try {
+      if (window.localStorage.getItem(TRADER_MODE_STORAGE_KEY) === '1') {
+        setTraderModeInternal(true);
+      }
+    } catch {
+      // ignore storage read failures
+    }
+  }, [proAccessActive, proAccessLoading, user?.id]);
 
   // --- Settings: language / currency / theme ------------------------------
   const [language, setLanguage] = useState(() => {
@@ -659,6 +704,83 @@ export default function CalendarScreen() {
       scanToInstall: 'Scanează codul QR și instalează aplicația pe ecranul principal',
     },
   }[resolveOnboardingLanguage(language)];
+
+  const proAccessCopy = {
+    ru: {
+      eyebrow: 'ДОСТУП К PRO',
+      title: 'PRO открывается за приглашение',
+      body: 'Пригласи одного нового пользователя. Когда он создаст первую настоящую запись, ты получишь 26 дней PRO.',
+      reward: '+26 дней PRO',
+      rewardHint: 'за каждого активного приглашённого',
+      share: 'Пригласить друга',
+      signIn: 'Войти и получить ссылку',
+      preparing: 'Готовим твою ссылку…',
+      copied: 'Ссылка скопирована',
+      close: 'Не сейчас',
+      inviteText: 'Попробуй AI Trade Journal. Установи приложение по моей ссылке — это займёт пару секунд.',
+    },
+    en: {
+      eyebrow: 'PRO ACCESS',
+      title: 'Unlock PRO by inviting a friend',
+      body: 'Invite one new user. When they create their first real entry, you get 26 days of PRO.',
+      reward: '+26 days PRO',
+      rewardHint: 'for every active referral',
+      share: 'Invite a friend',
+      signIn: 'Sign in to get your link',
+      preparing: 'Preparing your link…',
+      copied: 'Link copied',
+      close: 'Not now',
+      inviteText: 'Try AI Trade Journal. Install the app from my link — it only takes a few seconds.',
+    },
+    ro: {
+      eyebrow: 'ACCES PRO',
+      title: 'Deblochează PRO invitând un prieten',
+      body: 'Invită un utilizator nou. Când creează prima înregistrare reală, primești 26 de zile PRO.',
+      reward: '+26 zile PRO',
+      rewardHint: 'pentru fiecare invitație activă',
+      share: 'Invită un prieten',
+      signIn: 'Autentifică-te pentru link',
+      preparing: 'Pregătim linkul tău…',
+      copied: 'Link copiat',
+      close: 'Nu acum',
+      inviteText: 'Încearcă AI Trade Journal. Instalează aplicația din linkul meu — durează doar câteva secunde.',
+    },
+  }[resolveOnboardingLanguage(language)];
+
+  async function shareReferralInvite() {
+    if (!user) {
+      handleGoogleLogin();
+      return;
+    }
+    if (!referralCode) return;
+
+    const inviteUrl = new URL('/?install=1', window.location.origin);
+    inviteUrl.searchParams.set('ref', referralCode);
+    const url = inviteUrl.toString();
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'AI Trade Journal',
+          text: proAccessCopy.inviteText,
+          url,
+        });
+        setReferralShareStatus('');
+        return;
+      }
+
+      await navigator.clipboard.writeText(url);
+      setReferralShareStatus('copied');
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+      try {
+        await navigator.clipboard.writeText(url);
+        setReferralShareStatus('copied');
+      } catch {
+        setReferralShareStatus('');
+      }
+    }
+  }
 
   function markFirstRunGuideComplete() {
     try { window.localStorage.setItem('calendar_guide_completed', '1'); } catch { /* ignore */ }
@@ -1597,7 +1719,9 @@ export default function CalendarScreen() {
         const wins = historyTrades.filter((item) => Number(item.pnl) >= 0).length;
         const losses = historyTrades.filter((item) => Number(item.pnl) < 0).length;
         const winrate = historyTrades.length ? Math.round((wins / historyTrades.length) * 100) : 0;
-        const installUrl = `${window.location.origin}/?install=1`;
+        const installUrlObject = new URL('/?install=1', window.location.origin);
+        if (referralCode) installUrlObject.searchParams.set('ref', referralCode);
+        const installUrl = installUrlObject.toString();
 
         const gradient = ctx.createLinearGradient(0, 0, 1080, 1350);
         if (dark) {
@@ -2251,6 +2375,7 @@ export default function CalendarScreen() {
         openConnectModal={openConnectModal} ctraderConnected={ctraderConnected}
         installInfoRef={installInfoRef} handleInstallClick={handleInstallClick}
         pendingSyncCount={pendingSyncCount} installInfoOpen={installInfoOpen} installInstructions={installInstructions} isPwaInstalled={isPwaInstalled}
+        proAccessActive={proAccessActive} proAccessLoading={proAccessLoading} proAccessUntil={proAccessUntil}
         periodStats={periodStats} periodTrades={periodTrades} currencySymbol={currencySymbol} formatMoney={formatMoney}
       />
 
@@ -4544,6 +4669,80 @@ export default function CalendarScreen() {
             >
               Продолжить
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* PRO ACCESS — server entitlement gate */}
+      {proAccessPromptOpen && (
+        <div
+          className="fixed inset-0 z-[96] flex items-end justify-center bg-black/75 px-0 pt-10 backdrop-blur-sm sm:items-center sm:px-4 sm:pt-0"
+          onClick={(event) => { if (event.target === event.currentTarget) setProAccessPromptOpen(false); }}
+        >
+          <div className={`w-full max-w-md overflow-hidden rounded-t-[28px] border shadow-2xl sm:rounded-3xl ${
+            isLight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-white/[0.08] bg-zinc-950 text-zinc-100'
+          }`}>
+            <div className="flex justify-center pt-2.5 sm:hidden" aria-hidden="true">
+              <span className={`h-1 w-11 rounded-full ${isLight ? 'bg-zinc-300' : 'bg-zinc-700'}`} />
+            </div>
+
+            <div className="px-5 pb-5 pt-4 sm:px-6 sm:pt-6">
+              <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 ${
+                isLight
+                  ? 'border-amber-200 bg-amber-50 text-amber-700'
+                  : 'border-amber-400/15 bg-amber-400/[0.06] text-amber-300'
+              }`}>
+                <Zap className="h-3.5 w-3.5" />
+                <span className="font-data text-[9px] font-bold tracking-[0.2em]">{proAccessCopy.eyebrow}</span>
+              </div>
+
+              <h3 className="mt-4 font-display text-2xl font-semibold tracking-tight">{proAccessCopy.title}</h3>
+              <p className={`mt-2 text-sm leading-6 ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>
+                {proAccessCopy.body}
+              </p>
+
+              <div className={`mt-5 rounded-2xl border p-4 ${
+                isLight
+                  ? 'border-amber-200/80 bg-gradient-to-br from-amber-50 to-white'
+                  : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.08] to-white/[0.02]'
+              }`}>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-data text-2xl font-bold text-amber-500">{proAccessCopy.reward}</p>
+                    <p className={`mt-1 text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{proAccessCopy.rewardHint}</p>
+                  </div>
+                  <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl border ${
+                    isLight ? 'border-amber-200 bg-white text-amber-600 shadow-sm' : 'border-amber-400/20 bg-amber-400/[0.08] text-amber-300'
+                  }`}>
+                    <Award className="h-5 w-5" />
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={shareReferralInvite}
+                disabled={Boolean(user) && !referralCode}
+                className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-4 text-sm font-bold text-zinc-950 shadow-lg shadow-amber-500/10 transition-all hover:from-amber-300 hover:to-amber-400 active:scale-[0.99] disabled:cursor-wait disabled:opacity-55"
+              >
+                <Share2 className="h-4 w-4 stroke-[2]" />
+                {!user
+                  ? proAccessCopy.signIn
+                  : referralCode
+                    ? (referralShareStatus === 'copied' ? proAccessCopy.copied : proAccessCopy.share)
+                    : proAccessCopy.preparing}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setProAccessPromptOpen(false)}
+                className={`mt-2 min-h-11 w-full rounded-xl px-4 text-sm transition-colors ${
+                  isLight ? 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800' : 'text-zinc-500 hover:bg-white/[0.05] hover:text-zinc-300'
+                }`}
+              >
+                {proAccessCopy.close}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -64,6 +64,15 @@ if ('serviceWorker' in navigator) {
 }
 
 const params = new URLSearchParams(window.location.search)
+
+// Keep the inviter code across:
+// QR -> install screen -> Google OAuth -> first app launch.
+// This is intentionally stored before React renders.
+const incomingReferral = String(params.get('ref') || '').trim().toUpperCase()
+if (/^[A-Z0-9]{4,32}$/.test(incomingReferral)) {
+  try { window.localStorage.setItem('atj_pending_referral_code', incomingReferral) } catch { /* ignore */ }
+}
+
 const normalizedPath = window.location.pathname.replace(/\/+$/, '') || '/'
 const showInstallPage = params.get('install') === '1' || normalizedPath === '/install'
 

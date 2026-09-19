@@ -1,33 +1,33 @@
-V5.1 SAFE iPhone PWA patch
+REFERRAL STEP 2 — QR -> Google login -> automatic claim
 
 IMPORTANT:
-Do NOT replace your whole src or public folders.
+Do NOT replace your whole src/ folder.
 
-For the iPhone status-bar/layout fix:
-1) Replace only project-root index.html with this index.html.
+Copy exactly these files into your existing project:
 
-Keep your existing src/ and public/ folders intact.
+1) CalendarScreen.jsx
+   -> D:\ai-trade-journal\CalendarScreen.jsx
 
-Why:
-- V5 used viewport-fit=cover + black-translucent, which lets a standalone iPhone PWA draw underneath the iOS status bar.
-- This patch returns to normal safe viewport behavior and uses a non-translucent black status bar.
+2) src\main.jsx
+   -> D:\ai-trade-journal\src\main.jsx
 
-Your existing project should still contain at least:
-src/Login.jsx
-src/main.jsx
-src/features/
-src/shared/
-src/supabaseClient.js
+3) src\features\referrals\useReferral.js
+   -> create the folders if needed and place the NEW file there.
 
-public/icon-32.png
-public/icon-180.png
-public/icon-192.png
-public/icon-512.png
-public/manifest.json
-public/sw.js
+Nothing in public/ is changed in this step.
+Do not touch Login.jsx, shared/, trades-sync/, Supabase client, cTrader, or service worker.
 
-InstallPage.jsx is included only as a recovery copy. Its correct project location is:
-src/InstallPage.jsx
+What this step does:
+- A signed-in user's share QR becomes:
+  /?install=1&ref=THEIR_CODE
+- The incoming ref code is stored immediately in localStorage.
+- It survives the Google OAuth redirect.
+- After Supabase restores the logged-in user, claim_referral(code) runs once.
+- The pending code is removed after a successful/permanently rejected claim.
+- Your existing database trigger still gives the inviter +26 days only after
+  the referred user creates the first real entry.
 
-After the change:
+Then run:
 npm.cmd run build
+
+Do NOT change the FREE/PRO entitlement UI yet. That is Step 3.

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   ChevronLeft, ChevronRight, Link2, LogIn, LogOut, Download, Smartphone, Monitor, Wifi, Cloud,
-  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, ChevronDown,
+  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, ChevronDown, LockKeyhole,
 } from 'lucide-react';
 import { LANGUAGES, CURRENCIES } from './src/shared/config/constants';
 import { monthsFor } from './src/shared/i18n';
@@ -18,6 +18,7 @@ export default function Header({
   platformFilter, platformOptions = [], calendarTypeFilter, setCalendarTypeFilter,
   periodStats, periodTrades = [], currencySymbol = '$', formatMoney,
   monthSummary,
+  proAccessActive = false, proAccessLoading = false, proAccessUntil = null,
 }) {
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
 
@@ -413,7 +414,7 @@ export default function Header({
               role="switch"
               aria-checked={traderMode}
               onClick={() => setTraderMode(v => { const next = !v; if (!next) setPlatformFilter('ALL'); return next; })}
-              title={traderMode ? 'PRO' : 'FREE'}
+              title={traderMode ? 'PRO' : (proAccessActive ? 'PRO' : 'PRO · invite to unlock')}
               className={`relative h-9 w-[124px] shrink-0 rounded-full border p-0.5 font-data text-[10px] tracking-[0.14em] shadow-[inset_0_1px_1px_rgba(0,0,0,.2)] transition-all duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60 ${
                 isLight ? 'border-zinc-300 bg-zinc-100' : 'border-zinc-700/80 bg-zinc-950'
               }`}
@@ -448,7 +449,10 @@ export default function Header({
                 style={{ width: '58px' }}
               >
                 <span className="flex items-center gap-1">
-                  <span className={traderMode ? 'text-amber-300' : ''}>✦</span>PRO
+                  {!proAccessLoading && !proAccessActive && !traderMode
+                    ? <LockKeyhole className="h-3 w-3 stroke-[1.9]" />
+                    : <span className={traderMode ? 'text-amber-300' : ''}>✦</span>}
+                  PRO
                 </span>
               </span>
             </button>
