@@ -62,7 +62,7 @@ function formatGoalNumber(value, language) {
   }).format(Number(value) || 0);
 }
 
-export default function ProMonthlyGoal({
+export default function MonthlyGoal({
   year,
   month,
   currency,
@@ -93,6 +93,7 @@ export default function ProMonthlyGoal({
   const [draft, setDraft] = useState(goal ? String(goal) : '');
   const [error, setError] = useState('');
   const [celebrating, setCelebrating] = useState(false);
+  const [displayProgress, setDisplayProgress] = useState(0);
   const celebrationTimerRef = useRef(null);
 
   useEffect(() => {
@@ -113,6 +114,23 @@ export default function ProMonthlyGoal({
   const progress = goal > 0 ? Math.min(100, Math.max(0, (positiveProgress / goal) * 100)) : 0;
   const remaining = goal > 0 ? Math.max(0, goal - netPnl) : 0;
   const achieved = goal > 0 && netPnl >= goal;
+
+  useEffect(() => {
+    let reduceMotion = false;
+    try {
+      reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
+    } catch {
+      reduceMotion = false;
+    }
+
+    if (reduceMotion) {
+      setDisplayProgress(progress);
+      return undefined;
+    }
+
+    const frame = window.requestAnimationFrame(() => setDisplayProgress(progress));
+    return () => window.cancelAnimationFrame(frame);
+  }, [progress, monthKey]);
 
   useEffect(() => {
     if (!goal || !achieved) return;
@@ -252,13 +270,20 @@ export default function ProMonthlyGoal({
 
         <div className={`relative mt-2 h-1.5 overflow-hidden rounded-full ${trackClass}`}>
           <div
-            className={`absolute inset-y-0 left-0 rounded-full transition-[width] duration-700 ease-out ${
+            className={`absolute inset-y-0 left-0 rounded-full transition-[width,filter] duration-1000 ease-[cubic-bezier(.22,1,.36,1)] ${
               achieved
                 ? 'bg-gradient-to-r from-emerald-500 via-emerald-400 to-amber-400'
                 : 'bg-gradient-to-r from-amber-500 to-amber-300'
             }`}
-            style={{ width: `${progress}%` }}
+            style={{ width: `${displayProgress}%` }}
           />
+          {displayProgress > 0 && (
+            <span
+              aria-hidden="true"
+              className="absolute inset-y-0 w-10 -translate-x-full bg-gradient-to-r from-transparent via-white/35 to-transparent opacity-60 transition-[left] duration-1000 ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:hidden"
+              style={{ left: `${displayProgress}%` }}
+            />
+          )}
         </div>
 
         <div className={`grid transition-[grid-template-rows,opacity,margin] duration-200 ${

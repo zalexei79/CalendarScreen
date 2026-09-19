@@ -136,6 +136,27 @@ export default function CalendarDayCell({
           }
         }
 
+        .selected-calendar-cell {
+          z-index: 12;
+          transform: translateY(-1px) scale(1.012);
+          border-color: rgba(251, 191, 36, .78) !important;
+          box-shadow:
+            inset 0 0 0 1px rgba(251, 191, 36, .10),
+            inset 0 0 22px rgba(251, 191, 36, .055),
+            0 8px 20px -12px rgba(245, 158, 11, .55),
+            0 0 0 1px rgba(251, 191, 36, .08) !important;
+        }
+
+        .selected-calendar-cell:active {
+          transform: translateY(0) scale(.992);
+        }
+
+        @media (min-width: 640px) {
+          .selected-calendar-cell {
+            transform: translateY(-2px) scale(1.015);
+          }
+        }
+
         @media (prefers-reduced-motion: reduce) {
           .today-calendar-cell,
           .today-pulse-ring,
@@ -154,6 +175,7 @@ export default function CalendarDayCell({
           traderMode ? 'pro-calendar-day' : '',
           cell.isToday ? 'today-calendar-cell' : '',
           todayPulse ? 'today-calendar-pulse' : '',
+          isSelected ? 'selected-calendar-cell' : '',
           'min-h-[64px] sm:min-h-[110px] p-2 sm:p-3.5',
           isLight
             ? (cell.inMonth ? (hasTrades ? 'bg-transparent' : 'bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)]') : 'bg-slate-50/60')
@@ -162,7 +184,7 @@ export default function CalendarDayCell({
             ? (cell.inMonth ? (hasTrades ? 'border-slate-300/80' : 'border-slate-200/90') : 'border-slate-100')
             : (cell.inMonth ? (hasTrades ? 'border-zinc-800' : 'border-zinc-800/30') : ''),
           isSelected
-            ? `border-amber-400 ring-2 ring-amber-400/60 scale-[1.02] sm:scale-[1.03] shadow-lg shadow-amber-500/10 z-10 ${isLight ? 'bg-amber-50/60' : 'bg-zinc-800'}`
+            ? `${isLight ? 'bg-amber-50/45' : 'bg-zinc-800/90'}`
             : isLight ? 'hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm' : 'hover:border-zinc-600 hover:bg-zinc-800/60',
         ].join(' ')}
       >
@@ -209,16 +231,16 @@ export default function CalendarDayCell({
         {hasTrades && (
           <span
             title={formatPnlDisplay(pnl, false)}
-            className={`day-amount font-data text-[11px] sm:text-base font-extrabold tracking-tight whitespace-nowrap ${
+            className={`day-amount inline-flex w-fit max-w-full items-center rounded-md px-1.5 py-0.5 font-data text-[10px] sm:text-[15px] font-extrabold tracking-tight whitespace-nowrap ${
               pnlTone === 'profit'
                 ? (isLight
-                  ? 'text-emerald-950 [text-shadow:0_1px_0_rgba(255,255,255,.42)]'
-                  : 'text-emerald-500')
+                  ? 'bg-emerald-500/[0.10] text-emerald-950 ring-1 ring-inset ring-emerald-600/10 [text-shadow:0_1px_0_rgba(255,255,255,.42)]'
+                  : 'bg-emerald-500/[0.08] text-emerald-400 ring-1 ring-inset ring-emerald-400/10')
                 : pnlTone === 'loss'
                   ? (isLight
-                    ? 'text-rose-950 [text-shadow:0_1px_0_rgba(255,255,255,.42)]'
-                    : 'text-red-500')
-                  : (isLight ? 'text-slate-500' : 'text-zinc-500')
+                    ? 'bg-rose-500/[0.09] text-rose-950 ring-1 ring-inset ring-rose-600/10 [text-shadow:0_1px_0_rgba(255,255,255,.42)]'
+                    : 'bg-red-500/[0.08] text-red-400 ring-1 ring-inset ring-red-400/10')
+                  : (isLight ? 'bg-slate-500/[0.06] text-slate-500' : 'bg-white/[0.04] text-zinc-500')
             }`}
           >
             {traderMode ? (

@@ -75,7 +75,7 @@ import { useCurveNotes } from './src/features/day-notes/useCurveNotes';
 import PnlCurve from './src/features/trades-sync/components/PnlCurve';
 import PeriodDynamics from './src/features/trades-sync/components/PeriodDynamics';
 import CalendarGrid from './CalendarGrid';
-import ProMonthlyGoal from './ProMonthlyGoal';
+import MonthlyGoal from './MonthlyGoal';
 import CtraderControl from './src/features/ctrader/CtraderControl';
 
 export default function CalendarScreen() {
@@ -1828,20 +1828,18 @@ export default function CalendarScreen() {
         periodStats={periodStats} periodTrades={periodTrades} currencySymbol={currencySymbol} formatMoney={formatMoney}
       />
 
-      {traderMode && (
-        <div className="px-3 sm:px-5">
-          <ProMonthlyGoal
-            year={year}
-            month={month}
-            currency={currency}
-            currencySymbol={currencySymbol}
-            currentPnl={monthSummary.total}
-            language={language}
-            isLight={isLight}
-            userId={validUserId}
-          />
-        </div>
-      )}
+      <div className="px-3 sm:px-5">
+        <MonthlyGoal
+          year={year}
+          month={month}
+          currency={currency}
+          currencySymbol={currencySymbol}
+          currentPnl={monthSummary.total}
+          language={language}
+          isLight={isLight}
+          userId={validUserId}
+        />
+      </div>
 
       {/* PRO controls live in Header: one clean control center, no floating duplicate block. */}
       <CalendarGrid
@@ -2166,21 +2164,26 @@ export default function CalendarScreen() {
       {/* HISTORY MODAL — улучшен визуал для светлой темы + кнопка синхронизации cTrader */}
       {historyOpen && (
         <div
-          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-3 sm:px-4 transition-opacity duration-200 ${
+          className={`fixed inset-0 z-50 flex items-end justify-center bg-black/70 px-0 pt-10 sm:items-center sm:px-4 sm:pt-0 transition-opacity duration-300 ${
             historyVisible ? 'opacity-100' : 'opacity-0'
           }`}
           onMouseDown={handleBackdropMouseDown}
           onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) closeHistory(); }}
         >
           <div
-            className={`relative w-full ${traderMode ? 'max-w-2xl' : 'max-w-lg'} flex flex-col overflow-hidden rounded-2xl border shadow-2xl transition-all duration-200 ${
-              historyVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+            className={`relative w-full ${traderMode ? 'sm:max-w-2xl' : 'sm:max-w-lg'} flex flex-col overflow-hidden rounded-t-[28px] border shadow-2xl transition-all duration-300 ease-out sm:rounded-2xl ${
+              historyVisible
+                ? 'opacity-100 translate-y-0 sm:scale-100'
+                : 'opacity-0 translate-y-full sm:translate-y-0 sm:scale-95'
             } ${
               isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
             }`}
-            style={{ maxHeight: 'min(90vh, calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 32px))' }}
+            style={{ maxHeight: 'min(92dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 8px))' }}
           >
-            <div className={`flex items-center justify-between px-5 sm:px-6 pt-5 pb-4 border-b ${isLight ? 'border-zinc-200' : 'border-zinc-800/80'}`}>
+            <div className="flex shrink-0 justify-center pt-2.5 sm:hidden" aria-hidden="true">
+              <span className={`h-1 w-11 rounded-full ${isLight ? 'bg-zinc-300' : 'bg-zinc-700'}`} />
+            </div>
+            <div className={`flex items-center justify-between px-5 sm:px-6 pt-3.5 sm:pt-5 pb-4 border-b ${isLight ? 'border-zinc-200' : 'border-zinc-800/80'}`}>
               <div>
                 <p className="font-data text-[10px] tracking-[0.22em] text-amber-400 uppercase mb-1">
                   {traderMode ? t('tradesHistory') : t('myMoney')}
@@ -3084,8 +3087,8 @@ export default function CalendarScreen() {
           onClick={handleModalBackdropClick}
         >
           <div
-            className={`relative my-auto w-full max-w-[360px] max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain rounded-2xl border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl transition-all duration-200 sm:flex sm:max-h-[calc(100vh-3rem)] sm:max-w-[560px] sm:flex-col sm:overflow-hidden sm:px-5 sm:py-5 ${
-              modalVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+            className={`relative my-auto w-full max-w-[360px] max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain rounded-2xl border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl transition-all duration-300 ease-[cubic-bezier(.22,1,.36,1)] will-change-transform sm:flex sm:max-h-[calc(100vh-3rem)] sm:max-w-[560px] sm:flex-col sm:overflow-hidden sm:px-5 sm:py-5 ${
+              modalVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-[0.97] sm:translate-y-2'
             } ${
               isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
             }`}
@@ -3169,8 +3172,8 @@ export default function CalendarScreen() {
               )}
 
             {/* Income / expense: the first and fastest decision */}
-              <div className={`grid grid-cols-2 gap-1 rounded-xl border p-1 ${
-                isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-950'
+              <div className={`grid grid-cols-2 gap-1 rounded-xl p-1 ${
+                isLight ? 'bg-zinc-100/70' : 'bg-zinc-950/70'
               }`}>
                 <button
                   type="button"
@@ -3201,9 +3204,12 @@ export default function CalendarScreen() {
               </div>
 
               {/* Amount is the visual focus */}
-              <div className={`mt-3 rounded-xl border px-3 py-2 focus-within:border-amber-400/60 focus-within:ring-1 focus-within:ring-amber-400/20 ${
-                isLight ? 'border-zinc-300 bg-white' : 'border-zinc-700 bg-zinc-950'
+              <div className={`relative mt-3 rounded-2xl border px-10 py-4 transition-all duration-200 focus-within:-translate-y-0.5 focus-within:border-amber-400/70 focus-within:ring-2 focus-within:ring-amber-400/10 ${
+                isLight ? 'border-zinc-200 bg-zinc-50/70 shadow-sm' : 'border-zinc-800 bg-black/20 shadow-inner'
               }`}>
+                <span className={`pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 font-data text-sm font-semibold ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
+                  {CURRENCIES.find((c) => c.code === form.currency)?.symbol || form.currency}
+                </span>
                 <input
                   ref={guideAmountRef}
                   type="text"
@@ -3219,7 +3225,7 @@ export default function CalendarScreen() {
                     setForm((f) => ({ ...f, pnl: nextValue }));
                     setFormError('');
                   }}
-                  className={`w-full bg-transparent text-center font-data text-3xl font-semibold tracking-tight outline-none placeholder:text-zinc-700 ${
+                  className={`w-full bg-transparent text-center font-data text-4xl sm:text-5xl font-semibold tracking-[-0.035em] outline-none placeholder:text-zinc-700 ${
                     isLight ? 'text-zinc-900' : 'text-zinc-100'
                   }`}
                   placeholder="0"
@@ -3237,12 +3243,12 @@ export default function CalendarScreen() {
                     title={c.code}
                     aria-label={`Валюта ${c.code}`}
                     className={[
-                      'min-w-10 rounded-lg border px-3 py-1.5 font-data text-xs transition-colors',
+                      'min-w-10 rounded-lg border px-3 py-1.5 font-data text-xs transition-all duration-200',
                       form.currency === c.code
-                        ? 'border-amber-400/60 bg-amber-400/10 text-amber-600'
+                        ? 'border-amber-400/55 bg-amber-400/10 text-amber-600 shadow-sm'
                         : isLight
-                        ? 'border-zinc-300 bg-white text-zinc-500 hover:border-zinc-400 hover:text-zinc-700'
-                        : 'border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300',
+                        ? 'border-transparent bg-transparent text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700'
+                        : 'border-transparent bg-transparent text-zinc-600 hover:bg-zinc-800/70 hover:text-zinc-300',
                     ].join(' ')}
                   >
                     {c.symbol}
