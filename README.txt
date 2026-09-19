@@ -1,51 +1,64 @@
-STEP 9 — HISTORY SHARE BECOMES A REFERRAL CHANNEL
+STEP 10 — PREMIUM LIGHT THEME + PRO HISTORY REDESIGN
+
+ONE-PASS UPGRADE
 
 Replace ONLY:
-D:\ai-trade-journal\CalendarScreen.jsx
+1) D:\ai-trade-journal\CalendarScreen.jsx
+2) D:\ai-trade-journal\Header.jsx
 
 No SQL.
-Do not touch Header.jsx, src/, public/, Supabase.
+Do NOT replace src/ or public/.
+Referral logic, +26/+7 rewards, cTrader logic, calculations, auth and sync remain intact.
 
-WHAT CHANGED
+LIGHT THEME
+- Stronger readable text hierarchy.
+- Better contrast for secondary text.
+- Cleaner border palette.
+- Premium off-white app background.
+- PRO history cards get cleaner white surfaces and subtle depth.
 
-1) History -> Share still sends the result image.
-2) If the signed-in user has a referral code, the QR inside the result card
-   already points to:
-   /?install=1&ref=USER_CODE
+PRO HISTORY
+- Desktop PRO history is wider (max-w-5xl), so it no longer looks like a long narrow receipt.
+- Three clear tabs:
+  1) Обзор
+  2) Аналитика
+  3) Сделки
 
-3) Now the native share also sends a CLICKABLE personal referral URL.
-   The URL is included:
-   - in the Web Share `url` field
-   - and inside the text itself, because social apps differ in what they keep
-     when an image is attached.
+OVERVIEW
+- New premium command center.
+- Result
+- Winrate
+- Number of trades
+- Average trade
+- Clear "What PRO unlocks" block:
+  cTrader connection / PnL curve / discipline notes / period comparison
+- Existing PnL curve and scorecard remain; calculations are unchanged.
 
-4) Stronger share copy:
-   "Посмотри мои результаты..."
-   "Следи за деньгами красиво и просто."
-   "По моей ссылке — 7 дней PRO после первой записи."
-   + personal URL
+ANALYTICS
+- Deep analytics is separated from the overview.
+- Trading notes/discipline, instrument breakdown, period dynamics and the existing analytics feed live here.
+- No more endless everything-at-once feed on first open.
 
-5) The result PNG itself now has a much stronger viral install block:
-   ПРИСОЕДИНЯЙСЯ
-   Следи за деньгами красиво и просто
-   Сканируй QR или открой ссылку
-   7 ДНЕЙ PRO ПО МОЕЙ ССЫЛКЕ
+TRADES
+- Trade journal gets its own section.
+- Existing filters, rows, edit/delete/export behavior remain untouched.
 
-6) If the user is not signed in / has no referral code:
-   - QR and share URL remain generic install links
-   - no false "+7 days PRO" promise is shown.
+MOBILE
+- Still a bottom sheet.
+- Tabs remain visible under the history header.
+- No new dependencies.
 
-7) The preview explains that the clickable install link will be shared
-   together with the image.
-
-BUILD:
+BUILD
+cd D:\ai-trade-journal
 npm.cmd run build
 
-TEST ON IPHONE:
-- History -> Share
-- Open the share sheet
-- Send to Telegram or Messages
-- Confirm the message contains BOTH:
-  a) the PNG result card
-  b) a clickable /?install=1&ref=... link
-- Scan the QR too; it should lead to the same referral URL.
+TEST
+1) Light theme -> open PRO history.
+2) Switch Overview / Analytics / Trades.
+3) Toggle dark/light while history is open.
+4) Verify PnL/trade numbers are unchanged.
+5) Verify cTrader sync, editing and export still work.
+
+Validation performed while packaging:
+- CalendarScreen.jsx passed a TypeScript JSX syntax parse.
+- Full Vite build must still be run in your local project because your node_modules/project environment are on your PC.

@@ -962,6 +962,84 @@ export default function CalendarScreen() {
     }).format(date);
   }
 
+  const proHistoryCopy = {
+    ru: {
+      overview: 'Обзор',
+      analytics: 'Аналитика',
+      trades: 'Сделки',
+      commandCenter: 'PRO ОБЗОР',
+      commandTitle: 'Картина торговли за период',
+      commandSubtitle: 'Главное — без шума. Результат, качество сделок и ключевые сигналы в одном месте.',
+      result: 'Результат',
+      winrate: 'Winrate',
+      tradesCount: 'Сделок',
+      averageTrade: 'Средняя сделка',
+      proValue: 'Что даёт PRO',
+      platform: 'Подключение площадки',
+      platformHint: 'cTrader и синхронизация сделок',
+      curve: 'Кривая результата',
+      curveHint: 'PnL и просадка по времени',
+      discipline: 'Дисциплина',
+      disciplineHint: 'Заметки и торговые паттерны',
+      comparison: 'Сравнение периодов',
+      comparisonHint: 'Динамика и качество результатов',
+      deeperTitle: 'Глубокая аналитика',
+      deeperBody: 'Здесь уже не просто список сделок — структура результата, дисциплина и поведение по периоду.',
+      tradesTitle: 'Журнал сделок',
+      tradesBody: 'Фильтруй, открывай и редактируй сделки без визуального шума.',
+    },
+    en: {
+      overview: 'Overview',
+      analytics: 'Analytics',
+      trades: 'Trades',
+      commandCenter: 'PRO OVERVIEW',
+      commandTitle: 'Your trading picture for the period',
+      commandSubtitle: 'The important signals without the noise: result, trade quality and key patterns.',
+      result: 'Result',
+      winrate: 'Win rate',
+      tradesCount: 'Trades',
+      averageTrade: 'Average trade',
+      proValue: 'What PRO unlocks',
+      platform: 'Platform connection',
+      platformHint: 'cTrader and trade sync',
+      curve: 'Performance curve',
+      curveHint: 'PnL and drawdown over time',
+      discipline: 'Discipline',
+      disciplineHint: 'Notes and trading patterns',
+      comparison: 'Period comparison',
+      comparisonHint: 'Dynamics and result quality',
+      deeperTitle: 'Deep analytics',
+      deeperBody: 'More than a trade list: structure of results, discipline and period behaviour.',
+      tradesTitle: 'Trading journal',
+      tradesBody: 'Filter, open and edit trades without visual noise.',
+    },
+    ro: {
+      overview: 'Privire generală',
+      analytics: 'Analiză',
+      trades: 'Tranzacții',
+      commandCenter: 'REZUMAT PRO',
+      commandTitle: 'Imaginea tranzacționării pentru perioadă',
+      commandSubtitle: 'Semnalele importante fără zgomot: rezultat, calitatea tranzacțiilor și tipare.',
+      result: 'Rezultat',
+      winrate: 'Rată de succes',
+      tradesCount: 'Tranzacții',
+      averageTrade: 'Tranzacție medie',
+      proValue: 'Ce oferă PRO',
+      platform: 'Conectarea platformei',
+      platformHint: 'cTrader și sincronizarea tranzacțiilor',
+      curve: 'Curba rezultatului',
+      curveHint: 'PnL și declin în timp',
+      discipline: 'Disciplină',
+      disciplineHint: 'Notițe și tipare de tranzacționare',
+      comparison: 'Compararea perioadelor',
+      comparisonHint: 'Dinamică și calitatea rezultatelor',
+      deeperTitle: 'Analiză aprofundată',
+      deeperBody: 'Mai mult decât o listă: structura rezultatului, disciplina și comportamentul perioadei.',
+      tradesTitle: 'Jurnal de tranzacții',
+      tradesBody: 'Filtrează, deschide și modifică tranzacțiile fără zgomot vizual.',
+    },
+  }[resolveOnboardingLanguage(language)];
+
   const referralNoticeCopy = {
     ru: {
       claimedTitle: 'Приглашение принято',
@@ -1816,6 +1894,7 @@ export default function CalendarScreen() {
   const historyDealsRef = useRef(null);
   const historyScrollRef = useRef(null);
   const [historyAtDeals, setHistoryAtDeals] = useState(false);
+  const [proHistoryTab, setProHistoryTab] = useState('overview');
   useEffect(() => { setHistoryAtDeals(false); }, [historyOpen]);
 
   function handleHistoryScroll(event) {
@@ -2763,6 +2842,7 @@ export default function CalendarScreen() {
     setHistoryVisible(true);
     setHistoryFiltersOpen(false);
     setProFiltersOpen(false);
+    setProHistoryTab('overview');
     setConfirmingClear(false);
     setHistoryAnalysisOpen(false);
     setFreeHistoryPanel(null);
@@ -2895,29 +2975,54 @@ export default function CalendarScreen() {
         .font-data { font-family: 'JetBrains Mono', monospace; }
         @keyframes cellGlowIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
         @keyframes themeIconPop { from { opacity: 0; transform: scale(0.4) rotate(-40deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
-        /* Modern crisp, readable light theme palette */
+        /* Premium light theme — stronger hierarchy and readable contrast */
         .theme-light.premium-shell {
-          background-color: #f8fafc;
-          background-image: radial-gradient(circle at 15% -5%, rgba(251,191,36,.06), transparent 30%), radial-gradient(circle at 85% 0%, rgba(59,130,246,.03), transparent 25%);
+          background-color: #f3f6fa;
+          background-image:
+            radial-gradient(circle at 10% -10%, rgba(245,185,31,.10), transparent 30%),
+            radial-gradient(circle at 92% 0%, rgba(59,130,246,.045), transparent 24%);
         }
         .theme-light .bg-zinc-950,
         .theme-light .bg-zinc-900 { background-color: #ffffff !important; }
-        .theme-light .bg-zinc-800 { background-color: #f1f5f9 !important; }
-        .theme-light .bg-zinc-100 { background-color: #f8fafc !important; }
-        .theme-light .bg-zinc-50 { background-color: #ffffff !important; }
+        .theme-light .bg-zinc-800 { background-color: #eef2f7 !important; }
+        .theme-light .bg-zinc-100 { background-color: #f3f6fa !important; }
+        .theme-light .bg-zinc-50 { background-color: #f8fafc !important; }
         .theme-light .bg-white { background-color: #ffffff !important; }
         .theme-light .text-zinc-50,
-        .theme-light .text-zinc-100 { color: #0f172a !important; }
-        .theme-light .text-zinc-200 { color: #1e293b !important; }
-        .theme-light .text-zinc-300 { color: #334155 !important; }
+        .theme-light .text-zinc-100 { color: #0b1220 !important; }
+        .theme-light .text-zinc-200 { color: #172033 !important; }
+        .theme-light .text-zinc-300 { color: #263449 !important; }
         .theme-light .text-zinc-400 { color: #475569 !important; }
-        .theme-light .text-zinc-500 { color: #64748b !important; }
-        .theme-light .text-zinc-600 { color: #475569 !important; }
-        .theme-light .text-zinc-700 { color: #334155 !important; }
+        .theme-light .text-zinc-500 { color: #526071 !important; }
+        .theme-light .text-zinc-600 { color: #334155 !important; }
+        .theme-light .text-zinc-700 { color: #1f2a3b !important; }
         .theme-light .border-zinc-800,
-        .theme-light .border-zinc-700 { border-color: #e2e8f0 !important; }
-        .theme-light .border-zinc-200 { border-color: #e2e8f0 !important; }
-        .theme-light .border-zinc-300 { border-color: #e2e8f0 !important; }
+        .theme-light .border-zinc-700 { border-color: #d6dee9 !important; }
+        .theme-light .border-zinc-200 { border-color: #d9e1eb !important; }
+        .theme-light .border-zinc-300 { border-color: #cbd5e1 !important; }
+
+        /* PRO history has its own clean, premium hierarchy. */
+        .pro-history-premium > section,
+        .pro-history-premium .pro-premium-card {
+          border-radius: 22px;
+        }
+        .theme-light .pro-history-premium > section,
+        .theme-light .pro-history-premium .pro-premium-card {
+          border-color: #d9e1eb !important;
+          background: #ffffff !important;
+          box-shadow: 0 12px 34px rgba(15,23,42,.065);
+        }
+        .theme-light .pro-history-premium > section .opacity-50,
+        .theme-light .pro-history-premium > section .opacity-60 {
+          opacity: .78 !important;
+        }
+        .theme-light .pro-history-premium > section h3 {
+          color: #111827 !important;
+        }
+        .theme-light .pro-history-premium select,
+        .theme-light .pro-history-premium input[type="range"] {
+          color: #172033;
+        }
         /* Clean scrollbars */
         * { scrollbar-width: thin; scrollbar-color: #52525b transparent; }
         *::-webkit-scrollbar { height: 6px; width: 6px; }
@@ -3349,7 +3454,7 @@ export default function CalendarScreen() {
           onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) closeHistory(); }}
         >
           <div
-            className={`relative w-full ${traderMode ? 'sm:max-w-2xl' : 'sm:max-w-lg'} flex flex-col overflow-hidden rounded-t-[28px] border shadow-2xl transition-all duration-300 ease-out sm:rounded-2xl ${
+            className={`relative w-full ${traderMode ? 'sm:max-w-5xl' : 'sm:max-w-lg'} flex flex-col overflow-hidden rounded-t-[28px] border shadow-2xl transition-all duration-300 ease-out sm:rounded-[24px] ${
               historyVisible
                 ? 'opacity-100 translate-y-0 sm:scale-100'
                 : 'opacity-0 translate-y-full sm:translate-y-0 sm:scale-95'
@@ -3402,12 +3507,47 @@ export default function CalendarScreen() {
               </div>
             </div>
 
-            {traderMode && <div className={`flex shrink-0 items-center justify-between border-b px-5 py-2 sm:px-6 ${isLight ? 'border-zinc-100' : 'border-white/5'}`}>
-              <span className="text-[10px] text-zinc-500">{t('tradesHistory')}</span>
-              <button type="button" onClick={jumpHistorySection} className={`min-h-9 rounded-lg px-3 text-xs font-medium transition-colors ${isLight ? 'text-zinc-700 hover:bg-zinc-100' : 'text-zinc-300 hover:bg-white/5'}`}>{t(historyAtDeals ? 'jumpToStats' : 'jumpToTrades')} {historyAtDeals ? '↑' : '↓'}</button>
-            </div>}
+            {traderMode && (
+              <div className={`shrink-0 border-b px-4 py-3 sm:px-6 ${
+                isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-zinc-950'
+              }`}>
+                <div className={`grid grid-cols-3 rounded-xl p-1 ${
+                  isLight ? 'bg-slate-100' : 'bg-white/[0.045]'
+                }`}>
+                  {[
+                    ['overview', proHistoryCopy.overview],
+                    ['analytics', proHistoryCopy.analytics],
+                    ['trades', proHistoryCopy.trades],
+                  ].map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setProHistoryTab(key)}
+                      className={`min-h-10 rounded-lg px-2 text-xs font-semibold transition-all duration-200 ${
+                        proHistoryTab === key
+                          ? isLight
+                            ? 'bg-white text-slate-950 shadow-sm ring-1 ring-slate-200'
+                            : 'bg-zinc-800 text-white shadow-sm ring-1 ring-white/[0.06]'
+                          : isLight
+                            ? 'text-slate-500 hover:text-slate-900'
+                            : 'text-zinc-500 hover:text-zinc-200'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-            <div ref={historyScrollRef} onScroll={handleHistoryScroll} className={`overflow-y-auto px-5 sm:px-6 py-5 flex-1 min-h-0 ${isLight ? 'bg-zinc-50/50' : ''}`} style={{ overscrollBehavior: 'contain' }}>
+            <div
+              ref={historyScrollRef}
+              onScroll={handleHistoryScroll}
+              className={`overflow-y-auto px-4 py-5 sm:px-7 sm:py-6 flex-1 min-h-0 ${
+                traderMode ? 'pro-history-premium' : ''
+              } ${isLight ? 'bg-[#f5f7fa]' : ''}`}
+              style={{ overscrollBehavior: 'contain' }}
+            >
               {/* FREE — История сначала, аналитика по запросу */}
               {!traderMode && (
                 <section className="mb-4">
@@ -3847,7 +3987,106 @@ export default function CalendarScreen() {
                 </>
               ) : (
                 <>
-                  {/* PRO HISTORY — one continuous feed; only the instrument breakdown collapses. */}
+                  {/* PRO HISTORY — premium, sectioned experience. */}
+                  {proHistoryTab === 'overview' && (
+                    <>
+                      {(() => {
+                        const total = historyTrades.reduce((sum, item) => sum + Number(item.pnl || 0), 0);
+                        const wins = historyTrades.filter((item) => Number(item.pnl || 0) >= 0).length;
+                        const winrate = historyTrades.length ? Math.round((wins / historyTrades.length) * 100) : 0;
+                        const average = historyTrades.length ? total / historyTrades.length : 0;
+
+                        return (
+                          <section className={`pro-premium-card relative mb-4 overflow-hidden border p-5 sm:p-6 ${
+                            isLight
+                              ? 'border-slate-200 bg-white'
+                              : 'border-amber-400/15 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black'
+                          }`}>
+                            <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-amber-400/[0.08] blur-3xl" />
+                            <div className="pointer-events-none absolute -left-20 -bottom-24 h-56 w-56 rounded-full bg-emerald-500/[0.05] blur-3xl" />
+
+                            <div className="relative">
+                              <p className="font-data text-[10px] font-bold uppercase tracking-[0.22em] text-amber-500">
+                                {proHistoryCopy.commandCenter}
+                              </p>
+                              <h3 className={`mt-2 font-display text-xl font-semibold tracking-tight sm:text-2xl ${
+                                isLight ? 'text-slate-950' : 'text-white'
+                              }`}>
+                                {proHistoryCopy.commandTitle}
+                              </h3>
+                              <p className={`mt-2 max-w-2xl text-xs leading-5 sm:text-sm ${
+                                isLight ? 'text-slate-600' : 'text-zinc-400'
+                              }`}>
+                                {proHistoryCopy.commandSubtitle}
+                              </p>
+
+                              <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                                {[
+                                  [proHistoryCopy.result, `${total >= 0 ? '+' : '−'}${currencySymbol}${formatMoneyShort(Math.abs(total))}`, total >= 0 ? 'text-emerald-500' : 'text-red-500'],
+                                  [proHistoryCopy.winrate, `${winrate}%`, 'text-amber-500'],
+                                  [proHistoryCopy.tradesCount, String(historyTrades.length), isLight ? 'text-slate-950' : 'text-zinc-100'],
+                                  [proHistoryCopy.averageTrade, `${average >= 0 ? '+' : '−'}${currencySymbol}${formatMoneyShort(Math.abs(average))}`, average >= 0 ? 'text-emerald-500' : 'text-red-500'],
+                                ].map(([label, value, tone]) => (
+                                  <div
+                                    key={label}
+                                    className={`rounded-2xl border px-3.5 py-3 ${
+                                      isLight
+                                        ? 'border-slate-200 bg-slate-50'
+                                        : 'border-white/[0.06] bg-white/[0.025]'
+                                    }`}
+                                  >
+                                    <p className={`text-[10px] font-medium ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>
+                                      {label}
+                                    </p>
+                                    <p className={`mt-1.5 font-data text-base font-bold tabular-nums sm:text-lg ${tone}`}>
+                                      {value}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+
+                              <div className={`mt-5 border-t pt-4 ${
+                                isLight ? 'border-slate-200' : 'border-white/[0.06]'
+                              }`}>
+                                <p className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                                  isLight ? 'text-slate-500' : 'text-zinc-500'
+                                }`}>
+                                  {proHistoryCopy.proValue}
+                                </p>
+
+                                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                  {[
+                                    [Link2, proHistoryCopy.platform, proHistoryCopy.platformHint],
+                                    [TrendingUp, proHistoryCopy.curve, proHistoryCopy.curveHint],
+                                    [FileText, proHistoryCopy.discipline, proHistoryCopy.disciplineHint],
+                                    [Repeat2, proHistoryCopy.comparison, proHistoryCopy.comparisonHint],
+                                  ].map(([Icon, label, hint]) => (
+                                    <div key={label} className="flex min-w-0 items-start gap-2.5">
+                                      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ${
+                                        isLight ? 'bg-amber-50 text-amber-600' : 'bg-amber-400/[0.08] text-amber-300'
+                                      }`}>
+                                        <Icon className="h-3.5 w-3.5 stroke-[1.8]" />
+                                      </span>
+                                      <span className="min-w-0">
+                                        <span className={`block text-[11px] font-semibold leading-4 ${
+                                          isLight ? 'text-slate-800' : 'text-zinc-200'
+                                        }`}>
+                                          {label}
+                                        </span>
+                                        <span className={`mt-0.5 block text-[9px] leading-3.5 ${
+                                          isLight ? 'text-slate-500' : 'text-zinc-500'
+                                        }`}>
+                                          {hint}
+                                        </span>
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </section>
+                        );
+                      })()}
 
                   {/* ── Compact toolbar (currency · deposit · sync) — always visible ── */}
                   <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -3885,8 +4124,6 @@ export default function CalendarScreen() {
                   </div>
 
                   <PnlCurve key={validUserId || 'guest'} userId={validUserId} trades={historyTrades} comparisonTrades={historyFilteredTrades} dateFrom={periodPreset === 'Вся история' ? null : dateFrom} dateTo={dateTo} accounts={ctraderAccounts} language={language} isLight={isLight} />
-                  <NoteInsights userId={validUserId} trades={historyTrades} revision={notesRevision} language={language} isLight={isLight} onDay={jumpToTradeDate} />
-
                   {/* ── Luxury Donut + Stats Header ─────────────────────── */}
                   {(() => {
                     const hTrades = historyTrades;
@@ -4149,6 +4386,33 @@ export default function CalendarScreen() {
                     );
                   })()}
 
+                    </>
+                  )}
+
+                  {proHistoryTab === 'analytics' && (
+                    <>
+                      <section className={`pro-premium-card mb-4 border p-4 sm:p-5 ${
+                        isLight
+                          ? 'border-slate-200 bg-white'
+                          : 'border-white/[0.07] bg-white/[0.025]'
+                      }`}>
+                        <p className="font-data text-[10px] font-bold uppercase tracking-[0.20em] text-amber-500">
+                          {proHistoryCopy.analytics}
+                        </p>
+                        <h3 className={`mt-2 text-lg font-semibold tracking-tight ${
+                          isLight ? 'text-slate-950' : 'text-zinc-100'
+                        }`}>
+                          {proHistoryCopy.deeperTitle}
+                        </h3>
+                        <p className={`mt-1.5 max-w-2xl text-xs leading-5 ${
+                          isLight ? 'text-slate-600' : 'text-zinc-400'
+                        }`}>
+                          {proHistoryCopy.deeperBody}
+                        </p>
+                      </section>
+
+                      <NoteInsights userId={validUserId} trades={historyTrades} revision={notesRevision} language={language} isLight={isLight} onDay={jumpToTradeDate} />
+
                   {/* ── Аналитика — непрерывная лента ── */}
                   <section className="mb-4">
                     <h3 className="mb-3 px-1 text-sm font-semibold tracking-tight">{t('proFinancialPicture')}</h3>
@@ -4256,6 +4520,31 @@ export default function CalendarScreen() {
                   )}
                     </div>
                   </section>
+
+                    </>
+                  )}
+
+                  {proHistoryTab === 'trades' && (
+                    <>
+                      <section className={`pro-premium-card mb-4 border p-4 sm:p-5 ${
+                        isLight
+                          ? 'border-slate-200 bg-white'
+                          : 'border-white/[0.07] bg-white/[0.025]'
+                      }`}>
+                        <p className="font-data text-[10px] font-bold uppercase tracking-[0.20em] text-amber-500">
+                          {proHistoryCopy.trades}
+                        </p>
+                        <h3 className={`mt-2 text-lg font-semibold tracking-tight ${
+                          isLight ? 'text-slate-950' : 'text-zinc-100'
+                        }`}>
+                          {proHistoryCopy.tradesTitle}
+                        </h3>
+                        <p className={`mt-1.5 text-xs leading-5 ${
+                          isLight ? 'text-slate-600' : 'text-zinc-400'
+                        }`}>
+                          {proHistoryCopy.tradesBody}
+                        </p>
+                      </section>
 
                   {/* ── Сделки — единый блок фильтров: быстрый win/loss, "Фильтры" и валюта вместе ── */}
                   <div ref={historyDealsRef} tabIndex={-1} className={`mb-4 flex scroll-mt-4 items-center gap-2 border-t pt-4 outline-none ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
@@ -4444,6 +4733,8 @@ export default function CalendarScreen() {
                       {confirmingClear ? t('confirmClearHistory') : t('clearHistory')}
                     </button>
                   </div>
+                    </>
+                  )}
                 </>
               )}
             </div>
