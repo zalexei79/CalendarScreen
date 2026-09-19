@@ -112,7 +112,16 @@ export default function CalendarScreen() {
 
   // Referral code belongs to the signed-in account. The hook also claims any
   // referral that was saved before/through Google OAuth.
-  const { referralCode } = useReferral({ user });
+  const {
+    referralCode,
+    claimStatus,
+    invitedCount,
+    rewardedCount,
+    pendingCount,
+    recentInvites,
+    myReferralStatus,
+    myReferralRewardedAt,
+  } = useReferral({ user });
   const {
     active: proAccessActive,
     until: proAccessUntil,
@@ -385,7 +394,9 @@ export default function CalendarScreen() {
   // Supabase get_my_pro_status(); localStorage can no longer unlock PRO.
   const [traderMode, setTraderModeInternal] = useState(false);
   const [proAccessPromptOpen, setProAccessPromptOpen] = useState(false);
+  const [proOfferTab, setProOfferTab] = useState('offer');
   const [referralShareStatus, setReferralShareStatus] = useState('');
+  const [referralNotice, setReferralNotice] = useState(null);
 
   function setTraderMode(valueOrUpdater) {
     const requested = typeof valueOrUpdater === 'function'
@@ -396,6 +407,7 @@ export default function CalendarScreen() {
       if (proAccessLoading) return;
       if (!proAccessActive) {
         setReferralShareStatus('');
+        setProOfferTab('offer');
         setProAccessPromptOpen(true);
         return;
       }
@@ -732,6 +744,27 @@ export default function CalendarScreen() {
       buyBody: 'Помесячный доступ к PRO — без приглашений.',
       buyButton: 'Подключить PRO',
       comingSoon: 'Оплату подключим следующим шагом',
+      invitedLabel: 'Приглашено',
+      offerTab: 'PRO и бонусы',
+      invitesTab: 'Мои приглашения',
+      invitedPeople: 'Приглашено',
+      activatedPeople: 'Активировали',
+      waitingPeople: 'Ждём запись',
+      earnedDays: 'Заработано PRO',
+      daysShort: 'дн.',
+      historyTitle: 'Последние приглашения',
+      noInvitesTitle: 'Пока приглашений нет',
+      noInvitesBody: 'Создай персональное приглашение — здесь появится прогресс каждого нового пользователя.',
+      inviteMore: 'Пригласить ещё',
+      pendingStatus: 'Ждём первую запись',
+      qualifiedStatus: 'Начисляем награду',
+      rewardedStatus: '+26 дней PRO',
+      joinedAt: 'Присоединился',
+      rewardedAt: 'Награда',
+      signInHistory: 'Войди в аккаунт, чтобы видеть историю приглашений.',
+      inviteWaiting: 'Поделись приглашением — друг получит 7 дней PRO.',
+      invitePending: 'Друг уже присоединился · ждём его первую запись.',
+      inviteDone: 'Готово · бонус PRO начислен.',
       close: 'Не сейчас',
     },
     en: {
@@ -760,6 +793,27 @@ export default function CalendarScreen() {
       buyBody: 'Monthly PRO access — no invitation required.',
       buyButton: 'Get PRO',
       comingSoon: 'Payments are the next step',
+      invitedLabel: 'Invited',
+      offerTab: 'PRO & rewards',
+      invitesTab: 'My invites',
+      invitedPeople: 'Invited',
+      activatedPeople: 'Activated',
+      waitingPeople: 'Waiting',
+      earnedDays: 'PRO earned',
+      daysShort: 'days',
+      historyTitle: 'Recent invitations',
+      noInvitesTitle: 'No invitations yet',
+      noInvitesBody: 'Create a personal invitation and each new user’s progress will appear here.',
+      inviteMore: 'Invite another',
+      pendingStatus: 'Waiting for first entry',
+      qualifiedStatus: 'Granting reward',
+      rewardedStatus: '+26 days PRO',
+      joinedAt: 'Joined',
+      rewardedAt: 'Reward',
+      signInHistory: 'Sign in to see your invitation history.',
+      inviteWaiting: 'Share your invitation — your friend gets 7 days of PRO.',
+      invitePending: 'Your friend joined · waiting for their first entry.',
+      inviteDone: 'Done · your PRO bonus has been granted.',
       close: 'Not now',
     },
     ro: {
@@ -788,6 +842,27 @@ export default function CalendarScreen() {
       buyBody: 'Acces PRO lunar — fără invitații.',
       buyButton: 'Activează PRO',
       comingSoon: 'Plățile sunt următorul pas',
+      invitedLabel: 'Invitați',
+      offerTab: 'PRO și bonusuri',
+      invitesTab: 'Invitațiile mele',
+      invitedPeople: 'Invitați',
+      activatedPeople: 'Activați',
+      waitingPeople: 'Așteptăm',
+      earnedDays: 'PRO câștigat',
+      daysShort: 'zile',
+      historyTitle: 'Invitații recente',
+      noInvitesTitle: 'Încă nu ai invitații',
+      noInvitesBody: 'Creează o invitație personală și aici va apărea progresul fiecărui utilizator nou.',
+      inviteMore: 'Invită încă o persoană',
+      pendingStatus: 'Așteptăm prima înregistrare',
+      qualifiedStatus: 'Acordăm recompensa',
+      rewardedStatus: '+26 zile PRO',
+      joinedAt: 'S-a alăturat',
+      rewardedAt: 'Recompensă',
+      signInHistory: 'Autentifică-te pentru a vedea istoricul invitațiilor.',
+      inviteWaiting: 'Trimite invitația — prietenul primește 7 zile PRO.',
+      invitePending: 'Prietenul s-a alăturat · așteptăm prima înregistrare.',
+      inviteDone: 'Gata · bonusul PRO a fost acordat.',
       close: 'Nu acum',
     },
   }[resolveOnboardingLanguage(language)];
@@ -839,6 +914,126 @@ export default function CalendarScreen() {
       shareText: 'Urmărește-ți banii simplu și frumos. Din linkul meu primești 7 zile PRO după prima înregistrare.',
     },
   }[resolveOnboardingLanguage(language)];
+
+  function formatReferralHistoryDate(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+
+    const locale = resolveOnboardingLanguage(language) === 'ru'
+      ? 'ru-RU'
+      : resolveOnboardingLanguage(language) === 'ro'
+        ? 'ro-RO'
+        : 'en-US';
+
+    return new Intl.DateTimeFormat(locale, {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(date);
+  }
+
+  const referralNoticeCopy = {
+    ru: {
+      claimedTitle: 'Приглашение принято',
+      claimedBody: 'Создай первую настоящую запись — после неё тебе откроется 7 дней PRO.',
+      friendJoinedTitle: 'Друг присоединился · 1/1',
+      friendJoinedBody: 'Отлично. Теперь ждём его первую настоящую запись.',
+      inviterRewardTitle: '+26 дней PRO начислено',
+      inviterRewardBody: 'Друг создал первую запись. Твой бонус уже активирован.',
+      friendRewardTitle: 'Тебе открыто 7 дней PRO',
+      friendRewardBody: 'Первая запись готова — приветственный PRO активирован.',
+    },
+    en: {
+      claimedTitle: 'Invitation accepted',
+      claimedBody: 'Create your first real entry and you’ll unlock 7 days of PRO.',
+      friendJoinedTitle: 'Friend joined · 1/1',
+      friendJoinedBody: 'Great. Now we’re waiting for their first real entry.',
+      inviterRewardTitle: '+26 days PRO granted',
+      inviterRewardBody: 'Your friend created their first entry. Your bonus is active.',
+      friendRewardTitle: '7 days of PRO unlocked',
+      friendRewardBody: 'Your first entry is done — welcome PRO is active.',
+    },
+    ro: {
+      claimedTitle: 'Invitație acceptată',
+      claimedBody: 'Creează prima înregistrare reală și vei primi 7 zile PRO.',
+      friendJoinedTitle: 'Prietenul s-a alăturat · 1/1',
+      friendJoinedBody: 'Perfect. Acum așteptăm prima lui înregistrare reală.',
+      inviterRewardTitle: '+26 zile PRO acordate',
+      inviterRewardBody: 'Prietenul a creat prima înregistrare. Bonusul tău este activ.',
+      friendRewardTitle: 'Ai primit 7 zile PRO',
+      friendRewardBody: 'Prima înregistrare este gata — PRO de bun venit este activ.',
+    },
+  }[resolveOnboardingLanguage(language)];
+
+  useEffect(() => {
+    if (claimStatus !== 'claimed') return;
+    setReferralNotice({
+      title: referralNoticeCopy.claimedTitle,
+      body: referralNoticeCopy.claimedBody,
+    });
+  }, [claimStatus, referralNoticeCopy.claimedTitle, referralNoticeCopy.claimedBody]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const key = `atj_referrer_invited_seen_${user.id}`;
+    let seen = 0;
+    try { seen = Number(window.localStorage.getItem(key)) || 0; } catch { /* ignore */ }
+
+    if (invitedCount > seen) {
+      if (seen > 0 || invitedCount === 1) {
+        setReferralNotice({
+          title: referralNoticeCopy.friendJoinedTitle,
+          body: referralNoticeCopy.friendJoinedBody,
+        });
+      }
+      try { window.localStorage.setItem(key, String(invitedCount)); } catch { /* ignore */ }
+    }
+  }, [user?.id, invitedCount, referralNoticeCopy.friendJoinedTitle, referralNoticeCopy.friendJoinedBody]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const key = `atj_referrer_rewarded_seen_${user.id}`;
+    let seen = 0;
+    try { seen = Number(window.localStorage.getItem(key)) || 0; } catch { /* ignore */ }
+
+    if (rewardedCount > seen) {
+      setReferralNotice({
+        title: referralNoticeCopy.inviterRewardTitle,
+        body: referralNoticeCopy.inviterRewardBody,
+      });
+      try { window.localStorage.setItem(key, String(rewardedCount)); } catch { /* ignore */ }
+    }
+  }, [user?.id, rewardedCount, referralNoticeCopy.inviterRewardTitle, referralNoticeCopy.inviterRewardBody]);
+
+  useEffect(() => {
+    if (!user?.id || myReferralStatus !== 'rewarded' || !myReferralRewardedAt) return;
+
+    const key = `atj_referred_reward_seen_${user.id}_${myReferralRewardedAt}`;
+    let seen = false;
+    try { seen = window.localStorage.getItem(key) === '1'; } catch { /* ignore */ }
+    if (seen) return;
+
+    setReferralNotice({
+      title: referralNoticeCopy.friendRewardTitle,
+      body: referralNoticeCopy.friendRewardBody,
+    });
+    try { window.localStorage.setItem(key, '1'); } catch { /* ignore */ }
+  }, [
+    user?.id,
+    myReferralStatus,
+    myReferralRewardedAt,
+    referralNoticeCopy.friendRewardTitle,
+    referralNoticeCopy.friendRewardBody,
+  ]);
+
+  useEffect(() => {
+    if (!referralNotice) return undefined;
+    const timer = window.setTimeout(() => setReferralNotice(null), 5200);
+    return () => window.clearTimeout(timer);
+  }, [referralNotice]);
 
   function markFirstRunGuideComplete() {
     try { window.localStorage.setItem('calendar_guide_completed', '1'); } catch { /* ignore */ }
@@ -5028,6 +5223,38 @@ export default function CalendarScreen() {
         </div>
       )}
 
+      {referralNotice && (
+        <div className="fixed left-1/2 top-[max(16px,env(safe-area-inset-top))] z-[120] w-[calc(100%-24px)] max-w-sm -translate-x-1/2">
+          <div className={`flex items-start gap-3 rounded-2xl border px-4 py-3.5 shadow-2xl backdrop-blur-xl ${
+            isLight
+              ? 'border-emerald-200 bg-white/95 text-zinc-900 shadow-zinc-900/10'
+              : 'border-emerald-400/15 bg-zinc-950/95 text-zinc-100 shadow-black/40'
+          }`}>
+            <span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl ${
+              isLight ? 'bg-emerald-50 text-emerald-600' : 'bg-emerald-500/[0.10] text-emerald-400'
+            }`}>
+              <CheckCircle2 className="h-4.5 w-4.5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">{referralNotice.title}</p>
+              <p className={`mt-1 text-xs leading-5 ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>
+                {referralNotice.body}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReferralNotice(null)}
+              className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${
+                isLight ? 'text-zinc-400 hover:bg-zinc-100' : 'text-zinc-500 hover:bg-white/[0.05]'
+              }`}
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* PRO ACCESS — value-first server entitlement gate */}
       {proAccessPromptOpen && (
         <div
@@ -5078,7 +5305,56 @@ export default function CalendarScreen() {
               </button>
             </div>
 
+            <div className={`shrink-0 border-b px-5 py-3 sm:px-6 ${
+              isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-zinc-950'
+            }`}>
+              <div className={`grid grid-cols-2 rounded-xl p-1 ${
+                isLight ? 'bg-zinc-100' : 'bg-white/[0.045]'
+              }`}>
+                <button
+                  type="button"
+                  onClick={() => setProOfferTab('offer')}
+                  className={`min-h-10 rounded-lg px-3 text-xs font-semibold transition-all ${
+                    proOfferTab === 'offer'
+                      ? isLight
+                        ? 'bg-white text-zinc-900 shadow-sm'
+                        : 'bg-zinc-800 text-zinc-100 shadow-sm'
+                      : isLight
+                        ? 'text-zinc-500 hover:text-zinc-800'
+                        : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  {proAccessCopy.offerTab}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setProOfferTab('invites')}
+                  className={`flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-xs font-semibold transition-all ${
+                    proOfferTab === 'invites'
+                      ? isLight
+                        ? 'bg-white text-zinc-900 shadow-sm'
+                        : 'bg-zinc-800 text-zinc-100 shadow-sm'
+                      : isLight
+                        ? 'text-zinc-500 hover:text-zinc-800'
+                        : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  <span>{proAccessCopy.invitesTab}</span>
+                  <span className={`rounded-full px-1.5 py-0.5 font-data text-[10px] ${
+                    invitedCount > 0
+                      ? 'bg-amber-400/15 text-amber-500'
+                      : isLight ? 'bg-zinc-200 text-zinc-500' : 'bg-white/[0.06] text-zinc-500'
+                  }`}>
+                    {invitedCount}
+                  </span>
+                </button>
+              </div>
+            </div>
+
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+              {proOfferTab === 'offer' ? (
+                <>
               <p className={`mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] ${
                 isLight ? 'text-zinc-500' : 'text-zinc-500'
               }`}>
@@ -5141,7 +5417,47 @@ export default function CalendarScreen() {
                     </span>
                   </div>
 
-                  <div className={`mt-4 rounded-xl border px-3 py-2.5 ${
+                  <div className={`mt-4 rounded-xl border px-3 py-3 ${
+                    isLight
+                      ? 'border-zinc-200 bg-white/75'
+                      : 'border-white/[0.06] bg-black/10'
+                  }`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className={`text-[11px] font-semibold ${
+                        isLight ? 'text-zinc-600' : 'text-zinc-400'
+                      }`}>
+                        {proAccessCopy.invitedLabel}
+                      </span>
+                      <span className="font-data text-xs font-bold text-amber-500">
+                        {Math.min(invitedCount, 1)} / 1
+                      </span>
+                    </div>
+
+                    <div className={`mt-2 h-1.5 overflow-hidden rounded-full ${
+                      isLight ? 'bg-zinc-200' : 'bg-white/[0.07]'
+                    }`}>
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all duration-500"
+                        style={{ width: invitedCount > 0 ? '100%' : '0%' }}
+                      />
+                    </div>
+
+                    <p className={`mt-2 text-[10px] leading-4 ${
+                      rewardedCount > 0
+                        ? 'text-emerald-500'
+                        : invitedCount > 0
+                          ? 'text-amber-500'
+                          : isLight ? 'text-zinc-500' : 'text-zinc-500'
+                    }`}>
+                      {rewardedCount > 0
+                        ? proAccessCopy.inviteDone
+                        : invitedCount > 0 || pendingCount > 0
+                          ? proAccessCopy.invitePending
+                          : proAccessCopy.inviteWaiting}
+                    </p>
+                  </div>
+
+                  <div className={`mt-3 rounded-xl border px-3 py-2.5 ${
                     isLight
                       ? 'border-amber-200/80 bg-white/80'
                       : 'border-amber-400/10 bg-black/15'
@@ -5223,6 +5539,166 @@ export default function CalendarScreen() {
                   </div>
                 </div>
               </div>
+                </>
+              ) : (
+                <div>
+                  {!user ? (
+                    <div className={`rounded-2xl border p-5 text-center ${
+                      isLight ? 'border-zinc-200 bg-zinc-50' : 'border-white/[0.06] bg-white/[0.025]'
+                    }`}>
+                      <History className={`mx-auto h-6 w-6 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`} />
+                      <p className={`mt-3 text-sm leading-6 ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>
+                        {proAccessCopy.signInHistory}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleGoogleLogin}
+                        className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-amber-400 px-4 text-sm font-bold text-zinc-950 hover:bg-amber-300"
+                      >
+                        {proAccessCopy.signIn}
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                        {[
+                          [Inbox, proAccessCopy.invitedPeople, invitedCount, 'text-amber-500'],
+                          [CheckCircle2, proAccessCopy.activatedPeople, rewardedCount, 'text-emerald-500'],
+                          [History, proAccessCopy.waitingPeople, pendingCount, 'text-zinc-500'],
+                          [Award, proAccessCopy.earnedDays, `${rewardedCount * 26} ${proAccessCopy.daysShort}`, 'text-amber-500'],
+                        ].map(([Icon, label, value, valueClass]) => (
+                          <div
+                            key={label}
+                            className={`rounded-2xl border p-3.5 ${
+                              isLight ? 'border-zinc-200 bg-zinc-50/80' : 'border-white/[0.06] bg-white/[0.025]'
+                            }`}
+                          >
+                            <Icon className={`h-4 w-4 ${valueClass}`} />
+                            <p className={`mt-3 text-[10px] uppercase tracking-[0.12em] ${
+                              isLight ? 'text-zinc-500' : 'text-zinc-500'
+                            }`}>
+                              {label}
+                            </p>
+                            <p className={`mt-1 font-data text-xl font-bold ${valueClass}`}>{value}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className={`mt-4 overflow-hidden rounded-2xl border ${
+                        isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-white/[0.02]'
+                      }`}>
+                        <div className={`flex items-center justify-between border-b px-4 py-3 ${
+                          isLight ? 'border-zinc-200' : 'border-white/[0.06]'
+                        }`}>
+                          <div>
+                            <p className="text-sm font-semibold">{proAccessCopy.historyTitle}</p>
+                            <p className={`mt-0.5 text-[10px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                              {proAccessCopy.invitedPeople}: {invitedCount}
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={openReferralShare}
+                            disabled={!referralCode}
+                            className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors disabled:opacity-45 ${
+                              isLight
+                                ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                : 'border-amber-400/15 bg-amber-400/[0.06] text-amber-300 hover:bg-amber-400/[0.10]'
+                            }`}
+                          >
+                            <Share2 className="h-3.5 w-3.5" />
+                            {proAccessCopy.inviteMore}
+                          </button>
+                        </div>
+
+                        {recentInvites.length === 0 ? (
+                          <div className="px-5 py-8 text-center">
+                            <Gift className={`mx-auto h-6 w-6 ${isLight ? 'text-zinc-300' : 'text-zinc-700'}`} />
+                            <p className="mt-3 text-sm font-semibold">{proAccessCopy.noInvitesTitle}</p>
+                            <p className={`mx-auto mt-1.5 max-w-sm text-xs leading-5 ${
+                              isLight ? 'text-zinc-500' : 'text-zinc-500'
+                            }`}>
+                              {proAccessCopy.noInvitesBody}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={openReferralShare}
+                              disabled={!referralCode}
+                              className="mt-4 inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-amber-400 px-4 text-xs font-bold text-zinc-950 hover:bg-amber-300 disabled:opacity-45"
+                            >
+                              <Share2 className="h-3.5 w-3.5" />
+                              {proAccessCopy.share}
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-zinc-200/70 dark:divide-white/[0.05]">
+                            {recentInvites.map((invite, index) => {
+                              const isRewarded = invite.status === 'rewarded';
+                              const isQualified = invite.status === 'qualified';
+                              const statusText = isRewarded
+                                ? proAccessCopy.rewardedStatus
+                                : isQualified
+                                  ? proAccessCopy.qualifiedStatus
+                                  : proAccessCopy.pendingStatus;
+
+                              return (
+                                <div key={invite.id} className="flex items-center gap-3 px-4 py-3.5">
+                                  <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border ${
+                                    isRewarded
+                                      ? isLight
+                                        ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
+                                        : 'border-emerald-400/15 bg-emerald-500/[0.08] text-emerald-400'
+                                      : isLight
+                                        ? 'border-zinc-200 bg-zinc-50 text-zinc-500'
+                                        : 'border-white/[0.06] bg-white/[0.035] text-zinc-500'
+                                  }`}>
+                                    {isRewarded
+                                      ? <CheckCircle2 className="h-4 w-4" />
+                                      : <History className="h-4 w-4" />}
+                                  </span>
+
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center justify-between gap-3">
+                                      <p className="truncate text-sm font-semibold">
+                                        {proAccessCopy.invitesTab} #{Math.max(invitedCount - index, 1)}
+                                      </p>
+                                      <span className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-semibold ${
+                                        isRewarded
+                                          ? 'bg-emerald-500/10 text-emerald-500'
+                                          : isQualified
+                                            ? 'bg-amber-400/10 text-amber-500'
+                                            : isLight
+                                              ? 'bg-zinc-100 text-zinc-500'
+                                              : 'bg-white/[0.05] text-zinc-500'
+                                      }`}>
+                                        {statusText}
+                                      </span>
+                                    </div>
+
+                                    <div className={`mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] ${
+                                      isLight ? 'text-zinc-500' : 'text-zinc-500'
+                                    }`}>
+                                      <span>
+                                        {proAccessCopy.joinedAt}: {formatReferralHistoryDate(invite.created_at)}
+                                      </span>
+                                      {invite.rewarded_at && (
+                                        <span>
+                                          {proAccessCopy.rewardedAt}: {formatReferralHistoryDate(invite.rewarded_at)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className={`shrink-0 border-t px-5 py-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:px-6 ${
