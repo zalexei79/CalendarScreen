@@ -224,32 +224,34 @@ export default function MonthlyGoal({
   }
 
   const panelClass = isLight
-    ? 'border-zinc-200 bg-white/90 text-zinc-900 shadow-sm'
-    : 'border-white/10 bg-zinc-950/70 text-zinc-100 shadow-[0_16px_50px_rgba(0,0,0,.18)]';
+    ? 'border-slate-200/90 bg-white/80 text-zinc-900 shadow-[0_10px_30px_-24px_rgba(15,23,42,.35)]'
+    : 'border-white/[0.08] bg-zinc-950/48 text-zinc-100 shadow-[0_14px_34px_-26px_rgba(0,0,0,.75)]';
 
-  const mutedClass = isLight ? 'text-zinc-500' : 'text-zinc-400';
-  const trackClass = isLight ? 'bg-zinc-100' : 'bg-white/10';
+  const mutedClass = isLight ? 'text-slate-500' : 'text-zinc-500';
+  const trackClass = isLight ? 'bg-slate-100' : 'bg-white/[0.07]';
 
   return (
     <>
-      <section className={`relative mx-auto mt-1.5 mb-2 overflow-hidden rounded-xl border px-3 py-2.5 sm:px-4 ${panelClass}`}>
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/45 to-transparent" />
+      <section className={`relative mx-auto mt-1 mb-1.5 overflow-hidden rounded-2xl border px-3 py-2 sm:px-4 sm:py-2.5 ${panelClass}`}>
+        <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/35 to-transparent" />
 
-        <div className="flex min-w-0 items-center gap-2.5">
-          <div className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${isLight ? 'bg-amber-50 text-amber-600' : 'bg-amber-400/10 text-amber-300'}`}>
+        <div className="flex min-w-0 items-center gap-2">
+          <div className={`grid h-6 w-6 sm:h-7 sm:w-7 shrink-0 place-items-center rounded-lg ${
+            isLight ? 'bg-amber-50/80 text-amber-600' : 'bg-amber-400/[0.08] text-amber-300'
+          }`}>
             <Target className="h-3.5 w-3.5" />
           </div>
 
           <button
             type="button"
             onClick={() => setDetailsOpen((value) => !value)}
-            className="flex min-w-0 flex-1 items-center gap-2 text-left"
+            className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2 text-left"
             aria-expanded={detailsOpen}
           >
-            <span className="shrink-0 text-xs font-semibold sm:text-sm">{copy.title}</span>
+            <span className="shrink-0 text-[11px] font-semibold sm:text-sm">{copy.title}</span>
 
             {goal > 0 ? (
-              <span className="min-w-0 truncate font-data text-[11px] font-semibold sm:text-xs">
+              <span className={`min-w-0 truncate font-data text-[10px] font-semibold sm:text-xs ${mutedClass}`}>
                 {formatGoalNumber(netPnl, language)} / {formatGoalNumber(goal, language)} {currency}
               </span>
             ) : (
@@ -257,18 +259,18 @@ export default function MonthlyGoal({
             )}
 
             {goal > 0 && (
-              <span className={`ml-auto shrink-0 font-data text-[11px] font-bold ${achieved ? 'text-emerald-500' : 'text-amber-500'}`}>
+              <span className={`ml-auto shrink-0 font-data text-[10px] font-bold sm:text-[11px] ${achieved ? 'text-emerald-500' : 'text-amber-500'}`}>
                 {Math.round(progress)}%
               </span>
             )}
 
             <ChevronDown
-              className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${mutedClass} ${detailsOpen ? 'rotate-180' : ''}`}
+              className={`h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0 transition-transform duration-200 ${mutedClass} ${detailsOpen ? 'rotate-180' : ''}`}
             />
           </button>
         </div>
 
-        <div className={`relative mt-2 h-1.5 overflow-hidden rounded-full ${trackClass}`}>
+        <div className={`relative mt-1.5 h-[3px] sm:h-1 overflow-hidden rounded-full ${trackClass}`}>
           <div
             className={`absolute inset-y-0 left-0 rounded-full transition-[width,filter] duration-1000 ease-[cubic-bezier(.22,1,.36,1)] ${
               achieved
@@ -287,7 +289,7 @@ export default function MonthlyGoal({
         </div>
 
         <div className={`grid transition-[grid-template-rows,opacity,margin] duration-200 ${
-          detailsOpen || editing ? 'mt-2.5 grid-rows-[1fr] opacity-100' : 'mt-0 grid-rows-[0fr] opacity-0'
+          detailsOpen || editing ? 'mt-2 grid-rows-[1fr] opacity-100' : 'mt-0 grid-rows-[0fr] opacity-0'
         }`}>
           <div className="min-h-0 overflow-hidden">
             {editing ? (

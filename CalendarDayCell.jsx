@@ -45,14 +45,14 @@ export default function CalendarDayCell({
     cell.inMonth && hasTrades && !isSelected
       ? {
           backgroundColor: isLight
-            ? (pnlTone === 'profit' ? `rgba(16,185,129,${(0.20 + effectiveIntensity * 0.25).toFixed(2)})` : `rgba(239,68,68,${(0.20 + effectiveIntensity * 0.25).toFixed(2)})`)
-            : `rgba(${glowRgb},${(0.08 + effectiveIntensity * 0.16).toFixed(2)})`,
+            ? `rgba(${glowRgb},${(0.025 + effectiveIntensity * 0.035).toFixed(3)})`
+            : `rgba(${glowRgb},${(0.045 + effectiveIntensity * 0.065).toFixed(3)})`,
           borderColor: isLight
-            ? (pnlTone === 'profit' ? `rgba(5,150,105,${(0.40 + effectiveIntensity * 0.30).toFixed(2)})` : `rgba(225,29,72,${(0.40 + effectiveIntensity * 0.30).toFixed(2)})`)
-            : `rgba(${glowRgb},${(0.28 + effectiveIntensity * 0.28).toFixed(2)})`,
+            ? `rgba(${glowRgb},${(0.24 + effectiveIntensity * 0.14).toFixed(2)})`
+            : `rgba(${glowRgb},${(0.20 + effectiveIntensity * 0.16).toFixed(2)})`,
           boxShadow: isLight
-            ? `0 4px 14px rgba(${glowRgb},${(0.12 + effectiveIntensity * 0.16).toFixed(2)})`
-            : `0 0 ${Math.round(4 + effectiveIntensity * 12)}px rgba(${glowRgb},${(0.12 + effectiveIntensity * 0.16).toFixed(2)})`,
+            ? `inset 0 -10px 22px -18px rgba(${glowRgb},${(0.18 + effectiveIntensity * 0.10).toFixed(2)}), 0 2px 8px rgba(15,23,42,.035)`
+            : `inset 0 -12px 24px -20px rgba(${glowRgb},${(0.28 + effectiveIntensity * 0.12).toFixed(2)}), 0 7px 22px -18px rgba(${glowRgb},${(0.26 + effectiveIntensity * 0.10).toFixed(2)})`,
           animation: 'cellGlowIn 0.35s ease-out both',
           animationDelay: `${cellIndex * 18}ms`,
         }
@@ -74,12 +74,12 @@ export default function CalendarDayCell({
     ? pnl === 0
       ? { backgroundColor: isLight ? '#f8fafc' : '#131418', borderColor: isLight ? '#e2e8f0' : '#292a30', boxShadow: 'none' }
       : {
-          backgroundColor: isLight ? '#fff' : '#101114',
+          backgroundColor: isLight ? `rgba(${proRgb},.025)` : '#101114',
           backgroundImage: 'none',
-          borderColor: `rgba(${proRgb},${isLight ? 0.45 + proStrength * 0.12 : 0.25 + proStrength * 0.12})`,
+          borderColor: `rgba(${proRgb},${isLight ? 0.26 + proStrength * 0.10 : 0.22 + proStrength * 0.10})`,
           boxShadow: isLight
-            ? `0 2px 0 rgba(${proRgb},0.18), 0 5px 10px -3px rgba(${proRgb},${0.32 + proStrength * 0.12}), 0 12px 22px -9px rgba(${proRgb},${0.38 + proStrength * 0.12}), 0 1px 3px rgba(15,23,42,0.04)`
-            : `0 9px ${22 + Math.round(proStrength * 14)}px -5px rgba(${proRgb},${0.30 + proStrength * 0.10}), 0 0 12px -3px rgba(${proRgb},0.16)`,
+            ? `inset 0 -12px 24px -22px rgba(${proRgb},${0.30 + proStrength * 0.08}), 0 2px 8px rgba(15,23,42,.035)`
+            : `inset 0 -14px 30px -24px rgba(${proRgb},${0.36 + proStrength * 0.08}), 0 10px 24px -20px rgba(${proRgb},${0.28 + proStrength * 0.08})`,
         }
     : {};
 
@@ -138,13 +138,12 @@ export default function CalendarDayCell({
 
         .selected-calendar-cell {
           z-index: 12;
-          transform: translateY(-1px) scale(1.012);
-          border-color: rgba(251, 191, 36, .78) !important;
+          transform: translateY(-1px) scale(1.006);
+          border-color: rgba(245, 158, 11, .66) !important;
           box-shadow:
-            inset 0 0 0 1px rgba(251, 191, 36, .10),
-            inset 0 0 22px rgba(251, 191, 36, .055),
-            0 8px 20px -12px rgba(245, 158, 11, .55),
-            0 0 0 1px rgba(251, 191, 36, .08) !important;
+            inset 0 0 0 1px rgba(251, 191, 36, .08),
+            inset 0 0 18px rgba(251, 191, 36, .035),
+            0 8px 22px -17px rgba(245, 158, 11, .62) !important;
         }
 
         .selected-calendar-cell:active {
@@ -153,7 +152,7 @@ export default function CalendarDayCell({
 
         @media (min-width: 640px) {
           .selected-calendar-cell {
-            transform: translateY(-2px) scale(1.015);
+            transform: translateY(-1px) scale(1.008);
           }
         }
 
@@ -171,7 +170,7 @@ export default function CalendarDayCell({
         onClick={onSelect}
         style={{ ...heatmapStyle, ...proStyle }}
         className={[
-          'relative rounded-xl border flex flex-col justify-between text-left transition-all duration-200 ease-out',
+          'relative overflow-hidden rounded-xl border flex flex-col justify-between text-left transition-all duration-200 ease-out',
           traderMode ? 'pro-calendar-day' : '',
           cell.isToday ? 'today-calendar-cell' : '',
           todayPulse ? 'today-calendar-pulse' : '',
@@ -184,7 +183,7 @@ export default function CalendarDayCell({
             ? (cell.inMonth ? (hasTrades ? 'border-slate-300/80' : 'border-slate-200/90') : 'border-slate-100')
             : (cell.inMonth ? (hasTrades ? 'border-zinc-800' : 'border-zinc-800/30') : ''),
           isSelected
-            ? `${isLight ? 'bg-amber-50/45' : 'bg-zinc-800/90'}`
+            ? `${isLight ? 'bg-white' : 'bg-zinc-900/85'}`
             : isLight ? 'hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm' : 'hover:border-zinc-600 hover:bg-zinc-800/60',
         ].join(' ')}
       >
@@ -231,22 +230,22 @@ export default function CalendarDayCell({
         {hasTrades && (
           <span
             title={formatPnlDisplay(pnl, false)}
-            className={`day-amount inline-flex w-fit max-w-full items-center rounded-md px-1.5 py-0.5 font-data text-[10px] sm:text-[15px] font-extrabold tracking-tight whitespace-nowrap ${
+            className={`day-amount block w-full min-w-0 max-w-full overflow-hidden text-ellipsis font-data text-[10px] sm:text-[15px] font-bold tracking-[-0.02em] whitespace-nowrap ${
               pnlTone === 'profit'
                 ? (isLight
-                  ? 'bg-emerald-500/[0.10] text-emerald-950 ring-1 ring-inset ring-emerald-600/10 [text-shadow:0_1px_0_rgba(255,255,255,.42)]'
-                  : 'bg-emerald-500/[0.08] text-emerald-400 ring-1 ring-inset ring-emerald-400/10')
+                  ? 'text-emerald-700'
+                  : 'text-emerald-400')
                 : pnlTone === 'loss'
                   ? (isLight
-                    ? 'bg-rose-500/[0.09] text-rose-950 ring-1 ring-inset ring-rose-600/10 [text-shadow:0_1px_0_rgba(255,255,255,.42)]'
-                    : 'bg-red-500/[0.08] text-red-400 ring-1 ring-inset ring-red-400/10')
-                  : (isLight ? 'bg-slate-500/[0.06] text-slate-500' : 'bg-white/[0.04] text-zinc-500')
+                    ? 'text-rose-700'
+                    : 'text-rose-400')
+                  : (isLight ? 'text-slate-500' : 'text-zinc-500')
             }`}
           >
             {traderMode ? (
               <>
-                <span className="day-amount-short">{pnlText}</span>
-                <span className="day-amount-full">{formatPnlDisplay(pnl, false)}</span>
+                <span className="day-amount-short block min-w-0 overflow-hidden text-ellipsis">{pnlText}</span>
+                <span className="day-amount-full min-w-0 overflow-hidden text-ellipsis">{formatPnlDisplay(pnl, false)}</span>
               </>
             ) : (
               pnlText

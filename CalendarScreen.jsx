@@ -1765,6 +1765,8 @@ export default function CalendarScreen() {
         @media (min-width: 640px) { .calendar-days-grid > button { border-radius: 18px !important; } }
         .calendar-days-grid > button:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0,0,0,.16); }
         .calendar-days-grid > button:active { transform: scale(.985); }
+        .day-amount { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+        .day-amount-short, .day-amount-full { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .pro-calendar-day .day-amount { position: absolute; left: 8px; right: 8px; bottom: 8px; transition: bottom .24s ease, transform .24s ease; }
         .pro-calendar-day .day-amount-full { display: none; }
         @media (min-width: 640px) { .pro-calendar-day .day-amount { left: 14px; right: 14px; bottom: 14px; } }
