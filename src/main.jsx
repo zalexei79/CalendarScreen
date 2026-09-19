@@ -71,6 +71,14 @@ const params = new URLSearchParams(window.location.search)
 const incomingReferral = String(params.get('ref') || '').trim().toUpperCase()
 if (/^[A-Z0-9]{4,32}$/.test(incomingReferral)) {
   try { window.localStorage.setItem('atj_pending_referral_code', incomingReferral) } catch { /* ignore */ }
+
+  // iPhone/iPad Home Screen web apps do not inherit Safari localStorage.
+  // WebKit does copy same-origin cookies when the web app is installed, so keep
+  // the referral code in BOTH places before the user adds the app to Home Screen.
+  try {
+    const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+    document.cookie = `atj_pending_referral_code=${encodeURIComponent(incomingReferral)}; Max-Age=2592000; Path=/; SameSite=Lax${secure}`
+  } catch { /* ignore */ }
 }
 
 const normalizedPath = window.location.pathname.replace(/\/+$/, '') || '/'
