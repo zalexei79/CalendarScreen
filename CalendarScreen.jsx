@@ -707,36 +707,87 @@ export default function CalendarScreen() {
 
   const proAccessCopy = {
     ru: {
-      eyebrow: 'PRO БЕСПЛАТНО',
-      title: 'Пригласи друга — PRO получат оба',
-      body: 'Когда друг установит приложение по твоей ссылке и создаст первую настоящую запись, награда активируется автоматически.',
+      eyebrow: 'AI TRADE JOURNAL PRO',
+      title: 'Открой AI Trade Journal PRO',
+      body: 'Больше аналитики. Подключение площадок. Меньше ручной работы.',
+      featuresTitle: 'Что откроется в PRO',
+      featurePlatform: 'Подключение площадки',
+      featurePlatformHint: 'cTrader: синхронизация аккаунтов и сделок',
+      featureAnalytics: 'Расширенная аналитика',
+      featureAnalyticsHint: 'PnL-кривая, динамика периода и статистика',
+      featureJournal: 'Торговый журнал',
+      featureJournalHint: 'Инструмент, направление, TP/SL и заметки',
+      featureInsights: 'Разбор результатов',
+      featureInsightsHint: 'История и заметки помогают видеть закономерности',
+      freeTitle: 'Получить PRO бесплатно',
+      freeBody: 'Пригласи друга. После его первой настоящей записи награда активируется автоматически.',
       reward: '+26 дней PRO тебе',
       rewardHint: '+7 дней PRO другу на старт',
       share: 'Создать приглашение',
       signIn: 'Войти и получить приглашение',
       preparing: 'Готовим твоё приглашение…',
+      buyTitle: 'PRO без приглашения',
+      buyPrice: '$1.99',
+      buyPeriod: '/ месяц',
+      buyBody: 'Помесячный доступ к PRO — без приглашений.',
+      buyButton: 'Подключить PRO',
+      comingSoon: 'Оплату подключим следующим шагом',
       close: 'Не сейчас',
     },
     en: {
-      eyebrow: 'FREE PRO',
-      title: 'Invite a friend — both of you get PRO',
-      body: 'When your friend installs from your link and creates their first real entry, both rewards activate automatically.',
+      eyebrow: 'AI TRADE JOURNAL PRO',
+      title: 'Unlock AI Trade Journal PRO',
+      body: 'More analytics. Platform connections. Less manual work.',
+      featuresTitle: 'What PRO unlocks',
+      featurePlatform: 'Platform connection',
+      featurePlatformHint: 'cTrader account and trade sync',
+      featureAnalytics: 'Advanced analytics',
+      featureAnalyticsHint: 'PnL curve, period dynamics and statistics',
+      featureJournal: 'Trading journal',
+      featureJournalHint: 'Instrument, direction, TP/SL and notes',
+      featureInsights: 'Results review',
+      featureInsightsHint: 'History and notes help reveal patterns',
+      freeTitle: 'Get PRO for free',
+      freeBody: 'Invite a friend. After their first real entry, the reward activates automatically.',
       reward: '+26 days PRO for you',
       rewardHint: '+7 days PRO for your friend',
       share: 'Create invitation',
       signIn: 'Sign in to get an invitation',
       preparing: 'Preparing your invitation…',
+      buyTitle: 'PRO without inviting',
+      buyPrice: '$1.99',
+      buyPeriod: '/ month',
+      buyBody: 'Monthly PRO access — no invitation required.',
+      buyButton: 'Get PRO',
+      comingSoon: 'Payments are the next step',
       close: 'Not now',
     },
     ro: {
-      eyebrow: 'PRO GRATUIT',
-      title: 'Invită un prieten — amândoi primiți PRO',
-      body: 'Când prietenul instalează aplicația din linkul tău și creează prima înregistrare reală, recompensele se activează automat.',
+      eyebrow: 'AI TRADE JOURNAL PRO',
+      title: 'Deblochează AI Trade Journal PRO',
+      body: 'Mai multă analiză. Conectarea platformelor. Mai puțină muncă manuală.',
+      featuresTitle: 'Ce deblochează PRO',
+      featurePlatform: 'Conectarea platformei',
+      featurePlatformHint: 'cTrader: sincronizarea conturilor și tranzacțiilor',
+      featureAnalytics: 'Analiză avansată',
+      featureAnalyticsHint: 'Curba PnL, dinamica perioadei și statistici',
+      featureJournal: 'Jurnal de tranzacționare',
+      featureJournalHint: 'Instrument, direcție, TP/SL și notițe',
+      featureInsights: 'Analiza rezultatelor',
+      featureInsightsHint: 'Istoricul și notițele ajută să vezi tipare',
+      freeTitle: 'Primește PRO gratuit',
+      freeBody: 'Invită un prieten. După prima lui înregistrare reală, recompensa se activează automat.',
       reward: '+26 zile PRO pentru tine',
       rewardHint: '+7 zile PRO pentru prieten',
       share: 'Creează invitația',
       signIn: 'Autentifică-te pentru invitație',
       preparing: 'Pregătim invitația…',
+      buyTitle: 'PRO fără invitație',
+      buyPrice: '$1.99',
+      buyPeriod: '/ lună',
+      buyBody: 'Acces PRO lunar — fără invitații.',
+      buyButton: 'Activează PRO',
+      comingSoon: 'Plățile sunt următorul pas',
       close: 'Nu acum',
     },
   }[resolveOnboardingLanguage(language)];
@@ -4977,71 +5028,213 @@ export default function CalendarScreen() {
         </div>
       )}
 
-      {/* PRO ACCESS — server entitlement gate */}
+      {/* PRO ACCESS — value-first server entitlement gate */}
       {proAccessPromptOpen && (
         <div
-          className="fixed inset-0 z-[96] flex items-end justify-center bg-black/75 px-0 pt-10 backdrop-blur-sm sm:items-center sm:px-4 sm:pt-0"
+          className="fixed inset-0 z-[96] flex items-end justify-center bg-black/75 px-0 pt-8 backdrop-blur-sm sm:items-center sm:px-4 sm:pt-0"
           onClick={(event) => { if (event.target === event.currentTarget) setProAccessPromptOpen(false); }}
         >
-          <div className={`w-full max-w-md overflow-hidden rounded-t-[28px] border shadow-2xl sm:rounded-3xl ${
+          <div className={`flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-[28px] border shadow-2xl sm:rounded-3xl ${
             isLight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-white/[0.08] bg-zinc-950 text-zinc-100'
           }`}>
             <div className="flex justify-center pt-2.5 sm:hidden" aria-hidden="true">
               <span className={`h-1 w-11 rounded-full ${isLight ? 'bg-zinc-300' : 'bg-zinc-700'}`} />
             </div>
 
-            <div className="px-5 pb-5 pt-4 sm:px-6 sm:pt-6">
-              <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 ${
-                isLight
-                  ? 'border-amber-200 bg-amber-50 text-amber-700'
-                  : 'border-amber-400/15 bg-amber-400/[0.06] text-amber-300'
-              }`}>
-                <Zap className="h-3.5 w-3.5" />
-                <span className="font-data text-[9px] font-bold tracking-[0.2em]">{proAccessCopy.eyebrow}</span>
-              </div>
-
-              <h3 className="mt-4 font-display text-2xl font-semibold tracking-tight">{proAccessCopy.title}</h3>
-              <p className={`mt-2 text-sm leading-6 ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>
-                {proAccessCopy.body}
-              </p>
-
-              <div className={`mt-5 rounded-2xl border p-4 ${
-                isLight
-                  ? 'border-amber-200/80 bg-gradient-to-br from-amber-50 to-white'
-                  : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.08] to-white/[0.02]'
-              }`}>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="font-data text-2xl font-bold text-amber-500">{proAccessCopy.reward}</p>
-                    <p className={`mt-1 text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{proAccessCopy.rewardHint}</p>
-                  </div>
-                  <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl border ${
-                    isLight ? 'border-amber-200 bg-white text-amber-600 shadow-sm' : 'border-amber-400/20 bg-amber-400/[0.08] text-amber-300'
-                  }`}>
-                    <Award className="h-5 w-5" />
-                  </div>
+            <div className={`flex items-start justify-between gap-4 border-b px-5 pb-4 pt-4 sm:px-6 sm:pt-6 ${
+              isLight ? 'border-zinc-200' : 'border-white/[0.06]'
+            }`}>
+              <div className="min-w-0">
+                <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 ${
+                  isLight
+                    ? 'border-amber-200 bg-amber-50 text-amber-700'
+                    : 'border-amber-400/15 bg-amber-400/[0.06] text-amber-300'
+                }`}>
+                  <Zap className="h-3.5 w-3.5" />
+                  <span className="font-data text-[9px] font-bold tracking-[0.2em]">{proAccessCopy.eyebrow}</span>
                 </div>
-              </div>
 
-              <button
-                type="button"
-                onClick={openReferralShare}
-                disabled={Boolean(user) && !referralCode}
-                className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-4 text-sm font-bold text-zinc-950 shadow-lg shadow-amber-500/10 transition-all hover:from-amber-300 hover:to-amber-400 active:scale-[0.99] disabled:cursor-wait disabled:opacity-55"
-              >
-                <Share2 className="h-4 w-4 stroke-[2]" />
-                {!user
-                  ? proAccessCopy.signIn
-                  : referralCode
-                    ? proAccessCopy.share
-                    : proAccessCopy.preparing}
-              </button>
+                <h3 className="mt-3 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">
+                  {proAccessCopy.title}
+                </h3>
+                <p className={`mt-2 max-w-lg text-sm leading-6 ${
+                  isLight ? 'text-zinc-600' : 'text-zinc-400'
+                }`}>
+                  {proAccessCopy.body}
+                </p>
+              </div>
 
               <button
                 type="button"
                 onClick={() => setProAccessPromptOpen(false)}
-                className={`mt-2 min-h-11 w-full rounded-xl px-4 text-sm transition-colors ${
-                  isLight ? 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800' : 'text-zinc-500 hover:bg-white/[0.05] hover:text-zinc-300'
+                className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border transition-colors ${
+                  isLight
+                    ? 'border-zinc-200 bg-zinc-50 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800'
+                    : 'border-white/[0.08] bg-white/[0.04] text-zinc-500 hover:bg-white/[0.07] hover:text-zinc-200'
+                }`}
+                aria-label={proAccessCopy.close}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+              <p className={`mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] ${
+                isLight ? 'text-zinc-500' : 'text-zinc-500'
+              }`}>
+                {proAccessCopy.featuresTitle}
+              </p>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                {[
+                  [Link2, proAccessCopy.featurePlatform, proAccessCopy.featurePlatformHint],
+                  [TrendingUp, proAccessCopy.featureAnalytics, proAccessCopy.featureAnalyticsHint],
+                  [ChartCandlestick, proAccessCopy.featureJournal, proAccessCopy.featureJournalHint],
+                  [FileText, proAccessCopy.featureInsights, proAccessCopy.featureInsightsHint],
+                ].map(([Icon, title, hint]) => (
+                  <div
+                    key={title}
+                    className={`rounded-2xl border p-3.5 ${
+                      isLight
+                        ? 'border-zinc-200 bg-zinc-50/80'
+                        : 'border-white/[0.06] bg-white/[0.025]'
+                    }`}
+                  >
+                    <span className={`grid h-9 w-9 place-items-center rounded-xl border ${
+                      isLight
+                        ? 'border-amber-200/80 bg-white text-amber-600 shadow-sm'
+                        : 'border-amber-400/15 bg-amber-400/[0.07] text-amber-300'
+                    }`}>
+                      <Icon className="h-4 w-4 stroke-[1.8]" />
+                    </span>
+                    <p className="mt-3 text-sm font-semibold leading-tight">{title}</p>
+                    <p className={`mt-1 text-[11px] leading-4 ${
+                      isLight ? 'text-zinc-500' : 'text-zinc-500'
+                    }`}>
+                      {hint}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <div className={`rounded-2xl border p-4 ${
+                  isLight
+                    ? 'border-amber-200/80 bg-gradient-to-br from-amber-50 to-white'
+                    : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.08] to-white/[0.02]'
+                }`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">{proAccessCopy.freeTitle}</p>
+                      <p className={`mt-1.5 text-xs leading-5 ${
+                        isLight ? 'text-zinc-600' : 'text-zinc-400'
+                      }`}>
+                        {proAccessCopy.freeBody}
+                      </p>
+                    </div>
+                    <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border ${
+                      isLight
+                        ? 'border-amber-200 bg-white text-amber-600 shadow-sm'
+                        : 'border-amber-400/20 bg-amber-400/[0.08] text-amber-300'
+                    }`}>
+                      <Award className="h-4.5 w-4.5" />
+                    </span>
+                  </div>
+
+                  <div className={`mt-4 rounded-xl border px-3 py-2.5 ${
+                    isLight
+                      ? 'border-amber-200/80 bg-white/80'
+                      : 'border-amber-400/10 bg-black/15'
+                  }`}>
+                    <p className="font-data text-[15px] font-bold text-amber-500">{proAccessCopy.reward}</p>
+                    <p className={`mt-0.5 text-[11px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                      {proAccessCopy.rewardHint}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={openReferralShare}
+                    disabled={Boolean(user) && !referralCode}
+                    className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-3 text-sm font-bold text-zinc-950 shadow-lg shadow-amber-500/10 transition-all hover:from-amber-300 hover:to-amber-400 active:scale-[0.99] disabled:cursor-wait disabled:opacity-55"
+                  >
+                    <Share2 className="h-4 w-4 stroke-[2]" />
+                    {!user
+                      ? proAccessCopy.signIn
+                      : referralCode
+                        ? proAccessCopy.share
+                        : proAccessCopy.preparing}
+                  </button>
+                </div>
+
+                <div className={`relative overflow-hidden rounded-2xl border p-4 ${
+                  isLight
+                    ? 'border-zinc-200 bg-white'
+                    : 'border-white/[0.08] bg-white/[0.025]'
+                }`}>
+                  <div className={`pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full blur-3xl ${
+                    isLight ? 'bg-emerald-100/60' : 'bg-emerald-500/[0.06]'
+                  }`} />
+
+                  <div className="relative">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold">{proAccessCopy.buyTitle}</p>
+                        <p className={`mt-1.5 text-xs leading-5 ${
+                          isLight ? 'text-zinc-600' : 'text-zinc-400'
+                        }`}>
+                          {proAccessCopy.buyBody}
+                        </p>
+                      </div>
+                      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border ${
+                        isLight
+                          ? 'border-zinc-200 bg-zinc-50 text-zinc-600'
+                          : 'border-white/[0.08] bg-white/[0.04] text-zinc-300'
+                      }`}>
+                        <CreditCard className="h-4.5 w-4.5" />
+                      </span>
+                    </div>
+
+                    <div className="mt-4 flex items-end gap-1">
+                      <span className="font-data text-3xl font-bold tracking-tight">{proAccessCopy.buyPrice}</span>
+                      <span className={`pb-1 text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                        {proAccessCopy.buyPeriod}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled
+                      className={`mt-3 inline-flex min-h-11 w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold opacity-70 ${
+                        isLight
+                          ? 'border-zinc-200 bg-zinc-100 text-zinc-500'
+                          : 'border-white/[0.08] bg-white/[0.04] text-zinc-500'
+                      }`}
+                    >
+                      <CreditCard className="h-4 w-4 stroke-[1.8]" />
+                      {proAccessCopy.buyButton}
+                    </button>
+
+                    <p className={`mt-2 text-center text-[10px] leading-4 ${
+                      isLight ? 'text-zinc-400' : 'text-zinc-600'
+                    }`}>
+                      {proAccessCopy.comingSoon}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className={`shrink-0 border-t px-5 py-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:px-6 ${
+              isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-zinc-950'
+            }`}>
+              <button
+                type="button"
+                onClick={() => setProAccessPromptOpen(false)}
+                className={`min-h-10 w-full rounded-xl px-4 text-sm transition-colors ${
+                  isLight
+                    ? 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800'
+                    : 'text-zinc-500 hover:bg-white/[0.05] hover:text-zinc-300'
                 }`}
               >
                 {proAccessCopy.close}
