@@ -669,8 +669,14 @@ export default function CalendarScreen() {
       close: 'Закрыть',
       mixedCurrencies: 'Все валюты',
       allHistory: 'За всё время',
-      installCta: 'Начни вести свой календарь',
-      scanToInstall: 'Сканируй QR и установи приложение на главный экран',
+      installCta: 'Присоединяйся',
+      scanToInstall: 'Сканируй QR или открой ссылку',
+      viralTagline: 'Следи за деньгами красиво и просто',
+      referralBonus: '7 ДНЕЙ PRO ПО МОЕЙ ССЫЛКЕ',
+      shareInviteLine: 'Следи за деньгами красиво и просто.',
+      shareBonusLine: 'По моей ссылке — 7 дней PRO после первой записи.',
+      shareGenericLine: 'Попробуй AI Trade Journal и начни вести свой календарь.',
+      shareLinkHint: 'Вместе с картинкой отправится кликабельная ссылка на установку',
     },
     en: {
       share: 'Share',
@@ -693,8 +699,14 @@ export default function CalendarScreen() {
       close: 'Close',
       mixedCurrencies: 'All currencies',
       allHistory: 'All time',
-      installCta: 'Start your own calendar',
-      scanToInstall: 'Scan the QR code and install the app on your Home Screen',
+      installCta: 'JOIN ME',
+      scanToInstall: 'Scan the QR or open the link',
+      viralTagline: 'Track your money beautifully and simply',
+      referralBonus: '7 DAYS PRO WITH MY LINK',
+      shareInviteLine: 'Track your money beautifully and simply.',
+      shareBonusLine: 'My link gives you 7 days of PRO after your first entry.',
+      shareGenericLine: 'Try AI Trade Journal and start your own calendar.',
+      shareLinkHint: 'A clickable install link will be shared together with the image',
     },
     ro: {
       share: 'Distribuie',
@@ -717,8 +729,14 @@ export default function CalendarScreen() {
       close: 'Închide',
       mixedCurrencies: 'Toate monedele',
       allHistory: 'Toată perioada',
-      installCta: 'Începe propriul tău calendar',
-      scanToInstall: 'Scanează codul QR și instalează aplicația pe ecranul principal',
+      installCta: 'ALĂTURĂ-TE',
+      scanToInstall: 'Scanează QR-ul sau deschide linkul',
+      viralTagline: 'Urmărește-ți banii simplu și frumos',
+      referralBonus: '7 ZILE PRO DIN LINKUL MEU',
+      shareInviteLine: 'Urmărește-ți banii simplu și frumos.',
+      shareBonusLine: 'Din linkul meu primești 7 zile PRO după prima înregistrare.',
+      shareGenericLine: 'Încearcă AI Trade Journal și începe propriul calendar.',
+      shareLinkHint: 'Împreună cu imaginea va fi trimis și un link de instalare pe care se poate apăsa',
     },
   }[resolveOnboardingLanguage(language)];
 
@@ -2394,29 +2412,37 @@ export default function CalendarScreen() {
         ctx.stroke();
 
         ctx.fillStyle = amber;
-        ctx.font = '760 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-        ctx.fillText(historyShareCopy.installCta.toUpperCase(), 116, 998);
+        ctx.font = '760 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(historyShareCopy.installCta.toUpperCase(), 116, 992);
+
         ctx.fillStyle = textMain;
-        ctx.font = '700 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-        ctx.fillText('AI Trade Journal', 116, 1050);
+        ctx.font = '760 34px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        drawWrappedCanvasText(
+          ctx,
+          historyShareCopy.viralTagline,
+          116,
+          1040,
+          555,
+          43,
+          2,
+        );
+
         ctx.fillStyle = textMuted;
-        ctx.font = '520 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-        const hint = historyShareCopy.scanToInstall;
-        const maxHintWidth = 555;
-        const words = hint.split(' ');
-        let line = '';
-        let y = 1100;
-        for (const word of words) {
-          const candidate = line ? `${line} ${word}` : word;
-          if (ctx.measureText(candidate).width > maxHintWidth && line) {
-            ctx.fillText(line, 116, y);
-            line = word;
-            y += 34;
-          } else {
-            line = candidate;
-          }
+        ctx.font = '520 21px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        ctx.fillText(historyShareCopy.scanToInstall, 116, 1138);
+
+        if (referralCode) {
+          roundedCanvasRect(ctx, 116, 1162, 520, 48, 15);
+          ctx.fillStyle = dark ? 'rgba(245,185,31,.08)' : '#fff8df';
+          ctx.fill();
+          ctx.strokeStyle = dark ? 'rgba(245,185,31,.20)' : '#f0d36f';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.fillStyle = amber;
+          ctx.font = '760 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+          ctx.fillText(historyShareCopy.referralBonus, 136, 1193);
         }
-        if (line) ctx.fillText(line, 116, y);
 
         const qrMatrix = createQrMatrix(installUrl);
         roundedCanvasRect(ctx, 750, 955, 224, 224, 26);
@@ -2495,7 +2521,25 @@ export default function CalendarScreen() {
     const resultText = hasMixedCurrencies
       ? historyShareCopy.mixedCurrencies
       : `${historyTotal >= 0 ? '+' : '−'}${historyCurrencySymbol}${formatMoney(Math.abs(historyTotal))}`;
-    const shareText = `${historyShareCopy.caption}: ${resultText} · ${periodText}`;
+
+    const inviteUrlObject = new URL('/?install=1', window.location.origin);
+    if (referralCode) inviteUrlObject.searchParams.set('ref', referralCode);
+    const inviteUrl = inviteUrlObject.toString();
+
+    const invitationLine = referralCode
+      ? historyShareCopy.shareBonusLine
+      : historyShareCopy.shareGenericLine;
+
+    // Keep the URL inside the text as well as in the Web Share `url` field.
+    // Some social targets preserve only one of them when an image file is attached.
+    const shareText = [
+      `${historyShareCopy.caption}: ${resultText} · ${periodText}`,
+      '',
+      historyShareCopy.shareInviteLine,
+      invitationLine,
+      inviteUrl,
+    ].join('\n');
+
     const file = new File([blob], 'ai-trade-journal-results.png', { type: 'image/png' });
 
     try {
@@ -2503,19 +2547,36 @@ export default function CalendarScreen() {
         await navigator.share({
           title: historyShareCopy.shareTitle,
           text: shareText,
+          url: inviteUrl,
           files: [file],
         });
         return;
       }
+
       if (navigator.share) {
-        await navigator.share({ title: historyShareCopy.shareTitle, text: shareText });
+        await navigator.share({
+          title: historyShareCopy.shareTitle,
+          text: shareText,
+          url: inviteUrl,
+        });
         downloadHistoryShareImage();
         return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(shareText);
+      } catch {
+        // PNG download below remains the fallback.
       }
       downloadHistoryShareImage();
     } catch (error) {
       if (error?.name !== 'AbortError') {
         console.error('Native share error:', error);
+        try {
+          await navigator.clipboard.writeText(shareText);
+        } catch {
+          // ignore clipboard failure
+        }
         downloadHistoryShareImage();
       }
     }
@@ -5871,6 +5932,17 @@ export default function CalendarScreen() {
                   }`}
                 />
               ) : null}
+            </div>
+
+            <div className={`border-t px-4 py-2.5 text-center text-[10px] leading-4 sm:px-5 ${
+              isLight
+                ? 'border-zinc-200 bg-white text-zinc-500'
+                : 'border-white/[0.06] bg-zinc-950 text-zinc-500'
+            }`}>
+              {historyShareCopy.shareLinkHint}
+              {referralCode && (
+                <span className="ml-1 font-semibold text-amber-500">· +7 дней PRO</span>
+              )}
             </div>
 
             <div className={`grid grid-cols-2 gap-2 border-t px-4 pt-3 pb-[max(14px,env(safe-area-inset-bottom))] sm:px-5 sm:pb-5 ${

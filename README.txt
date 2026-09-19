@@ -1,50 +1,51 @@
-REFERRAL / PRO STEP 8 — STATIC TOGGLE + INVITATIONS IN PRO
+STEP 9 — HISTORY SHARE BECOMES A REFERRAL CHANNEL
 
 Replace ONLY:
-1) D:\ai-trade-journal\CalendarScreen.jsx
-2) D:\ai-trade-journal\Header.jsx
+D:\ai-trade-journal\CalendarScreen.jsx
 
 No SQL.
-Do not touch src/ or public/.
+Do not touch Header.jsx, src/, public/, Supabase.
 
 WHAT CHANGED
 
-1. FREE / PRO switch is now STATIC.
-   - The light theme no longer adds extra padding/border around the whole row.
-   - The subtitle line under the app title always reserves the same height.
-   - The monthly PRO summary was moved out of the static row.
-   Result: the switch should stop jumping when:
-   - FREE -> PRO
-   - PRO -> FREE
-   - dark -> light
-   - light -> dark
+1) History -> Share still sends the result image.
+2) If the signed-in user has a referral code, the QR inside the result card
+   already points to:
+   /?install=1&ref=USER_CODE
 
-2. PRO content now SLIDES OUT underneath the switch.
-   - Monthly trading summary
-   - Platforms/filter bar
-   - Existing expanded PRO control center
-   The switch itself stays in place.
+3) Now the native share also sends a CLICKABLE personal referral URL.
+   The URL is included:
+   - in the Web Share `url` field
+   - and inside the text itself, because social apps differ in what they keep
+     when an image is attached.
 
-3. When PRO mode is ON, a compact invitation button appears NEXT TO the switch:
-   Gift icon + invitation count.
-   On desktop it also shows "Мои приглашения" / localized label.
+4) Stronger share copy:
+   "Посмотри мои результаты..."
+   "Следи за деньгами красиво и просто."
+   "По моей ссылке — 7 дней PRO после первой записи."
+   + personal URL
 
-4. That button opens the existing "Мои приглашения" tab directly.
-   The modal title changes to:
-   "Мои приглашения"
-   instead of "Открой PRO".
+5) The result PNG itself now has a much stronger viral install block:
+   ПРИСОЕДИНЯЙСЯ
+   Следи за деньгами красиво и просто
+   Сканируй QR или открой ссылку
+   7 ДНЕЙ PRO ПО МОЕЙ ССЫЛКЕ
 
-5. Existing Step 6/7 referral logic is untouched.
+6) If the user is not signed in / has no referral code:
+   - QR and share URL remain generic install links
+   - no false "+7 days PRO" promise is shown.
+
+7) The preview explains that the clickable install link will be shared
+   together with the image.
 
 BUILD:
 npm.cmd run build
 
-Expected:
-✓ built in ...
-
-Then test on iPhone:
-- switch FREE/PRO several times;
-- switch dark/light several times;
-- make sure the FREE/PRO pill stays anchored;
-- PRO controls should smoothly slide down/up;
-- in PRO mode tap the Gift / invitation-count button.
+TEST ON IPHONE:
+- History -> Share
+- Open the share sheet
+- Send to Telegram or Messages
+- Confirm the message contains BOTH:
+  a) the PNG result card
+  b) a clickable /?install=1&ref=... link
+- Scan the QR too; it should lead to the same referral URL.
