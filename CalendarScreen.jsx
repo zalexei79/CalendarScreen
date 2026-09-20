@@ -1958,12 +1958,24 @@ export default function CalendarScreen() {
     });
   }
 
-  // Quick-pick tags: the 3 most recently used instruments first, then the
-  // default popular assets — deduplicated so nothing appears twice.
-  const quickAssetTags = useMemo(() => {
-    const combined = [...recentInstruments.slice(0, 3), ...DEFAULT_ASSET_TAGS];
-    return Array.from(new Set(combined));
+  // PRO trade quick-picks must contain trading instruments only. Money
+  // categories (salary, groceries, etc.) belong exclusively to Finance mode.
+  const recentTradeInstruments = useMemo(() => {
+    const normalized = recentInstruments
+      .map((value) => textValue(value).trim().toUpperCase())
+      .filter((value) => value && !getMoneyCategoryMeta(value));
+    return Array.from(new Set(normalized));
   }, [recentInstruments]);
+
+  // Real recently-used trading symbols come first; custom/default trading
+  // symbols only fill the remaining slots. This keeps the row useful without
+  // ever mixing Finance categories into the Trade composer.
+  const quickAssetTags = useMemo(() => {
+    const fallback = [...customTags, ...DEFAULT_ASSET_TAGS]
+      .map((value) => textValue(value).trim().toUpperCase())
+      .filter((value) => value && !getMoneyCategoryMeta(value));
+    return Array.from(new Set([...recentTradeInstruments, ...fallback]));
+  }, [recentTradeInstruments, customTags]);
 
   function handleBackdropMouseDown(e) {
     mouseDownOnBackdrop.current = e.target === e.currentTarget;
@@ -3146,7 +3158,7 @@ export default function CalendarScreen() {
         addNote: 'Добавить заметку', addDetails: 'Добавить детали сделки', hideDetails: 'Скрыть детали',
         detailsHint: 'TP, SL, источник и заметка', note: 'Заметка', noteFinance: 'Например: обед, аренда, зарплата за месяц…',
         noteTrade: 'Что произошло в этой сделке?', source: 'Источник', saveFinance: 'Сохранить запись', saveTrade: 'Сохранить сделку',
-        financeHint: 'Доходы и расходы', tradeHint: 'Журнал трейдера', time: 'Время',
+        financeHint: 'Доходы и расходы', tradeHint: 'Журнал трейдера', time: 'Время', quickPick: 'Быстрый выбор',
       }
     : proEntryLanguage === 'ro'
     ? {
@@ -3156,7 +3168,7 @@ export default function CalendarScreen() {
         addNote: 'Adaugă notă', addDetails: 'Adaugă detalii', hideDetails: 'Ascunde detaliile',
         detailsHint: 'TP, SL, sursă și notă', note: 'Notă', noteFinance: 'De ex.: prânz, chirie, salariu…',
         noteTrade: 'Ce s-a întâmplat în această tranzacție?', source: 'Sursă', saveFinance: 'Salvează înregistrarea', saveTrade: 'Salvează tranzacția',
-        financeHint: 'Venituri și cheltuieli', tradeHint: 'Jurnal de trading', time: 'Ora',
+        financeHint: 'Venituri și cheltuieli', tradeHint: 'Jurnal de trading', time: 'Ora', quickPick: 'Acces rapid',
       }
     : {
         newEntry: 'New entry', editEntry: 'Edit entry', finance: 'Finance', trade: 'Trade',
@@ -3165,7 +3177,7 @@ export default function CalendarScreen() {
         addNote: 'Add a note', addDetails: 'Add trade details', hideDetails: 'Hide details',
         detailsHint: 'TP, SL, source and note', note: 'Note', noteFinance: 'For example: lunch, rent, monthly salary…',
         noteTrade: 'What happened in this trade?', source: 'Source', saveFinance: 'Save entry', saveTrade: 'Save trade',
-        financeHint: 'Income & expenses', tradeHint: 'Trading journal', time: 'Time',
+        financeHint: 'Income & expenses', tradeHint: 'Trading journal', time: 'Time', quickPick: 'Quick pick',
       };
 
   function switchProEntryMode(nextMode) {
@@ -3201,7 +3213,7 @@ export default function CalendarScreen() {
     const selectedMoneyCategory = getMoneyCategoryMeta(form.instrument);
 
     return (
-      <div className="mt-4 sm:min-h-0 sm:overflow-y-auto sm:overscroll-contain sm:pr-1">
+      <div className={`mt-3 sm:min-h-0 ${detailsOpen ? 'sm:overflow-y-auto sm:overscroll-contain sm:pr-1' : 'sm:overflow-visible'}`}>
         {/* One calm switch separates ordinary money from the trading journal. */}
         <div className={`mx-auto grid max-w-[330px] grid-cols-2 rounded-2xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-black/30 ring-1 ring-inset ring-white/[0.05]'}`}>
           <button
@@ -3233,7 +3245,7 @@ export default function CalendarScreen() {
         </div>
 
         {/* Income/expense or profit/loss — same place, different meaning. */}
-        <div className={`mt-5 grid grid-cols-2 rounded-2xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-black/25 ring-1 ring-inset ring-white/[0.05]'}`}>
+        <div className={`mt-4 grid grid-cols-2 rounded-2xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-black/25 ring-1 ring-inset ring-white/[0.05]'}`}>
           <button
             type="button"
             onClick={() => {
@@ -3244,7 +3256,7 @@ export default function CalendarScreen() {
               }));
               setFormError('');
             }}
-            className={`flex h-12 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all ${
+            className={`flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all ${
               form.sign === 'plus'
                 ? 'bg-emerald-500/[0.13] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
                 : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-600 hover:text-zinc-300'
@@ -3262,7 +3274,7 @@ export default function CalendarScreen() {
               }));
               setFormError('');
             }}
-            className={`flex h-12 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all ${
+            className={`flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all ${
               form.sign === 'minus'
                 ? 'bg-red-500/[0.10] text-red-400 ring-1 ring-inset ring-red-400/20'
                 : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-600 hover:text-zinc-300'
@@ -3273,7 +3285,7 @@ export default function CalendarScreen() {
         </div>
 
         {/* Amount — the only oversized element in the composer. */}
-        <div className="py-6 text-center sm:py-7">
+        <div className="py-4 text-center sm:py-5">
           <div className="flex items-center justify-center gap-2">
             <span className={`font-data text-3xl ${form.sign === 'minus' ? 'text-red-400/70' : isFinanceEntry ? 'text-amber-400/70' : 'text-emerald-400/70'}`}>
               {CURRENCIES.find((item) => item.code === form.currency)?.symbol || form.currency}
@@ -3293,19 +3305,19 @@ export default function CalendarScreen() {
                 setForm((current) => ({ ...current, pnl: nextValue }));
                 setFormError('');
               }}
-              className={`w-[180px] max-w-[58vw] bg-transparent text-center font-data text-[54px] font-semibold leading-none tracking-[-0.06em] outline-none placeholder:text-zinc-800 sm:text-[64px] ${isLight ? 'text-zinc-950' : 'text-zinc-100'}`}
+              className={`w-[180px] max-w-[58vw] bg-transparent text-center font-data text-[48px] font-semibold leading-none tracking-[-0.06em] outline-none placeholder:text-zinc-800 sm:text-[56px] ${isLight ? 'text-zinc-950' : 'text-zinc-100'}`}
               placeholder="0"
               aria-label={proEntryCopy.amount}
             />
           </div>
-          <div className="mt-4 flex items-center justify-center gap-1.5">
+          <div className="mt-3 flex items-center justify-center gap-1.5">
             {CURRENCIES.map((item) => (
               <button
                 key={item.code}
                 type="button"
                 onClick={() => setForm((current) => ({ ...current, currency: item.code }))}
                 title={item.code}
-                className={`flex h-8 min-w-9 items-center justify-center rounded-xl px-2 font-data text-[11px] transition-all ${
+                className={`flex h-7 min-w-9 items-center justify-center rounded-xl px-2 font-data text-[11px] transition-all ${
                   form.currency === item.code
                     ? isFinanceEntry
                       ? 'bg-amber-400/[0.10] text-amber-400 ring-1 ring-inset ring-amber-400/20'
@@ -3385,27 +3397,30 @@ export default function CalendarScreen() {
                 placeholder="XAUUSD"
               />
             </div>
-            <div className="mt-2.5 flex flex-wrap gap-2">
-              {quickAssetTags.slice(0, 4).map((tag) => (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => { setForm((current) => ({ ...current, instrument: tag })); setFormError(''); }}
-                  className={`rounded-xl px-3 py-2 font-data text-[10px] transition-all ${
-                    textValue(form.instrument).trim().toUpperCase() === tag
-                      ? 'bg-emerald-500/[0.12] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
-                      : isLight ? 'bg-zinc-100 text-zinc-500 hover:text-zinc-800' : 'bg-white/[0.025] text-zinc-600 hover:bg-white/[0.045] hover:text-zinc-300'
-                  }`}
-                >{tag}</button>
-              ))}
-            </div>
+            {quickAssetTags.length > 0 && (
+              <div className="mt-2.5 flex items-center gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <span className={`mr-0.5 shrink-0 font-data text-[8px] uppercase tracking-[0.16em] ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>{proEntryCopy.quickPick}</span>
+                {quickAssetTags.slice(0, 4).map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => { setForm((current) => ({ ...current, instrument: tag })); setFormError(''); }}
+                    className={`shrink-0 rounded-xl px-3 py-1.5 font-data text-[10px] transition-all ${
+                      textValue(form.instrument).trim().toUpperCase() === tag
+                        ? 'bg-emerald-500/[0.12] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
+                        : isLight ? 'bg-zinc-100 text-zinc-500 hover:text-zinc-800' : 'bg-white/[0.025] text-zinc-600 hover:bg-white/[0.045] hover:text-zinc-300'
+                    }`}
+                  >{tag}</button>
+                ))}
+              </div>
+            )}
 
-            <p className={`mb-2 mt-5 font-data text-[9px] uppercase tracking-[0.20em] ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{proEntryCopy.direction}</p>
+            <p className={`mb-2 mt-4 font-data text-[9px] uppercase tracking-[0.20em] ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{proEntryCopy.direction}</p>
             <div className={`grid grid-cols-2 rounded-2xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-black/25 ring-1 ring-inset ring-white/[0.05]'}`}>
               <button
                 type="button"
                 onClick={() => setForm((current) => ({ ...current, direction: 'LONG' }))}
-                className={`flex h-12 items-center justify-center gap-2 rounded-xl font-data text-xs font-semibold tracking-wide transition-all ${
+                className={`flex h-11 items-center justify-center gap-2 rounded-xl font-data text-xs font-semibold tracking-wide transition-all ${
                   form.direction === 'LONG'
                     ? 'bg-emerald-500/[0.13] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
                     : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-600 hover:text-zinc-300'
@@ -3414,7 +3429,7 @@ export default function CalendarScreen() {
               <button
                 type="button"
                 onClick={() => setForm((current) => ({ ...current, direction: 'SHORT' }))}
-                className={`flex h-12 items-center justify-center gap-2 rounded-xl font-data text-xs font-semibold tracking-wide transition-all ${
+                className={`flex h-11 items-center justify-center gap-2 rounded-xl font-data text-xs font-semibold tracking-wide transition-all ${
                   form.direction === 'SHORT'
                     ? 'bg-red-500/[0.10] text-red-400 ring-1 ring-inset ring-red-400/20'
                     : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-600 hover:text-zinc-300'
@@ -3425,7 +3440,7 @@ export default function CalendarScreen() {
             <button
               type="button"
               onClick={() => setDetailsOpen((open) => !open)}
-              className={`mt-4 flex w-full items-center justify-between rounded-2xl border px-4 py-3.5 text-left transition-all ${isLight ? 'border-zinc-200 bg-zinc-50 hover:bg-zinc-100' : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.10] hover:bg-white/[0.035]'}`}
+              className={`mt-3 flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition-all ${isLight ? 'border-zinc-200 bg-zinc-50 hover:bg-zinc-100' : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.10] hover:bg-white/[0.035]'}`}
             >
               <span>
                 <span className={`block text-sm font-medium ${isLight ? 'text-zinc-800' : 'text-zinc-300'}`}>{detailsOpen ? proEntryCopy.hideDetails : proEntryCopy.addDetails}</span>
@@ -3475,7 +3490,7 @@ export default function CalendarScreen() {
         <button
           onClick={handleSaveTrade}
           disabled={isSaving}
-          className={`mt-5 flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-bold transition-all duration-200 active:scale-[0.995] disabled:opacity-60 ${
+          className={`mt-4 flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold transition-all duration-200 active:scale-[0.995] disabled:opacity-60 ${
             isFinanceEntry
               ? 'bg-amber-400 text-zinc-950 shadow-[0_12px_34px_rgba(245,158,11,0.12)] hover:bg-amber-300'
               : 'border border-emerald-300/20 bg-emerald-500 text-emerald-950 shadow-[0_12px_34px_rgba(16,185,129,0.16)] hover:bg-emerald-400 hover:shadow-[0_14px_38px_rgba(16,185,129,0.22)]'
