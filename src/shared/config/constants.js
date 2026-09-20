@@ -50,6 +50,7 @@ export const STORAGE_KEYS = {
   THEME: 'atj_theme',
   GUEST_TRADES_CACHE: 'money_calendar_guest_trades_cache',
   OFFLINE_QUEUE: 'atj_offline_queue',
+  ONBOARDING_V2_COMPLETED: 'dayris_onboarding_v2_completed',
 };
 
 // Aliases for compatibility
@@ -60,6 +61,7 @@ export const TRADER_MODE_STORAGE_KEY = STORAGE_KEYS.TRADER_MODE;
 export const LANGUAGE_STORAGE_KEY = STORAGE_KEYS.LANGUAGE;
 export const CURRENCY_STORAGE_KEY = STORAGE_KEYS.CURRENCY;
 export const THEME_STORAGE_KEY = STORAGE_KEYS.THEME;
+export const ONBOARDING_V2_COMPLETED_STORAGE_KEY = STORAGE_KEYS.ONBOARDING_V2_COMPLETED;
 export const GUEST_TRADES_CACHE_KEY = STORAGE_KEYS.GUEST_TRADES_CACHE;
 export const OFFLINE_QUEUE_KEY = STORAGE_KEYS.OFFLINE_QUEUE;
 

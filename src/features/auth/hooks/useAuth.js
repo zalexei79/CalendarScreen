@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { getValidUserId } from '../../../shared/lib/formatters';
+import { ONBOARDING_V2_COMPLETED_STORAGE_KEY } from '../../../shared/config/constants';
 
 /**
  * useAuth: manages Supabase authentication, session detection, and user profile state.
@@ -14,7 +15,7 @@ export function useAuth() {
   const [nicknameModalVisible, setNicknameModalVisible] = useState(false);
   const [nicknameInput, setNicknameInput] = useState('');
   const [setupStep, setSetupStep] = useState(() => {
-    try { return window.localStorage.getItem('calendar_guide_completed') === '1' ? null : 'language'; }
+    try { return window.localStorage.getItem(ONBOARDING_V2_COMPLETED_STORAGE_KEY) === '1' ? null : 'language'; }
     catch { return 'language'; }
   });
 
@@ -70,7 +71,7 @@ export function useAuth() {
     supabase.auth.updateUser({ data: { nickname } });
     closeNicknameModal();
     try {
-      if (window.localStorage.getItem('calendar_guide_completed') !== '1') setSetupStep('language');
+      if (window.localStorage.getItem(ONBOARDING_V2_COMPLETED_STORAGE_KEY) !== '1') setSetupStep('language');
     } catch {
       setSetupStep('language');
     }

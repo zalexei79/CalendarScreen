@@ -58,6 +58,7 @@ import {
   THEME_STORAGE_KEY,
   GUEST_TRADES_CACHE_KEY,
   OFFLINE_QUEUE_KEY,
+  ONBOARDING_V2_COMPLETED_STORAGE_KEY,
   LANGUAGES,
   CURRENCIES,
   getTradesCacheKey,
@@ -1311,6 +1312,10 @@ export default function CalendarScreen() {
     try { window.localStorage.setItem('calendar_guide_completed', '1'); } catch { /* ignore */ }
     setFirstRunGuideChoice(null);
     setFirstRunGuideStep(0);
+  }
+
+  function markOnboardingComplete() {
+    try { window.localStorage.setItem(ONBOARDING_V2_COMPLETED_STORAGE_KEY, '1'); } catch { /* ignore */ }
   }
 
   function chooseFirstRunGuideType(type) {
@@ -5643,7 +5648,7 @@ export default function CalendarScreen() {
       )}
 
 
-      {setupStep && (
+      {setupStep && !nicknameModalOpen && (
         <FirstRunSetup
           step={setupStep === 'theme' ? 'currency' : setupStep}
           language={language}
@@ -5654,6 +5659,7 @@ export default function CalendarScreen() {
           onTheme={setTheme}
           onStep={setSetupStep}
           onStart={() => {
+            markOnboardingComplete();
             setTraderMode(false);
             setSetupStep(null);
             setFirstRunGuideChoice(null);
@@ -5661,6 +5667,7 @@ export default function CalendarScreen() {
             openModal(null, todayKey);
           }}
           onSkip={() => {
+            markOnboardingComplete();
             setSetupStep(null);
             markFirstRunGuideComplete();
           }}
