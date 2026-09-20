@@ -3128,26 +3128,24 @@ export default function CalendarScreen() {
 
   const renderProTradeComposer = () => (
     <div className="mt-4 sm:min-h-0 sm:overflow-y-auto sm:overscroll-contain sm:pr-1">
-      {/* PRO quick composer: result + trade setup stay visible together. */}
-      <div className="grid gap-3 lg:grid-cols-[0.88fr_1.12fr]">
-        {/* Result command card */}
-        <section className={`rounded-[22px] border p-3.5 sm:p-4 ${
-          isLight
-            ? 'border-zinc-200 bg-zinc-50/90 shadow-sm'
-            : 'border-emerald-400/[0.11] bg-[linear-gradient(145deg,rgba(16,185,129,0.055),rgba(0,0,0,0.18)_42%,rgba(0,0,0,0.30))] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]'
-        }`}>
-          <div className="flex items-center justify-between gap-3">
-            <span className={`font-data text-[9px] uppercase tracking-[0.22em] ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>
-              {t('result')}
-            </span>
-            <div className={`grid grid-cols-2 gap-0.5 rounded-xl p-0.5 ${isLight ? 'bg-zinc-200/70' : 'bg-black/35'}`}>
+      {/* DAYRIS PRO trade ticket — one surface, clear hierarchy, no card soup. */}
+      <section className={`overflow-hidden rounded-[24px] border ${
+        isLight
+          ? 'border-zinc-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.08)]'
+          : 'border-emerald-400/[0.12] bg-[linear-gradient(160deg,rgba(16,185,129,0.045),rgba(8,10,12,0.96)_28%,rgba(5,7,9,0.98))] shadow-[0_22px_70px_rgba(0,0,0,0.36),inset_0_1px_0_rgba(255,255,255,0.025)]'
+      }`}>
+        {/* Result rail */}
+        <div className={`grid gap-4 p-4 sm:p-5 lg:grid-cols-[190px_minmax(0,1fr)_auto] lg:items-center ${isLight ? 'border-b border-zinc-200' : 'border-b border-white/[0.06]'}`}>
+          <div>
+            <p className={`mb-2 font-data text-[8px] uppercase tracking-[0.24em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('result')}</p>
+            <div className={`grid grid-cols-2 rounded-xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-black/35'}`}>
               <button
                 type="button"
                 onClick={() => { setForm((f) => ({ ...f, sign: 'plus' })); setFormError(''); }}
-                className={`flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[11px] font-semibold transition-all ${
+                className={`flex h-10 items-center justify-center gap-1.5 rounded-[9px] text-[11px] font-semibold transition-all ${
                   form.sign === 'plus'
                     ? 'bg-emerald-500/[0.14] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
-                    : isLight ? 'text-zinc-500' : 'text-zinc-600 hover:text-zinc-400'
+                    : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-600 hover:text-zinc-300'
                 }`}
               >
                 <TrendingUp className="h-3.5 w-3.5" /> {t('profitTrade')}
@@ -3155,10 +3153,10 @@ export default function CalendarScreen() {
               <button
                 type="button"
                 onClick={() => { setForm((f) => ({ ...f, sign: 'minus' })); setFormError(''); }}
-                className={`flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[11px] font-semibold transition-all ${
+                className={`flex h-10 items-center justify-center gap-1.5 rounded-[9px] text-[11px] font-semibold transition-all ${
                   form.sign === 'minus'
                     ? 'bg-red-500/[0.12] text-red-400 ring-1 ring-inset ring-red-400/20'
-                    : isLight ? 'text-zinc-500' : 'text-zinc-600 hover:text-zinc-400'
+                    : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-600 hover:text-zinc-300'
                 }`}
               >
                 <TrendingDown className="h-3.5 w-3.5" /> {t('lossTrade')}
@@ -3166,36 +3164,35 @@ export default function CalendarScreen() {
             </div>
           </div>
 
-          <div className="mt-4 flex min-w-0 items-end gap-2">
-            <span className={`mb-1 shrink-0 font-data text-xl ${form.sign === 'minus' ? 'text-red-400/70' : 'text-emerald-400/70'}`}>
-              {form.sign === 'minus' ? '−' : '+'}
-            </span>
-            <span className={`mb-1 shrink-0 font-data text-xl ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
-              {CURRENCIES.find((c) => c.code === form.currency)?.symbol || form.currency}
-            </span>
-            <input
-              ref={guideAmountRef}
-              type="text"
-              inputMode="decimal"
-              pattern="[0-9]*[.,]?[0-9]*"
-              enterKeyHint="done"
-              autoComplete="off"
-              autoFocus
-              value={form.pnl}
-              onChange={(e) => {
-                const nextValue = e.target.value.replace(',', '.');
-                if (!/^\d*(?:\.\d*)?$/.test(nextValue)) return;
-                setForm((f) => ({ ...f, pnl: nextValue }));
-                setFormError('');
-              }}
-              className={`min-w-0 flex-1 bg-transparent font-data text-[42px] font-semibold leading-none tracking-[-0.05em] outline-none placeholder:text-zinc-800 sm:text-[52px] ${isLight ? 'text-zinc-950' : 'text-zinc-100'}`}
-              placeholder="0"
-              aria-label={t('result')}
-            />
+          <div className="min-w-0 lg:px-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className={`shrink-0 font-data text-2xl sm:text-3xl ${form.sign === 'minus' ? 'text-red-400/80' : 'text-emerald-400/80'}`}>
+                {form.sign === 'minus' ? '−' : '+'}
+              </span>
+              <input
+                ref={guideAmountRef}
+                type="text"
+                inputMode="decimal"
+                pattern="[0-9]*[.,]?[0-9]*"
+                enterKeyHint="done"
+                autoComplete="off"
+                autoFocus
+                value={form.pnl}
+                onChange={(e) => {
+                  const nextValue = e.target.value.replace(',', '.');
+                  if (!/^\d*(?:\.\d*)?$/.test(nextValue)) return;
+                  setForm((f) => ({ ...f, pnl: nextValue }));
+                  setFormError('');
+                }}
+                className={`min-w-0 w-full bg-transparent font-data text-[44px] font-semibold leading-none tracking-[-0.055em] outline-none placeholder:text-zinc-800 sm:text-[56px] ${isLight ? 'text-zinc-950' : 'text-zinc-100'}`}
+                placeholder="0"
+                aria-label={t('result')}
+              />
+            </div>
           </div>
 
-          <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/[0.05] pt-3">
-            <div className={`flex items-center gap-0.5 rounded-xl p-0.5 ${isLight ? 'bg-zinc-200/60' : 'bg-black/25'}`}>
+          <div className="flex items-center justify-between gap-3 lg:flex-col lg:items-end">
+            <div className={`flex items-center gap-1 rounded-xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-black/30'}`}>
               {CURRENCIES.map((c) => (
                 <button
                   key={c.code}
@@ -3203,17 +3200,17 @@ export default function CalendarScreen() {
                   onClick={() => setForm((f) => ({ ...f, currency: c.code }))}
                   title={c.code}
                   aria-label={`Валюта ${c.code}`}
-                  className={`flex h-7 min-w-7 items-center justify-center rounded-[9px] px-2 font-data text-[10px] transition-all ${
+                  className={`flex h-8 min-w-8 items-center justify-center rounded-[9px] px-2 font-data text-[10px] transition-all ${
                     form.currency === c.code
-                      ? 'bg-emerald-500/[0.13] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
-                      : isLight ? 'text-zinc-500 hover:bg-white' : 'text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-400'
+                      ? 'bg-emerald-500/[0.14] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
+                      : isLight ? 'text-zinc-500 hover:bg-white hover:text-zinc-800' : 'text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-300'
                   }`}
                 >
                   {c.symbol}
                 </button>
               ))}
             </div>
-            <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1 font-data text-[10px] ${isLight ? 'text-zinc-500 hover:bg-zinc-200/60' : 'text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-400'}`}>
+            <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1 font-data text-[10px] transition-colors ${isLight ? 'text-zinc-500 hover:bg-zinc-100' : 'text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-400'}`}>
               <span>◷</span>
               <span>{form.time || currentTimeHHMM()}</span>
               <input
@@ -3226,130 +3223,143 @@ export default function CalendarScreen() {
               />
             </label>
           </div>
-        </section>
+        </div>
 
-        {/* Trade setup card */}
-        <section className={`rounded-[22px] border p-3.5 sm:p-4 ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-white/[0.07] bg-black/20'}`}>
-          <div className="flex items-center justify-between gap-3">
-            <span className={`font-data text-[9px] uppercase tracking-[0.22em] ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>
-              {t('instrument')}
-            </span>
-            <ChartCandlestick className={`h-4 w-4 ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`} />
-          </div>
-
-          <div className="mt-2.5 flex items-stretch gap-2">
+        {/* Instrument + direction — primary trade decision */}
+        <div className={`grid lg:grid-cols-[minmax(0,1fr)_250px] ${isLight ? 'divide-y divide-zinc-200 lg:divide-x lg:divide-y-0' : 'divide-y divide-white/[0.06] lg:divide-x lg:divide-y-0'}`}>
+          <div className="min-w-0 p-4 sm:p-5">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p className={`font-data text-[8px] uppercase tracking-[0.24em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('instrument')}</p>
+              <ChartCandlestick className={`h-4 w-4 ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`} />
+            </div>
             <input
               type="text"
               value={form.instrument}
               onChange={(e) => { setForm((f) => ({ ...f, instrument: e.target.value })); setFormError(''); }}
-              className={`min-w-0 flex-1 rounded-xl border px-3.5 py-2.5 font-data text-sm font-semibold uppercase tracking-wide outline-none transition-all focus:ring-2 focus:ring-emerald-400/[0.06] ${
+              className={`w-full border-0 border-b bg-transparent px-0 py-2 font-data text-xl font-semibold uppercase tracking-wide outline-none transition-colors sm:text-2xl ${
                 isLight
-                  ? 'border-zinc-200 bg-zinc-50 text-zinc-950 focus:border-emerald-400/45'
-                  : 'border-white/[0.08] bg-black/30 text-zinc-100 focus:border-emerald-400/30'
+                  ? 'border-zinc-200 text-zinc-950 focus:border-emerald-400'
+                  : 'border-white/[0.08] text-zinc-100 focus:border-emerald-400/50'
               }`}
               placeholder={t('instrumentPlaceholder')}
             />
-            <div className={`grid shrink-0 grid-cols-2 gap-0.5 rounded-xl p-0.5 ${isLight ? 'bg-zinc-100' : 'bg-black/30'}`}>
-              <button
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, direction: 'LONG' }))}
-                className={`rounded-[10px] px-3 text-[11px] font-bold transition-all ${
-                  form.direction === 'LONG'
-                    ? 'bg-emerald-500/[0.13] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
-                    : isLight ? 'text-zinc-500' : 'text-zinc-600 hover:text-zinc-400'
-                }`}
-              >LONG</button>
-              <button
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, direction: 'SHORT' }))}
-                className={`rounded-[10px] px-3 text-[11px] font-bold transition-all ${
-                  form.direction === 'SHORT'
-                    ? 'bg-red-500/[0.11] text-red-400 ring-1 ring-inset ring-red-400/20'
-                    : isLight ? 'text-zinc-500' : 'text-zinc-600 hover:text-zinc-400'
-                }`}
-              >SHORT</button>
+            <div className="mt-3 flex min-h-8 flex-wrap items-center gap-x-3 gap-y-2">
+              {quickAssetTags.slice(0, 4).map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => { setForm((f) => ({ ...f, instrument: tag })); setFormError(''); }}
+                  className={`font-data text-[10px] transition-colors ${
+                    textValue(form.instrument).trim().toUpperCase() === tag
+                      ? 'text-emerald-400'
+                      : isLight ? 'text-zinc-400 hover:text-zinc-800' : 'text-zinc-600 hover:text-zinc-300'
+                  }`}
+                >{tag}</button>
+              ))}
             </div>
           </div>
 
-          <div className="mt-2.5 flex min-h-8 flex-wrap items-center gap-1.5">
-            {quickAssetTags.slice(0, 4).map((tag) => (
+          <div className="p-4 sm:p-5">
+            <p className={`mb-2 font-data text-[8px] uppercase tracking-[0.24em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{resolveOnboardingLanguage(language) === 'ru' ? 'Направление' : resolveOnboardingLanguage(language) === 'ro' ? 'Direcție' : 'Direction'}</p>
+            <div className={`grid grid-cols-2 rounded-2xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-black/30'}`}>
               <button
-                key={tag}
                 type="button"
-                onClick={() => { setForm((f) => ({ ...f, instrument: tag })); setFormError(''); }}
-                className={`rounded-lg px-2.5 py-1.5 font-data text-[10px] transition-all ${
-                  textValue(form.instrument).trim().toUpperCase() === tag
-                    ? 'bg-emerald-500/[0.11] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
-                    : isLight ? 'bg-zinc-100 text-zinc-500 hover:text-zinc-800' : 'bg-white/[0.025] text-zinc-600 hover:bg-white/[0.05] hover:text-zinc-300'
+                onClick={() => setForm((f) => ({ ...f, direction: 'LONG' }))}
+                className={`flex h-[54px] items-center justify-center gap-2 rounded-xl text-xs font-bold tracking-[0.08em] transition-all ${
+                  form.direction === 'LONG'
+                    ? 'bg-emerald-500/[0.14] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
+                    : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-600 hover:text-zinc-300'
                 }`}
-              >{tag}</button>
-            ))}
+              >
+                <span className="text-base">↑</span> LONG
+              </button>
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, direction: 'SHORT' }))}
+                className={`flex h-[54px] items-center justify-center gap-2 rounded-xl text-xs font-bold tracking-[0.08em] transition-all ${
+                  form.direction === 'SHORT'
+                    ? 'bg-red-500/[0.12] text-red-400 ring-1 ring-inset ring-red-400/20'
+                    : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-600 hover:text-zinc-300'
+                }`}
+              >
+                <span className="text-base">↓</span> SHORT
+              </button>
+            </div>
           </div>
-
-          <div className={`mt-3 grid grid-cols-2 overflow-hidden rounded-xl border ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-white/[0.06] bg-black/20'}`}>
-            <label className="border-r border-white/[0.05] px-3 py-2.5">
-              <span className={`block font-data text-[8px] uppercase tracking-[0.18em] ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>TP</span>
-              <input
-                type="number"
-                step="any"
-                value={form.takeProfit}
-                onChange={(e) => setForm((f) => ({ ...f, takeProfit: e.target.value }))}
-                className={`mt-1 w-full bg-transparent font-data text-sm outline-none placeholder:text-zinc-700 ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`}
-                placeholder="Take Profit"
-              />
-            </label>
-            <label className="px-3 py-2.5">
-              <span className={`block font-data text-[8px] uppercase tracking-[0.18em] ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>SL</span>
-              <input
-                type="number"
-                step="any"
-                value={form.stopLoss}
-                onChange={(e) => setForm((f) => ({ ...f, stopLoss: e.target.value }))}
-                className={`mt-1 w-full bg-transparent font-data text-sm outline-none placeholder:text-zinc-700 ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`}
-                placeholder="Stop Loss"
-              />
-            </label>
-          </div>
-        </section>
-      </div>
-
-      {/* Context strip: secondary data is compact, not another stack of cards. */}
-      <div className="mt-3 grid gap-2 sm:grid-cols-[180px_1fr]">
-        <div className={`relative rounded-xl border ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-white/[0.06] bg-black/20'}`}>
-          <select
-            value={form.platform}
-            onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value }))}
-            className={`w-full appearance-none bg-transparent px-3 py-3 pr-9 font-data text-xs outline-none ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`}
-          >
-            {['Manual', 'cTrader', ...(!['Manual', 'cTrader'].includes(form.platform) ? [form.platform] : [])].map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
-          <ChevronDown className={`pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`} />
         </div>
 
-        <textarea
-          ref={guideCommentRef}
-          value={form.comment}
-          onChange={(e) => setForm((f) => ({ ...f, comment: e.target.value }))}
-          rows={2}
-          maxLength={500}
-          className={`min-h-[62px] w-full resize-none rounded-xl border px-3.5 py-3 text-sm outline-none transition-all focus:ring-2 focus:ring-emerald-400/[0.05] ${
-            isLight
-              ? 'border-zinc-200 bg-zinc-50 text-zinc-900 focus:border-emerald-400/40'
-              : 'border-white/[0.06] bg-black/20 text-zinc-300 focus:border-emerald-400/25'
-          }`}
-          placeholder={t('notePlaceholderTrade')}
-        />
-      </div>
+        {/* Plan + source — compact utility rail */}
+        <div className={`grid sm:grid-cols-2 lg:grid-cols-[1fr_1fr_180px] ${isLight ? 'border-t border-zinc-200' : 'border-t border-white/[0.06]'}`}>
+          <label className={`px-4 py-3.5 sm:px-5 ${isLight ? 'border-b border-zinc-200 sm:border-b-0 sm:border-r' : 'border-b border-white/[0.06] sm:border-b-0 sm:border-r sm:border-white/[0.06]'}`}>
+            <span className={`block font-data text-[8px] uppercase tracking-[0.22em] ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>Take Profit</span>
+            <input
+              type="number"
+              step="any"
+              value={form.takeProfit}
+              onChange={(e) => setForm((f) => ({ ...f, takeProfit: e.target.value }))}
+              className={`mt-1.5 w-full bg-transparent font-data text-base outline-none placeholder:text-zinc-700 ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`}
+              placeholder="—"
+            />
+          </label>
+          <label className={`px-4 py-3.5 sm:px-5 ${isLight ? 'border-b border-zinc-200 sm:border-b-0 lg:border-r' : 'border-b border-white/[0.06] sm:border-b-0 lg:border-r lg:border-white/[0.06]'}`}>
+            <span className={`block font-data text-[8px] uppercase tracking-[0.22em] ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>Stop Loss</span>
+            <input
+              type="number"
+              step="any"
+              value={form.stopLoss}
+              onChange={(e) => setForm((f) => ({ ...f, stopLoss: e.target.value }))}
+              className={`mt-1.5 w-full bg-transparent font-data text-base outline-none placeholder:text-zinc-700 ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`}
+              placeholder="—"
+            />
+          </label>
+          <div className="relative sm:col-span-2 lg:col-span-1">
+            <span className={`pointer-events-none absolute left-4 top-3.5 font-data text-[8px] uppercase tracking-[0.22em] sm:left-5 ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>{resolveOnboardingLanguage(language) === 'ru' ? 'Источник' : resolveOnboardingLanguage(language) === 'ro' ? 'Sursă' : 'Source'}</span>
+            <select
+              value={form.platform}
+              onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value }))}
+              className={`h-full min-h-[68px] w-full appearance-none bg-transparent px-4 pb-2 pt-7 pr-10 font-data text-xs outline-none sm:px-5 ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`}
+            >
+              {['Manual', 'cTrader', ...(!['Manual', 'cTrader'].includes(form.platform) ? [form.platform] : [])].map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <ChevronDown className={`pointer-events-none absolute right-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`} />
+          </div>
+        </div>
+
+        {/* Journal note — deliberately quiet until the user needs it. */}
+        <div className={`${isLight ? 'border-t border-zinc-200' : 'border-t border-white/[0.06]'} p-4 sm:p-5`}>
+          <div className="flex items-center justify-between gap-3">
+            <span className={`font-data text-[8px] uppercase tracking-[0.22em] ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>{resolveOnboardingLanguage(language) === 'ru' ? 'Заметка' : resolveOnboardingLanguage(language) === 'ro' ? 'Notă' : 'Note'}</span>
+            <span className={`font-data text-[9px] ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>{form.comment.length}/500</span>
+          </div>
+          <textarea
+            ref={guideCommentRef}
+            value={form.comment}
+            onChange={(e) => setForm((f) => ({ ...f, comment: e.target.value }))}
+            rows={2}
+            maxLength={500}
+            className={`mt-2 min-h-[62px] w-full resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-zinc-700 ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`}
+            placeholder={t('notePlaceholderTrade')}
+          />
+        </div>
+      </section>
 
       {formError && <p className="mt-2 text-center text-xs text-red-500">{formError}</p>}
 
-      <button
-        onClick={handleSaveTrade}
-        disabled={isSaving}
-        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-500 px-4 py-3.5 text-sm font-bold text-emerald-950 shadow-[0_12px_34px_rgba(16,185,129,0.18)] transition-all duration-200 hover:bg-emerald-400 hover:shadow-[0_14px_38px_rgba(16,185,129,0.25)] active:scale-[0.997] disabled:opacity-60"
-      >
-        {isSaving ? t('saving') : (editingTrade ? t('saveChanges') : t('saveTrade'))}
-      </button>
+      <div className="mt-3 flex items-center gap-3">
+        <div className={`hidden min-w-0 flex-1 items-center gap-2 sm:flex ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>
+          <span className="h-px flex-1 bg-current opacity-30" />
+          <span className="font-data text-[8px] uppercase tracking-[0.24em]">DAYRIS · TRADE JOURNAL</span>
+          <span className="h-px flex-1 bg-current opacity-30" />
+        </div>
+        <button
+          onClick={handleSaveTrade}
+          disabled={isSaving}
+          className="flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-500 px-7 py-4 text-sm font-bold text-emerald-950 shadow-[0_12px_34px_rgba(16,185,129,0.16)] transition-all duration-200 hover:bg-emerald-400 hover:shadow-[0_14px_38px_rgba(16,185,129,0.24)] active:scale-[0.997] disabled:opacity-60 sm:w-auto sm:min-w-[210px]"
+        >
+          {isSaving ? t('saving') : (editingTrade ? t('saveChanges') : t('saveTrade'))}
+          <span aria-hidden="true">→</span>
+        </button>
+      </div>
     </div>
   );
 
@@ -5216,7 +5226,7 @@ export default function CalendarScreen() {
         >
           <div
             className={`relative my-auto w-full max-w-[360px] max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain rounded-2xl border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl transition-all duration-300 ease-[cubic-bezier(.22,1,.36,1)] will-change-transform sm:flex sm:max-h-[calc(100vh-3rem)] sm:flex-col sm:overflow-hidden sm:px-5 sm:py-5 ${
-              traderMode ? 'sm:max-w-[860px]' : 'sm:max-w-[560px]'
+              traderMode ? 'sm:max-w-[780px]' : 'sm:max-w-[560px]'
             } ${
               modalVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-[0.97] sm:translate-y-2'
             } ${
