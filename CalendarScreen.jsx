@@ -63,6 +63,7 @@ import {
   CURRENCIES,
   getTradesCacheKey,
   getMoneyCategoryMeta,
+  getMoneyCategoryLabel,
   getCurrencyMeta,
 } from './src/shared/config/constants';
 import { TRANSLATIONS, translate } from './src/shared/i18n';
@@ -2929,13 +2930,9 @@ export default function CalendarScreen() {
     return getMoneyCategoryMeta(instrument)?.icon || CircleDollarSign || MoreHorizontal;
   };
 
-  const moneyCategoriesWithIcons = useMemo(() => {
-    const base = Array.isArray(MONEY_CATEGORIES) ? MONEY_CATEGORIES.slice() : [];
-    if (!base.some((item) => String(item.key || '').toUpperCase().includes('СИГАРЕТ'))) {
-      base.push({ key: 'СИГАРЕТЫ', icon: Cigarette });
-    }
-    return base.map((item) => ({ ...item, icon: getHistoryCategoryIcon(item.key) }));
-  }, []);
+  const moneyCategoriesWithIcons = MONEY_CATEGORIES.filter((item) =>
+    !item.type || item.type === form.sign || getMoneyCategoryMeta(form.instrument)?.key === item.key
+  );
 
   const renderHistoryCategoryPicker = (className = '') => {
     const ActiveIcon = historyNameFilter ? getHistoryCategoryIcon(historyNameFilter) : CircleDollarSign;
@@ -2955,7 +2952,7 @@ export default function CalendarScreen() {
           }`}>
             <ActiveIcon className="h-4 w-4 stroke-[1.8]" />
           </span>
-          <span className="min-w-0 flex-1 truncate text-xs font-data">{historyNameFilter || t('all')}</span>
+          <span className="min-w-0 flex-1 truncate text-xs font-data">{(traderMode ? historyNameFilter : getMoneyCategoryLabel(historyNameFilter, language)) || t('all')}</span>
           <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-zinc-500 transition-transform ${historyCategoryMenuOpen ? 'rotate-180' : ''}`} />
         </button>
         {historyCategoryMenuOpen && (
@@ -2963,7 +2960,7 @@ export default function CalendarScreen() {
             isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'
           }`}>
             <div className="max-h-64 overflow-y-auto pr-1">
-              {[{ name: '', Icon: CircleDollarSign, label: t('all') }, ...historyNameOptions.map((name) => ({ name, Icon: getHistoryCategoryIcon(name), label: name }))].map(({ name, Icon, label }) => {
+              {[{ name: '', Icon: CircleDollarSign, label: t('all') }, ...historyNameOptions.map((name) => ({ name, Icon: getHistoryCategoryIcon(name), label: traderMode ? name : getMoneyCategoryLabel(name, language) }))].map(({ name, Icon, label }) => {
                 const active = historyNameFilter === name;
                 return (
                   <button
@@ -3547,7 +3544,7 @@ export default function CalendarScreen() {
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-4 min-w-0 flex-wrap">
                       <span className={`font-data text-xs w-12 shrink-0 ${isLight ? 'text-zinc-400' : 'text-zinc-500'}`}>{trade.time}</span>
-                      <span className={`text-sm font-medium truncate ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{trade.instrument}</span>
+                      <span className={`text-sm font-medium truncate ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{traderMode ? trade.instrument : getMoneyCategoryLabel(trade.instrument, language)}</span>
                       <span
                         className={[
                           'font-data text-[11px] tracking-wider px-2 py-0.5 rounded-full shrink-0',
@@ -4916,7 +4913,7 @@ export default function CalendarScreen() {
                             </span>
                             <span className="min-w-0">
                               <span className={`block text-sm font-medium truncate ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>
-                                {trade.instrument}
+                                {traderMode ? trade.instrument : getMoneyCategoryLabel(trade.instrument, language)}
                               </span>
                               <span className={`block text-[11px] mt-0.5 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
                                 {formatDateLabel(trade.dateKey)} · {trade.time}
@@ -5078,7 +5075,7 @@ export default function CalendarScreen() {
               }`}>
                 <button
                   type="button"
-                  onClick={() => { setForm((f) => ({ ...f, sign: 'plus' })); setFormError(''); }}
+                  onClick={() => { setForm((f) => ({ ...f, sign: 'plus', instrument: !traderMode && getMoneyCategoryMeta(f.instrument)?.type === 'minus' ? 'Зарплата' : f.instrument })); setFormError(''); }}
                   className={[
                     'flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-colors',
                     form.sign === 'plus'
@@ -5091,7 +5088,7 @@ export default function CalendarScreen() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setForm((f) => ({ ...f, sign: 'minus' })); setFormError(''); }}
+                  onClick={() => { setForm((f) => ({ ...f, sign: 'minus', instrument: !traderMode && getMoneyCategoryMeta(f.instrument)?.type === 'plus' ? 'Продукты' : f.instrument })); setFormError(''); }}
                   className={[
                     'flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-colors',
                     form.sign === 'minus'
@@ -5305,33 +5302,35 @@ export default function CalendarScreen() {
                       }`}>
                         {t('category')}
                       </label>
-                      <div className="grid grid-cols-2 gap-1.5">
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="group" aria-label={t('category')}>
                         {moneyCategoriesWithIcons.map((category) => {
                           const Icon = category.icon;
-                          const active = textValue(form.instrument).trim() === category.key;
+                          const active = getMoneyCategoryMeta(form.instrument)?.key === category.key;
                           return (
                             <button
                               key={category.key}
                               type="button"
+                              aria-pressed={active}
                               onClick={() => { setForm((f) => ({ ...f, instrument: category.key })); setFormError(''); }}
                               className={[
-                                'flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-colors',
+                                'flex min-h-[72px] flex-col items-start justify-center gap-2 rounded-xl border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400',
                                 active
-                                  ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-600'
+                                  ? 'border-amber-400/70 bg-amber-400/10 text-amber-600'
                                   : isLight
-                                  ? 'border-zinc-300 bg-white text-zinc-500 hover:text-zinc-700'
-                                  : 'border-zinc-800 bg-zinc-950 text-zinc-500 hover:text-zinc-300',
+                                  ? 'border-zinc-200 bg-white text-zinc-600 hover:border-amber-400/50'
+                                  : 'border-white/[0.07] bg-white/[0.025] text-zinc-300 hover:border-amber-400/40 hover:bg-white/5',
                               ].join(' ')}
                             >
-                              <Icon className="h-3.5 w-3.5 shrink-0" />
-                              <span className="text-xs font-medium">{category.key}</span>
+                              <Icon className="h-5 w-5 shrink-0 stroke-[1.6]" />
+                              <span className="text-xs font-medium">{getMoneyCategoryLabel(category.key, language)}</span>
                             </button>
                           );
                         })}
                       </div>
                       <input
                         type="text"
-                        value={form.instrument}
+                        value={getMoneyCategoryLabel(form.instrument, language)}
+                        aria-label={t('ownCategory')}
                         onChange={(e) => { setForm((f) => ({ ...f, instrument: e.target.value })); setFormError(''); }}
                         className={`mt-1.5 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-emerald-400/50 ${
                           isLight

@@ -6,6 +6,7 @@ import {
   ShoppingBag,
   CreditCard,
   MoreHorizontal,
+  Coffee, Car, HeartPulse, GraduationCap, Plane, Gift, Gamepad2, Cigarette, Laptop, TrendingUp, RotateCcw,
 } from 'lucide-react';
 
 export const PERIOD_PRESETS = ['Сегодня', 'Текущая неделя', 'Текущий месяц', '3 месяца', 'Вся история'];
@@ -23,15 +24,24 @@ export const INSTRUMENT_INFO = {
 };
 
 export const MONEY_CATEGORIES = [
-  { key: 'Зарплата', icon: Wallet },
-  { key: 'Продукты', icon: ShoppingCart },
-  { key: 'Жильё', icon: Home },
-  { key: 'Работа', icon: Briefcase },
-  { key: 'Покупки', icon: ShoppingBag },
-  { key: 'Подписки', icon: CreditCard },
-  { key: 'Сигареты', icon: MoreHorizontal },
-  { key: 'Фриланс', icon: Wallet },
-  { key: 'Другое', icon: MoreHorizontal },
+  { key: 'Зарплата', icon: Wallet, type: 'plus', en: 'Salary', ro: 'Salariu' },
+  { key: 'Фриланс', icon: Laptop, type: 'plus', en: 'Freelance', ro: 'Freelance' },
+  { key: 'Инвестиции', icon: TrendingUp, type: 'plus', en: 'Investments', ro: 'Investiții' },
+  { key: 'Возврат', icon: RotateCcw, type: 'plus', en: 'Refund', ro: 'Rambursare' },
+  { key: 'Продукты', icon: ShoppingCart, type: 'minus', en: 'Groceries', ro: 'Alimente' },
+  { key: 'Кафе', icon: Coffee, type: 'minus', en: 'Cafés & dining', ro: 'Cafenele' },
+  { key: 'Жильё', icon: Home, type: 'minus', en: 'Housing', ro: 'Locuință' },
+  { key: 'Транспорт', icon: Car, type: 'minus', en: 'Transport', ro: 'Transport' },
+  { key: 'Покупки', icon: ShoppingBag, type: 'minus', en: 'Shopping', ro: 'Cumpărături' },
+  { key: 'Подписки', icon: CreditCard, type: 'minus', en: 'Subscriptions', ro: 'Abonamente' },
+  { key: 'Здоровье', icon: HeartPulse, type: 'minus', en: 'Health', ro: 'Sănătate' },
+  { key: 'Образование', icon: GraduationCap, type: 'minus', en: 'Education', ro: 'Educație' },
+  { key: 'Путешествия', icon: Plane, type: 'minus', en: 'Travel', ro: 'Călătorii' },
+  { key: 'Развлечения', icon: Gamepad2, type: 'minus', en: 'Entertainment', ro: 'Divertisment' },
+  { key: 'Сигареты', icon: Cigarette, type: 'minus', en: 'Tobacco', ro: 'Tutun' },
+  { key: 'Работа', icon: Briefcase, en: 'Work', ro: 'Muncă' },
+  { key: 'Подарки', icon: Gift, en: 'Gifts', ro: 'Cadouri' },
+  { key: 'Другое', icon: MoreHorizontal, en: 'Other', ro: 'Altele' },
 ];
 
 export const EXCHANGES = ['Bybit', 'Binance', 'OKX', 'MT4/MT5', 'cTrader'];
@@ -70,7 +80,13 @@ export function getTradesCacheKey(userId) {
 }
 
 export function getMoneyCategoryMeta(category) {
-  return MONEY_CATEGORIES.find((item) => item.key === category) || null;
+  return MONEY_CATEGORIES.find((item) => item.key.toUpperCase() === String(category || '').trim().toUpperCase()) || null;
+}
+
+export function getMoneyCategoryLabel(category, language = 'ru') {
+  const meta = getMoneyCategoryMeta(category);
+  if (!meta) return category;
+  return meta[language === 'md' ? 'ro' : language] || meta.key;
 }
 
 export const LANGUAGES = [
