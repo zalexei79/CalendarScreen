@@ -1,15 +1,17 @@
-# Step 12 — Paid PRO frontend
+# DAYRIS — Денежный календарь
+
+Step 12 — Paid DAYRIS PRO frontend
 
 Replace only the project root `CalendarScreen.jsx` with the file in this package.
 
 `Header.jsx` and `src/features/pro/useProAccess.js` do not need replacement for this step.
 
 What changed:
-- The $1.99 PRO button now calls the Supabase Edge Function `lemon-checkout`.
+- The $1.99 DAYRIS PRO button now calls the Supabase Edge Function `lemon-checkout`.
 - The button shows loading and checkout errors.
 - Checkout URLs are accepted only over HTTPS on `lemonsqueezy.com` / subdomains.
-- The button does not start another checkout while PRO is already active.
-- After `?payment=success`, PRO status is refreshed several times to cover webhook/redirect timing.
+- The button does not start another checkout while DAYRIS PRO is already active.
+- After `?payment=success`, DAYRIS PRO status is refreshed several times to cover webhook/redirect timing.
 - RU / EN / RO payment copy is updated.
 - No API key, Store ID, Variant ID, or webhook secret is added to the frontend.
 

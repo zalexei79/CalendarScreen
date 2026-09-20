@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v4';
+const CACHE_NAME = 'atj-cache-v5';
 
 const PRECACHE_ASSETS = [
   '/',

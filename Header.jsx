@@ -32,13 +32,13 @@ export default function Header({
           <div className="relative shrink-0 flex items-center justify-center">
             <img
               src="/icon-180.png"
-              alt="Logo"
+              alt={t('appName')}
               className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl shadow-md border border-amber-400/30 object-cover"
             />
           </div>
           <div className="min-w-0">
             <h1 className={`font-display text-base sm:text-lg font-semibold tracking-tight truncate leading-tight ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>
-              {traderMode ? 'AI Trade Journal' : t('titleMoney')}
+              {t('appName')}
             </h1>
             <p
               className={`h-[14px] font-data text-[9px] sm:text-[10px] tracking-[0.16em] uppercase truncate transition-opacity duration-300 ${
@@ -79,7 +79,7 @@ export default function Header({
                       <Download className="h-4 w-4" />
                     </div>
                     <div>
-                      <p className="font-data text-[10px] tracking-[0.2em] text-amber-400 uppercase">AI Trade Journal</p>
+                      <p className="font-data text-[10px] tracking-[0.2em] text-amber-400 uppercase">{t('appTitle')}</p>
                       <p className={`mt-0.5 text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('alwaysAtHand')}</p>
                     </div>
                   </div>
@@ -173,7 +173,7 @@ export default function Header({
                 {/* Header */}
                 <div className="flex items-center justify-between pb-3 border-b border-zinc-500/10 mb-3">
                   <p className={`font-data text-[11px] tracking-[0.2em] uppercase font-semibold ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>
-                    {t('settings')} · {t('profile')}
+                    {t('settings')} · {t('appTitle')}
                   </p>
                   <span className="text-amber-400 text-xs">✦</span>
                 </div>
@@ -407,7 +407,7 @@ export default function Header({
               role="switch"
               aria-checked={traderMode}
               onClick={() => setTraderMode(v => { const next = !v; if (!next) setPlatformFilter('ALL'); return next; })}
-              title={traderMode ? 'PRO' : (proAccessActive ? 'PRO' : 'PRO · invite to unlock')}
+              title={traderMode ? 'DAYRIS PRO' : (proAccessActive ? 'DAYRIS PRO' : 'DAYRIS PRO · invite to unlock')}
               className={`relative h-9 w-[124px] shrink-0 rounded-full border p-0.5 font-data text-[10px] tracking-[0.14em] shadow-[inset_0_1px_1px_rgba(0,0,0,.2)] transition-all duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60 ${
                 isLight ? 'border-zinc-300 bg-zinc-100' : 'border-zinc-700/80 bg-zinc-950'
               }`}
@@ -445,7 +445,7 @@ export default function Header({
                   {!proAccessLoading && !proAccessActive && !traderMode
                     ? <LockKeyhole className="h-3 w-3 stroke-[1.9]" />
                     : <span className={traderMode ? 'text-amber-300' : ''}>✦</span>}
-                  PRO
+                  <span>DAYRIS <br />PRO</span>
                 </span>
               </span>
             </button>

@@ -34,7 +34,7 @@ function getInitialLight() {
 const COPY = {
   ru: {
     eyebrow: 'УСТАНОВКА В 1 КАСАНИЕ',
-    title: 'AI Trade Journal на главном экране',
+    title: 'DAYRIS на главном экране',
     subtitle: 'Открывается как отдельное приложение — без адресной строки и лишних вкладок.',
     install: 'Установить на главный экран',
     showHow: 'Показать как установить',
@@ -55,7 +55,7 @@ const COPY = {
   },
   en: {
     eyebrow: 'INSTALL IN ONE TAP',
-    title: 'AI Trade Journal on your Home Screen',
+    title: 'DAYRIS on your Home Screen',
     subtitle: 'Opens like a standalone app — no address bar and no extra browser tabs.',
     install: 'Install on Home Screen',
     showHow: 'Show installation steps',
@@ -76,7 +76,7 @@ const COPY = {
   },
   ro: {
     eyebrow: 'INSTALEAZĂ DINTR-O ATINGERE',
-    title: 'AI Trade Journal pe ecranul principal',
+    title: 'DAYRIS pe ecranul principal',
     subtitle: 'Se deschide ca o aplicație separată — fără bara de adrese și fără file în plus.',
     install: 'Instalează pe ecranul principal',
     showHow: 'Arată pașii de instalare',
@@ -184,7 +184,7 @@ export default function InstallPage() {
               <BrandMark isLight={isLight} />
               <div className="min-w-0">
                 <p className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-amber-500">{copy.eyebrow}</p>
-                <p className={`mt-1 text-sm font-semibold ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>AI Trade Journal</p>
+                <p className={`mt-1 text-sm font-semibold ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>DAYRIS</p>
               </div>
             </div>
 

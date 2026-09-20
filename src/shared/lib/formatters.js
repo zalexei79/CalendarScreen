@@ -1,5 +1,5 @@
 /**
- * Pure formatting and string normalization utilities for Money Calendar.
+ * Pure formatting and string normalization utilities for DAYRIS.
  */
 
 // Safely normalize form/input values before string operations.

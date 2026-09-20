@@ -1,3 +1,5 @@
+import { APP_NAME, APP_TITLE, PRO_PLAN_NAME, APP_SLOGAN } from '../config/brand.js';
+
 export const MONTHS = [
   'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
   'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
@@ -21,7 +23,9 @@ export function monthsFor(language) {
 
 export const TRANSLATIONS = {
   ru: {
-    titleMoney: 'Денежный календарь', titlePro: 'Трейдерский календарь',
+    slogan: APP_SLOGAN,
+    appName: APP_NAME, appTitle: APP_TITLE, proPlanName: PRO_PLAN_NAME,
+    titleMoney: APP_NAME, titlePro: PRO_PLAN_NAME,
     signIn: 'Войти через Google', signOut: 'Выйти из аккаунта',
     settings: 'Настройки', language: 'Язык', currency: 'Валюта', theme: 'Тема',
     themeDark: 'Ночь', themeLight: 'День',
@@ -92,7 +96,7 @@ export const TRANSLATIONS = {
     onlineAction: 'Отлично',
     
     // PRO Analysis
-    proFinancialPicture: 'PRO · Финансовая картина',
+    proFinancialPicture: 'DAYRIS PRO · Финансовая картина',
     proSubtitle: 'Личный финансовый intelligence — без лишнего шума',
     moneyInMotion: 'Деньги в движении',
     overview: 'Обзор',
@@ -232,7 +236,9 @@ export const TRANSLATIONS = {
     catOther: 'Другое',
   },
   en: {
-    titleMoney: 'Money Calendar', titlePro: 'Trading Calendar',
+    slogan: 'Every day matters.',
+    appName: APP_NAME, appTitle: APP_TITLE, proPlanName: PRO_PLAN_NAME,
+    titleMoney: APP_NAME, titlePro: PRO_PLAN_NAME,
     signIn: 'Sign in with Google', signOut: 'Sign out',
     settings: 'Settings', language: 'Language', currency: 'Currency', theme: 'Theme',
     themeDark: 'Dark', themeLight: 'Light',
@@ -303,7 +309,7 @@ export const TRANSLATIONS = {
     onlineAction: 'Great',
     
     // PRO Analysis
-    proFinancialPicture: 'PRO · Financial Picture',
+    proFinancialPicture: 'DAYRIS PRO · Financial Picture',
     proSubtitle: 'Personal financial intelligence — clean and sharp',
     moneyInMotion: 'Money in Motion',
     overview: 'Overview',
@@ -443,7 +449,9 @@ export const TRANSLATIONS = {
     catOther: 'Other',
   },
   md: {
-    titleMoney: 'Calendar de bani', titlePro: 'Calendar de tranzacții',
+    slogan: 'Fiecare zi contează.',
+    appName: APP_NAME, appTitle: APP_TITLE, proPlanName: PRO_PLAN_NAME,
+    titleMoney: APP_NAME, titlePro: PRO_PLAN_NAME,
     signIn: 'Autentificare cu Google', signOut: 'Ieșire din cont',
     settings: 'Setări', language: 'Limbă', currency: 'Valută', theme: 'Temă',
     themeDark: 'Noapte', themeLight: 'Zi',
@@ -514,7 +522,7 @@ export const TRANSLATIONS = {
     onlineAction: 'Excelent',
     
     // PRO Analysis
-    proFinancialPicture: 'PRO · Imagine financiară',
+    proFinancialPicture: 'DAYRIS PRO · Imagine financiară',
     proSubtitle: 'Inteligență financiară personală — clară și directă',
     moneyInMotion: 'Bani în mișcare',
     overview: 'Prezentare',

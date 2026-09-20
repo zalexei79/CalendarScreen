@@ -1,5 +1,5 @@
 /**
- * Pure date utility functions for Money Calendar.
+ * Pure date utility functions for DAYRIS.
  * Ensures consistent local date manipulation without UTC day-shifting.
  */
 

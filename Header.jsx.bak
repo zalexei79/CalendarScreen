@@ -20,7 +20,7 @@ export default function Header({
   return (
     <header className={`px-2 sm:px-8 pt-3 sm:pt-8 pb-3 sm:pb-4 border-b ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}>
       <div className="flex items-start justify-between gap-2 mb-2">
-        <p className={`font-data text-[11px] sm:text-[12px] tracking-[0.16em] uppercase ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{traderMode ? t('titlePro') : t('titleMoney')}</p>
+        <p className={`font-data text-[11px] sm:text-[12px] tracking-[0.16em] uppercase ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('appName')}</p>
     
         {/* Theme toggle + settings gear — compact on mobile, same control scales up on wider screens */}
         <div className="flex items-center gap-1.5 shrink-0">
@@ -41,7 +41,7 @@ export default function Header({
                 <div className={`border-b bg-gradient-to-r from-amber-400/10 via-transparent to-transparent px-4 py-3.5 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
                   <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/10 text-amber-400"><Download className="h-4 w-4" /></div>
-                    <div><p className="font-data text-[10px] tracking-[0.2em] text-amber-400 uppercase">AI Trade Journal</p><p className={`mt-0.5 text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Всегда под рукой</p></div>
+                    <div><p className="font-data text-[10px] tracking-[0.2em] text-amber-400 uppercase">DAYRIS</p><p className={`mt-0.5 text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Всегда под рукой</p></div>
                   </div>
                 </div>
                 <div className="space-y-3 px-4 py-3.5">
@@ -295,7 +295,7 @@ export default function Header({
               role="switch"
               aria-checked={traderMode}
               onClick={() => setTraderMode(v => { const next = !v; if (!next) setPlatformFilter('ALL'); return next; })}
-              title={traderMode ? 'PRO: LONG/SHORT, Take Profit и Stop Loss' : 'Денежный: доходы и расходы без трейдерских полей'}
+              title={traderMode ? 'DAYRIS PRO: LONG/SHORT, Take Profit и Stop Loss' : 'Денежный: доходы и расходы без трейдерских полей'}
               className="relative h-10 sm:h-9 w-[116px] sm:w-[128px] shrink-0 rounded-full border border-zinc-700 bg-zinc-950 p-0.5 font-data text-[9px] sm:text-[10px] tracking-[0.12em] text-zinc-400 shadow-[inset_0_1px_0_rgba(255,255,255,.03),0_8px_24px_rgba(0,0,0,.16)] transition-all duration-300 hover:border-amber-400/40 focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60"
             >
               <span
@@ -325,7 +325,7 @@ export default function Header({
                 ].join(' ')}
                 style={{ width: '56px' }}
               >
-                <span className="flex items-center gap-1"><span className={traderMode ? 'text-amber-300' : ''}>✦</span>PRO</span>
+                <span className="flex items-center gap-1"><span className={traderMode ? 'text-amber-300' : ''}>✦</span>DAYRIS PRO</span>
               </span>
             </button>
     
@@ -377,4 +377,3 @@ export default function Header({
     </header>
   );
 }
-

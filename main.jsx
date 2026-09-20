@@ -13,7 +13,7 @@ class AppErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    console.error('[AI Trade Journal] Render error:', error, info)
+    console.error('[DAYRIS] Render error:', error, info)
   }
 
   render() {
@@ -21,7 +21,7 @@ class AppErrorBoundary extends React.Component {
       return (
         <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-6">
           <div className="w-full max-w-md rounded-2xl border border-amber-400/20 bg-zinc-900 p-6 text-center shadow-2xl">
-            <div className="text-amber-400 text-xs font-semibold tracking-widest uppercase mb-2">AI Trade Journal</div>
+            <div className="text-amber-400 text-xs font-semibold tracking-widest uppercase mb-2">DAYRIS</div>
             <h1 className="text-xl font-semibold mb-2">Не удалось открыть этот экран</h1>
             <p className="text-sm text-zinc-400 mb-5">Данные приложения сохранены. Попробуйте обновить страницу.</p>
             <button

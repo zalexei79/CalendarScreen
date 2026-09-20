@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "AI Trade Journal",
-  "short_name": "Trade Journal",
-  "description": "Денежный календарь и торговый журнал для ежедневных записей и аналитики",
+  "name": "DAYRIS — Денежный календарь",
+  "short_name": "DAYRIS",
+  "description": "DAYRIS — Денежный календарь. Каждый день имеет значение.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

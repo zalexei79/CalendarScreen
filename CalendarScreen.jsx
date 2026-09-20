@@ -9,7 +9,7 @@ import {
 import { supabase } from './src/supabaseClient';
 
 /**
- * AI Trading Journal — Screen 01: Calendar + Trade Panel + Add Trade Modal + Platform Connect
+ * DAYRIS — Screen 01: Calendar + Trade Panel + Add Trade Modal + Platform Connect
  *
  * For your Next.js app:
  *  - rename to CalendarScreen.tsx
@@ -721,17 +721,17 @@ export default function CalendarScreen() {
       saveImage: 'Сохранить PNG',
       preparing: 'Готовим карточку…',
       caption: 'Посмотри мои результаты',
-      createdWith: 'Собрано в AI Trade Journal',
+      createdWith: 'Собрано в DAYRIS',
       close: 'Закрыть',
       mixedCurrencies: 'Все валюты',
       allHistory: 'За всё время',
       installCta: 'Присоединяйся',
       scanToInstall: 'Сканируй QR или открой ссылку',
-      viralTagline: 'Следи за деньгами красиво и просто',
-      referralBonus: '7 ДНЕЙ PRO ПО МОЕЙ ССЫЛКЕ',
-      shareInviteLine: 'Следи за деньгами красиво и просто.',
-      shareBonusLine: 'По моей ссылке — 7 дней PRO после первой записи.',
-      shareGenericLine: 'Попробуй AI Trade Journal и начни вести свой календарь.',
+      viralTagline: t('slogan'),
+      referralBonus: '7 ДНЕЙ DAYRIS PRO ПО МОЕЙ ССЫЛКЕ',
+      shareInviteLine: 'Каждый день имеет значение.',
+      shareBonusLine: 'По моей ссылке — 7 дней DAYRIS PRO после первой записи.',
+      shareGenericLine: 'Попробуй DAYRIS и начни вести свой календарь.',
       shareLinkHint: 'Вместе с картинкой отправится кликабельная ссылка на установку',
     },
     en: {
@@ -751,17 +751,17 @@ export default function CalendarScreen() {
       saveImage: 'Save PNG',
       preparing: 'Preparing card…',
       caption: 'Check out my results',
-      createdWith: 'Created with AI Trade Journal',
+      createdWith: 'Created with DAYRIS',
       close: 'Close',
       mixedCurrencies: 'All currencies',
       allHistory: 'All time',
       installCta: 'JOIN ME',
       scanToInstall: 'Scan the QR or open the link',
-      viralTagline: 'Track your money beautifully and simply',
-      referralBonus: '7 DAYS PRO WITH MY LINK',
-      shareInviteLine: 'Track your money beautifully and simply.',
-      shareBonusLine: 'My link gives you 7 days of PRO after your first entry.',
-      shareGenericLine: 'Try AI Trade Journal and start your own calendar.',
+      viralTagline: t('slogan'),
+      referralBonus: '7 DAYS DAYRIS PRO WITH MY LINK',
+      shareInviteLine: 'Every day matters.',
+      shareBonusLine: 'My link gives you 7 days of DAYRIS PRO after your first entry.',
+      shareGenericLine: 'Try DAYRIS and start your own calendar.',
       shareLinkHint: 'A clickable install link will be shared together with the image',
     },
     ro: {
@@ -781,29 +781,29 @@ export default function CalendarScreen() {
       saveImage: 'Salvează PNG',
       preparing: 'Pregătim cardul…',
       caption: 'Uite rezultatele mele',
-      createdWith: 'Creat cu AI Trade Journal',
+      createdWith: 'Creat cu DAYRIS',
       close: 'Închide',
       mixedCurrencies: 'Toate monedele',
       allHistory: 'Toată perioada',
       installCta: 'ALĂTURĂ-TE',
       scanToInstall: 'Scanează QR-ul sau deschide linkul',
-      viralTagline: 'Urmărește-ți banii simplu și frumos',
-      referralBonus: '7 ZILE PRO DIN LINKUL MEU',
-      shareInviteLine: 'Urmărește-ți banii simplu și frumos.',
-      shareBonusLine: 'Din linkul meu primești 7 zile PRO după prima înregistrare.',
-      shareGenericLine: 'Încearcă AI Trade Journal și începe propriul calendar.',
+      viralTagline: t('slogan'),
+      referralBonus: '7 ZILE DAYRIS PRO DIN LINKUL MEU',
+      shareInviteLine: 'Fiecare zi contează.',
+      shareBonusLine: 'Din linkul meu primești 7 zile DAYRIS PRO după prima înregistrare.',
+      shareGenericLine: 'Încearcă DAYRIS și începe propriul calendar.',
       shareLinkHint: 'Împreună cu imaginea va fi trimis și un link de instalare pe care se poate apăsa',
     },
   }[resolveOnboardingLanguage(language)];
 
   const proAccessCopy = {
     ru: {
-      eyebrow: 'AI TRADE JOURNAL PRO',
-      title: 'Открой AI Trade Journal PRO',
+      eyebrow: 'DAYRIS PRO',
+      title: 'Открой DAYRIS PRO',
       body: 'Больше аналитики. Подключение площадок. Меньше ручной работы.',
       invitesHubTitle: 'Мои приглашения',
-      invitesHubBody: 'Следи за приглашёнными, статусами и заработанными днями PRO.',
-      featuresTitle: 'Что откроется в PRO',
+      invitesHubBody: 'Следи за приглашёнными, статусами и заработанными днями DAYRIS PRO.',
+      featuresTitle: 'Что откроется в DAYRIS PRO',
       featurePlatform: 'Подключение площадки',
       featurePlatformHint: 'cTrader: синхронизация аккаунтов и сделок',
       featureAnalytics: 'Расширенная аналитика',
@@ -812,37 +812,37 @@ export default function CalendarScreen() {
       featureJournalHint: 'Инструмент, направление, TP/SL и заметки',
       featureInsights: 'Разбор результатов',
       featureInsightsHint: 'История и заметки помогают видеть закономерности',
-      freeTitle: 'Получить PRO бесплатно',
+      freeTitle: 'Получить DAYRIS PRO бесплатно',
       freeBody: 'Пригласи друга. После его первой настоящей записи награда активируется автоматически.',
-      reward: '+26 дней PRO тебе',
-      rewardHint: '+7 дней PRO другу на старт',
+      reward: '+26 дней DAYRIS PRO тебе',
+      rewardHint: '+7 дней DAYRIS PRO другу на старт',
       share: 'Создать приглашение',
       signIn: 'Войти и получить приглашение',
       preparing: 'Готовим твоё приглашение…',
-      buyTitle: 'PRO без приглашения',
+      buyTitle: 'DAYRIS PRO без приглашения',
       buyPrice: '$1.99',
       buyPeriod: '/ месяц',
-      buyBody: 'Помесячный доступ к PRO — без приглашений.',
-      buyButton: 'Подключить PRO',
+      buyBody: 'Помесячный доступ к DAYRIS PRO — без приглашений.',
+      buyButton: 'Подключить DAYRIS PRO',
       buyLoading: 'Открываем оплату…',
-      buySignIn: 'Войти и подключить PRO',
-      buyActive: 'PRO уже активен',
+      buySignIn: 'Войти и подключить DAYRIS PRO',
+      buyActive: 'DAYRIS PRO уже активен',
       buyError: 'Не удалось открыть оплату. Попробуй ещё раз.',
       comingSoon: 'Безопасная оплата через Lemon Squeezy',
-      paymentSuccessTitle: 'PRO активирован',
-      paymentSuccessBody: 'Подписка подтверждена. Доступ PRO уже включён.',
+      paymentSuccessTitle: 'DAYRIS PRO активирован',
+      paymentSuccessBody: 'Подписка подтверждена. Доступ DAYRIS PRO уже включён.',
       invitedLabel: 'Приглашено',
-      offerTab: 'PRO и бонусы',
+      offerTab: 'DAYRIS PRO и бонусы',
       invitesTab: 'Мои приглашения',
       invitedPeople: 'Приглашено',
       activatedPeople: 'Активировали',
       waitingPeople: 'Ждём запись',
-      earnedDays: 'Заработано PRO',
+      earnedDays: 'Заработано DAYRIS PRO',
       daysShort: 'дн.',
-      myPro: 'Мой PRO',
+      myPro: 'Мой DAYRIS PRO',
       proRemaining: 'Осталось',
       proUntil: 'до',
-      proInactive: 'PRO не активен',
+      proInactive: 'DAYRIS PRO не активен',
       currencyTitle: 'Валюта аналитики',
       currencyHint: 'Выбранная валюта применяется к Обзору, Аналитике, Сделкам и карточке «Поделиться».',
       mixedCurrencyHint: 'Для точных цифр выбери одну валюту. Смешивать разные валюты в один результат некорректно.',
@@ -852,22 +852,22 @@ export default function CalendarScreen() {
       inviteMore: 'Пригласить ещё',
       pendingStatus: 'Ждём первую запись',
       qualifiedStatus: 'Начисляем награду',
-      rewardedStatus: '+26 дней PRO',
+      rewardedStatus: '+26 дней DAYRIS PRO',
       joinedAt: 'Присоединился',
       rewardedAt: 'Награда',
       signInHistory: 'Войди в аккаунт, чтобы видеть историю приглашений.',
-      inviteWaiting: 'Поделись приглашением — друг получит 7 дней PRO.',
+      inviteWaiting: 'Поделись приглашением — друг получит 7 дней DAYRIS PRO.',
       invitePending: 'Друг уже присоединился · ждём его первую запись.',
-      inviteDone: 'Готово · бонус PRO начислен.',
+      inviteDone: 'Готово · бонус DAYRIS PRO начислен.',
       close: 'Не сейчас',
     },
     en: {
-      eyebrow: 'AI TRADE JOURNAL PRO',
-      title: 'Unlock AI Trade Journal PRO',
+      eyebrow: 'DAYRIS PRO',
+      title: 'Unlock DAYRIS PRO',
       body: 'More analytics. Platform connections. Less manual work.',
       invitesHubTitle: 'My invitations',
-      invitesHubBody: 'Track invited users, their status, and the PRO days you have earned.',
-      featuresTitle: 'What PRO unlocks',
+      invitesHubBody: 'Track invited users, their status, and the DAYRIS PRO days you have earned.',
+      featuresTitle: 'What DAYRIS PRO unlocks',
       featurePlatform: 'Platform connection',
       featurePlatformHint: 'cTrader account and trade sync',
       featureAnalytics: 'Advanced analytics',
@@ -876,37 +876,37 @@ export default function CalendarScreen() {
       featureJournalHint: 'Instrument, direction, TP/SL and notes',
       featureInsights: 'Results review',
       featureInsightsHint: 'History and notes help reveal patterns',
-      freeTitle: 'Get PRO for free',
+      freeTitle: 'Get DAYRIS PRO for free',
       freeBody: 'Invite a friend. After their first real entry, the reward activates automatically.',
-      reward: '+26 days PRO for you',
-      rewardHint: '+7 days PRO for your friend',
+      reward: '+26 days DAYRIS PRO for you',
+      rewardHint: '+7 days DAYRIS PRO for your friend',
       share: 'Create invitation',
       signIn: 'Sign in to get an invitation',
       preparing: 'Preparing your invitation…',
-      buyTitle: 'PRO without inviting',
+      buyTitle: 'DAYRIS PRO without inviting',
       buyPrice: '$1.99',
       buyPeriod: '/ month',
-      buyBody: 'Monthly PRO access — no invitation required.',
-      buyButton: 'Get PRO',
+      buyBody: 'Monthly DAYRIS PRO access — no invitation required.',
+      buyButton: 'Get DAYRIS PRO',
       buyLoading: 'Opening checkout…',
-      buySignIn: 'Sign in to get PRO',
-      buyActive: 'PRO is already active',
+      buySignIn: 'Sign in to get DAYRIS PRO',
+      buyActive: 'DAYRIS PRO is already active',
       buyError: 'Could not open checkout. Please try again.',
       comingSoon: 'Secure checkout by Lemon Squeezy',
-      paymentSuccessTitle: 'PRO activated',
-      paymentSuccessBody: 'Your subscription is confirmed. PRO access is now active.',
+      paymentSuccessTitle: 'DAYRIS PRO activated',
+      paymentSuccessBody: 'Your subscription is confirmed. DAYRIS PRO access is now active.',
       invitedLabel: 'Invited',
-      offerTab: 'PRO & rewards',
+      offerTab: 'DAYRIS PRO & rewards',
       invitesTab: 'My invites',
       invitedPeople: 'Invited',
       activatedPeople: 'Activated',
       waitingPeople: 'Waiting',
-      earnedDays: 'PRO earned',
+      earnedDays: 'DAYRIS PRO earned',
       daysShort: 'days',
-      myPro: 'My PRO',
+      myPro: 'My DAYRIS PRO',
       proRemaining: 'Remaining',
       proUntil: 'until',
-      proInactive: 'PRO is not active',
+      proInactive: 'DAYRIS PRO is not active',
       currencyTitle: 'Analytics currency',
       currencyHint: 'The selected currency applies to Overview, Analytics, Trades and the Share card.',
       mixedCurrencyHint: 'Choose one currency for exact numbers. Different currencies should not be combined into one result.',
@@ -916,22 +916,22 @@ export default function CalendarScreen() {
       inviteMore: 'Invite another',
       pendingStatus: 'Waiting for first entry',
       qualifiedStatus: 'Granting reward',
-      rewardedStatus: '+26 days PRO',
+      rewardedStatus: '+26 days DAYRIS PRO',
       joinedAt: 'Joined',
       rewardedAt: 'Reward',
       signInHistory: 'Sign in to see your invitation history.',
-      inviteWaiting: 'Share your invitation — your friend gets 7 days of PRO.',
+      inviteWaiting: 'Share your invitation — your friend gets 7 days of DAYRIS PRO.',
       invitePending: 'Your friend joined · waiting for their first entry.',
-      inviteDone: 'Done · your PRO bonus has been granted.',
+      inviteDone: 'Done · your DAYRIS PRO bonus has been granted.',
       close: 'Not now',
     },
     ro: {
-      eyebrow: 'AI TRADE JOURNAL PRO',
-      title: 'Deblochează AI Trade Journal PRO',
+      eyebrow: 'DAYRIS PRO',
+      title: 'Deblochează DAYRIS PRO',
       body: 'Mai multă analiză. Conectarea platformelor. Mai puțină muncă manuală.',
       invitesHubTitle: 'Invitațiile mele',
-      invitesHubBody: 'Urmărește invitațiile, starea lor și zilele PRO câștigate.',
-      featuresTitle: 'Ce deblochează PRO',
+      invitesHubBody: 'Urmărește invitațiile, starea lor și zilele DAYRIS PRO câștigate.',
+      featuresTitle: 'Ce deblochează DAYRIS PRO',
       featurePlatform: 'Conectarea platformei',
       featurePlatformHint: 'cTrader: sincronizarea conturilor și tranzacțiilor',
       featureAnalytics: 'Analiză avansată',
@@ -940,37 +940,37 @@ export default function CalendarScreen() {
       featureJournalHint: 'Instrument, direcție, TP/SL și notițe',
       featureInsights: 'Analiza rezultatelor',
       featureInsightsHint: 'Istoricul și notițele ajută să vezi tipare',
-      freeTitle: 'Primește PRO gratuit',
+      freeTitle: 'Primește DAYRIS PRO gratuit',
       freeBody: 'Invită un prieten. După prima lui înregistrare reală, recompensa se activează automat.',
-      reward: '+26 zile PRO pentru tine',
-      rewardHint: '+7 zile PRO pentru prieten',
+      reward: '+26 zile DAYRIS PRO pentru tine',
+      rewardHint: '+7 zile DAYRIS PRO pentru prieten',
       share: 'Creează invitația',
       signIn: 'Autentifică-te pentru invitație',
       preparing: 'Pregătim invitația…',
-      buyTitle: 'PRO fără invitație',
+      buyTitle: 'DAYRIS PRO fără invitație',
       buyPrice: '$1.99',
       buyPeriod: '/ lună',
-      buyBody: 'Acces PRO lunar — fără invitații.',
-      buyButton: 'Activează PRO',
+      buyBody: 'Acces DAYRIS PRO lunar — fără invitații.',
+      buyButton: 'Activează DAYRIS PRO',
       buyLoading: 'Deschidem plata…',
-      buySignIn: 'Autentifică-te pentru PRO',
-      buyActive: 'PRO este deja activ',
+      buySignIn: 'Autentifică-te pentru DAYRIS PRO',
+      buyActive: 'DAYRIS PRO este deja activ',
       buyError: 'Nu am putut deschide plata. Încearcă din nou.',
       comingSoon: 'Plată securizată prin Lemon Squeezy',
-      paymentSuccessTitle: 'PRO activat',
-      paymentSuccessBody: 'Abonamentul este confirmat. Accesul PRO este activ.',
+      paymentSuccessTitle: 'DAYRIS PRO activat',
+      paymentSuccessBody: 'Abonamentul este confirmat. Accesul DAYRIS PRO este activ.',
       invitedLabel: 'Invitați',
-      offerTab: 'PRO și bonusuri',
+      offerTab: 'DAYRIS PRO și bonusuri',
       invitesTab: 'Invitațiile mele',
       invitedPeople: 'Invitați',
       activatedPeople: 'Activați',
       waitingPeople: 'Așteptăm',
-      earnedDays: 'PRO câștigat',
+      earnedDays: 'DAYRIS PRO câștigat',
       daysShort: 'zile',
-      myPro: 'PRO-ul meu',
+      myPro: 'DAYRIS PRO-ul meu',
       proRemaining: 'Au rămas',
       proUntil: 'până la',
-      proInactive: 'PRO nu este activ',
+      proInactive: 'DAYRIS PRO nu este activ',
       currencyTitle: 'Moneda analizei',
       currencyHint: 'Moneda selectată se aplică la Rezumat, Analiză, Tranzacții și cardul „Distribuie”.',
       mixedCurrencyHint: 'Pentru cifre exacte alege o singură monedă. Monedele diferite nu trebuie adunate într-un singur rezultat.',
@@ -980,13 +980,13 @@ export default function CalendarScreen() {
       inviteMore: 'Invită încă o persoană',
       pendingStatus: 'Așteptăm prima înregistrare',
       qualifiedStatus: 'Acordăm recompensa',
-      rewardedStatus: '+26 zile PRO',
+      rewardedStatus: '+26 zile DAYRIS PRO',
       joinedAt: 'S-a alăturat',
       rewardedAt: 'Recompensă',
       signInHistory: 'Autentifică-te pentru a vedea istoricul invitațiilor.',
-      inviteWaiting: 'Trimite invitația — prietenul primește 7 zile PRO.',
+      inviteWaiting: 'Trimite invitația — prietenul primește 7 zile DAYRIS PRO.',
       invitePending: 'Prietenul s-a alăturat · așteptăm prima înregistrare.',
-      inviteDone: 'Gata · bonusul PRO a fost acordat.',
+      inviteDone: 'Gata · bonusul DAYRIS PRO a fost acordat.',
       close: 'Nu acum',
     },
   }[resolveOnboardingLanguage(language)];
@@ -994,48 +994,48 @@ export default function CalendarScreen() {
   const referralShareCopy = {
     ru: {
       preview: 'ПЕРСОНАЛЬНОЕ ПРИГЛАШЕНИЕ',
-      shareTitle: 'Пригласить в AI Trade Journal',
+      shareTitle: 'Пригласить в DAYRIS',
       hero: 'Присоединяйся — будем считать дни вместе',
-      tagline: 'Следи за деньгами красиво и просто',
-      friendBonus: '7 ДНЕЙ PRO',
+      tagline: t('slogan'),
+      friendBonus: '7 ДНЕЙ DAYRIS PRO',
       friendBonusHint: 'на старт после первой записи',
       qrHint: 'Сканируй QR и установи приложение',
-      honestLine: 'После твоей первой записи я тоже получу бонус PRO.',
+      honestLine: 'После твоей первой записи я тоже получу бонус DAYRIS PRO.',
       saveImage: 'Сохранить PNG',
       share: 'Поделиться',
       preparing: 'Создаём приглашение…',
       close: 'Закрыть',
-      shareText: 'Следи за деньгами красиво и просто. По моей ссылке ты получишь 7 дней PRO после первой записи.',
+      shareText: 'Каждый день имеет значение. По моей ссылке ты получишь 7 дней DAYRIS PRO после первой записи.',
     },
     en: {
       preview: 'PERSONAL INVITATION',
-      shareTitle: 'Invite to AI Trade Journal',
+      shareTitle: 'Invite to DAYRIS',
       hero: 'Join me — let’s count the days together',
-      tagline: 'Track your money beautifully and simply',
-      friendBonus: '7 DAYS PRO',
+      tagline: t('slogan'),
+      friendBonus: '7 DAYS DAYRIS PRO',
       friendBonusHint: 'to get started after your first entry',
       qrHint: 'Scan the QR code and install the app',
-      honestLine: 'After your first entry, I’ll get a PRO bonus too.',
+      honestLine: 'After your first entry, I’ll get a DAYRIS PRO bonus too.',
       saveImage: 'Save PNG',
       share: 'Share',
       preparing: 'Creating invitation…',
       close: 'Close',
-      shareText: 'Track your money beautifully and simply. My link gives you 7 days of PRO after your first entry.',
+      shareText: 'Every day matters. My link gives you 7 days of DAYRIS PRO after your first entry.',
     },
     ro: {
       preview: 'INVITAȚIE PERSONALĂ',
-      shareTitle: 'Invită în AI Trade Journal',
+      shareTitle: 'Invită în DAYRIS',
       hero: 'Alătură-te — numărăm zilele împreună',
-      tagline: 'Urmărește-ți banii simplu și frumos',
-      friendBonus: '7 ZILE PRO',
+      tagline: t('slogan'),
+      friendBonus: '7 ZILE DAYRIS PRO',
       friendBonusHint: 'pentru început, după prima înregistrare',
       qrHint: 'Scanează QR-ul și instalează aplicația',
-      honestLine: 'După prima ta înregistrare, primesc și eu un bonus PRO.',
+      honestLine: 'După prima ta înregistrare, primesc și eu un bonus DAYRIS PRO.',
       saveImage: 'Salvează PNG',
       share: 'Distribuie',
       preparing: 'Creăm invitația…',
       close: 'Închide',
-      shareText: 'Urmărește-ți banii simplu și frumos. Din linkul meu primești 7 zile PRO după prima înregistrare.',
+      shareText: 'Fiecare zi contează. Din linkul meu primești 7 zile DAYRIS PRO după prima înregistrare.',
     },
   }[resolveOnboardingLanguage(language)];
 
@@ -1080,14 +1080,14 @@ export default function CalendarScreen() {
       overview: 'Обзор',
       analytics: 'Аналитика',
       trades: 'Сделки',
-      commandCenter: 'PRO ОБЗОР',
+      commandCenter: 'DAYRIS PRO ОБЗОР',
       commandTitle: 'Картина торговли за период',
       commandSubtitle: 'Главное — без шума. Результат, качество сделок и ключевые сигналы в одном месте.',
       result: 'Результат',
       winrate: 'Winrate',
       tradesCount: 'Сделок',
       averageTrade: 'Средняя сделка',
-      proValue: 'Что даёт PRO',
+      proValue: 'Что даёт DAYRIS PRO',
       platform: 'Подключение площадки',
       platformHint: 'cTrader и синхронизация сделок',
       curve: 'Кривая результата',
@@ -1105,14 +1105,14 @@ export default function CalendarScreen() {
       overview: 'Overview',
       analytics: 'Analytics',
       trades: 'Trades',
-      commandCenter: 'PRO OVERVIEW',
+      commandCenter: 'DAYRIS PRO OVERVIEW',
       commandTitle: 'Your trading picture for the period',
       commandSubtitle: 'The important signals without the noise: result, trade quality and key patterns.',
       result: 'Result',
       winrate: 'Win rate',
       tradesCount: 'Trades',
       averageTrade: 'Average trade',
-      proValue: 'What PRO unlocks',
+      proValue: 'What DAYRIS PRO unlocks',
       platform: 'Platform connection',
       platformHint: 'cTrader and trade sync',
       curve: 'Performance curve',
@@ -1130,14 +1130,14 @@ export default function CalendarScreen() {
       overview: 'Privire generală',
       analytics: 'Analiză',
       trades: 'Tranzacții',
-      commandCenter: 'REZUMAT PRO',
+      commandCenter: 'REZUMAT DAYRIS PRO',
       commandTitle: 'Imaginea tranzacționării pentru perioadă',
       commandSubtitle: 'Semnalele importante fără zgomot: rezultat, calitatea tranzacțiilor și tipare.',
       result: 'Rezultat',
       winrate: 'Rată de succes',
       tradesCount: 'Tranzacții',
       averageTrade: 'Tranzacție medie',
-      proValue: 'Ce oferă PRO',
+      proValue: 'Ce oferă DAYRIS PRO',
       platform: 'Conectarea platformei',
       platformHint: 'cTrader și sincronizarea tranzacțiilor',
       curve: 'Curba rezultatului',
@@ -1207,33 +1207,33 @@ export default function CalendarScreen() {
   const referralNoticeCopy = {
     ru: {
       claimedTitle: 'Приглашение принято',
-      claimedBody: 'Создай первую настоящую запись — после неё тебе откроется 7 дней PRO.',
+      claimedBody: 'Создай первую настоящую запись — после неё тебе откроется 7 дней DAYRIS PRO.',
       friendJoinedTitle: 'Друг присоединился · 1/1',
       friendJoinedBody: 'Отлично. Теперь ждём его первую настоящую запись.',
-      inviterRewardTitle: '+26 дней PRO начислено',
+      inviterRewardTitle: '+26 дней DAYRIS PRO начислено',
       inviterRewardBody: 'Друг создал первую запись. Твой бонус уже активирован.',
-      friendRewardTitle: 'Тебе открыто 7 дней PRO',
-      friendRewardBody: 'Первая запись готова — приветственный PRO активирован.',
+      friendRewardTitle: 'Тебе открыто 7 дней DAYRIS PRO',
+      friendRewardBody: 'Первая запись готова — приветственный DAYRIS PRO активирован.',
     },
     en: {
       claimedTitle: 'Invitation accepted',
-      claimedBody: 'Create your first real entry and you’ll unlock 7 days of PRO.',
+      claimedBody: 'Create your first real entry and you’ll unlock 7 days of DAYRIS PRO.',
       friendJoinedTitle: 'Friend joined · 1/1',
       friendJoinedBody: 'Great. Now we’re waiting for their first real entry.',
-      inviterRewardTitle: '+26 days PRO granted',
+      inviterRewardTitle: '+26 days DAYRIS PRO granted',
       inviterRewardBody: 'Your friend created their first entry. Your bonus is active.',
-      friendRewardTitle: '7 days of PRO unlocked',
-      friendRewardBody: 'Your first entry is done — welcome PRO is active.',
+      friendRewardTitle: '7 days of DAYRIS PRO unlocked',
+      friendRewardBody: 'Your first entry is done — welcome DAYRIS PRO is active.',
     },
     ro: {
       claimedTitle: 'Invitație acceptată',
-      claimedBody: 'Creează prima înregistrare reală și vei primi 7 zile PRO.',
+      claimedBody: 'Creează prima înregistrare reală și vei primi 7 zile DAYRIS PRO.',
       friendJoinedTitle: 'Prietenul s-a alăturat · 1/1',
       friendJoinedBody: 'Perfect. Acum așteptăm prima lui înregistrare reală.',
-      inviterRewardTitle: '+26 zile PRO acordate',
+      inviterRewardTitle: '+26 zile DAYRIS PRO acordate',
       inviterRewardBody: 'Prietenul a creat prima înregistrare. Bonusul tău este activ.',
-      friendRewardTitle: 'Ai primit 7 zile PRO',
-      friendRewardBody: 'Prima înregistrare este gata — PRO de bun venit este activ.',
+      friendRewardTitle: 'Ai primit 7 zile DAYRIS PRO',
+      friendRewardBody: 'Prima înregistrare este gata — DAYRIS PRO de bun venit este activ.',
     },
   }[resolveOnboardingLanguage(language)];
 
@@ -2323,7 +2323,7 @@ export default function CalendarScreen() {
 
         ctx.fillStyle = textMain;
         ctx.font = '700 40px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-        ctx.fillText('AI Trade Journal', 190, 116);
+        ctx.fillText('DAYRIS', 190, 116);
 
         ctx.fillStyle = amber;
         ctx.font = '700 19px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
@@ -2366,7 +2366,7 @@ export default function CalendarScreen() {
         ctx.font = '800 29px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
         ctx.fillText('+7', 896, 625);
         ctx.font = '700 19px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-        ctx.fillText('PRO', 896, 655);
+        ctx.fillText('DAYRIS PRO', 896, 655);
         ctx.textAlign = 'left';
 
         // QR panel.
@@ -2407,7 +2407,7 @@ export default function CalendarScreen() {
 
         ctx.fillStyle = textMuted;
         ctx.font = '600 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-        ctx.fillText('AI TRADE JOURNAL', 160, 1271);
+        ctx.fillText('© DAYRIS', 160, 1271);
 
         ctx.textAlign = 'right';
         ctx.fillText(new URL(window.location.origin).host, 1008, 1271);
@@ -2457,7 +2457,7 @@ export default function CalendarScreen() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `ai-trade-journal-invite-${referralCode || 'ref'}.png`;
+    link.download = `dayris-invite-${referralCode || 'ref'}.png`;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -2473,7 +2473,7 @@ export default function CalendarScreen() {
     const inviteUrl = inviteUrlObject.toString();
     const file = new File(
       [blob],
-      `ai-trade-journal-invite-${referralCode}.png`,
+      `dayris-invite-${referralCode}.png`,
       { type: 'image/png' },
     );
 
@@ -2580,12 +2580,12 @@ export default function CalendarScreen() {
 
         ctx.fillStyle = textMain;
         ctx.font = '750 39px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-        ctx.fillText('AI Trade Journal', 188, 112);
+        ctx.fillText('DAYRIS', 188, 112);
         ctx.fillStyle = textMuted;
         ctx.font = '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
         const productLine = traderMode
-          ? `${historyShareCopy.myResults} · PRO`
-          : `${resolveOnboardingLanguage(language) === 'ru' ? 'Денежный календарь' : historyShareCopy.myResults} · FREE`;
+          ? `${historyShareCopy.myResults} · DAYRIS PRO`
+          : `${resolveOnboardingLanguage(language) === 'ru' ? t('appTitle') : historyShareCopy.myResults} · FREE`;
         ctx.fillText(productLine, 188, 148);
 
         // Hero result — one obvious focal point.
@@ -2694,7 +2694,7 @@ export default function CalendarScreen() {
         drawQrToCanvas(ctx, qrMatrix, 756, 961, 212, { quiet: 4, background: '#ffffff', foreground: '#111111' });
 
         let installHost = '';
-        try { installHost = new URL(installUrl).host; } catch { installHost = 'AI Trade Journal'; }
+        try { installHost = new URL(installUrl).host; } catch { installHost = 'DAYRIS'; }
         ctx.textAlign = 'center';
         ctx.fillStyle = textMuted;
         ctx.font = '600 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
@@ -2706,7 +2706,7 @@ export default function CalendarScreen() {
         ctx.fill();
         ctx.fillStyle = textMuted;
         ctx.font = '620 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-        ctx.fillText(traderMode ? 'PRO' : 'FREE', 158, 1288);
+        ctx.fillText(traderMode ? 'DAYRIS PRO' : 'FREE', 158, 1288);
         ctx.textAlign = 'right';
         ctx.fillText(historyShareCopy.createdWith, 1008, 1288);
         ctx.textAlign = 'left';
@@ -2748,7 +2748,7 @@ export default function CalendarScreen() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'ai-trade-journal-results.png';
+    link.download = 'dayris-results.png';
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -2783,7 +2783,7 @@ export default function CalendarScreen() {
       inviteUrl,
     ].join('\n');
 
-    const file = new File([blob], 'ai-trade-journal-results.png', { type: 'image/png' });
+    const file = new File([blob], 'dayris-results.png', { type: 'image/png' });
 
     try {
       if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
@@ -3054,7 +3054,7 @@ export default function CalendarScreen() {
     const range = (exportPeriodPreset === 'currentPeriod' || exportPeriodPreset === 'Текущий период')
       ? { from: dateFrom, to: dateTo }
       : getPresetRange(exportPeriodPreset, today);
-    const title = `${traderMode ? 'AI Trade Journal' : t('titleMoney')} — ${t('csvPeriodTitle')}`;
+    const title = `${t('appName')} — ${t('csvPeriodTitle')}`;
     const periodLabel = `${formatDateLabel(range.from)} — ${formatDateLabel(range.to)}`;
     const rows = exportTrades.map((item) => [
       formatDateLabel(item.dateKey),
@@ -3087,7 +3087,7 @@ export default function CalendarScreen() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `money-calendar_${range.from}_${range.to}.csv`;
+    a.download = `dayris_${range.from}_${range.to}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     setExportOpen(false);
@@ -3101,7 +3101,7 @@ export default function CalendarScreen() {
       if (Number.isNaN(value) || value <= 0) return;
       setDepositSize(value);
     } catch (e) {
-      console.warn('[AI Trade Journal] prompt not available:', e);
+      console.warn('[DAYRIS] prompt not available:', e);
     }
   }
 
@@ -4415,7 +4415,7 @@ export default function CalendarScreen() {
                           {/* Stats */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
-                              <span className="font-data text-[10px] uppercase tracking-[0.22em] text-amber-500 font-bold">PRO</span>
+                              <span className="font-data text-[10px] uppercase tracking-[0.22em] text-amber-500 font-bold">DAYRIS PRO</span>
                               <span className={`font-data text-[10px] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>·</span>
                               <span className={`font-data text-[10px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{hTrades.length} {t('trades')}</span>
                             </div>
@@ -4507,7 +4507,7 @@ export default function CalendarScreen() {
                         <div className={`relative overflow-hidden rounded-2xl p-5 sm:p-7 ${isLight ? 'bg-gradient-to-br from-white to-zinc-50 shadow-[0_1px_0_rgba(0,0,0,.04),0_16px_40px_rgba(0,0,0,.06)]' : 'bg-gradient-to-br from-zinc-900 via-zinc-950 to-black shadow-[0_24px_70px_rgba(0,0,0,.5)]'}`}>
                           <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-amber-400/[0.07] blur-3xl" />
                           <div className="relative flex items-center justify-between mb-5">
-                            <span className="flex items-center gap-1.5 font-data text-[10px] uppercase tracking-[0.28em] text-amber-500 font-bold"><Zap className="h-3 w-3" /> PRO Scorecard</span>
+                            <span className="flex items-center gap-1.5 font-data text-[10px] uppercase tracking-[0.28em] text-amber-500 font-bold"><Zap className="h-3 w-3" /> DAYRIS PRO Scorecard</span>
                             <span className={`rounded-full px-2.5 py-1 font-data text-[10px] font-bold tracking-wide ${score >= 80 ? 'bg-emerald-500/15 text-emerald-500' : score >= 60 ? 'bg-amber-400/15 text-amber-500' : score >= 40 ? 'bg-orange-500/15 text-orange-500' : 'bg-red-500/15 text-red-500'}`}>Грейд {grade}</span>
                           </div>
                           <div className="relative flex flex-col items-center text-center gap-4 sm:flex-row sm:text-left sm:gap-8">
@@ -4602,7 +4602,7 @@ export default function CalendarScreen() {
                         </section>
 
                         <div className={`relative overflow-hidden rounded-2xl border p-4 ${isLight ? 'border-amber-300/70 bg-gradient-to-br from-amber-50 to-white' : 'border-amber-400/25 bg-gradient-to-br from-amber-400/[0.08] via-zinc-950 to-zinc-950'}`}>
-                          <div className="absolute -right-6 -top-8 select-none pointer-events-none font-display text-7xl font-bold tracking-tighter text-amber-400/[0.06]">PRO</div>
+                          <div className="absolute -right-6 -top-8 select-none pointer-events-none font-display text-7xl font-bold tracking-tighter text-amber-400/[0.06]">DAYRIS PRO</div>
                           <div className="relative flex items-start gap-2.5 mb-3">
                             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-400/10 text-amber-500"><Sparkles className="h-4 w-4" /></span>
                             <div>
@@ -4667,7 +4667,7 @@ export default function CalendarScreen() {
                         }) : <p className="col-span-full py-8 text-center text-sm text-zinc-500">{t('noRecords')}</p>}
                       </div>
                       <div className={`rounded-2xl border p-3 sm:p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-white/5 bg-black/20'}`}>
-                        <div className="mb-3 flex items-end justify-between gap-3"><div><p className="text-xs font-semibold">{t('currencyDynamics')}</p><p className="mt-1 text-[10px] text-zinc-500">{t('currenciesNotMixed')}</p></div><span className="text-[10px] text-amber-500">PRO</span></div>
+                        <div className="mb-3 flex items-end justify-between gap-3"><div><p className="text-xs font-semibold">{t('currencyDynamics')}</p><p className="mt-1 text-[10px] text-zinc-500">{t('currenciesNotMixed')}</p></div><span className="text-[10px] text-amber-500">DAYRIS PRO</span></div>
                         <div className="grid gap-2">
                           {historyByCurrency.map(([code, stats]) => { const meta = getCurrencyMeta(code); return <button key={code} onClick={() => setHistoryCurrency(code)} className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800/80 bg-zinc-900/40'}`}><span><span className="block text-xs font-medium">{meta.symbol} {code}</span><span className="mt-0.5 block text-[10px] text-zinc-500">{stats.count} {t('transactions')}</span></span><span className={`font-data text-sm ${stats.balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.balance >= 0 ? '+' : '−'}{meta.symbol}{formatMoney(Math.abs(stats.balance))}</span></button>; })}
                         </div>
@@ -5517,7 +5517,7 @@ export default function CalendarScreen() {
                   <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-amber-400/[0.07] blur-3xl" />
                   <div className="relative flex items-center justify-between mb-5">
                     <span className="flex items-center gap-1.5 font-data text-[10px] uppercase tracking-[0.28em] text-amber-500 font-bold">
-                      <Zap className="h-3 w-3" /> PRO Scorecard
+                      <Zap className="h-3 w-3" /> DAYRIS PRO Scorecard
                     </span>
                     <span className={`rounded-full px-2.5 py-1 font-data text-[10px] font-bold tracking-wide ${
                       traderScore.score >= 80 ? 'bg-emerald-500/15 text-emerald-500'
@@ -5616,7 +5616,7 @@ export default function CalendarScreen() {
               <div className={`relative overflow-hidden rounded-2xl border p-4 ${
                 isLight ? 'border-amber-300/70 bg-gradient-to-br from-amber-50 to-white' : 'border-amber-400/25 bg-gradient-to-br from-amber-400/[0.08] via-zinc-950 to-zinc-950'
               }`}>
-                <div className="absolute -right-6 -top-8 select-none pointer-events-none font-display text-7xl font-bold tracking-tighter text-amber-400/[0.06]">PRO</div>
+                <div className="absolute -right-6 -top-8 select-none pointer-events-none font-display text-7xl font-bold tracking-tighter text-amber-400/[0.06]">DAYRIS PRO</div>
                 <div className="relative flex items-start gap-2.5 mb-3">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-400/10 text-amber-500"><Sparkles className="h-4 w-4" /></span>
                   <div>
@@ -6508,7 +6508,7 @@ export default function CalendarScreen() {
             }`}>
               {historyShareCopy.shareLinkHint}
               {referralCode && (
-                <span className="ml-1 font-semibold text-amber-500">· +7 дней PRO</span>
+                <span className="ml-1 font-semibold text-amber-500">· +7 дней DAYRIS PRO</span>
               )}
             </div>
 

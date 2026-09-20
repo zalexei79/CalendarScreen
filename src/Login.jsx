@@ -19,7 +19,7 @@ export default function Login() {
     >
       <div style={{ textAlign: 'center' }}>
         <p style={{ color: '#fbbf24', fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>
-          AI Trading Journal
+          DAYRIS
         </p>
         <button
           onClick={handleGoogleLogin}
