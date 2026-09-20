@@ -39,7 +39,11 @@ try {
         }
     }
 
-    foreach ($size in @(16, 32, 48, 192, 512)) {
+    # Browser tabs have only 16 logical pixels: use the full transparent crop.
+    foreach ($size in @(16, 32, 48)) {
+        Export-Icon "public/icon-$size.png" $size 1.0
+    }
+    foreach ($size in @(192, 512)) {
         Export-Icon "public/icon-$size.png" $size
     }
     # iOS and adaptive launchers use opaque square canvases; desktop/PWA do not.

@@ -1,13 +1,13 @@
-const CACHE_NAME = 'atj-cache-v7-transparent-icon';
+const CACHE_NAME = 'atj-cache-v8-full-size-favicon';
 
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/brand-mark-192.png?v=20260920-transparent-v2',
-  '/icon-16.png?v=20260920-transparent-v2',
-  '/icon-32.png?v=20260920-transparent-v2',
-  '/icon-48.png?v=20260920-transparent-v2',
+  '/icon-16.png?v=20260920-favicon-v3',
+  '/icon-32.png?v=20260920-favicon-v3',
+  '/icon-48.png?v=20260920-favicon-v3',
   '/icon-180.png?v=20260920-transparent-v2',
   '/icon-192.png?v=20260920-transparent-v2',
   '/icon-512.png?v=20260920-transparent-v2',

@@ -21,6 +21,11 @@
 </style>
 <main>
   <h1>DAYRIS — новая иконка</h1>
+  <section class="brown"><h2>Значок вкладки · 16px при плотности экрана 1× / 2× / 3×</h2><div class="row">
+    <img src="/icon-16.png?v=20260920-favicon-v3" width="16" height="16" alt="Favicon 1x">
+    <img src="/icon-32.png?v=20260920-favicon-v3" width="16" height="16" alt="Favicon 2x">
+    <img src="/icon-48.png?v=20260920-favicon-v3" width="16" height="16" alt="Favicon 3x">
+  </div></section>
   <section class="brown"><h2>Окно обновления · PNG без CSS-обрезки</h2><img src="/icon-192.png?v=20260920-transparent-v2" width="96" height="96" alt="PWA update icon"></section>
   <section><h2>В приложении · тёмная тема</h2><div class="row" data-sizes></div></section>
   <section class="light"><h2>В приложении · светлая тема</h2><div class="row" data-sizes></div></section>
@@ -39,7 +44,7 @@
     for (const size of [16, 32, 36, 40, 64]) {
       const figure = document.createElement('figure');
       const image = new Image(size, size);
-      image.src = size === 16 ? '/icon-16.png?v=20260920-transparent-v2' : APP_ICON;
+      image.src = size === 16 ? '/icon-16.png?v=20260920-favicon-v3' : APP_ICON;
       image.className = 'mark';
       image.alt = `${size}px`;
       const caption = document.createElement('figcaption');
