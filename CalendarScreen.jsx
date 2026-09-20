@@ -621,10 +621,10 @@ export default function CalendarScreen() {
       guideAmountHint: 'Отлично. Теперь просто укажи сумму.',
       guideNoteHint: 'Напиши мысль или событие, которое хочешь сохранить.',
       guideSuccess: 'Вот и всё. Теперь календарь сам собирает твою историю.',
-      guideMore: 'Покажи ещё одну возможность',
-      guideDayTip: 'В любой день можно вернуться',
-      guideDayTipHint: 'Здесь хранятся записи за день — их можно открыть, изменить или удалить.',
-      guideDone: 'Понятно, готово',
+      guideMore: 'Как изменить запись',
+      guideDayTip: 'История дня — под рукой',
+      guideDayTipHint: 'Карандаш — изменить запись, корзина — удалить. Открой любой день в календаре, чтобы вернуться к его истории.',
+      guideDone: 'Понятно',
       guideSkip: 'Я разберусь сам',
     },
     en: {
@@ -658,9 +658,9 @@ export default function CalendarScreen() {
       guideAmountHint: 'Great. Now just enter the amount.',
       guideNoteHint: 'Write the thought or event you want to remember.',
       guideSuccess: 'That’s it. Your calendar now builds your story automatically.',
-      guideMore: 'Show me one more thing',
-      guideDayTip: 'You can return to any day',
-      guideDayTipHint: 'This is where that day’s entries live — you can open, edit, or delete them.',
+      guideMore: 'How to edit an entry',
+      guideDayTip: 'Your daily history, at hand',
+      guideDayTipHint: 'Use the pencil to edit or the bin to delete. Open any day in the calendar to revisit its history.',
       guideDone: 'Got it',
       guideSkip: 'I’ll figure it out',
     },
@@ -695,9 +695,9 @@ export default function CalendarScreen() {
       guideAmountHint: 'Perfect. Acum introdu doar suma.',
       guideNoteHint: 'Scrie gândul sau evenimentul pe care vrei să-l păstrezi.',
       guideSuccess: 'Gata. De acum calendarul îți adună singur povestea.',
-      guideMore: 'Arată-mi încă o posibilitate',
-      guideDayTip: 'Poți reveni la orice zi',
-      guideDayTipHint: 'Aici sunt păstrate înregistrările zilei — le poți deschide, modifica sau șterge.',
+      guideMore: 'Cum modific o înregistrare',
+      guideDayTip: 'Istoricul zilei, la îndemână',
+      guideDayTipHint: 'Creionul modifică înregistrarea, coșul o șterge. Deschide orice zi din calendar pentru a reveni la istoricul ei.',
       guideDone: 'Am înțeles',
       guideSkip: 'Mă descurc singur',
     },
@@ -3423,24 +3423,6 @@ export default function CalendarScreen() {
         </>
       )}
 
-      {firstRunGuideStep === 4 && !traderMode && (
-        <div className="fixed inset-x-0 bottom-5 z-[95] flex justify-center px-4 sm:bottom-8">
-          <div className={`w-full max-w-sm rounded-2xl border p-4 shadow-2xl ${
-            isLight ? 'border-amber-200 bg-white text-zinc-900' : 'border-amber-400/20 bg-zinc-950 text-zinc-100'
-          }`}>
-            <p className="text-sm font-semibold">{onboardingCopy.guideDayTip}</p>
-            <p className={`mt-1 text-xs leading-relaxed ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>{onboardingCopy.guideDayTipHint}</p>
-            <button
-              type="button"
-              onClick={markFirstRunGuideComplete}
-              className="mt-3 w-full rounded-xl bg-amber-400 px-3 py-2.5 text-xs font-semibold text-zinc-950 hover:bg-amber-300"
-            >
-              {onboardingCopy.guideDone}
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* DAY VIEW — bottom sheet, tap the dimmed backdrop anywhere to return to the calendar */}
       {selectedKey && (
       <div
@@ -3522,6 +3504,45 @@ export default function CalendarScreen() {
           )}
 
           {traderMode && <DayNote key={`${validUserId || 'guest'}:${selectedKey}`} userId={validUserId} dateKey={selectedKey} isLight={isLight} language={language} onLogin={handleGoogleLogin} onSaved={() => setNotesRevision(v => v + 1)} />}
+
+          {firstRunGuideStep === 4 && !traderMode && (
+            <aside
+              role="note"
+              aria-labelledby="day-history-tip-title"
+              onClick={(event) => event.stopPropagation()}
+              className={`relative overflow-hidden rounded-2xl border p-4 sm:p-5 ${
+                isLight
+                  ? 'border-zinc-200 bg-gradient-to-br from-amber-50/70 to-white'
+                  : 'border-white/[0.08] bg-gradient-to-br from-amber-400/[0.06] to-white/[0.02]'
+              }`}
+            >
+              <div className="flex items-start gap-3 sm:gap-4">
+                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${
+                  isLight ? 'bg-amber-100/80 text-amber-700' : 'bg-amber-400/10 text-amber-400'
+                }`} aria-hidden="true">
+                  <Pencil className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p id="day-history-tip-title" className={`text-sm font-semibold tracking-tight ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>
+                    {onboardingCopy.guideDayTip}
+                  </p>
+                  <p className={`mt-1.5 max-w-lg text-xs leading-relaxed ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>
+                    {onboardingCopy.guideDayTipHint}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={markFirstRunGuideComplete}
+                    className={`mt-3 inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
+                      isLight ? 'bg-zinc-900 text-white hover:bg-zinc-700' : 'bg-white/[0.08] text-zinc-200 hover:bg-white/[0.14]'
+                    }`}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    {onboardingCopy.guideDone}
+                  </button>
+                </div>
+              </div>
+            </aside>
+          )}
 
           {selectedDayTrades.length > 0 ? (
             <div className={`rounded-lg border divide-y ${isLight ? 'border-zinc-300 bg-zinc-50 divide-zinc-200' : 'border-zinc-800 bg-zinc-900 divide-zinc-800'}`}>
