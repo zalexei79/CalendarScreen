@@ -1781,6 +1781,7 @@ export default function CalendarScreen() {
 
   // ---- FIX: prevent double-save and improve id generation ----
   const [isSaving, setIsSaving] = useState(false);
+  const saveInFlightRef = useRef(false);
 
   function openModal(tradeToEdit, dateKeyOverride = null) {
     if (tradeToEdit) {
@@ -1824,12 +1825,13 @@ export default function CalendarScreen() {
     requestAnimationFrame(() => setModalVisible(true));
   }
 
-  function closeModal() {
+  function closeModal({ immediate = false } = {}) {
     setModalVisible(false);
     setFormError('');
     if (firstRunGuideStep === 2 && !editingTrade) setFirstRunGuideStep(1);
     setEditingTrade(null);
-    setTimeout(() => setModalOpen(false), 180);
+    if (immediate) setModalOpen(false);
+    else setTimeout(() => setModalOpen(false), 180);
   }
 
   function openConnectModal() {
@@ -1955,7 +1957,8 @@ export default function CalendarScreen() {
   }
 
   async function handleSaveTrade() {
-    if (isSaving) return;
+    if (saveInFlightRef.current) return;
+    saveInFlightRef.current = true;
     setIsSaving(true);
 
     try {
@@ -1963,28 +1966,24 @@ export default function CalendarScreen() {
 
       if (dateKey > todayKey) {
         setFormError('Нельзя добавить запись на будущую дату.');
-        setIsSaving(false);
         return;
       }
 
       const instrument = textValue(form.instrument).trim().toUpperCase();
       if (!instrument) {
         setFormError(traderMode ? 'Укажите символ инструмента.' : 'Выберите категорию или укажите свою.');
-        setIsSaving(false);
         return;
       }
 
       const pnlText = textValue(form.pnl).trim();
       if (!pnlText) {
         setFormError('Укажите сумму в $.');
-        setIsSaving(false);
         return;
       }
 
       const magnitude = parseFloat(pnlText);
       if (Number.isNaN(magnitude) || magnitude < 0) {
         setFormError('Сумма должна быть числом ≥ 0.');
-        setIsSaving(false);
         return;
       }
 
@@ -2030,7 +2029,7 @@ export default function CalendarScreen() {
       );
 
       const completedFirstRunGuide = firstRunGuideStep === 2 && !editingTrade && dateKey === todayKey && !traderMode;
-      closeModal();
+      closeModal({ immediate: true });
       if (completedFirstRunGuide) {
         try { window.localStorage.setItem('calendar_guide_completed', '1'); } catch { /* ignore */ }
         setFirstRunGuideStep(3);
@@ -2043,6 +2042,7 @@ export default function CalendarScreen() {
           : (err?.message || 'Не удалось сохранить запись. Попробуйте ещё раз.')
       );
     } finally {
+      saveInFlightRef.current = false;
       setIsSaving(false);
     }
   }
