@@ -83,11 +83,12 @@ export function useAuth() {
     const nickname = (nicknameInput == null ? '' : String(nicknameInput)).trim() || googleName;
     supabase.auth.updateUser({ data: { nickname } });
     closeNicknameModal();
+    // Completing the welcome/name step starts setup even when this browser
+    // already completed it as a guest or with another account.
     try {
-      if (window.localStorage.getItem(ONBOARDING_V2_COMPLETED_STORAGE_KEY) !== '1') setSetupStep('language');
-    } catch {
-      setSetupStep('language');
-    }
+      window.localStorage.removeItem(ONBOARDING_V2_COMPLETED_STORAGE_KEY);
+    } catch { /* Setup also works when browser storage is unavailable. */ }
+    setSetupStep('language');
   }, [user, nicknameInput, closeNicknameModal]);
 
   const handleGoogleLogin = useCallback(async () => {
