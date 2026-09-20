@@ -3124,6 +3124,236 @@ export default function CalendarScreen() {
     closeConnectModal();
   }
 
+
+
+  const renderProTradeComposer = () => (
+    <div className="mt-4 sm:min-h-0 sm:overflow-y-auto sm:overscroll-contain sm:pr-1">
+      {/* PRO quick composer: result + trade setup stay visible together. */}
+      <div className="grid gap-3 lg:grid-cols-[0.88fr_1.12fr]">
+        {/* Result command card */}
+        <section className={`rounded-[22px] border p-3.5 sm:p-4 ${
+          isLight
+            ? 'border-zinc-200 bg-zinc-50/90 shadow-sm'
+            : 'border-emerald-400/[0.11] bg-[linear-gradient(145deg,rgba(16,185,129,0.055),rgba(0,0,0,0.18)_42%,rgba(0,0,0,0.30))] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]'
+        }`}>
+          <div className="flex items-center justify-between gap-3">
+            <span className={`font-data text-[9px] uppercase tracking-[0.22em] ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>
+              {t('result')}
+            </span>
+            <div className={`grid grid-cols-2 gap-0.5 rounded-xl p-0.5 ${isLight ? 'bg-zinc-200/70' : 'bg-black/35'}`}>
+              <button
+                type="button"
+                onClick={() => { setForm((f) => ({ ...f, sign: 'plus' })); setFormError(''); }}
+                className={`flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[11px] font-semibold transition-all ${
+                  form.sign === 'plus'
+                    ? 'bg-emerald-500/[0.14] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
+                    : isLight ? 'text-zinc-500' : 'text-zinc-600 hover:text-zinc-400'
+                }`}
+              >
+                <TrendingUp className="h-3.5 w-3.5" /> {t('profitTrade')}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setForm((f) => ({ ...f, sign: 'minus' })); setFormError(''); }}
+                className={`flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[11px] font-semibold transition-all ${
+                  form.sign === 'minus'
+                    ? 'bg-red-500/[0.12] text-red-400 ring-1 ring-inset ring-red-400/20'
+                    : isLight ? 'text-zinc-500' : 'text-zinc-600 hover:text-zinc-400'
+                }`}
+              >
+                <TrendingDown className="h-3.5 w-3.5" /> {t('lossTrade')}
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 flex min-w-0 items-end gap-2">
+            <span className={`mb-1 shrink-0 font-data text-xl ${form.sign === 'minus' ? 'text-red-400/70' : 'text-emerald-400/70'}`}>
+              {form.sign === 'minus' ? '−' : '+'}
+            </span>
+            <span className={`mb-1 shrink-0 font-data text-xl ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
+              {CURRENCIES.find((c) => c.code === form.currency)?.symbol || form.currency}
+            </span>
+            <input
+              ref={guideAmountRef}
+              type="text"
+              inputMode="decimal"
+              pattern="[0-9]*[.,]?[0-9]*"
+              enterKeyHint="done"
+              autoComplete="off"
+              autoFocus
+              value={form.pnl}
+              onChange={(e) => {
+                const nextValue = e.target.value.replace(',', '.');
+                if (!/^\d*(?:\.\d*)?$/.test(nextValue)) return;
+                setForm((f) => ({ ...f, pnl: nextValue }));
+                setFormError('');
+              }}
+              className={`min-w-0 flex-1 bg-transparent font-data text-[42px] font-semibold leading-none tracking-[-0.05em] outline-none placeholder:text-zinc-800 sm:text-[52px] ${isLight ? 'text-zinc-950' : 'text-zinc-100'}`}
+              placeholder="0"
+              aria-label={t('result')}
+            />
+          </div>
+
+          <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/[0.05] pt-3">
+            <div className={`flex items-center gap-0.5 rounded-xl p-0.5 ${isLight ? 'bg-zinc-200/60' : 'bg-black/25'}`}>
+              {CURRENCIES.map((c) => (
+                <button
+                  key={c.code}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, currency: c.code }))}
+                  title={c.code}
+                  aria-label={`Валюта ${c.code}`}
+                  className={`flex h-7 min-w-7 items-center justify-center rounded-[9px] px-2 font-data text-[10px] transition-all ${
+                    form.currency === c.code
+                      ? 'bg-emerald-500/[0.13] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
+                      : isLight ? 'text-zinc-500 hover:bg-white' : 'text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-400'
+                  }`}
+                >
+                  {c.symbol}
+                </button>
+              ))}
+            </div>
+            <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1 font-data text-[10px] ${isLight ? 'text-zinc-500 hover:bg-zinc-200/60' : 'text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-400'}`}>
+              <span>◷</span>
+              <span>{form.time || currentTimeHHMM()}</span>
+              <input
+                type="time"
+                value={form.time}
+                onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* not supported */ } }}
+                onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
+                className="sr-only"
+                aria-label="Время"
+              />
+            </label>
+          </div>
+        </section>
+
+        {/* Trade setup card */}
+        <section className={`rounded-[22px] border p-3.5 sm:p-4 ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-white/[0.07] bg-black/20'}`}>
+          <div className="flex items-center justify-between gap-3">
+            <span className={`font-data text-[9px] uppercase tracking-[0.22em] ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>
+              {t('instrument')}
+            </span>
+            <ChartCandlestick className={`h-4 w-4 ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`} />
+          </div>
+
+          <div className="mt-2.5 flex items-stretch gap-2">
+            <input
+              type="text"
+              value={form.instrument}
+              onChange={(e) => { setForm((f) => ({ ...f, instrument: e.target.value })); setFormError(''); }}
+              className={`min-w-0 flex-1 rounded-xl border px-3.5 py-2.5 font-data text-sm font-semibold uppercase tracking-wide outline-none transition-all focus:ring-2 focus:ring-emerald-400/[0.06] ${
+                isLight
+                  ? 'border-zinc-200 bg-zinc-50 text-zinc-950 focus:border-emerald-400/45'
+                  : 'border-white/[0.08] bg-black/30 text-zinc-100 focus:border-emerald-400/30'
+              }`}
+              placeholder={t('instrumentPlaceholder')}
+            />
+            <div className={`grid shrink-0 grid-cols-2 gap-0.5 rounded-xl p-0.5 ${isLight ? 'bg-zinc-100' : 'bg-black/30'}`}>
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, direction: 'LONG' }))}
+                className={`rounded-[10px] px-3 text-[11px] font-bold transition-all ${
+                  form.direction === 'LONG'
+                    ? 'bg-emerald-500/[0.13] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
+                    : isLight ? 'text-zinc-500' : 'text-zinc-600 hover:text-zinc-400'
+                }`}
+              >LONG</button>
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, direction: 'SHORT' }))}
+                className={`rounded-[10px] px-3 text-[11px] font-bold transition-all ${
+                  form.direction === 'SHORT'
+                    ? 'bg-red-500/[0.11] text-red-400 ring-1 ring-inset ring-red-400/20'
+                    : isLight ? 'text-zinc-500' : 'text-zinc-600 hover:text-zinc-400'
+                }`}
+              >SHORT</button>
+            </div>
+          </div>
+
+          <div className="mt-2.5 flex min-h-8 flex-wrap items-center gap-1.5">
+            {quickAssetTags.slice(0, 4).map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => { setForm((f) => ({ ...f, instrument: tag })); setFormError(''); }}
+                className={`rounded-lg px-2.5 py-1.5 font-data text-[10px] transition-all ${
+                  textValue(form.instrument).trim().toUpperCase() === tag
+                    ? 'bg-emerald-500/[0.11] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
+                    : isLight ? 'bg-zinc-100 text-zinc-500 hover:text-zinc-800' : 'bg-white/[0.025] text-zinc-600 hover:bg-white/[0.05] hover:text-zinc-300'
+                }`}
+              >{tag}</button>
+            ))}
+          </div>
+
+          <div className={`mt-3 grid grid-cols-2 overflow-hidden rounded-xl border ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-white/[0.06] bg-black/20'}`}>
+            <label className="border-r border-white/[0.05] px-3 py-2.5">
+              <span className={`block font-data text-[8px] uppercase tracking-[0.18em] ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>TP</span>
+              <input
+                type="number"
+                step="any"
+                value={form.takeProfit}
+                onChange={(e) => setForm((f) => ({ ...f, takeProfit: e.target.value }))}
+                className={`mt-1 w-full bg-transparent font-data text-sm outline-none placeholder:text-zinc-700 ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`}
+                placeholder="Take Profit"
+              />
+            </label>
+            <label className="px-3 py-2.5">
+              <span className={`block font-data text-[8px] uppercase tracking-[0.18em] ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>SL</span>
+              <input
+                type="number"
+                step="any"
+                value={form.stopLoss}
+                onChange={(e) => setForm((f) => ({ ...f, stopLoss: e.target.value }))}
+                className={`mt-1 w-full bg-transparent font-data text-sm outline-none placeholder:text-zinc-700 ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`}
+                placeholder="Stop Loss"
+              />
+            </label>
+          </div>
+        </section>
+      </div>
+
+      {/* Context strip: secondary data is compact, not another stack of cards. */}
+      <div className="mt-3 grid gap-2 sm:grid-cols-[180px_1fr]">
+        <div className={`relative rounded-xl border ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-white/[0.06] bg-black/20'}`}>
+          <select
+            value={form.platform}
+            onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value }))}
+            className={`w-full appearance-none bg-transparent px-3 py-3 pr-9 font-data text-xs outline-none ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`}
+          >
+            {['Manual', 'cTrader', ...(!['Manual', 'cTrader'].includes(form.platform) ? [form.platform] : [])].map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <ChevronDown className={`pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`} />
+        </div>
+
+        <textarea
+          ref={guideCommentRef}
+          value={form.comment}
+          onChange={(e) => setForm((f) => ({ ...f, comment: e.target.value }))}
+          rows={2}
+          maxLength={500}
+          className={`min-h-[62px] w-full resize-none rounded-xl border px-3.5 py-3 text-sm outline-none transition-all focus:ring-2 focus:ring-emerald-400/[0.05] ${
+            isLight
+              ? 'border-zinc-200 bg-zinc-50 text-zinc-900 focus:border-emerald-400/40'
+              : 'border-white/[0.06] bg-black/20 text-zinc-300 focus:border-emerald-400/25'
+          }`}
+          placeholder={t('notePlaceholderTrade')}
+        />
+      </div>
+
+      {formError && <p className="mt-2 text-center text-xs text-red-500">{formError}</p>}
+
+      <button
+        onClick={handleSaveTrade}
+        disabled={isSaving}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-500 px-4 py-3.5 text-sm font-bold text-emerald-950 shadow-[0_12px_34px_rgba(16,185,129,0.18)] transition-all duration-200 hover:bg-emerald-400 hover:shadow-[0_14px_38px_rgba(16,185,129,0.25)] active:scale-[0.997] disabled:opacity-60"
+      >
+        {isSaving ? t('saving') : (editingTrade ? t('saveChanges') : t('saveTrade'))}
+      </button>
+    </div>
+  );
+
+
   return (
     <div className={`premium-shell min-h-screen w-full flex flex-col transition-colors duration-300 ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
       <style>{`
@@ -4986,7 +5216,7 @@ export default function CalendarScreen() {
         >
           <div
             className={`relative my-auto w-full max-w-[360px] max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain rounded-2xl border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl transition-all duration-300 ease-[cubic-bezier(.22,1,.36,1)] will-change-transform sm:flex sm:max-h-[calc(100vh-3rem)] sm:flex-col sm:overflow-hidden sm:px-5 sm:py-5 ${
-              traderMode ? 'sm:max-w-[640px]' : 'sm:max-w-[560px]'
+              traderMode ? 'sm:max-w-[860px]' : 'sm:max-w-[560px]'
             } ${
               modalVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-[0.97] sm:translate-y-2'
             } ${
@@ -5034,6 +5264,7 @@ export default function CalendarScreen() {
               </div>
             </div>
 
+            {traderMode ? renderProTradeComposer() : (
             <div className="mt-4 sm:min-h-0 sm:overflow-y-auto sm:overscroll-contain sm:pr-1">
               {firstRunGuideStep === 2 && !editingTrade && !traderMode && (
                 <div className={`mb-4 rounded-2xl border p-3 sm:p-4 ${
@@ -5416,6 +5647,7 @@ export default function CalendarScreen() {
                 {isSaving ? t('saving') : (editingTrade ? t('saveChanges') : (traderMode ? t('saveTrade') : t('saveRecord')))}
               </button>
             </div>
+            )}
           </div>
         </div>
       )}
