@@ -35,7 +35,20 @@ export function useAuth() {
 
       const { data, error } = await supabase.auth.getSession();
       console.log('[auth] getSession →', data.session ? 'сессия найдена' : 'сессии нет', error || '');
-      const currentUser = data.session?.user ?? null;
+
+      // getSession() only reads the cached browser token. Verify it with the
+      // Auth server so a stale desktop session cannot masquerade as signed in
+      // while every protected request fails.
+      let currentUser = null;
+      if (data.session) {
+        const { data: verified, error: verificationError } = await supabase.auth.getUser();
+        if (verificationError || !verified?.user) {
+          console.warn('[auth] cached session is no longer valid');
+          await supabase.auth.signOut({ scope: 'local' });
+        } else {
+          currentUser = verified.user;
+        }
+      }
       const normalizedUser = getValidUserId(currentUser) ? currentUser : null;
       setUser(normalizedUser);
     }

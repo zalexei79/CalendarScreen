@@ -150,21 +150,17 @@ export function useReferral({ user }) {
     setReferralCodeError('');
 
     try {
+      const { error: refreshError } = await withTimeout(supabase.auth.refreshSession());
+      if (refreshError) throw refreshError;
+
       const { data, error } = await withTimeout(
         supabase.from('referral_profiles').select('referral_code').eq('user_id', userId).maybeSingle()
       );
       if (error) throw error;
 
-      let code = normalizeReferralCode(data?.referral_code);
-      if (!code) {
-        const { data: createdCode, error: createError } = await withTimeout(
-          supabase.rpc('ensure_referral_profile')
-        );
-        if (createError) throw createError;
-        code = normalizeReferralCode(createdCode?.referral_code || createdCode);
-      }
+      const code = normalizeReferralCode(data?.referral_code);
 
-      if (!code) throw new Error('REFERRAL_CODE_MISSING');
+      if (!code) throw new Error('REFERRAL_PROFILE_MISSING');
       setReferralCode(code);
       return code;
     } catch (error) {

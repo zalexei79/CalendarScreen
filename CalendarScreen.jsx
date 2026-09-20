@@ -457,6 +457,12 @@ export default function CalendarScreen() {
     setProCheckoutLoading(true);
 
     try {
+      // Refresh the desktop session before invoking the protected Edge
+      // Function. A cached expired token otherwise makes both referrals and
+      // checkout appear broken while the UI still shows the user as signed in.
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) throw refreshError;
+
       const { data, error } = await supabase.functions.invoke('lemon-checkout', {
         body: {},
       });
