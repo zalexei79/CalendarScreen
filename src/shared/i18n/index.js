@@ -25,7 +25,7 @@ export const TRANSLATIONS = {
   ru: {
     slogan: APP_SLOGAN,
     appName: APP_NAME, appTitle: APP_TITLE, proPlanName: PRO_PLAN_NAME,
-    titleMoney: APP_NAME, titlePro: PRO_PLAN_NAME,
+    titleMoney: 'Денежный календарь', titlePro: 'Трейдерский календарь',
     signIn: 'Войти через Google', signOut: 'Выйти из аккаунта',
     settings: 'Настройки', language: 'Язык', currency: 'Валюта', theme: 'Тема',
     themeDark: 'Ночь', themeLight: 'День',
@@ -96,7 +96,7 @@ export const TRANSLATIONS = {
     onlineAction: 'Отлично',
     
     // PRO Analysis
-    proFinancialPicture: 'DAYRIS PRO · Финансовая картина',
+    proFinancialPicture: 'PRO · Финансовая картина',
     proSubtitle: 'Личный финансовый intelligence — без лишнего шума',
     moneyInMotion: 'Деньги в движении',
     overview: 'Обзор',
@@ -238,7 +238,7 @@ export const TRANSLATIONS = {
   en: {
     slogan: 'Every day matters.',
     appName: APP_NAME, appTitle: APP_TITLE, proPlanName: PRO_PLAN_NAME,
-    titleMoney: APP_NAME, titlePro: PRO_PLAN_NAME,
+    titleMoney: 'Money Calendar', titlePro: 'Trading Calendar',
     signIn: 'Sign in with Google', signOut: 'Sign out',
     settings: 'Settings', language: 'Language', currency: 'Currency', theme: 'Theme',
     themeDark: 'Dark', themeLight: 'Light',
@@ -309,7 +309,7 @@ export const TRANSLATIONS = {
     onlineAction: 'Great',
     
     // PRO Analysis
-    proFinancialPicture: 'DAYRIS PRO · Financial Picture',
+    proFinancialPicture: 'PRO · Financial Picture',
     proSubtitle: 'Personal financial intelligence — clean and sharp',
     moneyInMotion: 'Money in Motion',
     overview: 'Overview',
@@ -451,7 +451,7 @@ export const TRANSLATIONS = {
   md: {
     slogan: 'Fiecare zi contează.',
     appName: APP_NAME, appTitle: APP_TITLE, proPlanName: PRO_PLAN_NAME,
-    titleMoney: APP_NAME, titlePro: PRO_PLAN_NAME,
+    titleMoney: 'Calendar de bani', titlePro: 'Calendar de tranzacții',
     signIn: 'Autentificare cu Google', signOut: 'Ieșire din cont',
     settings: 'Setări', language: 'Limbă', currency: 'Valută', theme: 'Temă',
     themeDark: 'Noapte', themeLight: 'Zi',
@@ -522,7 +522,7 @@ export const TRANSLATIONS = {
     onlineAction: 'Excelent',
     
     // PRO Analysis
-    proFinancialPicture: 'DAYRIS PRO · Imagine financiară',
+    proFinancialPicture: 'PRO · Imagine financiară',
     proSubtitle: 'Inteligență financiară personală — clară și directă',
     moneyInMotion: 'Bani în mișcare',
     overview: 'Prezentare',
