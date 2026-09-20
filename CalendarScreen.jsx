@@ -1540,6 +1540,9 @@ export default function CalendarScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalDateKey, setModalDateKey] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  // PRO keeps ordinary money records and trading records in one clean composer.
+  // This state controls which entry experience is shown without changing the global PRO mode.
+  const [proEntryMode, setProEntryMode] = useState('trade'); // 'finance' | 'trade'
   const [form, setForm] = useState({
     instrument: '', direction: 'LONG', sign: 'plus', pnl: '', time: currentTimeHHMM(), comment: '', platform: 'Manual', currency: 'USD',
   });
@@ -1800,6 +1803,9 @@ export default function CalendarScreen() {
     if (tradeToEdit) {
       setEditingTrade({ id: tradeToEdit.id, dateKey: tradeToEdit.dateKey || modalDateKey || targetDateKey });
       setModalDateKey(tradeToEdit.dateKey || modalDateKey || targetDateKey);
+      if (traderMode) {
+        setProEntryMode(getMoneyCategoryMeta(tradeToEdit.instrument) ? 'finance' : 'trade');
+      }
       setForm({
         instrument: textValue(tradeToEdit.instrument),
         direction: textValue(tradeToEdit.direction),
@@ -1815,6 +1821,7 @@ export default function CalendarScreen() {
     } else {
       if (!dateKeyOverride && isFutureSelected) return; // нельзя добавлять сделки на будущее
       setEditingTrade(null);
+      if (traderMode) setProEntryMode('trade');
       const newEntryDateKey = dateKeyOverride || targetDateKey;
       if (newEntryDateKey > todayKey) return;
       setModalDateKey(newEntryDateKey);
@@ -1832,8 +1839,9 @@ export default function CalendarScreen() {
       });
     }
     setFormError('');
-    // Finance records need category controls immediately visible on mobile; otherwise the required category can be hidden below the fold.
-    setDetailsOpen(!traderMode || Boolean(traderMode && tradeToEdit));
+    // FREE keeps its current expanded category flow. PRO starts intentionally minimal;
+    // editing opens details only when the saved record actually contains extra context.
+    setDetailsOpen(!traderMode || Boolean(traderMode && tradeToEdit && (tradeToEdit.comment || tradeToEdit.take_profit != null || tradeToEdit.stop_loss != null || (tradeToEdit.platform && tradeToEdit.platform !== 'Manual'))));
     setModalOpen(true);
     requestAnimationFrame(() => setModalVisible(true));
   }
@@ -1975,6 +1983,7 @@ export default function CalendarScreen() {
     setIsSaving(true);
 
     try {
+      const saveAsTrade = traderMode && proEntryMode === 'trade';
       const dateKey = modalDateKey || targetDateKey;
 
       if (dateKey > todayKey) {
@@ -1984,7 +1993,7 @@ export default function CalendarScreen() {
 
       const instrument = textValue(form.instrument).trim().toUpperCase();
       if (!instrument) {
-        setFormError(traderMode ? 'Укажите символ инструмента.' : 'Выберите категорию или укажите свою.');
+        setFormError(saveAsTrade ? 'Укажите символ инструмента.' : 'Выберите категорию или укажите свою.');
         return;
       }
 
@@ -2005,7 +2014,7 @@ export default function CalendarScreen() {
         : Math.abs(magnitude);
 
       const finalDirection =
-        traderMode && form.direction
+        saveAsTrade && form.direction
           ? form.direction
           : signedPnl >= 0 ? 'LONG' : 'SHORT';
 
@@ -2013,11 +2022,11 @@ export default function CalendarScreen() {
       const comment = textValue(form.comment).trim();
       const platform = textValue(form.platform) || 'Manual';
 
-      const tp = traderMode && textValue(form.takeProfit).trim() !== ''
+      const tp = saveAsTrade && textValue(form.takeProfit).trim() !== ''
         ? parseFloat(form.takeProfit)
         : null;
 
-      const sl = traderMode && textValue(form.stopLoss).trim() !== ''
+      const sl = saveAsTrade && textValue(form.stopLoss).trim() !== ''
         ? parseFloat(form.stopLoss)
         : null;
 
@@ -2034,12 +2043,14 @@ export default function CalendarScreen() {
         currency: form.currency || currency,
         takeProfit: tp,
         stopLoss: sl,
-        traderMode,
+        traderMode: saveAsTrade,
       });
 
-      setRecentInstruments((prev) =>
-        [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5)
-      );
+      if (saveAsTrade) {
+        setRecentInstruments((prev) =>
+          [instrument, ...prev.filter((i) => i !== instrument)].slice(0, 5)
+        );
+      }
 
       const completedFirstRunGuide = firstRunGuideStep === 2 && !editingTrade && dateKey === todayKey && !traderMode;
       closeModal({ immediate: true });
@@ -3126,242 +3137,358 @@ export default function CalendarScreen() {
 
 
 
-  const renderProTradeComposer = () => (
-    <div className="mt-4 sm:min-h-0 sm:overflow-y-auto sm:overscroll-contain sm:pr-1">
-      {/* DAYRIS PRO trade ticket — one surface, clear hierarchy, no card soup. */}
-      <section className={`overflow-hidden rounded-[24px] border ${
-        isLight
-          ? 'border-zinc-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.08)]'
-          : 'border-emerald-400/[0.12] bg-[linear-gradient(160deg,rgba(16,185,129,0.045),rgba(8,10,12,0.96)_28%,rgba(5,7,9,0.98))] shadow-[0_22px_70px_rgba(0,0,0,0.36),inset_0_1px_0_rgba(255,255,255,0.025)]'
-      }`}>
-        {/* Result rail */}
-        <div className={`grid gap-4 p-4 sm:p-5 lg:grid-cols-[190px_minmax(0,1fr)_auto] lg:items-center ${isLight ? 'border-b border-zinc-200' : 'border-b border-white/[0.06]'}`}>
-          <div>
-            <p className={`mb-2 font-data text-[8px] uppercase tracking-[0.24em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('result')}</p>
-            <div className={`grid grid-cols-2 rounded-xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-black/35'}`}>
-              <button
-                type="button"
-                onClick={() => { setForm((f) => ({ ...f, sign: 'plus' })); setFormError(''); }}
-                className={`flex h-10 items-center justify-center gap-1.5 rounded-[9px] text-[11px] font-semibold transition-all ${
-                  form.sign === 'plus'
-                    ? 'bg-emerald-500/[0.14] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
-                    : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-600 hover:text-zinc-300'
-                }`}
-              >
-                <TrendingUp className="h-3.5 w-3.5" /> {t('profitTrade')}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setForm((f) => ({ ...f, sign: 'minus' })); setFormError(''); }}
-                className={`flex h-10 items-center justify-center gap-1.5 rounded-[9px] text-[11px] font-semibold transition-all ${
-                  form.sign === 'minus'
-                    ? 'bg-red-500/[0.12] text-red-400 ring-1 ring-inset ring-red-400/20'
-                    : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-600 hover:text-zinc-300'
-                }`}
-              >
-                <TrendingDown className="h-3.5 w-3.5" /> {t('lossTrade')}
-              </button>
-            </div>
-          </div>
+  const proEntryLanguage = resolveOnboardingLanguage(language);
+  const proEntryCopy = proEntryLanguage === 'ru'
+    ? {
+        newEntry: 'Новая запись', editEntry: 'Редактировать запись', finance: 'Финансы', trade: 'Сделка',
+        income: 'Доход', expense: 'Расход', profit: 'Профит', loss: 'Убыток', amount: 'Сумма',
+        category: 'Категория', instrument: 'Инструмент', direction: 'Направление', customCategory: 'Своя категория',
+        addNote: 'Добавить заметку', addDetails: 'Добавить детали сделки', hideDetails: 'Скрыть детали',
+        detailsHint: 'TP, SL, источник и заметка', note: 'Заметка', noteFinance: 'Например: обед, аренда, зарплата за месяц…',
+        noteTrade: 'Что произошло в этой сделке?', source: 'Источник', saveFinance: 'Сохранить запись', saveTrade: 'Сохранить сделку',
+        financeHint: 'Доходы и расходы', tradeHint: 'Журнал трейдера', time: 'Время',
+      }
+    : proEntryLanguage === 'ro'
+    ? {
+        newEntry: 'Înregistrare nouă', editEntry: 'Editează înregistrarea', finance: 'Finanțe', trade: 'Tranzacție',
+        income: 'Venit', expense: 'Cheltuială', profit: 'Profit', loss: 'Pierdere', amount: 'Sumă',
+        category: 'Categorie', instrument: 'Instrument', direction: 'Direcție', customCategory: 'Categorie proprie',
+        addNote: 'Adaugă notă', addDetails: 'Adaugă detalii', hideDetails: 'Ascunde detaliile',
+        detailsHint: 'TP, SL, sursă și notă', note: 'Notă', noteFinance: 'De ex.: prânz, chirie, salariu…',
+        noteTrade: 'Ce s-a întâmplat în această tranzacție?', source: 'Sursă', saveFinance: 'Salvează înregistrarea', saveTrade: 'Salvează tranzacția',
+        financeHint: 'Venituri și cheltuieli', tradeHint: 'Jurnal de trading', time: 'Ora',
+      }
+    : {
+        newEntry: 'New entry', editEntry: 'Edit entry', finance: 'Finance', trade: 'Trade',
+        income: 'Income', expense: 'Expense', profit: 'Profit', loss: 'Loss', amount: 'Amount',
+        category: 'Category', instrument: 'Instrument', direction: 'Direction', customCategory: 'Custom category',
+        addNote: 'Add a note', addDetails: 'Add trade details', hideDetails: 'Hide details',
+        detailsHint: 'TP, SL, source and note', note: 'Note', noteFinance: 'For example: lunch, rent, monthly salary…',
+        noteTrade: 'What happened in this trade?', source: 'Source', saveFinance: 'Save entry', saveTrade: 'Save trade',
+        financeHint: 'Income & expenses', tradeHint: 'Trading journal', time: 'Time',
+      };
 
-          <div className="min-w-0 lg:px-3">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className={`shrink-0 font-data text-2xl sm:text-3xl ${form.sign === 'minus' ? 'text-red-400/80' : 'text-emerald-400/80'}`}>
-                {form.sign === 'minus' ? '−' : '+'}
-              </span>
-              <input
-                ref={guideAmountRef}
-                type="text"
-                inputMode="decimal"
-                pattern="[0-9]*[.,]?[0-9]*"
-                enterKeyHint="done"
-                autoComplete="off"
-                autoFocus
-                value={form.pnl}
-                onChange={(e) => {
-                  const nextValue = e.target.value.replace(',', '.');
-                  if (!/^\d*(?:\.\d*)?$/.test(nextValue)) return;
-                  setForm((f) => ({ ...f, pnl: nextValue }));
-                  setFormError('');
-                }}
-                className={`min-w-0 w-full bg-transparent font-data text-[44px] font-semibold leading-none tracking-[-0.055em] outline-none placeholder:text-zinc-800 sm:text-[56px] ${isLight ? 'text-zinc-950' : 'text-zinc-100'}`}
-                placeholder="0"
-                aria-label={t('result')}
-              />
-            </div>
-          </div>
+  function switchProEntryMode(nextMode) {
+    if (editingTrade || nextMode === proEntryMode) return;
+    setProEntryMode(nextMode);
+    setDetailsOpen(false);
+    setFormError('');
+    setForm((current) => {
+      if (nextMode === 'finance') {
+        const currentMoneyCategory = getMoneyCategoryMeta(current.instrument);
+        return {
+          ...current,
+          instrument: currentMoneyCategory?.key || (current.sign === 'minus' ? 'Продукты' : 'Зарплата'),
+          direction: '',
+          platform: 'Manual',
+          takeProfit: '',
+          stopLoss: '',
+        };
+      }
+      return {
+        ...current,
+        instrument: getMoneyCategoryMeta(current.instrument) ? (recentInstruments[0] || 'XAUUSD') : (current.instrument || recentInstruments[0] || 'XAUUSD'),
+        direction: current.direction || 'LONG',
+        platform: current.platform === 'Manual' ? 'Manual' : current.platform,
+        takeProfit: current.takeProfit || '',
+        stopLoss: current.stopLoss || '',
+      };
+    });
+  }
 
-          <div className="flex items-center justify-between gap-3 lg:flex-col lg:items-end">
-            <div className={`flex items-center gap-1 rounded-xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-black/30'}`}>
-              {CURRENCIES.map((c) => (
-                <button
-                  key={c.code}
-                  type="button"
-                  onClick={() => setForm((f) => ({ ...f, currency: c.code }))}
-                  title={c.code}
-                  aria-label={`Валюта ${c.code}`}
-                  className={`flex h-8 min-w-8 items-center justify-center rounded-[9px] px-2 font-data text-[10px] transition-all ${
-                    form.currency === c.code
-                      ? 'bg-emerald-500/[0.14] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
-                      : isLight ? 'text-zinc-500 hover:bg-white hover:text-zinc-800' : 'text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-300'
-                  }`}
-                >
-                  {c.symbol}
-                </button>
-              ))}
-            </div>
-            <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1 font-data text-[10px] transition-colors ${isLight ? 'text-zinc-500 hover:bg-zinc-100' : 'text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-400'}`}>
-              <span>◷</span>
-              <span>{form.time || currentTimeHHMM()}</span>
-              <input
-                type="time"
-                value={form.time}
-                onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* not supported */ } }}
-                onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
-                className="sr-only"
-                aria-label="Время"
-              />
-            </label>
+  const renderProTradeComposer = () => {
+    const isFinanceEntry = proEntryMode === 'finance';
+    const selectedMoneyCategory = getMoneyCategoryMeta(form.instrument);
+
+    return (
+      <div className="mt-4 sm:min-h-0 sm:overflow-y-auto sm:overscroll-contain sm:pr-1">
+        {/* One calm switch separates ordinary money from the trading journal. */}
+        <div className={`mx-auto grid max-w-[330px] grid-cols-2 rounded-2xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-black/30 ring-1 ring-inset ring-white/[0.05]'}`}>
+          <button
+            type="button"
+            disabled={Boolean(editingTrade)}
+            onClick={() => switchProEntryMode('finance')}
+            className={`rounded-xl px-3 py-2.5 text-left transition-all disabled:cursor-default ${
+              isFinanceEntry
+                ? isLight ? 'bg-white text-zinc-950 shadow-sm' : 'bg-white/[0.07] text-zinc-100 shadow-[0_8px_22px_rgba(0,0,0,0.22)]'
+                : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-600 hover:text-zinc-300'
+            }`}
+          >
+            <span className="flex items-center gap-2 text-xs font-semibold"><Wallet className={`h-3.5 w-3.5 ${isFinanceEntry ? 'text-amber-400' : ''}`} />{proEntryCopy.finance}</span>
+            <span className={`mt-0.5 block pl-[22px] text-[9px] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{proEntryCopy.financeHint}</span>
+          </button>
+          <button
+            type="button"
+            disabled={Boolean(editingTrade)}
+            onClick={() => switchProEntryMode('trade')}
+            className={`rounded-xl px-3 py-2.5 text-left transition-all disabled:cursor-default ${
+              !isFinanceEntry
+                ? isLight ? 'bg-white text-zinc-950 shadow-sm' : 'bg-white/[0.07] text-zinc-100 shadow-[0_8px_22px_rgba(0,0,0,0.22)]'
+                : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-600 hover:text-zinc-300'
+            }`}
+          >
+            <span className="flex items-center gap-2 text-xs font-semibold"><ChartCandlestick className={`h-3.5 w-3.5 ${!isFinanceEntry ? 'text-emerald-400' : ''}`} />{proEntryCopy.trade}</span>
+            <span className={`mt-0.5 block pl-[22px] text-[9px] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{proEntryCopy.tradeHint}</span>
+          </button>
+        </div>
+
+        {/* Income/expense or profit/loss — same place, different meaning. */}
+        <div className={`mt-5 grid grid-cols-2 rounded-2xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-black/25 ring-1 ring-inset ring-white/[0.05]'}`}>
+          <button
+            type="button"
+            onClick={() => {
+              setForm((current) => ({
+                ...current,
+                sign: 'plus',
+                instrument: isFinanceEntry && getMoneyCategoryMeta(current.instrument)?.type === 'minus' ? 'Зарплата' : current.instrument,
+              }));
+              setFormError('');
+            }}
+            className={`flex h-12 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all ${
+              form.sign === 'plus'
+                ? 'bg-emerald-500/[0.13] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
+                : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-600 hover:text-zinc-300'
+            }`}
+          >
+            <TrendingUp className="h-4 w-4" /> {isFinanceEntry ? proEntryCopy.income : proEntryCopy.profit}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setForm((current) => ({
+                ...current,
+                sign: 'minus',
+                instrument: isFinanceEntry && getMoneyCategoryMeta(current.instrument)?.type === 'plus' ? 'Продукты' : current.instrument,
+              }));
+              setFormError('');
+            }}
+            className={`flex h-12 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all ${
+              form.sign === 'minus'
+                ? 'bg-red-500/[0.10] text-red-400 ring-1 ring-inset ring-red-400/20'
+                : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-600 hover:text-zinc-300'
+            }`}
+          >
+            <TrendingDown className="h-4 w-4" /> {isFinanceEntry ? proEntryCopy.expense : proEntryCopy.loss}
+          </button>
+        </div>
+
+        {/* Amount — the only oversized element in the composer. */}
+        <div className="py-6 text-center sm:py-7">
+          <div className="flex items-center justify-center gap-2">
+            <span className={`font-data text-3xl ${form.sign === 'minus' ? 'text-red-400/70' : isFinanceEntry ? 'text-amber-400/70' : 'text-emerald-400/70'}`}>
+              {CURRENCIES.find((item) => item.code === form.currency)?.symbol || form.currency}
+            </span>
+            <input
+              ref={guideAmountRef}
+              type="text"
+              inputMode="decimal"
+              pattern="[0-9]*[.,]?[0-9]*"
+              enterKeyHint="done"
+              autoComplete="off"
+              autoFocus
+              value={form.pnl}
+              onChange={(event) => {
+                const nextValue = event.target.value.replace(',', '.');
+                if (!/^\d*(?:\.\d*)?$/.test(nextValue)) return;
+                setForm((current) => ({ ...current, pnl: nextValue }));
+                setFormError('');
+              }}
+              className={`w-[180px] max-w-[58vw] bg-transparent text-center font-data text-[54px] font-semibold leading-none tracking-[-0.06em] outline-none placeholder:text-zinc-800 sm:text-[64px] ${isLight ? 'text-zinc-950' : 'text-zinc-100'}`}
+              placeholder="0"
+              aria-label={proEntryCopy.amount}
+            />
+          </div>
+          <div className="mt-4 flex items-center justify-center gap-1.5">
+            {CURRENCIES.map((item) => (
+              <button
+                key={item.code}
+                type="button"
+                onClick={() => setForm((current) => ({ ...current, currency: item.code }))}
+                title={item.code}
+                className={`flex h-8 min-w-9 items-center justify-center rounded-xl px-2 font-data text-[11px] transition-all ${
+                  form.currency === item.code
+                    ? isFinanceEntry
+                      ? 'bg-amber-400/[0.10] text-amber-400 ring-1 ring-inset ring-amber-400/20'
+                      : 'bg-emerald-500/[0.12] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
+                    : isLight ? 'text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700' : 'text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-300'
+                }`}
+              >{item.symbol}</button>
+            ))}
           </div>
         </div>
 
-        {/* Instrument + direction — primary trade decision */}
-        <div className={`grid lg:grid-cols-[minmax(0,1fr)_250px] ${isLight ? 'divide-y divide-zinc-200 lg:divide-x lg:divide-y-0' : 'divide-y divide-white/[0.06] lg:divide-x lg:divide-y-0'}`}>
-          <div className="min-w-0 p-4 sm:p-5">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <p className={`font-data text-[8px] uppercase tracking-[0.24em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('instrument')}</p>
-              <ChartCandlestick className={`h-4 w-4 ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`} />
+        {isFinanceEntry ? (
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <p className={`font-data text-[9px] uppercase tracking-[0.20em] ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{proEntryCopy.category}</p>
+              {selectedMoneyCategory && <span className={`text-[10px] ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>{getMoneyCategoryLabel(selectedMoneyCategory.key, language)}</span>}
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {moneyCategoriesWithIcons.map((category) => {
+                const Icon = category.icon;
+                const active = getMoneyCategoryMeta(form.instrument)?.key === category.key;
+                return (
+                  <button
+                    key={category.key}
+                    type="button"
+                    onClick={() => { setForm((current) => ({ ...current, instrument: category.key })); setFormError(''); }}
+                    className={`flex min-h-[58px] items-center gap-2.5 rounded-2xl border px-3 text-left transition-all ${
+                      active
+                        ? 'border-amber-400/30 bg-amber-400/[0.08] text-amber-400'
+                        : isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300' : 'border-white/[0.06] bg-white/[0.02] text-zinc-400 hover:border-white/[0.11] hover:bg-white/[0.035]'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0 stroke-[1.7]" />
+                    <span className="min-w-0 truncate text-[11px] font-medium">{getMoneyCategoryLabel(category.key, language)}</span>
+                  </button>
+                );
+              })}
             </div>
             <input
               type="text"
-              value={form.instrument}
-              onChange={(e) => { setForm((f) => ({ ...f, instrument: e.target.value })); setFormError(''); }}
-              className={`w-full border-0 border-b bg-transparent px-0 py-2 font-data text-xl font-semibold uppercase tracking-wide outline-none transition-colors sm:text-2xl ${
-                isLight
-                  ? 'border-zinc-200 text-zinc-950 focus:border-emerald-400'
-                  : 'border-white/[0.08] text-zinc-100 focus:border-emerald-400/50'
-              }`}
-              placeholder={t('instrumentPlaceholder')}
+              value={selectedMoneyCategory ? '' : form.instrument}
+              onChange={(event) => { setForm((current) => ({ ...current, instrument: event.target.value })); setFormError(''); }}
+              className={`mt-2.5 w-full rounded-2xl border bg-transparent px-4 py-3 text-sm outline-none transition-colors ${isLight ? 'border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-amber-400/60' : 'border-white/[0.06] text-zinc-200 placeholder:text-zinc-700 focus:border-amber-400/35'}`}
+              placeholder={`+ ${proEntryCopy.customCategory}`}
             />
-            <div className="mt-3 flex min-h-8 flex-wrap items-center gap-x-3 gap-y-2">
+
+            <button
+              type="button"
+              onClick={() => setDetailsOpen((open) => !open)}
+              className={`mt-3 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left transition-colors ${isLight ? 'bg-zinc-50 text-zinc-600 hover:bg-zinc-100' : 'bg-white/[0.025] text-zinc-400 hover:bg-white/[0.04]'}`}
+            >
+              <span className="text-sm">{detailsOpen ? proEntryCopy.hideDetails : proEntryCopy.addNote}</span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${detailsOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {detailsOpen && (
+              <textarea
+                ref={guideCommentRef}
+                value={form.comment}
+                onChange={(event) => setForm((current) => ({ ...current, comment: event.target.value }))}
+                rows={3}
+                className={`mt-2.5 w-full resize-none rounded-2xl border bg-transparent px-4 py-3 text-sm leading-relaxed outline-none ${isLight ? 'border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-amber-400/60' : 'border-white/[0.06] text-zinc-200 placeholder:text-zinc-700 focus:border-amber-400/35'}`}
+                placeholder={proEntryCopy.noteFinance}
+              />
+            )}
+          </div>
+        ) : (
+          <div>
+            <p className={`mb-2 font-data text-[9px] uppercase tracking-[0.20em] ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{proEntryCopy.instrument}</p>
+            <div className={`flex items-center rounded-2xl border px-4 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-white/[0.07] bg-white/[0.02]'}`}>
+              <ChartCandlestick className={`h-4 w-4 shrink-0 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`} />
+              <input
+                type="text"
+                value={form.instrument}
+                onChange={(event) => { setForm((current) => ({ ...current, instrument: event.target.value })); setFormError(''); }}
+                className={`min-w-0 flex-1 bg-transparent px-3 py-3.5 font-data text-sm font-semibold uppercase tracking-wide outline-none ${isLight ? 'text-zinc-950' : 'text-zinc-100'}`}
+                placeholder="XAUUSD"
+              />
+            </div>
+            <div className="mt-2.5 flex flex-wrap gap-2">
               {quickAssetTags.slice(0, 4).map((tag) => (
                 <button
                   key={tag}
                   type="button"
-                  onClick={() => { setForm((f) => ({ ...f, instrument: tag })); setFormError(''); }}
-                  className={`font-data text-[10px] transition-colors ${
+                  onClick={() => { setForm((current) => ({ ...current, instrument: tag })); setFormError(''); }}
+                  className={`rounded-xl px-3 py-2 font-data text-[10px] transition-all ${
                     textValue(form.instrument).trim().toUpperCase() === tag
-                      ? 'text-emerald-400'
-                      : isLight ? 'text-zinc-400 hover:text-zinc-800' : 'text-zinc-600 hover:text-zinc-300'
+                      ? 'bg-emerald-500/[0.12] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
+                      : isLight ? 'bg-zinc-100 text-zinc-500 hover:text-zinc-800' : 'bg-white/[0.025] text-zinc-600 hover:bg-white/[0.045] hover:text-zinc-300'
                   }`}
                 >{tag}</button>
               ))}
             </div>
-          </div>
 
-          <div className="p-4 sm:p-5">
-            <p className={`mb-2 font-data text-[8px] uppercase tracking-[0.24em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{resolveOnboardingLanguage(language) === 'ru' ? 'Направление' : resolveOnboardingLanguage(language) === 'ro' ? 'Direcție' : 'Direction'}</p>
-            <div className={`grid grid-cols-2 rounded-2xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-black/30'}`}>
+            <p className={`mb-2 mt-5 font-data text-[9px] uppercase tracking-[0.20em] ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{proEntryCopy.direction}</p>
+            <div className={`grid grid-cols-2 rounded-2xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-black/25 ring-1 ring-inset ring-white/[0.05]'}`}>
               <button
                 type="button"
-                onClick={() => setForm((f) => ({ ...f, direction: 'LONG' }))}
-                className={`flex h-[54px] items-center justify-center gap-2 rounded-xl text-xs font-bold tracking-[0.08em] transition-all ${
+                onClick={() => setForm((current) => ({ ...current, direction: 'LONG' }))}
+                className={`flex h-12 items-center justify-center gap-2 rounded-xl font-data text-xs font-semibold tracking-wide transition-all ${
                   form.direction === 'LONG'
-                    ? 'bg-emerald-500/[0.14] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
+                    ? 'bg-emerald-500/[0.13] text-emerald-400 ring-1 ring-inset ring-emerald-400/25'
                     : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-600 hover:text-zinc-300'
                 }`}
-              >
-                <span className="text-base">↑</span> LONG
-              </button>
+              ><span className="text-base">↑</span> LONG</button>
               <button
                 type="button"
-                onClick={() => setForm((f) => ({ ...f, direction: 'SHORT' }))}
-                className={`flex h-[54px] items-center justify-center gap-2 rounded-xl text-xs font-bold tracking-[0.08em] transition-all ${
+                onClick={() => setForm((current) => ({ ...current, direction: 'SHORT' }))}
+                className={`flex h-12 items-center justify-center gap-2 rounded-xl font-data text-xs font-semibold tracking-wide transition-all ${
                   form.direction === 'SHORT'
-                    ? 'bg-red-500/[0.12] text-red-400 ring-1 ring-inset ring-red-400/20'
+                    ? 'bg-red-500/[0.10] text-red-400 ring-1 ring-inset ring-red-400/20'
                     : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-600 hover:text-zinc-300'
                 }`}
-              >
-                <span className="text-base">↓</span> SHORT
-              </button>
+              ><span className="text-base">↓</span> SHORT</button>
             </div>
-          </div>
-        </div>
 
-        {/* Plan + source — compact utility rail */}
-        <div className={`grid sm:grid-cols-2 lg:grid-cols-[1fr_1fr_180px] ${isLight ? 'border-t border-zinc-200' : 'border-t border-white/[0.06]'}`}>
-          <label className={`px-4 py-3.5 sm:px-5 ${isLight ? 'border-b border-zinc-200 sm:border-b-0 sm:border-r' : 'border-b border-white/[0.06] sm:border-b-0 sm:border-r sm:border-white/[0.06]'}`}>
-            <span className={`block font-data text-[8px] uppercase tracking-[0.22em] ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>Take Profit</span>
-            <input
-              type="number"
-              step="any"
-              value={form.takeProfit}
-              onChange={(e) => setForm((f) => ({ ...f, takeProfit: e.target.value }))}
-              className={`mt-1.5 w-full bg-transparent font-data text-base outline-none placeholder:text-zinc-700 ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`}
-              placeholder="—"
-            />
-          </label>
-          <label className={`px-4 py-3.5 sm:px-5 ${isLight ? 'border-b border-zinc-200 sm:border-b-0 lg:border-r' : 'border-b border-white/[0.06] sm:border-b-0 lg:border-r lg:border-white/[0.06]'}`}>
-            <span className={`block font-data text-[8px] uppercase tracking-[0.22em] ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>Stop Loss</span>
-            <input
-              type="number"
-              step="any"
-              value={form.stopLoss}
-              onChange={(e) => setForm((f) => ({ ...f, stopLoss: e.target.value }))}
-              className={`mt-1.5 w-full bg-transparent font-data text-base outline-none placeholder:text-zinc-700 ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`}
-              placeholder="—"
-            />
-          </label>
-          <div className="relative sm:col-span-2 lg:col-span-1">
-            <span className={`pointer-events-none absolute left-4 top-3.5 font-data text-[8px] uppercase tracking-[0.22em] sm:left-5 ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>{resolveOnboardingLanguage(language) === 'ru' ? 'Источник' : resolveOnboardingLanguage(language) === 'ro' ? 'Sursă' : 'Source'}</span>
-            <select
-              value={form.platform}
-              onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value }))}
-              className={`h-full min-h-[68px] w-full appearance-none bg-transparent px-4 pb-2 pt-7 pr-10 font-data text-xs outline-none sm:px-5 ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`}
+            <button
+              type="button"
+              onClick={() => setDetailsOpen((open) => !open)}
+              className={`mt-4 flex w-full items-center justify-between rounded-2xl border px-4 py-3.5 text-left transition-all ${isLight ? 'border-zinc-200 bg-zinc-50 hover:bg-zinc-100' : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.10] hover:bg-white/[0.035]'}`}
             >
-              {['Manual', 'cTrader', ...(!['Manual', 'cTrader'].includes(form.platform) ? [form.platform] : [])].map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
-            <ChevronDown className={`pointer-events-none absolute right-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`} />
+              <span>
+                <span className={`block text-sm font-medium ${isLight ? 'text-zinc-800' : 'text-zinc-300'}`}>{detailsOpen ? proEntryCopy.hideDetails : proEntryCopy.addDetails}</span>
+                {!detailsOpen && <span className={`mt-0.5 block text-[10px] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{proEntryCopy.detailsHint}</span>}
+              </span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${detailsOpen ? 'rotate-180' : ''} ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`} />
+            </button>
+
+            {detailsOpen && (
+              <div className={`mt-2.5 overflow-hidden rounded-2xl border ${isLight ? 'border-zinc-200 bg-zinc-50/70' : 'border-white/[0.06] bg-black/15'}`}>
+                <div className={`grid grid-cols-2 ${isLight ? 'divide-x divide-zinc-200' : 'divide-x divide-white/[0.06]'}`}>
+                  <label className="px-4 py-3.5">
+                    <span className={`block font-data text-[8px] uppercase tracking-[0.18em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>Take Profit</span>
+                    <input type="number" step="any" value={form.takeProfit} onChange={(event) => setForm((current) => ({ ...current, takeProfit: event.target.value }))} className={`mt-1.5 w-full bg-transparent font-data text-sm outline-none placeholder:text-zinc-700 ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`} placeholder="—" />
+                  </label>
+                  <label className="px-4 py-3.5">
+                    <span className={`block font-data text-[8px] uppercase tracking-[0.18em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>Stop Loss</span>
+                    <input type="number" step="any" value={form.stopLoss} onChange={(event) => setForm((current) => ({ ...current, stopLoss: event.target.value }))} className={`mt-1.5 w-full bg-transparent font-data text-sm outline-none placeholder:text-zinc-700 ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`} placeholder="—" />
+                  </label>
+                </div>
+                <div className={`relative border-t ${isLight ? 'border-zinc-200' : 'border-white/[0.06]'}`}>
+                  <span className={`pointer-events-none absolute left-4 top-2.5 font-data text-[8px] uppercase tracking-[0.18em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{proEntryCopy.source}</span>
+                  <select value={form.platform} onChange={(event) => setForm((current) => ({ ...current, platform: event.target.value }))} className={`w-full appearance-none bg-transparent px-4 pb-3 pt-6 pr-10 font-data text-xs outline-none ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`}>
+                    {['Manual', 'cTrader', ...(!['Manual', 'cTrader'].includes(form.platform) ? [form.platform] : [])].map((platform) => <option key={platform} value={platform}>{platform}</option>)}
+                  </select>
+                  <ChevronDown className={`pointer-events-none absolute right-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`} />
+                </div>
+                <div className={`border-t p-4 ${isLight ? 'border-zinc-200' : 'border-white/[0.06]'}`}>
+                  <textarea
+                    ref={guideCommentRef}
+                    value={form.comment}
+                    onChange={(event) => setForm((current) => ({ ...current, comment: event.target.value }))}
+                    rows={3}
+                    maxLength={500}
+                    className={`w-full resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-zinc-700 ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`}
+                    placeholder={proEntryCopy.noteTrade}
+                  />
+                  <div className={`mt-1 text-right font-data text-[9px] ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>{form.comment.length}/500</div>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        )}
 
-        {/* Journal note — deliberately quiet until the user needs it. */}
-        <div className={`${isLight ? 'border-t border-zinc-200' : 'border-t border-white/[0.06]'} p-4 sm:p-5`}>
-          <div className="flex items-center justify-between gap-3">
-            <span className={`font-data text-[8px] uppercase tracking-[0.22em] ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>{resolveOnboardingLanguage(language) === 'ru' ? 'Заметка' : resolveOnboardingLanguage(language) === 'ro' ? 'Notă' : 'Note'}</span>
-            <span className={`font-data text-[9px] ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>{form.comment.length}/500</span>
-          </div>
-          <textarea
-            ref={guideCommentRef}
-            value={form.comment}
-            onChange={(e) => setForm((f) => ({ ...f, comment: e.target.value }))}
-            rows={2}
-            maxLength={500}
-            className={`mt-2 min-h-[62px] w-full resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-zinc-700 ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`}
-            placeholder={t('notePlaceholderTrade')}
-          />
-        </div>
-      </section>
+        {formError && <p className="mt-3 text-center text-xs text-red-500">{formError}</p>}
 
-      {formError && <p className="mt-2 text-center text-xs text-red-500">{formError}</p>}
-
-      <div className="mt-3 flex items-center gap-3">
-        <div className={`hidden min-w-0 flex-1 items-center gap-2 sm:flex ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>
-          <span className="h-px flex-1 bg-current opacity-30" />
-          <span className="font-data text-[8px] uppercase tracking-[0.24em]">DAYRIS · TRADE JOURNAL</span>
-          <span className="h-px flex-1 bg-current opacity-30" />
-        </div>
         <button
           onClick={handleSaveTrade}
           disabled={isSaving}
-          className="flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-500 px-7 py-4 text-sm font-bold text-emerald-950 shadow-[0_12px_34px_rgba(16,185,129,0.16)] transition-all duration-200 hover:bg-emerald-400 hover:shadow-[0_14px_38px_rgba(16,185,129,0.24)] active:scale-[0.997] disabled:opacity-60 sm:w-auto sm:min-w-[210px]"
+          className={`mt-5 flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-bold transition-all duration-200 active:scale-[0.995] disabled:opacity-60 ${
+            isFinanceEntry
+              ? 'bg-amber-400 text-zinc-950 shadow-[0_12px_34px_rgba(245,158,11,0.12)] hover:bg-amber-300'
+              : 'border border-emerald-300/20 bg-emerald-500 text-emerald-950 shadow-[0_12px_34px_rgba(16,185,129,0.16)] hover:bg-emerald-400 hover:shadow-[0_14px_38px_rgba(16,185,129,0.22)]'
+          }`}
         >
-          {isSaving ? t('saving') : (editingTrade ? t('saveChanges') : t('saveTrade'))}
-          <span aria-hidden="true">→</span>
+          {isSaving ? t('saving') : editingTrade ? t('saveChanges') : isFinanceEntry ? proEntryCopy.saveFinance : proEntryCopy.saveTrade}
+          {!isSaving && <span aria-hidden="true">→</span>}
         </button>
+
+        <p className={`mt-3 text-center font-data text-[8px] uppercase tracking-[0.28em] ${isLight ? 'text-zinc-300' : 'text-zinc-800'}`}>DAYRIS · {isFinanceEntry ? 'MONEY' : 'TRADE'} JOURNAL</p>
       </div>
-    </div>
-  );
+    );
+  };
 
 
   return (
@@ -5226,7 +5353,7 @@ export default function CalendarScreen() {
         >
           <div
             className={`relative my-auto w-full max-w-[360px] max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain rounded-2xl border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl transition-all duration-300 ease-[cubic-bezier(.22,1,.36,1)] will-change-transform sm:flex sm:max-h-[calc(100vh-3rem)] sm:flex-col sm:overflow-hidden sm:px-5 sm:py-5 ${
-              traderMode ? 'sm:max-w-[780px]' : 'sm:max-w-[560px]'
+              traderMode ? 'sm:max-w-[620px]' : 'sm:max-w-[560px]'
             } ${
               modalVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-[0.97] sm:translate-y-2'
             } ${
@@ -5249,9 +5376,9 @@ export default function CalendarScreen() {
 
             <div className="flex items-center justify-between pr-8">
               <div>
-                <p className={`font-data text-[10px] tracking-[0.18em] uppercase ${traderMode ? 'text-emerald-400' : 'text-amber-400'}`}>
+                <p className={`font-data text-[10px] tracking-[0.18em] uppercase ${traderMode ? (proEntryMode === 'finance' ? 'text-amber-400' : 'text-emerald-400') : 'text-amber-400'}`}>
                   {traderMode
-                    ? (editingTrade ? t('editTrade') : t('newTrade'))
+                    ? (editingTrade ? proEntryCopy.editEntry : proEntryCopy.newEntry)
                     : (editingTrade ? t('editRecord') : t('addRecord'))}
                 </p>
                 <div className="mt-1 flex items-center gap-1.5">
@@ -5270,6 +5397,19 @@ export default function CalendarScreen() {
                         : `${traderMode ? 'border-white/[0.08] bg-black/25 text-zinc-300 hover:border-emerald-400/30 focus:border-emerald-400/40' : 'border-zinc-800 bg-zinc-900 text-zinc-200 hover:border-amber-400/50 focus:border-amber-400'}`
                     }`}
                   />
+                  {traderMode && (
+                    <input
+                      type="time"
+                      value={form.time}
+                      onChange={(e) => setForm((current) => ({ ...current, time: e.target.value }))}
+                      className={`rounded-lg border px-2 py-0.5 font-data text-xs outline-none transition-colors cursor-pointer ${
+                        isLight
+                          ? 'border-zinc-200 bg-zinc-100 text-zinc-800 hover:border-zinc-300 focus:border-emerald-500'
+                          : 'border-white/[0.08] bg-black/25 text-zinc-400 hover:border-white/[0.14] focus:border-emerald-400/40'
+                      }`}
+                      aria-label={proEntryCopy.time}
+                    />
+                  )}
                 </div>
               </div>
             </div>
