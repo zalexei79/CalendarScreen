@@ -81,6 +81,7 @@ import { createQrMatrix, drawQrToCanvas } from './qrCode.js';
 import { useReferral } from './src/features/referrals/useReferral.js';
 import { useProAccess } from './src/features/pro/useProAccess.js';
 import { loadBrandIcon, drawBrandIcon } from './src/shared/lib/brandIcon.js';
+import FirstRunSetup from './src/features/onboarding/FirstRunSetup.jsx';
 
 export default function CalendarScreen() {
   const [today, setToday] = useState(() => new Date());
@@ -587,7 +588,6 @@ export default function CalendarScreen() {
   function handleOnboardingLanguageSelect(item) {
     setOnboardingLang(resolveOnboardingLanguage(item));
     setLanguage(item.code);
-    setSetupStep('currency');
   }
 
   const onboardingCopy = {
@@ -5644,118 +5644,27 @@ export default function CalendarScreen() {
 
 
       {setupStep && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4 py-6">
-          <div className={`w-full max-w-sm rounded-2xl border p-6 shadow-2xl ${
-            isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
-          }`}>
-            <p className="font-data text-[10px] tracking-widest text-amber-400 uppercase mb-2">
-              {setupStep === 'language'
-                ? '1 / 4'
-                : `${onboardingCopy.setup} ${setupStep === 'currency' ? '2' : setupStep === 'theme' ? '3' : '4'} ${onboardingCopy.of} 4`}
-            </p>
-
-            {setupStep === 'language' ? (
-              <div className="mb-4">
-                <h2 className={`font-display text-xl font-semibold leading-snug ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>
-                  Выберите язык · Choose language · Alege limba
-                </h2>
-                <p className={`mt-2 text-xs leading-relaxed ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>
-                  Язык интерфейса · Interface language · Limba interfeței
-                </p>
-              </div>
-            ) : setupStep !== 'intro' ? (
-              <h2 className={`font-display text-xl font-semibold mb-4 ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>
-                {setupStep === 'currency' ? onboardingCopy.chooseCurrency : onboardingCopy.chooseTheme}
-              </h2>
-            ) : null}
-
-            {setupStep === 'language' && <div className="grid grid-cols-3 gap-2">{LANGUAGES.map((item) => <button key={item.code} onClick={() => handleOnboardingLanguageSelect(item)} className={`rounded-lg border px-3 py-3 font-data text-sm hover:border-amber-400 ${
-              isLight ? 'border-zinc-300' : 'border-zinc-700'
-            }`}>{item.label}</button>)}</div>}
-            {setupStep === 'currency' && (
-              <div className={`mb-3 flex items-start gap-2 rounded-xl border px-3 py-2.5 ${
-                isLight ? 'border-amber-200/80 bg-amber-50/70 text-zinc-600' : 'border-amber-400/15 bg-amber-400/[0.05] text-zinc-400'
-              }`}>
-                <CircleDollarSign className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-                <p className="text-xs leading-relaxed">{onboardingCopy.currencyHint}</p>
-              </div>
-            )}
-            {setupStep === 'currency' && <div className="grid grid-cols-2 gap-2">{CURRENCIES.map((item) => <button key={item.code} onClick={() => { setCurrency(item.code); setSetupStep('theme'); }} className={`rounded-lg border px-3 py-3 font-data text-sm hover:border-amber-400 ${
-              isLight ? 'border-zinc-300' : 'border-zinc-700'
-            }`}>{item.symbol} {item.code}</button>)}</div>}
-            {setupStep === 'theme' && (
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => { setTheme('light'); setSetupStep('intro'); }}
-                  className={`rounded-lg border px-3 py-3 hover:border-amber-400 ${
-                    isLight ? 'border-zinc-300' : 'border-zinc-700'
-                  }`}
-                >
-                  ☀ {onboardingCopy.light}
-                </button>
-                <button
-                  onClick={() => { setTheme('dark'); setSetupStep('intro'); }}
-                  className={`rounded-lg border px-3 py-3 hover:border-amber-400 ${
-                    isLight ? 'border-zinc-300' : 'border-zinc-700'
-                  }`}
-                >
-                  🌙 {onboardingCopy.dark}
-                </button>
-              </div>
-            )}
-
-            {setupStep === 'intro' && (() => {
-              const selectedCurrency = CURRENCIES.find((item) => item.code === currency);
-              const currencyLabel = selectedCurrency?.symbol || currency;
-              return (
-                <div>
-                  <h2 className={`font-display text-2xl font-semibold leading-tight ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>
-                    {onboardingCopy.title}
-                  </h2>
-                  <p className={`mt-2 text-sm leading-relaxed ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>
-                    {onboardingCopy.subtitle}
-                  </p>
-
-                  <div className={`mt-5 overflow-hidden rounded-2xl border ${
-                    isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-950/60'
-                  }`}>
-                    <div className={`flex items-center justify-between border-b px-4 py-3 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
-                      <span className={`font-display text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{onboardingCopy.exampleDate}</span>
-                      <span className="font-data text-[10px] uppercase tracking-widest text-zinc-500">{onboardingCopy.exampleDay}</span>
-                    </div>
-                    <div className="space-y-3 px-4 py-4 text-sm">
-                      <div className="flex items-center justify-between gap-3"><span>☕ {onboardingCopy.coffee}</span><span className="font-data font-semibold text-red-400">−45 {currencyLabel}</span></div>
-                      <div className="flex items-center justify-between gap-3"><span>🛒 {onboardingCopy.groceries}</span><span className="font-data font-semibold text-red-400">−380 {currencyLabel}</span></div>
-                      <div className="flex items-center justify-between gap-3"><span>💰 {onboardingCopy.sideJob}</span><span className="font-data font-semibold text-emerald-500">+487 {currencyLabel}</span></div>
-                      <div className="flex items-center justify-between gap-3"><span>💭 {onboardingCopy.greatDay}</span><span className="text-zinc-500">{onboardingCopy.noAmount}</span></div>
-                    </div>
-                    <div className={`flex items-center justify-between border-t px-4 py-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900/70'}`}>
-                      <span className={`text-xs font-medium ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>{onboardingCopy.total}</span>
-                      <span className="font-data text-sm font-bold text-emerald-500">+62 {currencyLabel}</span>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => { setTraderMode(false); setSetupStep(null); setFirstRunGuideChoice(null); setFirstRunGuideStep(1); }}
-                    className="mt-5 w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-amber-300 active:scale-[0.99]"
-                  >
-                    {onboardingCopy.create}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setSetupStep(null); markFirstRunGuideComplete(); }}
-                    className={`mt-2 w-full rounded-xl px-4 py-2.5 text-sm transition-colors ${
-                      isLight ? 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800' : 'text-zinc-500 hover:bg-zinc-800/70 hover:text-zinc-300'
-                    }`}
-                  >
-                    {onboardingCopy.skip}
-                  </button>
-                </div>
-              );
-            })()}
-          </div>
-        </div>
+        <FirstRunSetup
+          step={setupStep === 'theme' ? 'currency' : setupStep}
+          language={language}
+          currency={currency}
+          theme={theme}
+          onLanguage={handleOnboardingLanguageSelect}
+          onCurrency={setCurrency}
+          onTheme={setTheme}
+          onStep={setSetupStep}
+          onStart={() => {
+            setTraderMode(false);
+            setSetupStep(null);
+            setFirstRunGuideChoice(null);
+            setFirstRunGuideStep(2);
+            openModal(null, todayKey);
+          }}
+          onSkip={() => {
+            setSetupStep(null);
+            markFirstRunGuideComplete();
+          }}
+        />
       )}
 
       {nicknameModalOpen && (

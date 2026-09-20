@@ -13,7 +13,10 @@ export function useAuth() {
   const [nicknameModalOpen, setNicknameModalOpen] = useState(false);
   const [nicknameModalVisible, setNicknameModalVisible] = useState(false);
   const [nicknameInput, setNicknameInput] = useState('');
-  const [setupStep, setSetupStep] = useState(null);
+  const [setupStep, setSetupStep] = useState(() => {
+    try { return window.localStorage.getItem('calendar_guide_completed') === '1' ? null : 'language'; }
+    catch { return 'language'; }
+  });
 
   useEffect(() => {
     async function init() {
@@ -66,7 +69,11 @@ export function useAuth() {
     const nickname = (nicknameInput == null ? '' : String(nicknameInput)).trim() || googleName;
     supabase.auth.updateUser({ data: { nickname } });
     closeNicknameModal();
-    setSetupStep('language');
+    try {
+      if (window.localStorage.getItem('calendar_guide_completed') !== '1') setSetupStep('language');
+    } catch {
+      setSetupStep('language');
+    }
   }, [user, nicknameInput, closeNicknameModal]);
 
   const handleGoogleLogin = useCallback(async () => {
