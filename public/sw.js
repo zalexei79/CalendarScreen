@@ -1,12 +1,17 @@
-const CACHE_NAME = 'atj-cache-v5';
+const CACHE_NAME = 'atj-cache-v6-polished-icon';
 
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icon-180.png',
-  '/icon-192.png',
-  '/icon-32.png'
+  '/icon-16.png?v=20260920-polished',
+  '/icon-32.png?v=20260920-polished',
+  '/icon-48.png?v=20260920-polished',
+  '/icon-180.png?v=20260920-polished',
+  '/icon-192.png?v=20260920-polished',
+  '/icon-512.png?v=20260920-polished',
+  '/icon-maskable-192.png?v=20260920-polished',
+  '/icon-maskable-512.png?v=20260920-polished'
 ];
 
 self.addEventListener('install', (event) => {

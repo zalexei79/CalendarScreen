@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { ArrowLeft, ArrowRight, Check, Sun, Moon, TrendingUp, Coffee, Wallet } from 'lucide-react';
 import { CURRENCIES } from '../../shared/config/constants';
+import BrandIcon from '../../shared/ui/BrandIcon.jsx';
 
 const COPY = {
   ru: {
@@ -63,7 +64,7 @@ export default function FirstRunSetup({ step, language, currency, theme, onLangu
         <div className={`grid w-full max-w-[940px] overflow-hidden rounded-[28px] border shadow-2xl md:grid-cols-[0.85fr_1.15fr] ${light ? 'border-white bg-[#faf9f6]' : 'border-white/10 bg-[#111214]'}`}>
           <div className="relative hidden flex-col justify-between overflow-hidden border-r border-white/10 bg-[#171811] p-9 text-white md:flex">
             <div className="pointer-events-none absolute -left-24 -top-32 h-96 w-96 rounded-full bg-amber-400/10 blur-3xl" />
-            <div className="relative flex items-center gap-3"><img src="/icon-180.png" alt="" className="h-9 w-9 rounded-xl" /><span className="text-sm font-semibold tracking-[0.16em]">DAYRIS</span></div>
+            <div className="relative flex items-center gap-3"><BrandIcon className="h-10 w-10" /><span className="text-sm font-semibold tracking-[0.16em]">DAYRIS</span></div>
             <div className="relative py-12">
               <h2 className="whitespace-pre-line text-[38px] font-semibold leading-[1.12] tracking-[-0.045em]">{copy.tagline}</h2>
               <div className="mt-8 grid grid-cols-7 gap-1.5" aria-hidden="true">
@@ -74,7 +75,7 @@ export default function FirstRunSetup({ step, language, currency, theme, onLangu
           </div>
 
           <div className="flex min-w-0 flex-col p-5 sm:p-9">
-            <div className="mb-7 flex items-center gap-2 md:hidden"><img src="/icon-180.png" alt="" className="h-7 w-7 rounded-lg" /><span className="text-xs font-semibold tracking-[0.16em]">DAYRIS</span></div>
+            <div className="mb-7 flex items-center gap-2 md:hidden"><BrandIcon className="h-8 w-8" /><span className="text-xs font-semibold tracking-[0.16em]">DAYRIS</span></div>
             <nav aria-label={copy.steps.join(' / ')} className="mb-8 flex gap-2">
               {copy.steps.map((label, item) => <div key={label} aria-current={item === index ? 'step' : undefined} className="min-w-0 flex-1">
                 <div className={`mb-2 h-1 rounded-full ${item <= index ? 'bg-amber-400' : light ? 'bg-zinc-200' : 'bg-white/10'}`} />

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { LANGUAGES, CURRENCIES } from './src/shared/config/constants';
 import { monthsFor } from './src/shared/i18n';
+import BrandIcon from './src/shared/ui/BrandIcon.jsx';
 
 export default function Header({
   isLight, traderMode, t, theme, setTheme, settingsRef, settingsOpen,
@@ -30,10 +31,9 @@ export default function Header({
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="relative shrink-0 flex items-center justify-center">
-            <img
-              src="/icon-180.png"
+            <BrandIcon
               alt={t('appName')}
-              className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl shadow-md border border-amber-400/30 object-cover"
+              className="h-9 w-9 sm:h-10 sm:w-10"
             />
           </div>
           <div className="min-w-0">

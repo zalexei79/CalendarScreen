@@ -80,6 +80,7 @@ import CtraderControl from './src/features/ctrader/CtraderControl';
 import { createQrMatrix, drawQrToCanvas } from './qrCode.js';
 import { useReferral } from './src/features/referrals/useReferral.js';
 import { useProAccess } from './src/features/pro/useProAccess.js';
+import { loadBrandIcon, drawBrandIcon } from './src/shared/lib/brandIcon.js';
 
 export default function CalendarScreen() {
   const [today, setToday] = useState(() => new Date());
@@ -2259,7 +2260,8 @@ export default function CalendarScreen() {
     return `${dayMonthYear.format(from)} — ${dayMonthYear.format(to)}`;
   }
 
-  function createReferralShareBlob() {
+  async function createReferralShareBlob() {
+    const brandIcon = await loadBrandIcon();
     return new Promise((resolve, reject) => {
       try {
         if (!referralCode) throw new Error('REFERRAL_CODE_MISSING');
@@ -2303,23 +2305,7 @@ export default function CalendarScreen() {
         ctx.fillStyle = glow;
         ctx.fillRect(460, 0, 620, 560);
 
-        // Brand mark.
-        roundedCanvasRect(ctx, 72, 72, 92, 92, 24);
-        ctx.fillStyle = dark ? '#13151a' : '#ffffff';
-        ctx.fill();
-        ctx.strokeStyle = dark ? '#3a3219' : '#eadba8';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-
-        const tile = 29;
-        const gap = 8;
-        const startX = 84;
-        const startY = 84;
-        [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(([cx, cy], index) => {
-          roundedCanvasRect(ctx, startX + cx * (tile + gap), startY + cy * (tile + gap), tile, tile, 8);
-          ctx.fillStyle = index === 1 ? green : (dark ? '#25282f' : '#e7eaee');
-          ctx.fill();
-        });
+        drawBrandIcon(ctx, brandIcon, 72, 72, 92);
 
         ctx.fillStyle = textMain;
         ctx.font = '700 40px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
@@ -2512,7 +2498,8 @@ export default function CalendarScreen() {
     }
   }
 
-  function createHistoryShareBlob() {
+  async function createHistoryShareBlob() {
+    const brandIcon = await loadBrandIcon();
     return new Promise((resolve, reject) => {
       try {
         const canvas = document.createElement('canvas');
@@ -2564,19 +2551,7 @@ export default function CalendarScreen() {
         ctx.fillStyle = glow;
         ctx.fillRect(500, 0, 580, 500);
 
-        // Brand mark.
-        roundedCanvasRect(ctx, 72, 72, 86, 86, 23);
-        ctx.fillStyle = dark ? '#14171b' : '#ffffff';
-        ctx.fill();
-        ctx.strokeStyle = dark ? '#3b331a' : '#eadba8';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        const tile = 27, gap = 7, startX = 84, startY = 84;
-        [[0,0],[1,0],[0,1],[1,1]].forEach(([cx, cy], idx) => {
-          roundedCanvasRect(ctx, startX + cx*(tile+gap), startY + cy*(tile+gap), tile, tile, 7);
-          ctx.fillStyle = idx === 1 ? green : dark ? '#262a31' : '#e8ebef';
-          ctx.fill();
-        });
+        drawBrandIcon(ctx, brandIcon, 72, 72, 86);
 
         ctx.fillStyle = textMain;
         ctx.font = '750 39px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';

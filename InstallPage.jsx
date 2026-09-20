@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import BrandIcon from './src/shared/ui/BrandIcon.jsx';
 import {
   ArrowRight,
   CheckCircle2,
@@ -97,19 +98,6 @@ const COPY = {
   },
 };
 
-function BrandMark({ isLight }) {
-  return (
-    <div className={`grid h-16 w-16 grid-cols-2 gap-1 rounded-[20px] border p-2 shadow-xl ${
-      isLight ? 'border-amber-200 bg-white shadow-amber-200/30' : 'border-amber-400/20 bg-zinc-950 shadow-black/40'
-    }`}>
-      <span className={`rounded-md ${isLight ? 'bg-zinc-200' : 'bg-zinc-800'}`} />
-      <span className="rounded-md bg-emerald-500 shadow-[0_0_16px_rgba(16,185,129,.45)]" />
-      <span className={`rounded-md ${isLight ? 'bg-zinc-200' : 'bg-zinc-800'}`} />
-      <span className={`rounded-md ${isLight ? 'bg-zinc-200' : 'bg-zinc-800'}`} />
-    </div>
-  );
-}
-
 export default function InstallPage() {
   const lang = useMemo(getLang, []);
   const copy = COPY[lang];
@@ -181,7 +169,7 @@ export default function InstallPage() {
         <section className={`w-full overflow-hidden rounded-[30px] border backdrop-blur-xl ${cardClass}`}>
           <div className="px-5 pb-5 pt-6 sm:px-8 sm:pb-7 sm:pt-8">
             <div className="flex items-center gap-4">
-              <BrandMark isLight={isLight} />
+              <BrandIcon className="h-16 w-16" />
               <div className="min-w-0">
                 <p className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-amber-500">{copy.eyebrow}</p>
                 <p className={`mt-1 text-sm font-semibold ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>DAYRIS</p>
