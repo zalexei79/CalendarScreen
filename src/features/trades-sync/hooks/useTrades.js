@@ -222,7 +222,22 @@ export function useTrades({ user }) {
     } catch (error) {
       console.warn('[cloud-sync] save deferred:', error?.message || error);
       if (isRetryableNetworkError(error)) enqueueOperation(operation);
-      else throw error;
+      else {
+        // The optimistic row was never accepted by the database. Remove it so
+        // retries cannot look like successfully saved duplicate entries.
+        if (!isEditing) {
+          setManualTrades((prev) => {
+            const next = {
+              ...prev,
+              [dateKey]: (prev[dateKey] || []).filter((trade) => String(trade.id) !== String(localId)),
+            };
+            manualTradesRef.current = next;
+            cacheTradesLocally(next, cloudUserId);
+            return next;
+          });
+        }
+        throw error;
+      }
     }
   }, [cloudUserId, cacheTradesLocally, enqueueOperation, amendPendingInsert, refreshFromCloud]);
 

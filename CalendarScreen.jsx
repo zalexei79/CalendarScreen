@@ -2036,8 +2036,11 @@ export default function CalendarScreen() {
       }
     } catch (err) {
       console.error('[save] unexpected error:', err);
+      const isUserForeignKeyError = err?.code === '23503' && String(err?.message || '').includes('trades_user_id_fkey');
       setFormError(
-        navigator.onLine === false
+        isUserForeignKeyError
+          ? 'Не удалось связать запись с аккаунтом. Выйдите и войдите снова. Если ошибка повторится, требуется обновление базы данных.'
+          : navigator.onLine === false
           ? 'Не удалось поставить запись в очередь офлайн-синхронизации. Попробуйте ещё раз.'
           : (err?.message || 'Не удалось сохранить запись. Попробуйте ещё раз.')
       );
