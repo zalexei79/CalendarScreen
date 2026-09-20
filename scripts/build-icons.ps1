@@ -49,11 +49,19 @@ try {
         Export-Icon "public/icon-$size.png" $size
     }
     # iOS and adaptive launchers use opaque square canvases; desktop/PWA do not.
-    Export-Icon 'public/icon-180.png' 180 0.9 $true
+    # Almost edge-to-edge artwork: remove the former nested black frame on iOS.
+    # The OS applies its own rounded mask, so export opaque square PNGs.
+    Export-Icon 'public/icon-180.png' 180 1.02 $true
+    Export-Icon 'public/apple-touch-icon.png' 180 1.02 $true
+    foreach ($size in @(152, 167, 180)) {
+        Export-Icon "public/apple-touch-icon-$size-v5.png" $size 1.02 $true
+    }
     Export-Icon 'public/brand-mark-192.png' 192 1.0
-    # A separate inset keeps the mark inside Android's circular safe area.
+    # The four buttons fit inside the r=40% safe circle at 82% scale.
+    # The decorative outer rim may be masked by more aggressive launcher shapes.
     foreach ($size in @(192, 512)) {
-        Export-Icon "public/icon-maskable-$size.png" $size 0.72 $true
+        Export-Icon "public/icon-maskable-$size.png" $size 0.82 $true
+        Export-Icon "public/icon-maskable-$size-v5.png" $size 0.82 $true
     }
     Export-Icon 'assets/brand/dayris-play-store-512.png' 512 0.9 $true
 } finally {

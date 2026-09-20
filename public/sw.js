@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v9-full-size-desktop';
+const CACHE_NAME = 'atj-cache-v10-mobile-icon-fit';
 
 const PRECACHE_ASSETS = [
   '/',
@@ -8,11 +8,14 @@ const PRECACHE_ASSETS = [
   '/icon-16.png?v=20260920-favicon-v3',
   '/icon-32.png?v=20260920-favicon-v3',
   '/icon-48.png?v=20260920-favicon-v3',
-  '/icon-180.png?v=20260920-transparent-v2',
+  '/apple-touch-icon.png',
+  '/apple-touch-icon-152-v5.png',
+  '/apple-touch-icon-167-v5.png',
+  '/apple-touch-icon-180-v5.png',
   '/icon-192.png?v=20260920-desktop-v4',
   '/icon-512.png?v=20260920-desktop-v4',
-  '/icon-maskable-192.png?v=20260920-transparent-v2',
-  '/icon-maskable-512.png?v=20260920-transparent-v2'
+  '/icon-maskable-192-v5.png',
+  '/icon-maskable-512-v5.png'
 ];
 
 self.addEventListener('install', (event) => {
