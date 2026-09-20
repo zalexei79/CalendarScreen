@@ -14,7 +14,7 @@ try {
 
     # Preserve the transparent contour, including the complete outer rim.
     $crop = [System.Drawing.RectangleF]::new(107, 93, 1040, 1040)
-    function Export-Icon([string]$RelativePath, [int]$Size, [double]$Scale = 0.84, [bool]$Opaque = $false) {
+    function Export-Icon([string]$RelativePath, [int]$Size, [double]$Scale = 1.0, [bool]$Opaque = $false) {
         $bitmap = [System.Drawing.Bitmap]::new($Size, $Size)
         $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
         $attributes = [System.Drawing.Imaging.ImageAttributes]::new()
@@ -43,6 +43,8 @@ try {
     foreach ($size in @(16, 32, 48)) {
         Export-Icon "public/icon-$size.png" $size 1.0
     }
+    # Desktop/PWA icons need the same full-size silhouette as favicons.
+    # Only adaptive Android icons below require extra safety padding.
     foreach ($size in @(192, 512)) {
         Export-Icon "public/icon-$size.png" $size
     }

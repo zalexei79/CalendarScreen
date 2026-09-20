@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v8-full-size-favicon';
+const CACHE_NAME = 'atj-cache-v9-full-size-desktop';
 
 const PRECACHE_ASSETS = [
   '/',
@@ -9,8 +9,8 @@ const PRECACHE_ASSETS = [
   '/icon-32.png?v=20260920-favicon-v3',
   '/icon-48.png?v=20260920-favicon-v3',
   '/icon-180.png?v=20260920-transparent-v2',
-  '/icon-192.png?v=20260920-transparent-v2',
-  '/icon-512.png?v=20260920-transparent-v2',
+  '/icon-192.png?v=20260920-desktop-v4',
+  '/icon-512.png?v=20260920-desktop-v4',
   '/icon-maskable-192.png?v=20260920-transparent-v2',
   '/icon-maskable-512.png?v=20260920-transparent-v2'
 ];
