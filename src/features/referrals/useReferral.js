@@ -3,6 +3,14 @@ import { supabase } from '../../supabaseClient';
 import { getValidUserId } from '../../shared/lib/formatters';
 
 const PENDING_REFERRAL_KEY = 'atj_pending_referral_code';
+const REFERRAL_CODE_TIMEOUT_MS = 12000;
+
+function withTimeout(promise, timeoutMs = REFERRAL_CODE_TIMEOUT_MS) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => window.setTimeout(() => reject(new Error('REFERRAL_CODE_TIMEOUT')), timeoutMs)),
+  ]);
+}
 
 function normalizeReferralCode(value) {
   const code = String(value || '').trim().toUpperCase();
@@ -71,6 +79,8 @@ export function useReferral({ user }) {
   const userId = getValidUserId(user);
 
   const [referralCode, setReferralCode] = useState('');
+  const [referralCodeLoading, setReferralCodeLoading] = useState(Boolean(userId));
+  const [referralCodeError, setReferralCodeError] = useState('');
   const [claimStatus, setClaimStatus] = useState('idle');
 
   const [invitedCount, setInvitedCount] = useState(0);
@@ -129,34 +139,46 @@ export function useReferral({ user }) {
     setStatusLoading(false);
   }, [userId]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadOwnCode() {
-      if (!userId) {
-        setReferralCode('');
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('referral_profiles')
-        .select('referral_code')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (cancelled) return;
-
-      if (error) {
-        console.warn('[referral] failed to load referral code:', error.message);
-        return;
-      }
-
-      setReferralCode(normalizeReferralCode(data?.referral_code));
+  const ensureReferralCode = useCallback(async () => {
+    if (!userId) {
+      setReferralCode('');
+      setReferralCodeLoading(false);
+      return '';
     }
 
-    loadOwnCode();
-    return () => { cancelled = true; };
+    setReferralCodeLoading(true);
+    setReferralCodeError('');
+
+    try {
+      const { data, error } = await withTimeout(
+        supabase.from('referral_profiles').select('referral_code').eq('user_id', userId).maybeSingle()
+      );
+      if (error) throw error;
+
+      let code = normalizeReferralCode(data?.referral_code);
+      if (!code) {
+        const { data: createdCode, error: createError } = await withTimeout(
+          supabase.rpc('ensure_referral_profile')
+        );
+        if (createError) throw createError;
+        code = normalizeReferralCode(createdCode?.referral_code || createdCode);
+      }
+
+      if (!code) throw new Error('REFERRAL_CODE_MISSING');
+      setReferralCode(code);
+      return code;
+    } catch (error) {
+      console.warn('[referral] failed to prepare referral code:', error?.message || error);
+      setReferralCodeError(error?.message || 'REFERRAL_CODE_FAILED');
+      return '';
+    } finally {
+      setReferralCodeLoading(false);
+    }
   }, [userId]);
+
+  useEffect(() => {
+    ensureReferralCode();
+  }, [ensureReferralCode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -226,6 +248,9 @@ export function useReferral({ user }) {
 
   return {
     referralCode,
+    referralCodeLoading,
+    referralCodeError,
+    ensureReferralCode,
     claimStatus,
 
     invitedCount,

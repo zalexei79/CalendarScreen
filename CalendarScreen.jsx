@@ -117,6 +117,9 @@ export default function CalendarScreen() {
   // referral that was saved before/through Google OAuth.
   const {
     referralCode,
+    referralCodeLoading,
+    referralCodeError,
+    ensureReferralCode,
     claimStatus,
     invitedCount,
     rewardedCount,
@@ -821,6 +824,7 @@ export default function CalendarScreen() {
       share: 'Создать приглашение',
       signIn: 'Войти и получить приглашение',
       preparing: 'Готовим твоё приглашение…',
+      retryInvite: 'Повторить создание приглашения',
       buyTitle: 'PRO без приглашения',
       buyPrice: '$1.99',
       buyPeriod: '/ месяц',
@@ -885,6 +889,7 @@ export default function CalendarScreen() {
       share: 'Create invitation',
       signIn: 'Sign in to get an invitation',
       preparing: 'Preparing your invitation…',
+      retryInvite: 'Try creating the invitation again',
       buyTitle: 'PRO without inviting',
       buyPrice: '$1.99',
       buyPeriod: '/ month',
@@ -949,6 +954,7 @@ export default function CalendarScreen() {
       share: 'Creează invitația',
       signIn: 'Autentifică-te pentru invitație',
       preparing: 'Pregătim invitația…',
+      retryInvite: 'Încearcă din nou crearea invitației',
       buyTitle: 'PRO fără invitație',
       buyPrice: '$1.99',
       buyPeriod: '/ lună',
@@ -2268,11 +2274,11 @@ export default function CalendarScreen() {
     return `${dayMonthYear.format(from)} — ${dayMonthYear.format(to)}`;
   }
 
-  async function createReferralShareBlob() {
+  async function createReferralShareBlob(activeReferralCode = referralCode) {
     const brandIcon = await loadBrandIcon();
     return new Promise((resolve, reject) => {
       try {
-        if (!referralCode) throw new Error('REFERRAL_CODE_MISSING');
+        if (!activeReferralCode) throw new Error('REFERRAL_CODE_MISSING');
 
         const canvas = document.createElement('canvas');
         canvas.width = 1080;
@@ -2290,7 +2296,7 @@ export default function CalendarScreen() {
         const green = '#10b981';
 
         const inviteUrlObject = new URL('/?install=1', window.location.origin);
-        inviteUrlObject.searchParams.set('ref', referralCode);
+        inviteUrlObject.searchParams.set('ref', activeReferralCode);
         const inviteUrl = inviteUrlObject.toString();
 
         // Premium background.
@@ -2392,7 +2398,7 @@ export default function CalendarScreen() {
 
         ctx.fillStyle = amber;
         ctx.font = '700 18px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
-        ctx.fillText(`REF · ${referralCode}`, 490, 1116);
+        ctx.fillText(`REF · ${activeReferralCode}`, 490, 1116);
 
         // Footer.
         ctx.fillStyle = amber;
@@ -2422,13 +2428,14 @@ export default function CalendarScreen() {
       handleGoogleLogin();
       return;
     }
-    if (!referralCode) return;
+    const activeReferralCode = referralCode || await ensureReferralCode();
+    if (!activeReferralCode) return;
 
     setReferralShareOpen(true);
     setReferralShareBusy(true);
 
     try {
-      const blob = await createReferralShareBlob();
+      const blob = await createReferralShareBlob(activeReferralCode);
       referralShareBlobRef.current = blob;
       if (referralShareUrl) URL.revokeObjectURL(referralShareUrl);
       setReferralShareUrl(URL.createObjectURL(blob));
@@ -5968,7 +5975,7 @@ export default function CalendarScreen() {
                   <button
                     type="button"
                     onClick={openReferralShare}
-                    disabled={Boolean(user) && !referralCode}
+                    disabled={Boolean(user) && referralCodeLoading}
                     className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-3 text-sm font-bold text-zinc-950 shadow-lg shadow-amber-500/10 transition-all hover:from-amber-300 hover:to-amber-400 active:scale-[0.99] disabled:cursor-wait disabled:opacity-55"
                   >
                     <Share2 className="h-4 w-4 stroke-[2]" />
@@ -5976,7 +5983,9 @@ export default function CalendarScreen() {
                       ? proAccessCopy.signIn
                       : referralCode
                         ? proAccessCopy.share
-                        : proAccessCopy.preparing}
+                        : referralCodeError
+                          ? proAccessCopy.retryInvite
+                          : proAccessCopy.preparing}
                   </button>
                 </div>
 
