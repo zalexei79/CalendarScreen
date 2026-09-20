@@ -9,7 +9,7 @@ export default function BrandIcon({ className = '', alt = '' }) {
       width={192}
       height={192}
       draggable={false}
-      className={`shrink-0 rounded-[22%] object-contain ${className}`}
+      className={`shrink-0 object-contain ${className}`}
     />
   );
 }

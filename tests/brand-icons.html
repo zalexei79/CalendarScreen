@@ -12,7 +12,8 @@
   .light { background: #fafafa; color: #18181b; }
   .row { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
   figure { margin: 0; text-align: center; } figcaption { margin-top: 12px; font-size: 12px; opacity: .7; }
-  .mark { border-radius: 22%; object-fit: contain; }
+  .mark { object-fit: contain; }
+  .brown { background: #291d1b; }
   .round { border-radius: 50%; }
   .squircle { border-radius: 24%; }
   canvas { width: 120px; height: 120px; }
@@ -20,13 +21,14 @@
 </style>
 <main>
   <h1>DAYRIS — новая иконка</h1>
+  <section class="brown"><h2>Окно обновления · PNG без CSS-обрезки</h2><img src="/icon-192.png?v=20260920-transparent-v2" width="96" height="96" alt="PWA update icon"></section>
   <section><h2>В приложении · тёмная тема</h2><div class="row" data-sizes></div></section>
   <section class="light"><h2>В приложении · светлая тема</h2><div class="row" data-sizes></div></section>
   <section><h2>Иконки устройства</h2><div class="row">
-    <figure><img class="round" src="/icon-maskable-192.png?v=20260920-polished" width="120" height="120" alt="Android circle"><figcaption>Android · круг</figcaption></figure>
-    <figure><img class="squircle" src="/icon-maskable-192.png?v=20260920-polished" width="120" height="120" alt="Android rounded square"><figcaption>Android · квадрат</figcaption></figure>
-    <figure><img class="squircle" src="/icon-180.png?v=20260920-polished" width="120" height="120" alt="iPhone"><figcaption>iPhone</figcaption></figure>
-    <figure><img src="/icon-512.png?v=20260920-polished" width="120" height="120" alt="Store"><figcaption>Магазин · 512×512</figcaption></figure>
+    <figure><img class="round" src="/icon-maskable-192.png?v=20260920-transparent-v2" width="120" height="120" alt="Android circle"><figcaption>Android · круг</figcaption></figure>
+    <figure><img class="squircle" src="/icon-maskable-192.png?v=20260920-transparent-v2" width="120" height="120" alt="Android rounded square"><figcaption>Android · квадрат</figcaption></figure>
+    <figure><img class="squircle" src="/icon-180.png?v=20260920-transparent-v2" width="120" height="120" alt="iPhone"><figcaption>iPhone</figcaption></figure>
+    <figure><img src="/assets/brand/dayris-play-store-512.png" width="120" height="120" alt="Store"><figcaption>Магазин · 512×512</figcaption></figure>
   </div></section>
   <section><h2>Экспорт карточек «Поделиться»</h2><div class="row"><canvas id="dark" width="240" height="240"></canvas><canvas id="light" width="240" height="240"></canvas></div><p id="status">Проверка экспорта…</p></section>
 </main>
@@ -37,7 +39,7 @@
     for (const size of [16, 32, 36, 40, 64]) {
       const figure = document.createElement('figure');
       const image = new Image(size, size);
-      image.src = size === 16 ? '/icon-16.png?v=20260920-polished' : APP_ICON;
+      image.src = size === 16 ? '/icon-16.png?v=20260920-transparent-v2' : APP_ICON;
       image.className = 'mark';
       image.alt = `${size}px`;
       const caption = document.createElement('figcaption');

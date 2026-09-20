@@ -28,9 +28,6 @@ export function loadBrandIcon() {
 
 export function drawBrandIcon(ctx, image, x, y, size) {
   ctx.save();
-  ctx.beginPath();
-  ctx.roundRect(x, y, size, size, size * 0.22);
-  ctx.clip();
   ctx.drawImage(image, x, y, size, size);
   ctx.restore();
 }
