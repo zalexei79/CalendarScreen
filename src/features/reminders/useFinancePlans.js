@@ -24,7 +24,7 @@ export function useFinancePlans({ user }) {
     setLoading(true);
     const { data, error: queryError } = await supabase
       .from('reminders')
-      .select('id,title,amount,currency,kind,local_at,scheduled_at,status,outcome,resolved_at,repeat_rule,remind_offset,created_at')
+      .select('id,title,amount,currency,kind,local_at,scheduled_at,status,outcome,resolved_at,repeat_rule,remind_offset,repeat_until,created_at')
       .eq('user_id', user.id)
       .order('local_at', { ascending: true })
       .limit(100);
@@ -51,7 +51,7 @@ export function useFinancePlans({ user }) {
     }, {});
   }, [plans]);
 
-  const createPlan = useCallback(async ({ id, title, amount, currency, kind, dateKey, time, timezone, repeatRule = 'none', remindOffset = 'at_time' }) => {
+  const createPlan = useCallback(async ({ id, title, amount, currency, kind, dateKey, time, timezone, repeatRule = 'none', remindOffset = 'at_time', repeatUntil = null }) => {
     const localAt = `${dateKey} ${time}:00`;
     const scheduledAt = new Date(`${dateKey}T${time}:00`);
     const offsetMinutes = { at_time: 0, '1_day': 1440, '3_days': 4320, '1_week': 10080 }[remindOffset] || 0;
@@ -68,13 +68,14 @@ export function useFinancePlans({ user }) {
       p_scheduled_at: scheduledAt.toISOString(),
       p_repeat_rule: repeatRule,
       p_remind_offset: remindOffset,
+      p_repeat_until: repeatUntil || null,
     });
     if (createError) throw createError;
     await refreshPlans();
     return data;
   }, [refreshPlans]);
 
-  const updatePlan = useCallback(async ({ id, title, amount, currency, kind, dateKey, time, timezone, repeatRule = 'none', remindOffset = 'at_time' }) => {
+  const updatePlan = useCallback(async ({ id, title, amount, currency, kind, dateKey, time, timezone, repeatRule = 'none', remindOffset = 'at_time', repeatUntil = null }) => {
     const localAt = `${dateKey} ${time}:00`;
     const scheduledAt = new Date(`${dateKey}T${time}:00`);
     const offsetMinutes = { at_time: 0, '1_day': 1440, '3_days': 4320, '1_week': 10080 }[remindOffset] || 0;
@@ -91,6 +92,7 @@ export function useFinancePlans({ user }) {
       p_scheduled_at: scheduledAt.toISOString(),
       p_repeat_rule: repeatRule,
       p_remind_offset: remindOffset,
+      p_repeat_until: repeatUntil || null,
     });
     if (updateError) throw updateError;
     await refreshPlans();

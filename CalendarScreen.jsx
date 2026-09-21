@@ -1460,6 +1460,7 @@ export default function CalendarScreen() {
       if (plan.status !== 'active' || plan.outcome !== 'planned' || plan.repeat_rule === 'none') continue;
       const baseKey = planDateKey(plan);
       if (!baseKey || dateKey < baseKey || directIds.has(plan.id)) continue;
+      if (plan.repeat_until && dateKey > plan.repeat_until) continue;
 
       const [baseYear, baseMonth, baseDay] = baseKey.split('-').map(Number);
       const [targetYear, targetMonth, targetDay] = dateKey.split('-').map(Number);
@@ -1496,7 +1497,7 @@ export default function CalendarScreen() {
   }
 
   function formatPlanAmount(plan) {
-    if (plan?.amount == null) return 'сумма позже';
+    if (plan?.amount == null) return language === 'en' ? 'amount later' : language === 'ro' ? 'sumă mai târziu' : 'сумма позже';
     const symbol = getCurrencyMeta(plan?.currency || 'USD').symbol;
     return `${plan?.kind === 'income' ? '+' : '−'}${symbol}${formatMoney(Number(plan?.amount) || 0)}`;
   }
@@ -1532,6 +1533,7 @@ export default function CalendarScreen() {
     const value = rawAmount === '' ? null : Number(rawAmount.replace(',', '.'));
     if (!payload.title?.trim()) { setPlanError('Напишите, что запланировано.'); return; }
     if (value != null && (!Number.isFinite(value) || value < 0)) { setPlanError('Укажите корректную сумму.'); return; }
+    if (payload.repeatRule !== 'none' && payload.repeatUntil && payload.repeatUntil < dateKey) { setPlanError(language === 'en' ? 'The end date must be on or after the event date.' : language === 'ro' ? 'Data de final trebuie să fie după sau egală cu data evenimentului.' : 'Дата окончания должна быть не раньше даты события.'); return; }
     setPlanSaving(true);
     setPlanError('');
     try {
@@ -4126,6 +4128,7 @@ export default function CalendarScreen() {
           <FinancePlanList
             plans={plansForDay(selectedKey)}
             todayKey={todayKey}
+            language={language}
             isLight={isLight}
             busyId={planBusyId}
             onResolve={handleResolvePlan}
@@ -4205,6 +4208,7 @@ export default function CalendarScreen() {
         error={planError}
         onClose={() => { if (!planSaving) { setPlanComposerOpen(false); setPlanComposerPlan(null); } }}
         onCreate={handleCreatePlan}
+        language={language}
       />
 
       {planConfirm && (
