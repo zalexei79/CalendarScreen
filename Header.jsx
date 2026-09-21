@@ -26,14 +26,14 @@ export default function Header({
 
 
   return (
-    <header className={`px-2 sm:px-8 pt-3 sm:pt-6 pb-3 sm:pb-4 border-b ${isLight ? 'border-slate-200/90 bg-white' : 'border-zinc-800'}`}>
+    <header className={`px-3 sm:px-8 pt-3 sm:pt-5 pb-3 sm:pb-4 border-b transition-colors duration-300 ${isLight ? 'border-slate-200/70 bg-white/80' : 'border-white/[0.06] bg-zinc-950/70'}`}>
       {/* Top row: Brand app icon + Title on left, [Download] [Theme] [Settings] on right */}
-      <div className="flex items-center justify-between gap-2 mb-3">
+      <div className="flex items-center justify-between gap-3 mb-2.5">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="relative shrink-0 flex items-center justify-center">
             <BrandIcon
               alt={t('appName')}
-              className="h-9 w-9 sm:h-10 sm:w-10"
+              className="h-8 w-8 sm:h-9 sm:w-9"
             />
           </div>
           <div className="min-w-0">
@@ -282,7 +282,7 @@ export default function Header({
             onClick={goToPrevMonth}
             aria-label="Previous Month"
             title="Предыдущий месяц"
-            className={`rounded-lg border h-10 w-10 flex items-center justify-center transition-colors ${isLight ? 'border-zinc-300 bg-white text-zinc-600 hover:border-amber-400 hover:text-amber-700' : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-zinc-100 hover:border-zinc-600'}`}
+            className={`rounded-full border h-9 w-9 flex items-center justify-center transition-all duration-200 hover:-translate-y-px ${isLight ? 'border-zinc-300/80 bg-white/70 text-zinc-600 hover:border-amber-400 hover:text-amber-700 hover:shadow-sm' : 'border-white/[0.08] bg-white/[0.035] text-zinc-400 hover:text-zinc-100 hover:border-white/[0.18] hover:bg-white/[0.06]'}`}
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -290,7 +290,7 @@ export default function Header({
             <div className="relative" ref={monthMenuRef}>
               <button
                 onClick={() => { setMonthMenuOpen((v) => !v); setYearMenuOpen(false); }}
-                className={`font-display text-2xl sm:text-2xl font-semibold transition-colors ${isLight ? 'text-zinc-900 hover:text-amber-600' : 'text-zinc-50 hover:text-amber-400'}`}
+                className={`font-display text-2xl sm:text-[28px] font-semibold transition-colors ${isLight ? 'text-zinc-900 hover:text-amber-600' : 'text-zinc-50 hover:text-amber-400'}`}
               >
                 {monthsFor(language)[month]}
               </button>
@@ -317,7 +317,7 @@ export default function Header({
             <div className="relative" ref={yearMenuRef}>
               <button
                 onClick={() => { setYearMenuOpen((v) => !v); setMonthMenuOpen(false); }}
-                className={`font-display text-2xl sm:text-2xl font-semibold transition-colors ${isLight ? 'text-zinc-600 hover:text-amber-600' : 'text-zinc-500 hover:text-amber-400'}`}
+                className={`font-display text-2xl sm:text-[28px] font-semibold transition-colors ${isLight ? 'text-zinc-600 hover:text-amber-600' : 'text-zinc-500 hover:text-amber-400'}`}
               >
                 {year}
               </button>
@@ -345,7 +345,7 @@ export default function Header({
             onClick={goToNextMonth}
             aria-label="Next Month"
             title="Следующий месяц"
-            className={`rounded-lg border h-10 w-10 flex items-center justify-center transition-colors ${isLight ? 'border-zinc-300 bg-white text-zinc-600 hover:border-amber-400 hover:text-amber-700' : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-zinc-100 hover:border-zinc-600'}`}
+            className={`rounded-full border h-9 w-9 flex items-center justify-center transition-all duration-200 hover:-translate-y-px ${isLight ? 'border-zinc-300/80 bg-white/70 text-zinc-600 hover:border-amber-400 hover:text-amber-700 hover:shadow-sm' : 'border-white/[0.08] bg-white/[0.035] text-zinc-400 hover:text-zinc-100 hover:border-white/[0.18] hover:bg-white/[0.06]'}`}
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -366,7 +366,7 @@ export default function Header({
                   window.dispatchEvent(new Event('dk:today-pulse'));
                 }, 80);
               }}
-              className={`min-h-10 rounded-xl px-3 text-xs font-medium transition-colors ${isLight ? 'text-amber-700 hover:bg-amber-50' : 'text-amber-400 hover:bg-amber-400/10'}`}
+              className={`min-h-9 rounded-full px-3 text-xs font-medium transition-all duration-200 hover:-translate-y-px ${isLight ? 'text-amber-700 hover:bg-amber-50' : 'text-amber-400 hover:bg-amber-400/10'}`}
             >
               {t('today')}
             </button>
@@ -447,11 +447,7 @@ export default function Header({
               </span>
             </button>
 
-            <div className={`overflow-hidden transition-[max-width,opacity,margin] duration-300 ease-out ${
-              traderMode
-                ? 'ml-2 max-w-[190px] opacity-100'
-                : 'ml-0 max-w-0 opacity-0 pointer-events-none'
-            }`}>
+            <div className="ml-2 max-w-[190px] opacity-100">
               <button
                 type="button"
                 onClick={openReferralHub}
@@ -459,8 +455,8 @@ export default function Header({
                 aria-label={referralLabel}
                 className={`flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 font-data text-[10px] font-semibold transition-colors ${
                   isLight
-                    ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
-                    : 'border-amber-400/15 bg-amber-400/[0.06] text-amber-300 hover:bg-amber-400/[0.10]'
+                    ? 'border-amber-200 bg-amber-50/80 text-amber-700 hover:bg-amber-100'
+                    : 'border-amber-400/20 bg-amber-400/[0.07] text-amber-300 hover:bg-amber-400/[0.12]'
                 }`}
               >
                 <Gift className="h-3.5 w-3.5 shrink-0" />
@@ -485,16 +481,16 @@ export default function Header({
           : 'grid-rows-[0fr] opacity-0 mt-0 -translate-y-1 pointer-events-none'
       }`}>
         <div className="min-h-0 overflow-hidden">
-          <div className={`rounded-2xl border px-3 py-3 sm:px-4 ${
+          <div className={`rounded-2xl border px-3 py-2.5 sm:px-4 sm:py-3 ${
             isLight
               ? 'border-slate-200 bg-white shadow-sm'
               : 'border-white/[0.07] bg-white/[0.025]'
           }`}>
-            <div className="flex flex-col gap-3">
+            <div className="grid items-center gap-2.5 md:grid-cols-[minmax(200px,1fr)_1px_minmax(220px,auto)_minmax(140px,1fr)]">
               {/* cTrader is currently the single supported platform — show it directly. */}
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-3 md:pr-4">
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl border ${
+                  <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border ${
                     ctraderConnected
                       ? isLight
                         ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
@@ -525,7 +521,7 @@ export default function Header({
                 <button
                   type="button"
                   onClick={openConnectModal}
-                  className={`shrink-0 rounded-xl border px-3 py-2 font-data text-[10px] font-semibold transition-all ${
+                  className={`shrink-0 rounded-full border px-2.5 py-1.5 font-data text-[10px] font-semibold transition-all ${
                     ctraderConnected
                       ? isLight
                         ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
@@ -539,10 +535,10 @@ export default function Header({
                 </button>
               </div>
 
-              <div className={`h-px ${isLight ? 'bg-slate-200' : 'bg-white/[0.06]'}`} />
+              <div className={`h-px md:h-8 md:w-px ${isLight ? 'bg-slate-200' : 'bg-white/[0.06]'}`} />
 
               {/* Keep only the useful income / expense visibility filter. */}
-              <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 md:justify-center">
                 <span className={`font-data text-[9px] uppercase tracking-[0.16em] ${
                   isLight ? 'text-slate-500 font-semibold' : 'text-zinc-500'
                 }`}>
@@ -560,7 +556,7 @@ export default function Header({
                     <button
                       key={key}
                       onClick={() => setCalendarTypeFilter(key)}
-                      className={`rounded-lg px-3 py-1.5 text-[10px] font-data transition-all ${
+                      className={`rounded-full px-2.5 py-1.5 text-[10px] font-data transition-all ${
                         calendarTypeFilter === key
                           ? isLight
                             ? 'bg-white text-slate-950 shadow-sm'
@@ -577,7 +573,7 @@ export default function Header({
               </div>
 
               {monthSummary && (
-                <div className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] ${
+                <div className={`flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-[10px] md:pl-4 ${
                   isLight ? 'text-slate-500' : 'text-zinc-500'
                 }`}>
                   <span className={`font-data font-semibold tabular-nums ${

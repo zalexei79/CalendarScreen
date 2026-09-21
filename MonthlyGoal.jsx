@@ -224,15 +224,15 @@ export default function MonthlyGoal({
   }
 
   const panelClass = isLight
-    ? 'border-slate-200/90 bg-white/80 text-zinc-900 shadow-[0_10px_30px_-24px_rgba(15,23,42,.35)]'
-    : 'border-white/[0.08] bg-zinc-950/48 text-zinc-100 shadow-[0_14px_34px_-26px_rgba(0,0,0,.75)]';
+    ? 'border-slate-200/70 bg-transparent text-zinc-900'
+    : 'border-white/[0.08] bg-transparent text-zinc-100';
 
   const mutedClass = isLight ? 'text-slate-500' : 'text-zinc-500';
   const trackClass = isLight ? 'bg-slate-100' : 'bg-white/[0.07]';
 
   return (
     <>
-      <section className={`relative mx-auto mt-1 mb-1.5 overflow-hidden rounded-2xl border px-3 py-2 sm:px-4 sm:py-2.5 ${panelClass}`}>
+      <section className={`relative mx-auto mt-1 mb-1.5 overflow-hidden rounded-none border-x-0 border-y px-1 py-2 sm:px-1.5 sm:py-2.5 ${panelClass}`}>
         <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/35 to-transparent" />
 
         <div className="flex min-w-0 items-center gap-2">
