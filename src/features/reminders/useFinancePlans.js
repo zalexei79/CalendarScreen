@@ -74,11 +74,34 @@ export function useFinancePlans({ user }) {
     return data;
   }, [refreshPlans]);
 
+  const updatePlan = useCallback(async ({ id, title, amount, currency, kind, dateKey, time, timezone, repeatRule = 'none', remindOffset = 'at_time' }) => {
+    const localAt = `${dateKey} ${time}:00`;
+    const scheduledAt = new Date(`${dateKey}T${time}:00`);
+    const offsetMinutes = { at_time: 0, '1_day': 1440, '3_days': 4320, '1_week': 10080 }[remindOffset] || 0;
+    scheduledAt.setMinutes(scheduledAt.getMinutes() - offsetMinutes);
+    if (!Number.isFinite(scheduledAt.getTime())) throw new Error('Выберите корректную дату и время.');
+    const { data, error: updateError } = await supabase.rpc('dayris_update_finance_plan', {
+      p_id: id,
+      p_title: title.trim(),
+      p_amount: amount === '' || amount == null ? null : Number(amount),
+      p_currency: currency,
+      p_kind: kind,
+      p_local_at: localAt,
+      p_timezone: timezone,
+      p_scheduled_at: scheduledAt.toISOString(),
+      p_repeat_rule: repeatRule,
+      p_remind_offset: remindOffset,
+    });
+    if (updateError) throw updateError;
+    await refreshPlans();
+    return data;
+  }, [refreshPlans]);
+
   const resolvePlan = useCallback(async (id, outcome) => {
     const { error: resolveError } = await supabase.rpc('dayris_resolve_reminder', { p_id: id, p_outcome: outcome });
     if (resolveError) throw resolveError;
     await refreshPlans();
   }, [refreshPlans]);
 
-  return { plans, plansByDate, loading, error, refreshPlans, createPlan, resolvePlan };
+  return { plans, plansByDate, loading, error, refreshPlans, createPlan, updatePlan, resolvePlan };
 }

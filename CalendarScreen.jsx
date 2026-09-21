@@ -155,11 +155,12 @@ export default function CalendarScreen() {
   const [ctraderAccountId, setCtraderAccountId] = useState('');
   const [ctraderNotice, setCtraderNotice] = useState(null);
   useEffect(() => {
-    // Keep errors and incomplete calendar refresh warnings visible.
-    if (ctraderNotice?.kind !== 'success' || !ctraderNotice.refreshed) return;
+    // Success notices are confirmations, not persistent panels. Keep errors
+    // visible, but let every successful connection/sync confirmation fade out.
+    if (ctraderNotice?.kind !== 'success') return;
     const timer = window.setTimeout(() => {
       setCtraderNotice(current => current === ctraderNotice ? null : current);
-    }, 3000);
+    }, 2200);
     return () => window.clearTimeout(timer);
   }, [ctraderNotice]);
   const ctraderBusy = useRef(false);
@@ -1424,9 +1425,11 @@ export default function CalendarScreen() {
     plans,
     plansByDate,
     createPlan,
+    updatePlan,
     resolvePlan,
   } = useFinancePlans({ user });
   const [planComposerOpen, setPlanComposerOpen] = useState(false);
+  const [planComposerPlan, setPlanComposerPlan] = useState(null);
   const [planSaving, setPlanSaving] = useState(false);
   const [planError, setPlanError] = useState('');
   const [planBusyId, setPlanBusyId] = useState(null);
@@ -1468,12 +1471,23 @@ export default function CalendarScreen() {
       return;
     }
     setPlanError('');
+    setPlanComposerPlan(null);
+    setPlanComposerOpen(true);
+  }
+
+  function openPlanEditor(plan) {
+    if (!validUserId) {
+      handleGoogleLogin();
+      return;
+    }
+    setPlanError('');
+    setPlanComposerPlan(plan);
     setPlanComposerOpen(true);
   }
 
   async function handleCreatePlan(payload) {
     if (planSaving) return;
-    const dateKey = selectedKey || targetDateKey;
+    const dateKey = planComposerPlan ? planDateKey(planComposerPlan) : (selectedKey || targetDateKey);
     if (!dateKey || dateKey <= todayKey) {
       setPlanError('План можно создать только на будущий день.');
       return;
@@ -1486,8 +1500,14 @@ export default function CalendarScreen() {
     setPlanError('');
     try {
       await enablePush(validUserId);
-      await createPlan({ ...payload, amount: value, dateKey, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+      const planPayload = { ...payload, amount: value, dateKey, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+      if (planComposerPlan) {
+        await updatePlan({ ...planPayload, id: planComposerPlan.id });
+      } else {
+        await createPlan(planPayload);
+      }
       setPlanComposerOpen(false);
+      setPlanComposerPlan(null);
     } catch (error) {
       const message = String(error?.message || 'Не удалось создать план.');
       setPlanError(message.includes('NO_PUSH_DEVICE') ? 'Сначала включите уведомления на этом устройстве.' : message);
@@ -4073,6 +4093,7 @@ export default function CalendarScreen() {
             isLight={isLight}
             busyId={planBusyId}
             onResolve={handleResolvePlan}
+            onEdit={openPlanEditor}
           />
 
           {selectedDayTrades.length > 0 ? (
@@ -4140,12 +4161,13 @@ export default function CalendarScreen() {
 
       <FinancePlanComposer
         open={planComposerOpen}
-        dateKey={selectedKey || targetDateKey}
+        dateKey={planComposerPlan ? planDateKey(planComposerPlan) : (selectedKey || targetDateKey)}
+        initialPlan={planComposerPlan}
         defaultCurrency={currency}
         isLight={isLight}
         busy={planSaving}
         error={planError}
-        onClose={() => { if (!planSaving) setPlanComposerOpen(false); }}
+        onClose={() => { if (!planSaving) { setPlanComposerOpen(false); setPlanComposerPlan(null); } }}
         onCreate={handleCreatePlan}
       />
 
