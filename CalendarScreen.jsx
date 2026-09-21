@@ -1452,7 +1452,43 @@ export default function CalendarScreen() {
   }, [plans]);
 
   function plansForDay(dateKey) {
-    return plansByDate[dateKey] || [];
+    const directPlans = plansByDate[dateKey] || [];
+    const visible = [...directPlans];
+    const directIds = new Set(directPlans.map((plan) => plan.id));
+
+    for (const plan of plans) {
+      if (plan.status !== 'active' || plan.outcome !== 'planned' || plan.repeat_rule === 'none') continue;
+      const baseKey = planDateKey(plan);
+      if (!baseKey || dateKey < baseKey || directIds.has(plan.id)) continue;
+
+      const [baseYear, baseMonth, baseDay] = baseKey.split('-').map(Number);
+      const [targetYear, targetMonth, targetDay] = dateKey.split('-').map(Number);
+      let occurrence = false;
+
+      if (plan.repeat_rule === 'weekly') {
+        const baseUtc = Date.UTC(baseYear, baseMonth - 1, baseDay);
+        const targetUtc = Date.UTC(targetYear, targetMonth - 1, targetDay);
+        const days = Math.round((targetUtc - baseUtc) / 86400000);
+        occurrence = days >= 0 && days % 7 === 0;
+      } else if (plan.repeat_rule === 'monthly') {
+        const lastDay = new Date(Date.UTC(targetYear, targetMonth, 0)).getUTCDate();
+        occurrence = targetDay === Math.min(baseDay, lastDay);
+      } else if (plan.repeat_rule === 'yearly') {
+        occurrence = targetMonth === baseMonth && targetDay === baseDay;
+      }
+
+      if (occurrence) {
+        visible.push({
+          ...plan,
+          id: `${plan.id}:${dateKey}`,
+          local_at: `${dateKey} ${planTime(plan)}:00`,
+          sourcePlan: plan,
+          virtualOccurrence: true,
+        });
+      }
+    }
+
+    return visible.sort((a, b) => planTime(a).localeCompare(planTime(b)));
   }
 
   function activePlansForDay(dateKey) {

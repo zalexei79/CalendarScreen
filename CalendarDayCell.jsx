@@ -259,7 +259,7 @@ export default function CalendarDayCell({
           )}
           {hasPlans && (
             <span className={`flex min-w-0 items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap font-data text-[9px] font-semibold sm:text-[11px] ${isLight ? 'text-slate-500' : 'text-zinc-400'}`} title={plans.map((plan) => `${plan.title}: ${formatPlanAmount?.(plan) || plan.amount}`).join(', ')}>
-              <span className={`shrink-0 ${isLight ? 'text-slate-400' : 'text-zinc-500'}`}>◷</span>
+              <span className={`shrink-0 ${isLight ? 'text-slate-400' : 'text-zinc-500'}`}>{plans[0]?.repeat_rule && plans[0].repeat_rule !== 'none' ? '↻' : '◷'}</span>
               <span className="truncate">{formatPlanAmount?.(plans[0]) || plans[0].amount}</span>
               {plans.length > 1 && <span className="shrink-0 opacity-60">+{plans.length - 1}</span>}
             </span>
