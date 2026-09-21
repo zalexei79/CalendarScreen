@@ -10,6 +10,8 @@ export default function CalendarGrid({
   selectedKey,
   isLight,
   monthMaxAbsPnl,
+  plansForDay,
+  formatPlanAmount,
   tradesForDayFiltered,
   totalPnlForDay,
   formatPnlDisplay,
@@ -67,8 +69,9 @@ export default function CalendarGrid({
         {cells.map((cell, cellIndex) => {
           const isSelected = cell.key === selectedKey;
           const hasTrades = tradesForDayFiltered(cell.key).length > 0;
+          const plans = plansForDay?.(cell.key) || [];
           const pnl = totalPnlForDay(cell.key);
-          return <CalendarDayCell key={cell.key} hasNote={!!notes[cell.key]} noteLabel={noteLabel} traderMode={traderMode} cell={cell} cellIndex={cellIndex} isSelected={isSelected} hasTrades={hasTrades} pnl={pnl} monthMaxAbsPnl={monthMaxAbsPnl} isLight={isLight} formatPnlDisplay={formatPnlDisplay} onSelect={() => onSelectDay(isSelected ? null : cell.key)} />;
+          return <CalendarDayCell key={cell.key} hasNote={!!notes[cell.key]} noteLabel={noteLabel} traderMode={traderMode} cell={cell} cellIndex={cellIndex} isSelected={isSelected} hasTrades={hasTrades} plans={plans} formatPlanAmount={formatPlanAmount} pnl={pnl} monthMaxAbsPnl={monthMaxAbsPnl} isLight={isLight} formatPnlDisplay={formatPnlDisplay} onSelect={() => onSelectDay(isSelected ? null : cell.key)} />;
         })}
       </div>
     </section>

@@ -8,6 +8,8 @@ export default function CalendarDayCell({
   cellIndex,
   isSelected,
   hasTrades,
+  plans = [],
+  formatPlanAmount,
   pnl,
   monthMaxAbsPnl,
   isLight,
@@ -32,6 +34,7 @@ export default function CalendarDayCell({
   }, [cell.isToday]);
 
   const pnlTone = pnl > 0 ? 'profit' : pnl < 0 ? 'loss' : 'neutral';
+  const hasPlans = plans.length > 0;
   const pnlText = formatPnlDisplay(pnl, true);
   const intensity = monthMaxAbsPnl > 0 ? Math.min(Math.abs(pnl) / monthMaxAbsPnl, 1) : 0;
   const effectiveIntensity = (cell.isToday || isSelected) ? intensity : intensity * 0.7;
@@ -177,11 +180,11 @@ export default function CalendarDayCell({
           isSelected ? 'selected-calendar-cell' : '',
           'min-h-[64px] sm:min-h-[110px] p-2 sm:p-3.5',
           isLight
-            ? (cell.inMonth ? (hasTrades ? 'bg-transparent' : 'bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)]') : 'bg-slate-50/60')
+            ? (cell.inMonth ? (hasTrades ? 'bg-transparent' : hasPlans ? 'bg-amber-50/35' : 'bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)]') : 'bg-slate-50/60')
             : (cell.inMonth ? (hasTrades ? 'bg-zinc-900' : 'bg-zinc-900/20') : ''),
           isLight
-            ? (cell.inMonth ? (hasTrades ? 'border-slate-300/80' : 'border-slate-200/90') : 'border-slate-100')
-            : (cell.inMonth ? (hasTrades ? 'border-zinc-800' : 'border-zinc-800/30') : ''),
+            ? (cell.inMonth ? (hasTrades ? 'border-slate-300/80' : hasPlans ? 'border-amber-300/60' : 'border-slate-200/90') : 'border-slate-100')
+            : (cell.inMonth ? (hasTrades ? 'border-zinc-800' : hasPlans ? 'border-amber-400/30' : 'border-zinc-800/30') : ''),
           isSelected
             ? `${isLight ? 'bg-white' : 'bg-zinc-900/85'}`
             : isLight ? 'hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm' : 'hover:border-zinc-600 hover:bg-zinc-800/60',
@@ -227,7 +230,9 @@ export default function CalendarDayCell({
           {cell.date.getDate()}
         </span>
 
-        {hasTrades && (
+        {(hasTrades || hasPlans) && (
+          <div className="mt-auto min-w-0 space-y-1">
+          {hasTrades && (
           <span
             title={formatPnlDisplay(pnl, false)}
             className={`day-amount block w-full min-w-0 max-w-full overflow-hidden text-ellipsis font-data text-[10px] sm:text-[15px] font-bold tracking-[-0.02em] whitespace-nowrap ${
@@ -251,6 +256,15 @@ export default function CalendarDayCell({
               pnlText
             )}
           </span>
+          )}
+          {hasPlans && (
+            <span className={`flex min-w-0 items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap font-data text-[9px] font-semibold sm:text-[11px] ${isLight ? 'text-amber-700' : 'text-amber-300'}`} title={plans.map((plan) => `${plan.title}: ${formatPlanAmount?.(plan) || plan.amount}`).join(', ')}>
+              <span className="shrink-0">◷</span>
+              <span className="truncate">{formatPlanAmount?.(plans[0]) || plans[0].amount}</span>
+              {plans.length > 1 && <span className="shrink-0 opacity-60">+{plans.length - 1}</span>}
+            </span>
+          )}
+          </div>
         )}
       </button>
     </>

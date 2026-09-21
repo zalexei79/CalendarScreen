@@ -2,7 +2,6 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import CalendarScreen from '../CalendarScreen.jsx'
 import InstallPage from './InstallPage.jsx'
-import ReminderPocPanel from './features/reminders/ReminderPocPanel.jsx'
 import { supabase } from './supabaseClient'
 import { reconcilePushOwner } from './features/reminders/pushClient'
 
@@ -97,7 +96,7 @@ const showInstallPage = params.get('install') === '1' || normalizedPath === '/in
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AppErrorBoundary>
-      {showInstallPage ? <InstallPage /> : <><CalendarScreen />{(params.get('push-test') === '1' || import.meta.env.VITE_REMINDERS_POC === '1') && <AppErrorBoundary><ReminderPocPanel /></AppErrorBoundary>}</>}
+      {showInstallPage ? <InstallPage /> : <CalendarScreen />}
     </AppErrorBoundary>
   </React.StrictMode>
 )

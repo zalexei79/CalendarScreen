@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v10-mobile-icon-fit';
+const CACHE_NAME = 'atj-cache-v11-finance-plans';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
@@ -11,7 +11,7 @@ self.addEventListener('push', (event) => {
   const reminderId = uuid(data.reminderId) ? data.reminderId : '';
   const deliveryId = uuid(data.deliveryId) ? data.deliveryId : '';
   event.waitUntil(self.registration.showNotification('DAYRIS', {
-    body: 'Наступило время напоминания. Открой DAYRIS.',
+    body: typeof data.body === 'string' && data.body.length < 180 ? data.body : 'Наступило время плана. Открой DAYRIS.',
     icon: '/icon-192.png?v=20260920-desktop-v4',
     tag: deliveryId ? 'dayris-' + deliveryId : 'dayris-reminder',
     data: { reminderId },
@@ -20,7 +20,6 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const target = new URL('/', self.location.origin);
-  target.searchParams.set('push-test', '1');
   const id = event.notification.data?.reminderId;
   if (typeof id === 'string') target.searchParams.set('reminder', id);
   event.waitUntil((async () => {

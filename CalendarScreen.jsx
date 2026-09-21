@@ -84,6 +84,10 @@ import { useReferral } from './src/features/referrals/useReferral.js';
 import { useProAccess } from './src/features/pro/useProAccess.js';
 import { loadBrandIcon, drawBrandIcon } from './src/shared/lib/brandIcon.js';
 import FirstRunSetup from './src/features/onboarding/FirstRunSetup.jsx';
+import { enablePush } from './src/features/reminders/pushClient';
+import { planDateKey, planTime, useFinancePlans } from './src/features/reminders/useFinancePlans';
+import FinancePlanComposer from './src/features/reminders/FinancePlanComposer.jsx';
+import FinancePlanList from './src/features/reminders/FinancePlanList.jsx';
 
 export default function CalendarScreen() {
   const [today, setToday] = useState(() => new Date());
@@ -1416,6 +1420,143 @@ export default function CalendarScreen() {
     refreshFromCloud,
   } = useTrades({ user });
 
+  const {
+    plans,
+    plansByDate,
+    createPlan,
+    resolvePlan,
+  } = useFinancePlans({ user });
+  const [planComposerOpen, setPlanComposerOpen] = useState(false);
+  const [planSaving, setPlanSaving] = useState(false);
+  const [planError, setPlanError] = useState('');
+  const [planBusyId, setPlanBusyId] = useState(null);
+  const [planConfirm, setPlanConfirm] = useState(null);
+  const [pendingPlanRecordId, setPendingPlanRecordId] = useState(null);
+  const reminderFocusHandled = useRef(false);
+
+  useEffect(() => {
+    const reminderId = new URLSearchParams(window.location.search).get('reminder');
+    if (!reminderId || reminderFocusHandled.current || !plans.length) return;
+    const plan = plans.find((item) => item.id === reminderId);
+    if (!plan) return;
+    const dateKey = planDateKey(plan);
+    const date = parseDateKeyLocal(dateKey);
+    setViewYear(date.getFullYear());
+    setViewMonth(date.getMonth());
+    setSelectedKey(dateKey);
+    reminderFocusHandled.current = true;
+    try { window.history.replaceState({}, document.title, window.location.pathname); } catch { /* ignore */ }
+  }, [plans]);
+
+  function plansForDay(dateKey) {
+    return plansByDate[dateKey] || [];
+  }
+
+  function activePlansForDay(dateKey) {
+    return plansForDay(dateKey).filter((plan) => plan.status === 'active' && plan.outcome === 'planned');
+  }
+
+  function formatPlanAmount(plan) {
+    if (plan?.amount == null) return 'сумма позже';
+    const symbol = getCurrencyMeta(plan?.currency || 'USD').symbol;
+    return `${plan?.kind === 'income' ? '+' : '−'}${symbol}${formatMoney(Number(plan?.amount) || 0)}`;
+  }
+
+  function openPlanComposer() {
+    if (!validUserId) {
+      handleGoogleLogin();
+      return;
+    }
+    setPlanError('');
+    setPlanComposerOpen(true);
+  }
+
+  async function handleCreatePlan(payload) {
+    if (planSaving) return;
+    const dateKey = selectedKey || targetDateKey;
+    if (!dateKey || dateKey <= todayKey) {
+      setPlanError('План можно создать только на будущий день.');
+      return;
+    }
+    const rawAmount = String(payload.amount ?? '').trim();
+    const value = rawAmount === '' ? null : Number(rawAmount.replace(',', '.'));
+    if (!payload.title?.trim()) { setPlanError('Напишите, что запланировано.'); return; }
+    if (value != null && (!Number.isFinite(value) || value < 0)) { setPlanError('Укажите корректную сумму.'); return; }
+    setPlanSaving(true);
+    setPlanError('');
+    try {
+      await enablePush(validUserId);
+      await createPlan({ ...payload, amount: value, dateKey, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+      setPlanComposerOpen(false);
+    } catch (error) {
+      const message = String(error?.message || 'Не удалось создать план.');
+      setPlanError(message.includes('NO_PUSH_DEVICE') ? 'Сначала включите уведомления на этом устройстве.' : message);
+    } finally {
+      setPlanSaving(false);
+    }
+  }
+
+  async function finishPlan(plan, outcome, addRecord = true) {
+    if (planBusyId) return;
+    setPlanBusyId(plan.id);
+    setPlanError('');
+    try {
+      if (outcome === 'completed' && addRecord) {
+        if (plan.amount == null) throw new Error('Для записи сначала укажите сумму.');
+        const signedPnl = (Number(plan.amount) || 0) * (plan.kind === 'income' ? 1 : -1);
+        await hookSaveTrade({
+          dateKey: planDateKey(plan),
+          isEditing: false,
+          time: planTime(plan),
+          instrument: plan.title,
+          direction: signedPnl >= 0 ? 'LONG' : 'SHORT',
+          signedPnl,
+          comment: 'Подтверждено из плана DAYRIS',
+          platform: 'Manual',
+          currency: plan.currency || currency,
+          traderMode: false,
+        });
+      }
+      await resolvePlan(plan.id, outcome);
+    } catch (error) {
+      setPlanError(error?.message || 'Не удалось обновить план.');
+    } finally {
+      setPlanBusyId(null);
+    }
+  }
+
+  function handleResolvePlan(plan, outcome) {
+    if (outcome === 'completed') {
+      setPlanError('');
+      setPlanConfirm(plan);
+      return;
+    }
+    finishPlan(plan, outcome, false);
+  }
+
+  function openPlanRecord(plan) {
+    setPendingPlanRecordId(plan.id);
+    setPlanConfirm(null);
+    setEditingTrade(null);
+    setModalDateKey(planDateKey(plan));
+    setForm({
+      instrument: plan.title,
+      direction: '',
+      sign: plan.kind === 'income' ? 'plus' : 'minus',
+      pnl: plan.amount == null ? '' : String(plan.amount),
+      time: planTime(plan),
+      comment: 'Подтверждено из плана DAYRIS',
+      platform: 'Manual',
+      currency: plan.currency || currency,
+      takeProfit: '',
+      stopLoss: '',
+    });
+    setDetailsOpen(false);
+    setFormError('');
+    setModalOpen(true);
+    requestAnimationFrame(() => setModalVisible(true));
+  }
+
   const [recentInstruments, setRecentInstruments] = useState([]); // most-recently-used instrument symbols
   const [customTags, setCustomTags] = useState([]); // user-added instrument tags, max MAX_CUSTOM_TAGS
   const [addingCustomTag, setAddingCustomTag] = useState(false);
@@ -1851,6 +1992,7 @@ export default function CalendarScreen() {
     setFormError('');
     if (firstRunGuideStep === 2 && !editingTrade) setFirstRunGuideStep(1);
     setEditingTrade(null);
+    setPendingPlanRecordId(null);
     if (immediate) setModalOpen(false);
     else setTimeout(() => setModalOpen(false), 180);
   }
@@ -2057,6 +2199,12 @@ export default function CalendarScreen() {
         stopLoss: sl,
         traderMode: saveAsTrade,
       });
+
+      const planIdToResolve = pendingPlanRecordId;
+      if (planIdToResolve) {
+        setPendingPlanRecordId(null);
+        await resolvePlan(planIdToResolve, 'completed');
+      }
 
       if (saveAsTrade) {
         setRecentInstruments((prev) =>
@@ -3693,6 +3841,7 @@ export default function CalendarScreen() {
         key={`${year}-${month}-${animKey}`}
         slideDirection={slideDirection}
         cells={cells} selectedKey={selectedKey} isLight={isLight} monthMaxAbsPnl={monthMaxAbsPnl}
+        plansForDay={activePlansForDay} formatPlanAmount={formatPlanAmount}
         tradesForDayFiltered={tradesForDayFiltered} totalPnlForDay={totalPnlForDay}
         formatPnlDisplay={formatPnlDisplay} onSelectDay={(dateKey) => {
           if (firstRunGuideStep === 1 && dateKey === todayKey && !traderMode) {
@@ -3841,15 +3990,14 @@ export default function CalendarScreen() {
 
           <div className="flex items-center self-start">
             <button
-              onClick={() => openModal()}
-              disabled={isFutureSelected}
-              title={isFutureSelected ? (traderMode ? 'Нельзя добавить сделку на будущую дату' : t('recordFutureBlocked')) : undefined}
+              onClick={() => isFutureSelected ? openPlanComposer() : openModal()}
+              title={isFutureSelected ? 'Создать план на этот день' : undefined}
               className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 px-4 py-2.5 text-xs sm:text-sm font-bold text-zinc-950 shadow-md shadow-amber-500/25 hover:shadow-lg hover:shadow-amber-500/35 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-black/10 transition-transform duration-200 group-hover:rotate-90">
                 <Plus className="h-3.5 w-3.5 stroke-[3] text-zinc-950" />
               </span>
-              <span>{traderMode ? t('addTrade') : t('addRecord')}</span>
+              <span>{isFutureSelected ? 'Запланировать' : (traderMode ? t('addTrade') : t('addRecord'))}</span>
             </button>
           </div>
 
@@ -3919,6 +4067,14 @@ export default function CalendarScreen() {
             </aside>
           )}
 
+          <FinancePlanList
+            plans={plansForDay(selectedKey)}
+            todayKey={todayKey}
+            isLight={isLight}
+            busyId={planBusyId}
+            onResolve={handleResolvePlan}
+          />
+
           {selectedDayTrades.length > 0 ? (
             <div className={`rounded-lg border divide-y ${isLight ? 'border-zinc-300 bg-zinc-50 divide-zinc-200' : 'border-zinc-800 bg-zinc-900 divide-zinc-800'}`}>
               {selectedDayTrades.map((trade) => (
@@ -3969,17 +4125,38 @@ export default function CalendarScreen() {
                 </div>
               ))}
             </div>
-          ) : (
+          ) : plansForDay(selectedKey).length === 0 ? (
             <div className="flex items-center justify-center py-16">
               <div className={`text-center max-w-sm border border-dashed rounded-xl px-10 py-10 ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}>
                 <Inbox className={`h-8 w-8 mx-auto mb-4 ${isLight ? 'text-zinc-300' : 'text-zinc-700'}`} />
                 <p className={`text-sm ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{traderMode ? t('noTradesDay') : t('noRecordsDay')}</p>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
       </div>
+      )}
+
+      <FinancePlanComposer
+        open={planComposerOpen}
+        dateKey={selectedKey || targetDateKey}
+        defaultCurrency={currency}
+        isLight={isLight}
+        busy={planSaving}
+        error={planError}
+        onClose={() => { if (!planSaving) setPlanComposerOpen(false); }}
+        onCreate={handleCreatePlan}
+      />
+
+      {planConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center" onMouseDown={(event) => { if (event.target === event.currentTarget) setPlanConfirm(null); }}>
+          <div className={`w-full max-w-sm rounded-[26px] border p-5 shadow-2xl ${isLight ? 'border-slate-200 bg-white text-slate-950' : 'border-zinc-800 bg-zinc-950 text-zinc-100'}`}>
+            <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-emerald-500/12 text-emerald-500"><CheckCircle2 className="h-5 w-5" /></span><div><p className="font-data text-[10px] uppercase tracking-[0.18em] text-emerald-500">План выполнен?</p><h3 className="mt-1 text-lg font-semibold">{planConfirm.title}</h3><p className="mt-1 font-data text-sm text-zinc-500">{formatPlanAmount(planConfirm)}</p></div></div>
+            <p className="mt-4 text-sm leading-relaxed text-zinc-500">Добавить подтверждённую сумму как обычную запись в календарь?</p>
+            <div className="mt-5 space-y-2"><button type="button" disabled={Boolean(planBusyId)} onClick={() => planConfirm.amount == null ? openPlanRecord(planConfirm) : finishPlan(planConfirm, 'completed', true)} className="w-full rounded-2xl bg-emerald-500 px-4 py-3.5 text-sm font-bold text-white transition hover:bg-emerald-400 disabled:opacity-50">{planConfirm.amount == null ? 'Указать сумму и добавить' : 'Добавить в календарь'}</button><button type="button" disabled={Boolean(planBusyId)} onClick={() => finishPlan(planConfirm, 'completed', false)} className={`w-full rounded-2xl border px-4 py-3 text-sm font-semibold ${isLight ? 'border-slate-200 text-slate-600 hover:bg-slate-50' : 'border-white/[0.08] text-zinc-400 hover:bg-white/[0.04]'} disabled:opacity-50`}>Нет, только отметить</button><button type="button" onClick={() => setPlanConfirm(null)} className="w-full py-2 text-xs text-zinc-500">Отмена</button></div>
+          </div>
+        </div>
       )}
 
       {/* Floating Action Dock: Prominent Center "+" Add Button + History */}
