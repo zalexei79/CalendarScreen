@@ -2,6 +2,16 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import CalendarScreen from '../CalendarScreen.jsx'
 import InstallPage from './InstallPage.jsx'
+import ReminderPocPanel from './features/reminders/ReminderPocPanel.jsx'
+import { supabase } from './supabaseClient'
+import { reconcilePushOwner } from './features/reminders/pushClient'
+
+// Also handle sign-out/account changes from another tab, outside the test panel.
+supabase.auth.onAuthStateChange((_event, session) => {
+  queueMicrotask(() => reconcilePushOwner(session?.user?.id || null).catch(() => {
+    console.warn('[push] subscription cleanup requires another attempt')
+  }))
+})
 
 class AppErrorBoundary extends React.Component {
   constructor(props) {
@@ -87,7 +97,7 @@ const showInstallPage = params.get('install') === '1' || normalizedPath === '/in
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AppErrorBoundary>
-      {showInstallPage ? <InstallPage /> : <CalendarScreen />}
+      {showInstallPage ? <InstallPage /> : <><CalendarScreen />{(params.get('push-test') === '1' || import.meta.env.VITE_REMINDERS_POC === '1') && <AppErrorBoundary><ReminderPocPanel /></AppErrorBoundary>}</>}
     </AppErrorBoundary>
   </React.StrictMode>
 )

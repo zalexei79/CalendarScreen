@@ -1,5 +1,38 @@
 const CACHE_NAME = 'atj-cache-v10-mobile-icon-fit';
 
+// The existing registration/cache lifecycle remains the only service worker.
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'DAYRIS_PUSH_VERSION') event.ports[0]?.postMessage({ version: 1 });
+});
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data?.json() || {}; } catch { /* show safe fallback */ }
+  const uuid = value => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value || '');
+  const reminderId = uuid(data.reminderId) ? data.reminderId : '';
+  const deliveryId = uuid(data.deliveryId) ? data.deliveryId : '';
+  event.waitUntil(self.registration.showNotification('DAYRIS', {
+    body: 'Наступило время напоминания. Открой DAYRIS.',
+    icon: '/icon-192.png?v=20260920-desktop-v4',
+    tag: deliveryId ? 'dayris-' + deliveryId : 'dayris-reminder',
+    data: { reminderId },
+  }));
+});
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = new URL('/', self.location.origin);
+  target.searchParams.set('push-test', '1');
+  const id = event.notification.data?.reminderId;
+  if (typeof id === 'string') target.searchParams.set('reminder', id);
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const existing = windows.find(client => new URL(client.url).origin === self.location.origin);
+    if (existing) {
+      try { const navigated = await existing.navigate(target.href); if (navigated) { await navigated.focus(); return; } } catch { /* open fallback */ }
+    }
+    await self.clients.openWindow(target.href);
+  })());
+});
+
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { getValidUserId } from '../../../shared/lib/formatters';
 import { ONBOARDING_V2_COMPLETED_STORAGE_KEY } from '../../../shared/config/constants';
+import { disablePush } from '../../reminders/pushClient';
 
 /**
  * useAuth: manages Supabase authentication, session detection, and user profile state.
@@ -92,6 +93,9 @@ export function useAuth() {
   }, [user, nicknameInput, closeNicknameModal]);
 
   const handleGoogleLogin = useCallback(async () => {
+    // Account selection must not leave the old account's push endpoint active.
+    try { await disablePush(); }
+    catch { window.alert('Не удалось отключить старые уведомления. Проверь интернет и повтори вход.'); return; }
     console.log('[auth] кнопка "Войти через Google" нажата');
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -105,6 +109,8 @@ export function useAuth() {
   }, []);
 
   const handleGoogleLogout = useCallback(async () => {
+    try { await disablePush(); }
+    catch { window.alert('Не удалось отключить уведомления. Проверь интернет и повтори выход.'); return; }
     const { error } = await supabase.auth.signOut();
     if (error) console.error('[auth] ошибка при выходе:', error);
   }, []);
