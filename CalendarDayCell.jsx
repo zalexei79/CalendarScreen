@@ -184,7 +184,7 @@ export default function CalendarDayCell({
             : (cell.inMonth ? (hasTrades ? 'bg-zinc-900' : 'bg-zinc-900/20') : ''),
           isLight
             ? (cell.inMonth ? (hasTrades ? 'border-slate-300/80' : hasPlans ? 'border-amber-300/60' : 'border-slate-200/90') : 'border-slate-100')
-            : (cell.inMonth ? (hasTrades ? 'border-zinc-800' : hasPlans ? 'border-amber-400/30' : 'border-zinc-800/30') : ''),
+            : (cell.inMonth ? (hasTrades ? 'border-zinc-800' : hasPlans ? 'border-zinc-800/55' : 'border-zinc-800/30') : ''),
           isSelected
             ? `${isLight ? 'bg-white' : 'bg-zinc-900/85'}`
             : isLight ? 'hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm' : 'hover:border-zinc-600 hover:bg-zinc-800/60',
@@ -258,8 +258,8 @@ export default function CalendarDayCell({
           </span>
           )}
           {hasPlans && (
-            <span className={`flex min-w-0 items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap font-data text-[9px] font-semibold sm:text-[11px] ${isLight ? 'text-amber-700' : 'text-amber-300'}`} title={plans.map((plan) => `${plan.title}: ${formatPlanAmount?.(plan) || plan.amount}`).join(', ')}>
-              <span className="shrink-0">◷</span>
+            <span className={`flex min-w-0 items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap font-data text-[9px] font-semibold sm:text-[11px] ${isLight ? 'text-slate-500' : 'text-zinc-400'}`} title={plans.map((plan) => `${plan.title}: ${formatPlanAmount?.(plan) || plan.amount}`).join(', ')}>
+              <span className={`shrink-0 ${isLight ? 'text-slate-400' : 'text-zinc-500'}`}>◷</span>
               <span className="truncate">{formatPlanAmount?.(plans[0]) || plans[0].amount}</span>
               {plans.length > 1 && <span className="shrink-0 opacity-60">+{plans.length - 1}</span>}
             </span>
