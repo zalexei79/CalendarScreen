@@ -4068,11 +4068,16 @@ export default function CalendarScreen() {
         <div className="max-w-3xl mx-auto px-3 sm:px-8 py-4 sm:py-8 flex flex-col gap-4">
           <div className={`mx-auto h-1 w-10 rounded-full -mt-1 mb-1 ${isLight ? 'bg-zinc-300' : 'bg-zinc-700'}`} />
           {isFutureSelected ? (
-            <div className="flex min-h-[48vh] items-center justify-center px-4 py-12">
+            <div className={`relative isolate overflow-hidden rounded-[28px] border px-6 py-9 text-center ${isLight ? 'border-slate-200 bg-slate-50/80' : 'border-white/[0.07] bg-white/[0.02]'}`}>
+              <div className="pointer-events-none absolute left-1/2 top-[-88px] -z-10 h-44 w-44 -translate-x-1/2 rounded-full bg-amber-400/[0.11] blur-3xl" />
+              <span className={`mx-auto grid h-11 w-11 place-items-center rounded-2xl ${isLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-400/[0.10] text-amber-400'}`}><Calendar className="h-5 w-5" /></span>
+              <p className={`mt-4 font-data text-[10px] font-semibold uppercase tracking-[0.2em] ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>Будущий день</p>
+              <h3 className={`mt-1 text-lg font-semibold tracking-[-0.02em] ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>{targetDateLabel}</h3>
+              <p className={`mx-auto mt-2 max-w-xs text-xs leading-relaxed ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>Добавь платёж, доход или личное дело — DAYRIS напомнит вовремя.</p>
               <button
                 type="button"
                 onClick={openPlanComposer}
-                className="group inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 px-6 py-4 text-sm font-bold text-zinc-950 shadow-lg shadow-amber-500/25 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-amber-500/35 active:scale-[0.98]"
+                className="group mt-6 inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 px-6 py-4 text-sm font-bold text-zinc-950 shadow-lg shadow-amber-500/25 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-amber-500/35 active:scale-[0.98]"
               >
                 <span className="grid h-7 w-7 place-items-center rounded-full bg-black/10 transition-transform duration-200 group-hover:rotate-90"><Plus className="h-4 w-4 stroke-[3]" /></span>
                 Запланировать
