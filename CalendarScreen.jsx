@@ -1622,7 +1622,7 @@ export default function CalendarScreen() {
     }
     const { action } = pendingPushAction;
     setPendingPushAction(null);
-    const due = planDateKey(plan) <= todayKey;
+    const due = planDateKey(plan) <= keyFromDate(today);
     if (action === 'missed') {
       finishPlan(plan, 'missed', false);
     } else if (action === 'amount' || (action === 'completed' && plan.amount == null)) {
@@ -1633,7 +1633,7 @@ export default function CalendarScreen() {
     } else {
       openPlanEditor(plan);
     }
-  }, [pendingPushAction, plans, todayKey]);
+  }, [pendingPushAction, plans, today]);
 
   function openPlanRecord(plan) {
     setPendingPlanRecordId(plan.id);
