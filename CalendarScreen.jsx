@@ -1543,7 +1543,7 @@ export default function CalendarScreen() {
 
   async function handleCreatePlan(payload) {
     if (planSaving) return;
-    const dateKey = planComposerPlan ? planDateKey(planComposerPlan) : (selectedKey || targetDateKey);
+    const dateKey = payload.dateKey || (planComposerPlan ? planDateKey(planComposerPlan) : (selectedKey || targetDateKey));
     if (!dateKey || dateKey <= todayKey) {
       setPlanError('План можно создать только на будущий день.');
       return;
@@ -1569,7 +1569,7 @@ export default function CalendarScreen() {
       setPlanComposerPlan(null);
     } catch (error) {
       const message = String(error?.message || 'Не удалось создать план.');
-      setPlanError(message.includes('NO_PUSH_DEVICE') ? 'Сначала включите уведомления на этом устройстве.' : message);
+      setPlanError(message);
     } finally {
       setPlanSaving(false);
     }
