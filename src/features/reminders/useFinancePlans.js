@@ -109,8 +109,9 @@ export function useFinancePlans({ user }) {
 
   const deletePlan = useCallback(async (id) => {
     // The server verifies ownership and also cancels pending push deliveries.
-    const { error: deleteError } = await supabase.rpc('dayris_cancel_reminder', { p_id: id });
+    const { data, error: deleteError } = await supabase.rpc('dayris_delete_finance_plan', { p_id: id });
     if (deleteError) throw deleteError;
+    if (data !== true) throw new Error('PLAN_NOT_FOUND');
     await refreshPlans();
   }, [refreshPlans]);
 

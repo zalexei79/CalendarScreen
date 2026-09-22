@@ -1634,6 +1634,11 @@ export default function CalendarScreen() {
     }
   }
 
+  function requestPlanDelete(plan) {
+    setPlanError('');
+    setPlanDeleteConfirm(plan);
+  }
+
   useEffect(() => {
     if (!pendingPushAction) return;
     const plan = plans.find((item) => item.id === pendingPushAction.planId);
@@ -4113,7 +4118,7 @@ export default function CalendarScreen() {
               busyId={planBusyId}
               onResolve={handleResolvePlan}
               onEdit={openPlanEditor}
-              onDelete={setPlanDeleteConfirm}
+              onDelete={requestPlanDelete}
             />
             </>
           ) : <>
@@ -4226,7 +4231,7 @@ export default function CalendarScreen() {
             busyId={planBusyId}
             onResolve={handleResolvePlan}
             onEdit={openPlanEditor}
-            onDelete={setPlanDeleteConfirm}
+            onDelete={requestPlanDelete}
           />
 
           {selectedDayTrades.length > 0 ? (
@@ -4311,6 +4316,7 @@ export default function CalendarScreen() {
           <div className={`w-full max-w-sm rounded-[26px] border p-5 shadow-2xl ${isLight ? 'border-slate-200 bg-white text-slate-950' : 'border-zinc-800 bg-zinc-950 text-zinc-100'}`}>
             <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-rose-500/12 text-rose-500"><Trash2 className="h-5 w-5" /></span><div><p className="font-data text-[10px] uppercase tracking-[0.18em] text-rose-500">{planDeleteText.eyebrow}</p><h3 className="mt-1 text-lg font-semibold break-words">{planDeleteConfirm.title}</h3><p className="mt-1 font-data text-sm text-zinc-500">{formatPlanAmount(planDeleteConfirm)}</p></div></div>
             <p className="mt-4 text-sm leading-relaxed text-zinc-500">{planDeleteConfirm.repeat_rule !== 'none' ? planDeleteText.recurring : planDeleteText.once}</p>
+            {planError && <p role="alert" className="mt-3 text-xs leading-relaxed text-rose-400">{String(planError).includes('PLAN_NOT_FOUND') ? 'План уже был изменён. Обнови календарь и попробуй снова.' : planError}</p>}
             <div className="mt-5 flex gap-2"><button type="button" disabled={Boolean(planBusyId)} onClick={() => setPlanDeleteConfirm(null)} className={`flex-1 rounded-2xl border px-4 py-3 text-sm font-semibold ${isLight ? 'border-slate-200 text-slate-600 hover:bg-slate-50' : 'border-white/[0.08] text-zinc-400 hover:bg-white/[0.04]'} disabled:opacity-50`}>{planDeleteText.cancel}</button><button type="button" disabled={Boolean(planBusyId)} onClick={() => deletePlannedItem(planDeleteConfirm)} className="flex-1 rounded-2xl bg-rose-500 px-4 py-3 text-sm font-bold text-white transition hover:bg-rose-400 disabled:opacity-50">{planBusyId ? planDeleteText.removing : planDeleteText.remove}</button></div>
           </div>
         </div>
