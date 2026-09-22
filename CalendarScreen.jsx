@@ -1435,6 +1435,7 @@ export default function CalendarScreen() {
   const [planBusyId, setPlanBusyId] = useState(null);
   const [planConfirm, setPlanConfirm] = useState(null);
   const [pendingPlanRecordId, setPendingPlanRecordId] = useState(null);
+  const [pendingPushAction, setPendingPushAction] = useState(null);
   const reminderFocusHandled = useRef(false);
 
   useEffect(() => {
@@ -1442,11 +1443,15 @@ export default function CalendarScreen() {
     if (!reminderId || reminderFocusHandled.current || !plans.length) return;
     const plan = plans.find((item) => item.id === reminderId);
     if (!plan) return;
+    const requestedAction = new URLSearchParams(window.location.search).get('action');
     const dateKey = planDateKey(plan);
     const date = parseDateKeyLocal(dateKey);
     setViewYear(date.getFullYear());
     setViewMonth(date.getMonth());
     setSelectedKey(dateKey);
+    if (['completed', 'missed', 'amount'].includes(requestedAction)) {
+      setPendingPushAction({ planId: reminderId, action: requestedAction });
+    }
     reminderFocusHandled.current = true;
     try { window.history.replaceState({}, document.title, window.location.pathname); } catch { /* ignore */ }
   }, [plans]);
@@ -1455,6 +1460,19 @@ export default function CalendarScreen() {
     const directPlans = plansByDate[dateKey] || [];
     const visible = [...directPlans];
     const directIds = new Set(directPlans.map((plan) => plan.id));
+
+    function occurrenceIndex(plan, targetKey) {
+      const baseKey = planDateKey(plan);
+      const [baseYear, baseMonth, baseDay] = baseKey.split('-').map(Number);
+      const [targetYear, targetMonth, targetDay] = targetKey.split('-').map(Number);
+      if (plan.repeat_rule === 'weekly') {
+        const days = Math.round((Date.UTC(targetYear, targetMonth - 1, targetDay) - Date.UTC(baseYear, baseMonth - 1, baseDay)) / 86400000);
+        return Math.floor(days / 7) + 1;
+      }
+      if (plan.repeat_rule === 'monthly') return (targetYear - baseYear) * 12 + (targetMonth - baseMonth) + 1;
+      if (plan.repeat_rule === 'yearly') return targetYear - baseYear + 1;
+      return plan.repeat_index || 1;
+    }
 
     for (const plan of plans) {
       if (plan.status !== 'active' || plan.outcome !== 'planned' || plan.repeat_rule === 'none') continue;
@@ -1483,6 +1501,7 @@ export default function CalendarScreen() {
           ...plan,
           id: `${plan.id}:${dateKey}`,
           local_at: `${dateKey} ${planTime(plan)}:00`,
+          repeat_index: occurrenceIndex(plan, dateKey),
           sourcePlan: plan,
           virtualOccurrence: true,
         });
@@ -1533,12 +1552,14 @@ export default function CalendarScreen() {
     const value = rawAmount === '' ? null : Number(rawAmount.replace(',', '.'));
     if (!payload.title?.trim()) { setPlanError('Напишите, что запланировано.'); return; }
     if (value != null && (!Number.isFinite(value) || value < 0)) { setPlanError('Укажите корректную сумму.'); return; }
+    const repeatTotal = payload.repeatRule === 'none' || String(payload.repeatTotal ?? '').trim() === '' ? null : Number(payload.repeatTotal);
+    if (repeatTotal != null && (!Number.isInteger(repeatTotal) || repeatTotal < 1 || repeatTotal > 600)) { setPlanError(language === 'en' ? 'Enter a payment count from 1 to 600.' : language === 'ro' ? 'Introdu un număr de plăți între 1 și 600.' : 'Укажите от 1 до 600 платежей.'); return; }
     if (payload.repeatRule !== 'none' && payload.repeatUntil && payload.repeatUntil < dateKey) { setPlanError(language === 'en' ? 'The end date must be on or after the event date.' : language === 'ro' ? 'Data de final trebuie să fie după sau egală cu data evenimentului.' : 'Дата окончания должна быть не раньше даты события.'); return; }
     setPlanSaving(true);
     setPlanError('');
     try {
       await enablePush(validUserId);
-      const planPayload = { ...payload, amount: value, dateKey, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+      const planPayload = { ...payload, amount: value, repeatTotal, dateKey, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
       if (planComposerPlan) {
         await updatePlan({ ...planPayload, id: planComposerPlan.id });
       } else {
@@ -1591,6 +1612,28 @@ export default function CalendarScreen() {
     }
     finishPlan(plan, outcome, false);
   }
+
+  useEffect(() => {
+    if (!pendingPushAction) return;
+    const plan = plans.find((item) => item.id === pendingPushAction.planId);
+    if (!plan) {
+      setPendingPushAction(null);
+      return;
+    }
+    const { action } = pendingPushAction;
+    setPendingPushAction(null);
+    const due = planDateKey(plan) <= todayKey;
+    if (action === 'missed') {
+      finishPlan(plan, 'missed', false);
+    } else if (action === 'amount' || (action === 'completed' && plan.amount == null)) {
+      if (due) openPlanRecord(plan);
+      else openPlanEditor(plan);
+    } else if (action === 'completed' && due) {
+      finishPlan(plan, 'completed', true);
+    } else {
+      openPlanEditor(plan);
+    }
+  }, [pendingPushAction, plans, todayKey]);
 
   function openPlanRecord(plan) {
     setPendingPlanRecordId(plan.id);

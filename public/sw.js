@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v11-finance-plans';
+const CACHE_NAME = 'atj-cache-v12-push-actions';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
@@ -15,6 +15,11 @@ self.addEventListener('push', (event) => {
     icon: '/icon-192.png?v=20260920-desktop-v4',
     tag: deliveryId ? 'dayris-' + deliveryId : 'dayris-reminder',
     data: { reminderId },
+    actions: [
+      { action: 'completed', title: 'Подтвердилось' },
+      { action: 'missed', title: 'Не получилось' },
+      { action: 'amount', title: 'Указать сумму' },
+    ],
   }));
 });
 self.addEventListener('notificationclick', (event) => {
@@ -22,6 +27,7 @@ self.addEventListener('notificationclick', (event) => {
   const target = new URL('/', self.location.origin);
   const id = event.notification.data?.reminderId;
   if (typeof id === 'string') target.searchParams.set('reminder', id);
+  if (['completed', 'missed', 'amount'].includes(event.action)) target.searchParams.set('action', event.action);
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const existing = windows.find(client => new URL(client.url).origin === self.location.origin);
