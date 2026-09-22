@@ -4067,6 +4067,18 @@ export default function CalendarScreen() {
       >
         <div className="max-w-3xl mx-auto px-3 sm:px-8 py-4 sm:py-8 flex flex-col gap-4">
           <div className={`mx-auto h-1 w-10 rounded-full -mt-1 mb-1 ${isLight ? 'bg-zinc-300' : 'bg-zinc-700'}`} />
+          {isFutureSelected ? (
+            <div className="flex min-h-[48vh] items-center justify-center px-4 py-12">
+              <button
+                type="button"
+                onClick={openPlanComposer}
+                className="group inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 px-6 py-4 text-sm font-bold text-zinc-950 shadow-lg shadow-amber-500/25 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-amber-500/35 active:scale-[0.98]"
+              >
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-black/10 transition-transform duration-200 group-hover:rotate-90"><Plus className="h-4 w-4 stroke-[3]" /></span>
+                Запланировать
+              </button>
+            </div>
+          ) : <>
           <div className="flex items-center justify-between">
             <div>
               <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">{selectedKey}</p>
@@ -4127,7 +4139,7 @@ export default function CalendarScreen() {
             </div>
           )}
 
-          {traderMode && <DayNote key={`${validUserId || 'guest'}:${selectedKey}`} userId={validUserId} dateKey={selectedKey} isLight={isLight} language={language} onLogin={handleGoogleLogin} onSaved={() => setNotesRevision(v => v + 1)} />}
+          {traderMode && selectedKey < todayKey && <DayNote key={`${validUserId || 'guest'}:${selectedKey}`} userId={validUserId} dateKey={selectedKey} isLight={isLight} language={language} onLogin={handleGoogleLogin} onSaved={() => setNotesRevision(v => v + 1)} />}
 
           {firstRunGuideStep === 4 && !traderMode && (
             <aside
@@ -4236,6 +4248,7 @@ export default function CalendarScreen() {
               </div>
             </div>
           ) : null}
+          </>}
         </div>
       </div>
       </div>
