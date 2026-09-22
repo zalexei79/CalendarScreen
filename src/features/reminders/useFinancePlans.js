@@ -107,5 +107,12 @@ export function useFinancePlans({ user }) {
     await refreshPlans();
   }, [refreshPlans]);
 
-  return { plans, plansByDate, loading, error, refreshPlans, createPlan, updatePlan, resolvePlan };
+  const deletePlan = useCallback(async (id) => {
+    // The server verifies ownership and also cancels pending push deliveries.
+    const { error: deleteError } = await supabase.rpc('dayris_cancel_reminder', { p_id: id });
+    if (deleteError) throw deleteError;
+    await refreshPlans();
+  }, [refreshPlans]);
+
+  return { plans, plansByDate, loading, error, refreshPlans, createPlan, updatePlan, resolvePlan, deletePlan };
 }
