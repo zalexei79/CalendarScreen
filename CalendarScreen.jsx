@@ -4111,7 +4111,7 @@ export default function CalendarScreen() {
               </button>
             </div>
             <FinancePlanList
-              plans={plansForDay(selectedKey)}
+              plans={activePlansForDay(selectedKey)}
               todayKey={todayKey}
               language={language}
               isLight={isLight}
