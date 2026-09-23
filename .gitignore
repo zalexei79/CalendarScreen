@@ -5,6 +5,7 @@ dist
 /supabase/.temp
 /recovered-calendar-export.csv
 /.android-sdk-local/
+/.android-sdk/
 /.android-commandlinetools.zip
 /.android-sdk-local-extract/
 /.bubblewrap-config.json
