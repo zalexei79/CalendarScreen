@@ -10,8 +10,10 @@ self.addEventListener('push', (event) => {
   const uuid = value => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value || '');
   const reminderId = uuid(data.reminderId) ? data.reminderId : '';
   const deliveryId = uuid(data.deliveryId) ? data.deliveryId : '';
-  event.waitUntil(self.registration.showNotification('DAYRIS', {
-    body: typeof data.body === 'string' && data.body.length < 180 ? data.body : 'Наступило время плана. Открой DAYRIS.',
+  const title = typeof data.title === 'string' && data.title.trim() && data.title.length < 90 ? data.title.trim() : 'DAYRIS · напоминание';
+  const body = typeof data.body === 'string' && data.body.trim() && data.body.length < 180 ? data.body.trim() : 'Открой DAYRIS и отметь план.';
+  event.waitUntil(self.registration.showNotification(title, {
+    body,
     icon: '/icon-192.png?v=20260920-desktop-v4',
     tag: deliveryId ? 'dayris-' + deliveryId : 'dayris-reminder',
     data: { reminderId },

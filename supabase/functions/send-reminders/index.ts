@@ -3,6 +3,17 @@ import webpush from 'npm:web-push@3.6.7';
 import { allowedEndpoint, resultForStatus } from './policy.mjs';
 
 const reply = (status: number, body: unknown) => Response.json(body, { status });
+const trimText = (value: unknown, limit: number) => String(value || '').trim().replace(/\s+/g, ' ').slice(0, limit);
+function formatMoney(amount: number, currency: unknown) {
+  const value = amount.toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+  switch (String(currency || '').toUpperCase()) {
+    case 'USD': return `$${value}`;
+    case 'EUR': return `€${value}`;
+    case 'MDL': return `${value} L`;
+    case 'RUB': return `₽${value}`;
+    default: return `${value} ${trimText(currency, 6)}`.trim();
+  }
+}
 async function equalSecret(a: string, b: string) {
   const hash = async (s: string) => new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)));
   const [x, y] = await Promise.all([hash(a), hash(b)]);
@@ -29,17 +40,21 @@ Deno.serve(async (req: Request) => {
     let result = 'failed';
     let code = 'INVALID_ENDPOINT';
     if (allowedEndpoint(job.endpoint)) {
-      const { data: reminder, error: lookupError } = await db.from('reminders').select('status,title,amount,currency,kind,remind_offset').eq('id', job.reminder_id).maybeSingle();
+      const { data: reminder, error: lookupError } = await db.from('reminders').select('status,title,amount,currency,kind,remind_offset,local_at').eq('id', job.reminder_id).maybeSingle();
       if (lookupError) { result = 'uncertain'; code = 'DATABASE_UNAVAILABLE'; }
       else if (reminder?.status !== 'active') { code = 'CANCELLED'; }
       else {
         try {
-          const amount = Number(reminder.amount);
-          const money = Number.isFinite(amount) ? ` ${amount.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ${reminder.currency || ''}` : '';
+          const amount = reminder.amount == null ? Number.NaN : Number(reminder.amount);
+          const money = Number.isFinite(amount) ? formatMoney(amount, reminder.currency) : '';
           const lead = reminder.remind_offset === '1_day' ? 'Завтра' : reminder.remind_offset === '3_days' ? 'Через 3 дня' : reminder.remind_offset === '1_week' ? 'Через неделю' : 'Сегодня';
-          const body = `${lead}: ${reminder.kind === 'income' ? 'ожидается' : 'к оплате'}${money}. ${reminder.title}`;
+          const action = reminder.kind === 'income' ? 'Получить' : 'Оплатить';
+          const eventTitle = trimText(reminder.title, 54) || 'План';
+          const title = trimText(money ? `${eventTitle} · ${money}` : eventTitle, 78);
+          const time = /^\d{4}-\d{2}-\d{2}[ T](\d{2}:\d{2})/.exec(String(reminder.local_at || ''))?.[1];
+          const body = trimText(`${lead}${time ? ` · ${time}` : ''} — ${action.toLowerCase()} и отметить.`, 120);
           const details = webpush.generateRequestDetails({ endpoint: job.endpoint, keys: { p256dh: job.p256dh, auth: job.auth } },
-            JSON.stringify({ title: 'DAYRIS', body, reminderId: job.reminder_id, deliveryId: job.delivery_id }),
+            JSON.stringify({ title, body, reminderId: job.reminder_id, deliveryId: job.delivery_id }),
             { TTL: 3600, urgency: 'high', topic: job.delivery_id.replaceAll('-', ''), contentEncoding: 'aes128gcm' });
           const response = await fetch(details.endpoint, { method: details.method, headers: details.headers, body: details.body, redirect: 'error', signal: AbortSignal.timeout(10000) });
           result = resultForStatus(response.status);
