@@ -4,3 +4,15 @@ node_modules
 dist
 /supabase/.temp
 /recovered-calendar-export.csv
+/.android-sdk-local/
+/.android-commandlinetools.zip
+/.android-sdk-local-extract/
+/.bubblewrap-config.json
+/.jdk17/
+/android/android.keystore
+/android/.gradle/
+/android/build/
+/android/app/build/
+/android/*.aab
+/android/*.apk
+/android/*.idsig
