@@ -94,6 +94,10 @@ export const TRANSLATIONS = {
     onlineTitle: 'Подключение восстановлено',
     onlineDesc: 'Вы снова в сети! Все сделки и данные успешно синхронизированы с облаком.',
     onlineAction: 'Отлично',
+    syncIssueTitle: 'Синхронизации нужна помощь',
+    syncIssueDesc: 'Одна или несколько записей остались на устройстве. Данные не потеряны — попробуйте синхронизировать их ещё раз.',
+    syncRetry: 'Повторить синхронизацию',
+    syncRetrying: 'Синхронизирую…',
     
     // PRO Analysis
     proFinancialPicture: 'PRO · Финансовая картина',
@@ -307,6 +311,10 @@ export const TRANSLATIONS = {
     onlineTitle: 'Connection restored',
     onlineDesc: 'You are back online! All entries and data are synchronized with the cloud.',
     onlineAction: 'Great',
+    syncIssueTitle: 'Sync needs attention',
+    syncIssueDesc: 'One or more entries are still on this device. Your data is safe — try syncing them again.',
+    syncRetry: 'Retry sync',
+    syncRetrying: 'Syncing…',
     
     // PRO Analysis
     proFinancialPicture: 'PRO · Financial Picture',
@@ -520,6 +528,10 @@ export const TRANSLATIONS = {
     onlineTitle: 'Conexiune restabilită',
     onlineDesc: 'Sunteți din nou online! Toate datele s-au sincronizat cu succes în cloud.',
     onlineAction: 'Excelent',
+    syncIssueTitle: 'Sincronizarea are nevoie de atenție',
+    syncIssueDesc: 'Una sau mai multe înregistrări sunt încă pe acest dispozitiv. Datele sunt în siguranță — încercați din nou sincronizarea.',
+    syncRetry: 'Reîncearcă sincronizarea',
+    syncRetrying: 'Se sincronizează…',
     
     // PRO Analysis
     proFinancialPicture: 'PRO · Imagine financiară',

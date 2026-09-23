@@ -1415,6 +1415,8 @@ export default function CalendarScreen() {
     manualTradesRef,
     cacheTradesLocally,
     pendingSyncCount,
+    failedSyncCount,
+    retryFailedSync,
     saveTrade: hookSaveTrade,
     deleteTrade: hookDeleteTrade,
     clearAllTrades: hookClearAllTrades,
@@ -3941,6 +3943,7 @@ export default function CalendarScreen() {
         openConnectModal={openConnectModal} ctraderConnected={ctraderConnected}
         installInfoRef={installInfoRef} handleInstallClick={handleInstallClick}
         pendingSyncCount={pendingSyncCount} installInfoOpen={installInfoOpen} installInstructions={installInstructions} isPwaInstalled={isPwaInstalled}
+        failedSyncCount={failedSyncCount} retryFailedSync={retryFailedSync}
         proAccessActive={proAccessActive} proAccessLoading={proAccessLoading} proAccessUntil={proAccessUntil}
         openReferralHub={openReferralHub} invitedCount={invitedCount} referralLabel={proAccessCopy.invitesTab}
         periodStats={periodStats} periodTrades={periodTrades} currencySymbol={currencySymbol} formatMoney={formatMoney}

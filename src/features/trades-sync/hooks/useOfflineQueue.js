@@ -29,6 +29,7 @@ function createOperationId() {
 export function useOfflineQueue({ user, onSyncedInsert }) {
   const isFlushingRef = useRef(false);
   const inFlightOperationIdsRef = useRef(new Set());
+  const activeUserId = getValidUserId(user);
 
   const readOfflineQueue = useCallback(() => {
     try {
@@ -69,7 +70,21 @@ export function useOfflineQueue({ user, onSyncedInsert }) {
     }
   }, []);
 
-  const [pendingSyncCount, setPendingSyncCount] = useState(() => readOfflineQueue().length);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  const [failedSyncCount, setFailedSyncCount] = useState(0);
+
+  // The queue is shared by the browser, but each operation belongs to one
+  // account. Never show one person's pending/failed items to another person
+  // who signs in on the same device.
+  const updateQueueState = useCallback((queue) => {
+    const ownQueue = activeUserId ? queue.filter((item) => item.user_id === activeUserId) : [];
+    setPendingSyncCount(ownQueue.length);
+    setFailedSyncCount(ownQueue.filter((item) => item.status === 'failed').length);
+  }, [activeUserId]);
+
+  useEffect(() => {
+    updateQueueState(readOfflineQueue());
+  }, [activeUserId, readOfflineQueue, updateQueueState]);
 
   const amendPendingInsert = useCallback((operation) => {
     const queue = readOfflineQueue();
@@ -98,9 +113,9 @@ export function useOfflineQueue({ user, onSyncedInsert }) {
       lastError: undefined,
     };
     writeOfflineQueue(queue);
-    setPendingSyncCount(queue.length);
+    updateQueueState(queue);
     return true;
-  }, [readOfflineQueue, writeOfflineQueue]);
+  }, [readOfflineQueue, writeOfflineQueue, updateQueueState]);
 
   const enqueueOperation = useCallback((operation) => {
     const queue = readOfflineQueue();
@@ -126,22 +141,36 @@ export function useOfflineQueue({ user, onSyncedInsert }) {
           revision: insert.revision + 1,
         };
         writeOfflineQueue(queue);
-        setPendingSyncCount(queue.length);
+        updateQueueState(queue);
         return;
       }
       queue.splice(insertIndex, 1);
       writeOfflineQueue(queue);
-      setPendingSyncCount(queue.length);
+      updateQueueState(queue);
       return;
     }
 
     queue.push({ ...operation, operationId: createOperationId(), revision: 0 });
     writeOfflineQueue(queue);
-    setPendingSyncCount(queue.length);
-  }, [readOfflineQueue, writeOfflineQueue, amendPendingInsert]);
+    updateQueueState(queue);
+  }, [readOfflineQueue, writeOfflineQueue, amendPendingInsert, updateQueueState]);
+
+  const retryFailedSync = useCallback(() => {
+    if (!activeUserId) return false;
+    const queue = readOfflineQueue();
+    const nextQueue = queue.map((item) => (
+      item.user_id === activeUserId && item.status === 'failed'
+        ? { ...item, status: undefined, failedAt: undefined, lastError: undefined }
+        : item
+    ));
+    const retried = nextQueue.some((item, index) => item !== queue[index]);
+    if (!retried) return false;
+    writeOfflineQueue(nextQueue);
+    updateQueueState(nextQueue);
+    return true;
+  }, [activeUserId, readOfflineQueue, writeOfflineQueue, updateQueueState]);
 
   const flushOfflineQueue = useCallback(async () => {
-    const activeUserId = getValidUserId(user);
     if (!activeUserId || !navigator.onLine || isFlushingRef.current) return;
 
     isFlushingRef.current = true;
@@ -186,7 +215,7 @@ export function useOfflineQueue({ user, onSyncedInsert }) {
                   : entry
               ));
               writeOfflineQueue(nextQueue);
-              setPendingSyncCount(nextQueue.length);
+              updateQueueState(nextQueue);
               continue;
             }
 
@@ -206,7 +235,7 @@ export function useOfflineQueue({ user, onSyncedInsert }) {
                   : entry
               ));
               writeOfflineQueue(nextQueue);
-              setPendingSyncCount(nextQueue.length);
+              updateQueueState(nextQueue);
               continue;
             }
           } else if (item.action === 'update') {
@@ -232,7 +261,7 @@ export function useOfflineQueue({ user, onSyncedInsert }) {
           const latestQueue = readOfflineQueue();
           const nextQueue = latestQueue.filter((entry) => entry.operationId !== item.operationId);
           writeOfflineQueue(nextQueue);
-          setPendingSyncCount(nextQueue.length);
+          updateQueueState(nextQueue);
         } catch (err) {
           if (isRetryableNetworkError(err)) {
             console.warn('[offline] retryable sync error; operation remains queued:', err);
@@ -253,7 +282,7 @@ export function useOfflineQueue({ user, onSyncedInsert }) {
               : entry
           ));
           writeOfflineQueue(nextQueue);
-          setPendingSyncCount(nextQueue.length);
+          updateQueueState(nextQueue);
           console.error('[offline] permanent sync error; operation retained as failed and will not retry automatically:', err);
         } finally {
           inFlightOperationIdsRef.current.delete(item.operationId);
@@ -262,7 +291,7 @@ export function useOfflineQueue({ user, onSyncedInsert }) {
     } finally {
       isFlushingRef.current = false;
     }
-  }, [user, readOfflineQueue, writeOfflineQueue, onSyncedInsert]);
+  }, [activeUserId, readOfflineQueue, writeOfflineQueue, onSyncedInsert, updateQueueState]);
 
   useEffect(() => {
     window.addEventListener('online', flushOfflineQueue);
@@ -271,8 +300,10 @@ export function useOfflineQueue({ user, onSyncedInsert }) {
 
   return {
     pendingSyncCount,
+    failedSyncCount,
     enqueueOperation,
     amendPendingInsert,
+    retryFailedSync,
     flushOfflineQueue,
   };
 }

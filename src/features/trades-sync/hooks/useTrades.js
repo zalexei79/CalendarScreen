@@ -66,7 +66,20 @@ export function useTrades({ user }) {
     });
   }, []);
 
-  const { pendingSyncCount, enqueueOperation, amendPendingInsert, flushOfflineQueue } = useOfflineQueue({ user, onSyncedInsert: handleSyncedInsert });
+  const {
+    pendingSyncCount,
+    failedSyncCount,
+    enqueueOperation,
+    amendPendingInsert,
+    retryFailedSync: retryQueuedOperations,
+    flushOfflineQueue,
+  } = useOfflineQueue({ user, onSyncedInsert: handleSyncedInsert });
+
+  const retryFailedSync = useCallback(async () => {
+    const wasReset = retryQueuedOperations();
+    if (wasReset && navigator.onLine) await flushOfflineQueue();
+    return wasReset;
+  }, [retryQueuedOperations, flushOfflineQueue]);
 
   const reconcileCloudRows = useCallback((rows) => {
     const cloud = groupRows(rows);
@@ -272,5 +285,9 @@ export function useTrades({ user }) {
     cacheTradesLocally({}, cloudUserId);
   }, [cloudUserId, cacheTradesLocally]);
 
-  return { manualTrades, setManualTrades, manualTradesRef, cacheTradesLocally, pendingSyncCount, saveTrade, deleteTrade, clearAllTrades, refreshFromCloud };
+  return {
+    manualTrades, setManualTrades, manualTradesRef, cacheTradesLocally,
+    pendingSyncCount, failedSyncCount, retryFailedSync,
+    saveTrade, deleteTrade, clearAllTrades, refreshFromCloud,
+  };
 }

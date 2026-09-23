@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   ChevronLeft, ChevronRight, Link2, LogIn, LogOut, Download, Smartphone, Monitor, Wifi, Cloud,
-  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, ChevronDown, LockKeyhole, Gift,
+  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw,
 } from 'lucide-react';
 import { LANGUAGES, CURRENCIES } from './src/shared/config/constants';
 import { monthsFor } from './src/shared/i18n';
@@ -16,6 +16,7 @@ export default function Header({
   setViewMonth, setViewYear, setSelectedKey, setTraderMode, setPlatformFilter,
   openConnectModal, ctraderConnected, installInfoRef, handleInstallClick,
   pendingSyncCount, installInfoOpen, installInstructions, isPwaInstalled,
+  failedSyncCount = 0, retryFailedSync = () => {},
   platformFilter, platformOptions = [], calendarTypeFilter, setCalendarTypeFilter,
   periodStats, periodTrades = [], currencySymbol = '$', formatMoney,
   monthSummary,
@@ -23,6 +24,14 @@ export default function Header({
   openReferralHub = () => {}, invitedCount = 0, referralLabel = 'Invites',
 }) {
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
+  const [syncIssueOpen, setSyncIssueOpen] = useState(false);
+  const [retryingSync, setRetryingSync] = useState(false);
+
+  async function retrySync() {
+    setRetryingSync(true);
+    try { await retryFailedSync(); }
+    finally { setRetryingSync(false); }
+  }
 
 
   return (
@@ -114,6 +123,45 @@ export default function Header({
               </div>
             )}
           </div>}
+
+          {failedSyncCount > 0 && (
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setSyncIssueOpen((open) => !open)}
+                aria-expanded={syncIssueOpen}
+                aria-label={t('syncIssueTitle')}
+                className={`flex h-10 w-10 sm:h-9 sm:w-9 items-center justify-center rounded-full border transition-colors ${
+                  isLight
+                    ? 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                    : 'border-amber-400/30 bg-amber-400/[0.09] text-amber-300 hover:bg-amber-400/[0.14]'
+                }`}
+              >
+                <AlertTriangle className="h-4 w-4" />
+              </button>
+
+              {syncIssueOpen && (
+                <div role="status" className={`absolute right-0 top-full z-50 mt-3 w-[min(320px,calc(100vw-32px))] rounded-2xl border p-4 shadow-2xl backdrop-blur-xl ${isLight ? 'border-zinc-200 bg-white/95' : 'border-zinc-800 bg-zinc-950/95'}`}>
+                  <div className="flex gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400/10 text-amber-400"><AlertTriangle className="h-4 w-4" /></span>
+                    <div className="min-w-0">
+                      <p className={`text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('syncIssueTitle')}</p>
+                      <p className={`mt-1 text-xs leading-relaxed ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>{t('syncIssueDesc')}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={retryingSync || !navigator.onLine}
+                    onClick={retrySync}
+                    className="mt-4 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-amber-400 px-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${retryingSync ? 'animate-spin' : ''}`} />
+                    {t(retryingSync ? 'syncRetrying' : 'syncRetry')}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Theme toggle */}
           <button
