@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   ChevronLeft, ChevronRight, Link2, LogIn, LogOut, Download, Smartphone, Monitor, Wifi, Cloud,
-  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw,
+  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw, Wallet as WalletIcon,
 } from 'lucide-react';
 import { LANGUAGES, CURRENCIES } from './src/shared/config/constants';
 import { monthsFor } from './src/shared/i18n';
@@ -51,12 +51,6 @@ export default function Header({
 
   return (
     <header className={`px-3 sm:px-8 pt-3 sm:pt-5 pb-3 sm:pb-4 border-b transition-colors duration-300 ${isLight ? 'border-slate-200/70 bg-white/80' : 'border-white/[0.06] bg-zinc-950/70'}`}>
-      <div className={`mb-3 flex rounded-xl border p-1 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}>
-        <button type="button" onClick={() => setAccountMode('main')} className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-all duration-500 ${accountMode === 'main' ? 'bg-amber-400 text-zinc-950 shadow-sm' : 'text-zinc-500'}`}>Основной счёт</button>
-        <div className={`flex flex-1 overflow-hidden transition-all duration-500 ease-out ${proAccessActive ? 'max-w-full translate-x-0 opacity-100' : 'max-w-0 -translate-x-2 opacity-0'}`} aria-hidden={!proAccessActive}>
-          <button type="button" tabIndex={proAccessActive ? 0 : -1} onClick={() => setAccountMode('wallet')} className={`w-full rounded-lg px-3 py-2 text-xs font-semibold transition-all duration-500 ${accountMode === 'wallet' ? 'bg-amber-400 text-zinc-950 shadow-sm' : 'text-zinc-500 hover:text-amber-400'}`}>Кошелёк <span className="ml-1 text-[9px] uppercase tracking-wider opacity-60">PRO</span></button>
-        </div>
-      </div>
       {/* Top row: Brand app icon + Title on left, [Download] [Theme] [Settings] on right */}
       <div className="flex items-center justify-between gap-3 mb-2.5">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -540,6 +534,10 @@ export default function Header({
                 </span>
               </span>
             </button>
+
+            <div className={`ml-2 overflow-hidden transition-all duration-500 ease-out ${proAccessActive ? 'max-w-[150px] translate-x-0 opacity-100' : 'max-w-0 -translate-x-3 opacity-0'}`} aria-hidden={!proAccessActive}>
+              <button type="button" tabIndex={proAccessActive ? 0 : -1} onClick={() => setAccountMode('wallet')} title={t('walletProHint')} className={`flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 font-data text-[10px] font-semibold transition-all ${accountMode === 'wallet' ? 'border-amber-400/50 bg-amber-400 text-zinc-950' : isLight ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100' : 'border-amber-400/25 bg-amber-400/[.08] text-amber-300 hover:bg-amber-400/[.14]'}`}><WalletIcon />{t('walletLabel')}<span className="text-[8px] opacity-60">PRO</span></button>
+            </div>
 
             <div className="ml-2 max-w-[190px] opacity-100">
               <button
