@@ -261,8 +261,8 @@ export default function CalendarDayCell({
           </span>
           )}
           {hasPlans && (
-            <span className={`flex min-w-0 items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap font-data text-[9px] font-semibold sm:text-[11px] ${isLight ? 'text-slate-500' : 'text-zinc-400'}`} title={plans.map((plan) => `${plan.title}: ${formatPlanAmount?.(plan) || plan.amount}`).join(', ')}>
-              <span className={`shrink-0 ${isLight ? 'text-slate-400' : 'text-zinc-500'}`}>{plans[0]?.repeat_rule && plans[0].repeat_rule !== 'none' ? '↻' : '◷'}</span>
+            <span className={`flex min-w-0 items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap font-data text-[9px] font-semibold sm:text-[11px] ${primaryPlan?.kind === 'income' ? (isLight ? 'text-emerald-700' : 'text-emerald-400') : (isLight ? 'text-rose-700' : 'text-rose-400')}`} title={plans.map((plan) => `${plan.title}: ${formatPlanAmount?.(plan) || plan.amount}`).join(', ')}>
+              <span className={`shrink-0 ${primaryPlan?.kind === 'income' ? 'text-emerald-500' : 'text-rose-500'}`}>{plans[0]?.repeat_rule && plans[0].repeat_rule !== 'none' ? '↻' : '◷'}</span>
               <span className="truncate">{formatPlanAmount?.(primaryPlan) || primaryPlan.amount}</span>
               {paymentCounter && <span className="shrink-0 opacity-70">· {paymentCounter}</span>}
               {plans.length > 1 && <span className="shrink-0 opacity-60">+{plans.length - 1}</span>}
