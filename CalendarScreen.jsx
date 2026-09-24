@@ -3983,7 +3983,7 @@ export default function CalendarScreen() {
         periodStats={periodStats} periodTrades={periodTrades} currencySymbol={currencySymbol} formatMoney={formatMoney}
       />
 
-      {accountMode === 'wallet' ? <WalletPanel isLight={isLight} currency={currency} {...wallet} onSave={wallet.saveTransaction} onDelete={wallet.deleteTransaction} onTransfer={wallet.createTransfer} /> : null}
+      {accountMode === 'wallet' ? <WalletPanel isLight={isLight} currency={currency} {...wallet} onSave={wallet.saveTransaction} onDelete={wallet.deleteTransaction} onTransfer={wallet.createTransfer} onClearHistory={wallet.clearHistory} /> : null}
       {accountMode === 'main' && <>
       <div className="px-3 sm:px-5">
         <MonthlyGoal
