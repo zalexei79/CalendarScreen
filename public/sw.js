@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v12-push-actions';
+const CACHE_NAME = 'atj-cache-v13-push-actions';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
@@ -99,6 +99,7 @@ self.addEventListener('fetch', (event) => {
 
   // Handle navigation requests (opening the app or refreshing)
   if (event.request.mode === 'navigate') {
+    const isAppShellNavigation = url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/install';
     event.respondWith(
       fetch(event.request)
         .then((response) => {
@@ -106,8 +107,12 @@ self.addEventListener('fetch', (event) => {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(event.request, clone);
-              cache.put('/', clone.clone());
-              cache.put('/index.html', clone.clone());
+              // Only the app shell may become the offline fallback for `/`.
+              // Pages such as /privacy.html must not replace the cached app.
+              if (isAppShellNavigation) {
+                cache.put('/', clone.clone());
+                cache.put('/index.html', clone.clone());
+              }
             });
           }
           return response;

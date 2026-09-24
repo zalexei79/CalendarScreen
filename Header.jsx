@@ -330,6 +330,19 @@ export default function Header({
                     </div>
                   </div>
                 </div>
+
+                <a
+                  href="/privacy.html"
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`block rounded-xl border px-3 py-2.5 text-xs transition-colors ${
+                    isLight
+                      ? 'border-zinc-200 text-zinc-600 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700'
+                      : 'border-zinc-800 text-zinc-400 hover:border-amber-400/30 hover:bg-amber-400/5 hover:text-amber-300'
+                  }`}
+                >
+                  Политика конфиденциальности
+                </a>
               </div>
             )}
           </div>
