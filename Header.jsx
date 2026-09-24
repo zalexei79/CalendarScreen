@@ -36,6 +36,7 @@ export default function Header({
   monthSummary,
   proAccessActive = false, proAccessLoading = false, proAccessUntil = null,
   openReferralHub = () => {}, invitedCount = 0, referralLabel = 'Invites',
+  accountMode = 'main', setAccountMode = () => {},
 }) {
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
   const [syncIssueOpen, setSyncIssueOpen] = useState(false);
@@ -50,6 +51,9 @@ export default function Header({
 
   return (
     <header className={`px-3 sm:px-8 pt-3 sm:pt-5 pb-3 sm:pb-4 border-b transition-colors duration-300 ${isLight ? 'border-slate-200/70 bg-white/80' : 'border-white/[0.06] bg-zinc-950/70'}`}>
+      <div className={`mb-3 flex rounded-xl border p-1 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}>
+        {[['main', 'Основной счёт'], ['wallet', 'Кошелёк']].map(([key, label]) => <button key={key} type="button" onClick={() => setAccountMode(key)} className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold ${accountMode === key ? 'bg-amber-400 text-zinc-950' : 'text-zinc-500'}`}>{label}</button>)}
+      </div>
       {/* Top row: Brand app icon + Title on left, [Download] [Theme] [Settings] on right */}
       <div className="flex items-center justify-between gap-3 mb-2.5">
         <div className="flex items-center gap-2.5 min-w-0">

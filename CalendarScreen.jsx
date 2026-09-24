@@ -88,8 +88,12 @@ import { enablePush } from './src/features/reminders/pushClient';
 import { planDateKey, planTime, useFinancePlans } from './src/features/reminders/useFinancePlans';
 import FinancePlanComposer from './src/features/reminders/FinancePlanComposer.jsx';
 import FinancePlanList from './src/features/reminders/FinancePlanList.jsx';
+import { useWalletTransactions } from './src/features/wallet/hooks/useWalletTransactions';
+import WalletPanel from './src/features/wallet/WalletPanel.jsx';
 
 export default function CalendarScreen() {
+  const [accountMode, setAccountMode] = useState(() => { try { return localStorage.getItem('dayris_account_mode') || 'main'; } catch { return 'main'; } });
+  useEffect(() => { try { localStorage.setItem('dayris_account_mode', accountMode); } catch {} }, [accountMode]);
   const [today, setToday] = useState(() => new Date());
   useEffect(() => {
     function refreshToday() {
@@ -1427,6 +1431,7 @@ export default function CalendarScreen() {
     clearAllTrades: hookClearAllTrades,
     refreshFromCloud,
   } = useTrades({ user });
+  const wallet = useWalletTransactions({ user });
 
   const {
     plans,
@@ -3937,6 +3942,7 @@ export default function CalendarScreen() {
         </div>
       )}
       <Header
+        accountMode={accountMode} setAccountMode={setAccountMode}
         monthSummary={monthSummary}
         isLight={isLight} traderMode={traderMode} t={t} theme={theme} setTheme={setTheme}
         settingsRef={settingsRef} settingsOpen={settingsOpen} closeSettings={closeSettings}
@@ -3959,6 +3965,7 @@ export default function CalendarScreen() {
         periodStats={periodStats} periodTrades={periodTrades} currencySymbol={currencySymbol} formatMoney={formatMoney}
       />
 
+      {accountMode === 'wallet' ? <WalletPanel isLight={isLight} currency={currency} {...wallet} onSave={wallet.saveTransaction} onDelete={wallet.deleteTransaction} /> : <>
       <div className="px-3 sm:px-5">
         <MonthlyGoal
           year={year}
@@ -4001,6 +4008,7 @@ export default function CalendarScreen() {
           if (endX < startX) goToNextMonth(); else goToPrevMonth();
         }}
       />
+      </>}
 
       {firstRunGuideStep === 1 && !traderMode && (
         <>
