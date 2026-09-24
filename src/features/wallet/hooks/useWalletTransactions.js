@@ -88,7 +88,7 @@ export function useWalletTransactions({ user }) {
   const createTransfer = useCallback(async ({ amount, currency, fromAccount, toAccount, dateKey, comment = '' }) => {
     if (!userId) throw new Error('AUTH_REQUIRED');
     const { error: transferError } = await supabase.from('wallet_transfers').insert({ user_id: userId, amount: Number(amount), currency, from_account: fromAccount, to_account: toAccount, date_key: dateKey, comment });
-    if (transferError) throw transferError;
+    if (transferError) { setError(transferError.code === 'PGRST205' ? 'WALLET_TRANSFERS_MIGRATION_REQUIRED' : (transferError.message || 'WALLET_TRANSFER_FAILED')); throw transferError; }
     await refresh();
   }, [userId, refresh]);
 
