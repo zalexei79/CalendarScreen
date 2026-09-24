@@ -143,7 +143,6 @@ export default function CalendarScreen() {
     loading: proAccessLoading,
     refresh: refreshProAccess,
   } = useProAccess({ user });
-  useEffect(() => { if (!proAccessActive && accountMode === 'wallet') setAccountMode('main'); }, [proAccessActive, accountMode]);
 
   const proDaysRemaining = useMemo(() => {
     if (!proAccessActive || !proAccessUntil) return 0;
@@ -418,6 +417,7 @@ export default function CalendarScreen() {
   // PRO mode is now a UI preference only. Permission itself comes from
   // Supabase get_my_pro_status(); localStorage can no longer unlock PRO.
   const [traderMode, setTraderModeInternal] = useState(false);
+  useEffect(() => { if (!traderMode && accountMode === 'wallet') setAccountMode('main'); }, [traderMode, accountMode]);
   const [proAccessPromptOpen, setProAccessPromptOpen] = useState(false);
   const [proOfferTab, setProOfferTab] = useState('offer');
   const [proCheckoutLoading, setProCheckoutLoading] = useState(false);
