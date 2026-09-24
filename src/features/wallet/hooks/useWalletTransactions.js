@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { getValidUserId } from '../../../shared/lib/formatters';
 
@@ -32,6 +32,7 @@ export function useWalletTransactions({ user }) {
   const [ready, setReady] = useState(!userId);
   const [error, setError] = useState('');
   const [transfers, setTransfers] = useState([]);
+  const refreshVersion = useRef(0);
 
   const cache = useCallback((next) => {
     try { localStorage.setItem(cacheKey(owner), JSON.stringify(next)); } catch { /* guest cache is best effort */ }
@@ -39,11 +40,13 @@ export function useWalletTransactions({ user }) {
 
   const refresh = useCallback(async () => {
     if (!userId) { setLoading(false); setReady(true); return []; }
+    const version = ++refreshVersion.current;
     setLoading(true);
     const [{ data, error: queryError }, { data: transferRows, error: transferError }] = await Promise.all([
       supabase.from('wallet_transactions').select('*').eq('user_id', userId).order('date_key', { ascending: false }).order('time', { ascending: false }),
       supabase.from('wallet_transfers').select('*').eq('user_id', userId).order('date_key', { ascending: false }),
     ]);
+    if (version !== refreshVersion.current) return [];
     setLoading(false);
     if (queryError || transferError) {
       setReady(false);
