@@ -99,12 +99,17 @@ export function useWalletTransactions({ user }) {
   }, [userId, refresh]);
 
   const clearHistory = useCallback(async () => {
+    refreshVersion.current += 1;
     if (!userId) { setTransactions([]); setTransfers([]); cache([]); return; }
     const [transactionsResult, transfersResult] = await Promise.all([
       supabase.from('wallet_transactions').delete().eq('user_id', userId),
       supabase.from('wallet_transfers').delete().eq('user_id', userId),
     ]);
-    if (transactionsResult.error || transfersResult.error) throw transactionsResult.error || transfersResult.error;
+    if (transactionsResult.error || transfersResult.error) {
+      const clearError = transactionsResult.error || transfersResult.error;
+      setError(clearError.message || 'WALLET_CLEAR_FAILED');
+      throw clearError;
+    }
     setTransactions([]); setTransfers([]); cache([]);
   }, [userId, cache]);
 
