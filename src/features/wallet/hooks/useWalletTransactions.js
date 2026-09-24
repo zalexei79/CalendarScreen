@@ -98,6 +98,16 @@ export function useWalletTransactions({ user }) {
     await refresh();
   }, [userId, refresh]);
 
+  const clearHistory = useCallback(async () => {
+    if (!userId) { setTransactions([]); setTransfers([]); cache([]); return; }
+    const [transactionsResult, transfersResult] = await Promise.all([
+      supabase.from('wallet_transactions').delete().eq('user_id', userId),
+      supabase.from('wallet_transfers').delete().eq('user_id', userId),
+    ]);
+    if (transactionsResult.error || transfersResult.error) throw transactionsResult.error || transfersResult.error;
+    setTransactions([]); setTransfers([]); cache([]);
+  }, [userId, cache]);
+
   const balanceByCurrency = useMemo(() => {
     const result = transactions.reduce((output, item) => {
       const code = item.currency || 'USD';
@@ -113,5 +123,5 @@ export function useWalletTransactions({ user }) {
     return result;
   }, [transactions, transfers]);
 
-  return { transactions, transfers, balanceByCurrency, loading: loading || !ready, error, refresh, saveTransaction, deleteTransaction, createTransfer };
+  return { transactions, transfers, balanceByCurrency, loading: loading || !ready, error, refresh, saveTransaction, deleteTransaction, createTransfer, clearHistory };
 }
