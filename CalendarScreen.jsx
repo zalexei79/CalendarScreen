@@ -1831,7 +1831,7 @@ export default function CalendarScreen() {
   // This state controls which entry experience is shown without changing the global PRO mode.
   const [proEntryMode, setProEntryMode] = useState('trade'); // 'finance' | 'trade'
   const [form, setForm] = useState({
-    instrument: '', direction: 'LONG', sign: 'plus', pnl: '', time: currentTimeHHMM(), comment: '', platform: 'Manual', currency: 'USD',
+    instrument: '', direction: 'LONG', sign: 'plus', pnl: '', time: currentTimeHHMM(), comment: '', platform: 'Manual', currency: 'USD', accountTarget: 'main',
   });
   const [formError, setFormError] = useState('');
 
@@ -2330,7 +2330,9 @@ export default function CalendarScreen() {
         ? parseFloat(form.stopLoss)
         : null;
 
-      await hookSaveTrade({
+      if (!saveAsTrade && proEntryMode === 'finance' && traderMode && proAccessActive && form.accountTarget === 'wallet') {
+        await wallet.saveTransaction({ dateKey, time, title: instrument, amount: magnitude, kind: signedPnl < 0 ? 'expense' : 'income', currency: form.currency || currency, comment });
+      } else await hookSaveTrade({
         dateKey,
         isEditing: Boolean(editingTrade),
         editingTradeId: editingTrade?.id,
@@ -3537,6 +3539,15 @@ export default function CalendarScreen() {
             <span className={`mt-0.5 block pl-[22px] text-[9px] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{proEntryCopy.tradeHint}</span>
           </button>
         </div>
+
+        {isFinanceEntry && !editingTrade && (
+          <div className={`mt-3 rounded-2xl border p-3 ${isLight ? 'border-amber-200 bg-amber-50/60' : 'border-amber-400/15 bg-amber-400/[.04]'}`}>
+            <p className="text-[10px] font-semibold uppercase tracking-[.16em] text-amber-500">Куда записать операцию?</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {['main', ...(proAccessActive ? ['wallet'] : [])].map((target) => <button key={target} type="button" onClick={() => setForm((current) => ({ ...current, accountTarget: target }))} className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${form.accountTarget === target ? 'bg-amber-400 text-zinc-950' : isLight ? 'bg-white text-zinc-500' : 'bg-white/[.06] text-zinc-400'}`}>{target === 'wallet' ? 'Кошелёк · PRO' : 'Основной счёт'}</button>)}
+            </div>
+          </div>
+        )}
 
         {/* Income/expense or profit/loss — same place, different meaning. */}
         <div className={`mt-4 grid grid-cols-2 rounded-2xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-black/25 ring-1 ring-inset ring-white/[0.05]'}`}>
