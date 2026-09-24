@@ -30,6 +30,7 @@ export function useWalletTransactions({ user }) {
   });
   const [loading, setLoading] = useState(Boolean(userId));
   const [error, setError] = useState('');
+  const [transfers, setTransfers] = useState([]);
 
   const cache = useCallback((next) => {
     try { localStorage.setItem(cacheKey(owner), JSON.stringify(next)); } catch { /* guest cache is best effort */ }
@@ -38,14 +39,17 @@ export function useWalletTransactions({ user }) {
   const refresh = useCallback(async () => {
     if (!userId) { setLoading(false); return []; }
     setLoading(true);
-    const { data, error: queryError } = await supabase.from('wallet_transactions').select('*').eq('user_id', userId).order('date_key', { ascending: false }).order('time', { ascending: false });
+    const [{ data, error: queryError }, { data: transferRows, error: transferError }] = await Promise.all([
+      supabase.from('wallet_transactions').select('*').eq('user_id', userId).order('date_key', { ascending: false }).order('time', { ascending: false }),
+      supabase.from('wallet_transfers').select('*').eq('user_id', userId).order('date_key', { ascending: false }),
+    ]);
     setLoading(false);
-    if (queryError) {
+    if (queryError || transferError) {
       setError(queryError.code === 'PGRST205' ? 'WALLET_MIGRATION_REQUIRED' : (queryError.message || 'WALLET_LOAD_FAILED'));
       return [];
     }
     const next = (data || []).map(normalize);
-    setTransactions(next); cache(next); setError(''); return next;
+    setTransactions(next); setTransfers(transferRows || []); cache(next); setError(''); return next;
   }, [userId, cache]);
 
   useEffect(() => {
@@ -81,11 +85,23 @@ export function useWalletTransactions({ user }) {
     if (deleteError) { await refresh(); throw deleteError; }
   }, [transactions, userId, cache, refresh]);
 
+  const createTransfer = useCallback(async ({ amount, currency, fromAccount, toAccount, dateKey, comment = '' }) => {
+    if (!userId) throw new Error('AUTH_REQUIRED');
+    const { error: transferError } = await supabase.from('wallet_transfers').insert({ user_id: userId, amount: Number(amount), currency, from_account: fromAccount, to_account: toAccount, date_key: dateKey, comment });
+    if (transferError) throw transferError;
+    await refresh();
+  }, [userId, refresh]);
+
   const balanceByCurrency = useMemo(() => transactions.reduce((result, item) => {
     const code = item.currency || 'USD';
     result[code] = (result[code] || 0) + (item.kind === 'expense' ? -item.amount : item.amount);
     return result;
   }, {}), [transactions]);
+  for (const transfer of transfers) {
+    const code = transfer.currency || 'USD';
+    if (transfer.to_account === 'wallet') balanceByCurrency[code] = (balanceByCurrency[code] || 0) + Number(transfer.amount || 0);
+    if (transfer.from_account === 'wallet') balanceByCurrency[code] = (balanceByCurrency[code] || 0) - Number(transfer.amount || 0);
+  }
 
-  return { transactions, balanceByCurrency, loading, error, refresh, saveTransaction, deleteTransaction };
+  return { transactions, transfers, balanceByCurrency, loading, error, refresh, saveTransaction, deleteTransaction, createTransfer };
 }
