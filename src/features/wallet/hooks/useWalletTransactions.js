@@ -40,7 +40,10 @@ export function useWalletTransactions({ user }) {
     setLoading(true);
     const { data, error: queryError } = await supabase.from('wallet_transactions').select('*').eq('user_id', userId).order('date_key', { ascending: false }).order('time', { ascending: false });
     setLoading(false);
-    if (queryError) { setError(queryError.message || 'WALLET_LOAD_FAILED'); return []; }
+    if (queryError) {
+      setError(queryError.code === 'PGRST205' ? 'WALLET_MIGRATION_REQUIRED' : (queryError.message || 'WALLET_LOAD_FAILED'));
+      return [];
+    }
     const next = (data || []).map(normalize);
     setTransactions(next); cache(next); setError(''); return next;
   }, [userId, cache]);

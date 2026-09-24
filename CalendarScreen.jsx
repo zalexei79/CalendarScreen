@@ -3965,7 +3965,8 @@ export default function CalendarScreen() {
         periodStats={periodStats} periodTrades={periodTrades} currencySymbol={currencySymbol} formatMoney={formatMoney}
       />
 
-      {accountMode === 'wallet' ? <WalletPanel isLight={isLight} currency={currency} {...wallet} onSave={wallet.saveTransaction} onDelete={wallet.deleteTransaction} /> : <>
+      {accountMode === 'wallet' ? <WalletPanel isLight={isLight} currency={currency} {...wallet} onSave={wallet.saveTransaction} onDelete={wallet.deleteTransaction} /> : null}
+      {accountMode === 'main' && <>
       <div className="px-3 sm:px-5">
         <MonthlyGoal
           year={year}
@@ -4008,7 +4009,6 @@ export default function CalendarScreen() {
           if (endX < startX) goToNextMonth(); else goToPrevMonth();
         }}
       />
-      </>}
 
       {firstRunGuideStep === 1 && !traderMode && (
         <>
@@ -7359,6 +7359,7 @@ export default function CalendarScreen() {
           </div>
         </div>
       )}
+      </>}
     </div>
   );
 }
