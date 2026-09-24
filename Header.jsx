@@ -568,7 +568,7 @@ export default function Header({
 
       {/* PRO extras slide out below the static FREE / PRO switch. */}
       <div className={`grid transition-[grid-template-rows,opacity,margin,transform] duration-300 ease-out ${
-        traderMode
+        traderMode && accountMode === 'main'
           ? 'grid-rows-[1fr] opacity-100 mt-1.5 translate-y-0'
           : 'grid-rows-[0fr] opacity-0 mt-0 -translate-y-1 pointer-events-none'
       }`}>
