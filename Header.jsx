@@ -343,6 +343,18 @@ export default function Header({
                 >
                   Политика конфиденциальности
                 </a>
+                <a
+                  href="/delete-account.html"
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`mt-2 block rounded-xl border px-3 py-2.5 text-xs transition-colors ${
+                    isLight
+                      ? 'border-zinc-200 text-zinc-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700'
+                      : 'border-zinc-800 text-zinc-400 hover:border-red-400/30 hover:bg-red-400/5 hover:text-red-300'
+                  }`}
+                >
+                  Удалить аккаунт и данные
+                </a>
               </div>
             )}
           </div>
