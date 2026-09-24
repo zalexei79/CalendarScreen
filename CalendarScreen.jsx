@@ -143,6 +143,7 @@ export default function CalendarScreen() {
     loading: proAccessLoading,
     refresh: refreshProAccess,
   } = useProAccess({ user });
+  useEffect(() => { if (!proAccessActive && accountMode === 'wallet') setAccountMode('main'); }, [proAccessActive, accountMode]);
 
   const proDaysRemaining = useMemo(() => {
     if (!proAccessActive || !proAccessUntil) return 0;
