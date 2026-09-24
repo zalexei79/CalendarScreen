@@ -7,6 +7,20 @@ import { LANGUAGES, CURRENCIES } from './src/shared/config/constants';
 import { monthsFor } from './src/shared/i18n';
 import BrandIcon from './src/shared/ui/BrandIcon.jsx';
 
+function pendingSyncText(count, traderMode, language) {
+  const locale = language === 'md' ? 'ro' : language;
+  if (locale === 'en') return `${count} ${traderMode ? (count === 1 ? 'trade' : 'trades') : (count === 1 ? 'entry' : 'entries')} waiting for sync.`;
+  if (locale === 'ro') return `${count} ${traderMode ? (count === 1 ? 'tranzacție' : 'tranzacții') : (count === 1 ? 'înregistrare' : 'înregistrări')} așteaptă sincronizarea.`;
+  const form = (one, few, many) => {
+    const lastTwo = count % 100;
+    if (lastTwo >= 11 && lastTwo <= 14) return many;
+    if (count % 10 === 1) return one;
+    if (count % 10 >= 2 && count % 10 <= 4) return few;
+    return many;
+  };
+  return `${count} ${traderMode ? form('сделка', 'сделки', 'сделок') : form('запись', 'записи', 'записей')} ждут синхронизации.`;
+}
+
 export default function Header({
   isLight, traderMode, t, theme, setTheme, settingsRef, settingsOpen,
   closeSettings, openSettings, settingsVisible, language, setLanguage,
@@ -116,7 +130,7 @@ export default function Header({
                   </div>
                   {pendingSyncCount > 0 && (
                     <p className="border-t border-zinc-800 pt-2.5 text-[11px] leading-relaxed text-amber-300">
-                      {pendingSyncCount} {traderMode ? (pendingSyncCount === 1 ? 'сделка' : 'сделок') : (pendingSyncCount === 1 ? 'запись' : 'записей')} {t('pendingSyncMsg')}
+                      {pendingSyncText(pendingSyncCount, traderMode, language)}
                     </p>
                   )}
                 </div>
@@ -168,7 +182,7 @@ export default function Header({
             type="button"
             onClick={() => setTheme((v) => (v === 'light' ? 'dark' : 'light'))}
             title={isLight ? t('themeDark') : t('themeLight')}
-            aria-label="Toggle Theme"
+            aria-label={isLight ? t('themeDark') : t('themeLight')}
             className={[
               'relative flex items-center justify-center gap-1 rounded-full border h-10 w-10 sm:h-9 sm:w-9 px-2 text-xs overflow-hidden transition-all duration-300',
               isLight
@@ -328,8 +342,8 @@ export default function Header({
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <button
             onClick={goToPrevMonth}
-            aria-label="Previous Month"
-            title="Предыдущий месяц"
+            aria-label={t('previousMonth')}
+            title={t('previousMonth')}
             className={`rounded-full border h-9 w-9 flex items-center justify-center transition-all duration-200 hover:-translate-y-px ${isLight ? 'border-zinc-300/80 bg-white/70 text-zinc-600 hover:border-amber-400 hover:text-amber-700 hover:shadow-sm' : 'border-white/[0.08] bg-white/[0.035] text-zinc-400 hover:text-zinc-100 hover:border-white/[0.18] hover:bg-white/[0.06]'}`}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -391,8 +405,8 @@ export default function Header({
           </div>
           <button
             onClick={goToNextMonth}
-            aria-label="Next Month"
-            title="Следующий месяц"
+            aria-label={t('nextMonth')}
+            title={t('nextMonth')}
             className={`rounded-full border h-9 w-9 flex items-center justify-center transition-all duration-200 hover:-translate-y-px ${isLight ? 'border-zinc-300/80 bg-white/70 text-zinc-600 hover:border-amber-400 hover:text-amber-700 hover:shadow-sm' : 'border-white/[0.08] bg-white/[0.035] text-zinc-400 hover:text-zinc-100 hover:border-white/[0.18] hover:bg-white/[0.06]'}`}
           >
             <ChevronRight className="h-4 w-4" />

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../supabaseClient';
+import { translate } from '../../shared/i18n';
 
 export function planDateKey(plan) {
   return String(plan?.local_at || '').slice(0, 10);
@@ -11,7 +12,8 @@ export function planTime(plan) {
   return match?.[1] || '09:00';
 }
 
-export function useFinancePlans({ user }) {
+export function useFinancePlans({ user, language = 'ru' }) {
+  const t = (key) => translate(language, key);
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -30,14 +32,14 @@ export function useFinancePlans({ user }) {
       .limit(100);
     setLoading(false);
     if (queryError) {
-      setError('Не удалось загрузить планы.');
+      setError(t('planLoadFailed'));
       throw queryError;
     }
     setError('');
     const next = data || [];
     setPlans(next);
     return next;
-  }, [user?.id]);
+  }, [user?.id, language]);
 
   useEffect(() => {
     refreshPlans().catch(() => {});
@@ -56,7 +58,7 @@ export function useFinancePlans({ user }) {
     const scheduledAt = new Date(`${dateKey}T${time}:00`);
     const offsetMinutes = { at_time: 0, '1_day': 1440, '3_days': 4320, '1_week': 10080 }[remindOffset] || 0;
     scheduledAt.setMinutes(scheduledAt.getMinutes() - offsetMinutes);
-    if (!Number.isFinite(scheduledAt.getTime())) throw new Error('Выберите корректную дату и время.');
+    if (!Number.isFinite(scheduledAt.getTime())) throw new Error(t('planDateTimeInvalid'));
     const { data, error: createError } = await supabase.rpc('dayris_create_finance_plan', {
       p_id: id,
       p_title: title.trim(),
@@ -74,14 +76,14 @@ export function useFinancePlans({ user }) {
     if (createError) throw createError;
     await refreshPlans();
     return data;
-  }, [refreshPlans]);
+  }, [refreshPlans, language]);
 
   const updatePlan = useCallback(async ({ id, title, amount, currency, kind, dateKey, time, timezone, repeatRule = 'none', remindOffset = 'at_time', repeatUntil = null, repeatTotal = null }) => {
     const localAt = `${dateKey} ${time}:00`;
     const scheduledAt = new Date(`${dateKey}T${time}:00`);
     const offsetMinutes = { at_time: 0, '1_day': 1440, '3_days': 4320, '1_week': 10080 }[remindOffset] || 0;
     scheduledAt.setMinutes(scheduledAt.getMinutes() - offsetMinutes);
-    if (!Number.isFinite(scheduledAt.getTime())) throw new Error('Выберите корректную дату и время.');
+    if (!Number.isFinite(scheduledAt.getTime())) throw new Error(t('planDateTimeInvalid'));
     const { data, error: updateError } = await supabase.rpc('dayris_update_finance_plan', {
       p_id: id,
       p_title: title.trim(),
@@ -99,7 +101,7 @@ export function useFinancePlans({ user }) {
     if (updateError) throw updateError;
     await refreshPlans();
     return data;
-  }, [refreshPlans]);
+  }, [refreshPlans, language]);
 
   const resolvePlan = useCallback(async (id, outcome) => {
     const { error: resolveError } = await supabase.rpc('dayris_resolve_reminder', { p_id: id, p_outcome: outcome });

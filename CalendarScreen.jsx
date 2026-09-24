@@ -583,6 +583,11 @@ export default function CalendarScreen() {
 
   const t = (key) => translate(language, key);
 
+  useEffect(() => {
+    document.documentElement.lang = language === 'md' ? 'ro' : language;
+    document.title = `${translate(language, 'appName')} — ${translate(language, traderMode ? 'titlePro' : 'titleMoney')}`;
+  }, [language, traderMode]);
+
   // Keep onboarding language independent from the app language state so the
   // very next onboarding screen switches immediately after the user's tap,
   // regardless of the exact language codes used in LANGUAGES.
@@ -1430,7 +1435,7 @@ export default function CalendarScreen() {
     updatePlan,
     resolvePlan,
     deletePlan,
-  } = useFinancePlans({ user });
+  } = useFinancePlans({ user, language });
   const [planComposerOpen, setPlanComposerOpen] = useState(false);
   const [planComposerPlan, setPlanComposerPlan] = useState(null);
   const [planSaving, setPlanSaving] = useState(false);
@@ -1525,7 +1530,7 @@ export default function CalendarScreen() {
   }
 
   function formatPlanAmount(plan) {
-    if (plan?.amount == null) return language === 'en' ? 'amount later' : language === 'ro' ? 'sumă mai târziu' : 'сумма позже';
+    if (plan?.amount == null) return t('planAmountLater');
     const symbol = getCurrencyMeta(plan?.currency || 'USD').symbol;
     return `${plan?.kind === 'income' ? '+' : '−'}${symbol}${formatMoney(Number(plan?.amount) || 0)}`;
   }
@@ -1554,16 +1559,16 @@ export default function CalendarScreen() {
     if (planSaving) return;
     const dateKey = payload.dateKey || (planComposerPlan ? planDateKey(planComposerPlan) : (selectedKey || targetDateKey));
     if (!dateKey || dateKey <= todayKey) {
-      setPlanError('План можно создать только на будущий день.');
+      setPlanError(t('planFutureOnly'));
       return;
     }
     const rawAmount = String(payload.amount ?? '').trim();
     const value = rawAmount === '' ? null : Number(rawAmount.replace(',', '.'));
-    if (!payload.title?.trim()) { setPlanError('Напишите, что запланировано.'); return; }
-    if (value != null && (!Number.isFinite(value) || value < 0)) { setPlanError('Укажите корректную сумму.'); return; }
+    if (!payload.title?.trim()) { setPlanError(t('planTitleRequired')); return; }
+    if (value != null && (!Number.isFinite(value) || value < 0)) { setPlanError(t('planAmountInvalid')); return; }
     const repeatTotal = payload.repeatRule === 'none' || String(payload.repeatTotal ?? '').trim() === '' ? null : Number(payload.repeatTotal);
-    if (repeatTotal != null && (!Number.isInteger(repeatTotal) || repeatTotal < 1 || repeatTotal > 600)) { setPlanError(language === 'en' ? 'Enter a payment count from 1 to 600.' : language === 'ro' ? 'Introdu un număr de plăți între 1 și 600.' : 'Укажите от 1 до 600 платежей.'); return; }
-    if (payload.repeatRule !== 'none' && payload.repeatUntil && payload.repeatUntil < dateKey) { setPlanError(language === 'en' ? 'The end date must be on or after the event date.' : language === 'ro' ? 'Data de final trebuie să fie după sau egală cu data evenimentului.' : 'Дата окончания должна быть не раньше даты события.'); return; }
+    if (repeatTotal != null && (!Number.isInteger(repeatTotal) || repeatTotal < 1 || repeatTotal > 600)) { setPlanError(t('planCountInvalid')); return; }
+    if (payload.repeatRule !== 'none' && payload.repeatUntil && payload.repeatUntil < dateKey) { setPlanError(t('planEndInvalid')); return; }
     setPlanSaving(true);
     setPlanError('');
     try {
@@ -1577,7 +1582,7 @@ export default function CalendarScreen() {
       setPlanComposerOpen(false);
       setPlanComposerPlan(null);
     } catch (error) {
-      const message = String(error?.message || 'Не удалось создать план.');
+      const message = String(error?.message || t('planCreateFailed'));
       setPlanError(message);
     } finally {
       setPlanSaving(false);
@@ -1590,7 +1595,7 @@ export default function CalendarScreen() {
     setPlanError('');
     try {
       if (outcome === 'completed' && addRecord) {
-        if (plan.amount == null) throw new Error('Для записи сначала укажите сумму.');
+        if (plan.amount == null) throw new Error(t('planAmountRequired'));
         const signedPnl = (Number(plan.amount) || 0) * (plan.kind === 'income' ? 1 : -1);
         await hookSaveTrade({
           dateKey: planDateKey(plan),
@@ -1599,7 +1604,7 @@ export default function CalendarScreen() {
           instrument: plan.title,
           direction: signedPnl >= 0 ? 'LONG' : 'SHORT',
           signedPnl,
-          comment: 'Подтверждено из плана DAYRIS',
+          comment: t('planConfirmedComment'),
           platform: 'Manual',
           currency: plan.currency || currency,
           traderMode: false,
@@ -1607,7 +1612,7 @@ export default function CalendarScreen() {
       }
       await resolvePlan(plan.id, outcome);
     } catch (error) {
-      setPlanError(error?.message || 'Не удалось обновить план.');
+      setPlanError(error?.message || t('planUpdateFailed'));
     } finally {
       setPlanBusyId(null);
     }
@@ -1630,7 +1635,7 @@ export default function CalendarScreen() {
       await deletePlan(plan.id);
       setPlanDeleteConfirm(null);
     } catch (error) {
-      setPlanError(error?.message || 'Не удалось удалить план.');
+      setPlanError(error?.message || t('planDeleteFailed'));
     } finally {
       setPlanBusyId(null);
     }
@@ -1674,7 +1679,7 @@ export default function CalendarScreen() {
       sign: plan.kind === 'income' ? 'plus' : 'minus',
       pnl: plan.amount == null ? '' : String(plan.amount),
       time: planTime(plan),
-      comment: 'Подтверждено из плана DAYRIS',
+      comment: t('planConfirmedComment'),
       platform: 'Manual',
       currency: plan.currency || currency,
       takeProfit: '',
@@ -1729,8 +1734,8 @@ export default function CalendarScreen() {
   }, [installInfoOpen]);
 
   const installInstructions = isIOS
-    ? 'Нажмите значок «Поделиться» внизу Safari, затем «На экран «Домой»» — приложение появится как иконка, будет открываться без адресной строки и работать офлайн.'
-    : 'Нажмите кнопку ниже (или значок установки в адресной строке браузера) — приложение появится на рабочем столе/телефоне и будет работать без интернета.';
+    ? t('installIos')
+    : t('installOther');
 
   async function handleInstallClick() {
     if (deferredInstallPrompt) {
@@ -1996,19 +2001,19 @@ export default function CalendarScreen() {
     const streakPenalty = Math.min(basicAnalysis.longestLossStreak, 6) * 1.5;
     const score = Math.max(4, Math.min(99, Math.round(pfComponent + winComponent + payoffComponent - streakPenalty + 10)));
     const grade = score >= 85 ? 'S' : score >= 70 ? 'A' : score >= 55 ? 'B' : score >= 40 ? 'C' : 'D';
-    const label = score >= 85 ? 'Элитный трейдер' : score >= 70 ? 'Уверенная рука' : score >= 55 ? 'Стабильная база' : score >= 40 ? 'Есть над чем работать' : 'Требует дисциплины';
+    const label = score >= 85 ? t('traderElite') : score >= 70 ? t('traderConfident') : score >= 55 ? t('traderSteady') : score >= 40 ? t('traderImprove') : t('traderDiscipline');
     return { score, grade, label };
-  }, [basicAnalysis, analysisStats]);
+  }, [basicAnalysis, analysisStats, language]);
 
   // Rule-based observations from the selected trades, not an AI assessment.
   const traderInsight = useMemo(() => {
     if (!basicAnalysis) return '';
-    if (basicAnalysis.longestLossStreak >= 3) return `Самая длинная серия убытков в выборке: ${basicAnalysis.longestLossStreak}. Сопоставьте этот период с заметками к торговым дням: по одним результатам сделок нельзя определить причины убытков или эмоциональное состояние.`;
-    if (basicAnalysis.payoffRatio > 0 && basicAnalysis.payoffRatio < 1 && analysisStats.winrate >= 50) return 'Винрейт хороший, но средний убыток крупнее среднего профита — похоже, прибыль фиксируется слишком рано, а убытки пересиживаются.';
-    if (basicAnalysis.profitFactor !== Infinity && basicAnalysis.profitFactor < 1) return 'Profit Factor ниже 1 — за период убытки перевешивают прибыль. Стоит пересмотреть risk/reward по сделкам.';
-    if (basicAnalysis.profitFactor >= 1.5) return 'Сильный период: Profit Factor выше 1.5 говорит о стабильном преимуществе в текущей стратегии. Держите риск неизменным.';
-    return 'Данных пока немного для глубоких выводов — статистика станет точнее по мере накопления сделок.';
-  }, [basicAnalysis, analysisStats]);
+    if (basicAnalysis.longestLossStreak >= 3) return t('insightLossStreak').replace('{0}', basicAnalysis.longestLossStreak);
+    if (basicAnalysis.payoffRatio > 0 && basicAnalysis.payoffRatio < 1 && analysisStats.winrate >= 50) return t('insightPayoff');
+    if (basicAnalysis.profitFactor !== Infinity && basicAnalysis.profitFactor < 1) return t('insightProfitFactorLow');
+    if (basicAnalysis.profitFactor >= 1.5) return t('insightProfitFactorHigh');
+    return t('insightLittleData');
+  }, [basicAnalysis, analysisStats, language]);
 
   const moneyAnalysis = useMemo(() => {
     if (traderMode || analysisTrades.length === 0) return null;
@@ -2057,7 +2062,7 @@ export default function CalendarScreen() {
   const targetDateKey = selectedCell ? selectedCell.key : keyFromDate(today);
   const todayKey = keyFromDate(today);
   const isFutureSelected = targetDateKey > todayKey;
-  const targetDateLabel = parseDateKeyLocal(targetDateKey).toLocaleDateString('ru-RU', {
+  const targetDateLabel = parseDateKeyLocal(targetDateKey).toLocaleDateString(language === 'en' ? 'en-US' : language === 'ro' || language === 'md' ? 'ro-RO' : 'ru-RU', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -2270,25 +2275,25 @@ export default function CalendarScreen() {
       const dateKey = modalDateKey || targetDateKey;
 
       if (dateKey > todayKey) {
-        setFormError('Нельзя добавить запись на будущую дату.');
+        setFormError(t('recordFutureBlocked'));
         return;
       }
 
       const instrument = textValue(form.instrument).trim().toUpperCase();
       if (!instrument) {
-        setFormError(saveAsTrade ? 'Укажите символ инструмента.' : 'Выберите категорию или укажите свою.');
+        setFormError(t('enterSymbolOrCategory'));
         return;
       }
 
       const pnlText = textValue(form.pnl).trim();
       if (!pnlText) {
-        setFormError('Укажите сумму в $.');
+        setFormError(t('enterAmount'));
         return;
       }
 
       const magnitude = parseFloat(pnlText);
       if (Number.isNaN(magnitude) || magnitude < 0) {
-        setFormError('Сумма должна быть числом ≥ 0.');
+        setFormError(t('amountMustBePositive'));
         return;
       }
 
@@ -2352,10 +2357,10 @@ export default function CalendarScreen() {
       const isUserForeignKeyError = err?.code === '23503' && String(err?.message || '').includes('trades_user_id_fkey');
       setFormError(
         isUserForeignKeyError
-          ? 'Не удалось связать запись с аккаунтом. Выйдите и войдите снова. Если ошибка повторится, требуется обновление базы данных.'
+          ? t('entryAccountLinkFailed')
           : navigator.onLine === false
-          ? 'Не удалось поставить запись в очередь офлайн-синхронизации. Попробуйте ещё раз.'
-          : (err?.message || 'Не удалось сохранить запись. Попробуйте ещё раз.')
+          ? t('entryOfflineQueueFailed')
+          : (err?.message || t('entrySaveFailed'))
       );
     } finally {
       saveInFlightRef.current = false;
@@ -3128,10 +3133,10 @@ export default function CalendarScreen() {
     const latePurchases = historyTrades.filter((t) => t.pnl < 0 && t.instrument === 'Покупки' && Number(textValue(t.time).slice(0, 2)) >= 20);
     for (const t of historyTrades.filter((t) => t.pnl < 0)) expensesByCategory[t.instrument || 'Другое'] = (expensesByCategory[t.instrument || 'Другое'] || 0) + Math.abs(t.pnl);
     const [topCategory, topAmount] = Object.entries(expensesByCategory).sort((a, b) => b[1] - a[1])[0] || [];
-    const insights = topCategory ? [`${topCategory} — ${Math.round((topAmount / historyExpense) * 100)}% всех расходов.`] : [];
-    if (latePurchases.length >= 2) insights.push(`Есть ${latePurchases.length} поздних покупок после 20:00 — проверь, не импульсивные ли они.`);
+    const insights = topCategory ? [t('historyTopExpense').replace('{0}', topCategory).replace('{1}', Math.round((topAmount / historyExpense) * 100))] : [];
+    if (latePurchases.length >= 2) insights.push(t('historyLatePurchases').replace('{0}', latePurchases.length));
     return insights;
-  }, [historyTrades, historyExpense, traderMode]);
+  }, [historyTrades, historyExpense, traderMode, language]);
 
   const historyAnalysis = useMemo(() => {
     const incomeSources = {}, expenseCategories = {}, daily = {};
@@ -3388,7 +3393,7 @@ export default function CalendarScreen() {
 
   function handleEditDeposit() {
     try {
-      const input = window.prompt('Размер депозита для расчёта %:', depositSize > 0 ? String(depositSize) : '1000');
+      const input = window.prompt(t('depositPrompt'), depositSize > 0 ? String(depositSize) : '1000');
       if (!input) return;
       const value = parseFloat(input);
       if (Number.isNaN(value) || value <= 0) return;
@@ -4101,16 +4106,16 @@ export default function CalendarScreen() {
             <div className={`relative isolate overflow-hidden rounded-[28px] border px-5 py-5 text-center ${isLight ? 'border-slate-200 bg-slate-50/80' : 'border-white/[0.07] bg-white/[0.02]'}`}>
               <div className="pointer-events-none absolute left-1/2 top-[-88px] -z-10 h-44 w-44 -translate-x-1/2 rounded-full bg-amber-400/[0.11] blur-3xl" />
               <span className={`mx-auto grid h-11 w-11 place-items-center rounded-2xl ${isLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-400/[0.10] text-amber-400'}`}><Calendar className="h-5 w-5" /></span>
-              <p className={`mt-2 font-data text-[10px] font-semibold uppercase tracking-[0.2em] ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>Будущий день</p>
+              <p className={`mt-2 font-data text-[10px] font-semibold uppercase tracking-[0.2em] ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>{t('futureDay')}</p>
               <h3 className={`mt-1 text-lg font-semibold tracking-[-0.02em] ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>{targetDateLabel}</h3>
-              <p className={`mx-auto mt-2 max-w-xs text-xs leading-relaxed ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>Добавь платёж, доход или личное дело — DAYRIS напомнит вовремя.</p>
+              <p className={`mx-auto mt-2 max-w-xs text-xs leading-relaxed ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>{t('futureDayHint')}</p>
               <button
                 type="button"
                 onClick={openPlanComposer}
                 className="group mt-4 inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 px-5 py-3 text-sm font-bold text-zinc-950 shadow-lg shadow-amber-500/25 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-amber-500/35 active:scale-[0.98]"
               >
                 <span className="grid h-7 w-7 place-items-center rounded-full bg-black/10 transition-transform duration-200 group-hover:rotate-90"><Plus className="h-4 w-4 stroke-[3]" /></span>
-                Запланировать
+                {t('schedule')}
               </button>
             </div>
             <FinancePlanList
@@ -4150,13 +4155,13 @@ export default function CalendarScreen() {
           <div className="flex items-center self-start">
             <button
               onClick={() => isFutureSelected ? openPlanComposer() : openModal()}
-              title={isFutureSelected ? 'Создать план на этот день' : undefined}
+              title={isFutureSelected ? t('scheduleDay') : undefined}
               className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 px-4 py-2.5 text-xs sm:text-sm font-bold text-zinc-950 shadow-md shadow-amber-500/25 hover:shadow-lg hover:shadow-amber-500/35 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-black/10 transition-transform duration-200 group-hover:rotate-90">
                 <Plus className="h-3.5 w-3.5 stroke-[3] text-zinc-950" />
               </span>
-              <span>{isFutureSelected ? 'Запланировать' : (traderMode ? t('addTrade') : t('addRecord'))}</span>
+              <span>{isFutureSelected ? t('schedule') : (traderMode ? t('addTrade') : t('addRecord'))}</span>
             </button>
           </div>
 
@@ -4253,7 +4258,7 @@ export default function CalendarScreen() {
                             : 'bg-red-500/10 text-red-500',
                         ].join(' ')}
                       >
-                        {trade.pnl >= 0 ? (traderMode ? 'Прибыль' : 'Доход') : (traderMode ? 'Убыток' : 'Расход')}
+                        {trade.pnl >= 0 ? (traderMode ? t('profitTrade') : t('income')) : (traderMode ? t('lossTrade') : t('expense'))}
                       </span>
                       <span className={`font-data text-[10px] shrink-0 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{trade.platform}</span>
                     </div>
@@ -4266,8 +4271,8 @@ export default function CalendarScreen() {
                         className={`grid h-10 w-10 sm:h-8 sm:w-8 place-items-center rounded-xl transition-colors sm:opacity-0 sm:group-hover:opacity-100 ${
                           isLight ? 'bg-zinc-100 text-zinc-500 hover:text-amber-600' : 'bg-white/[0.05] text-zinc-500 hover:text-amber-400'
                         }`}
-                        aria-label={traderMode ? 'Редактировать сделку' : t('editRecord')}
-                        title={traderMode ? 'Редактировать сделку' : t('editRecord')}
+                        aria-label={traderMode ? t('editTrade') : t('editRecord')}
+                        title={traderMode ? t('editTrade') : t('editRecord')}
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
@@ -4276,8 +4281,8 @@ export default function CalendarScreen() {
                         className={`grid h-10 w-10 sm:h-8 sm:w-8 place-items-center rounded-xl transition-colors sm:opacity-0 sm:group-hover:opacity-100 ${
                           isLight ? 'bg-zinc-100 text-zinc-500 hover:text-red-500' : 'bg-white/[0.05] text-zinc-500 hover:text-red-400'
                         }`}
-                        aria-label={traderMode ? 'Удалить сделку' : t('deleteRecord')}
-                        title={traderMode ? 'Удалить сделку' : t('deleteRecord')}
+                        aria-label={traderMode ? t('deleteTrade') : t('deleteRecord')}
+                        title={traderMode ? t('deleteTrade') : t('deleteRecord')}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -4319,7 +4324,7 @@ export default function CalendarScreen() {
           <div className={`w-full max-w-sm rounded-[26px] border p-5 shadow-2xl ${isLight ? 'border-slate-200 bg-white text-slate-950' : 'border-zinc-800 bg-zinc-950 text-zinc-100'}`}>
             <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-rose-500/12 text-rose-500"><Trash2 className="h-5 w-5" /></span><div><p className="font-data text-[10px] uppercase tracking-[0.18em] text-rose-500">{planDeleteText.eyebrow}</p><h3 className="mt-1 text-lg font-semibold break-words">{planDeleteConfirm.title}</h3><p className="mt-1 font-data text-sm text-zinc-500">{formatPlanAmount(planDeleteConfirm)}</p></div></div>
             <p className="mt-4 text-sm leading-relaxed text-zinc-500">{planDeleteConfirm.repeat_rule !== 'none' ? planDeleteText.recurring : planDeleteText.once}</p>
-            {planError && <p role="alert" className="mt-3 text-xs leading-relaxed text-rose-400">{String(planError).includes('PLAN_NOT_FOUND') ? 'План уже был изменён. Обнови календарь и попробуй снова.' : planError}</p>}
+            {planError && <p role="alert" className="mt-3 text-xs leading-relaxed text-rose-400">{String(planError).includes('PLAN_NOT_FOUND') ? t('planNotFound') : planError}</p>}
             <div className="mt-5 flex gap-2"><button type="button" disabled={Boolean(planBusyId)} onClick={() => setPlanDeleteConfirm(null)} className={`flex-1 rounded-2xl border px-4 py-3 text-sm font-semibold ${isLight ? 'border-slate-200 text-slate-600 hover:bg-slate-50' : 'border-white/[0.08] text-zinc-400 hover:bg-white/[0.04]'} disabled:opacity-50`}>{planDeleteText.cancel}</button><button type="button" disabled={Boolean(planBusyId)} onClick={() => deletePlannedItem(planDeleteConfirm)} className="flex-1 rounded-2xl bg-rose-500 px-4 py-3 text-sm font-bold text-white transition hover:bg-rose-400 disabled:opacity-50">{planBusyId ? planDeleteText.removing : planDeleteText.remove}</button></div>
           </div>
         </div>
@@ -4328,9 +4333,9 @@ export default function CalendarScreen() {
       {planConfirm && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center" onMouseDown={(event) => { if (event.target === event.currentTarget) setPlanConfirm(null); }}>
           <div className={`w-full max-w-sm rounded-[26px] border p-5 shadow-2xl ${isLight ? 'border-slate-200 bg-white text-slate-950' : 'border-zinc-800 bg-zinc-950 text-zinc-100'}`}>
-            <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-emerald-500/12 text-emerald-500"><CheckCircle2 className="h-5 w-5" /></span><div><p className="font-data text-[10px] uppercase tracking-[0.18em] text-emerald-500">План выполнен?</p><h3 className="mt-1 text-lg font-semibold">{planConfirm.title}</h3><p className="mt-1 font-data text-sm text-zinc-500">{formatPlanAmount(planConfirm)}</p></div></div>
-            <p className="mt-4 text-sm leading-relaxed text-zinc-500">Добавить подтверждённую сумму как обычную запись в календарь?</p>
-            <div className="mt-5 space-y-2"><button type="button" disabled={Boolean(planBusyId)} onClick={() => planConfirm.amount == null ? openPlanRecord(planConfirm) : (setPlanConfirm(null), finishPlan(planConfirm, 'completed', true))} className="w-full rounded-2xl bg-emerald-500 px-4 py-3.5 text-sm font-bold text-white transition hover:bg-emerald-400 disabled:opacity-50">{planConfirm.amount == null ? 'Указать сумму и добавить' : 'Добавить в календарь'}</button><button type="button" disabled={Boolean(planBusyId)} onClick={() => { setPlanConfirm(null); finishPlan(planConfirm, 'completed', false); }} className={`w-full rounded-2xl border px-4 py-3 text-sm font-semibold ${isLight ? 'border-slate-200 text-slate-600 hover:bg-slate-50' : 'border-white/[0.08] text-zinc-400 hover:bg-white/[0.04]'} disabled:opacity-50`}>Нет, только отметить</button><button type="button" onClick={() => setPlanConfirm(null)} className="w-full py-2 text-xs text-zinc-500">Отмена</button></div>
+            <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-emerald-500/12 text-emerald-500"><CheckCircle2 className="h-5 w-5" /></span><div><p className="font-data text-[10px] uppercase tracking-[0.18em] text-emerald-500">{t('planCompleteEyebrow')}</p><h3 className="mt-1 text-lg font-semibold">{planConfirm.title}</h3><p className="mt-1 font-data text-sm text-zinc-500">{formatPlanAmount(planConfirm)}</p></div></div>
+            <p className="mt-4 text-sm leading-relaxed text-zinc-500">{t('planCompleteBody')}</p>
+            <div className="mt-5 space-y-2"><button type="button" disabled={Boolean(planBusyId)} onClick={() => planConfirm.amount == null ? openPlanRecord(planConfirm) : (setPlanConfirm(null), finishPlan(planConfirm, 'completed', true))} className="w-full rounded-2xl bg-emerald-500 px-4 py-3.5 text-sm font-bold text-white transition hover:bg-emerald-400 disabled:opacity-50">{planConfirm.amount == null ? t('planAddAmountAndRecord') : t('planAddRecord')}</button><button type="button" disabled={Boolean(planBusyId)} onClick={() => { setPlanConfirm(null); finishPlan(planConfirm, 'completed', false); }} className={`w-full rounded-2xl border px-4 py-3 text-sm font-semibold ${isLight ? 'border-slate-200 text-slate-600 hover:bg-slate-50' : 'border-white/[0.08] text-zinc-400 hover:bg-white/[0.04]'} disabled:opacity-50`}>{t('planMarkOnly')}</button><button type="button" onClick={() => setPlanConfirm(null)} className="w-full py-2 text-xs text-zinc-500">{t('planCancel')}</button></div>
           </div>
         </div>
       )}
@@ -5236,19 +5241,19 @@ export default function CalendarScreen() {
                     const streakPenalty = Math.min(longestLossStreak, 6) * 1.5;
                     const score = Math.max(4, Math.min(99, Math.round(pfComponent + winComponent + payoffComponent - streakPenalty + 10)));
                     const grade = score >= 85 ? 'S' : score >= 70 ? 'A' : score >= 55 ? 'B' : score >= 40 ? 'C' : 'D';
-                    const scoreLabel = score >= 85 ? 'Элитный трейдер' : score >= 70 ? 'Уверенная рука' : score >= 55 ? 'Стабильная база' : score >= 40 ? 'Есть над чем работать' : 'Требует дисциплины';
+                    const scoreLabel = score >= 85 ? t('traderElite') : score >= 70 ? t('traderConfident') : score >= 55 ? t('traderSteady') : score >= 40 ? t('traderImprove') : t('traderDiscipline');
                     const scoreColor = score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : score >= 40 ? '#f97316' : '#ef4444';
                     const scoreCirc = 238.76;
 
                     const insight = longestLossStreak >= 3
-                      ? `Самая длинная серия убытков в выборке: ${longestLossStreak}. Сопоставьте этот период с заметками к торговым дням: по одним результатам сделок нельзя определить причины убытков или эмоциональное состояние.`
+                      ? t('insightLossStreak').replace('{0}', longestLossStreak)
                       : (payoffRatio > 0 && payoffRatio < 1 && winrate >= 50)
-                      ? 'Винрейт хороший, но средний убыток крупнее среднего профита — похоже, прибыль фиксируется слишком рано.'
+                      ? t('insightPayoff')
                       : (profitFactor !== Infinity && profitFactor < 1)
-                      ? 'Profit Factor ниже 1 — за период убытки перевешивают прибыль. Стоит пересмотреть risk/reward.'
+                      ? t('insightProfitFactorLow')
                       : profitFactor >= 1.5
-                      ? 'Сильный период: Profit Factor выше 1.5 говорит о стабильном преимуществе стратегии.'
-                      : 'Данных пока немного — статистика станет точнее по мере накопления сделок.';
+                      ? t('insightProfitFactorHigh')
+                      : t('insightLittleData');
 
                     return (
                       <div className="mb-4 space-y-3">
@@ -5257,7 +5262,7 @@ export default function CalendarScreen() {
                           <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-amber-400/[0.07] blur-3xl" />
                           <div className="relative flex items-center justify-between mb-5">
                             <span className="flex items-center gap-1.5 font-data text-[10px] uppercase tracking-[0.28em] text-amber-500 font-bold"><Zap className="h-3 w-3" /> PRO Scorecard</span>
-                            <span className={`rounded-full px-2.5 py-1 font-data text-[10px] font-bold tracking-wide ${score >= 80 ? 'bg-emerald-500/15 text-emerald-500' : score >= 60 ? 'bg-amber-400/15 text-amber-500' : score >= 40 ? 'bg-orange-500/15 text-orange-500' : 'bg-red-500/15 text-red-500'}`}>Грейд {grade}</span>
+                            <span className={`rounded-full px-2.5 py-1 font-data text-[10px] font-bold tracking-wide ${score >= 80 ? 'bg-emerald-500/15 text-emerald-500' : score >= 60 ? 'bg-amber-400/15 text-amber-500' : score >= 40 ? 'bg-orange-500/15 text-orange-500' : 'bg-red-500/15 text-red-500'}`}>{t('scoreGrade')} {grade}</span>
                           </div>
                           <div className="relative flex flex-col items-center text-center gap-4 sm:flex-row sm:text-left sm:gap-8">
                             <div className="relative flex shrink-0 items-center justify-center" style={{ width: 132, height: 132 }}>
@@ -5274,7 +5279,7 @@ export default function CalendarScreen() {
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className={`text-base font-semibold leading-tight ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{scoreLabel}</p>
-                              <p className="mt-1.5 text-[11px] text-zinc-500 leading-relaxed max-w-xs mx-auto sm:mx-0">На основе Profit Factor, винрейта, payoff и серий убытков за текущий фильтр истории.</p>
+                              <p className="mt-1.5 text-[11px] text-zinc-500 leading-relaxed max-w-xs mx-auto sm:mx-0">{t('scoreDescription')}</p>
                               <div className={`mt-4 inline-flex items-baseline gap-2 border-t pt-3 sm:border-t-0 sm:pt-0 sm:border-l sm:pl-5 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
                                 <span className="text-[10px] uppercase tracking-wider text-zinc-500">Profit Factor</span>
                                 <span className={`font-display text-2xl font-bold tabular-nums ${profitFactor >= 1.5 ? 'text-emerald-500' : profitFactor >= 1 ? (isLight ? 'text-zinc-800' : 'text-zinc-200') : 'text-red-500'}`}>{profitFactor === Infinity ? 'MAX' : profitFactor.toFixed(2)}</span>
@@ -5289,11 +5294,11 @@ export default function CalendarScreen() {
                             <p className={`font-display text-lg font-semibold tabular-nums ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{payoffRatio > 0 ? `1:${payoffRatio.toFixed(2)}` : '—'}</p>
                           </div>
                           <div className="px-3 text-center">
-                            <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1.5 flex items-center justify-center gap-1"><TrendingUp className="h-3 w-3 text-emerald-500/70" /> Средний +</p>
+                            <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1.5 flex items-center justify-center gap-1"><TrendingUp className="h-3 w-3 text-emerald-500/70" /> {t('avgWin')}</p>
                             <p className="font-data text-lg font-semibold text-emerald-500 tabular-nums">+{historyCurrencySymbol}{formatMoney(avgWin)}</p>
                           </div>
                           <div className="px-3 text-center">
-                            <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1.5 flex items-center justify-center gap-1"><TrendingDown className="h-3 w-3 text-red-500/70" /> Средний −</p>
+                            <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1.5 flex items-center justify-center gap-1"><TrendingDown className="h-3 w-3 text-red-500/70" /> {t('avgLoss')}</p>
                             <p className="font-data text-lg font-semibold text-red-500 tabular-nums">-{historyCurrencySymbol}{formatMoney(avgLoss)}</p>
                           </div>
                         </div>
@@ -5301,24 +5306,24 @@ export default function CalendarScreen() {
                         <div className="grid grid-cols-2 gap-3">
                           <div className={`relative overflow-hidden rounded-2xl p-4 bg-gradient-to-br ${isLight ? 'from-emerald-50 to-white' : 'from-emerald-500/[0.09] to-transparent'}`}>
                             <TrendingUp className="absolute -right-2 -bottom-2 h-14 w-14 text-emerald-500/10" />
-                            <p className="relative text-[9px] uppercase tracking-wider text-emerald-600/80 mb-1.5">Лучший день</p>
+                            <p className="relative text-[9px] uppercase tracking-wider text-emerald-600/80 mb-1.5">{t('bestDay')}</p>
                             <p className="relative font-display text-xl font-bold text-emerald-500 tabular-nums">{formatSignedShort(bestDay[1])}</p>
                             <p className="relative mt-1 text-[10px] text-zinc-500">{formatDateLabel(bestDay[0])}</p>
                           </div>
                           <div className={`relative overflow-hidden rounded-2xl p-4 bg-gradient-to-br ${isLight ? 'from-red-50 to-white' : 'from-red-500/[0.09] to-transparent'}`}>
                             <TrendingDown className="absolute -right-2 -bottom-2 h-14 w-14 text-red-500/10" />
-                            <p className="relative text-[9px] uppercase tracking-wider text-red-500/80 mb-1.5">Худший день</p>
+                            <p className="relative text-[9px] uppercase tracking-wider text-red-500/80 mb-1.5">{t('worstDay')}</p>
                             <p className="relative font-display text-xl font-bold text-red-500 tabular-nums">{formatSignedShort(worstDay[1])}</p>
                             <p className="relative mt-1 text-[10px] text-zinc-500">{formatDateLabel(worstDay[0])}</p>
                           </div>
                         </div>
 
                         <div className={`flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t pt-3 text-[11px] font-data ${isLight ? 'border-zinc-200 text-zinc-600' : 'border-zinc-800 text-zinc-400'}`}>
-                          <span className="inline-flex items-center gap-1.5"><Award className="h-3 w-3 text-amber-500/80" /> Частый инструмент <span className={isLight ? 'text-zinc-900 font-semibold' : 'text-zinc-100 font-semibold'}>{topInstrument ? topInstrument[0] : '—'}</span></span>
+                          <span className="inline-flex items-center gap-1.5"><Award className="h-3 w-3 text-amber-500/80" /> {t('topInstrument')} <span className={isLight ? 'text-zinc-900 font-semibold' : 'text-zinc-100 font-semibold'}>{topInstrument ? topInstrument[0] : '—'}</span></span>
                           {longestLossStreak >= 2 && (
                             <>
                               <span className="text-zinc-400/40">·</span>
-                              <span className="inline-flex items-center gap-1.5 text-red-400"><Flame className="h-3 w-3" /> Серия убытков <span className="font-semibold">{longestLossStreak}</span></span>
+                              <span className="inline-flex items-center gap-1.5 text-red-400"><Flame className="h-3 w-3" /> {t('lossStreak')} <span className="font-semibold">{longestLossStreak}</span></span>
                             </>
                           )}
                         </div>
@@ -5355,8 +5360,8 @@ export default function CalendarScreen() {
                           <div className="relative flex items-start gap-2.5 mb-3">
                             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-400/10 text-amber-500"><Sparkles className="h-4 w-4" /></span>
                             <div>
-                              <p className={`text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Наблюдение по статистике</p>
-                              <p className="text-[11px] text-zinc-500">На основе сделок за выбранный период</p>
+                              <p className={`text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('statsObservation')}</p>
+                              <p className="text-[11px] text-zinc-500">{t('statsObservationHint')}</p>
                             </div>
                           </div>
                           <p className={`relative rounded-xl border px-3 py-2.5 text-xs leading-relaxed mb-3 ${isLight ? 'border-zinc-200 bg-white text-zinc-700' : 'border-zinc-800 bg-black/25 text-zinc-300'}`}>{insight}</p>
@@ -5907,7 +5912,7 @@ export default function CalendarScreen() {
                           type="button"
                           onClick={() => setForm((f) => ({ ...f, currency: c.code }))}
                           title={c.code}
-                          aria-label={`Валюта ${c.code}`}
+                          aria-label={`${t('currency')} ${c.code}`}
                           className={[
                             'flex h-8 min-w-8 items-center justify-center rounded-lg px-2 font-data text-xs transition-all duration-200',
                             form.currency === c.code
@@ -5931,7 +5936,7 @@ export default function CalendarScreen() {
                       type="button"
                       onClick={() => setForm((f) => ({ ...f, currency: c.code }))}
                       title={c.code}
-                      aria-label={`Валюта ${c.code}`}
+                      aria-label={`${t('currency')} ${c.code}`}
                       className={[
                         'min-w-10 rounded-lg border px-3 py-1.5 font-data text-xs transition-all duration-200',
                         form.currency === c.code
@@ -5960,7 +5965,7 @@ export default function CalendarScreen() {
                     onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* not supported */ } }}
                     onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
                     className="sr-only"
-                    aria-label="Время"
+                    aria-label={proEntryCopy.time}
                   />
                 </label>
               </div>
@@ -6268,30 +6273,30 @@ export default function CalendarScreen() {
               className={`absolute top-4 right-4 transition-colors ${
                 isLight ? 'text-zinc-500 hover:text-zinc-700' : 'text-zinc-500 hover:text-zinc-200'
               }`}
-              aria-label="Закрыть"
+              aria-label={t('close')}
             >
               <X className="h-4 w-4" />
             </button>
 
-            <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">Анализ периода</p>
+            <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">{t('periodAnalysis')}</p>
             <h2 className={`font-display text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'} mb-3`}>
               {analysisFrom === '0000-01-01'
-                ? 'Вся история'
+                ? t('allHistory')
                 : analysisFrom === analysisTo
                 ? analysisFrom
                 : `${analysisFrom} — ${analysisTo}`}
             </h2>
 
-            <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'} mb-4`}>{analysisStats.count} {traderMode ? 'сделок' : 'операций'} в выборке</p>
+            <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'} mb-4`}>{analysisStats.count} {traderMode ? t('trades') : t('transactions')} {t('selectionSuffix')}</p>
 
             {moneyAnalysis && (
               <div className="mb-4 space-y-5">
                 <>
                     <div className={`grid grid-cols-3 gap-2 rounded-xl border p-2 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'}`}>
                       {[
-                        ['Доходы', moneyAnalysis.income, 'text-emerald-600'],
-                        ['Расходы', moneyAnalysis.expenses, 'text-red-600'],
-                        ['Баланс', moneyAnalysis.balance, moneyAnalysis.balance >= 0 ? 'text-emerald-600' : 'text-red-600'],
+                        [t('income'), moneyAnalysis.income, 'text-emerald-600'],
+                        [t('expense'), moneyAnalysis.expenses, 'text-red-600'],
+                        [t('balanceLabel'), moneyAnalysis.balance, moneyAnalysis.balance >= 0 ? 'text-emerald-600' : 'text-red-600'],
                       ].map(([label, amount, color]) => (
                         <div key={label} className={`min-w-0 rounded-lg border p-2 text-left ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}>
                           <p className={`text-[10px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{label}</p>
@@ -6300,7 +6305,7 @@ export default function CalendarScreen() {
                       ))}
                     </div>
                     <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'}`}>
-                      <div className="mb-2 flex items-center justify-between"><p className={`text-xs font-medium ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>Динамика периода</p><span className="text-[10px] text-emerald-500">по операциям</span></div>
+                      <div className="mb-2 flex items-center justify-between"><p className={`text-xs font-medium ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>{t('periodDynamics')}</p><span className="text-[10px] text-emerald-500">{t('byEntries')}</span></div>
                       <div className="flex h-24 items-end gap-1.5">
                         {Object.entries(analysisTrades.reduce((acc, t) => { acc[t.dateKey] = (acc[t.dateKey] || 0) + t.pnl; return acc; }, {})).slice(-12).map(([day, amount]) => {
                           const max = Math.max(1, ...Object.values(analysisTrades.reduce((acc, t) => { acc[t.dateKey] = (acc[t.dateKey] || 0) + Math.abs(t.pnl); return acc; }, {})));
@@ -6311,12 +6316,12 @@ export default function CalendarScreen() {
                     </div>
                   </>
                 <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'}`}>
-                    <div className="mb-3"><p className={`text-sm font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>Откуда пришли деньги</p><p className="text-[11px] text-zinc-500">Источники дохода за выбранный период</p></div>
-                    <div className="space-y-3">{moneyAnalysis.topIncomeSources.length ? moneyAnalysis.topIncomeSources.map(([source, amount]) => <div key={source}><div className="mb-1 flex justify-between gap-3 text-xs"><span className="truncate text-zinc-500">{source}</span><span className="font-data text-emerald-500">+{currencySymbol}{formatMoney(amount)}</span></div><div className="h-2 overflow-hidden rounded-full bg-zinc-800/70"><div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${Math.max(6, Math.round((amount / moneyAnalysis.income) * 100))}%` }} /></div></div>) : <p className="py-6 text-center text-xs text-zinc-500">За период пока нет доходов</p>}</div>
+                    <div className="mb-3"><p className={`text-sm font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{t('whereMoneyCameFrom')}</p><p className="text-[11px] text-zinc-500">{t('incomeSourcesSubtitle')}</p></div>
+                    <div className="space-y-3">{moneyAnalysis.topIncomeSources.length ? moneyAnalysis.topIncomeSources.map(([source, amount]) => <div key={source}><div className="mb-1 flex justify-between gap-3 text-xs"><span className="truncate text-zinc-500">{source}</span><span className="font-data text-emerald-500">+{currencySymbol}{formatMoney(amount)}</span></div><div className="h-2 overflow-hidden rounded-full bg-zinc-800/70"><div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${Math.max(6, Math.round((amount / moneyAnalysis.income) * 100))}%` }} /></div></div>) : <p className="py-6 text-center text-xs text-zinc-500">{t('noIncomePeriod')}</p>}</div>
                   </div>
                 <div className={`rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'}`}>
-                    <div className="mb-3"><p className={`text-sm font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>Куда уходят деньги</p><p className="text-[11px] text-zinc-500">Самые крупные категории расходов</p></div>
-                    <div className="space-y-3">{moneyAnalysis.topCategories.length ? moneyAnalysis.topCategories.map(([category, amount]) => <div key={category}><div className="mb-1 flex justify-between gap-3 text-xs"><span className="truncate text-zinc-500">{category}</span><span className="font-data text-red-500">−{currencySymbol}{formatMoney(amount)}</span></div><div className="h-2 overflow-hidden rounded-full bg-zinc-800/70"><div className="h-full rounded-full bg-red-500 transition-all duration-500" style={{ width: `${Math.max(6, Math.round((amount / moneyAnalysis.expenses) * 100))}%` }} /></div></div>) : <p className="py-6 text-center text-xs text-zinc-500">За период пока нет расходов</p>}</div>
+                    <div className="mb-3"><p className={`text-sm font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{t('whereMoneyGoes')}</p><p className="text-[11px] text-zinc-500">{t('expenseCategoriesSubtitle')}</p></div>
+                    <div className="space-y-3">{moneyAnalysis.topCategories.length ? moneyAnalysis.topCategories.map(([category, amount]) => <div key={category}><div className="mb-1 flex justify-between gap-3 text-xs"><span className="truncate text-zinc-500">{category}</span><span className="font-data text-red-500">−{currencySymbol}{formatMoney(amount)}</span></div><div className="h-2 overflow-hidden rounded-full bg-zinc-800/70"><div className="h-full rounded-full bg-red-500 transition-all duration-500" style={{ width: `${Math.max(6, Math.round((amount / moneyAnalysis.expenses) * 100))}%` }} /></div></div>) : <p className="py-6 text-center text-xs text-zinc-500">{t('noExpensePeriod')}</p>}</div>
                   </div>
               </div>
             )}
@@ -6340,7 +6345,7 @@ export default function CalendarScreen() {
                       : traderScore.score >= 40 ? 'bg-orange-500/15 text-orange-500'
                       : 'bg-red-500/15 text-red-500'
                     }`}>
-                      Грейд {traderScore.grade}
+                      {t('scoreGrade')} {traderScore.grade}
                     </span>
                   </div>
 
@@ -6365,7 +6370,7 @@ export default function CalendarScreen() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className={`text-base font-semibold leading-tight ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{traderScore.label}</p>
-                      <p className="mt-1.5 text-[11px] text-zinc-500 leading-relaxed max-w-xs mx-auto sm:mx-0">Композитная оценка на основе Profit Factor, винрейта, payoff и серий убытков за выбранный период.</p>
+                      <p className="mt-1.5 text-[11px] text-zinc-500 leading-relaxed max-w-xs mx-auto sm:mx-0">{t('scoreDescription')}</p>
                       <div className={`mt-4 inline-flex items-baseline gap-2 border-t pt-3 sm:border-t-0 sm:pt-0 sm:border-l sm:pl-5 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
                         <span className="text-[10px] uppercase tracking-wider text-zinc-500">Profit Factor</span>
                         <span className={`font-display text-2xl font-bold tabular-nums ${basicAnalysis.profitFactor >= 1.5 ? 'text-emerald-500' : basicAnalysis.profitFactor >= 1 ? (isLight ? 'text-zinc-800' : 'text-zinc-200') : 'text-red-500'}`}>
@@ -6385,11 +6390,11 @@ export default function CalendarScreen() {
                     </p>
                   </div>
                   <div className="px-3 text-center">
-                    <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1.5 flex items-center justify-center gap-1"><TrendingUp className="h-3 w-3 text-emerald-500/70" /> Средний +</p>
+                    <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1.5 flex items-center justify-center gap-1"><TrendingUp className="h-3 w-3 text-emerald-500/70" /> {t('avgWin')}</p>
                     <p className="font-data text-lg font-semibold text-emerald-500 tabular-nums">+${formatMoney(basicAnalysis.avgWin)}</p>
                   </div>
                   <div className="px-3 text-center">
-                    <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1.5 flex items-center justify-center gap-1"><TrendingDown className="h-3 w-3 text-red-500/70" /> Средний −</p>
+                    <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1.5 flex items-center justify-center gap-1"><TrendingDown className="h-3 w-3 text-red-500/70" /> {t('avgLoss')}</p>
                     <p className="font-data text-lg font-semibold text-red-500 tabular-nums">-${formatMoney(basicAnalysis.avgLoss)}</p>
                   </div>
                 </div>
@@ -6398,13 +6403,13 @@ export default function CalendarScreen() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className={`relative overflow-hidden rounded-2xl p-4 bg-gradient-to-br ${isLight ? 'from-emerald-50 to-white' : 'from-emerald-500/[0.09] to-transparent'}`}>
                     <TrendingUp className="absolute -right-2 -bottom-2 h-14 w-14 text-emerald-500/10" />
-                    <p className="relative text-[9px] uppercase tracking-wider text-emerald-600/80 mb-1.5">Лучший день</p>
+                    <p className="relative text-[9px] uppercase tracking-wider text-emerald-600/80 mb-1.5">{t('bestDay')}</p>
                     <p className="relative font-display text-xl font-bold text-emerald-500 tabular-nums">{formatSignedShort(basicAnalysis.bestDay[1])}</p>
                     <p className="relative mt-1 text-[10px] text-zinc-500">{formatDateLabel(basicAnalysis.bestDay[0])}</p>
                   </div>
                   <div className={`relative overflow-hidden rounded-2xl p-4 bg-gradient-to-br ${isLight ? 'from-red-50 to-white' : 'from-red-500/[0.09] to-transparent'}`}>
                     <TrendingDown className="absolute -right-2 -bottom-2 h-14 w-14 text-red-500/10" />
-                    <p className="relative text-[9px] uppercase tracking-wider text-red-500/80 mb-1.5">Худший день</p>
+                    <p className="relative text-[9px] uppercase tracking-wider text-red-500/80 mb-1.5">{t('worstDay')}</p>
                     <p className="relative font-display text-xl font-bold text-red-500 tabular-nums">{formatSignedShort(basicAnalysis.worstDay[1])}</p>
                     <p className="relative mt-1 text-[10px] text-zinc-500">{formatDateLabel(basicAnalysis.worstDay[0])}</p>
                   </div>
@@ -6413,13 +6418,13 @@ export default function CalendarScreen() {
                 {/* ── Insight ticker — quiet terminal strip instead of loud badges ── */}
                 <div className={`flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t pt-3 text-[11px] font-data ${isLight ? 'border-zinc-200 text-zinc-600' : 'border-zinc-800 text-zinc-400'}`}>
                   <span className="inline-flex items-center gap-1.5">
-                    <Award className="h-3 w-3 text-amber-500/80" /> Частый инструмент <span className={isLight ? 'text-zinc-900 font-semibold' : 'text-zinc-100 font-semibold'}>{basicAnalysis.topInstrument[0]}</span>
+                    <Award className="h-3 w-3 text-amber-500/80" /> {t('topInstrument')} <span className={isLight ? 'text-zinc-900 font-semibold' : 'text-zinc-100 font-semibold'}>{basicAnalysis.topInstrument[0]}</span>
                   </span>
                   {basicAnalysis.longestLossStreak >= 2 && (
                     <>
                       <span className="text-zinc-400/40">·</span>
                       <span className="inline-flex items-center gap-1.5 text-red-400">
-                        <Flame className="h-3 w-3" /> Серия убытков <span className="font-semibold">{basicAnalysis.longestLossStreak}</span>
+                        <Flame className="h-3 w-3" /> {t('lossStreak')} <span className="font-semibold">{basicAnalysis.longestLossStreak}</span>
                       </span>
                     </>
                   )}
@@ -6435,8 +6440,8 @@ export default function CalendarScreen() {
                 <div className="relative flex items-start gap-2.5 mb-3">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-400/10 text-amber-500"><Sparkles className="h-4 w-4" /></span>
                   <div>
-                    <p className={`text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>Наблюдение по статистике</p>
-                    <p className="text-[11px] text-zinc-500">На основе сделок за выбранный период</p>
+                    <p className={`text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('statsObservation')}</p>
+                    <p className="text-[11px] text-zinc-500">{t('statsObservationHint')}</p>
                   </div>
                 </div>
                 <p className={`relative rounded-xl border px-3 py-2.5 text-xs leading-relaxed mb-3 ${isLight ? 'border-zinc-200 bg-white text-zinc-700' : 'border-zinc-800 bg-black/25 text-zinc-300'}`}>
@@ -6450,9 +6455,9 @@ export default function CalendarScreen() {
               }`}>
                 <Sparkles className={`h-4 w-4 ${isLight ? 'text-zinc-400' : 'text-zinc-600'} shrink-0 mt-0.5`} />
                 <div>
-                  <p className={`text-sm font-medium mb-0.5 ${isLight ? 'text-zinc-700' : 'text-zinc-400'}`}>Глубокий AI-анализ — скоро</p>
+                  <p className={`text-sm font-medium mb-0.5 ${isLight ? 'text-zinc-700' : 'text-zinc-400'}`}>{t('aiAnalysisSoon')}</p>
                   <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-600'} leading-relaxed`}>
-                    Разбор эмоциональных паттернов, конкретных ошибок по каждой сделке и персональные рекомендации — по подписке.
+                    {t('aiAnalysisSoonBody')}
                   </p>
                 </div>
               </div>
@@ -6501,10 +6506,10 @@ export default function CalendarScreen() {
               isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
             }`}
           >
-            <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">Добро пожаловать</p>
-            <h2 className={`font-display text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'} mb-1`}>Как вас называть?</h2>
+            <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">{t('welcome')}</p>
+            <h2 className={`font-display text-lg font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'} mb-1`}>{t('howToCallYou')}</h2>
             <p className={`text-sm ${isLight ? 'text-zinc-600' : 'text-zinc-500'} mb-4`}>
-              Это имя будет отображаться в приложении. Можно оставить пустым — тогда возьмём имя из Google.
+              {t('howToCallYouDesc')}
             </p>
 
             <input
@@ -6512,7 +6517,7 @@ export default function CalendarScreen() {
               value={nicknameInput}
               onChange={(e) => setNicknameInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSaveNickname()}
-              placeholder={user?.user_metadata?.full_name || user?.email || 'Ваш ник'}
+              placeholder={user?.user_metadata?.full_name || user?.email || t('nicknamePlaceholder')}
               autoFocus
               className={`w-full rounded-md border px-3 py-2 text-sm font-data mb-4 focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40 ${
                 isLight
@@ -6525,7 +6530,7 @@ export default function CalendarScreen() {
               onClick={handleSaveNickname}
               className="w-full rounded-md bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-300 transition-colors"
             >
-              Продолжить
+              {t('continueBtn')}
             </button>
           </div>
         </div>
@@ -6555,7 +6560,7 @@ export default function CalendarScreen() {
               className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${
                 isLight ? 'text-zinc-400 hover:bg-zinc-100' : 'text-zinc-500 hover:bg-white/[0.05]'
               }`}
-              aria-label="Close"
+              aria-label={t('close')}
             >
               <X className="h-4 w-4" />
             </button>
@@ -7236,7 +7241,7 @@ export default function CalendarScreen() {
             }`}>
               {historyShareCopy.shareLinkHint}
               {referralCode && (
-                <span className="ml-1 font-semibold text-amber-500">· +7 дней PRO</span>
+                <span className="ml-1 font-semibold text-amber-500">· {t('referralStartBonus')}</span>
               )}
             </div>
 

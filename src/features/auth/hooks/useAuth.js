@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { getValidUserId } from '../../../shared/lib/formatters';
-import { ONBOARDING_V2_COMPLETED_STORAGE_KEY } from '../../../shared/config/constants';
+import { LANGUAGE_STORAGE_KEY, ONBOARDING_V2_COMPLETED_STORAGE_KEY } from '../../../shared/config/constants';
+import { translate } from '../../../shared/i18n';
 import { disablePush } from '../../reminders/pushClient';
 
 /**
@@ -19,6 +20,11 @@ export function useAuth() {
     try { return window.localStorage.getItem(ONBOARDING_V2_COMPLETED_STORAGE_KEY) === '1' ? null : 'language'; }
     catch { return 'language'; }
   });
+
+  const authCopy = useCallback((key) => {
+    try { return translate(window.localStorage.getItem(LANGUAGE_STORAGE_KEY) || navigator.language, key); }
+    catch { return translate('ru', key); }
+  }, []);
 
   useEffect(() => {
     async function init() {
@@ -95,7 +101,7 @@ export function useAuth() {
   const handleGoogleLogin = useCallback(async () => {
     // Account selection must not leave the old account's push endpoint active.
     try { await disablePush(); }
-    catch { window.alert('Не удалось отключить старые уведомления. Проверь интернет и повтори вход.'); return; }
+    catch { window.alert(authCopy('pushDisableBeforeLogin')); return; }
     console.log('[auth] кнопка "Войти через Google" нажата');
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -106,14 +112,14 @@ export function useAuth() {
     });
     if (error) console.error('[auth] ошибка от Supabase:', error);
     else console.log('[auth] signInWithOAuth вызван, редирект-URL:', data?.url);
-  }, []);
+  }, [authCopy]);
 
   const handleGoogleLogout = useCallback(async () => {
     try { await disablePush(); }
-    catch { window.alert('Не удалось отключить уведомления. Проверь интернет и повтори выход.'); return; }
+    catch { window.alert(authCopy('pushDisableBeforeLogout')); return; }
     const { error } = await supabase.auth.signOut();
     if (error) console.error('[auth] ошибка при выходе:', error);
-  }, []);
+  }, [authCopy]);
 
   const validUserId = getValidUserId(user);
 
