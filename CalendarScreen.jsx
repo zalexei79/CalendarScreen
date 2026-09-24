@@ -3889,11 +3889,16 @@ export default function CalendarScreen() {
         .day-amount { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
         .day-amount-short, .day-amount-full { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .pro-calendar-day .day-amount { position: absolute; left: 8px; right: 8px; bottom: 8px; transition: bottom .24s ease, transform .24s ease; }
+        /* Planned items occupy the same dock as the PnL amount. Keep both in a
+           compact vertical stack instead of letting the absolute PnL overlap. */
+        .pro-calendar-day.has-calendar-plans .day-amount { position: static; left: auto; right: auto; bottom: auto; transform: none; margin-top: auto; }
+        .pro-calendar-day.has-calendar-plans > div:last-child { max-width: 100%; }
         .pro-calendar-day .day-amount-full { display: none; }
         @media (min-width: 640px) { .pro-calendar-day .day-amount { left: 14px; right: 14px; bottom: 14px; } }
         @media (hover: hover) and (pointer: fine) {
           .pro-calendar-day:hover { z-index: 2; }
           .pro-calendar-day:hover .day-amount { bottom: 50%; transform: translateY(50%); text-align: center; font-size: clamp(12px, 1.25vw, 20px); }
+          .pro-calendar-day.has-calendar-plans:hover .day-amount { bottom: auto; transform: none; text-align: left; font-size: inherit; }
           .pro-calendar-day:hover .day-amount-short { display: none; }
           .pro-calendar-day:hover .day-amount-full { display: block; overflow: hidden; text-overflow: ellipsis; }
         }

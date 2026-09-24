@@ -177,6 +177,7 @@ export default function CalendarDayCell({
         className={[
           'relative overflow-hidden rounded-xl border flex flex-col justify-between text-left transition-all duration-200 ease-out',
           traderMode ? 'pro-calendar-day' : '',
+          hasPlans ? 'has-calendar-plans' : '',
           cell.isToday ? 'today-calendar-cell' : '',
           todayPulse ? 'today-calendar-pulse' : '',
           isSelected ? 'selected-calendar-cell' : '',
