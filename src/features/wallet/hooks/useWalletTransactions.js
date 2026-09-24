@@ -29,6 +29,7 @@ export function useWalletTransactions({ user }) {
     try { return JSON.parse(localStorage.getItem(cacheKey(owner)) || '[]') || []; } catch { return []; }
   });
   const [loading, setLoading] = useState(Boolean(userId));
+  const [ready, setReady] = useState(!userId);
   const [error, setError] = useState('');
   const [transfers, setTransfers] = useState([]);
 
@@ -37,7 +38,7 @@ export function useWalletTransactions({ user }) {
   }, [owner]);
 
   const refresh = useCallback(async () => {
-    if (!userId) { setLoading(false); return []; }
+    if (!userId) { setLoading(false); setReady(true); return []; }
     setLoading(true);
     const [{ data, error: queryError }, { data: transferRows, error: transferError }] = await Promise.all([
       supabase.from('wallet_transactions').select('*').eq('user_id', userId).order('date_key', { ascending: false }).order('time', { ascending: false }),
@@ -45,14 +46,16 @@ export function useWalletTransactions({ user }) {
     ]);
     setLoading(false);
     if (queryError || transferError) {
+      setReady(false);
       setError(queryError.code === 'PGRST205' ? 'WALLET_MIGRATION_REQUIRED' : (queryError.message || 'WALLET_LOAD_FAILED'));
       return [];
     }
     const next = (data || []).map(normalize);
-    setTransactions(next); setTransfers(transferRows || []); cache(next); setError(''); return next;
+    setTransactions(next); setTransfers(transferRows || []); cache(next); setError(''); setReady(true); return next;
   }, [userId, cache]);
 
   useEffect(() => {
+    setReady(!userId);
     try { setTransactions(JSON.parse(localStorage.getItem(cacheKey(owner)) || '[]') || []); } catch { setTransactions([]); }
     refresh().catch(() => {});
   }, [owner, refresh]);
@@ -103,5 +106,5 @@ export function useWalletTransactions({ user }) {
     if (transfer.from_account === 'wallet') balanceByCurrency[code] = (balanceByCurrency[code] || 0) - Number(transfer.amount || 0);
   }
 
-  return { transactions, transfers, balanceByCurrency, loading, error, refresh, saveTransaction, deleteTransaction, createTransfer };
+  return { transactions, transfers, balanceByCurrency, loading: loading || !ready, error, refresh, saveTransaction, deleteTransaction, createTransfer };
 }
