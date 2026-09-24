@@ -827,7 +827,7 @@ export default function CalendarScreen() {
     ru: {
       eyebrow: 'PRO',
       title: 'Открой DAYRIS PRO',
-      body: 'Больше аналитики. Подключение площадок. Меньше ручной работы.',
+      body: 'Видь деньги целиком: сделки, аналитика и личный кошелёк — в одном спокойном пространстве.',
       invitesHubTitle: 'Мои приглашения',
       invitesHubBody: 'Следи за приглашёнными, статусами и заработанными днями PRO.',
       featuresTitle: 'Что откроется в PRO',
@@ -839,6 +839,8 @@ export default function CalendarScreen() {
       featureJournalHint: 'Инструмент, направление, TP/SL и заметки',
       featureInsights: 'Разбор результатов',
       featureInsightsHint: 'История и заметки помогают видеть закономерности',
+      featureWallet: 'Личный кошелёк PRO',
+      featureWalletHint: 'Отдельный баланс и история денег — без смешивания с PnL',
       freeTitle: 'Получить PRO бесплатно',
       freeBody: 'Пригласи друга. После его первой настоящей записи награда активируется автоматически.',
       reward: '+26 дней PRO тебе',
@@ -892,7 +894,7 @@ export default function CalendarScreen() {
     en: {
       eyebrow: 'PRO',
       title: 'Unlock DAYRIS PRO',
-      body: 'More analytics. Platform connections. Less manual work.',
+      body: 'See the full picture: trading, analytics and your private wallet in one calm workspace.',
       invitesHubTitle: 'My invitations',
       invitesHubBody: 'Track invited users, their status, and the PRO days you have earned.',
       featuresTitle: 'What PRO unlocks',
@@ -904,6 +906,8 @@ export default function CalendarScreen() {
       featureJournalHint: 'Instrument, direction, TP/SL and notes',
       featureInsights: 'Results review',
       featureInsightsHint: 'History and notes help reveal patterns',
+      featureWallet: 'Private PRO wallet',
+      featureWalletHint: 'A separate balance and money history, never mixed with PnL',
       freeTitle: 'Get PRO for free',
       freeBody: 'Invite a friend. After their first real entry, the reward activates automatically.',
       reward: '+26 days PRO for you',
@@ -957,7 +961,7 @@ export default function CalendarScreen() {
     ro: {
       eyebrow: 'PRO',
       title: 'Deblochează DAYRIS PRO',
-      body: 'Mai multă analiză. Conectarea platformelor. Mai puțină muncă manuală.',
+      body: 'Vezi imaginea completă: tranzacții, analiză și portofelul personal într-un singur spațiu.',
       invitesHubTitle: 'Invitațiile mele',
       invitesHubBody: 'Urmărește invitațiile, starea lor și zilele PRO câștigate.',
       featuresTitle: 'Ce deblochează PRO',
@@ -969,6 +973,8 @@ export default function CalendarScreen() {
       featureJournalHint: 'Instrument, direcție, TP/SL și notițe',
       featureInsights: 'Analiza rezultatelor',
       featureInsightsHint: 'Istoricul și notițele ajută să vezi tipare',
+      featureWallet: 'Portofel PRO personal',
+      featureWalletHint: 'Sold și istoric separat, fără amestec cu PnL-ul',
       freeTitle: 'Primește PRO gratuit',
       freeBody: 'Invită un prieten. După prima lui înregistrare reală, recompensa se activează automat.',
       reward: '+26 zile PRO pentru tine',
@@ -6694,10 +6700,11 @@ export default function CalendarScreen() {
                   [TrendingUp, proAccessCopy.featureAnalytics, proAccessCopy.featureAnalyticsHint],
                   [ChartCandlestick, proAccessCopy.featureJournal, proAccessCopy.featureJournalHint],
                   [FileText, proAccessCopy.featureInsights, proAccessCopy.featureInsightsHint],
+                  [Wallet, proAccessCopy.featureWallet, proAccessCopy.featureWalletHint],
                 ].map(([Icon, title, hint]) => (
                   <div
                     key={title}
-                    className={`rounded-2xl border p-3.5 ${
+                    className={`rounded-2xl border p-3.5 ${title === proAccessCopy.featureWallet ? 'col-span-2' : ''} ${
                       isLight
                         ? 'border-zinc-200 bg-zinc-50/80'
                         : 'border-white/[0.06] bg-white/[0.025]'
