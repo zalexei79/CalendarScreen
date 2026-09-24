@@ -98,16 +98,20 @@ export function useWalletTransactions({ user }) {
     await refresh();
   }, [userId, refresh]);
 
-  const balanceByCurrency = useMemo(() => transactions.reduce((result, item) => {
-    const code = item.currency || 'USD';
-    result[code] = (result[code] || 0) + (item.kind === 'expense' ? -item.amount : item.amount);
+  const balanceByCurrency = useMemo(() => {
+    const result = transactions.reduce((output, item) => {
+      const code = item.currency || 'USD';
+      output[code] = (output[code] || 0) + (item.kind === 'expense' ? -item.amount : item.amount);
+      return output;
+    }, {});
+    for (const transfer of transfers) {
+      const code = transfer.currency || 'USD';
+      const amount = Number(transfer.amount || 0);
+      if (transfer.to_account === 'wallet') result[code] = (result[code] || 0) + amount;
+      if (transfer.from_account === 'wallet') result[code] = (result[code] || 0) - amount;
+    }
     return result;
-  }, {}), [transactions]);
-  for (const transfer of transfers) {
-    const code = transfer.currency || 'USD';
-    if (transfer.to_account === 'wallet') balanceByCurrency[code] = (balanceByCurrency[code] || 0) + Number(transfer.amount || 0);
-    if (transfer.from_account === 'wallet') balanceByCurrency[code] = (balanceByCurrency[code] || 0) - Number(transfer.amount || 0);
-  }
+  }, [transactions, transfers]);
 
   return { transactions, transfers, balanceByCurrency, loading: loading || !ready, error, refresh, saveTransaction, deleteTransaction, createTransfer };
 }
