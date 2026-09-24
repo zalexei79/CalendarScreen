@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   ChevronLeft, ChevronRight, Link2, LogIn, LogOut, Download, Smartphone, Monitor, Wifi, Cloud,
-  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw, Wallet as WalletIcon,
+  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw, Wallet as WalletIcon, CalendarDays,
 } from 'lucide-react';
 import { LANGUAGES, CURRENCIES } from './src/shared/config/constants';
 import { monthsFor } from './src/shared/i18n';
@@ -535,8 +535,8 @@ export default function Header({
               </span>
             </button>
 
-            <div className={`ml-2 overflow-hidden transition-all duration-500 ease-out ${proAccessActive ? 'max-w-[150px] translate-x-0 opacity-100' : 'max-w-0 -translate-x-3 opacity-0'}`} aria-hidden={!proAccessActive}>
-              <button type="button" tabIndex={proAccessActive ? 0 : -1} onClick={() => setAccountMode('wallet')} title={t('walletProHint')} className={`flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 font-data text-[10px] font-semibold transition-all ${accountMode === 'wallet' ? 'border-amber-400/50 bg-amber-400 text-zinc-950' : isLight ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100' : 'border-amber-400/25 bg-amber-400/[.08] text-amber-300 hover:bg-amber-400/[.14]'}`}><WalletIcon />{t('walletLabel')}<span className="text-[8px] opacity-60">PRO</span></button>
+            <div className={`ml-0 overflow-hidden transition-all duration-500 ease-[cubic-bezier(.22,1,.36,1)] ${proAccessActive ? 'max-w-[150px] translate-x-0 opacity-100' : 'max-w-0 -translate-x-8 opacity-0'}`} aria-hidden={!proAccessActive}>
+              <button type="button" tabIndex={proAccessActive ? 0 : -1} onClick={() => setAccountMode(accountMode === 'wallet' ? 'main' : 'wallet')} title={accountMode === 'wallet' ? t('calendarLabel') : t('walletProHint')} className={`ml-1 flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 font-data text-[10px] font-semibold transition-all ${accountMode === 'wallet' ? 'border-amber-400/50 bg-amber-400 text-zinc-950' : isLight ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100' : 'border-amber-400/25 bg-amber-400/[.08] text-amber-300 hover:bg-amber-400/[.14]'}`}>{accountMode === 'wallet' ? <CalendarDays className="h-3.5 w-3.5" /> : <WalletIcon className="h-3.5 w-3.5" />}{accountMode === 'wallet' ? t('calendarLabel') : t('walletLabel')}<span className="text-[8px] opacity-60">{accountMode === 'wallet' ? '' : 'PRO'}</span></button>
             </div>
 
             <div className="ml-2 max-w-[190px] opacity-100">

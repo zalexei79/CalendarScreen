@@ -46,7 +46,7 @@ export const TRANSLATIONS = {
     flowPositivePro: 'Поток положительный: доходы покрывают расходы.',
     flowNegativePro: 'Расходы сейчас сильнее — стоит посмотреть структуру.',
     flowLittleData: 'Данных пока мало для уверенного вывода.',
-    freePlan: 'FREE', walletLabel: 'Кошелёк', walletProHint: 'Открыть отдельный кошелёк PRO', history: 'История', filters: 'Фильтры', all: 'Все', entries: 'записей',
+    freePlan: 'FREE', walletLabel: 'Кошелёк', walletProHint: 'Открыть отдельный кошелёк PRO', calendarLabel: 'Календарь', history: 'История', filters: 'Фильтры', all: 'Все', entries: 'записей',
     financialHistory: 'Финансовая история', resultForPeriod: 'Результат за выбранный период', app: 'Приложение', account: 'Аккаунт', mobile: 'Телефон', desktop: 'Компьютер', sync: 'Синхронизация', platform: 'Площадка', platforms: 'Площадки',
     
     // Period presets
@@ -263,7 +263,7 @@ export const TRANSLATIONS = {
     flowPositivePro: 'Flow is positive: income exceeds expenses.',
     flowNegativePro: 'Expenses are higher — check the breakdown.',
     flowLittleData: 'Not enough data yet for a solid takeaway.',
-    freePlan: 'FREE', walletLabel: 'Wallet', walletProHint: 'Open the separate PRO wallet', history: 'History', filters: 'Filters', all: 'All', entries: 'entries',
+    freePlan: 'FREE', walletLabel: 'Wallet', walletProHint: 'Open the separate PRO wallet', calendarLabel: 'Calendar', history: 'History', filters: 'Filters', all: 'All', entries: 'entries',
     financialHistory: 'Financial history', resultForPeriod: 'Result for selected period', app: 'App', account: 'Account', mobile: 'Mobile', desktop: 'Desktop', sync: 'Sync', platform: 'Platform', platforms: 'Platforms',
     
     // Period presets
@@ -480,7 +480,7 @@ export const TRANSLATIONS = {
     flowPositivePro: 'Fluxul este pozitiv: veniturile depășesc cheltuielile.',
     flowNegativePro: 'Cheltuielile sunt mai mari — verificați structura.',
     flowLittleData: 'Nu sunt suficiente date pentru o concluzie sigură.',
-    freePlan: 'FREE', walletLabel: 'Portofel', walletProHint: 'Deschide portofelul PRO separat', history: 'Istoric', filters: 'Filtre', all: 'Toate', entries: 'înregistrări',
+    freePlan: 'FREE', walletLabel: 'Portofel', walletProHint: 'Deschide portofelul PRO separat', calendarLabel: 'Calendar', history: 'Istoric', filters: 'Filtre', all: 'Toate', entries: 'înregistrări',
     financialHistory: 'Istoric financiar', resultForPeriod: 'Rezultat pentru perioada selectată', app: 'Aplicație', account: 'Cont', mobile: 'Telefon', desktop: 'Computer', sync: 'Sincronizare', platform: 'Platformă', platforms: 'Platforme',
     
     // Period presets
