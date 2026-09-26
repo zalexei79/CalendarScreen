@@ -3812,7 +3812,7 @@ export default function CalendarScreen() {
 
 
   return (
-    <div className={`premium-shell min-h-screen w-full flex flex-col transition-colors duration-300 ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
+    <div className={`premium-shell min-h-screen w-full flex flex-col transition-colors duration-500 ${traderMode ? 'pro-active-shell' : ''} ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
         .font-display { font-family: 'Space Grotesk', sans-serif; }
@@ -3902,6 +3902,69 @@ export default function CalendarScreen() {
         /* Mobile layout: use the available viewport instead of leaving a huge empty area. */
         /* Premium visual system */
         .premium-shell { background-image: radial-gradient(circle at 12% -10%, rgba(251,191,36,.10), transparent 28%), radial-gradient(circle at 90% 5%, rgba(59,130,246,.06), transparent 24%); }
+        .premium-shell.pro-active-shell {
+          background-image:
+            radial-gradient(circle at 14% -8%, rgba(251,191,36,.18), transparent 31%),
+            radial-gradient(circle at 88% 1%, rgba(16,185,129,.075), transparent 25%),
+            linear-gradient(180deg, rgba(251,191,36,.018), transparent 34%);
+          animation: proShellReveal .7s cubic-bezier(.16,1,.3,1) both;
+        }
+        .pro-active-shell .dayris-header {
+          border-bottom-color: rgba(251,191,36,.16);
+          background-image: linear-gradient(180deg, rgba(251,191,36,.035), transparent 88%);
+          box-shadow: 0 18px 42px -38px rgba(251,191,36,.75);
+        }
+        .pro-active-shell .monthly-goal-bar {
+          border-color: rgba(251,191,36,.15);
+          background-image: linear-gradient(90deg, rgba(251,191,36,.035), transparent 32%, rgba(16,185,129,.018));
+        }
+        .pro-active-shell .calendar-section {
+          background-image:
+            radial-gradient(circle at 50% -8%, rgba(251,191,36,.045), transparent 30%),
+            linear-gradient(180deg, rgba(255,255,255,.008), transparent 22%);
+        }
+        .pro-active-shell .pro-calendar-day::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          background: linear-gradient(145deg, rgba(255,255,255,.035), transparent 38%, rgba(251,191,36,.012));
+          pointer-events: none;
+        }
+        .pro-active-shell .history-fab > div {
+          border-color: rgba(251,191,36,.24);
+          background-image: linear-gradient(110deg, rgba(251,191,36,.075), rgba(9,9,11,.94) 42%, rgba(255,255,255,.025));
+          box-shadow: 0 18px 52px rgba(0,0,0,.5), 0 0 32px -16px rgba(251,191,36,.68), inset 0 1px rgba(255,255,255,.045);
+        }
+        .pro-mobile-commandbar { position: relative; overflow: hidden; }
+        .pro-mobile-commandbar::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background: linear-gradient(105deg, transparent 25%, rgba(255,225,150,.12) 48%, transparent 68%);
+          transform: translateX(-120%);
+          animation: proCommandSweep 1.05s .12s cubic-bezier(.2,.7,.2,1) both;
+        }
+        .theme-light.pro-active-shell {
+          background-image:
+            radial-gradient(circle at 14% -8%, rgba(245,158,11,.15), transparent 31%),
+            radial-gradient(circle at 88% 1%, rgba(16,185,129,.06), transparent 25%),
+            linear-gradient(180deg, rgba(245,158,11,.025), transparent 34%);
+        }
+        .theme-light.pro-active-shell .history-fab > div {
+          background-image: linear-gradient(110deg, rgba(251,191,36,.10), rgba(255,255,255,.97) 42%, rgba(16,185,129,.035));
+          box-shadow: 0 16px 42px rgba(15,23,42,.15), 0 0 30px -18px rgba(245,158,11,.62), inset 0 1px rgba(255,255,255,.8);
+        }
+        @keyframes proShellReveal {
+          from { filter: saturate(.9); }
+          to { filter: saturate(1); }
+        }
+        @keyframes proCommandSweep {
+          from { transform: translateX(-120%); opacity: 0; }
+          24% { opacity: 1; }
+          to { transform: translateX(120%); opacity: 0; }
+        }
         .premium-surface { box-shadow: 0 18px 55px rgba(0,0,0,.18); }
         button { -webkit-tap-highlight-color: transparent; }
         button:focus-visible { outline: 2px solid rgba(251,191,36,.7); outline-offset: 2px; }

@@ -232,7 +232,7 @@ export default function MonthlyGoal({
 
   return (
     <>
-      <section className={`relative mx-auto mt-1 mb-1.5 overflow-hidden rounded-none border-x-0 border-y px-1 py-2 sm:px-1.5 sm:py-2.5 ${panelClass}`}>
+      <section className={`monthly-goal-bar relative mx-auto mt-1 mb-1.5 overflow-hidden rounded-none border-x-0 border-y px-1 py-2 transition-all duration-500 sm:px-1.5 sm:py-2.5 ${panelClass}`}>
         <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/35 to-transparent" />
 
         <div className="flex min-w-0 items-center gap-2">

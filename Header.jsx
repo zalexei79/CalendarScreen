@@ -50,7 +50,7 @@ export default function Header({
 
 
   return (
-    <header className={`px-3 sm:px-8 pt-3 sm:pt-5 pb-3 sm:pb-4 border-b transition-colors duration-300 ${isLight ? 'border-slate-200/70 bg-white/80' : 'border-white/[0.06] bg-zinc-950/70'}`}>
+    <header className={`dayris-header px-3 sm:px-8 pt-3 sm:pt-5 pb-3 sm:pb-4 border-b transition-all duration-500 ${isLight ? 'border-slate-200/70 bg-white/80' : 'border-white/[0.06] bg-zinc-950/70'}`}>
       {/* Top row: Brand app icon + Title on left, [Download] [Theme] [Settings] on right */}
       <div className="flex items-center justify-between gap-3 mb-2.5">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -502,7 +502,7 @@ export default function Header({
                 className={[
                   'absolute top-0.5 bottom-0.5 left-0.5 w-[58px] rounded-full border transition-all duration-300 ease-out',
                   traderMode
-                    ? 'translate-x-[60px] border-amber-400/70 bg-gradient-to-br from-amber-400/35 to-amber-500/15 shadow-[0_0_20px_rgba(251,191,36,0.25)]'
+                    ? 'translate-x-[60px] border-amber-300 bg-gradient-to-br from-amber-200 via-amber-400 to-amber-500 shadow-[0_0_26px_rgba(251,191,36,0.34),inset_0_1px_rgba(255,255,255,.52)]'
                     : isLight
                     ? 'translate-x-0 border-zinc-400/40 bg-white shadow-sm'
                     : 'translate-x-0 border-zinc-600/60 bg-zinc-800/90 shadow-sm',
@@ -522,14 +522,14 @@ export default function Header({
               <span
                 className={[
                   'absolute right-0.5 top-0.5 bottom-0.5 z-10 flex items-center justify-center transition-colors duration-300 font-semibold',
-                  traderMode ? 'text-amber-400' : 'text-zinc-500',
+                  traderMode ? 'text-zinc-950' : 'text-zinc-500',
                 ].join(' ')}
                 style={{ width: '58px' }}
               >
                 <span className="flex items-center gap-1">
                   {!proAccessLoading && !proAccessActive && !traderMode
                     ? <LockKeyhole className="h-3 w-3 stroke-[1.9]" />
-                    : <span className={traderMode ? 'text-amber-300' : ''}>✦</span>}
+                    : <span className={traderMode ? 'text-zinc-950' : ''}>✦</span>}
                   PRO
                 </span>
               </span>
@@ -574,7 +574,7 @@ export default function Header({
       }`}>
         <div className="min-h-0 overflow-hidden">
           {/* Mobile keeps PRO useful without pushing the calendar below the fold. */}
-          <div className={`sm:hidden rounded-xl border px-2.5 py-2 ${
+          <div className={`pro-mobile-commandbar sm:hidden rounded-xl border px-2.5 py-2 shadow-[0_12px_30px_-24px_rgba(251,191,36,.75),inset_0_1px_rgba(255,255,255,.035)] ${
             isLight
               ? 'border-amber-200/70 bg-gradient-to-r from-amber-50/80 via-white to-white shadow-sm'
               : 'border-amber-400/15 bg-gradient-to-r from-amber-400/[0.055] via-white/[0.025] to-transparent'
