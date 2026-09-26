@@ -573,7 +573,80 @@ export default function Header({
           : 'grid-rows-[0fr] opacity-0 mt-0 -translate-y-1 pointer-events-none'
       }`}>
         <div className="min-h-0 overflow-hidden">
-          <div className={`rounded-2xl border px-3 py-2.5 sm:px-4 sm:py-3 ${
+          {/* Mobile keeps PRO useful without pushing the calendar below the fold. */}
+          <div className={`sm:hidden rounded-xl border px-2.5 py-2 ${
+            isLight
+              ? 'border-amber-200/70 bg-gradient-to-r from-amber-50/80 via-white to-white shadow-sm'
+              : 'border-amber-400/15 bg-gradient-to-r from-amber-400/[0.055] via-white/[0.025] to-transparent'
+          }`}>
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={openConnectModal}
+                className="flex min-w-0 items-center gap-2 rounded-lg text-left"
+              >
+                <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg border ${
+                  ctraderConnected
+                    ? isLight
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
+                      : 'border-emerald-400/15 bg-emerald-500/[0.08] text-emerald-400'
+                    : isLight
+                      ? 'border-amber-200 bg-amber-50 text-amber-700'
+                      : 'border-amber-400/15 bg-amber-400/[0.07] text-amber-300'
+                }`}>
+                  <Link2 className="h-3.5 w-3.5 stroke-[1.8]" />
+                </span>
+                <span className="min-w-0">
+                  <span className={`block truncate text-[11px] font-semibold leading-tight ${isLight ? 'text-slate-900' : 'text-zinc-200'}`}>cTrader</span>
+                  <span className={`block truncate text-[9px] leading-tight ${ctraderConnected ? 'text-emerald-500' : isLight ? 'text-slate-500' : 'text-zinc-500'}`}>
+                    {ctraderConnected ? t('connected') : t('connectPlatform')}
+                  </span>
+                </span>
+              </button>
+
+              {monthSummary && (
+                <div className="min-w-0 text-right">
+                  <span className={`block truncate font-data text-[10px] font-semibold tabular-nums ${
+                    monthSummary.total < 0 ? 'text-red-500' : monthSummary.total > 0 ? 'text-emerald-500' : 'text-zinc-500'
+                  }`}>
+                    {monthSummary.total > 0 ? '+' : monthSummary.total < 0 ? '−' : ''}
+                    {formatMoney(Math.abs(monthSummary.total))} {currency}
+                  </span>
+                  <span className={`block truncate text-[8px] ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>
+                    {t('calendarTradingDays')}: {monthSummary.days}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className={`mt-2 grid grid-cols-3 gap-1 rounded-lg border p-0.5 ${
+              isLight ? 'border-slate-200/80 bg-slate-100/80' : 'border-white/[0.06] bg-black/20'
+            }`}>
+              {[
+                ['all', t('all')],
+                ['income', `+ ${t('income')}`],
+                ['expense', `− ${t('expense')}`],
+              ].map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setCalendarTypeFilter(key)}
+                  className={`min-w-0 truncate rounded-md px-1.5 py-1.5 font-data text-[9px] transition-colors ${
+                    calendarTypeFilter === key
+                      ? isLight
+                        ? 'bg-white text-slate-950 shadow-sm'
+                        : 'bg-amber-400/15 text-amber-300'
+                      : isLight ? 'text-slate-500' : 'text-zinc-500'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Desktop retains the full cTrader control centre. */}
+          <div className={`hidden sm:block rounded-2xl border px-4 py-3 ${
             isLight
               ? 'border-slate-200 bg-white shadow-sm'
               : 'border-white/[0.07] bg-white/[0.025]'

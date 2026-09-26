@@ -28,7 +28,7 @@ export default function CalendarGrid({
   const animClass = slideDirection === 'next' ? 'animate-slide-next' : slideDirection === 'prev' ? 'animate-slide-prev' : '';
   return (
     <section
-      className={`calendar-section flex-1 flex flex-col px-2 sm:px-8 pt-3 sm:pt-6 border-b relative transition-colors duration-200 ${animClass} ${isLight ? 'border-slate-200/90 bg-slate-50/40' : 'border-zinc-800'}`}
+      className={`calendar-section flex-1 flex flex-col px-1.5 sm:px-8 pt-2.5 sm:pt-6 border-b relative transition-colors duration-200 ${animClass} ${isLight ? 'border-slate-200/90 bg-slate-50/40' : 'border-zinc-800'}`}
       onClick={(e) => { if (e.target === e.currentTarget) onEmptyClick(); }}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
@@ -65,7 +65,7 @@ export default function CalendarGrid({
       <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-3" onClick={(e) => { if (e.target === e.currentTarget) onEmptyClick(); }}>
         {WEEKDAYS.map((w) => <div key={w} className={`font-data text-[11px] sm:text-xs font-semibold tracking-wider text-center uppercase pb-1 ${isLight ? 'text-slate-600' : 'text-zinc-500'}`}>{w}</div>)}
       </div>
-      <div className="calendar-days-grid grid flex-none grid-cols-7 auto-rows-[62px] gap-1 sm:flex-1 sm:auto-rows-auto sm:gap-2" onClick={(e) => { if (e.target === e.currentTarget) onEmptyClick(); }}>
+      <div className="calendar-days-grid grid flex-none grid-cols-7 auto-rows-[64px] gap-1 sm:flex-1 sm:auto-rows-auto sm:gap-2" onClick={(e) => { if (e.target === e.currentTarget) onEmptyClick(); }}>
         {cells.map((cell, cellIndex) => {
           const isSelected = cell.key === selectedKey;
           const hasTrades = tradesForDayFiltered(cell.key).length > 0;
