@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.dayris.calendar",
+      "sha256_cert_fingerprints": [
+        "55:CC:26:AC:B2:0A:AE:55:10:A4:64:A2:F3:00:38:F5:C5:43:DE:39:5A:26:B3:85:24:36:5E:10:9D:85:1A:41"
+      ]
+    }
+  }
+]
