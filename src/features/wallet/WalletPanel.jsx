@@ -102,7 +102,7 @@ export default function WalletPanel({
     ? [['tradingProfit', BriefcaseBusiness, copy.tradingProfit], ['accountTopup', CreditCard, copy.accountTopup], ['otherIncome', CircleDollarSign, copy.otherIncome]]
     : [['accountWithdrawal', Landmark, copy.accountWithdrawal], ['expense', ShoppingBag, copy.expense], ['otherExpense', ArrowUpRight, copy.otherExpense]];
 
-  return <section className={`min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-8 sm:py-8 ${isLight ? 'bg-[#f4f6f8]' : 'bg-[#08090c]'}`}>
+  return <section className={`wallet-panel-enter min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-8 sm:py-8 ${isLight ? 'bg-[#f4f6f8]' : 'bg-[#08090c]'}`}>
     <div className="mx-auto max-w-3xl">
       <header className="mb-5">
         <p className="font-data text-[10px] uppercase tracking-[.28em] text-amber-500">{copy.eyebrow}</p>

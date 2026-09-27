@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { flushSync } from 'react-dom';
 import {
   ChevronLeft, ChevronRight, Link2, LogIn, LogOut, Download, Smartphone, Monitor, Wifi, Cloud,
-  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw, Wallet as WalletIcon, CalendarDays,
+  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw, Wallet as WalletIcon,
 } from 'lucide-react';
 import { LANGUAGES, CURRENCIES } from './src/shared/config/constants';
 import { monthsFor } from './src/shared/i18n';
@@ -46,6 +47,39 @@ export default function Header({
     setRetryingSync(true);
     try { await retryFailedSync(); }
     finally { setRetryingSync(false); }
+  }
+
+  function changeAccountMode(nextMode) {
+    if (nextMode === accountMode) return;
+    const applyMode = () => flushSync(() => setAccountMode(nextMode));
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (!reduceMotion && typeof document.startViewTransition === 'function') {
+      document.startViewTransition(applyMode);
+      return;
+    }
+    applyMode();
+  }
+
+  if (accountMode === 'wallet') {
+    return (
+      <header className={`wallet-focus-header border-b px-3 py-3 sm:px-8 sm:py-4 ${isLight ? 'border-amber-200/70 bg-[#f4f6f8]/95' : 'border-amber-400/10 bg-[#08090c]/95'}`}>
+        <button
+          type="button"
+          onClick={() => changeAccountMode('main')}
+          aria-label={t('walletBackLabel')}
+          className={`group flex min-h-11 items-center gap-3 rounded-full border py-1.5 pl-1.5 pr-5 text-sm font-semibold shadow-lg backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 active:scale-[.98] ${
+            isLight
+              ? 'border-amber-300/70 bg-white/90 text-zinc-900 shadow-amber-900/5 hover:border-amber-400'
+              : 'border-amber-400/25 bg-white/[.045] text-zinc-100 shadow-black/30 hover:border-amber-400/45 hover:bg-white/[.07]'
+          }`}
+        >
+          <span className="grid h-8 w-8 place-items-center rounded-full bg-amber-400 text-zinc-950 shadow-[0_0_20px_rgba(251,191,36,.2)] transition-transform duration-300 group-hover:-translate-x-0.5">
+            <ChevronLeft className="h-4 w-4 stroke-[2.2]" />
+          </span>
+          <span>{t('walletBackLabel')}</span>
+        </button>
+      </header>
+    );
   }
 
 
@@ -536,7 +570,7 @@ export default function Header({
             </button>
 
             <div className={`ml-0 overflow-hidden transition-all duration-500 ease-[cubic-bezier(.22,1,.36,1)] ${traderMode ? 'max-w-[190px] translate-x-0 opacity-100' : 'max-w-0 -translate-x-8 opacity-0'}`} aria-hidden={!traderMode}>
-              <button type="button" tabIndex={traderMode ? 0 : -1} onClick={() => setAccountMode(accountMode === 'wallet' ? 'main' : 'wallet')} title={accountMode === 'wallet' ? t('calendarLabel') : t('walletProHint')} className={`ml-1 flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 font-data text-[10px] font-semibold transition-all ${accountMode === 'wallet' ? 'border-amber-400/50 bg-amber-400 text-zinc-950 shadow-[0_0_18px_rgba(251,191,36,.18)]' : isLight ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100' : 'border-amber-400/25 bg-amber-400/[.08] text-amber-300 hover:bg-amber-400/[.14]'}`}>{accountMode === 'wallet' ? <CalendarDays className="h-3.5 w-3.5" /> : <WalletIcon className="h-3.5 w-3.5" />}{accountMode === 'wallet' ? `← ${t('calendarLabel')}` : t('walletLabel')}<span className="text-[8px] opacity-60">{accountMode === 'wallet' ? '' : 'PRO'}</span></button>
+              <button type="button" tabIndex={traderMode ? 0 : -1} onClick={() => changeAccountMode('wallet')} title={t('walletProHint')} className={`ml-1 flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 font-data text-[10px] font-semibold transition-all ${isLight ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100' : 'border-amber-400/25 bg-amber-400/[.08] text-amber-300 hover:bg-amber-400/[.14]'}`}><WalletIcon className="h-3.5 w-3.5" />{t('walletLabel')}<span className="text-[8px] opacity-60">PRO</span></button>
             </div>
 
             <div className="ml-2 max-w-[190px] opacity-100">
