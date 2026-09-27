@@ -92,6 +92,7 @@ import FinancePlanList from './src/features/reminders/FinancePlanList.jsx';
 import { useWalletTransactions } from './src/features/wallet/hooks/useWalletTransactions';
 import WalletPanel from './src/features/wallet/WalletPanel.jsx';
 import SwipeDismissSheet from './src/shared/ui/SwipeDismissSheet.jsx';
+import ProOffer from './src/features/pro/ProOffer.jsx';
 
 export default function CalendarScreen() {
   const [accountMode, setAccountMode] = useState(() => { try { return localStorage.getItem('dayris_account_mode') || 'main'; } catch { return 'main'; } });
@@ -6961,212 +6962,41 @@ export default function CalendarScreen() {
           className="fixed inset-0 z-[96] flex items-end justify-center bg-black/75 px-0 pt-[max(2rem,env(safe-area-inset-top))] backdrop-blur-sm sm:items-center sm:px-4 sm:pt-0"
           onClick={(event) => { if (event.target === event.currentTarget) setProAccessPromptOpen(false); }}
         >
-          <SwipeDismissSheet onDismiss={() => setProAccessPromptOpen(false)} isLight={isLight} style={{ maxHeight: 'min(92dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 8px))' }} className={`flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-[28px] border shadow-2xl sm:rounded-3xl ${
-            isLight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-white/[0.08] bg-zinc-950 text-zinc-100'
-          }`}>
-            <div className={`relative flex items-start justify-between gap-4 border-b px-5 pb-5 pt-4 sm:px-6 sm:pb-6 sm:pt-6 ${
-              isLight ? 'border-amber-200/70 bg-gradient-to-br from-amber-50 via-white to-white' : 'border-amber-400/10 bg-[radial-gradient(circle_at_15%_0%,rgba(251,191,36,.14),transparent_42%)]'
-            }`}>
-              <div className="pointer-events-none absolute -left-20 -top-28 h-64 w-64 rounded-full bg-amber-400/10 blur-3xl" />
-              <div className="min-w-0">
-                <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 ${
-                  isLight
-                    ? 'border-amber-200 bg-amber-50 text-amber-700'
-                    : 'border-amber-400/15 bg-amber-400/[0.06] text-amber-300'
-                }`}>
-                  <Zap className="h-3.5 w-3.5" />
-                  <span className="font-data text-[9px] font-bold tracking-[0.2em]">{proAccessCopy.eyebrow}</span>
-                </div>
-
-                <h3 className="mt-3 max-w-xl font-display text-[24px] font-semibold leading-[1.08] tracking-tight sm:text-[34px]">
-                  {proOfferTab === 'invites' ? proAccessCopy.invitesHubTitle : proAccessCopy.title}
-                </h3>
-                <p className={`mt-2 max-w-xl text-[13px] leading-5 sm:mt-3 sm:text-sm sm:leading-6 ${
-                  isLight ? 'text-zinc-600' : 'text-zinc-400'
-                }`}>
-                  {proOfferTab === 'invites' ? proAccessCopy.invitesHubBody : proAccessCopy.body}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setProAccessPromptOpen(false)}
-                className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border transition-colors ${
-                  isLight
-                    ? 'border-zinc-200 bg-zinc-50 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800'
-                    : 'border-white/[0.08] bg-white/[0.04] text-zinc-500 hover:bg-white/[0.07] hover:text-zinc-200'
-                }`}
-                aria-label={proAccessCopy.close}
-              >
-                <X className="h-4 w-4" />
-              </button>
+          <SwipeDismissSheet
+            onDismiss={() => setProAccessPromptOpen(false)}
+            isLight={isLight}
+            className={`pro-dialog ${isLight ? 'pro-light' : ''}`}
+            role="dialog" aria-modal="true"
+            aria-labelledby={proOfferTab === 'offer' ? 'pro-offer-title' : 'pro-invites-title'}
+            onKeyDown={(event) => { if (event.key === 'Escape') setProAccessPromptOpen(false); }}
+          >
+            <div className="pro-dialog-header">
+              <div className="pro-dialog-brand"><Zap aria-hidden="true" /> DAYRIS <span>PRO</span></div>
+              <button type="button" onClick={() => setProAccessPromptOpen(false)} className="pro-dialog-close" aria-label={t('close')}><X className="h-4 w-4" /></button>
             </div>
-
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pt-5">
+            <div className="pro-dialog-scroll">
               {proOfferTab === 'offer' ? (
-                <>
-              <div className={`relative rounded-[22px] border p-4 sm:p-5 ${
-                isLight
-                  ? 'border-zinc-200 bg-gradient-to-br from-zinc-50 via-white to-amber-50/50'
-                  : 'border-white/[0.07] bg-gradient-to-br from-white/[0.06] via-white/[0.02] to-amber-400/[0.04]'
-              }`}>
-                <div className="pointer-events-none absolute -right-8 -top-12 h-36 w-36 rounded-full bg-amber-400/10 blur-3xl" />
-                <div className="relative flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-data text-[9px] uppercase tracking-[0.2em] text-amber-500">DAYRIS PRO</p>
-                    <p className={`mt-2 text-lg font-semibold tracking-tight ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{proAccessCopy.previewTitle}</p>
-                    <p className={`mt-1 max-w-sm text-[11px] leading-5 ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>{proAccessCopy.previewBody}</p>
-                  </div>
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-amber-400 text-zinc-950 shadow-[0_0_26px_rgba(251,191,36,.22)]">
-                    <Wallet className="h-5 w-5 stroke-[1.8]" />
-                  </span>
-                </div>
-                <div className="relative mt-4 grid grid-cols-3 gap-2">
-                  {[
-                    [Wallet, proAccessCopy.previewWallet, proAccessCopy.previewWalletHint, 'wallet'],
-                    [History, proAccessCopy.previewHistory, proAccessCopy.previewHistoryHint, 'neutral'],
-                    [ChartCandlestick, t('traderModeLabel'), proAccessCopy.previewTraderHint, 'neutral'],
-                  ].map(([Icon, label, hint, tone]) => (
-                    <div key={label} className={`min-w-0 rounded-2xl border p-2.5 ${tone === 'wallet' ? (isLight ? 'border-amber-300 bg-amber-100/70 text-amber-950' : 'border-amber-400/28 bg-amber-400/[0.10] text-amber-100') : (isLight ? 'border-zinc-200 bg-white/80 text-zinc-700' : 'border-white/[0.07] bg-white/[0.025] text-zinc-300')}`}>
-                      <Icon className={`h-3.5 w-3.5 ${tone === 'wallet' ? 'text-amber-500' : 'text-zinc-500'}`} />
-                      <p className="mt-2 truncate text-[10px] font-semibold leading-tight">{label}</p>
-                      <p className={`mt-1 truncate text-[9px] leading-tight ${tone === 'wallet' ? (isLight ? 'text-amber-700' : 'text-amber-200/70') : 'text-zinc-500'}`}>{hint}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <section className="mt-4">
-                <p className={`mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
-                  {proAccessCopy.featuresTitle}
-                </p>
-                <div className={`divide-y ${isLight ? 'divide-zinc-200' : 'divide-white/[0.07]'}`}>
-                  {[
-                    [Wallet, proAccessCopy.featureWallet, proAccessCopy.featureWalletHint],
-                    [History, proAccessCopy.featureHistory, proAccessCopy.featureHistoryHint],
-                    [ChartCandlestick, proAccessCopy.featureJournal, proAccessCopy.featureJournalHint],
-                  ].map(([Icon, title, hint]) => (
-                    <div key={title} className="flex items-center gap-3 py-2.5 first:pt-2 last:pb-2">
-                      <Icon className="h-4 w-4 shrink-0 text-amber-500" />
-                      <div className="min-w-0">
-                        <p className={`text-sm font-semibold leading-tight ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{title}</p>
-                        <p className={`mt-1 text-[11px] leading-4 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{hint}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <div className="mt-4 space-y-4">
-                 <div className={`relative isolate rounded-[22px] border p-4 sm:p-5 ${
-                  isLight
-                    ? 'border-amber-300/80 bg-gradient-to-br from-amber-100 via-amber-50 to-white shadow-[0_24px_70px_-36px_rgba(180,83,9,.45)]'
-                    : 'border-amber-400/25 bg-[radial-gradient(circle_at_85%_0%,rgba(251,191,36,.18),transparent_38%),linear-gradient(135deg,rgba(251,191,36,.10),rgba(255,255,255,.025))] shadow-[0_28px_90px_-46px_rgba(251,191,36,.55)]'
-                }`}>
-                  <span className="pointer-events-none absolute right-5 top-1 font-display text-7xl font-bold text-amber-400/[0.07]">26</span>
-                   <div className="relative z-10 flex items-start justify-between gap-3">
-                    <div>
-                       <p className="font-data text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-500">{proAccessCopy.freeTitle}</p>
-                      <p className={`mt-2 max-w-lg text-xs leading-5 ${
-                        isLight ? 'text-zinc-600' : 'text-zinc-400'
-                      }`}>
-                        {proAccessCopy.freeBody}
-                      </p>
-                    </div>
-                     <button type="button" onClick={() => setProOfferTab('invites')} className="shrink-0 text-[10px] font-semibold text-amber-500 transition-colors hover:text-amber-300">
-                       {proAccessCopy.invitesTab} →
-                     </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={openReferralShare}
-                    disabled={Boolean(user) && referralCodeLoading}
-                    className="relative z-10 mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[14px] border border-amber-300/70 bg-amber-400 px-4 text-[13px] font-semibold text-zinc-950 shadow-[0_14px_28px_-20px_rgba(251,191,36,.9)] transition-all hover:bg-amber-300 active:scale-[0.99] disabled:cursor-wait disabled:opacity-55"
-                  >
-                    <Share2 className="h-4 w-4 stroke-[2]" />
-                    {!user
-                      ? proAccessCopy.signIn
-                      : referralCode
-                        ? proAccessCopy.share
-                        : referralCodeError
-                          ? proAccessCopy.retryInvite
-                          : proAccessCopy.preparing}
-                  </button>
-                </div>
-
-                 <div className={`relative isolate rounded-[22px] border p-4 sm:p-5 ${
-                  isLight
-                    ? 'border-zinc-200 bg-white'
-                    : 'border-white/[0.08] bg-white/[0.025]'
-                }`}>
-                  <div className={`pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full blur-3xl ${
-                    isLight ? 'bg-emerald-100/60' : 'bg-emerald-500/[0.06]'
-                  }`} />
-
-                  <div className="relative">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold">{proAccessActive ? proAccessCopy.renewTitle : proAccessCopy.buyTitle}</p>
-                        <p className={`mt-1.5 text-xs leading-5 ${
-                          isLight ? 'text-zinc-600' : 'text-zinc-400'
-                        }`}>
-                          {proAccessActive ? proAccessCopy.renewBody : proAccessCopy.buyBody}
-                        </p>
-                      </div>
-                      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border ${
-                        isLight
-                          ? 'border-zinc-200 bg-zinc-50 text-zinc-600'
-                          : 'border-white/[0.08] bg-white/[0.04] text-zinc-300'
-                      }`}>
-                        <CreditCard className="h-4.5 w-4.5" />
-                      </span>
-                    </div>
-
-                    <div className="mt-4 flex items-end gap-1">
-                      <span className="font-data text-3xl font-bold tracking-tight">{proAccessCopy.buyPrice}</span>
-                      <span className={`pb-1 text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
-                        {proAccessCopy.buyPeriod}
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleStartProCheckout}
-                      disabled={proCheckoutLoading}
-                      aria-busy={proCheckoutLoading}
-                      className={`relative z-10 mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[14px] border px-4 text-[13px] font-semibold transition-all active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 ${
-                        isLight
-                          ? 'border-amber-400 bg-amber-400 text-zinc-950 shadow-[0_14px_28px_-20px_rgba(251,191,36,.8)] hover:bg-amber-300'
-                          : 'border-amber-300/70 bg-amber-400 text-zinc-950 shadow-[0_14px_28px_-20px_rgba(251,191,36,.8)] hover:bg-amber-300'
-                      }`}
-                    >
-                      {proCheckoutLoading
-                        ? <RefreshCw className="h-4 w-4 animate-spin stroke-[1.8]" />
-                        : <CreditCard className="h-4 w-4 stroke-[1.8]" />}
-                      {!user
-                        ? proAccessCopy.buySignIn
-                        : proCheckoutLoading
-                            ? proAccessCopy.buyLoading
-                            : `${proAccessActive ? proAccessCopy.renewButton : proAccessCopy.buyButton} — ${proAccessCopy.buyPrice}`}
-                    </button>
-
-                    <p className={`mt-2 text-center text-[10px] leading-4 ${
-                      proCheckoutError
-                        ? 'text-red-500'
-                        : isLight ? 'text-zinc-400' : 'text-zinc-600'
-                    }`}>
-                      {proCheckoutError ? proAccessCopy.buyError : proAccessCopy.comingSoon}
-                    </p>
-                  </div>
-                </div>
-              </div>
-                </>
+                <ProOffer
+                  language={language} copy={proAccessCopy} active={proAccessActive}
+                  signedIn={Boolean(user)} referralLoading={referralCodeLoading}
+                  referralCode={referralCode} referralError={referralCodeError}
+                  checkoutLoading={proCheckoutLoading} checkoutError={proCheckoutError}
+                  onInvite={openReferralShare} onCheckout={handleStartProCheckout}
+                  onInvites={() => setProOfferTab('invites')}
+                  onWallet={() => {
+                    if (!proAccessActive) return;
+                    setProView(true);
+                    setAccountMode('wallet');
+                    setProAccessPromptOpen(false);
+                  }}
+                />
               ) : (
                 <div>
                   <button type="button" onClick={() => setProOfferTab('offer')} className="mb-4 text-xs font-semibold text-amber-500 transition-colors hover:text-amber-300">
                     ← {proAccessCopy.offerTab}
                   </button>
+                  <h2 id="pro-invites-title" className="mb-2 text-2xl font-semibold">{proAccessCopy.invitesHubTitle}</h2>
+                  <p className="mb-5 text-sm text-zinc-500">{proAccessCopy.invitesHubBody}</p>
                   {!user ? (
                     <div className={`rounded-2xl border p-5 text-center ${
                       isLight ? 'border-zinc-200 bg-zinc-50' : 'border-white/[0.06] bg-white/[0.025]'
@@ -7372,9 +7202,7 @@ export default function CalendarScreen() {
               )}
             </div>
 
-            <div className={`shrink-0 border-t px-5 py-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:px-6 ${
-              isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-zinc-950'
-            }`}>
+            <div className="pro-dialog-footer">
               <button
                 type="button"
                 onClick={() => setProAccessPromptOpen(false)}
