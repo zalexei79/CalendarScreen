@@ -1207,7 +1207,7 @@ export default function CalendarScreen() {
     ru: {
       overview: 'Обзор',
       analytics: 'Аналитика',
-      trades: 'Сделки',
+      trades: 'Журнал',
       commandCenter: 'PRO ОБЗОР',
       commandTitle: 'Картина торговли за период',
       commandSubtitle: 'Главное — без шума. Результат, качество сделок и ключевые сигналы в одном месте.',
@@ -1232,7 +1232,7 @@ export default function CalendarScreen() {
     en: {
       overview: 'Overview',
       analytics: 'Analytics',
-      trades: 'Trades',
+      trades: 'Journal',
       commandCenter: 'PRO OVERVIEW',
       commandTitle: 'Your trading picture for the period',
       commandSubtitle: 'The important signals without the noise: result, trade quality and key patterns.',
@@ -1257,7 +1257,7 @@ export default function CalendarScreen() {
     ro: {
       overview: 'Privire generală',
       analytics: 'Analiză',
-      trades: 'Tranzacții',
+      trades: 'Jurnal',
       commandCenter: 'REZUMAT PRO',
       commandTitle: 'Imaginea tranzacționării pentru perioadă',
       commandSubtitle: 'Semnalele importante fără zgomot: rezultat, calitatea tranzacțiilor și tipare.',
@@ -3438,7 +3438,9 @@ export default function CalendarScreen() {
     setFreeHistoryPanel(null);
     setFreeTimelineSelected(null);
     setFreeTimelineOffset(0);
-    setHistoryScope('all');
+    // In trader mode the first screen should answer one clear question: how did I trade?
+    // Money remains a separate, explicit destination instead of mixing two histories.
+    setHistoryScope(traderMode ? 'trades' : 'all');
   }
 
   function closeHistory() {
@@ -4709,9 +4711,9 @@ export default function CalendarScreen() {
             </div>
 
             <div className={`shrink-0 border-b px-4 py-2.5 sm:px-6 ${isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-zinc-950'}`}>
-              <div className={`grid grid-cols-3 rounded-xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-white/[0.045]'}`}>
+              <div className={`grid ${traderMode ? 'grid-cols-2' : 'grid-cols-3'} rounded-xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-white/[0.045]'}`}>
                 {(traderMode
-                  ? [['all', t('historyAll')], ['trades', t('historyTrades')], ['money', t('historyMoney')]]
+                  ? [['trades', t('historyTrading')], ['money', t('historyMoney')]]
                   : [['all', t('historyAll')], ['income', t('income')], ['expense', t('expense')]]
                 ).map(([key, label]) => (
                   <button
@@ -4877,22 +4879,38 @@ export default function CalendarScreen() {
                       })()}
                     </div>
 
-                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                      <div className={`rounded-xl border p-3 ${isLight ? 'border-emerald-100 bg-emerald-50/50' : 'border-emerald-400/10 bg-emerald-500/[0.04]'}`}>
-                        <p className="text-[10px] text-zinc-500">{t('mainSource')}</p>
-                        <p className="mt-1 truncate text-sm font-semibold">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p>
-                      </div>
-                      <div className={`rounded-xl border p-3 ${isLight ? 'border-rose-100 bg-rose-50/50' : 'border-red-400/10 bg-red-500/[0.04]'}`}>
-                        <p className="text-[10px] text-zinc-500">{t('expenseZone')}</p>
-                        <p className="mt-1 truncate text-sm font-semibold">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p>
-                      </div>
-                    </div>
+                    {(() => {
+                      const [incomeName, incomeAmount] = historyAnalysis.incomeSources[0] || [];
+                      const [expenseName, expenseAmount] = historyAnalysis.expenseCategories[0] || [];
+                      const incomePart = historyIncome > 0 && incomeAmount ? Math.round((incomeAmount / historyIncome) * 100) : 0;
+                      const expensePart = historyExpense > 0 && expenseAmount ? Math.round((expenseAmount / historyExpense) * 100) : 0;
+                      return (
+                        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                          {[
+                            [t('mainSource'), incomeName, incomeAmount, incomePart, 'emerald'],
+                            [t('expenseZone'), expenseName, expenseAmount, expensePart, 'rose'],
+                          ].map(([label, name, amount, share, tone]) => (
+                            <div key={label} className={`rounded-xl border p-3 ${tone === 'emerald' ? (isLight ? 'border-emerald-100 bg-emerald-50/50' : 'border-emerald-400/10 bg-emerald-500/[0.04]') : (isLight ? 'border-rose-100 bg-rose-50/50' : 'border-red-400/10 bg-red-500/[0.04]')}`}>
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="text-[10px] text-zinc-500">{label}</p>
+                                <span className={`font-data text-[10px] font-semibold ${tone === 'emerald' ? 'text-emerald-500' : 'text-red-400'}`}>{share ? `${share}%` : '—'}</span>
+                              </div>
+                              <p className="mt-1 truncate text-sm font-semibold">{name || '—'}</p>
+                              <p className={`mt-1 font-data text-xs font-semibold tabular-nums ${tone === 'emerald' ? 'text-emerald-500' : 'text-red-400'}`}>{amount ? `${tone === 'emerald' ? '+' : '−'}${historyCurrencySymbol}${formatMoney(amount)}` : '—'}</p>
+                              <div className="mt-2 h-1 overflow-hidden rounded-full bg-zinc-500/10">
+                                <span className={`block h-full rounded-full ${tone === 'emerald' ? 'bg-emerald-500' : 'bg-red-400'}`} style={{ width: `${share}%` }} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </section>
               )}
 
-              {/* FREE — История сначала, аналитика по запросу */}
-              {(!traderMode || historyScope === 'money') && (
+              {/* FREE stays exactly as it was; the PRO money view has its own focused overview above. */}
+              {(!isFinancialPro && (!traderMode || historyScope === 'money')) && (
                 <section className="mb-4">
                   <div className={`grid grid-cols-2 gap-2 rounded-2xl border p-1.5 ${
                     isLight ? 'border-zinc-200 bg-zinc-100/70' : 'border-zinc-800 bg-black/20'
@@ -6937,7 +6955,7 @@ export default function CalendarScreen() {
           <SwipeDismissSheet onDismiss={() => setProAccessPromptOpen(false)} isLight={isLight} style={{ maxHeight: 'min(92dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 8px))' }} className={`flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-[28px] border shadow-2xl sm:rounded-3xl ${
             isLight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-white/[0.08] bg-zinc-950 text-zinc-100'
           }`}>
-            <div className={`relative flex items-start justify-between gap-4 overflow-hidden border-b px-5 pb-5 pt-4 sm:px-6 sm:pb-6 sm:pt-6 ${
+            <div className={`relative flex items-start justify-between gap-4 border-b px-5 pb-5 pt-4 sm:px-6 sm:pb-6 sm:pt-6 ${
               isLight ? 'border-amber-200/70 bg-gradient-to-br from-amber-50 via-white to-white' : 'border-amber-400/10 bg-[radial-gradient(circle_at_15%_0%,rgba(251,191,36,.14),transparent_42%)]'
             }`}>
               <div className="pointer-events-none absolute -left-20 -top-28 h-64 w-64 rounded-full bg-amber-400/10 blur-3xl" />
@@ -6951,10 +6969,10 @@ export default function CalendarScreen() {
                   <span className="font-data text-[9px] font-bold tracking-[0.2em]">{proAccessCopy.eyebrow}</span>
                 </div>
 
-                <h3 className="mt-3 max-w-xl font-display text-[25px] font-semibold leading-[1.05] tracking-tight sm:text-[34px]">
+                <h3 className="mt-3 max-w-xl font-display text-[24px] font-semibold leading-[1.08] tracking-tight sm:text-[34px]">
                   {proOfferTab === 'invites' ? proAccessCopy.invitesHubTitle : proAccessCopy.title}
                 </h3>
-                <p className={`mt-3 max-w-xl text-sm leading-6 ${
+                <p className={`mt-2 max-w-xl text-[13px] leading-5 sm:mt-3 sm:text-sm sm:leading-6 ${
                   isLight ? 'text-zinc-600' : 'text-zinc-400'
                 }`}>
                   {proOfferTab === 'invites' ? proAccessCopy.invitesHubBody : proAccessCopy.body}
@@ -7018,7 +7036,7 @@ export default function CalendarScreen() {
               </section>
 
               <div className="contents">
-                 <div className={`order-2 relative mt-4 overflow-hidden rounded-[22px] border p-4 ${
+                 <div className={`order-2 relative mt-4 rounded-[22px] border p-4 pb-5 ${
                   isLight
                     ? 'border-amber-300/80 bg-gradient-to-br from-amber-100 via-amber-50 to-white shadow-[0_24px_70px_-36px_rgba(180,83,9,.45)]'
                     : 'border-amber-400/25 bg-[radial-gradient(circle_at_85%_0%,rgba(251,191,36,.18),transparent_38%),linear-gradient(135deg,rgba(251,191,36,.10),rgba(255,255,255,.025))] shadow-[0_28px_90px_-46px_rgba(251,191,36,.55)]'
@@ -7055,7 +7073,7 @@ export default function CalendarScreen() {
                   </button>
                 </div>
 
-                 <div className={`order-4 relative mt-4 overflow-hidden rounded-2xl border p-4 ${
+                 <div className={`order-4 relative mt-4 rounded-2xl border p-4 pb-5 ${
                   isLight
                     ? 'border-zinc-200 bg-white'
                     : 'border-white/[0.08] bg-white/[0.025]'

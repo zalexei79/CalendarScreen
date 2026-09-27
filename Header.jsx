@@ -528,7 +528,7 @@ export default function Header({
               aria-checked={proView}
               onClick={() => setProView((value) => !value)}
               title={proView ? t('freePlan') : (proAccessActive ? 'PRO' : t('proOpenHint'))}
-              className={`relative h-9 w-[124px] shrink-0 rounded-full border p-0.5 font-data text-[10px] tracking-[0.14em] shadow-[inset_0_1px_1px_rgba(0,0,0,.2)] transition-all duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60 ${
+              className={`relative h-10 w-[124px] shrink-0 rounded-full border p-0.5 font-data text-[10px] tracking-[0.14em] shadow-[inset_0_1px_1px_rgba(0,0,0,.2)] transition-all duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60 ${
                 isLight ? 'border-zinc-300 bg-zinc-100' : 'border-zinc-700/80 bg-zinc-950'
               }`}
             >
@@ -550,17 +550,18 @@ export default function Header({
                 <button
                   type="button"
                   onClick={() => changeAccountMode('wallet')}
-                  className={`flex h-9 w-28 items-center gap-1.5 rounded-xl border px-2.5 font-data text-[9px] font-bold uppercase tracking-[0.1em] transition-all duration-500 delay-75 hover:-translate-y-px ${
+                  className={`flex h-10 w-[122px] items-center gap-1.5 rounded-xl border px-2.5 font-data text-[9px] font-bold uppercase tracking-[0.1em] transition-all duration-500 delay-75 hover:-translate-y-px ${
                     proView && accountMode === 'main' ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'
-                  } ${isLight ? 'border-amber-300/80 bg-amber-50 text-amber-800 hover:bg-amber-100' : 'border-amber-400/25 bg-amber-400/[0.055] text-amber-200 hover:border-amber-400/45 hover:bg-amber-400/[0.10]'}`}
+                  } ${isLight ? 'border-amber-300/80 bg-gradient-to-br from-amber-50 to-white text-amber-800 shadow-sm hover:border-amber-400 hover:bg-amber-100' : 'border-amber-400/30 bg-gradient-to-br from-amber-400/[0.13] via-amber-400/[0.055] to-white/[0.025] text-amber-100 shadow-[0_12px_30px_-20px_rgba(251,191,36,.9)] hover:border-amber-300/55 hover:shadow-[0_16px_34px_-20px_rgba(251,191,36,.98)]'}`}
                 >
-                  <WalletIcon className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                  <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-md ${isLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-400/[0.13] text-amber-300'}`}><WalletIcon className="h-3.5 w-3.5" /></span>
                   <span className="truncate">{t('walletLabel')}</span>
                 </button>
-                <div className={`flex h-9 w-[132px] items-center gap-1.5 rounded-xl border px-2.5 transition-all duration-500 delay-150 ${
+                <div className={`flex h-10 w-[138px] items-center gap-1.5 rounded-xl border px-2.5 transition-all duration-500 delay-150 ${
                   proView && accountMode === 'main' ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'
-                } ${isLight ? 'border-zinc-200 bg-white text-zinc-700' : 'border-white/[0.08] bg-white/[0.03] text-zinc-300'}`}>
-                  <span className="min-w-0 flex-1 truncate font-data text-[8px] uppercase tracking-[0.08em]">{t('traderModeLabel')}</span>
+                } ${traderMode ? (isLight ? 'border-emerald-300 bg-gradient-to-br from-emerald-50 to-white text-emerald-800 shadow-sm' : 'border-emerald-400/28 bg-gradient-to-br from-emerald-400/[0.11] via-emerald-400/[0.035] to-white/[0.025] text-emerald-100 shadow-[0_12px_28px_-20px_rgba(16,185,129,.85)]') : (isLight ? 'border-zinc-200 bg-white text-zinc-700' : 'border-white/[0.10] bg-gradient-to-br from-white/[0.055] to-white/[0.018] text-zinc-300')}`}>
+                  <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-md font-data text-[10px] ${traderMode ? (isLight ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-400/[0.13] text-emerald-300') : (isLight ? 'bg-zinc-100 text-zinc-500' : 'bg-white/[0.06] text-zinc-500')}`}>↗</span>
+                  <span className="min-w-0 flex-1 truncate font-data text-[8px] font-bold uppercase tracking-[0.08em]">{t('traderModeLabel')}</span>
                   <button type="button" role="switch" aria-checked={traderMode} onClick={() => setTraderMode((value) => { const next = !value; if (!next) setPlatformFilter('ALL'); return next; })} className={`relative h-5 w-9 shrink-0 rounded-full border p-0.5 transition-all ${traderMode ? 'border-amber-300 bg-amber-400' : isLight ? 'border-zinc-300 bg-zinc-100' : 'border-zinc-700 bg-zinc-900'}`}>
                     <span className={`block h-3.5 w-3.5 rounded-full transition-transform ${traderMode ? 'translate-x-4 bg-zinc-950' : 'translate-x-0 bg-zinc-500'}`} />
                   </button>
@@ -573,7 +574,7 @@ export default function Header({
               <button
                 type="button"
                 onClick={openConnectModal}
-                className={`ml-0.5 flex h-9 w-[78px] shrink-0 items-center justify-center gap-1.5 rounded-xl border font-data text-[9px] font-bold transition-all duration-500 ${
+                className={`ml-0.5 flex h-10 w-[84px] shrink-0 items-center justify-center gap-1.5 rounded-xl border font-data text-[9px] font-bold transition-all duration-500 ${
                   traderMode && accountMode === 'main' ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'
                 } ${ctraderConnected ? (isLight ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'border-emerald-400/20 bg-emerald-500/[0.07] text-emerald-300 hover:bg-emerald-500/[0.12]') : (isLight ? 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100' : 'border-amber-400/20 bg-amber-400/[0.06] text-amber-300 hover:bg-amber-400/[0.10]')}`}
               >
@@ -586,7 +587,7 @@ export default function Header({
               onClick={openProPresentation}
               aria-label={t('proInfoAction')}
               title={t('proInfoAction')}
-              className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl border font-data text-[9px] font-bold text-amber-500 transition-all duration-500 delay-200 ${
+              className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border font-data text-[9px] font-bold text-amber-500 transition-all duration-500 delay-200 ${
                 proView && accountMode === 'main' ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0 pointer-events-none'
               } ${isLight ? 'border-amber-200 bg-amber-50 hover:bg-amber-100' : 'border-amber-400/15 bg-amber-400/[0.04] hover:border-amber-400/30 hover:bg-amber-400/[0.09]'}`}
             >
