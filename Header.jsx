@@ -36,7 +36,8 @@ export default function Header({
   periodStats, periodTrades = [], currencySymbol = '$', formatMoney,
   monthSummary,
   proAccessActive = false, proAccessLoading = false, proAccessUntil = null,
-  openReferralHub = () => {}, invitedCount = 0, referralLabel = 'Invites',
+  proView = false, setProView = () => {},
+  openReferralHub = () => {}, openProPresentation = () => {}, invitedCount = 0, referralLabel = 'Invites',
   accountMode = 'main', setAccountMode = () => {},
 }) {
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
@@ -519,79 +520,46 @@ export default function Header({
             )}
           </div>
 
-          {/* PRO entitlement and the optional Trader Mode are deliberately separate. */}
-          <div className="mt-1 flex w-full items-center justify-between gap-1.5 sm:mt-0 sm:ml-2 sm:w-auto sm:justify-start">
+          {/* The workspace selector is separate from server-side PRO entitlement. */}
+          <div className="mt-1 flex w-full items-center justify-between sm:mt-0 sm:ml-2 sm:w-auto sm:justify-start">
             <button
               type="button"
-              onClick={() => (proAccessActive ? openReferralHub() : setTraderMode(true))}
-              title={proAccessActive ? t('proActiveHint') : t('proOpenHint')}
-              className={`flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 font-data text-[10px] font-semibold tracking-[0.08em] transition-all hover:-translate-y-px ${
-                proAccessActive
-                  ? 'border-amber-300 bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 text-zinc-950 shadow-[0_0_22px_rgba(251,191,36,.18)]'
-                  : isLight
-                    ? 'border-zinc-300 bg-white text-zinc-500 hover:border-amber-300 hover:text-amber-700'
-                    : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:border-amber-400/40 hover:text-amber-300'
+              role="switch"
+              aria-checked={proView}
+              onClick={() => setProView((value) => !value)}
+              title={proView ? t('freePlan') : (proAccessActive ? 'PRO' : t('proOpenHint'))}
+              className={`relative h-9 w-[124px] shrink-0 rounded-full border p-0.5 font-data text-[10px] tracking-[0.14em] shadow-[inset_0_1px_1px_rgba(0,0,0,.2)] transition-all duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60 ${
+                isLight ? 'border-zinc-300 bg-zinc-100' : 'border-zinc-700/80 bg-zinc-950'
               }`}
             >
-              {!proAccessActive && !proAccessLoading && <LockKeyhole className="h-3 w-3" />}
-              <span>✦ PRO</span>
+              <span aria-hidden="true" className={[
+                'absolute top-0.5 bottom-0.5 left-0.5 w-[58px] rounded-full border transition-all duration-300 ease-out',
+                proView
+                  ? 'translate-x-[60px] border-amber-300 bg-gradient-to-br from-amber-200 via-amber-400 to-amber-500 shadow-[0_0_26px_rgba(251,191,36,.34),inset_0_1px_rgba(255,255,255,.52)]'
+                  : isLight ? 'translate-x-0 border-zinc-400/40 bg-white shadow-sm' : 'translate-x-0 border-zinc-600/60 bg-zinc-800/90 shadow-sm',
+              ].join(' ')} />
+              <span className={`relative z-10 flex h-full items-center justify-center font-medium transition-colors ${!proView ? (isLight ? 'font-semibold text-zinc-900' : 'font-semibold text-zinc-100') : 'text-zinc-500'}`} style={{ width: '58px' }}>{t('freePlan')}</span>
+              <span className={`absolute bottom-0.5 right-0.5 top-0.5 z-10 flex items-center justify-center font-semibold ${proView ? 'text-zinc-950' : 'text-zinc-500'}`} style={{ width: '58px' }}>
+                <span className="flex items-center gap-1">{!proAccessLoading && !proAccessActive && !proView ? <LockKeyhole className="h-3 w-3 stroke-[1.9]" /> : <span>✦</span>} PRO</span>
+              </span>
             </button>
+          </div>
+        </div>
+      </div>
 
-            <div className={`flex h-9 items-center gap-2 rounded-full border px-2.5 transition-all duration-300 ${
-              proAccessActive
-                ? isLight ? 'border-zinc-300 bg-white text-zinc-700' : 'border-zinc-800 bg-zinc-950 text-zinc-300'
-                : isLight ? 'border-zinc-200 bg-zinc-100/70 text-zinc-400' : 'border-zinc-800/70 bg-zinc-950/60 text-zinc-600'
-            }`}>
-              <span className="hidden font-data text-[9px] uppercase tracking-[0.12em] sm:inline">{t('traderModeLabel')}</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={traderMode}
-                aria-disabled={!proAccessActive}
-                onClick={() => setTraderMode((value) => {
-                  const next = !value;
-                  if (!next) setPlatformFilter('ALL');
-                  return next;
-                })}
-                title={proAccessActive ? t('traderModeHint') : t('traderModeRequiresPro')}
-                className={`relative h-6 w-11 rounded-full border p-0.5 transition-all duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/70 ${
-                  traderMode
-                    ? 'border-amber-300 bg-amber-400 shadow-[0_0_18px_rgba(251,191,36,.22)]'
-                    : isLight ? 'border-zinc-300 bg-zinc-100' : 'border-zinc-700 bg-zinc-900'
-                } ${!proAccessActive ? 'cursor-not-allowed opacity-55' : ''}`}
-              >
-                <span className={`block h-4 w-4 rounded-full transition-transform duration-300 ${traderMode ? 'translate-x-5 bg-zinc-950' : 'translate-x-0 bg-zinc-500'}`} />
-              </button>
-              <span className={`hidden font-data text-[9px] font-semibold uppercase tracking-[0.08em] sm:inline ${traderMode ? 'text-amber-500' : 'text-zinc-500'}`}>{traderMode ? t('traderModeOn') : t('traderModeOff')}</span>
-            </div>
-
-            <div className={`overflow-hidden transition-all duration-500 ease-[cubic-bezier(.22,1,.36,1)] ${proAccessActive ? 'max-w-[150px] translate-x-0 opacity-100' : 'max-w-0 -translate-x-5 opacity-0'}`} aria-hidden={!proAccessActive}>
-              <button type="button" tabIndex={proAccessActive ? 0 : -1} onClick={() => changeAccountMode('wallet')} title={t('walletProHint')} className={`ml-0 flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 font-data text-[10px] font-semibold transition-all ${isLight ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100' : 'border-amber-400/25 bg-amber-400/[.08] text-amber-300 hover:bg-amber-400/[.14]'}`}><WalletIcon className="h-3.5 w-3.5" />{t('walletLabel')}<span className="text-[8px] opacity-60">PRO</span></button>
-            </div>
-
-            <div className="ml-2 max-w-[190px] opacity-100">
-              <button
-                type="button"
-                onClick={openReferralHub}
-                title={referralLabel}
-                aria-label={referralLabel}
-                className={`flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 font-data text-[10px] font-semibold transition-colors ${
-                  isLight
-                    ? 'border-amber-200 bg-amber-50/80 text-amber-700 hover:bg-amber-100'
-                    : 'border-amber-400/20 bg-amber-400/[0.07] text-amber-300 hover:bg-amber-400/[0.12]'
-                }`}
-              >
-                <Gift className="h-3.5 w-3.5 shrink-0" />
-                <span className="hidden sm:inline max-w-[110px] truncate">{referralLabel}</span>
-                <span className={`min-w-5 rounded-full px-1.5 py-0.5 text-center text-[9px] ${
-                  invitedCount > 0
-                    ? 'bg-amber-400/15 text-amber-500'
-                    : isLight ? 'bg-white text-zinc-500' : 'bg-white/[0.06] text-zinc-500'
-                }`}>
-                  {invitedCount}
-                </span>
+      <div className={`grid transition-[grid-template-rows,opacity,margin,transform] duration-300 ease-out ${
+        proView && accountMode === 'main' ? 'mt-2 grid-rows-[1fr] opacity-100 translate-y-0' : 'mt-0 grid-rows-[0fr] opacity-0 -translate-y-1 pointer-events-none'
+      }`}>
+        <div className="min-h-0 overflow-hidden">
+          <div className={`flex flex-wrap items-center gap-2 border-t pt-2.5 ${isLight ? 'border-zinc-200' : 'border-white/[0.06]'}`}>
+            <button type="button" onClick={() => changeAccountMode('wallet')} className={`flex h-8 items-center gap-1.5 rounded-full border px-3 font-data text-[10px] font-semibold transition-colors ${isLight ? 'border-zinc-200 bg-white text-zinc-700 hover:border-amber-300' : 'border-white/[0.08] bg-white/[0.03] text-zinc-300 hover:border-amber-400/30'}`}><WalletIcon className="h-3.5 w-3.5 text-amber-500" />{t('walletLabel')}</button>
+            <div className={`flex h-8 items-center gap-2 rounded-full border px-2.5 ${isLight ? 'border-zinc-200 bg-white text-zinc-700' : 'border-white/[0.08] bg-white/[0.03] text-zinc-300'}`}>
+              <span className="font-data text-[9px] uppercase tracking-[0.1em]">{t('traderModeLabel')}</span>
+              <button type="button" role="switch" aria-checked={traderMode} onClick={() => setTraderMode((value) => { const next = !value; if (!next) setPlatformFilter('ALL'); return next; })} className={`relative h-5 w-9 rounded-full border p-0.5 transition-all ${traderMode ? 'border-amber-300 bg-amber-400' : isLight ? 'border-zinc-300 bg-zinc-100' : 'border-zinc-700 bg-zinc-900'}`}>
+                <span className={`block h-3.5 w-3.5 rounded-full transition-transform ${traderMode ? 'translate-x-4 bg-zinc-950' : 'translate-x-0 bg-zinc-500'}`} />
               </button>
             </div>
+            <button type="button" onClick={openProPresentation} className="ml-auto text-[10px] font-semibold text-zinc-500 transition-colors hover:text-amber-500">{t('proInfoAction')} →</button>
           </div>
         </div>
       </div>
@@ -649,7 +617,7 @@ export default function Header({
               )}
             </div>
 
-            <div className={`mt-2 grid grid-cols-3 gap-1 rounded-lg border p-0.5 ${
+            <div className={`mt-2 hidden grid-cols-3 gap-1 rounded-lg border p-0.5 ${
               isLight ? 'border-slate-200/80 bg-slate-100/80' : 'border-white/[0.06] bg-black/20'
             }`}>
               {[
@@ -676,12 +644,12 @@ export default function Header({
           </div>
 
           {/* Desktop keeps cTrader and the period controls in one quiet status row. */}
-          <div className={`hidden sm:block rounded-2xl border px-4 py-3 ${
+          <div className={`hidden sm:block rounded-xl border px-3 py-2 ${
             isLight
               ? 'border-slate-200 bg-white shadow-sm'
               : 'border-white/[0.07] bg-white/[0.025]'
           }`}>
-            <div className="grid items-center gap-2.5 md:grid-cols-[minmax(200px,1fr)_1px_minmax(220px,auto)_minmax(140px,1fr)]">
+            <div className="flex items-center justify-between gap-4">
               {/* cTrader is currently the single supported platform — show it directly. */}
               <div className="flex items-center justify-between gap-3 md:pr-4">
                 <div className="flex min-w-0 items-center gap-2.5">
@@ -730,10 +698,10 @@ export default function Header({
                 </button>
               </div>
 
-              <div className={`h-px md:h-8 md:w-px ${isLight ? 'bg-slate-200' : 'bg-white/[0.06]'}`} />
+              <div className="hidden" />
 
               {/* Keep only the useful income / expense visibility filter. */}
-              <div className="flex flex-wrap items-center justify-between gap-2 md:justify-center">
+              <div className="hidden flex-wrap items-center justify-between gap-2 md:justify-center">
                 <span className={`font-data text-[9px] uppercase tracking-[0.16em] ${
                   isLight ? 'text-slate-500 font-semibold' : 'text-zinc-500'
                 }`}>

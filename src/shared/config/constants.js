@@ -54,6 +54,7 @@ export const STORAGE_KEYS = {
   RECENT_INSTRUMENTS: 'atj_recent_instruments',
   CUSTOM_TAGS: 'atj_custom_instrument_tags',
   DEPOSIT_SIZE: 'atj_deposit_size',
+  PRO_VIEW: 'atj_pro_view',
   TRADER_MODE: 'atj_trader_mode',
   LANGUAGE: 'atj_language',
   CURRENCY: 'atj_currency',
@@ -67,6 +68,7 @@ export const STORAGE_KEYS = {
 export const RECENT_INSTRUMENTS_STORAGE_KEY = STORAGE_KEYS.RECENT_INSTRUMENTS;
 export const CUSTOM_TAGS_STORAGE_KEY = STORAGE_KEYS.CUSTOM_TAGS;
 export const DEPOSIT_SIZE_STORAGE_KEY = STORAGE_KEYS.DEPOSIT_SIZE;
+export const PRO_VIEW_STORAGE_KEY = STORAGE_KEYS.PRO_VIEW;
 export const TRADER_MODE_STORAGE_KEY = STORAGE_KEYS.TRADER_MODE;
 export const LANGUAGE_STORAGE_KEY = STORAGE_KEYS.LANGUAGE;
 export const CURRENCY_STORAGE_KEY = STORAGE_KEYS.CURRENCY;

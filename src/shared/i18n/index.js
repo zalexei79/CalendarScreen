@@ -30,7 +30,7 @@ export const TRANSLATIONS = {
     settings: 'Настройки', language: 'Язык', currency: 'Валюта', theme: 'Тема',
     themeDark: 'Ночь', themeLight: 'День',
     balanceOfDay: 'Баланс дня', overallResult: 'Общий результат дня',
-    analysis: 'Анализ', addRecord: 'Новая запись', addTrade: 'Добавить сделку',
+    analysis: 'Анализ', addAction: 'Добавить', addRecord: 'Новая запись', addTrade: 'Добавить сделку',
     operations: 'История', income: 'Доходы', expense: 'Расходы',
     trades: 'Сделок', winrate: 'Winrate', noRecords: 'Пока нет записей за этот период.',
     close: 'Закрыть',
@@ -46,7 +46,7 @@ export const TRANSLATIONS = {
     flowPositivePro: 'Поток положительный: доходы покрывают расходы.',
     flowNegativePro: 'Расходы сейчас сильнее — стоит посмотреть структуру.',
     flowLittleData: 'Данных пока мало для уверенного вывода.',
-    freePlan: 'FREE', walletLabel: 'Кошелёк', walletProHint: 'Открыть отдельный кошелёк PRO', walletBackLabel: 'Вернуться в календарь', proActiveHint: 'Открыть PRO и приглашения', proOpenHint: 'Открыть DAYRIS PRO', traderModeLabel: 'Режим трейдера', traderModeHint: 'Добавляет журнал сделок, аналитику и cTrader', traderModeConnectHint: 'Ведите сделки вручную или подключите cTrader для автоматической синхронизации.', traderModeRequiresPro: 'Режим трейдера доступен в PRO', traderModeOn: 'Вкл.', traderModeOff: 'Выкл.', historyAll: 'Все', historyTrades: 'Сделки', historyMoney: 'Деньги', addMoneySecondary: 'Доход / расход', calendarLabel: 'Календарь', history: 'История', filters: 'Фильтры', all: 'Все', entries: 'записей',
+    freePlan: 'FREE', walletLabel: 'Кошелёк', walletProHint: 'Открыть отдельный кошелёк PRO', walletBackLabel: 'Вернуться в календарь', proActiveHint: 'Открыть PRO и приглашения', proOpenHint: 'Открыть DAYRIS PRO', proInfoAction: 'Что входит в PRO', traderModeLabel: 'Режим трейдера', traderModeHint: 'Добавляет журнал сделок, аналитику и cTrader', traderModeConnectHint: 'Ведите сделки вручную или подключите cTrader для автоматической синхронизации.', traderModeRequiresPro: 'Режим трейдера доступен в PRO', traderModeOn: 'Вкл.', traderModeOff: 'Выкл.', historyAll: 'Все', historyTrades: 'Сделки', historyMoney: 'Деньги', addMoneySecondary: 'Доход / расход', calendarLabel: 'Календарь', history: 'История', filters: 'Фильтры', all: 'Все', entries: 'записей',
     financialHistory: 'Финансовая история', resultForPeriod: 'Результат за выбранный период', app: 'Приложение', account: 'Аккаунт', mobile: 'Телефон', desktop: 'Компьютер', sync: 'Синхронизация', platform: 'Площадка', platforms: 'Площадки',
     
     // Period presets
@@ -247,7 +247,7 @@ export const TRANSLATIONS = {
     settings: 'Settings', language: 'Language', currency: 'Currency', theme: 'Theme',
     themeDark: 'Dark', themeLight: 'Light',
     balanceOfDay: "Day's balance", overallResult: "Day's overall result",
-    analysis: 'Analysis', addRecord: 'New entry', addTrade: 'Add trade',
+    analysis: 'Analysis', addAction: 'Add', addRecord: 'New entry', addTrade: 'Add trade',
     operations: 'History', income: 'Income', expense: 'Expenses',
     trades: 'Trades', winrate: 'Winrate', noRecords: 'No entries for this period yet.',
     close: 'Close',
@@ -263,7 +263,7 @@ export const TRANSLATIONS = {
     flowPositivePro: 'Flow is positive: income exceeds expenses.',
     flowNegativePro: 'Expenses are higher — check the breakdown.',
     flowLittleData: 'Not enough data yet for a solid takeaway.',
-    freePlan: 'FREE', walletLabel: 'Wallet', walletProHint: 'Open the separate PRO wallet', walletBackLabel: 'Back to calendar', proActiveHint: 'Open PRO and invitations', proOpenHint: 'Open DAYRIS PRO', traderModeLabel: 'Trader mode', traderModeHint: 'Adds trade journal, analytics and cTrader', traderModeConnectHint: 'Keep trades manual or connect cTrader for automatic syncing.', traderModeRequiresPro: 'Trader Mode is included in PRO', traderModeOn: 'On', traderModeOff: 'Off', historyAll: 'All', historyTrades: 'Trades', historyMoney: 'Money', addMoneySecondary: 'Income / expense', calendarLabel: 'Calendar', history: 'History', filters: 'Filters', all: 'All', entries: 'entries',
+    freePlan: 'FREE', walletLabel: 'Wallet', walletProHint: 'Open the separate PRO wallet', walletBackLabel: 'Back to calendar', proActiveHint: 'Open PRO and invitations', proOpenHint: 'Open DAYRIS PRO', proInfoAction: 'What is included in PRO', traderModeLabel: 'Trader mode', traderModeHint: 'Adds trade journal, analytics and cTrader', traderModeConnectHint: 'Keep trades manual or connect cTrader for automatic syncing.', traderModeRequiresPro: 'Trader Mode is included in PRO', traderModeOn: 'On', traderModeOff: 'Off', historyAll: 'All', historyTrades: 'Trades', historyMoney: 'Money', addMoneySecondary: 'Income / expense', calendarLabel: 'Calendar', history: 'History', filters: 'Filters', all: 'All', entries: 'entries',
     financialHistory: 'Financial history', resultForPeriod: 'Result for selected period', app: 'App', account: 'Account', mobile: 'Mobile', desktop: 'Desktop', sync: 'Sync', platform: 'Platform', platforms: 'Platforms',
     
     // Period presets
@@ -464,7 +464,7 @@ export const TRANSLATIONS = {
     settings: 'Setări', language: 'Limbă', currency: 'Valută', theme: 'Temă',
     themeDark: 'Noapte', themeLight: 'Zi',
     balanceOfDay: 'Soldul zilei', overallResult: 'Rezultatul zilei',
-    analysis: 'Analiză', addRecord: 'Înregistrare nouă', addTrade: 'Adaugă tranzacție',
+    analysis: 'Analiză', addAction: 'Adaugă', addRecord: 'Înregistrare nouă', addTrade: 'Adaugă tranzacție',
     operations: 'Istoric', income: 'Venituri', expense: 'Cheltuieli',
     trades: 'Tranzacții', winrate: 'Winrate', noRecords: 'Încă nu sunt înregistrări pentru această perioadă.',
     close: 'Închide',
@@ -480,7 +480,7 @@ export const TRANSLATIONS = {
     flowPositivePro: 'Fluxul este pozitiv: veniturile depășesc cheltuielile.',
     flowNegativePro: 'Cheltuielile sunt mai mari — verificați structura.',
     flowLittleData: 'Nu sunt suficiente date pentru o concluzie sigură.',
-    freePlan: 'FREE', walletLabel: 'Portofel', walletProHint: 'Deschide portofelul PRO separat', walletBackLabel: 'Înapoi la calendar', proActiveHint: 'Deschide PRO și invitațiile', proOpenHint: 'Deschide DAYRIS PRO', traderModeLabel: 'Mod trader', traderModeHint: 'Adaugă jurnalul, analiza și cTrader', traderModeConnectHint: 'Ține tranzacțiile manual sau conectează cTrader pentru sincronizare automată.', traderModeRequiresPro: 'Modul trader este inclus în PRO', traderModeOn: 'Activ', traderModeOff: 'Inactiv', historyAll: 'Toate', historyTrades: 'Tranzacții', historyMoney: 'Bani', addMoneySecondary: 'Venit / cheltuială', calendarLabel: 'Calendar', history: 'Istoric', filters: 'Filtre', all: 'Toate', entries: 'înregistrări',
+    freePlan: 'FREE', walletLabel: 'Portofel', walletProHint: 'Deschide portofelul PRO separat', walletBackLabel: 'Înapoi la calendar', proActiveHint: 'Deschide PRO și invitațiile', proOpenHint: 'Deschide DAYRIS PRO', proInfoAction: 'Ce include PRO', traderModeLabel: 'Mod trader', traderModeHint: 'Adaugă jurnalul, analiza și cTrader', traderModeConnectHint: 'Ține tranzacțiile manual sau conectează cTrader pentru sincronizare automată.', traderModeRequiresPro: 'Modul trader este inclus în PRO', traderModeOn: 'Activ', traderModeOff: 'Inactiv', historyAll: 'Toate', historyTrades: 'Tranzacții', historyMoney: 'Bani', addMoneySecondary: 'Venit / cheltuială', calendarLabel: 'Calendar', history: 'Istoric', filters: 'Filtre', all: 'Toate', entries: 'înregistrări',
     financialHistory: 'Istoric financiar', resultForPeriod: 'Rezultat pentru perioada selectată', app: 'Aplicație', account: 'Cont', mobile: 'Telefon', desktop: 'Computer', sync: 'Sincronizare', platform: 'Platformă', platforms: 'Platforme',
     
     // Period presets

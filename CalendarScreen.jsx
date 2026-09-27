@@ -52,6 +52,7 @@ import {
   RECENT_INSTRUMENTS_STORAGE_KEY,
   CUSTOM_TAGS_STORAGE_KEY,
   DEPOSIT_SIZE_STORAGE_KEY,
+  PRO_VIEW_STORAGE_KEY,
   TRADER_MODE_STORAGE_KEY,
   LANGUAGE_STORAGE_KEY,
   CURRENCY_STORAGE_KEY,
@@ -415,17 +416,43 @@ export default function CalendarScreen() {
     }
   }, [depositSize]);
 
-  // PRO mode is now a UI preference only. Permission itself comes from
-  // Supabase get_my_pro_status(); localStorage can no longer unlock PRO.
+  // Access is server-owned. The selected PRO view and Trader Mode are only
+  // local presentation preferences and can never grant entitlement.
+  const [proView, setProViewInternal] = useState(false);
+  const proViewPreferenceReady = useRef(false);
   const [traderMode, setTraderModeInternal] = useState(false);
   const traderModePreferenceReady = useRef(false);
-  useEffect(() => { if (!proAccessLoading && !proAccessActive && accountMode === 'wallet') setAccountMode('main'); }, [proAccessActive, proAccessLoading, accountMode]);
+  useEffect(() => {
+    if ((!proAccessLoading && !proAccessActive) || !proView) {
+      if (accountMode === 'wallet') setAccountMode('main');
+    }
+  }, [proAccessActive, proAccessLoading, proView, accountMode]);
   const [proAccessPromptOpen, setProAccessPromptOpen] = useState(false);
   const [proOfferTab, setProOfferTab] = useState('offer');
   const [proCheckoutLoading, setProCheckoutLoading] = useState(false);
   const [proCheckoutError, setProCheckoutError] = useState('');
   const [referralShareStatus, setReferralShareStatus] = useState('');
   const [referralNotice, setReferralNotice] = useState(null);
+
+  function setProView(valueOrUpdater) {
+    const requested = typeof valueOrUpdater === 'function'
+      ? Boolean(valueOrUpdater(proView))
+      : Boolean(valueOrUpdater);
+
+    if (requested && proAccessLoading) return;
+    if (requested && !proAccessActive) {
+      setReferralShareStatus('');
+      setProOfferTab('offer');
+      setProAccessPromptOpen(true);
+      return;
+    }
+
+    setProViewInternal(requested);
+    if (!requested) {
+      setTraderModeInternal(false);
+      setPlatformFilter('ALL');
+    }
+  }
 
   function setTraderMode(valueOrUpdater) {
     const requested = typeof valueOrUpdater === 'function'
@@ -434,7 +461,7 @@ export default function CalendarScreen() {
 
     if (requested) {
       if (proAccessLoading) return;
-      if (!proAccessActive) {
+      if (!proAccessActive || !proView) {
         setReferralShareStatus('');
         setProOfferTab('offer');
         setProAccessPromptOpen(true);
@@ -448,6 +475,12 @@ export default function CalendarScreen() {
   function openReferralHub() {
     setProCheckoutError('');
     setProOfferTab('invites');
+    setProAccessPromptOpen(true);
+  }
+
+  function openProPresentation() {
+    setProCheckoutError('');
+    setProOfferTab('offer');
     setProAccessPromptOpen(true);
   }
 
@@ -503,32 +536,39 @@ export default function CalendarScreen() {
   }
 
   useEffect(() => {
-    if (!traderModePreferenceReady.current || proAccessLoading || !proAccessActive) return;
+    if (!proViewPreferenceReady.current || proAccessLoading || !proAccessActive) return;
     try {
+      window.localStorage.setItem(PRO_VIEW_STORAGE_KEY, proView ? '1' : '0');
       window.localStorage.setItem(TRADER_MODE_STORAGE_KEY, traderMode ? '1' : '0');
     } catch {
       // localStorage remembers only the preferred view, never the entitlement.
     }
-  }, [traderMode, proAccessActive, proAccessLoading]);
+  }, [proView, traderMode, proAccessActive, proAccessLoading]);
 
   useEffect(() => {
     if (proAccessLoading) {
+      proViewPreferenceReady.current = false;
       traderModePreferenceReady.current = false;
       return;
     }
 
     if (!proAccessActive) {
+      setProViewInternal(false);
       setTraderModeInternal(false);
+      proViewPreferenceReady.current = false;
       traderModePreferenceReady.current = false;
       return;
     }
 
-    // Restore the user's preferred view only after the server confirms access.
+    // Restore presentation only after the server confirms access.
     try {
-      setTraderModeInternal(window.localStorage.getItem(TRADER_MODE_STORAGE_KEY) === '1');
+      const nextProView = window.localStorage.getItem(PRO_VIEW_STORAGE_KEY) === '1';
+      setProViewInternal(nextProView);
+      setTraderModeInternal(nextProView && window.localStorage.getItem(TRADER_MODE_STORAGE_KEY) === '1');
     } catch {
       // ignore storage read failures
     }
+    proViewPreferenceReady.current = true;
     traderModePreferenceReady.current = true;
   }, [proAccessActive, proAccessLoading, user?.id]);
 
@@ -595,8 +635,8 @@ export default function CalendarScreen() {
 
   useEffect(() => {
     document.documentElement.lang = language === 'md' ? 'ro' : language;
-    document.title = `${translate(language, 'appName')} — ${translate(language, proAccessActive ? 'titlePro' : 'titleMoney')}`;
-  }, [language, proAccessActive]);
+    document.title = `${translate(language, 'appName')} — ${translate(language, proView ? 'titlePro' : 'titleMoney')}`;
+  }, [language, proView]);
 
   // Keep onboarding language independent from the app language state so the
   // very next onboarding screen switches immediately after the user's tap,
@@ -1874,6 +1914,7 @@ export default function CalendarScreen() {
   // PRO keeps ordinary money records and trading records in one clean composer.
   // This state controls which entry experience is shown without changing the global PRO mode.
   const [proEntryMode, setProEntryMode] = useState('trade'); // 'finance' | 'trade'
+  const [proEntryChoiceOpen, setProEntryChoiceOpen] = useState(false);
   const [form, setForm] = useState({
     instrument: '', direction: 'LONG', sign: 'plus', pnl: '', time: currentTimeHHMM(), comment: '', platform: 'Manual', currency: 'USD', accountTarget: 'main',
   });
@@ -2137,6 +2178,7 @@ export default function CalendarScreen() {
       if (traderMode) {
         setProEntryMode(getMoneyCategoryMeta(tradeToEdit.instrument) ? 'finance' : 'trade');
       }
+      setProEntryChoiceOpen(false);
       setForm({
         instrument: textValue(tradeToEdit.instrument),
         direction: textValue(tradeToEdit.direction),
@@ -2152,7 +2194,10 @@ export default function CalendarScreen() {
     } else {
       if (!dateKeyOverride && isFutureSelected) return; // нельзя добавлять сделки на будущее
       setEditingTrade(null);
-      if (traderMode) setProEntryMode('trade');
+      if (traderMode) {
+        setProEntryMode('trade');
+        setProEntryChoiceOpen(true);
+      } else setProEntryChoiceOpen(false);
       const newEntryDateKey = dateKeyOverride || targetDateKey;
       if (newEntryDateKey > todayKey) return;
       setModalDateKey(newEntryDateKey);
@@ -2182,14 +2227,10 @@ export default function CalendarScreen() {
     setFormError('');
     if (firstRunGuideStep === 2 && !editingTrade) setFirstRunGuideStep(1);
     setEditingTrade(null);
+    setProEntryChoiceOpen(false);
     setPendingPlanRecordId(null);
     if (immediate) setModalOpen(false);
     else setTimeout(() => setModalOpen(false), 180);
-  }
-
-  function openFinanceEntry(dateKeyOverride = null) {
-    openModal(null, dateKeyOverride);
-    if (traderMode) setProEntryMode('finance');
   }
 
   function openConnectModal() {
@@ -2526,7 +2567,12 @@ export default function CalendarScreen() {
   const historyFilteredTrades = useMemo(() => {
     return Object.entries(manualTrades || {})
       .flatMap(([dateKey, arr]) => (Array.isArray(arr) ? arr : []).map((t) => ({ ...t, dateKey })))
-      .filter((t) => !traderMode || historyScope === 'all' || (historyScope === 'trades' ? isTradingHistoryRecord(t) : !isTradingHistoryRecord(t)))
+      .filter((t) => {
+        if (traderMode) return historyScope === 'all' || (historyScope === 'trades' ? isTradingHistoryRecord(t) : !isTradingHistoryRecord(t));
+        if (historyScope === 'income') return (Number(t.pnl) || 0) >= 0;
+        if (historyScope === 'expense') return (Number(t.pnl) || 0) < 0;
+        return true;
+      })
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
       .filter((t) => historyCurrency === 'ALL' || (t.currency || 'USD') === historyCurrency)
       .filter((t) => !historyNameFilter || String(t.instrument || '').trim().toUpperCase() === historyNameFilter.trim().toUpperCase())
@@ -3384,7 +3430,7 @@ export default function CalendarScreen() {
     setFreeHistoryPanel(null);
     setFreeTimelineSelected(null);
     setFreeTimelineOffset(0);
-    setHistoryScope(traderMode ? 'all' : 'money');
+    setHistoryScope('all');
   }
 
   function closeHistory() {
@@ -3515,7 +3561,7 @@ export default function CalendarScreen() {
         addNote: 'Добавить заметку', addDetails: 'Добавить детали сделки', hideDetails: 'Скрыть детали',
         detailsHint: 'TP, SL, источник и заметка', note: 'Заметка', noteFinance: 'Например: обед, аренда, зарплата за месяц…',
         noteTrade: 'Что произошло в этой сделке?', source: 'Источник', saveFinance: 'Сохранить запись', saveTrade: 'Сохранить сделку',
-        financeHint: 'Доходы и расходы', tradeHint: 'Журнал трейдера', time: 'Время', quickPick: 'Быстрый выбор',
+        financeHint: 'Доходы и расходы', tradeHint: 'Журнал трейдера', time: 'Время', quickPick: 'Быстрый выбор', chooseType: 'Что добавить?', chooseTypeHint: 'Сначала выберите тип записи', reminder: 'Напоминание',
       }
     : proEntryLanguage === 'ro'
     ? {
@@ -3525,7 +3571,7 @@ export default function CalendarScreen() {
         addNote: 'Adaugă notă', addDetails: 'Adaugă detalii', hideDetails: 'Ascunde detaliile',
         detailsHint: 'TP, SL, sursă și notă', note: 'Notă', noteFinance: 'De ex.: prânz, chirie, salariu…',
         noteTrade: 'Ce s-a întâmplat în această tranzacție?', source: 'Sursă', saveFinance: 'Salvează înregistrarea', saveTrade: 'Salvează tranzacția',
-        financeHint: 'Venituri și cheltuieli', tradeHint: 'Jurnal de trading', time: 'Ora', quickPick: 'Acces rapid',
+        financeHint: 'Venituri și cheltuieli', tradeHint: 'Jurnal de trading', time: 'Ora', quickPick: 'Acces rapid', chooseType: 'Ce adaugi?', chooseTypeHint: 'Alege mai întâi tipul înregistrării', reminder: 'Reminder',
       }
     : {
         newEntry: 'New entry', editEntry: 'Edit entry', finance: 'Finance', trade: 'Trade',
@@ -3534,7 +3580,7 @@ export default function CalendarScreen() {
         addNote: 'Add a note', addDetails: 'Add trade details', hideDetails: 'Hide details',
         detailsHint: 'TP, SL, source and note', note: 'Note', noteFinance: 'For example: lunch, rent, monthly salary…',
         noteTrade: 'What happened in this trade?', source: 'Source', saveFinance: 'Save entry', saveTrade: 'Save trade',
-        financeHint: 'Income & expenses', tradeHint: 'Trading journal', time: 'Time', quickPick: 'Quick pick',
+        financeHint: 'Income & expenses', tradeHint: 'Trading journal', time: 'Time', quickPick: 'Quick pick', chooseType: 'What would you like to add?', chooseTypeHint: 'Choose the entry type first', reminder: 'Reminder',
       };
 
   function switchProEntryMode(nextMode) {
@@ -3564,6 +3610,46 @@ export default function CalendarScreen() {
       };
     });
   }
+
+  function chooseProEntryKind(kind) {
+    if (kind === 'reminder') {
+      closeModal({ immediate: true });
+      openPlanComposer();
+      return;
+    }
+
+    if (kind === 'trade') {
+      switchProEntryMode('trade');
+    } else {
+      switchProEntryMode('finance');
+      setForm((current) => ({
+        ...current,
+        sign: kind === 'expense' ? 'minus' : 'plus',
+        instrument: kind === 'expense' ? 'Продукты' : 'Зарплата',
+      }));
+    }
+    setProEntryChoiceOpen(false);
+  }
+
+  const renderProEntryChoice = () => (
+    <div className="mt-5">
+      <p className={`text-base font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{proEntryCopy.chooseType}</p>
+      <p className={`mt-1 text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{proEntryCopy.chooseTypeHint}</p>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        {[
+          ['trade', ChartCandlestick, proEntryCopy.trade, 'border-emerald-400/35 text-emerald-400'],
+          ['income', TrendingUp, proEntryCopy.income, 'border-amber-400/35 text-amber-400'],
+          ['expense', TrendingDown, proEntryCopy.expense, 'border-red-400/30 text-red-400'],
+          ['reminder', Calendar, proEntryCopy.reminder, 'border-zinc-400/25 text-zinc-400'],
+        ].map(([kind, Icon, label, accent]) => (
+          <button key={kind} type="button" onClick={() => chooseProEntryKind(kind)} className={`flex min-h-24 flex-col justify-between rounded-2xl border p-3.5 text-left transition-all hover:-translate-y-0.5 ${isLight ? 'border-zinc-200 bg-zinc-50 hover:bg-white' : 'border-white/[0.08] bg-white/[0.025] hover:bg-white/[0.05]'}`}>
+            <Icon className={`h-5 w-5 ${accent}`} />
+            <span className={`text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
   const renderProTradeComposer = () => {
     const isFinanceEntry = proEntryMode === 'finance';
@@ -3873,7 +3959,7 @@ export default function CalendarScreen() {
 
 
   return (
-    <div className={`premium-shell min-h-screen w-full flex flex-col transition-colors duration-500 ${proAccessActive ? 'pro-active-shell' : ''} ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
+    <div className={`premium-shell min-h-screen w-full flex flex-col transition-colors duration-500 ${proView ? 'pro-active-shell' : ''} ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
         .font-display { font-family: 'Space Grotesk', sans-serif; }
@@ -4103,7 +4189,7 @@ export default function CalendarScreen() {
         monthMenuRef={monthMenuRef} monthMenuOpen={monthMenuOpen} setMonthMenuOpen={setMonthMenuOpen}
         yearMenuRef={yearMenuRef} yearMenuOpen={yearMenuOpen} setYearMenuOpen={setYearMenuOpen}
         month={month} year={year} today={today} setViewMonth={setViewMonth} setViewYear={setViewYear}
-        setSelectedKey={setSelectedKey} setTraderMode={setTraderMode} setPlatformFilter={setPlatformFilter}
+        setSelectedKey={setSelectedKey} proView={proView} setProView={setProView} setTraderMode={setTraderMode} setPlatformFilter={setPlatformFilter}
         platformFilter={platformFilter} platformOptions={['ALL', 'cTrader']}
         calendarTypeFilter={calendarTypeFilter} setCalendarTypeFilter={setCalendarTypeFilter}
         openConnectModal={openConnectModal} ctraderConnected={ctraderConnected}
@@ -4111,7 +4197,7 @@ export default function CalendarScreen() {
         pendingSyncCount={pendingSyncCount} installInfoOpen={installInfoOpen} installInstructions={installInstructions} isPwaInstalled={isPwaInstalled}
         failedSyncCount={failedSyncCount} retryFailedSync={retryFailedSync}
         proAccessActive={proAccessActive} proAccessLoading={proAccessLoading} proAccessUntil={proAccessUntil}
-        openReferralHub={openReferralHub} invitedCount={invitedCount} referralLabel={proAccessCopy.invitesTab}
+        openReferralHub={openReferralHub} openProPresentation={openProPresentation} invitedCount={invitedCount} referralLabel={proAccessCopy.invitesTab}
         periodStats={periodStats} periodTrades={periodTrades} currencySymbol={currencySymbol} formatMoney={formatMoney}
       />
 
@@ -4325,17 +4411,8 @@ export default function CalendarScreen() {
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-black/10 transition-transform duration-200 group-hover:rotate-90">
                 <Plus className="h-3.5 w-3.5 stroke-[3] text-zinc-950" />
               </span>
-              <span>{isFutureSelected ? t('schedule') : (traderMode ? t('addTrade') : t('addRecord'))}</span>
+              <span>{isFutureSelected ? t('schedule') : t('addAction')}</span>
             </button>
-            {traderMode && !isFutureSelected && (
-              <button
-                type="button"
-                onClick={() => openFinanceEntry()}
-                className={`ml-2 rounded-xl border px-3 py-2.5 text-[11px] font-semibold transition-colors ${isLight ? 'border-zinc-200 bg-white text-zinc-600 hover:border-amber-300 hover:text-amber-700' : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-amber-400/30 hover:text-amber-300'}`}
-              >
-                {t('addMoneySecondary')}
-              </button>
-            )}
           </div>
 
           {traderMode ? (
@@ -4540,8 +4617,8 @@ export default function CalendarScreen() {
           <button
             type="button"
             onClick={() => openModal()}
-            title={traderMode ? t('addTrade') : t('addRecord')}
-            aria-label={traderMode ? t('addTrade') : t('addRecord')}
+            title={t('addAction')}
+            aria-label={t('addAction')}
             className={`group relative flex items-center gap-2 rounded-full px-4 sm:px-5 py-2 sm:py-2.5 font-medium transition-all duration-200 active:scale-[0.97] border ${
               isLight
                 ? 'border-slate-800 bg-slate-900 text-white hover:bg-slate-800 shadow-sm'
@@ -4554,21 +4631,9 @@ export default function CalendarScreen() {
               <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 stroke-[2.5]" />
             </span>
             <span className="text-xs sm:text-sm font-semibold tracking-tight">
-              {traderMode ? t('addTrade') : t('addRecord')}
+              {t('addAction')}
             </span>
           </button>
-          {traderMode && (
-            <button
-              type="button"
-              onClick={() => openFinanceEntry()}
-              title={t('addMoneySecondary')}
-              aria-label={t('addMoneySecondary')}
-              className={`inline-flex min-w-0 items-center gap-1.5 rounded-full border px-3 py-2 text-[11px] font-semibold transition-colors ${isLight ? 'border-slate-200 bg-white text-slate-600 hover:border-amber-300 hover:text-amber-700' : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-amber-400/30 hover:text-amber-300'}`}
-            >
-              <Repeat2 className="h-3.5 w-3.5 shrink-0" />
-              <span className="max-w-[9rem] truncate">{t('addMoneySecondary')}</span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -4634,41 +4699,33 @@ export default function CalendarScreen() {
               </div>
             </div>
 
-            {traderMode && (
-              <div className={`shrink-0 border-b px-4 py-2.5 sm:px-6 ${isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-zinc-950'}`}>
-                <div className={`grid grid-cols-3 rounded-xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-white/[0.045]'}`}>
-                  {[
-                    ['all', t('historyAll')],
-                    ['trades', t('historyTrades')],
-                    ['money', t('historyMoney')],
-                  ].map(([key, label]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => {
-                        setHistoryScope(key);
-                        setHistoryFiltersOpen(false);
-                        setProFiltersOpen(false);
-                        if (key === 'money') {
-                          setPlatformFilter('ALL');
-                          setHistoryWinLoss('all');
-                          setHistoryNameFilter('');
-                        }
-                      }}
-                      className={`min-h-9 rounded-lg px-2 text-xs font-semibold transition-all ${
-                        historyScope === key
-                          ? isLight ? 'bg-white text-zinc-900 shadow-sm' : 'bg-zinc-800 text-zinc-100 shadow-sm'
-                          : isLight ? 'text-zinc-500 hover:text-zinc-900' : 'text-zinc-500 hover:text-zinc-200'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
+            <div className={`shrink-0 border-b px-4 py-2.5 sm:px-6 ${isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-zinc-950'}`}>
+              <div className={`grid grid-cols-3 rounded-xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-white/[0.045]'}`}>
+                {(traderMode
+                  ? [['all', t('historyAll')], ['trades', t('historyTrades')], ['money', t('historyMoney')]]
+                  : [['all', t('historyAll')], ['income', t('income')], ['expense', t('expense')]]
+                ).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      setHistoryScope(key);
+                      setHistoryFiltersOpen(false);
+                      setProFiltersOpen(false);
+                      if (key === 'money' || !traderMode) {
+                        setPlatformFilter('ALL');
+                        setHistoryWinLoss('all');
+                        setHistoryNameFilter('');
+                      }
+                    }}
+                    className={`min-h-9 rounded-lg px-2 text-xs font-semibold transition-all ${historyScope === key ? (isLight ? 'bg-white text-zinc-900 shadow-sm' : 'bg-zinc-800 text-zinc-100 shadow-sm') : (isLight ? 'text-zinc-500 hover:text-zinc-900' : 'text-zinc-500 hover:text-zinc-200')}`}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
-            )}
-
-            {traderMode && historyScope !== 'money' && (
+            </div>
+            {traderMode && historyScope === 'trades' && (
               <div className={`shrink-0 border-b px-4 py-3 sm:px-6 ${
                 isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-zinc-950'
               }`}>
@@ -6008,7 +6065,7 @@ export default function CalendarScreen() {
               </div>
             </div>
 
-            {traderMode ? renderProTradeComposer() : (
+            {traderMode ? (proEntryChoiceOpen ? renderProEntryChoice() : renderProTradeComposer()) : (
             <div className="mt-4 sm:min-h-0 sm:overflow-y-auto sm:overscroll-contain sm:pr-1">
               {firstRunGuideStep === 2 && !editingTrade && !traderMode && (
                 <div className={`mb-4 rounded-2xl border p-3 sm:p-4 ${
