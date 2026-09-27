@@ -419,7 +419,7 @@ export default function CalendarScreen() {
   // Supabase get_my_pro_status(); localStorage can no longer unlock PRO.
   const [traderMode, setTraderModeInternal] = useState(false);
   const traderModePreferenceReady = useRef(false);
-  useEffect(() => { if (!traderMode && accountMode === 'wallet') setAccountMode('main'); }, [traderMode, accountMode]);
+  useEffect(() => { if (!proAccessLoading && !proAccessActive && accountMode === 'wallet') setAccountMode('main'); }, [proAccessActive, proAccessLoading, accountMode]);
   const [proAccessPromptOpen, setProAccessPromptOpen] = useState(false);
   const [proOfferTab, setProOfferTab] = useState('offer');
   const [proCheckoutLoading, setProCheckoutLoading] = useState(false);
@@ -595,8 +595,8 @@ export default function CalendarScreen() {
 
   useEffect(() => {
     document.documentElement.lang = language === 'md' ? 'ro' : language;
-    document.title = `${translate(language, 'appName')} — ${translate(language, traderMode ? 'titlePro' : 'titleMoney')}`;
-  }, [language, traderMode]);
+    document.title = `${translate(language, 'appName')} — ${translate(language, proAccessActive ? 'titlePro' : 'titleMoney')}`;
+  }, [language, proAccessActive]);
 
   // Keep onboarding language independent from the app language state so the
   // very next onboarding screen switches immediately after the user's tap,
@@ -831,11 +831,11 @@ export default function CalendarScreen() {
   const proAccessCopy = {
     ru: {
       eyebrow: 'PRO',
-      title: 'Торгуй спокойнее. Видь больше.',
-      body: 'DAYRIS PRO превращает записи в ясную систему: сделки загружаются сами, закономерности становятся видны, а личные деньги остаются отдельно от PnL.',
+      title: 'Больше порядка в ваших финансах.',
+      body: 'DAYRIS PRO объединяет планирование, историю, аналитику и личные деньги в одном спокойном пространстве.',
       invitesHubTitle: 'Мои приглашения',
       invitesHubBody: 'Следи за приглашёнными, статусами и заработанными днями PRO.',
-      featuresTitle: 'Не больше функций. Больше ясности.',
+      featuresTitle: 'В PRO ваши финансы собраны в одном месте.',
       featurePlatform: 'Сделки появляются сами',
       featurePlatformHint: 'Подключи cTrader и забудь о ручном переносе результатов',
       featureAnalytics: 'Результат видно сразу',
@@ -846,6 +846,14 @@ export default function CalendarScreen() {
       featureInsightsHint: 'История помогает повторять сильные решения и замечать ошибки',
       featureWallet: 'Деньги отдельно от торговли',
       featureWalletHint: 'Личный баланс и история расходов никогда не смешиваются с PnL',
+      featureReminders: 'Важное не теряется',
+      featureRemindersHint: 'Платежи, аренда и ожидаемые доходы остаются в поле зрения',
+      featureHistory: 'Понятная финансовая картина',
+      featureHistoryHint: 'Доходы и расходы легко просматривать без торгового шума',
+      traderRevealEyebrow: 'ТРЕЙДИНГ · ВКЛЮЧЕНО В PRO',
+      traderRevealTitle: 'Торгуете?',
+      traderRevealBody: 'В PRO также входит режим трейдера: журнал сделок, PnL, аналитика и cTrader — когда они вам нужны.',
+      traderRevealAction: 'Включить режим трейдера',
       freeTitle: 'Один друг — 26 дней PRO',
       freeBody: 'Отправь личное приглашение. Друг получит 7 дней PRO, а после его первой записи тебе автоматически откроется 26 дней.',
       reward: '+26 дней PRO тебе',
@@ -898,11 +906,11 @@ export default function CalendarScreen() {
     },
     en: {
       eyebrow: 'PRO',
-      title: 'Trade calmer. See more.',
-      body: 'DAYRIS PRO turns entries into a clear system: trades sync themselves, patterns become visible, and personal money stays separate from PnL.',
+      title: 'More order in your finances.',
+      body: 'DAYRIS PRO brings planning, history, analytics and personal money into one calm workspace.',
       invitesHubTitle: 'My invitations',
       invitesHubBody: 'Track invited users, their status, and the PRO days you have earned.',
-      featuresTitle: 'Not more features. More clarity.',
+      featuresTitle: 'PRO keeps your finances in one clear place.',
       featurePlatform: 'Trades appear automatically',
       featurePlatformHint: 'Connect cTrader and stop copying results by hand',
       featureAnalytics: 'See the result instantly',
@@ -913,6 +921,14 @@ export default function CalendarScreen() {
       featureInsightsHint: 'History helps repeat strong decisions and catch mistakes',
       featureWallet: 'Money stays separate from trading',
       featureWalletHint: 'Personal balance and spending history never mix with PnL',
+      featureReminders: 'Important things stay visible',
+      featureRemindersHint: 'Payments, rent and expected income stay in view',
+      featureHistory: 'A clear financial picture',
+      featureHistoryHint: 'Review income and expenses without trading noise',
+      traderRevealEyebrow: 'TRADING · INCLUDED IN PRO',
+      traderRevealTitle: 'Do you trade?',
+      traderRevealBody: 'PRO also includes Trader Mode: trade journal, PnL, analytics and cTrader — whenever you need them.',
+      traderRevealAction: 'Turn on Trader Mode',
       freeTitle: 'One friend — 26 days of PRO',
       freeBody: 'Send a personal invite. Your friend gets 7 days of PRO, and their first entry unlocks 26 days for you automatically.',
       reward: '+26 days PRO for you',
@@ -965,11 +981,11 @@ export default function CalendarScreen() {
     },
     ro: {
       eyebrow: 'PRO',
-      title: 'Tranzacționează calm. Vezi mai mult.',
-      body: 'DAYRIS PRO transformă înregistrările într-un sistem clar: tranzacțiile se sincronizează, tiparele devin vizibile, iar banii personali rămân separați de PnL.',
+      title: 'Mai multă ordine în finanțele tale.',
+      body: 'DAYRIS PRO aduce planificarea, istoricul, analiza și banii personali într-un singur spațiu calm.',
       invitesHubTitle: 'Invitațiile mele',
       invitesHubBody: 'Urmărește invitațiile, starea lor și zilele PRO câștigate.',
-      featuresTitle: 'Nu mai multe funcții. Mai multă claritate.',
+      featuresTitle: 'În PRO, finanțele tale rămân într-un singur loc clar.',
       featurePlatform: 'Tranzacțiile apar automat',
       featurePlatformHint: 'Conectează cTrader și renunță la copierea manuală a rezultatelor',
       featureAnalytics: 'Vezi rezultatul imediat',
@@ -980,6 +996,14 @@ export default function CalendarScreen() {
       featureInsightsHint: 'Istoricul te ajută să repeți deciziile bune și să observi greșelile',
       featureWallet: 'Banii rămân separați de trading',
       featureWalletHint: 'Soldul personal și cheltuielile nu se amestecă niciodată cu PnL-ul',
+      featureReminders: 'Lucrurile importante rămân vizibile',
+      featureRemindersHint: 'Plățile, chiria și veniturile așteptate rămân în atenție',
+      featureHistory: 'O imagine financiară clară',
+      featureHistoryHint: 'Veniturile și cheltuielile se văd fără zgomot de trading',
+      traderRevealEyebrow: 'TRADING · INCLUS ÎN PRO',
+      traderRevealTitle: 'Tranzacționezi?',
+      traderRevealBody: 'PRO include și Modul trader: jurnal, PnL, analiză și cTrader — atunci când ai nevoie.',
+      traderRevealAction: 'Activează modul trader',
       freeTitle: 'Un prieten — 26 de zile PRO',
       freeBody: 'Trimite o invitație personală. Prietenul primește 7 zile PRO, iar prima lui înregistrare îți activează automat 26 de zile.',
       reward: '+26 zile PRO pentru tine',
@@ -2148,6 +2172,11 @@ export default function CalendarScreen() {
     else setTimeout(() => setModalOpen(false), 180);
   }
 
+  function openFinanceEntry(dateKeyOverride = null) {
+    openModal(null, dateKeyOverride);
+    if (traderMode) setProEntryMode('finance');
+  }
+
   function openConnectModal() {
     setConnectTab('ctrader');
     setApiForm({ exchange: 'Bybit', key: '', secret: '' });
@@ -2401,6 +2430,7 @@ export default function CalendarScreen() {
 
   // --- History browser: filterable, shows a total, click a trade to jump to its day
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyScope, setHistoryScope] = useState('all'); // 'all' | 'trades' | 'money'
   const historyDealsRef = useRef(null);
   const historyScrollRef = useRef(null);
   const [historyAtDeals, setHistoryAtDeals] = useState(false);
@@ -2469,15 +2499,25 @@ export default function CalendarScreen() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [historyOpen, modalOpen, settingsOpen, connectOpen, installInfoOpen, selectedKey]);
 
+  function isTradingHistoryRecord(item) {
+    if (typeof item.traderMode === 'boolean') return item.traderMode;
+    const name = String(item.instrument || '').trim();
+    return item.platform === 'cTrader'
+      || item.take_profit != null
+      || item.stop_loss != null
+      || !getMoneyCategoryMeta(name);
+  }
+
   const historyFilteredTrades = useMemo(() => {
     return Object.entries(manualTrades || {})
       .flatMap(([dateKey, arr]) => (Array.isArray(arr) ? arr : []).map((t) => ({ ...t, dateKey })))
+      .filter((t) => !traderMode || historyScope === 'all' || (historyScope === 'trades' ? isTradingHistoryRecord(t) : !isTradingHistoryRecord(t)))
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
       .filter((t) => historyCurrency === 'ALL' || (t.currency || 'USD') === historyCurrency)
       .filter((t) => !historyNameFilter || String(t.instrument || '').trim().toUpperCase() === historyNameFilter.trim().toUpperCase())
       .filter((t) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? (Number(t.pnl) || 0) >= 0 : (Number(t.pnl) || 0) < 0))
       .sort((a, b) => (a.dateKey === b.dateKey ? (b.time || '').localeCompare(a.time || '') : (b.dateKey || '').localeCompare(a.dateKey || '')));
-  }, [manualTrades, platformFilter, historyWinLoss, historyCurrency, historyNameFilter]);
+  }, [manualTrades, platformFilter, historyWinLoss, historyCurrency, historyNameFilter, traderMode, historyScope]);
   const historyTrades = useMemo(() => historyFilteredTrades.filter(t => t.dateKey >= dateFrom && t.dateKey <= dateTo), [historyFilteredTrades, dateFrom, dateTo]);
 
   function isTradingInstrumentName(value) {
@@ -2488,12 +2528,12 @@ export default function CalendarScreen() {
   const historyNameOptions = useMemo(() => [...new Set(
     Object.values(manualTrades).flat().map((trade) => trade.instrument).filter(Boolean)
   )]
-    .filter((name) => traderMode || MONEY_CATEGORIES.some((category) => category.key.toUpperCase() === name.trim().toUpperCase()))
-    .sort((a, b) => a.localeCompare(b, language)), [manualTrades, language, traderMode]);
+    .filter((name) => (traderMode && historyScope !== 'money') || MONEY_CATEGORIES.some((category) => category.key.toUpperCase() === name.trim().toUpperCase()))
+    .sort((a, b) => a.localeCompare(b, language)), [manualTrades, language, traderMode, historyScope]);
 
   useEffect(() => {
-    if (!traderMode && historyNameFilter && isTradingInstrumentName(historyNameFilter)) setHistoryNameFilter('');
-  }, [traderMode, historyNameFilter]);
+    if ((!traderMode || historyScope === 'money') && historyNameFilter && isTradingInstrumentName(historyNameFilter)) setHistoryNameFilter('');
+  }, [traderMode, historyScope, historyNameFilter]);
 
   const historyByCurrency = useMemo(() => Object.entries(historyTrades.reduce((groups, trade) => {
     const code = trade.currency || 'USD';
@@ -3276,7 +3316,7 @@ export default function CalendarScreen() {
           }`}>
             <ActiveIcon className="h-4 w-4 stroke-[1.8]" />
           </span>
-          <span className="min-w-0 flex-1 truncate text-xs font-data">{(traderMode ? historyNameFilter : getMoneyCategoryLabel(historyNameFilter, language)) || t('all')}</span>
+          <span className="min-w-0 flex-1 truncate text-xs font-data">{(traderMode && historyScope !== 'money' ? historyNameFilter : getMoneyCategoryLabel(historyNameFilter, language)) || t('all')}</span>
           <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-zinc-500 transition-transform ${historyCategoryMenuOpen ? 'rotate-180' : ''}`} />
         </button>
         {historyCategoryMenuOpen && (
@@ -3284,7 +3324,7 @@ export default function CalendarScreen() {
             isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'
           }`}>
             <div className="max-h-64 overflow-y-auto pr-1">
-              {[{ name: '', Icon: CircleDollarSign, label: t('all') }, ...historyNameOptions.map((name) => ({ name, Icon: getHistoryCategoryIcon(name), label: traderMode ? name : getMoneyCategoryLabel(name, language) }))].map(({ name, Icon, label }) => {
+              {[{ name: '', Icon: CircleDollarSign, label: t('all') }, ...historyNameOptions.map((name) => ({ name, Icon: getHistoryCategoryIcon(name), label: traderMode && historyScope !== 'money' ? name : getMoneyCategoryLabel(name, language) }))].map(({ name, Icon, label }) => {
                 const active = historyNameFilter === name;
                 return (
                   <button
@@ -3329,6 +3369,7 @@ export default function CalendarScreen() {
     setFreeHistoryPanel(null);
     setFreeTimelineSelected(null);
     setFreeTimelineOffset(0);
+    setHistoryScope(traderMode ? 'all' : 'money');
   }
 
   function closeHistory() {
@@ -3817,7 +3858,7 @@ export default function CalendarScreen() {
 
 
   return (
-    <div className={`premium-shell min-h-screen w-full flex flex-col transition-colors duration-500 ${traderMode ? 'pro-active-shell' : ''} ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
+    <div className={`premium-shell min-h-screen w-full flex flex-col transition-colors duration-500 ${proAccessActive ? 'pro-active-shell' : ''} ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
         .font-display { font-family: 'Space Grotesk', sans-serif; }
@@ -4271,6 +4312,15 @@ export default function CalendarScreen() {
               </span>
               <span>{isFutureSelected ? t('schedule') : (traderMode ? t('addTrade') : t('addRecord'))}</span>
             </button>
+            {traderMode && !isFutureSelected && (
+              <button
+                type="button"
+                onClick={() => openFinanceEntry()}
+                className={`ml-2 rounded-xl border px-3 py-2.5 text-[11px] font-semibold transition-colors ${isLight ? 'border-zinc-200 bg-white text-zinc-600 hover:border-amber-300 hover:text-amber-700' : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-amber-400/30 hover:text-amber-300'}`}
+              >
+                {t('addMoneySecondary')}
+              </button>
+            )}
           </div>
 
           {traderMode ? (
@@ -4492,6 +4542,18 @@ export default function CalendarScreen() {
               {traderMode ? t('addTrade') : t('addRecord')}
             </span>
           </button>
+          {traderMode && (
+            <button
+              type="button"
+              onClick={() => openFinanceEntry()}
+              title={t('addMoneySecondary')}
+              aria-label={t('addMoneySecondary')}
+              className={`inline-flex min-w-0 items-center gap-1.5 rounded-full border px-3 py-2 text-[11px] font-semibold transition-colors ${isLight ? 'border-slate-200 bg-white text-slate-600 hover:border-amber-300 hover:text-amber-700' : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-amber-400/30 hover:text-amber-300'}`}
+            >
+              <Repeat2 className="h-3.5 w-3.5 shrink-0" />
+              <span className="max-w-[9rem] truncate">{t('addMoneySecondary')}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -4522,7 +4584,7 @@ export default function CalendarScreen() {
                   {traderMode ? t('tradesHistory') : t('myMoney')}
                 </p>
                 <h2 className={`font-display text-xl font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>
-                  {traderMode
+                  {traderMode && historyScope !== 'money'
                     ? (periodPreset === 'Вся история' ? t('allHistory') : dateFrom === dateTo ? dateFrom : `${dateFrom} — ${dateTo}`)
                     : t('financialHistory')}
                 </h2>
@@ -4558,6 +4620,40 @@ export default function CalendarScreen() {
             </div>
 
             {traderMode && (
+              <div className={`shrink-0 border-b px-4 py-2.5 sm:px-6 ${isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-zinc-950'}`}>
+                <div className={`grid grid-cols-3 rounded-xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-white/[0.045]'}`}>
+                  {[
+                    ['all', t('historyAll')],
+                    ['trades', t('historyTrades')],
+                    ['money', t('historyMoney')],
+                  ].map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => {
+                        setHistoryScope(key);
+                        setHistoryFiltersOpen(false);
+                        setProFiltersOpen(false);
+                        if (key === 'money') {
+                          setPlatformFilter('ALL');
+                          setHistoryWinLoss('all');
+                          setHistoryNameFilter('');
+                        }
+                      }}
+                      className={`min-h-9 rounded-lg px-2 text-xs font-semibold transition-all ${
+                        historyScope === key
+                          ? isLight ? 'bg-white text-zinc-900 shadow-sm' : 'bg-zinc-800 text-zinc-100 shadow-sm'
+                          : isLight ? 'text-zinc-500 hover:text-zinc-900' : 'text-zinc-500 hover:text-zinc-200'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {traderMode && historyScope !== 'money' && (
               <div className={`shrink-0 border-b px-4 py-3 sm:px-6 ${
                 isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-zinc-950'
               }`}>
@@ -4642,7 +4738,7 @@ export default function CalendarScreen() {
               style={{ overscrollBehavior: 'contain' }}
             >
               {/* FREE — История сначала, аналитика по запросу */}
-              {!traderMode && (
+              {(!traderMode || historyScope === 'money') && (
                 <section className="mb-4">
                   <div className={`grid grid-cols-2 gap-2 rounded-2xl border p-1.5 ${
                     isLight ? 'border-zinc-200 bg-zinc-100/70' : 'border-zinc-800 bg-black/20'
@@ -4895,7 +4991,7 @@ export default function CalendarScreen() {
                 </section>
               )}
 
-              {!traderMode ? (
+              {(!traderMode || historyScope === 'money') ? (
                 <>
                   {/* Compact period selector */}
                   <div className="relative flex items-center gap-2 mb-3">
@@ -6542,7 +6638,7 @@ export default function CalendarScreen() {
               </div>
             )}
 
-            {traderMode ? (
+            {traderMode && historyScope !== 'money' ? (
               <div className={`relative overflow-hidden rounded-2xl border p-4 ${
                 isLight ? 'border-amber-300/70 bg-gradient-to-br from-amber-50 to-white' : 'border-amber-400/25 bg-gradient-to-br from-amber-400/[0.08] via-zinc-950 to-zinc-950'
               }`}>
@@ -6681,10 +6777,10 @@ export default function CalendarScreen() {
       {/* PRO ACCESS — value-first server entitlement gate */}
       {proAccessPromptOpen && (
         <div
-          className="fixed inset-0 z-[96] flex items-end justify-center bg-black/75 px-0 pt-8 backdrop-blur-sm sm:items-center sm:px-4 sm:pt-0"
+          className="fixed inset-0 z-[96] flex items-end justify-center bg-black/75 px-0 pt-[max(2rem,env(safe-area-inset-top))] backdrop-blur-sm sm:items-center sm:px-4 sm:pt-0"
           onClick={(event) => { if (event.target === event.currentTarget) setProAccessPromptOpen(false); }}
         >
-          <SwipeDismissSheet onDismiss={() => setProAccessPromptOpen(false)} isLight={isLight} className={`flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-[28px] border shadow-2xl sm:rounded-3xl ${
+          <SwipeDismissSheet onDismiss={() => setProAccessPromptOpen(false)} isLight={isLight} style={{ maxHeight: 'min(92dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 8px))' }} className={`flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-[28px] border shadow-2xl sm:rounded-3xl ${
             isLight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-white/[0.08] bg-zinc-950 text-zinc-100'
           }`}>
             <div className={`relative flex items-start justify-between gap-4 overflow-hidden border-b px-5 pb-5 pt-4 sm:px-6 sm:pb-6 sm:pt-6 ${
@@ -6766,7 +6862,7 @@ export default function CalendarScreen() {
               </div>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-5 sm:px-6">
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:px-6">
               {proOfferTab === 'offer' ? (
                 <>
               <p className={`mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] ${
@@ -6778,10 +6874,9 @@ export default function CalendarScreen() {
               <div className="grid grid-cols-2 gap-2.5">
                 {[
                   [Wallet, proAccessCopy.featureWallet, proAccessCopy.featureWalletHint],
-                  [Link2, proAccessCopy.featurePlatform, proAccessCopy.featurePlatformHint],
+                  [Calendar, proAccessCopy.featureReminders, proAccessCopy.featureRemindersHint],
+                  [History, proAccessCopy.featureHistory, proAccessCopy.featureHistoryHint],
                   [TrendingUp, proAccessCopy.featureAnalytics, proAccessCopy.featureAnalyticsHint],
-                  [ChartCandlestick, proAccessCopy.featureJournal, proAccessCopy.featureJournalHint],
-                  [FileText, proAccessCopy.featureInsights, proAccessCopy.featureInsightsHint],
                 ].map(([Icon, title, hint]) => (
                   <div
                     key={title}
@@ -6808,6 +6903,46 @@ export default function CalendarScreen() {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              <div className={`mt-5 overflow-hidden rounded-[26px] border p-5 sm:p-6 ${
+                isLight
+                  ? 'border-zinc-200 bg-white shadow-[0_18px_60px_-42px_rgba(15,23,42,.35)]'
+                  : 'border-white/[0.08] bg-[#111216] shadow-[0_24px_70px_-48px_rgba(251,191,36,.28)]'
+              }`}>
+                <p className="font-data text-[9px] font-semibold uppercase tracking-[0.22em] text-amber-500">{proAccessCopy.traderRevealEyebrow}</p>
+                <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="min-w-0">
+                    <h4 className="font-display text-2xl font-semibold tracking-tight">{proAccessCopy.traderRevealTitle}</h4>
+                    <p className={`mt-2 max-w-lg text-sm leading-6 ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>{proAccessCopy.traderRevealBody}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (proAccessActive) {
+                        setProAccessPromptOpen(false);
+                        setTraderMode(true);
+                      } else {
+                        handleStartProCheckout();
+                      }
+                    }}
+                    className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/[0.07] px-4 text-xs font-semibold text-amber-500 transition-colors hover:bg-amber-400/[0.13]"
+                  >
+                    {proAccessActive ? proAccessCopy.traderRevealAction : proAccessCopy.buyButton}
+                  </button>
+                </div>
+                <div className={`mt-5 grid grid-cols-3 divide-x rounded-2xl border px-2 py-3 text-center ${isLight ? 'border-zinc-200 bg-zinc-50/80 divide-zinc-200' : 'border-white/[0.06] bg-black/20 divide-white/[0.07]'}`}>
+                  {[
+                    [ChartCandlestick, proAccessCopy.featureJournal],
+                    [TrendingUp, 'PnL'],
+                    [Link2, 'cTrader'],
+                  ].map(([Icon, label]) => (
+                    <div key={label} className="flex min-w-0 flex-col items-center gap-1.5 px-2">
+                      <Icon className="h-4 w-4 text-amber-500" />
+                      <span className="truncate text-[10px] font-medium text-zinc-500">{label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="contents">

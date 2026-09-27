@@ -519,58 +519,54 @@ export default function Header({
             )}
           </div>
 
-          {/* High-contrast luxury minimal FREE / PRO toggle */}
-          <div className="mt-1 flex w-full items-center justify-between sm:mt-0 sm:ml-2 sm:w-auto sm:basis-auto sm:justify-start">
+          {/* PRO entitlement and the optional Trader Mode are deliberately separate. */}
+          <div className="mt-1 flex w-full items-center justify-between gap-1.5 sm:mt-0 sm:ml-2 sm:w-auto sm:justify-start">
             <button
               type="button"
-              role="switch"
-              aria-checked={traderMode}
-              onClick={() => setTraderMode(v => { const next = !v; if (!next) setPlatformFilter('ALL'); return next; })}
-              title={traderMode ? 'PRO' : (proAccessActive ? 'PRO' : 'PRO · invite to unlock')}
-              className={`relative h-9 w-[124px] shrink-0 rounded-full border p-0.5 font-data text-[10px] tracking-[0.14em] shadow-[inset_0_1px_1px_rgba(0,0,0,.2)] transition-all duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60 ${
-                isLight ? 'border-zinc-300 bg-zinc-100' : 'border-zinc-700/80 bg-zinc-950'
+              onClick={() => (proAccessActive ? openReferralHub() : setTraderMode(true))}
+              title={proAccessActive ? t('proActiveHint') : t('proOpenHint')}
+              className={`flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 font-data text-[10px] font-semibold tracking-[0.08em] transition-all hover:-translate-y-px ${
+                proAccessActive
+                  ? 'border-amber-300 bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 text-zinc-950 shadow-[0_0_22px_rgba(251,191,36,.18)]'
+                  : isLight
+                    ? 'border-zinc-300 bg-white text-zinc-500 hover:border-amber-300 hover:text-amber-700'
+                    : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:border-amber-400/40 hover:text-amber-300'
               }`}
             >
-              <span
-                aria-hidden="true"
-                className={[
-                  'absolute top-0.5 bottom-0.5 left-0.5 w-[58px] rounded-full border transition-all duration-300 ease-out',
-                  traderMode
-                    ? 'translate-x-[60px] border-amber-300 bg-gradient-to-br from-amber-200 via-amber-400 to-amber-500 shadow-[0_0_26px_rgba(251,191,36,0.34),inset_0_1px_rgba(255,255,255,.52)]'
-                    : isLight
-                    ? 'translate-x-0 border-zinc-400/40 bg-white shadow-sm'
-                    : 'translate-x-0 border-zinc-600/60 bg-zinc-800/90 shadow-sm',
-                ].join(' ')}
-              />
-              <span
-                className={[
-                  'relative z-10 flex h-full items-center justify-center transition-colors duration-300 font-medium',
-                  !traderMode
-                    ? isLight ? 'text-zinc-900 font-semibold' : 'text-zinc-100 font-semibold'
-                    : 'text-zinc-500',
-                ].join(' ')}
-                style={{ width: '58px' }}
-              >
-                {t('freePlan')}
-              </span>
-              <span
-                className={[
-                  'absolute right-0.5 top-0.5 bottom-0.5 z-10 flex items-center justify-center transition-colors duration-300 font-semibold',
-                  traderMode ? 'text-zinc-950' : 'text-zinc-500',
-                ].join(' ')}
-                style={{ width: '58px' }}
-              >
-                <span className="flex items-center gap-1">
-                  {!proAccessLoading && !proAccessActive && !traderMode
-                    ? <LockKeyhole className="h-3 w-3 stroke-[1.9]" />
-                    : <span className={traderMode ? 'text-zinc-950' : ''}>✦</span>}
-                  PRO
-                </span>
-              </span>
+              {!proAccessActive && !proAccessLoading && <LockKeyhole className="h-3 w-3" />}
+              <span>✦ PRO</span>
             </button>
 
-            <div className={`ml-0 overflow-hidden transition-all duration-500 ease-[cubic-bezier(.22,1,.36,1)] ${traderMode ? 'max-w-[190px] translate-x-0 opacity-100' : 'max-w-0 -translate-x-8 opacity-0'}`} aria-hidden={!traderMode}>
-              <button type="button" tabIndex={traderMode ? 0 : -1} onClick={() => changeAccountMode('wallet')} title={t('walletProHint')} className={`ml-1 flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 font-data text-[10px] font-semibold transition-all ${isLight ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100' : 'border-amber-400/25 bg-amber-400/[.08] text-amber-300 hover:bg-amber-400/[.14]'}`}><WalletIcon className="h-3.5 w-3.5" />{t('walletLabel')}<span className="text-[8px] opacity-60">PRO</span></button>
+            <div className={`flex h-9 items-center gap-2 rounded-full border px-2.5 transition-all duration-300 ${
+              proAccessActive
+                ? isLight ? 'border-zinc-300 bg-white text-zinc-700' : 'border-zinc-800 bg-zinc-950 text-zinc-300'
+                : isLight ? 'border-zinc-200 bg-zinc-100/70 text-zinc-400' : 'border-zinc-800/70 bg-zinc-950/60 text-zinc-600'
+            }`}>
+              <span className="hidden font-data text-[9px] uppercase tracking-[0.12em] sm:inline">{t('traderModeLabel')}</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={traderMode}
+                aria-disabled={!proAccessActive}
+                onClick={() => setTraderMode((value) => {
+                  const next = !value;
+                  if (!next) setPlatformFilter('ALL');
+                  return next;
+                })}
+                title={proAccessActive ? t('traderModeHint') : t('traderModeRequiresPro')}
+                className={`relative h-6 w-11 rounded-full border p-0.5 transition-all duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/70 ${
+                  traderMode
+                    ? 'border-amber-300 bg-amber-400 shadow-[0_0_18px_rgba(251,191,36,.22)]'
+                    : isLight ? 'border-zinc-300 bg-zinc-100' : 'border-zinc-700 bg-zinc-900'
+                } ${!proAccessActive ? 'cursor-not-allowed opacity-55' : ''}`}
+              >
+                <span className={`block h-4 w-4 rounded-full transition-transform duration-300 ${traderMode ? 'translate-x-5 bg-zinc-950' : 'translate-x-0 bg-zinc-500'}`} />
+              </button>
+              <span className={`hidden font-data text-[9px] font-semibold uppercase tracking-[0.08em] sm:inline ${traderMode ? 'text-amber-500' : 'text-zinc-500'}`}>{traderMode ? t('traderModeOn') : t('traderModeOff')}</span>
+            </div>
+
+            <div className={`overflow-hidden transition-all duration-500 ease-[cubic-bezier(.22,1,.36,1)] ${proAccessActive ? 'max-w-[150px] translate-x-0 opacity-100' : 'max-w-0 -translate-x-5 opacity-0'}`} aria-hidden={!proAccessActive}>
+              <button type="button" tabIndex={proAccessActive ? 0 : -1} onClick={() => changeAccountMode('wallet')} title={t('walletProHint')} className={`ml-0 flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 font-data text-[10px] font-semibold transition-all ${isLight ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100' : 'border-amber-400/25 bg-amber-400/[.08] text-amber-300 hover:bg-amber-400/[.14]'}`}><WalletIcon className="h-3.5 w-3.5" />{t('walletLabel')}<span className="text-[8px] opacity-60">PRO</span></button>
             </div>
 
             <div className="ml-2 max-w-[190px] opacity-100">
@@ -600,13 +596,17 @@ export default function Header({
         </div>
       </div>
 
-      {/* PRO extras slide out below the static FREE / PRO switch. */}
+      {/* Trader Mode tools slide out only after the separate Trader Mode switch is enabled. */}
       <div className={`grid transition-[grid-template-rows,opacity,margin,transform] duration-300 ease-out ${
         traderMode && accountMode === 'main'
           ? 'grid-rows-[1fr] opacity-100 mt-1.5 translate-y-0'
           : 'grid-rows-[0fr] opacity-0 mt-0 -translate-y-1 pointer-events-none'
       }`}>
         <div className="min-h-0 overflow-hidden">
+          <div className={`mb-2 flex items-center gap-2 px-1 text-[10px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
+            <span className="font-data font-semibold uppercase tracking-[0.16em] text-amber-500">{t('traderModeLabel')}</span>
+            <span className="truncate">{t('traderModeConnectHint')}</span>
+          </div>
           {/* Mobile keeps PRO useful without pushing the calendar below the fold. */}
           <div className={`pro-mobile-commandbar sm:hidden rounded-xl border px-2.5 py-2 shadow-[0_12px_30px_-24px_rgba(251,191,36,.75),inset_0_1px_rgba(255,255,255,.035)] ${
             isLight
