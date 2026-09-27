@@ -90,6 +90,7 @@ import FinancePlanComposer from './src/features/reminders/FinancePlanComposer.js
 import FinancePlanList from './src/features/reminders/FinancePlanList.jsx';
 import { useWalletTransactions } from './src/features/wallet/hooks/useWalletTransactions';
 import WalletPanel from './src/features/wallet/WalletPanel.jsx';
+import SwipeDismissSheet from './src/shared/ui/SwipeDismissSheet.jsx';
 
 export default function CalendarScreen() {
   const [accountMode, setAccountMode] = useState(() => { try { return localStorage.getItem('dayris_account_mode') || 'main'; } catch { return 'main'; } });
@@ -4183,7 +4184,9 @@ export default function CalendarScreen() {
         onMouseDown={handleBackdropMouseDown}
         onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) setSelectedKey(null); }}
       >
-      <div
+      <SwipeDismissSheet
+        onDismiss={() => setSelectedKey(null)}
+        isLight={isLight}
         className={`absolute inset-x-0 bottom-0 max-h-[82vh] rounded-t-2xl border-t shadow-2xl overflow-y-auto transition-colors duration-200 ${isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-950'}`}
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => {
@@ -4194,7 +4197,6 @@ export default function CalendarScreen() {
         }}
       >
         <div className="max-w-3xl mx-auto px-3 sm:px-8 py-4 sm:py-8 flex flex-col gap-4">
-          <div className={`mx-auto h-1 w-10 rounded-full -mt-1 mb-1 ${isLight ? 'bg-zinc-300' : 'bg-zinc-700'}`} />
           {isFutureSelected ? (
             <>
             <div className={`relative isolate overflow-hidden rounded-[28px] border px-5 py-5 text-center ${isLight ? 'border-slate-200 bg-slate-50/80' : 'border-white/[0.07] bg-white/[0.02]'}`}>
@@ -4396,7 +4398,7 @@ export default function CalendarScreen() {
           ) : null}
           </>}
         </div>
-      </div>
+      </SwipeDismissSheet>
       </div>
       )}
 
@@ -4415,22 +4417,22 @@ export default function CalendarScreen() {
 
       {planDeleteConfirm && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center" onMouseDown={(event) => { if (event.target === event.currentTarget && !planBusyId) setPlanDeleteConfirm(null); }}>
-          <div className={`w-full max-w-sm rounded-[26px] border p-5 shadow-2xl ${isLight ? 'border-slate-200 bg-white text-slate-950' : 'border-zinc-800 bg-zinc-950 text-zinc-100'}`}>
+          <SwipeDismissSheet onDismiss={() => setPlanDeleteConfirm(null)} disabled={Boolean(planBusyId)} isLight={isLight} handleClassName="-mt-3 mb-1" className={`w-full max-w-sm rounded-[26px] border p-5 shadow-2xl ${isLight ? 'border-slate-200 bg-white text-slate-950' : 'border-zinc-800 bg-zinc-950 text-zinc-100'}`}>
             <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-rose-500/12 text-rose-500"><Trash2 className="h-5 w-5" /></span><div><p className="font-data text-[10px] uppercase tracking-[0.18em] text-rose-500">{planDeleteText.eyebrow}</p><h3 className="mt-1 text-lg font-semibold break-words">{planDeleteConfirm.title}</h3><p className="mt-1 font-data text-sm text-zinc-500">{formatPlanAmount(planDeleteConfirm)}</p></div></div>
             <p className="mt-4 text-sm leading-relaxed text-zinc-500">{planDeleteConfirm.repeat_rule !== 'none' ? planDeleteText.recurring : planDeleteText.once}</p>
             {planError && <p role="alert" className="mt-3 text-xs leading-relaxed text-rose-400">{String(planError).includes('PLAN_NOT_FOUND') ? t('planNotFound') : planError}</p>}
             <div className="mt-5 flex gap-2"><button type="button" disabled={Boolean(planBusyId)} onClick={() => setPlanDeleteConfirm(null)} className={`flex-1 rounded-2xl border px-4 py-3 text-sm font-semibold ${isLight ? 'border-slate-200 text-slate-600 hover:bg-slate-50' : 'border-white/[0.08] text-zinc-400 hover:bg-white/[0.04]'} disabled:opacity-50`}>{planDeleteText.cancel}</button><button type="button" disabled={Boolean(planBusyId)} onClick={() => deletePlannedItem(planDeleteConfirm)} className="flex-1 rounded-2xl bg-rose-500 px-4 py-3 text-sm font-bold text-white transition hover:bg-rose-400 disabled:opacity-50">{planBusyId ? planDeleteText.removing : planDeleteText.remove}</button></div>
-          </div>
+          </SwipeDismissSheet>
         </div>
       )}
 
       {planConfirm && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center" onMouseDown={(event) => { if (event.target === event.currentTarget) setPlanConfirm(null); }}>
-          <div className={`w-full max-w-sm rounded-[26px] border p-5 shadow-2xl ${isLight ? 'border-slate-200 bg-white text-slate-950' : 'border-zinc-800 bg-zinc-950 text-zinc-100'}`}>
+          <SwipeDismissSheet onDismiss={() => setPlanConfirm(null)} disabled={Boolean(planBusyId)} isLight={isLight} handleClassName="-mt-3 mb-1" className={`w-full max-w-sm rounded-[26px] border p-5 shadow-2xl ${isLight ? 'border-slate-200 bg-white text-slate-950' : 'border-zinc-800 bg-zinc-950 text-zinc-100'}`}>
             <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-emerald-500/12 text-emerald-500"><CheckCircle2 className="h-5 w-5" /></span><div><p className="font-data text-[10px] uppercase tracking-[0.18em] text-emerald-500">{t('planCompleteEyebrow')}</p><h3 className="mt-1 text-lg font-semibold">{planConfirm.title}</h3><p className="mt-1 font-data text-sm text-zinc-500">{formatPlanAmount(planConfirm)}</p></div></div>
             <p className="mt-4 text-sm leading-relaxed text-zinc-500">{t('planCompleteBody')}</p>
             <div className="mt-5 space-y-2"><button type="button" disabled={Boolean(planBusyId)} onClick={() => planConfirm.amount == null ? openPlanRecord(planConfirm) : (setPlanConfirm(null), finishPlan(planConfirm, 'completed', true))} className="w-full rounded-2xl bg-emerald-500 px-4 py-3.5 text-sm font-bold text-white transition hover:bg-emerald-400 disabled:opacity-50">{planConfirm.amount == null ? t('planAddAmountAndRecord') : t('planAddRecord')}</button><button type="button" disabled={Boolean(planBusyId)} onClick={() => { setPlanConfirm(null); finishPlan(planConfirm, 'completed', false); }} className={`w-full rounded-2xl border px-4 py-3 text-sm font-semibold ${isLight ? 'border-slate-200 text-slate-600 hover:bg-slate-50' : 'border-white/[0.08] text-zinc-400 hover:bg-white/[0.04]'} disabled:opacity-50`}>{t('planMarkOnly')}</button><button type="button" onClick={() => setPlanConfirm(null)} className="w-full py-2 text-xs text-zinc-500">{t('planCancel')}</button></div>
-          </div>
+          </SwipeDismissSheet>
         </div>
       )}
 
@@ -4490,7 +4492,9 @@ export default function CalendarScreen() {
           onMouseDown={handleBackdropMouseDown}
           onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) closeHistory(); }}
         >
-          <div
+          <SwipeDismissSheet
+            onDismiss={closeHistory}
+            isLight={isLight}
             className={`relative w-full ${traderMode ? 'sm:max-w-5xl' : 'sm:max-w-lg'} flex flex-col overflow-hidden rounded-t-[28px] border shadow-2xl transition-all duration-300 ease-out sm:rounded-[24px] ${
               historyVisible
                 ? 'opacity-100 translate-y-0 sm:scale-100'
@@ -4500,9 +4504,6 @@ export default function CalendarScreen() {
             }`}
             style={{ maxHeight: 'min(92dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 8px))' }}
           >
-            <div className="flex shrink-0 justify-center pt-2.5 sm:hidden" aria-hidden="true">
-              <span className={`h-1 w-11 rounded-full ${isLight ? 'bg-zinc-300' : 'bg-zinc-700'}`} />
-            </div>
             <div className={`flex items-center justify-between px-5 sm:px-6 pt-3.5 sm:pt-5 pb-4 border-b ${isLight ? 'border-zinc-200' : 'border-zinc-800/80'}`}>
               <div>
                 <p className="font-data text-[10px] tracking-[0.22em] text-amber-400 uppercase mb-1">
@@ -5804,7 +5805,7 @@ export default function CalendarScreen() {
                 </>
               )}
             </div>
-          </div>
+          </SwipeDismissSheet>
         </div>
       )}
 
@@ -5818,7 +5819,10 @@ export default function CalendarScreen() {
           onMouseDown={handleBackdropMouseDown}
           onClick={handleModalBackdropClick}
         >
-          <div
+          <SwipeDismissSheet
+            onDismiss={closeModal}
+            disabled={isSaving}
+            isLight={isLight}
             className={`relative my-auto w-full max-w-[360px] max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain rounded-2xl border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl transition-all duration-300 ease-[cubic-bezier(.22,1,.36,1)] will-change-transform sm:flex sm:max-h-[calc(100vh-3rem)] sm:flex-col sm:overflow-hidden sm:px-5 sm:py-5 ${
               traderMode ? 'sm:max-w-[620px]' : 'sm:max-w-[560px]'
             } ${
@@ -6265,7 +6269,7 @@ export default function CalendarScreen() {
               </button>
             </div>
             )}
-          </div>
+          </SwipeDismissSheet>
         </div>
       )}
 
@@ -6668,13 +6672,9 @@ export default function CalendarScreen() {
           className="fixed inset-0 z-[96] flex items-end justify-center bg-black/75 px-0 pt-8 backdrop-blur-sm sm:items-center sm:px-4 sm:pt-0"
           onClick={(event) => { if (event.target === event.currentTarget) setProAccessPromptOpen(false); }}
         >
-          <div className={`flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-[28px] border shadow-2xl sm:rounded-3xl ${
+          <SwipeDismissSheet onDismiss={() => setProAccessPromptOpen(false)} isLight={isLight} className={`flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-[28px] border shadow-2xl sm:rounded-3xl ${
             isLight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-white/[0.08] bg-zinc-950 text-zinc-100'
           }`}>
-            <div className="flex justify-center pt-2.5 sm:hidden" aria-hidden="true">
-              <span className={`h-1 w-11 rounded-full ${isLight ? 'bg-zinc-300' : 'bg-zinc-700'}`} />
-            </div>
-
             <div className={`flex items-start justify-between gap-4 border-b px-5 pb-4 pt-4 sm:px-6 sm:pt-6 ${
               isLight ? 'border-zinc-200' : 'border-white/[0.06]'
             }`}>
@@ -7184,7 +7184,7 @@ export default function CalendarScreen() {
                 {proAccessCopy.close}
               </button>
             </div>
-          </div>
+          </SwipeDismissSheet>
         </div>
       )}
 
@@ -7194,13 +7194,9 @@ export default function CalendarScreen() {
           className="fixed inset-0 z-[97] flex items-end justify-center bg-black/75 px-0 pt-10 backdrop-blur-sm sm:items-center sm:px-4 sm:pt-0"
           onClick={(event) => { if (event.target === event.currentTarget) closeReferralShare(); }}
         >
-          <div className={`w-full max-w-md overflow-hidden rounded-t-[28px] border shadow-2xl sm:rounded-3xl ${
+          <SwipeDismissSheet onDismiss={closeReferralShare} isLight={isLight} className={`w-full max-w-md overflow-hidden rounded-t-[28px] border shadow-2xl sm:rounded-3xl ${
             isLight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-white/[0.08] bg-zinc-950 text-zinc-100'
           }`}>
-            <div className="flex justify-center pt-2.5 sm:hidden" aria-hidden="true">
-              <span className={`h-1 w-11 rounded-full ${isLight ? 'bg-zinc-300' : 'bg-zinc-700'}`} />
-            </div>
-
             <div className={`flex items-center justify-between border-b px-5 py-4 ${
               isLight ? 'border-zinc-200' : 'border-white/[0.06]'
             }`}>
@@ -7274,7 +7270,7 @@ export default function CalendarScreen() {
                 {referralShareCopy.share}
               </button>
             </div>
-          </div>
+          </SwipeDismissSheet>
         </div>
       )}
 
@@ -7284,13 +7280,9 @@ export default function CalendarScreen() {
           className="fixed inset-0 z-[95] flex items-end justify-center bg-black/75 px-0 pt-10 backdrop-blur-sm sm:items-center sm:px-4 sm:pt-0"
           onClick={(event) => { if (event.target === event.currentTarget) closeHistoryShare(); }}
         >
-          <div className={`w-full max-w-md overflow-hidden rounded-t-[28px] border shadow-2xl sm:rounded-3xl ${
+          <SwipeDismissSheet onDismiss={closeHistoryShare} isLight={isLight} className={`w-full max-w-md overflow-hidden rounded-t-[28px] border shadow-2xl sm:rounded-3xl ${
             isLight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-white/[0.08] bg-zinc-950 text-zinc-100'
           }`}>
-            <div className="flex justify-center pt-2.5 sm:hidden" aria-hidden="true">
-              <span className={`h-1 w-11 rounded-full ${isLight ? 'bg-zinc-300' : 'bg-zinc-700'}`} />
-            </div>
-
             <div className={`flex items-center justify-between border-b px-5 py-4 ${isLight ? 'border-zinc-200' : 'border-white/[0.06]'}`}>
               <div>
                 <p className="font-data text-[9px] font-semibold uppercase tracking-[0.22em] text-amber-500">{historyShareCopy.preview}</p>
@@ -7364,7 +7356,7 @@ export default function CalendarScreen() {
                 {historyShareCopy.share}
               </button>
             </div>
-          </div>
+          </SwipeDismissSheet>
         </div>
       )}
 

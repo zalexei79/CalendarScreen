@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, Bell, CalendarDays, Check, ChevronDown, CreditCa
 import { CURRENCIES } from '../../shared/config/constants';
 import { PLANNER_COPY, plannerLanguage } from './plannerCopy';
 import { initialDraft, localDateKey, planPayload, reminderPreview, REMIND_OFFSETS, REPEAT_RULES, validateDraft } from './plannerModel';
+import SwipeDismissSheet from '../../shared/ui/SwipeDismissSheet.jsx';
 import './FinancePlanComposer.css';
 
 const TEMPLATE_ICONS = [CreditCard, Smartphone, House, Wallet];
@@ -155,7 +156,7 @@ export default function FinancePlanComposer({ open, dateKey, initialPlan = null,
   return <div className={'plan-overlay' + (isLight ? ' plan-light' : '')} onMouseDown={(event) => {
     if (event.target === event.currentTarget && !locked) onClose();
   }}>
-    <form ref={panelRef} tabIndex={-1} className="plan-dialog" role="dialog" aria-modal="true" aria-labelledby={id + '-heading'} aria-describedby={id + '-description'} aria-busy={locked} noValidate onSubmit={(event) => {
+    <SwipeDismissSheet as="form" ref={panelRef} onDismiss={onClose} disabled={locked} isLight={isLight} tabIndex={-1} className="plan-dialog" role="dialog" aria-modal="true" aria-labelledby={id + '-heading'} aria-describedby={id + '-description'} aria-busy={locked} noValidate onSubmit={(event) => {
       event.preventDefault();
       if (step === 2) save(); else advance();
     }}>
@@ -258,6 +259,6 @@ export default function FinancePlanComposer({ open, dateKey, initialPlan = null,
           </button>
         </div>
       </footer>
-    </form>
+    </SwipeDismissSheet>
   </div>;
 }
