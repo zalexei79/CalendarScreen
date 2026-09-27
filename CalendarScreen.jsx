@@ -496,11 +496,6 @@ export default function CalendarScreen() {
       return;
     }
 
-    // Do not start another paid subscription while any PRO access is active.
-    // This also protects users who already have referral/admin PRO from paying
-    // before their current access expires.
-    if (proAccessActive) return;
-
     setProCheckoutLoading(true);
 
     try {
@@ -511,7 +506,10 @@ export default function CalendarScreen() {
       if (refreshError) throw refreshError;
 
       const { data, error } = await supabase.functions.invoke('lemon-checkout', {
-        body: {},
+        // The backend remains the source of truth for entitlement. It receives
+        // an explicit renewal intent so an active user can extend access
+        // without leaving the PRO workspace first.
+        body: { intent: proAccessActive ? 'renew' : 'start' },
       });
 
       if (error) throw error;
@@ -913,6 +911,9 @@ export default function CalendarScreen() {
       buyPeriod: '/ месяц',
       buyBody: 'Помесячный доступ к PRO — без приглашений.',
       buyButton: 'Подключить PRO',
+      renewTitle: 'Продлить PRO',
+      renewBody: 'Текущий доступ сохранится, а новый период добавится после оплаты.',
+      renewButton: 'Продлить PRO',
       buyLoading: 'Открываем оплату…',
       buySignIn: 'Войти и подключить PRO',
       buyActive: 'PRO уже активен',
@@ -993,6 +994,9 @@ export default function CalendarScreen() {
       buyPeriod: '/ month',
       buyBody: 'Monthly PRO access — no invitation required.',
       buyButton: 'Get PRO',
+      renewTitle: 'Extend PRO',
+      renewBody: 'Your current access stays active and the new period is added after payment.',
+      renewButton: 'Extend PRO',
       buyLoading: 'Opening checkout…',
       buySignIn: 'Sign in to get PRO',
       buyActive: 'PRO is already active',
@@ -1073,6 +1077,9 @@ export default function CalendarScreen() {
       buyPeriod: '/ lună',
       buyBody: 'Acces PRO lunar — fără invitații.',
       buyButton: 'Activează PRO',
+      renewTitle: 'Prelungește PRO',
+      renewBody: 'Accesul curent rămâne activ, iar perioada nouă se adaugă după plată.',
+      renewButton: 'Prelungește PRO',
       buyLoading: 'Deschidem plata…',
       buySignIn: 'Autentifică-te pentru PRO',
       buyActive: 'PRO este deja activ',
@@ -4149,7 +4156,8 @@ export default function CalendarScreen() {
         .premium-shell { min-height: 100dvh; }
         /* Reserve the dock's space in the scrollable calendar, including iOS's home indicator. */
         .calendar-section { padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
-        .history-fab { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+        .history-fab { bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+        @media (min-width: 640px) { .history-fab { bottom: 26px; } }
         .premium-shell { font-size: 15px; }
         .premium-shell .font-data { letter-spacing: .055em; }
         @media (max-width: 640px) { .premium-shell { font-size: 16px; } .premium-shell p, .premium-shell button { -webkit-font-smoothing: antialiased; } }
@@ -4839,15 +4847,35 @@ export default function CalendarScreen() {
                       ))}
                     </div>
 
-                    {historyTrades.length > 0 && (
-                      <div className={`mt-4 rounded-2xl border p-3 sm:p-4 ${isLight ? 'border-slate-200 bg-slate-50/70' : 'border-white/[0.06] bg-black/20'}`}>
-                        {historyCurrency === 'ALL' ? (
-                          <p className="text-xs leading-5 text-zinc-500">{t('allCurrenciesNotice')}</p>
-                        ) : (
-                          <HistoryChart entries={historyAnalysis.dailyEntries} isLight={isLight} t={t} formatAmount={(amount) => formatAmountInCurrency(amount, historyCurrency)} />
-                        )}
-                      </div>
-                    )}
+                    <div className={`mt-4 rounded-2xl border p-3 sm:p-4 ${isLight ? 'border-slate-200 bg-slate-50/70' : 'border-white/[0.06] bg-black/20'}`}>
+                      {(() => {
+                        const totalFlow = historyIncome + historyExpense;
+                        const incomeShare = totalFlow > 0 ? Math.round((historyIncome / totalFlow) * 100) : 0;
+                        const expenseShare = totalFlow > 0 ? 100 - incomeShare : 0;
+                        return (
+                          <>
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="text-xs font-semibold">{t('financialSummary')}</p>
+                              <span className="font-data text-[10px] text-zinc-500">{historyTrades.length} {t('records')}</span>
+                            </div>
+                            {historyCurrency === 'ALL' ? (
+                              <p className="mt-2 text-[11px] leading-5 text-zinc-500">{t('allCurrenciesNotice')}</p>
+                            ) : (
+                              <>
+                                <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-zinc-500/10">
+                                  <span className="h-full bg-emerald-500 transition-[width] duration-500" style={{ width: `${incomeShare}%` }} />
+                                  <span className="h-full bg-red-400 transition-[width] duration-500" style={{ width: `${expenseShare}%` }} />
+                                </div>
+                                <div className="mt-2 grid grid-cols-2 gap-3 text-[10px]">
+                                  <span className="flex items-center justify-between gap-2 text-emerald-500"><span>{t('incomeLabel')}</span><b className="font-data">{incomeShare}%</b></span>
+                                  <span className="flex items-center justify-between gap-2 text-red-400"><span>{t('expenseLabel')}</span><b className="font-data">{expenseShare}%</b></span>
+                                </div>
+                              </>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
 
                     <div className="mt-4 grid gap-2 sm:grid-cols-2">
                       <div className={`rounded-xl border p-3 ${isLight ? 'border-emerald-100 bg-emerald-50/50' : 'border-emerald-400/10 bg-emerald-500/[0.04]'}`}>
@@ -6966,16 +6994,6 @@ export default function CalendarScreen() {
                     <Wallet className="h-5 w-5 stroke-[1.8]" />
                   </span>
                 </div>
-                <div className={`relative mt-3 grid grid-cols-3 divide-x rounded-xl border px-2 py-2 text-center ${
-                  isLight ? 'border-zinc-200 bg-white/80 divide-zinc-200' : 'border-white/[0.07] bg-black/15 divide-white/[0.07]'
-                }`}>
-                  {[[proAccessCopy.previewWallet, Wallet], [proAccessCopy.previewPlans, Calendar], [proAccessCopy.previewHistory, History]].map(([label, Icon]) => (
-                    <div key={label} className="flex min-w-0 items-center justify-center gap-1.5 px-1">
-                      <Icon className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-                      <span className="truncate text-[10px] font-medium text-zinc-500">{label}</span>
-                    </div>
-                    ))}
-                </div>
               </div>
 
               <section className="mt-4">
@@ -7049,11 +7067,11 @@ export default function CalendarScreen() {
                   <div className="relative">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold">{proAccessCopy.buyTitle}</p>
+                        <p className="text-sm font-semibold">{proAccessActive ? proAccessCopy.renewTitle : proAccessCopy.buyTitle}</p>
                         <p className={`mt-1.5 text-xs leading-5 ${
                           isLight ? 'text-zinc-600' : 'text-zinc-400'
                         }`}>
-                          {proAccessCopy.buyBody}
+                          {proAccessActive ? proAccessCopy.renewBody : proAccessCopy.buyBody}
                         </p>
                       </div>
                       <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border ${
@@ -7075,7 +7093,7 @@ export default function CalendarScreen() {
                     <button
                       type="button"
                       onClick={handleStartProCheckout}
-                      disabled={proCheckoutLoading || proAccessActive}
+                      disabled={proCheckoutLoading}
                       aria-busy={proCheckoutLoading}
                       className={`mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-3 text-sm font-bold transition-all active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 ${
                         isLight
@@ -7088,11 +7106,9 @@ export default function CalendarScreen() {
                         : <CreditCard className="h-4 w-4 stroke-[1.8]" />}
                       {!user
                         ? proAccessCopy.buySignIn
-                        : proAccessActive
-                          ? proAccessCopy.buyActive
-                          : proCheckoutLoading
+                        : proCheckoutLoading
                             ? proAccessCopy.buyLoading
-                            : `${proAccessCopy.buyButton} — ${proAccessCopy.buyPrice}`}
+                            : `${proAccessActive ? proAccessCopy.renewButton : proAccessCopy.buyButton} — ${proAccessCopy.buyPrice}`}
                     </button>
 
                     <p className={`mt-2 text-center text-[10px] leading-4 ${
