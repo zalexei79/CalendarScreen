@@ -846,6 +846,11 @@ export default function CalendarScreen() {
       featureInsightsHint: 'История помогает повторять сильные решения и замечать ошибки',
       featureWallet: 'Деньги отдельно от торговли',
       featureWalletHint: 'Личный баланс и история расходов никогда не смешиваются с PnL',
+      previewTitle: 'Ваши деньги — в поле зрения.',
+      previewBody: 'Календарь, кошелёк и история рядом — без лишнего шума.',
+      previewWallet: 'Кошелёк',
+      previewPlans: 'Планы',
+      previewHistory: 'История',
       featureReminders: 'Важное не теряется',
       featureRemindersHint: 'Платежи, аренда и ожидаемые доходы остаются в поле зрения',
       featureHistory: 'Понятная финансовая картина',
@@ -921,6 +926,11 @@ export default function CalendarScreen() {
       featureInsightsHint: 'History helps repeat strong decisions and catch mistakes',
       featureWallet: 'Money stays separate from trading',
       featureWalletHint: 'Personal balance and spending history never mix with PnL',
+      previewTitle: 'Your money stays in view.',
+      previewBody: 'Calendar, wallet and history together — without the noise.',
+      previewWallet: 'Wallet',
+      previewPlans: 'Plans',
+      previewHistory: 'History',
       featureReminders: 'Important things stay visible',
       featureRemindersHint: 'Payments, rent and expected income stay in view',
       featureHistory: 'A clear financial picture',
@@ -996,6 +1006,11 @@ export default function CalendarScreen() {
       featureInsightsHint: 'Istoricul te ajută să repeți deciziile bune și să observi greșelile',
       featureWallet: 'Banii rămân separați de trading',
       featureWalletHint: 'Soldul personal și cheltuielile nu se amestecă niciodată cu PnL-ul',
+      previewTitle: 'Banii tăi rămân la vedere.',
+      previewBody: 'Calendarul, portofelul și istoricul într-un singur loc calm.',
+      previewWallet: 'Portofel',
+      previewPlans: 'Planuri',
+      previewHistory: 'Istoric',
       featureReminders: 'Lucrurile importante rămân vizibile',
       featureRemindersHint: 'Plățile, chiria și veniturile așteptate rămân în atenție',
       featureHistory: 'O imagine financiară clară',
@@ -6821,91 +6836,59 @@ export default function CalendarScreen() {
               </button>
             </div>
 
-            <div className={`shrink-0 border-b px-5 py-3 sm:px-6 ${
-              isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-zinc-950'
-            }`}>
-              <div className={`grid grid-cols-2 rounded-xl p-1 ${
-                isLight ? 'bg-zinc-100' : 'bg-white/[0.045]'
-              }`}>
-                <button
-                  type="button"
-                  onClick={() => setProOfferTab('offer')}
-                  className={`min-h-10 rounded-lg px-3 text-xs font-semibold transition-all ${
-                    proOfferTab === 'offer'
-                      ? isLight
-                        ? 'bg-white text-zinc-900 shadow-sm'
-                        : 'bg-zinc-800 text-zinc-100 shadow-sm'
-                      : isLight
-                        ? 'text-zinc-500 hover:text-zinc-800'
-                        : 'text-zinc-500 hover:text-zinc-300'
-                  }`}
-                >
-                  {proAccessCopy.offerTab}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setProOfferTab('invites')}
-                  className={`flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-xs font-semibold transition-all ${
-                    proOfferTab === 'invites'
-                      ? isLight
-                        ? 'bg-white text-zinc-900 shadow-sm'
-                        : 'bg-zinc-800 text-zinc-100 shadow-sm'
-                      : isLight
-                        ? 'text-zinc-500 hover:text-zinc-800'
-                        : 'text-zinc-500 hover:text-zinc-300'
-                  }`}
-                >
-                  <span>{proAccessCopy.invitesTab}</span>
-                  {invitedCount > 0 && <span className="rounded-full bg-amber-400/15 px-1.5 py-0.5 font-data text-[10px] text-amber-500">{invitedCount}</span>}
-                </button>
-              </div>
-            </div>
-
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:px-6">
               {proOfferTab === 'offer' ? (
                 <>
-              <p className={`mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] ${
-                isLight ? 'text-zinc-500' : 'text-zinc-500'
+              <div className={`relative overflow-hidden rounded-[26px] border px-5 py-4 ${
+                isLight
+                  ? 'border-zinc-200 bg-gradient-to-br from-zinc-50 via-white to-amber-50/50'
+                  : 'border-white/[0.07] bg-gradient-to-br from-white/[0.06] via-white/[0.02] to-amber-400/[0.04]'
               }`}>
-                {proAccessCopy.featuresTitle}
-              </p>
-
-              <div className="grid grid-cols-2 gap-2.5">
-                {[
-                  [Wallet, proAccessCopy.featureWallet, proAccessCopy.featureWalletHint],
-                  [Calendar, proAccessCopy.featureReminders, proAccessCopy.featureRemindersHint],
-                  [History, proAccessCopy.featureHistory, proAccessCopy.featureHistoryHint],
-                  [TrendingUp, proAccessCopy.featureAnalytics, proAccessCopy.featureAnalyticsHint],
-                ].map(([Icon, title, hint]) => (
-                  <div
-                    key={title}
-                    className={`rounded-2xl border p-3.5 transition-transform duration-300 hover:-translate-y-0.5 ${title === proAccessCopy.featureWallet ? 'col-span-2 sm:flex sm:items-center sm:gap-4' : ''} ${
-                      title === proAccessCopy.featureWallet
-                        ? isLight
-                          ? 'border-amber-200 bg-gradient-to-r from-amber-50 to-white'
-                          : 'border-amber-400/15 bg-gradient-to-r from-amber-400/[0.08] to-white/[0.025]'
-                        : isLight
-                          ? 'border-zinc-200 bg-zinc-50/80'
-                          : 'border-white/[0.06] bg-white/[0.025]'
-                    }`}
-                  >
-                    <span className={`grid h-9 w-9 place-items-center rounded-xl border ${
-                      isLight
-                        ? 'border-amber-200/80 bg-white text-amber-600 shadow-sm'
-                        : 'border-amber-400/15 bg-amber-400/[0.07] text-amber-300'
-                    }`}>
-                      <Icon className="h-4 w-4 stroke-[1.8]" />
-                    </span>
-                    <div className={title === proAccessCopy.featureWallet ? 'min-w-0' : ''}>
-                      <p className={`${title === proAccessCopy.featureWallet ? 'mt-3 sm:mt-0' : 'mt-3'} text-sm font-semibold leading-tight`}>{title}</p>
-                      <p className={`mt-1 text-[11px] leading-4 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{hint}</p>
-                    </div>
+                <div className="pointer-events-none absolute -right-8 -top-12 h-36 w-36 rounded-full bg-amber-400/10 blur-3xl" />
+                <div className="relative flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-data text-[9px] uppercase tracking-[0.2em] text-amber-500">DAYRIS PRO</p>
+                    <p className={`mt-2 text-lg font-semibold tracking-tight ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{proAccessCopy.previewTitle}</p>
+                    <p className={`mt-1 max-w-sm text-[11px] leading-5 ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>{proAccessCopy.previewBody}</p>
                   </div>
-                ))}
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-amber-400 text-zinc-950 shadow-[0_0_26px_rgba(251,191,36,.22)]">
+                    <Wallet className="h-5 w-5 stroke-[1.8]" />
+                  </span>
+                </div>
+                <div className={`relative mt-4 grid grid-cols-3 divide-x rounded-xl border px-2 py-2.5 text-center ${
+                  isLight ? 'border-zinc-200 bg-white/80 divide-zinc-200' : 'border-white/[0.07] bg-black/15 divide-white/[0.07]'
+                }`}>
+                  {[[proAccessCopy.previewWallet, Wallet], [proAccessCopy.previewPlans, Calendar], [proAccessCopy.previewHistory, History]].map(([label, Icon]) => (
+                    <div key={label} className="flex min-w-0 items-center justify-center gap-1.5 px-1">
+                      <Icon className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                      <span className="truncate text-[10px] font-medium text-zinc-500">{label}</span>
+                    </div>
+                    ))}
+                </div>
               </div>
 
-              <div className={`mt-5 overflow-hidden rounded-[26px] border p-5 sm:p-6 ${
+              <section className="mt-6">
+                <p className={`mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                  {proAccessCopy.featuresTitle}
+                </p>
+                <div className={`divide-y ${isLight ? 'divide-zinc-200' : 'divide-white/[0.07]'}`}>
+                  {[
+                    [Wallet, proAccessCopy.featureWallet, proAccessCopy.featureWalletHint],
+                    [Calendar, proAccessCopy.featureReminders, proAccessCopy.featureRemindersHint],
+                    [History, proAccessCopy.featureHistory, proAccessCopy.featureHistoryHint],
+                  ].map(([Icon, title, hint]) => (
+                    <div key={title} className="flex items-center gap-3 py-3.5 first:pt-3 last:pb-3">
+                      <Icon className="h-4 w-4 shrink-0 text-amber-500" />
+                      <div className="min-w-0">
+                        <p className={`text-sm font-semibold leading-tight ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{title}</p>
+                        <p className={`mt-1 text-[11px] leading-4 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{hint}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <div className={`order-3 mt-6 overflow-hidden rounded-[26px] border p-5 sm:p-6 ${
                 isLight
                   ? 'border-zinc-200 bg-white shadow-[0_18px_60px_-42px_rgba(15,23,42,.35)]'
                   : 'border-white/[0.08] bg-[#111216] shadow-[0_24px_70px_-48px_rgba(251,191,36,.28)]'
@@ -6946,28 +6929,24 @@ export default function CalendarScreen() {
               </div>
 
               <div className="contents">
-                <div className={`order-first relative mb-5 overflow-hidden rounded-[26px] border p-5 ${
+                 <div className={`order-2 relative mt-6 overflow-hidden rounded-[26px] border p-5 ${
                   isLight
                     ? 'border-amber-300/80 bg-gradient-to-br from-amber-100 via-amber-50 to-white shadow-[0_24px_70px_-36px_rgba(180,83,9,.45)]'
                     : 'border-amber-400/25 bg-[radial-gradient(circle_at_85%_0%,rgba(251,191,36,.18),transparent_38%),linear-gradient(135deg,rgba(251,191,36,.10),rgba(255,255,255,.025))] shadow-[0_28px_90px_-46px_rgba(251,191,36,.55)]'
                 }`}>
                   <span className="pointer-events-none absolute right-5 top-1 font-display text-7xl font-bold text-amber-400/[0.07]">26</span>
-                  <div className="flex items-start justify-between gap-3">
+                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="max-w-sm text-xl font-semibold leading-tight">{proAccessCopy.freeTitle}</p>
+                       <p className="font-data text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-500">{proAccessCopy.freeTitle}</p>
                       <p className={`mt-2 max-w-lg text-xs leading-5 ${
                         isLight ? 'text-zinc-600' : 'text-zinc-400'
                       }`}>
                         {proAccessCopy.freeBody}
                       </p>
                     </div>
-                    <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border ${
-                      isLight
-                        ? 'border-amber-200 bg-white text-amber-600 shadow-sm'
-                        : 'border-amber-400/20 bg-amber-400/[0.08] text-amber-300'
-                    }`}>
-                      <Award className="h-4.5 w-4.5" />
-                    </span>
+                     <button type="button" onClick={() => setProOfferTab('invites')} className="shrink-0 text-[10px] font-semibold text-amber-500 transition-colors hover:text-amber-300">
+                       {proAccessCopy.invitesTab} →
+                     </button>
                   </div>
 
                   <div className={`mt-4 rounded-2xl border px-3.5 py-3 ${
@@ -7038,7 +7017,7 @@ export default function CalendarScreen() {
                   </button>
                 </div>
 
-                <div className={`order-last relative mt-5 overflow-hidden rounded-2xl border p-4 ${
+                 <div className={`order-4 relative mt-6 overflow-hidden rounded-2xl border p-4 ${
                   isLight
                     ? 'border-zinc-200 bg-white'
                     : 'border-white/[0.08] bg-white/[0.025]'
@@ -7109,6 +7088,9 @@ export default function CalendarScreen() {
                 </>
               ) : (
                 <div>
+                  <button type="button" onClick={() => setProOfferTab('offer')} className="mb-4 text-xs font-semibold text-amber-500 transition-colors hover:text-amber-300">
+                    ← {proAccessCopy.offerTab}
+                  </button>
                   {!user ? (
                     <div className={`rounded-2xl border p-5 text-center ${
                       isLight ? 'border-zinc-200 bg-zinc-50' : 'border-white/[0.06] bg-white/[0.025]'

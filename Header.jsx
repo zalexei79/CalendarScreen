@@ -603,10 +603,6 @@ export default function Header({
           : 'grid-rows-[0fr] opacity-0 mt-0 -translate-y-1 pointer-events-none'
       }`}>
         <div className="min-h-0 overflow-hidden">
-          <div className={`mb-2 flex items-center gap-2 px-1 text-[10px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
-            <span className="font-data font-semibold uppercase tracking-[0.16em] text-amber-500">{t('traderModeLabel')}</span>
-            <span className="truncate">{t('traderModeConnectHint')}</span>
-          </div>
           {/* Mobile keeps PRO useful without pushing the calendar below the fold. */}
           <div className={`pro-mobile-commandbar sm:hidden rounded-xl border px-2.5 py-2 shadow-[0_12px_30px_-24px_rgba(251,191,36,.75),inset_0_1px_rgba(255,255,255,.035)] ${
             isLight
@@ -679,7 +675,7 @@ export default function Header({
             </div>
           </div>
 
-          {/* Desktop retains the full cTrader control centre. */}
+          {/* Desktop keeps cTrader and the period controls in one quiet status row. */}
           <div className={`hidden sm:block rounded-2xl border px-4 py-3 ${
             isLight
               ? 'border-slate-200 bg-white shadow-sm'
