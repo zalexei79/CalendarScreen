@@ -885,11 +885,14 @@ export default function CalendarScreen() {
       featureInsightsHint: 'История помогает повторять сильные решения и замечать ошибки',
       featureWallet: 'Деньги отдельно от торговли',
       featureWalletHint: 'Личный баланс и история расходов никогда не смешиваются с PnL',
-      previewTitle: 'Видеть. Решать. Двигаться дальше.',
-      previewBody: 'Реальные деньги отдельно. Торговые результаты — отдельно.',
+      previewTitle: 'Личные деньги — в поле зрения.',
+      previewBody: 'Баланс, поступления и траты отдельно от торгового PnL.',
       previewWallet: 'Кошелёк',
+      previewWalletHint: 'Баланс и операции',
       previewPlans: 'Планы',
       previewHistory: 'История',
+      previewHistoryHint: 'Доходы и траты',
+      previewTraderHint: 'По желанию',
       featureReminders: 'Важное не теряется',
       featureRemindersHint: 'Платежи, аренда и ожидаемые доходы остаются в поле зрения',
       featureHistory: 'Понятная финансовая картина',
@@ -968,11 +971,14 @@ export default function CalendarScreen() {
       featureInsightsHint: 'History helps repeat strong decisions and catch mistakes',
       featureWallet: 'Money stays separate from trading',
       featureWalletHint: 'Personal balance and spending history never mix with PnL',
-      previewTitle: 'See it. Decide. Move forward.',
-      previewBody: 'Real money stays separate. Trading results stay separate.',
+      previewTitle: 'Your personal money, in view.',
+      previewBody: 'Balance, income and spending stay separate from trading PnL.',
       previewWallet: 'Wallet',
+      previewWalletHint: 'Balance and activity',
       previewPlans: 'Plans',
       previewHistory: 'History',
+      previewHistoryHint: 'Income and spending',
+      previewTraderHint: 'When you need it',
       featureReminders: 'Important things stay visible',
       featureRemindersHint: 'Payments, rent and expected income stay in view',
       featureHistory: 'A clear financial picture',
@@ -1051,11 +1057,14 @@ export default function CalendarScreen() {
       featureInsightsHint: 'Istoricul te ajută să repeți deciziile bune și să observi greșelile',
       featureWallet: 'Banii rămân separați de trading',
       featureWalletHint: 'Soldul personal și cheltuielile nu se amestecă niciodată cu PnL-ul',
-      previewTitle: 'Vezi. Decizi. Mergi mai departe.',
-      previewBody: 'Banii reali rămân separați. Rezultatele din trading rămân separate.',
+      previewTitle: 'Banii personali, mereu la vedere.',
+      previewBody: 'Soldul, veniturile și cheltuielile rămân separate de PnL-ul din trading.',
       previewWallet: 'Portofel',
+      previewWalletHint: 'Sold și operațiuni',
       previewPlans: 'Planuri',
       previewHistory: 'Istoric',
+      previewHistoryHint: 'Venituri și cheltuieli',
+      previewTraderHint: 'Când ai nevoie',
       featureReminders: 'Lucrurile importante rămân vizibile',
       featureRemindersHint: 'Plățile, chiria și veniturile așteptate rămân în atenție',
       featureHistory: 'O imagine financiară clară',
@@ -7011,6 +7020,19 @@ export default function CalendarScreen() {
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-amber-400 text-zinc-950 shadow-[0_0_26px_rgba(251,191,36,.22)]">
                     <Wallet className="h-5 w-5 stroke-[1.8]" />
                   </span>
+                </div>
+                <div className="relative mt-4 grid grid-cols-3 gap-2">
+                  {[
+                    [Wallet, proAccessCopy.previewWallet, proAccessCopy.previewWalletHint, 'wallet'],
+                    [History, proAccessCopy.previewHistory, proAccessCopy.previewHistoryHint, 'neutral'],
+                    [ChartCandlestick, t('traderModeLabel'), proAccessCopy.previewTraderHint, 'neutral'],
+                  ].map(([Icon, label, hint, tone]) => (
+                    <div key={label} className={`min-w-0 rounded-2xl border p-2.5 ${tone === 'wallet' ? (isLight ? 'border-amber-300 bg-amber-100/70 text-amber-950' : 'border-amber-400/28 bg-amber-400/[0.10] text-amber-100') : (isLight ? 'border-zinc-200 bg-white/80 text-zinc-700' : 'border-white/[0.07] bg-white/[0.025] text-zinc-300')}`}>
+                      <Icon className={`h-3.5 w-3.5 ${tone === 'wallet' ? 'text-amber-500' : 'text-zinc-500'}`} />
+                      <p className="mt-2 truncate text-[10px] font-semibold leading-tight">{label}</p>
+                      <p className={`mt-1 truncate text-[9px] leading-tight ${tone === 'wallet' ? (isLight ? 'text-amber-700' : 'text-amber-200/70') : 'text-zinc-500'}`}>{hint}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
 

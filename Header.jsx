@@ -543,24 +543,24 @@ export default function Header({
                 <span className="flex items-center gap-1">{!proAccessLoading && !proAccessActive && !proView ? <LockKeyhole className="h-3 w-3 stroke-[1.9]" /> : <span>✦</span>} PRO</span>
               </span>
             </button>
-            <div className={`flex max-w-0 min-w-0 overflow-hidden transition-[max-width,opacity,transform] duration-500 ease-out ${
-              proView && accountMode === 'main' ? 'max-w-[270px] translate-x-0 opacity-100' : 'translate-x-5 opacity-0 pointer-events-none'
+            <div className={`flex max-w-0 min-w-0 overflow-hidden rounded-full transition-[max-width,opacity,transform,padding,background-color,border-color] duration-500 ease-out ${
+              proView && accountMode === 'main' ? (isLight ? 'max-w-[270px] border border-zinc-200 bg-zinc-50/80 p-0.5 translate-x-0 opacity-100' : 'max-w-[270px] border border-white/[0.07] bg-white/[0.025] p-0.5 translate-x-0 opacity-100') : 'translate-x-5 border-transparent p-0 opacity-0 pointer-events-none'
             }`}>
-              <div className="flex shrink-0 items-center gap-1.5 pl-0.5">
+              <div className="flex shrink-0 items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => changeAccountMode('wallet')}
-                  className={`flex h-9 w-[116px] items-center gap-1.5 rounded-xl border px-2.5 font-data text-[9px] font-bold uppercase tracking-[0.08em] transition-all duration-500 delay-75 hover:-translate-y-px ${
+                  className={`flex h-9 w-[116px] items-center gap-1.5 rounded-full border px-2.5 font-data text-[9px] font-bold uppercase tracking-[0.08em] transition-all duration-500 delay-75 hover:-translate-y-px ${
                     proView && accountMode === 'main' ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'
-                  } ${isLight ? 'border-zinc-200 bg-white text-zinc-800 shadow-sm hover:border-amber-300' : 'border-white/[0.09] bg-white/[0.035] text-zinc-200 hover:border-amber-400/30 hover:bg-white/[0.055]'}`}
+                  } ${isLight ? 'border-amber-300 bg-gradient-to-r from-amber-100 via-amber-50 to-white text-amber-900 shadow-[0_10px_24px_-18px_rgba(180,83,9,.7)] hover:border-amber-400' : 'border-amber-400/40 bg-[linear-gradient(100deg,rgba(251,191,36,.20),rgba(251,191,36,.075),rgba(255,255,255,.04))] text-amber-100 shadow-[0_12px_28px_-19px_rgba(251,191,36,.9)] hover:border-amber-300/65 hover:bg-amber-400/[.15]'}`}
                 >
-                  <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-md ${isLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-400/[0.12] text-amber-300'}`}><WalletIcon className="h-3.5 w-3.5" /></span>
+                  <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full ${isLight ? 'bg-amber-200 text-amber-800' : 'bg-amber-400/[0.18] text-amber-200'}`}><WalletIcon className="h-3.5 w-3.5" /></span>
                   <span className="truncate">{t('walletLabel')}</span>
                 </button>
-                <div className={`flex h-9 w-[128px] items-center gap-1.5 rounded-xl border px-2.5 transition-all duration-500 delay-150 ${
+                <div className={`flex h-9 w-[128px] items-center gap-1.5 rounded-full border px-2.5 transition-all duration-500 delay-150 ${
                   proView && accountMode === 'main' ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'
                 } ${traderMode ? (isLight ? 'border-emerald-200 bg-white text-zinc-800 shadow-sm' : 'border-emerald-400/24 bg-white/[0.045] text-zinc-100') : (isLight ? 'border-zinc-200 bg-white text-zinc-700' : 'border-white/[0.09] bg-white/[0.035] text-zinc-300')}`}>
-                  <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-md font-data text-[10px] ${traderMode ? (isLight ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-400/[0.13] text-emerald-300') : (isLight ? 'bg-zinc-100 text-zinc-500' : 'bg-white/[0.06] text-zinc-500')}`}>↗</span>
+                  <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full font-data text-[10px] ${traderMode ? (isLight ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-400/[0.13] text-emerald-300') : (isLight ? 'bg-zinc-100 text-zinc-500' : 'bg-white/[0.06] text-zinc-500')}`}>↗</span>
                   <span className="min-w-0 flex-1 truncate font-data text-[8px] font-bold uppercase tracking-[0.08em]">{t('traderModeLabel')}</span>
                   <button type="button" role="switch" aria-checked={traderMode} onClick={() => setTraderMode((value) => { const next = !value; if (!next) setPlatformFilter('ALL'); return next; })} className={`relative h-5 w-9 shrink-0 rounded-full border p-0.5 transition-all ${traderMode ? 'border-emerald-300 bg-emerald-400' : isLight ? 'border-zinc-300 bg-zinc-100' : 'border-zinc-700 bg-zinc-900'}`}>
                     <span className={`block h-3.5 w-3.5 rounded-full transition-transform ${traderMode ? 'translate-x-4 bg-zinc-950' : 'translate-x-0 bg-zinc-500'}`} />
@@ -574,7 +574,7 @@ export default function Header({
               <button
                 type="button"
                 onClick={openConnectModal}
-                className={`ml-0.5 flex h-9 w-[78px] shrink-0 items-center justify-center gap-1.5 rounded-xl border font-data text-[9px] font-bold transition-all duration-500 ${
+                className={`ml-0.5 flex h-9 w-[78px] shrink-0 items-center justify-center gap-1.5 rounded-full border font-data text-[9px] font-bold transition-all duration-500 ${
                   traderMode && accountMode === 'main' ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'
                 } ${ctraderConnected ? (isLight ? 'border-emerald-200 bg-white text-emerald-700 hover:border-emerald-300' : 'border-emerald-400/24 bg-white/[0.035] text-emerald-300 hover:border-emerald-400/40 hover:bg-white/[0.055]') : (isLight ? 'border-zinc-200 bg-white text-zinc-700 hover:border-amber-300' : 'border-white/[0.09] bg-white/[0.035] text-zinc-300 hover:border-amber-400/30 hover:bg-white/[0.055]')}`}
               >
@@ -587,7 +587,7 @@ export default function Header({
               onClick={openProPresentation}
               aria-label={t('proInfoAction')}
               title={t('proInfoAction')}
-              className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl border font-data text-[9px] font-bold text-amber-500 transition-all duration-500 delay-200 ${
+              className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border font-data text-[9px] font-bold text-amber-500 transition-all duration-500 delay-200 ${
                 proView && accountMode === 'main' ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0 pointer-events-none'
               } ${isLight ? 'border-zinc-200 bg-white hover:border-amber-300 hover:bg-amber-50' : 'border-white/[0.09] bg-white/[0.035] hover:border-amber-400/30 hover:bg-white/[0.055]'}`}
             >
