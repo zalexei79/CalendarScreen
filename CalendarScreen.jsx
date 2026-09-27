@@ -418,6 +418,7 @@ export default function CalendarScreen() {
   // PRO mode is now a UI preference only. Permission itself comes from
   // Supabase get_my_pro_status(); localStorage can no longer unlock PRO.
   const [traderMode, setTraderModeInternal] = useState(false);
+  const traderModePreferenceReady = useRef(false);
   useEffect(() => { if (!traderMode && accountMode === 'wallet') setAccountMode('main'); }, [traderMode, accountMode]);
   const [proAccessPromptOpen, setProAccessPromptOpen] = useState(false);
   const [proOfferTab, setProOfferTab] = useState('offer');
@@ -502,30 +503,33 @@ export default function CalendarScreen() {
   }
 
   useEffect(() => {
+    if (!traderModePreferenceReady.current || proAccessLoading || !proAccessActive) return;
     try {
       window.localStorage.setItem(TRADER_MODE_STORAGE_KEY, traderMode ? '1' : '0');
     } catch {
       // localStorage remembers only the preferred view, never the entitlement.
     }
-  }, [traderMode]);
+  }, [traderMode, proAccessActive, proAccessLoading]);
 
   useEffect(() => {
-    if (proAccessLoading) return;
+    if (proAccessLoading) {
+      traderModePreferenceReady.current = false;
+      return;
+    }
 
     if (!proAccessActive) {
       setTraderModeInternal(false);
-      try { window.localStorage.setItem(TRADER_MODE_STORAGE_KEY, '0'); } catch { /* ignore */ }
+      traderModePreferenceReady.current = false;
       return;
     }
 
     // Restore the user's preferred view only after the server confirms access.
     try {
-      if (window.localStorage.getItem(TRADER_MODE_STORAGE_KEY) === '1') {
-        setTraderModeInternal(true);
-      }
+      setTraderModeInternal(window.localStorage.getItem(TRADER_MODE_STORAGE_KEY) === '1');
     } catch {
       // ignore storage read failures
     }
+    traderModePreferenceReady.current = true;
   }, [proAccessActive, proAccessLoading, user?.id]);
 
   // --- Settings: language / currency / theme ------------------------------
@@ -827,26 +831,26 @@ export default function CalendarScreen() {
   const proAccessCopy = {
     ru: {
       eyebrow: 'PRO',
-      title: 'Открой DAYRIS PRO',
-      body: 'Видь деньги целиком: сделки, аналитика и личный кошелёк — в одном спокойном пространстве.',
+      title: 'Торгуй спокойнее. Видь больше.',
+      body: 'DAYRIS PRO превращает записи в ясную систему: сделки загружаются сами, закономерности становятся видны, а личные деньги остаются отдельно от PnL.',
       invitesHubTitle: 'Мои приглашения',
       invitesHubBody: 'Следи за приглашёнными, статусами и заработанными днями PRO.',
-      featuresTitle: 'Что откроется в PRO',
-      featurePlatform: 'Подключение площадки',
-      featurePlatformHint: 'cTrader: синхронизация аккаунтов и сделок',
-      featureAnalytics: 'Расширенная аналитика',
-      featureAnalyticsHint: 'PnL-кривая, динамика периода и статистика',
-      featureJournal: 'Торговый журнал',
-      featureJournalHint: 'Инструмент, направление, TP/SL и заметки',
-      featureInsights: 'Разбор результатов',
-      featureInsightsHint: 'История и заметки помогают видеть закономерности',
-      featureWallet: 'Личный кошелёк PRO',
-      featureWalletHint: 'Отдельный баланс и история денег — без смешивания с PnL',
-      freeTitle: 'Получить PRO бесплатно',
-      freeBody: 'Пригласи друга. После его первой настоящей записи награда активируется автоматически.',
+      featuresTitle: 'Не больше функций. Больше ясности.',
+      featurePlatform: 'Сделки появляются сами',
+      featurePlatformHint: 'Подключи cTrader и забудь о ручном переносе результатов',
+      featureAnalytics: 'Результат видно сразу',
+      featureAnalyticsHint: 'PnL-кривая, динамика и статистика показывают реальную картину',
+      featureJournal: 'Каждая сделка имеет контекст',
+      featureJournalHint: 'Инструмент, направление, TP/SL и заметки всегда рядом',
+      featureInsights: 'Находи свои закономерности',
+      featureInsightsHint: 'История помогает повторять сильные решения и замечать ошибки',
+      featureWallet: 'Деньги отдельно от торговли',
+      featureWalletHint: 'Личный баланс и история расходов никогда не смешиваются с PnL',
+      freeTitle: 'Один друг — 26 дней PRO',
+      freeBody: 'Отправь личное приглашение. Друг получит 7 дней PRO, а после его первой записи тебе автоматически откроется 26 дней.',
       reward: '+26 дней PRO тебе',
       rewardHint: '+7 дней PRO другу на старт',
-      share: 'Создать приглашение',
+      share: 'Пригласить друга и открыть PRO',
       signIn: 'Войти и получить приглашение',
       preparing: 'Готовим твоё приглашение…',
       retryInvite: 'Повторить создание приглашения',
@@ -863,7 +867,7 @@ export default function CalendarScreen() {
       paymentSuccessTitle: 'PRO активирован',
       paymentSuccessBody: 'Подписка подтверждена. Доступ PRO уже включён.',
       invitedLabel: 'Приглашено',
-      offerTab: 'PRO и бонусы',
+      offerTab: 'Открыть PRO',
       invitesTab: 'Мои приглашения',
       invitedPeople: 'Приглашено',
       activatedPeople: 'Активировали',
@@ -894,26 +898,26 @@ export default function CalendarScreen() {
     },
     en: {
       eyebrow: 'PRO',
-      title: 'Unlock DAYRIS PRO',
-      body: 'See the full picture: trading, analytics and your private wallet in one calm workspace.',
+      title: 'Trade calmer. See more.',
+      body: 'DAYRIS PRO turns entries into a clear system: trades sync themselves, patterns become visible, and personal money stays separate from PnL.',
       invitesHubTitle: 'My invitations',
       invitesHubBody: 'Track invited users, their status, and the PRO days you have earned.',
-      featuresTitle: 'What PRO unlocks',
-      featurePlatform: 'Platform connection',
-      featurePlatformHint: 'cTrader account and trade sync',
-      featureAnalytics: 'Advanced analytics',
-      featureAnalyticsHint: 'PnL curve, period dynamics and statistics',
-      featureJournal: 'Trading journal',
-      featureJournalHint: 'Instrument, direction, TP/SL and notes',
-      featureInsights: 'Results review',
-      featureInsightsHint: 'History and notes help reveal patterns',
-      featureWallet: 'Private PRO wallet',
-      featureWalletHint: 'A separate balance and money history, never mixed with PnL',
-      freeTitle: 'Get PRO for free',
-      freeBody: 'Invite a friend. After their first real entry, the reward activates automatically.',
+      featuresTitle: 'Not more features. More clarity.',
+      featurePlatform: 'Trades appear automatically',
+      featurePlatformHint: 'Connect cTrader and stop copying results by hand',
+      featureAnalytics: 'See the result instantly',
+      featureAnalyticsHint: 'PnL curve, dynamics and statistics reveal the real picture',
+      featureJournal: 'Every trade has context',
+      featureJournalHint: 'Instrument, direction, TP/SL and notes stay together',
+      featureInsights: 'Find your own patterns',
+      featureInsightsHint: 'History helps repeat strong decisions and catch mistakes',
+      featureWallet: 'Money stays separate from trading',
+      featureWalletHint: 'Personal balance and spending history never mix with PnL',
+      freeTitle: 'One friend — 26 days of PRO',
+      freeBody: 'Send a personal invite. Your friend gets 7 days of PRO, and their first entry unlocks 26 days for you automatically.',
       reward: '+26 days PRO for you',
       rewardHint: '+7 days PRO for your friend',
-      share: 'Create invitation',
+      share: 'Invite a friend and unlock PRO',
       signIn: 'Sign in to get an invitation',
       preparing: 'Preparing your invitation…',
       retryInvite: 'Try creating the invitation again',
@@ -930,7 +934,7 @@ export default function CalendarScreen() {
       paymentSuccessTitle: 'PRO activated',
       paymentSuccessBody: 'Your subscription is confirmed. PRO access is now active.',
       invitedLabel: 'Invited',
-      offerTab: 'PRO & rewards',
+      offerTab: 'Unlock PRO',
       invitesTab: 'My invites',
       invitedPeople: 'Invited',
       activatedPeople: 'Activated',
@@ -961,26 +965,26 @@ export default function CalendarScreen() {
     },
     ro: {
       eyebrow: 'PRO',
-      title: 'Deblochează DAYRIS PRO',
-      body: 'Vezi imaginea completă: tranzacții, analiză și portofelul personal într-un singur spațiu.',
+      title: 'Tranzacționează calm. Vezi mai mult.',
+      body: 'DAYRIS PRO transformă înregistrările într-un sistem clar: tranzacțiile se sincronizează, tiparele devin vizibile, iar banii personali rămân separați de PnL.',
       invitesHubTitle: 'Invitațiile mele',
       invitesHubBody: 'Urmărește invitațiile, starea lor și zilele PRO câștigate.',
-      featuresTitle: 'Ce deblochează PRO',
-      featurePlatform: 'Conectarea platformei',
-      featurePlatformHint: 'cTrader: sincronizarea conturilor și tranzacțiilor',
-      featureAnalytics: 'Analiză avansată',
-      featureAnalyticsHint: 'Curba PnL, dinamica perioadei și statistici',
-      featureJournal: 'Jurnal de tranzacționare',
-      featureJournalHint: 'Instrument, direcție, TP/SL și notițe',
-      featureInsights: 'Analiza rezultatelor',
-      featureInsightsHint: 'Istoricul și notițele ajută să vezi tipare',
-      featureWallet: 'Portofel PRO personal',
-      featureWalletHint: 'Sold și istoric separat, fără amestec cu PnL-ul',
-      freeTitle: 'Primește PRO gratuit',
-      freeBody: 'Invită un prieten. După prima lui înregistrare reală, recompensa se activează automat.',
+      featuresTitle: 'Nu mai multe funcții. Mai multă claritate.',
+      featurePlatform: 'Tranzacțiile apar automat',
+      featurePlatformHint: 'Conectează cTrader și renunță la copierea manuală a rezultatelor',
+      featureAnalytics: 'Vezi rezultatul imediat',
+      featureAnalyticsHint: 'Curba PnL, dinamica și statisticile arată imaginea reală',
+      featureJournal: 'Fiecare tranzacție are context',
+      featureJournalHint: 'Instrumentul, direcția, TP/SL și notițele rămân împreună',
+      featureInsights: 'Descoperă-ți tiparele',
+      featureInsightsHint: 'Istoricul te ajută să repeți deciziile bune și să observi greșelile',
+      featureWallet: 'Banii rămân separați de trading',
+      featureWalletHint: 'Soldul personal și cheltuielile nu se amestecă niciodată cu PnL-ul',
+      freeTitle: 'Un prieten — 26 de zile PRO',
+      freeBody: 'Trimite o invitație personală. Prietenul primește 7 zile PRO, iar prima lui înregistrare îți activează automat 26 de zile.',
       reward: '+26 zile PRO pentru tine',
       rewardHint: '+7 zile PRO pentru prieten',
-      share: 'Creează invitația',
+      share: 'Invită un prieten și activează PRO',
       signIn: 'Autentifică-te pentru invitație',
       preparing: 'Pregătim invitația…',
       retryInvite: 'Încearcă din nou crearea invitației',
@@ -997,7 +1001,7 @@ export default function CalendarScreen() {
       paymentSuccessTitle: 'PRO activat',
       paymentSuccessBody: 'Abonamentul este confirmat. Accesul PRO este activ.',
       invitedLabel: 'Invitați',
-      offerTab: 'PRO și bonusuri',
+      offerTab: 'Activează PRO',
       invitesTab: 'Invitațiile mele',
       invitedPeople: 'Invitați',
       activatedPeople: 'Activați',
@@ -6680,12 +6684,13 @@ export default function CalendarScreen() {
           className="fixed inset-0 z-[96] flex items-end justify-center bg-black/75 px-0 pt-8 backdrop-blur-sm sm:items-center sm:px-4 sm:pt-0"
           onClick={(event) => { if (event.target === event.currentTarget) setProAccessPromptOpen(false); }}
         >
-          <SwipeDismissSheet onDismiss={() => setProAccessPromptOpen(false)} isLight={isLight} className={`flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-[28px] border shadow-2xl sm:rounded-3xl ${
+          <SwipeDismissSheet onDismiss={() => setProAccessPromptOpen(false)} isLight={isLight} className={`flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-[28px] border shadow-2xl sm:rounded-3xl ${
             isLight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-white/[0.08] bg-zinc-950 text-zinc-100'
           }`}>
-            <div className={`flex items-start justify-between gap-4 border-b px-5 pb-4 pt-4 sm:px-6 sm:pt-6 ${
-              isLight ? 'border-zinc-200' : 'border-white/[0.06]'
+            <div className={`relative flex items-start justify-between gap-4 overflow-hidden border-b px-5 pb-5 pt-4 sm:px-6 sm:pb-6 sm:pt-6 ${
+              isLight ? 'border-amber-200/70 bg-gradient-to-br from-amber-50 via-white to-white' : 'border-amber-400/10 bg-[radial-gradient(circle_at_15%_0%,rgba(251,191,36,.14),transparent_42%)]'
             }`}>
+              <div className="pointer-events-none absolute -left-20 -top-28 h-64 w-64 rounded-full bg-amber-400/10 blur-3xl" />
               <div className="min-w-0">
                 <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 ${
                   isLight
@@ -6696,10 +6701,10 @@ export default function CalendarScreen() {
                   <span className="font-data text-[9px] font-bold tracking-[0.2em]">{proAccessCopy.eyebrow}</span>
                 </div>
 
-                <h3 className="mt-3 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">
+                <h3 className="mt-3 max-w-xl font-display text-[27px] font-semibold leading-[1.05] tracking-tight sm:text-[34px]">
                   {proOfferTab === 'invites' ? proAccessCopy.invitesHubTitle : proAccessCopy.title}
                 </h3>
-                <p className={`mt-2 max-w-lg text-sm leading-6 ${
+                <p className={`mt-3 max-w-xl text-sm leading-6 ${
                   isLight ? 'text-zinc-600' : 'text-zinc-400'
                 }`}>
                   {proOfferTab === 'invites' ? proAccessCopy.invitesHubBody : proAccessCopy.body}
@@ -6756,18 +6761,12 @@ export default function CalendarScreen() {
                   }`}
                 >
                   <span>{proAccessCopy.invitesTab}</span>
-                  <span className={`rounded-full px-1.5 py-0.5 font-data text-[10px] ${
-                    invitedCount > 0
-                      ? 'bg-amber-400/15 text-amber-500'
-                      : isLight ? 'bg-zinc-200 text-zinc-500' : 'bg-white/[0.06] text-zinc-500'
-                  }`}>
-                    {invitedCount}
-                  </span>
+                  {invitedCount > 0 && <span className="rounded-full bg-amber-400/15 px-1.5 py-0.5 font-data text-[10px] text-amber-500">{invitedCount}</span>}
                 </button>
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-5 sm:px-6">
               {proOfferTab === 'offer' ? (
                 <>
               <p className={`mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] ${
@@ -6778,18 +6777,22 @@ export default function CalendarScreen() {
 
               <div className="grid grid-cols-2 gap-2.5">
                 {[
+                  [Wallet, proAccessCopy.featureWallet, proAccessCopy.featureWalletHint],
                   [Link2, proAccessCopy.featurePlatform, proAccessCopy.featurePlatformHint],
                   [TrendingUp, proAccessCopy.featureAnalytics, proAccessCopy.featureAnalyticsHint],
                   [ChartCandlestick, proAccessCopy.featureJournal, proAccessCopy.featureJournalHint],
                   [FileText, proAccessCopy.featureInsights, proAccessCopy.featureInsightsHint],
-                  [Wallet, proAccessCopy.featureWallet, proAccessCopy.featureWalletHint],
                 ].map(([Icon, title, hint]) => (
                   <div
                     key={title}
-                    className={`rounded-2xl border p-3.5 ${title === proAccessCopy.featureWallet ? 'col-span-2' : ''} ${
-                      isLight
-                        ? 'border-zinc-200 bg-zinc-50/80'
-                        : 'border-white/[0.06] bg-white/[0.025]'
+                    className={`rounded-2xl border p-3.5 transition-transform duration-300 hover:-translate-y-0.5 ${title === proAccessCopy.featureWallet ? 'col-span-2 sm:flex sm:items-center sm:gap-4' : ''} ${
+                      title === proAccessCopy.featureWallet
+                        ? isLight
+                          ? 'border-amber-200 bg-gradient-to-r from-amber-50 to-white'
+                          : 'border-amber-400/15 bg-gradient-to-r from-amber-400/[0.08] to-white/[0.025]'
+                        : isLight
+                          ? 'border-zinc-200 bg-zinc-50/80'
+                          : 'border-white/[0.06] bg-white/[0.025]'
                     }`}
                   >
                     <span className={`grid h-9 w-9 place-items-center rounded-xl border ${
@@ -6799,26 +6802,25 @@ export default function CalendarScreen() {
                     }`}>
                       <Icon className="h-4 w-4 stroke-[1.8]" />
                     </span>
-                    <p className="mt-3 text-sm font-semibold leading-tight">{title}</p>
-                    <p className={`mt-1 text-[11px] leading-4 ${
-                      isLight ? 'text-zinc-500' : 'text-zinc-500'
-                    }`}>
-                      {hint}
-                    </p>
+                    <div className={title === proAccessCopy.featureWallet ? 'min-w-0' : ''}>
+                      <p className={`${title === proAccessCopy.featureWallet ? 'mt-3 sm:mt-0' : 'mt-3'} text-sm font-semibold leading-tight`}>{title}</p>
+                      <p className={`mt-1 text-[11px] leading-4 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{hint}</p>
+                    </div>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className={`rounded-2xl border p-4 ${
+              <div className="contents">
+                <div className={`order-first relative mb-5 overflow-hidden rounded-[26px] border p-5 ${
                   isLight
-                    ? 'border-amber-200/80 bg-gradient-to-br from-amber-50 to-white'
-                    : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.08] to-white/[0.02]'
+                    ? 'border-amber-300/80 bg-gradient-to-br from-amber-100 via-amber-50 to-white shadow-[0_24px_70px_-36px_rgba(180,83,9,.45)]'
+                    : 'border-amber-400/25 bg-[radial-gradient(circle_at_85%_0%,rgba(251,191,36,.18),transparent_38%),linear-gradient(135deg,rgba(251,191,36,.10),rgba(255,255,255,.025))] shadow-[0_28px_90px_-46px_rgba(251,191,36,.55)]'
                 }`}>
+                  <span className="pointer-events-none absolute right-5 top-1 font-display text-7xl font-bold text-amber-400/[0.07]">26</span>
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold">{proAccessCopy.freeTitle}</p>
-                      <p className={`mt-1.5 text-xs leading-5 ${
+                      <p className="max-w-sm text-xl font-semibold leading-tight">{proAccessCopy.freeTitle}</p>
+                      <p className={`mt-2 max-w-lg text-xs leading-5 ${
                         isLight ? 'text-zinc-600' : 'text-zinc-400'
                       }`}>
                         {proAccessCopy.freeBody}
@@ -6833,7 +6835,7 @@ export default function CalendarScreen() {
                     </span>
                   </div>
 
-                  <div className={`mt-4 rounded-xl border px-3 py-3 ${
+                  <div className={`mt-4 rounded-2xl border px-3.5 py-3 ${
                     isLight
                       ? 'border-zinc-200 bg-white/75'
                       : 'border-white/[0.06] bg-black/10'
@@ -6873,12 +6875,12 @@ export default function CalendarScreen() {
                     </p>
                   </div>
 
-                  <div className={`mt-3 rounded-xl border px-3 py-2.5 ${
+                  <div className={`mt-3 rounded-2xl border px-3.5 py-3 ${
                     isLight
                       ? 'border-amber-200/80 bg-white/80'
                       : 'border-amber-400/10 bg-black/15'
                   }`}>
-                    <p className="font-data text-[15px] font-bold text-amber-500">{proAccessCopy.reward}</p>
+                    <p className="font-data text-lg font-bold text-amber-500">{proAccessCopy.reward}</p>
                     <p className={`mt-0.5 text-[11px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
                       {proAccessCopy.rewardHint}
                     </p>
@@ -6888,7 +6890,7 @@ export default function CalendarScreen() {
                     type="button"
                     onClick={openReferralShare}
                     disabled={Boolean(user) && referralCodeLoading}
-                    className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-3 text-sm font-bold text-zinc-950 shadow-lg shadow-amber-500/10 transition-all hover:from-amber-300 hover:to-amber-400 active:scale-[0.99] disabled:cursor-wait disabled:opacity-55"
+                    className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 px-4 text-sm font-bold text-zinc-950 shadow-[0_16px_36px_-16px_rgba(251,191,36,.7)] transition-all hover:brightness-105 active:scale-[0.99] disabled:cursor-wait disabled:opacity-55"
                   >
                     <Share2 className="h-4 w-4 stroke-[2]" />
                     {!user
@@ -6901,7 +6903,7 @@ export default function CalendarScreen() {
                   </button>
                 </div>
 
-                <div className={`relative overflow-hidden rounded-2xl border p-4 ${
+                <div className={`order-last relative mt-5 overflow-hidden rounded-2xl border p-4 ${
                   isLight
                     ? 'border-zinc-200 bg-white'
                     : 'border-white/[0.08] bg-white/[0.025]'
