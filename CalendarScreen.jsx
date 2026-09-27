@@ -6996,7 +6996,7 @@ export default function CalendarScreen() {
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pt-5">
               {proOfferTab === 'offer' ? (
                 <>
-              <div className={`relative overflow-hidden rounded-[22px] border px-4 py-3.5 ${
+              <div className={`relative rounded-[22px] border p-4 sm:p-5 ${
                 isLight
                   ? 'border-zinc-200 bg-gradient-to-br from-zinc-50 via-white to-amber-50/50'
                   : 'border-white/[0.07] bg-gradient-to-br from-white/[0.06] via-white/[0.02] to-amber-400/[0.04]'
@@ -7035,14 +7035,14 @@ export default function CalendarScreen() {
                 </div>
               </section>
 
-              <div className="contents">
-                 <div className={`order-2 relative mt-4 rounded-[22px] border p-4 pb-5 ${
+              <div className="mt-4 space-y-4">
+                 <div className={`relative isolate rounded-[22px] border p-4 sm:p-5 ${
                   isLight
                     ? 'border-amber-300/80 bg-gradient-to-br from-amber-100 via-amber-50 to-white shadow-[0_24px_70px_-36px_rgba(180,83,9,.45)]'
                     : 'border-amber-400/25 bg-[radial-gradient(circle_at_85%_0%,rgba(251,191,36,.18),transparent_38%),linear-gradient(135deg,rgba(251,191,36,.10),rgba(255,255,255,.025))] shadow-[0_28px_90px_-46px_rgba(251,191,36,.55)]'
                 }`}>
                   <span className="pointer-events-none absolute right-5 top-1 font-display text-7xl font-bold text-amber-400/[0.07]">26</span>
-                   <div className="flex items-start justify-between gap-3">
+                   <div className="relative z-10 flex items-start justify-between gap-3">
                     <div>
                        <p className="font-data text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-500">{proAccessCopy.freeTitle}</p>
                       <p className={`mt-2 max-w-lg text-xs leading-5 ${
@@ -7060,7 +7060,7 @@ export default function CalendarScreen() {
                     type="button"
                     onClick={openReferralShare}
                     disabled={Boolean(user) && referralCodeLoading}
-                    className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 px-4 text-sm font-bold text-zinc-950 shadow-[0_16px_36px_-16px_rgba(251,191,36,.7)] transition-all hover:brightness-105 active:scale-[0.99] disabled:cursor-wait disabled:opacity-55"
+                    className="relative z-10 mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[14px] border border-amber-300/70 bg-amber-400 px-4 text-[13px] font-semibold text-zinc-950 shadow-[0_14px_28px_-20px_rgba(251,191,36,.9)] transition-all hover:bg-amber-300 active:scale-[0.99] disabled:cursor-wait disabled:opacity-55"
                   >
                     <Share2 className="h-4 w-4 stroke-[2]" />
                     {!user
@@ -7073,7 +7073,7 @@ export default function CalendarScreen() {
                   </button>
                 </div>
 
-                 <div className={`order-4 relative mt-4 rounded-2xl border p-4 pb-5 ${
+                 <div className={`relative isolate rounded-[22px] border p-4 sm:p-5 ${
                   isLight
                     ? 'border-zinc-200 bg-white'
                     : 'border-white/[0.08] bg-white/[0.025]'
@@ -7113,10 +7113,10 @@ export default function CalendarScreen() {
                       onClick={handleStartProCheckout}
                       disabled={proCheckoutLoading}
                       aria-busy={proCheckoutLoading}
-                      className={`mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-3 text-sm font-bold transition-all active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 ${
+                      className={`relative z-10 mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[14px] border px-4 text-[13px] font-semibold transition-all active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 ${
                         isLight
-                          ? 'border-zinc-900 bg-zinc-900 text-white shadow-lg shadow-zinc-900/10 hover:bg-zinc-800'
-                          : 'border-white/80 bg-white text-zinc-950 shadow-lg shadow-black/20 hover:bg-zinc-100'
+                          ? 'border-amber-400 bg-amber-400 text-zinc-950 shadow-[0_14px_28px_-20px_rgba(251,191,36,.8)] hover:bg-amber-300'
+                          : 'border-amber-300/70 bg-amber-400 text-zinc-950 shadow-[0_14px_28px_-20px_rgba(251,191,36,.8)] hover:bg-amber-300'
                       }`}
                     >
                       {proCheckoutLoading
