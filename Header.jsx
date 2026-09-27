@@ -550,16 +550,29 @@ export default function Header({
       <div className={`grid transition-[grid-template-rows,opacity,margin,transform] duration-300 ease-out ${
         proView && accountMode === 'main' ? 'mt-2 grid-rows-[1fr] opacity-100 translate-y-0' : 'mt-0 grid-rows-[0fr] opacity-0 -translate-y-1 pointer-events-none'
       }`}>
-        <div className="min-h-0 overflow-hidden">
+        <div className={`min-h-0 ${proView && accountMode === 'main' ? 'overflow-visible' : 'overflow-hidden'}`}>
           <div className={`flex flex-wrap items-center gap-2 border-t pt-2.5 ${isLight ? 'border-zinc-200' : 'border-white/[0.06]'}`}>
-            <button type="button" onClick={() => changeAccountMode('wallet')} className={`flex h-8 items-center gap-1.5 rounded-full border px-3 font-data text-[10px] font-semibold transition-colors ${isLight ? 'border-zinc-200 bg-white text-zinc-700 hover:border-amber-300' : 'border-white/[0.08] bg-white/[0.03] text-zinc-300 hover:border-amber-400/30'}`}><WalletIcon className="h-3.5 w-3.5 text-amber-500" />{t('walletLabel')}</button>
+            <button
+              type="button"
+              onClick={() => changeAccountMode('wallet')}
+              className={`group relative flex h-10 min-w-[148px] items-center gap-2 overflow-hidden rounded-xl border px-3.5 text-left shadow-[0_12px_28px_-18px_rgba(251,191,36,.85)] transition-all duration-300 hover:-translate-y-px hover:brightness-105 active:translate-y-0 ${
+                isLight
+                  ? 'border-amber-300 bg-gradient-to-r from-amber-200 via-amber-300 to-amber-400 text-zinc-950'
+                  : 'border-amber-300/75 bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 text-zinc-950'
+              }`}
+            >
+              <span className="pointer-events-none absolute -right-3 -top-4 h-14 w-14 rounded-full bg-white/35 blur-xl transition-transform duration-300 group-hover:scale-125" />
+              <span className="relative grid h-6 w-6 shrink-0 place-items-center rounded-lg border border-zinc-950/15 bg-zinc-950/10"><WalletIcon className="h-3.5 w-3.5 stroke-[2]" /></span>
+              <span className="relative font-data text-[10px] font-bold uppercase tracking-[0.12em]">{t('walletLabel')}</span>
+              <span className="relative ml-auto rounded-full bg-zinc-950/15 px-1.5 py-0.5 font-data text-[8px] font-bold tracking-[0.13em]">PRO</span>
+            </button>
             <div className={`flex h-8 items-center gap-2 rounded-full border px-2.5 ${isLight ? 'border-zinc-200 bg-white text-zinc-700' : 'border-white/[0.08] bg-white/[0.03] text-zinc-300'}`}>
               <span className="font-data text-[9px] uppercase tracking-[0.1em]">{t('traderModeLabel')}</span>
               <button type="button" role="switch" aria-checked={traderMode} onClick={() => setTraderMode((value) => { const next = !value; if (!next) setPlatformFilter('ALL'); return next; })} className={`relative h-5 w-9 rounded-full border p-0.5 transition-all ${traderMode ? 'border-amber-300 bg-amber-400' : isLight ? 'border-zinc-300 bg-zinc-100' : 'border-zinc-700 bg-zinc-900'}`}>
                 <span className={`block h-3.5 w-3.5 rounded-full transition-transform ${traderMode ? 'translate-x-4 bg-zinc-950' : 'translate-x-0 bg-zinc-500'}`} />
               </button>
             </div>
-            <button type="button" onClick={openProPresentation} className="ml-auto text-[10px] font-semibold text-zinc-500 transition-colors hover:text-amber-500">{t('proInfoAction')} →</button>
+            <button type="button" onClick={openProPresentation} className="text-[10px] font-semibold text-zinc-500 transition-colors hover:text-amber-500 sm:ml-auto">{t('proInfoAction')} →</button>
           </div>
         </div>
       </div>
@@ -570,7 +583,7 @@ export default function Header({
           ? 'grid-rows-[1fr] opacity-100 mt-1.5 translate-y-0'
           : 'grid-rows-[0fr] opacity-0 mt-0 -translate-y-1 pointer-events-none'
       }`}>
-        <div className="min-h-0 overflow-hidden">
+        <div className={`min-h-0 ${traderMode && accountMode === 'main' ? 'overflow-visible' : 'overflow-hidden'}`}>
           {/* Mobile keeps PRO useful without pushing the calendar below the fold. */}
           <div className={`pro-mobile-commandbar sm:hidden rounded-xl border px-2.5 py-2 shadow-[0_12px_30px_-24px_rgba(251,191,36,.75),inset_0_1px_rgba(255,255,255,.035)] ${
             isLight

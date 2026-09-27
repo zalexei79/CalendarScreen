@@ -422,6 +422,7 @@ export default function CalendarScreen() {
   const proViewPreferenceReady = useRef(false);
   const [traderMode, setTraderModeInternal] = useState(false);
   const traderModePreferenceReady = useRef(false);
+  const isFinancialPro = proView && !traderMode;
   useEffect(() => {
     if ((!proAccessLoading && !proAccessActive) || !proView) {
       if (accountMode === 'wallet') setAccountMode('main');
@@ -871,11 +872,11 @@ export default function CalendarScreen() {
   const proAccessCopy = {
     ru: {
       eyebrow: 'PRO',
-      title: 'Больше порядка в ваших финансах.',
-      body: 'DAYRIS PRO объединяет планирование, историю, аналитику и личные деньги в одном спокойном пространстве.',
+      title: 'Деньги под контролем. Без лишнего.',
+      body: 'Личный кошелёк, финансовая картина и режим трейдера — каждый включается тогда, когда нужен.',
       invitesHubTitle: 'Мои приглашения',
       invitesHubBody: 'Следи за приглашёнными, статусами и заработанными днями PRO.',
-      featuresTitle: 'В PRO ваши финансы собраны в одном месте.',
+      featuresTitle: 'Что меняется в PRO',
       featurePlatform: 'Сделки появляются сами',
       featurePlatformHint: 'Подключи cTrader и забудь о ручном переносе результатов',
       featureAnalytics: 'Результат видно сразу',
@@ -886,8 +887,8 @@ export default function CalendarScreen() {
       featureInsightsHint: 'История помогает повторять сильные решения и замечать ошибки',
       featureWallet: 'Деньги отдельно от торговли',
       featureWalletHint: 'Личный баланс и история расходов никогда не смешиваются с PnL',
-      previewTitle: 'Ваши деньги — в поле зрения.',
-      previewBody: 'Календарь, кошелёк и история рядом — без лишнего шума.',
+      previewTitle: 'Видеть. Решать. Двигаться дальше.',
+      previewBody: 'Реальные деньги отдельно. Торговые результаты — отдельно.',
       previewWallet: 'Кошелёк',
       previewPlans: 'Планы',
       previewHistory: 'История',
@@ -899,8 +900,8 @@ export default function CalendarScreen() {
       traderRevealTitle: 'Торгуете?',
       traderRevealBody: 'В PRO также входит режим трейдера: журнал сделок, PnL, аналитика и cTrader — когда они вам нужны.',
       traderRevealAction: 'Включить режим трейдера',
-      freeTitle: 'Один друг — 26 дней PRO',
-      freeBody: 'Отправь личное приглашение. Друг получит 7 дней PRO, а после его первой записи тебе автоматически откроется 26 дней.',
+      freeTitle: 'Пригласи друга — получи 26 дней PRO',
+      freeBody: 'Друг получает 7 дней PRO. Его первая запись открывает тебе 26 дней.',
       reward: '+26 дней PRO тебе',
       rewardHint: '+7 дней PRO другу на старт',
       share: 'Пригласить друга и открыть PRO',
@@ -951,11 +952,11 @@ export default function CalendarScreen() {
     },
     en: {
       eyebrow: 'PRO',
-      title: 'More order in your finances.',
-      body: 'DAYRIS PRO brings planning, history, analytics and personal money into one calm workspace.',
+      title: 'Money in control. Nothing extra.',
+      body: 'A personal wallet, a clear financial picture, and Trader Mode — each available when you need it.',
       invitesHubTitle: 'My invitations',
       invitesHubBody: 'Track invited users, their status, and the PRO days you have earned.',
-      featuresTitle: 'PRO keeps your finances in one clear place.',
+      featuresTitle: 'What changes with PRO',
       featurePlatform: 'Trades appear automatically',
       featurePlatformHint: 'Connect cTrader and stop copying results by hand',
       featureAnalytics: 'See the result instantly',
@@ -966,8 +967,8 @@ export default function CalendarScreen() {
       featureInsightsHint: 'History helps repeat strong decisions and catch mistakes',
       featureWallet: 'Money stays separate from trading',
       featureWalletHint: 'Personal balance and spending history never mix with PnL',
-      previewTitle: 'Your money stays in view.',
-      previewBody: 'Calendar, wallet and history together — without the noise.',
+      previewTitle: 'See it. Decide. Move forward.',
+      previewBody: 'Real money stays separate. Trading results stay separate.',
       previewWallet: 'Wallet',
       previewPlans: 'Plans',
       previewHistory: 'History',
@@ -979,8 +980,8 @@ export default function CalendarScreen() {
       traderRevealTitle: 'Do you trade?',
       traderRevealBody: 'PRO also includes Trader Mode: trade journal, PnL, analytics and cTrader — whenever you need them.',
       traderRevealAction: 'Turn on Trader Mode',
-      freeTitle: 'One friend — 26 days of PRO',
-      freeBody: 'Send a personal invite. Your friend gets 7 days of PRO, and their first entry unlocks 26 days for you automatically.',
+      freeTitle: 'Invite a friend — get 26 days of PRO',
+      freeBody: 'Your friend gets 7 days of PRO. Their first entry unlocks 26 days for you.',
       reward: '+26 days PRO for you',
       rewardHint: '+7 days PRO for your friend',
       share: 'Invite a friend and unlock PRO',
@@ -1031,11 +1032,11 @@ export default function CalendarScreen() {
     },
     ro: {
       eyebrow: 'PRO',
-      title: 'Mai multă ordine în finanțele tale.',
-      body: 'DAYRIS PRO aduce planificarea, istoricul, analiza și banii personali într-un singur spațiu calm.',
+      title: 'Banii sub control. Fără surplus.',
+      body: 'Portofel personal, imagine financiară clară și Modul trader — fiecare când ai nevoie.',
       invitesHubTitle: 'Invitațiile mele',
       invitesHubBody: 'Urmărește invitațiile, starea lor și zilele PRO câștigate.',
-      featuresTitle: 'În PRO, finanțele tale rămân într-un singur loc clar.',
+      featuresTitle: 'Ce se schimbă cu PRO',
       featurePlatform: 'Tranzacțiile apar automat',
       featurePlatformHint: 'Conectează cTrader și renunță la copierea manuală a rezultatelor',
       featureAnalytics: 'Vezi rezultatul imediat',
@@ -1046,8 +1047,8 @@ export default function CalendarScreen() {
       featureInsightsHint: 'Istoricul te ajută să repeți deciziile bune și să observi greșelile',
       featureWallet: 'Banii rămân separați de trading',
       featureWalletHint: 'Soldul personal și cheltuielile nu se amestecă niciodată cu PnL-ul',
-      previewTitle: 'Banii tăi rămân la vedere.',
-      previewBody: 'Calendarul, portofelul și istoricul într-un singur loc calm.',
+      previewTitle: 'Vezi. Decizi. Mergi mai departe.',
+      previewBody: 'Banii reali rămân separați. Rezultatele din trading rămân separate.',
       previewWallet: 'Portofel',
       previewPlans: 'Planuri',
       previewHistory: 'Istoric',
@@ -1059,8 +1060,8 @@ export default function CalendarScreen() {
       traderRevealTitle: 'Tranzacționezi?',
       traderRevealBody: 'PRO include și Modul trader: jurnal, PnL, analiză și cTrader — atunci când ai nevoie.',
       traderRevealAction: 'Activează modul trader',
-      freeTitle: 'Un prieten — 26 de zile PRO',
-      freeBody: 'Trimite o invitație personală. Prietenul primește 7 zile PRO, iar prima lui înregistrare îți activează automat 26 de zile.',
+      freeTitle: 'Invită un prieten — primești 26 zile PRO',
+      freeBody: 'Prietenul primește 7 zile PRO. Prima lui înregistrare îți deschide 26 de zile.',
       reward: '+26 zile PRO pentru tine',
       rewardHint: '+7 zile PRO pentru prieten',
       share: 'Invită un prieten și activează PRO',
@@ -4219,7 +4220,7 @@ export default function CalendarScreen() {
       {/* PRO controls live in Header: one clean control center, no floating duplicate block. */}
       <CalendarGrid
         notes={calendarNotes} noteLabel={t('calendarDayNote')}
-        traderMode={traderMode}
+        traderMode={traderMode} proView={proView}
         onNextMonth={goToNextMonth}
         onPreviousMonth={goToPrevMonth}
         key={`${year}-${month}-${animKey}`}
@@ -4649,7 +4650,7 @@ export default function CalendarScreen() {
           <SwipeDismissSheet
             onDismiss={closeHistory}
             isLight={isLight}
-            className={`relative w-full ${traderMode ? 'sm:max-w-5xl' : 'sm:max-w-lg'} flex flex-col overflow-hidden rounded-t-[28px] border shadow-2xl transition-all duration-300 ease-out sm:rounded-[24px] ${
+            className={`relative w-full ${traderMode || isFinancialPro ? 'sm:max-w-5xl' : 'sm:max-w-lg'} flex flex-col overflow-hidden rounded-t-[28px] border shadow-2xl transition-all duration-300 ease-out sm:rounded-[24px] ${
               historyVisible
                 ? 'opacity-100 translate-y-0 sm:scale-100'
                 : 'opacity-0 translate-y-full sm:translate-y-0 sm:scale-95'
@@ -4805,10 +4806,63 @@ export default function CalendarScreen() {
               ref={historyScrollRef}
               onScroll={handleHistoryScroll}
               className={`overflow-y-auto px-4 py-5 sm:px-7 sm:py-6 flex-1 min-h-0 ${
-                traderMode ? 'pro-history-premium' : ''
+                traderMode || isFinancialPro ? 'pro-history-premium' : ''
               } ${isLight ? 'bg-[#f5f7fa]' : ''}`}
               style={{ overscrollBehavior: 'contain' }}
             >
+              {isFinancialPro && (
+                <section className={`pro-premium-card relative mb-4 overflow-hidden border p-4 sm:p-5 ${
+                  isLight
+                    ? 'border-amber-200 bg-white'
+                    : 'border-amber-400/15 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black'
+                }`}>
+                  <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-amber-400/[0.10] blur-3xl" />
+                  <div className="relative">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="font-data text-[10px] font-bold uppercase tracking-[0.20em] text-amber-500">PRO · {t('financialSummary')}</p>
+                        <h3 className={`mt-2 text-xl font-semibold tracking-tight ${isLight ? 'text-slate-950' : 'text-zinc-100'}`}>{t('financialHistory')}</h3>
+                      </div>
+                      <span className={`rounded-xl border px-2.5 py-1 font-data text-[9px] font-semibold ${isLight ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-amber-400/15 bg-amber-400/[0.06] text-amber-300'}`}>{historyCurrency}</span>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-3 gap-2">
+                      {[
+                        [t('incomeLabel'), historyIncome, 'text-emerald-500', '+'],
+                        [t('expenseLabel'), historyExpense, 'text-red-400', '−'],
+                        [t('balanceLabel'), Math.abs(historyTotal), historyTotal >= 0 ? 'text-emerald-500' : 'text-red-400', historyTotal >= 0 ? '+' : '−'],
+                      ].map(([label, amount, tone, prefix]) => (
+                        <div key={label} className={`min-w-0 rounded-xl border p-2.5 ${isLight ? 'border-slate-200 bg-slate-50' : 'border-white/[0.06] bg-white/[0.025]'}`}>
+                          <p className="truncate text-[9px] text-zinc-500">{label}</p>
+                          <p className={`mt-1 truncate font-data text-xs font-bold tabular-nums sm:text-sm ${tone}`}>{prefix}{historyCurrencySymbol}{formatMoney(amount)}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {historyTrades.length > 0 && (
+                      <div className={`mt-4 rounded-2xl border p-3 sm:p-4 ${isLight ? 'border-slate-200 bg-slate-50/70' : 'border-white/[0.06] bg-black/20'}`}>
+                        {historyCurrency === 'ALL' ? (
+                          <p className="text-xs leading-5 text-zinc-500">{t('allCurrenciesNotice')}</p>
+                        ) : (
+                          <HistoryChart entries={historyAnalysis.dailyEntries} isLight={isLight} t={t} formatAmount={(amount) => formatAmountInCurrency(amount, historyCurrency)} />
+                        )}
+                      </div>
+                    )}
+
+                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                      <div className={`rounded-xl border p-3 ${isLight ? 'border-emerald-100 bg-emerald-50/50' : 'border-emerald-400/10 bg-emerald-500/[0.04]'}`}>
+                        <p className="text-[10px] text-zinc-500">{t('mainSource')}</p>
+                        <p className="mt-1 truncate text-sm font-semibold">{historyAnalysis.incomeSources[0]?.[0] || '—'}</p>
+                      </div>
+                      <div className={`rounded-xl border p-3 ${isLight ? 'border-rose-100 bg-rose-50/50' : 'border-red-400/10 bg-red-500/[0.04]'}`}>
+                        <p className="text-[10px] text-zinc-500">{t('expenseZone')}</p>
+                        <p className="mt-1 truncate text-sm font-semibold">{historyAnalysis.expenseCategories[0]?.[0] || '—'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
               {/* FREE — История сначала, аналитика по запросу */}
               {(!traderMode || historyScope === 'money') && (
                 <section className="mb-4">
@@ -6869,7 +6923,7 @@ export default function CalendarScreen() {
                   <span className="font-data text-[9px] font-bold tracking-[0.2em]">{proAccessCopy.eyebrow}</span>
                 </div>
 
-                <h3 className="mt-3 max-w-xl font-display text-[27px] font-semibold leading-[1.05] tracking-tight sm:text-[34px]">
+                <h3 className="mt-3 max-w-xl font-display text-[25px] font-semibold leading-[1.05] tracking-tight sm:text-[34px]">
                   {proOfferTab === 'invites' ? proAccessCopy.invitesHubTitle : proAccessCopy.title}
                 </h3>
                 <p className={`mt-3 max-w-xl text-sm leading-6 ${
@@ -6893,10 +6947,10 @@ export default function CalendarScreen() {
               </button>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:px-6">
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pt-5">
               {proOfferTab === 'offer' ? (
                 <>
-              <div className={`relative overflow-hidden rounded-[26px] border px-5 py-4 ${
+              <div className={`relative overflow-hidden rounded-[22px] border px-4 py-3.5 ${
                 isLight
                   ? 'border-zinc-200 bg-gradient-to-br from-zinc-50 via-white to-amber-50/50'
                   : 'border-white/[0.07] bg-gradient-to-br from-white/[0.06] via-white/[0.02] to-amber-400/[0.04]'
@@ -6912,7 +6966,7 @@ export default function CalendarScreen() {
                     <Wallet className="h-5 w-5 stroke-[1.8]" />
                   </span>
                 </div>
-                <div className={`relative mt-4 grid grid-cols-3 divide-x rounded-xl border px-2 py-2.5 text-center ${
+                <div className={`relative mt-3 grid grid-cols-3 divide-x rounded-xl border px-2 py-2 text-center ${
                   isLight ? 'border-zinc-200 bg-white/80 divide-zinc-200' : 'border-white/[0.07] bg-black/15 divide-white/[0.07]'
                 }`}>
                   {[[proAccessCopy.previewWallet, Wallet], [proAccessCopy.previewPlans, Calendar], [proAccessCopy.previewHistory, History]].map(([label, Icon]) => (
@@ -6924,17 +6978,17 @@ export default function CalendarScreen() {
                 </div>
               </div>
 
-              <section className="mt-6">
+              <section className="mt-4">
                 <p className={`mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
                   {proAccessCopy.featuresTitle}
                 </p>
                 <div className={`divide-y ${isLight ? 'divide-zinc-200' : 'divide-white/[0.07]'}`}>
                   {[
                     [Wallet, proAccessCopy.featureWallet, proAccessCopy.featureWalletHint],
-                    [Calendar, proAccessCopy.featureReminders, proAccessCopy.featureRemindersHint],
                     [History, proAccessCopy.featureHistory, proAccessCopy.featureHistoryHint],
+                    [ChartCandlestick, proAccessCopy.featureJournal, proAccessCopy.featureJournalHint],
                   ].map(([Icon, title, hint]) => (
-                    <div key={title} className="flex items-center gap-3 py-3.5 first:pt-3 last:pb-3">
+                    <div key={title} className="flex items-center gap-3 py-2.5 first:pt-2 last:pb-2">
                       <Icon className="h-4 w-4 shrink-0 text-amber-500" />
                       <div className="min-w-0">
                         <p className={`text-sm font-semibold leading-tight ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{title}</p>
@@ -6945,48 +6999,8 @@ export default function CalendarScreen() {
                 </div>
               </section>
 
-              <div className={`order-3 mt-6 overflow-hidden rounded-[26px] border p-5 sm:p-6 ${
-                isLight
-                  ? 'border-zinc-200 bg-white shadow-[0_18px_60px_-42px_rgba(15,23,42,.35)]'
-                  : 'border-white/[0.08] bg-[#111216] shadow-[0_24px_70px_-48px_rgba(251,191,36,.28)]'
-              }`}>
-                <p className="font-data text-[9px] font-semibold uppercase tracking-[0.22em] text-amber-500">{proAccessCopy.traderRevealEyebrow}</p>
-                <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                  <div className="min-w-0">
-                    <h4 className="font-display text-2xl font-semibold tracking-tight">{proAccessCopy.traderRevealTitle}</h4>
-                    <p className={`mt-2 max-w-lg text-sm leading-6 ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>{proAccessCopy.traderRevealBody}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (proAccessActive) {
-                        setProAccessPromptOpen(false);
-                        setTraderMode(true);
-                      } else {
-                        handleStartProCheckout();
-                      }
-                    }}
-                    className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/[0.07] px-4 text-xs font-semibold text-amber-500 transition-colors hover:bg-amber-400/[0.13]"
-                  >
-                    {proAccessActive ? proAccessCopy.traderRevealAction : proAccessCopy.buyButton}
-                  </button>
-                </div>
-                <div className={`mt-5 grid grid-cols-3 divide-x rounded-2xl border px-2 py-3 text-center ${isLight ? 'border-zinc-200 bg-zinc-50/80 divide-zinc-200' : 'border-white/[0.06] bg-black/20 divide-white/[0.07]'}`}>
-                  {[
-                    [ChartCandlestick, proAccessCopy.featureJournal],
-                    [TrendingUp, 'PnL'],
-                    [Link2, 'cTrader'],
-                  ].map(([Icon, label]) => (
-                    <div key={label} className="flex min-w-0 flex-col items-center gap-1.5 px-2">
-                      <Icon className="h-4 w-4 text-amber-500" />
-                      <span className="truncate text-[10px] font-medium text-zinc-500">{label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               <div className="contents">
-                 <div className={`order-2 relative mt-6 overflow-hidden rounded-[26px] border p-5 ${
+                 <div className={`order-2 relative mt-4 overflow-hidden rounded-[22px] border p-4 ${
                   isLight
                     ? 'border-amber-300/80 bg-gradient-to-br from-amber-100 via-amber-50 to-white shadow-[0_24px_70px_-36px_rgba(180,83,9,.45)]'
                     : 'border-amber-400/25 bg-[radial-gradient(circle_at_85%_0%,rgba(251,191,36,.18),transparent_38%),linear-gradient(135deg,rgba(251,191,36,.10),rgba(255,255,255,.025))] shadow-[0_28px_90px_-46px_rgba(251,191,36,.55)]'
@@ -7006,62 +7020,11 @@ export default function CalendarScreen() {
                      </button>
                   </div>
 
-                  <div className={`mt-4 rounded-2xl border px-3.5 py-3 ${
-                    isLight
-                      ? 'border-zinc-200 bg-white/75'
-                      : 'border-white/[0.06] bg-black/10'
-                  }`}>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className={`text-[11px] font-semibold ${
-                        isLight ? 'text-zinc-600' : 'text-zinc-400'
-                      }`}>
-                        {proAccessCopy.invitedLabel}
-                      </span>
-                      <span className="font-data text-xs font-bold text-amber-500">
-                        {Math.min(invitedCount, 1)} / 1
-                      </span>
-                    </div>
-
-                    <div className={`mt-2 h-1.5 overflow-hidden rounded-full ${
-                      isLight ? 'bg-zinc-200' : 'bg-white/[0.07]'
-                    }`}>
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all duration-500"
-                        style={{ width: invitedCount > 0 ? '100%' : '0%' }}
-                      />
-                    </div>
-
-                    <p className={`mt-2 text-[10px] leading-4 ${
-                      rewardedCount > 0
-                        ? 'text-emerald-500'
-                        : invitedCount > 0
-                          ? 'text-amber-500'
-                          : isLight ? 'text-zinc-500' : 'text-zinc-500'
-                    }`}>
-                      {rewardedCount > 0
-                        ? proAccessCopy.inviteDone
-                        : invitedCount > 0 || pendingCount > 0
-                          ? proAccessCopy.invitePending
-                          : proAccessCopy.inviteWaiting}
-                    </p>
-                  </div>
-
-                  <div className={`mt-3 rounded-2xl border px-3.5 py-3 ${
-                    isLight
-                      ? 'border-amber-200/80 bg-white/80'
-                      : 'border-amber-400/10 bg-black/15'
-                  }`}>
-                    <p className="font-data text-lg font-bold text-amber-500">{proAccessCopy.reward}</p>
-                    <p className={`mt-0.5 text-[11px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
-                      {proAccessCopy.rewardHint}
-                    </p>
-                  </div>
-
                   <button
                     type="button"
                     onClick={openReferralShare}
                     disabled={Boolean(user) && referralCodeLoading}
-                    className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 px-4 text-sm font-bold text-zinc-950 shadow-[0_16px_36px_-16px_rgba(251,191,36,.7)] transition-all hover:brightness-105 active:scale-[0.99] disabled:cursor-wait disabled:opacity-55"
+                    className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 px-4 text-sm font-bold text-zinc-950 shadow-[0_16px_36px_-16px_rgba(251,191,36,.7)] transition-all hover:brightness-105 active:scale-[0.99] disabled:cursor-wait disabled:opacity-55"
                   >
                     <Share2 className="h-4 w-4 stroke-[2]" />
                     {!user
@@ -7074,7 +7037,7 @@ export default function CalendarScreen() {
                   </button>
                 </div>
 
-                 <div className={`order-4 relative mt-6 overflow-hidden rounded-2xl border p-4 ${
+                 <div className={`order-4 relative mt-4 overflow-hidden rounded-2xl border p-4 ${
                   isLight
                     ? 'border-zinc-200 bg-white'
                     : 'border-white/[0.08] bg-white/[0.025]'

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 export default function CalendarDayCell({
   traderMode = false,
+  proView = false,
   hasNote = false,
   noteLabel,
   cell,
@@ -75,7 +76,8 @@ export default function CalendarDayCell({
   // Pro: jewel-toned light under the surface, never a flashing animation.
   const proRgb = pnl > 0 ? '16,155,115' : '190,35,75';
   const proStrength = Math.sqrt(intensity);
-  const proStyle = traderMode && cell.inMonth && hasTrades && !isSelected
+  const premiumCalendar = traderMode || proView;
+  const proStyle = premiumCalendar && cell.inMonth && hasTrades && !isSelected
     ? pnl === 0
       ? { backgroundColor: isLight ? '#f8fafc' : '#131418', borderColor: isLight ? '#e2e8f0' : '#292a30', boxShadow: 'none' }
       : {
@@ -176,7 +178,7 @@ export default function CalendarDayCell({
         style={{ ...heatmapStyle, ...proStyle }}
         className={[
           'relative overflow-hidden rounded-xl border flex flex-col justify-between text-left transition-all duration-200 ease-out',
-          traderMode ? 'pro-calendar-day' : '',
+          premiumCalendar ? 'pro-calendar-day' : '',
           hasPlans ? 'has-calendar-plans' : '',
           cell.isToday ? 'today-calendar-cell' : '',
           todayPulse ? 'today-calendar-pulse' : '',
@@ -238,7 +240,7 @@ export default function CalendarDayCell({
           {hasTrades && (
           <span
             title={formatPnlDisplay(pnl, false)}
-            className={`day-amount block w-full min-w-0 max-w-full overflow-hidden text-ellipsis font-data text-[10px] sm:text-[15px] font-bold tracking-[-0.02em] whitespace-nowrap ${
+            className={`day-amount block w-full min-w-0 max-w-full overflow-hidden text-ellipsis font-data ${premiumCalendar ? 'text-[11px] sm:text-[17px]' : 'text-[10px] sm:text-[15px]'} font-bold tracking-[-0.02em] whitespace-nowrap ${
               pnlTone === 'profit'
                 ? (isLight
                   ? 'text-emerald-700'
