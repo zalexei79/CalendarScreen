@@ -19,25 +19,26 @@
   --pro-gold: #886224;
   --pro-gold-ink: #282111;
 }
-.pro-actions-reveal { display: grid; grid-template-columns: 0fr; flex: 0 0 auto; opacity: 0; visibility: hidden; transition: grid-template-columns .42s ease, opacity .3s ease, visibility .42s; }
+.pro-actions-reveal { display: grid; grid-template-columns: 0fr; flex: 0 1 auto; min-width: 0; opacity: 0; visibility: hidden; transition: grid-template-columns .42s ease, opacity .3s ease, visibility .42s; }
 .pro-actions-reveal.is-visible { grid-template-columns: 1fr; opacity: 1; visibility: visible; }
-.pro-actions-clip { min-width: 0; overflow: hidden; padding-block: 3px; }
-.pro-actions { display: flex; align-items: center; gap: 4px; width: max-content; padding: 3px; border: 1px solid var(--pro-line); border-radius: 999px; background: var(--pro-bg); box-shadow: inset 0 1px rgba(255,255,255,.035); }
-.pro-control { appearance: none; display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 13px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--pro-muted); font-family: inherit; font-size: 12px; font-weight: 550; line-height: 1; white-space: nowrap; cursor: pointer; transition: color .2s, background .2s, border-color .2s; }
+.pro-actions-clip { min-width: 0; overflow: hidden; padding: 3px 1px; }
+.pro-actions { display: flex; align-items: center; gap: 5px; width: max-content; max-width: 100%; padding: 4px; border: 1px solid var(--pro-line); border-radius: 999px; background: linear-gradient(115deg, color-mix(in srgb, var(--pro-gold) 5%, var(--pro-bg)), var(--pro-bg) 55%); box-shadow: 0 5px 18px rgba(0,0,0,.10), inset 0 1px rgba(255,255,255,.04); }
+.pro-control { appearance: none; display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 14px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--pro-muted); font-family: inherit; font-size: 12px; font-weight: 550; line-height: 1; white-space: nowrap; cursor: pointer; transition: color .2s, background .2s, border-color .2s, box-shadow .2s, transform .2s; }
 .pro-control svg { width: 15px; height: 15px; flex: 0 0 auto; stroke-width: 1.7; }
 .pro-control:hover { background: var(--pro-surface); color: var(--pro-text); }
-.pro-control-wallet { color: #f4dca5; border-color: rgba(237,205,135,.32); background: linear-gradient(110deg, #443921, #28251e); box-shadow: inset 0 1px rgba(255,237,191,.12); }
-.pro-control-wallet:hover { background: linear-gradient(110deg, #55462a, #353026); color: #fff2d3; border-color: rgba(237,205,135,.55); }
-.pro-light .pro-control-wallet { color: #674916; background: linear-gradient(110deg, #f3e1b6, #fbf1d9); }
-.pro-control-trader[aria-checked="true"] { color: var(--pro-text); background: var(--pro-surface); }
-.pro-control-toggle { display: flex; align-items: center; width: 28px; height: 17px; padding: 3px; border-radius: 99px; background: #55565a; }
-.pro-control-toggle > span { width: 11px; height: 11px; border-radius: 50%; background: #e4e4e7; transition: transform .22s; }
-.pro-control-trader[aria-checked="true"] .pro-control-toggle { background: #c2a263; }
-.pro-control-trader[aria-checked="true"] .pro-control-toggle > span { transform: translateX(11px); background: #282111; }
-.pro-control-connect { border-left-color: var(--pro-line); }
+.pro-control-wallet { color: var(--pro-gold); border-color: color-mix(in srgb, var(--pro-gold) 28%, transparent); background: color-mix(in srgb, var(--pro-gold) 9%, var(--pro-bg)); }
+.pro-control-wallet:hover { color: var(--pro-text); border-color: color-mix(in srgb, var(--pro-gold) 50%, transparent); background: color-mix(in srgb, var(--pro-gold) 14%, var(--pro-bg)); }
+.pro-control-wallet svg { width: 17px; height: 17px; }
+.pro-control-trader { border-color: var(--pro-line); background: color-mix(in srgb, var(--pro-surface) 48%, transparent); }
+.pro-control-trader[aria-checked="true"] { color: var(--pro-text); border-color: rgba(83,196,165,.32); background: rgba(83,196,165,.085); }
+.pro-control-toggle { display: flex; align-items: center; width: 30px; height: 18px; padding: 3px; border-radius: 99px; background: #45464b; transition: background .22s; }
+.pro-control-toggle > span { width: 12px; height: 12px; border-radius: 50%; background: #d8d9dc; transition: transform .22s; }
+.pro-control-trader[aria-checked="true"] .pro-control-toggle { background: #43aa8b; }
+.pro-control-trader[aria-checked="true"] .pro-control-toggle > span { transform: translateX(12px); background: #f5fff9; }
+.pro-control-connect { border-color: var(--pro-line); background: color-mix(in srgb, var(--pro-surface) 60%, transparent); }
 .pro-control-connect i { width: 5px; height: 5px; border-radius: 50%; background: var(--pro-muted); }
 .pro-control-connect i[data-connected="true"] { background: #53c4a5; }
-.pro-control-info { width: 34px; padding: 0; }
+.pro-control-info { width: 38px; padding: 0; border-color: var(--pro-line); }
 .pro-control:focus-visible, .pro-dialog button:focus-visible, .pro-feature-panel:focus-visible { outline: 2px solid var(--pro-gold); outline-offset: 2px; }
 
 .pro-dialog { display: flex; flex-direction: column; width: min(760px, 100%); max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 12px)); min-width: 0; overflow: hidden; border: 1px solid var(--pro-line); border-radius: 28px; background: var(--pro-bg); box-shadow: 0 32px 120px rgba(0,0,0,.55); }
@@ -125,8 +126,16 @@
   .pro-feature-tabs svg { width: 13px; height: 13px; }
   .pro-access-options { grid-template-columns: 1fr; }
   .pro-example-wallet .pro-example-transactions { margin-top: 12px; }
-  .pro-actions { gap: 2px; }
+  .pro-actions { gap: 4px; padding: 3px; }
   .pro-control { gap: 6px; padding-inline: 10px; min-height: 38px; }
+  .pro-control-wallet { width: 40px; padding: 0; }
+  .pro-control-wallet span, .pro-control-trader > span:not(.pro-control-toggle), .pro-control-connect > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .pro-control-trader { width: 62px; gap: 6px; padding: 0 7px; }
+  .pro-control-trader > svg { width: 16px; height: 16px; }
+  .pro-control-toggle { width: 28px; }
+  .pro-control-trader[aria-checked="true"] .pro-control-toggle > span { transform: translateX(10px); }
+  .pro-control-connect { width: 40px; padding: 0; }
+  .pro-control-info { width: 36px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .pro-actions-reveal, .pro-control, .pro-control-toggle > span { transition: none; }
