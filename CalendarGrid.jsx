@@ -7,6 +7,7 @@ export default function CalendarGrid({
   proView = false,
   notes = {},
   noteLabel,
+  language = 'ru',
   cells,
   selectedKey,
   isLight,
@@ -72,7 +73,7 @@ export default function CalendarGrid({
           const hasTrades = tradesForDayFiltered(cell.key).length > 0;
           const plans = plansForDay?.(cell.key) || [];
           const pnl = totalPnlForDay(cell.key);
-          return <CalendarDayCell key={cell.key} hasNote={!!notes[cell.key]} noteLabel={noteLabel} traderMode={traderMode} proView={proView} cell={cell} cellIndex={cellIndex} isSelected={isSelected} hasTrades={hasTrades} plans={plans} formatPlanAmount={formatPlanAmount} pnl={pnl} monthMaxAbsPnl={monthMaxAbsPnl} isLight={isLight} formatPnlDisplay={formatPnlDisplay} onSelect={() => onSelectDay(isSelected ? null : cell.key)} />;
+          return <CalendarDayCell key={cell.key} planLabel={language === 'en' ? 'Plans' : language === 'ro' || language === 'md' ? 'Planuri' : 'Планы'} hasNote={!!notes[cell.key]} noteLabel={noteLabel} traderMode={traderMode} proView={proView} cell={cell} cellIndex={cellIndex} isSelected={isSelected} hasTrades={hasTrades} plans={plans} formatPlanAmount={formatPlanAmount} pnl={pnl} monthMaxAbsPnl={monthMaxAbsPnl} isLight={isLight} formatPnlDisplay={formatPnlDisplay} onSelect={() => onSelectDay(isSelected ? null : cell.key)} />;
         })}
       </div>
     </section>

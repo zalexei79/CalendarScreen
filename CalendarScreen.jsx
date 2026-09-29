@@ -4239,6 +4239,7 @@ export default function CalendarScreen() {
 
       {/* PRO controls live in Header: one clean control center, no floating duplicate block. */}
       <CalendarGrid
+        language={language}
         notes={calendarNotes} noteLabel={t('calendarDayNote')}
         traderMode={traderMode} proView={proView}
         onNextMonth={goToNextMonth}

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { Clock3 } from 'lucide-react';
 
 export default function CalendarDayCell({
   traderMode = false,
   proView = false,
   hasNote = false,
   noteLabel,
+  planLabel = 'Планы',
   cell,
   cellIndex,
   isSelected,
@@ -36,8 +38,6 @@ export default function CalendarDayCell({
 
   const pnlTone = pnl > 0 ? 'profit' : pnl < 0 ? 'loss' : 'neutral';
   const hasPlans = plans.length > 0;
-  const primaryPlan = plans[0];
-  const paymentCounter = primaryPlan?.repeat_total ? `${primaryPlan.repeat_index || 1}/${primaryPlan.repeat_total}` : '';
   const pnlText = formatPnlDisplay(pnl, true);
   const intensity = monthMaxAbsPnl > 0 ? Math.min(Math.abs(pnl) / monthMaxAbsPnl, 1) : 0;
   const effectiveIntensity = (cell.isToday || isSelected) ? intensity : intensity * 0.7;
@@ -263,16 +263,9 @@ export default function CalendarDayCell({
           </span>
           )}
           {hasPlans && (
-            <span className={`flex min-w-0 items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap font-data text-[9px] font-semibold sm:text-[11px] ${primaryPlan?.kind === 'income' ? (isLight ? 'text-emerald-700' : 'text-emerald-400') : (isLight ? 'text-rose-700' : 'text-rose-400')}`} title={plans.map((plan) => `${plan.title}: ${formatPlanAmount?.(plan) || plan.amount}`).join(', ')}>
-              <span className={`shrink-0 ${primaryPlan?.kind === 'income' ? 'text-emerald-500' : 'text-rose-500'}`}>{plans[0]?.repeat_rule && plans[0].repeat_rule !== 'none' ? '↻' : '◷'}</span>
-              <span className="min-w-0 flex-1 truncate sm:hidden">
-                {primaryPlan?.amount == null ? '—' : (formatPlanAmount?.(primaryPlan) || primaryPlan.amount)}
-              </span>
-              <span className="hidden min-w-0 flex-1 truncate sm:inline">
-                {formatPlanAmount?.(primaryPlan) || primaryPlan.amount}
-              </span>
-              {paymentCounter && <span className="hidden shrink-0 opacity-70 sm:inline">· {paymentCounter}</span>}
-              {plans.length > 1 && <span className="hidden shrink-0 opacity-60 sm:inline">+{plans.length - 1}</span>}
+            <span className={`inline-flex w-fit max-w-full items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] sm:text-[10px] ${isLight ? 'bg-slate-100 text-slate-500' : 'bg-white/[0.04] text-zinc-500'}`} aria-label={`${planLabel}: ${plans.length}`} title={`${planLabel}: ${plans.map((plan) => `${plan.title}${plan.amount == null ? '' : `: ${formatPlanAmount?.(plan) || plan.amount}`}`).join(', ')}`}>
+              <Clock3 size={11} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />
+              <span aria-hidden="true">{plans.length}</span>
             </span>
           )}
           </div>
