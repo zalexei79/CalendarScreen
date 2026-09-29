@@ -3335,6 +3335,54 @@ export default function CalendarScreen() {
     };
   }, [historyTrades]);
 
+  const historyPremiumInsights = useMemo(() => {
+    const parseKey = (key) => {
+      const [year, month, day] = String(key || '').split('-').map(Number);
+      return new Date(year, month - 1, day);
+    };
+    const keyFor = (date) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+    const finitePeriod = dateFrom !== '0000-01-01' && dateTo !== '9999-12-31';
+    const start = finitePeriod ? parseKey(dateFrom) : null;
+    const end = finitePeriod ? parseKey(dateTo) : null;
+    const periodDays = start && end ? Math.max(1, Math.round((end - start) / 86400000) + 1) : 0;
+    const previousStart = start ? new Date(start.getTime() - periodDays * 86400000) : null;
+    const previousEnd = start ? new Date(start.getTime() - 86400000) : null;
+    const previousTrades = previousStart && previousEnd
+      ? historyFilteredTrades.filter((item) => item.dateKey >= keyFor(previousStart) && item.dateKey <= keyFor(previousEnd))
+      : [];
+    const sum = (items, positive) => items.reduce((total, item) => total + (positive ? (item.pnl > 0 ? item.pnl : 0) : (item.pnl < 0 ? Math.abs(item.pnl) : 0)), 0);
+    const previousIncome = sum(previousTrades, true);
+    const previousExpense = sum(previousTrades, false);
+    const change = (current, previous) => previous ? Math.round(((current - previous) / previous) * 100) : null;
+    const smallGroups = {};
+    historyTrades.filter((item) => item.pnl < 0).forEach((item) => {
+      const name = item.instrument || 'Другое';
+      const group = smallGroups[name] || { count: 0, amount: 0 };
+      group.count += 1;
+      group.amount += Math.abs(item.pnl);
+      smallGroups[name] = group;
+    });
+    const recurring = Object.entries(smallGroups)
+      .filter(([, value]) => value.count >= 3)
+      .sort((a, b) => b[1].count - a[1].count || b[1].amount - a[1].amount)[0];
+    const latestKey = historyTrades.reduce((latest, item) => item.dateKey > latest ? item.dateKey : latest, '0000-00-00');
+    const currentDate = latestKey !== '0000-00-00' ? parseKey(latestKey) : null;
+    const forecastEnd = end && currentDate && end > currentDate ? end : null;
+    const elapsedDays = start && currentDate ? Math.max(1, Math.round((Math.min(currentDate, end || currentDate) - start) / 86400000) + 1) : 0;
+    const remainingDays = forecastEnd ? Math.max(0, Math.round((forecastEnd - currentDate) / 86400000)) : 0;
+    const projectedExpense = forecastEnd && elapsedDays ? historyExpense + (historyExpense / elapsedDays) * remainingDays : null;
+    return {
+      previousAvailable: previousTrades.length > 0,
+      previousIncome,
+      previousExpense,
+      incomeChange: change(historyIncome, previousIncome),
+      expenseChange: change(historyExpense, previousExpense),
+      recurring,
+      projectedExpense,
+      remainingDays,
+    };
+  }, [dateFrom, dateTo, historyFilteredTrades, historyTrades, historyIncome, historyExpense]);
+
   const historyTimeline = useMemo(() => {
     // Anchor to the last real operation. For "Вся история" dateTo can be 9999-12-31.
     const latestTradeKey = historyTrades.length
@@ -4842,7 +4890,7 @@ export default function CalendarScreen() {
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <p className="font-data text-[10px] font-bold uppercase tracking-[0.20em] text-amber-500">PRO · {t('financialSummary')}</p>
-                        <h3 className={`mt-2 text-xl font-semibold tracking-tight ${isLight ? 'text-slate-950' : 'text-zinc-100'}`}>{t('financialHistory')}</h3>
+                    <h3 className={`mt-2 text-xl font-semibold tracking-tight ${isLight ? 'text-slate-950' : 'text-zinc-100'}`}>{language === 'ru' ? 'Финансовый разбор' : language === 'ro' || language === 'md' ? 'Analiză financiară' : 'Financial breakdown'}</h3>
                       </div>
                       <span className={`rounded-xl border px-2.5 py-1 font-data text-[9px] font-semibold ${isLight ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-amber-400/15 bg-amber-400/[0.06] text-amber-300'}`}>{historyCurrency}</span>
                     </div>
@@ -4901,7 +4949,7 @@ export default function CalendarScreen() {
                             [t('mainSource'), incomeName, incomeAmount, incomePart, 'emerald'],
                             [t('expenseZone'), expenseName, expenseAmount, expensePart, 'rose'],
                           ].map(([label, name, amount, share, tone]) => (
-                            <div key={label} className={`rounded-xl border p-3 ${tone === 'emerald' ? (isLight ? 'border-emerald-100 bg-emerald-50/50' : 'border-emerald-400/10 bg-emerald-500/[0.04]') : (isLight ? 'border-rose-100 bg-rose-50/50' : 'border-red-400/10 bg-red-500/[0.04]')}`}>
+                            <button type="button" onClick={() => name && setHistoryNameFilter(name)} className={`text-left rounded-xl border p-3 transition-transform active:scale-[0.99] ${tone === 'emerald' ? (isLight ? 'border-emerald-100 bg-emerald-50/50 hover:bg-emerald-50' : 'border-emerald-400/10 bg-emerald-500/[0.04] hover:bg-emerald-500/[0.08]') : (isLight ? 'border-rose-100 bg-rose-50/50 hover:bg-rose-50' : 'border-red-400/10 bg-red-500/[0.04] hover:bg-red-500/[0.08]')}`}>
                               <div className="flex items-center justify-between gap-3">
                                 <p className="text-[10px] text-zinc-500">{label}</p>
                                 <span className={`font-data text-[10px] font-semibold ${tone === 'emerald' ? 'text-emerald-500' : 'text-red-400'}`}>{share ? `${share}%` : '—'}</span>
@@ -4911,11 +4959,40 @@ export default function CalendarScreen() {
                               <div className="mt-2 h-1 overflow-hidden rounded-full bg-zinc-500/10">
                                 <span className={`block h-full rounded-full ${tone === 'emerald' ? 'bg-emerald-500' : 'bg-red-400'}`} style={{ width: `${share}%` }} />
                               </div>
-                            </div>
+                            </button>
                           ))}
                         </div>
                       );
                     })()}
+
+                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                      <div className={`rounded-xl border p-3 ${isLight ? 'border-slate-200 bg-white' : 'border-white/[0.06] bg-white/[0.02]'}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-semibold">{language === 'ru' ? 'Что изменилось' : language === 'ro' || language === 'md' ? 'Ce s-a schimbat' : 'What changed'}</p>
+                          <span className="text-[9px] text-zinc-500">{historyPremiumInsights.previousAvailable ? (language === 'ru' ? 'к прошлому периоду' : 'vs previous') : '—'}</span>
+                        </div>
+                        {historyPremiumInsights.previousAvailable ? (
+                          <div className="mt-3 space-y-2 text-[11px]">
+                            <div className="flex justify-between gap-3"><span className="text-zinc-500">{t('incomeLabel')}</span><b className={historyPremiumInsights.incomeChange >= 0 ? 'text-emerald-500' : 'text-red-400'}>{historyPremiumInsights.incomeChange > 0 ? '+' : ''}{historyPremiumInsights.incomeChange}%</b></div>
+                            <div className="flex justify-between gap-3"><span className="text-zinc-500">{t('expenseLabel')}</span><b className={historyPremiumInsights.expenseChange <= 0 ? 'text-emerald-500' : 'text-red-400'}>{historyPremiumInsights.expenseChange > 0 ? '+' : ''}{historyPremiumInsights.expenseChange}%</b></div>
+                          </div>
+                        ) : <p className="mt-3 text-[11px] leading-5 text-zinc-500">{language === 'ru' ? 'Недостаточно данных для честного сравнения.' : 'Not enough data for a reliable comparison.'}</p>}
+                      </div>
+                      <div className={`rounded-xl border p-3 ${isLight ? 'border-slate-200 bg-white' : 'border-white/[0.06] bg-white/[0.02]'}`}>
+                        <p className="text-xs font-semibold">{language === 'ru' ? 'Незаметные расходы' : language === 'ro' || language === 'md' ? 'Cheltuieli frecvente' : 'Easy-to-miss spending'}</p>
+                        {historyPremiumInsights.recurring ? <p className="mt-2 text-[11px] leading-5 text-zinc-500"><b className="text-zinc-900 dark:text-zinc-200">{historyPremiumInsights.recurring[0]}</b> · {historyPremiumInsights.recurring[1].count} {language === 'ru' ? 'операции' : 'entries'} · <b className="text-red-400">{historyCurrencySymbol}{formatMoney(historyPremiumInsights.recurring[1].amount)}</b></p> : <p className="mt-2 text-[11px] leading-5 text-zinc-500">{language === 'ru' ? 'Повторяющихся небольших трат не обнаружено.' : 'No reliable recurring pattern found.'}</p>}
+                      </div>
+                    </div>
+
+                    {historyPremiumInsights.projectedExpense !== null && historyCurrency !== 'ALL' && (
+                      <div className={`mt-2 rounded-xl border p-3 ${isLight ? 'border-amber-200 bg-amber-50/60' : 'border-amber-400/10 bg-amber-400/[0.05]'}`}>
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs font-semibold">{language === 'ru' ? 'Если так продолжится' : language === 'ro' || language === 'md' ? 'Dacă ritmul continuă' : 'If this pace continues'}</p>
+                          <span className="font-data text-xs font-semibold text-amber-500">≈ {historyCurrencySymbol}{formatMoney(Math.round(historyPremiumInsights.projectedExpense))}</span>
+                        </div>
+                        <p className="mt-1 text-[10px] leading-5 text-zinc-500">{language === 'ru' ? `Оценка расходов к концу периода · осталось ${historyPremiumInsights.remainingDays} дн. Расчёт основан только на среднем темпе за текущий период.` : `Estimated spending by period end · ${historyPremiumInsights.remainingDays} days left. Based only on the current average pace.`}</p>
+                      </div>
+                    )}
                   </div>
                 </section>
               )}
