@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import WealthPlan from './src/features/pro/WealthPlan.jsx';
+import SavingsReview from './src/features/pro/SavingsReview.jsx';
 import {
   Inbox, TrendingUp, TrendingDown, Sparkles, Plus, X, Trash2,
   Calendar, ChevronDown, Link2, KeyRound, UploadCloud, FileText,
@@ -2530,6 +2531,7 @@ export default function CalendarScreen() {
   const [historyWinLoss, setHistoryWinLoss] = useState('all'); // 'all' | 'win' | 'loss'
   const [historyCurrency, setHistoryCurrency] = useState(() => currency || 'USD');
   const [historyNameFilter, setHistoryNameFilter] = useState('');
+  const [savingsReview, setSavingsReview] = useState(null);
   const [historyCategoryMenuOpen, setHistoryCategoryMenuOpen] = useState(false);
   const [historyFiltersOpen, setHistoryFiltersOpen] = useState(false);
   const [historyPeriodMenuOpen, setHistoryPeriodMenuOpen] = useState(false);
@@ -4894,7 +4896,8 @@ export default function CalendarScreen() {
                 }`}>
                   <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-amber-400/[0.10] blur-3xl" />
                   <div className="relative">
-                    <WealthPlan trades={wealthPlanTrades} isTrading={(item) => item.platform === 'cTrader' || isTradingInstrumentName(item.instrument) || (!getMoneyCategoryMeta(item.instrument) && isTradingHistoryRecord(item))} currency={historyCurrency} symbol={historyCurrencySymbol} formatMoney={formatMoney} language={language} isLight={isLight} onReview={(name, scope) => {
+                    {savingsReview && <SavingsReview trades={wealthPlanTrades} category={savingsReview.category} symbol={historyCurrencySymbol} formatMoney={formatMoney} language={language} isLight={isLight} onClose={() => setSavingsReview(null)} />}
+                    <WealthPlan trades={wealthPlanTrades} onStartReview={(category) => setSavingsReview({ category })} isTrading={(item) => item.platform === 'cTrader' || isTradingInstrumentName(item.instrument) || (!getMoneyCategoryMeta(item.instrument) && isTradingHistoryRecord(item))} currency={historyCurrency} symbol={historyCurrencySymbol} formatMoney={formatMoney} language={language} isLight={isLight} onReview={(name, scope) => {
                       setHistoryNameFilter(name);
                       setHistoryScope(scope);
                       setHistoryWinLoss('all');
@@ -5008,8 +5011,15 @@ export default function CalendarScreen() {
                     )}
 
                     {(() => {
-                      const [mainExpenseName, mainExpenseAmount] = historyAnalysis.expenseCategories[0] || [];
-                      const gap = Math.max(0, historyExpense - historyIncome);
+                      const personalEntries = wealthPlanTrades.filter(item => item.platform !== 'cTrader' && !isTradingInstrumentName(item.instrument) && (getMoneyCategoryMeta(item.instrument) || !isTradingHistoryRecord(item)));
+                      const expenseGroups = personalEntries.filter(item => item.pnl < 0).reduce((groups, item) => {
+                        groups[item.instrument] = (groups[item.instrument] || 0) + Math.abs(item.pnl);
+                        return groups;
+                      }, {});
+                      const [mainExpenseName] = Object.entries(expenseGroups).sort((a, b) => b[1] - a[1])[0] || [];
+                      const personalExpense = personalEntries.reduce((sum, item) => sum + Math.max(0, -item.pnl), 0);
+                      const personalIncome = personalEntries.reduce((sum, item) => sum + Math.max(0, item.pnl), 0);
+                      const gap = Math.max(0, personalExpense - personalIncome);
                       const title = language === 'ru' ? 'Ваш следующий шаг к большему капиталу' : language === 'ro' || language === 'md' ? 'Următorul pas spre mai mult capital' : 'Your next move toward more wealth';
                       const body = gap > 0
                         ? (language === 'ru' ? `Сейчас расходы выше доходов на ${historyCurrencySymbol}${formatMoney(gap)}. Начните с главной зоны — ${mainExpenseName || 'расходов'} — и найдите операции, которые можно сократить.` : `Expenses are above income by ${historyCurrencySymbol}${formatMoney(gap)}. Start with ${mainExpenseName || 'your largest category'} and find what can be reduced.`)
@@ -5021,7 +5031,7 @@ export default function CalendarScreen() {
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-semibold">{title}</p>
                               <p className="mt-1 text-[11px] leading-5 text-zinc-500">{body}</p>
-                              {mainExpenseName && <button type="button" onClick={() => setHistoryNameFilter(mainExpenseName)} className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-xl bg-emerald-500 px-3 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-emerald-600 active:scale-[0.98]">
+                              {mainExpenseName && historyCurrency !== 'ALL' && !isTradingInstrumentName(mainExpenseName) && <button type="button" onClick={() => setSavingsReview({ category: mainExpenseName })} className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-xl bg-emerald-500 px-3 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-emerald-600 active:scale-[0.98]">
                                 {language === 'ru' ? `Разобрать ${mainExpenseName}` : `Review ${mainExpenseName}`} <ArrowRight className="h-3.5 w-3.5" />
                               </button>}
                             </div>

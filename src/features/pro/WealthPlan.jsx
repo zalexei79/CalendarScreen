@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function WealthPlan({ trades, isTrading, currency, symbol, formatMoney, language, isLight, onReview }) {
+export default function WealthPlan({ trades, isTrading, currency, symbol, formatMoney, language, isLight, onReview, onStartReview }) {
   const [open, setOpen] = useState(false);
   const [percent, setPercent] = useState(10);
   const ru = language === 'ru';
@@ -48,7 +48,7 @@ export default function WealthPlan({ trades, isTrading, currency, symbol, format
           <input id="wealth-saving" type="range" min="0" max="30" step="5" value={percent} onChange={event => setPercent(Number(event.target.value))} className="mt-2 w-full accent-amber-400" />
           <p className="mt-2 text-lg font-semibold text-emerald-500">+{symbol}{formatMoney(saving)} {copy('останется', 'kept', 'păstrați')}</p>
           <p className="mt-1 text-xs leading-5 text-zinc-500">{copy('Сценарий за тот же период, не обещание. Проверьте, какие покупки можно пропустить без ущерба обязательным платежам.', 'Scenario for the same period, not a promise. Review which purchases you can skip while protecting essential payments.', 'Scenariu pentru aceeași perioadă. Verifică ce cumpărături poți evita păstrând plățile esențiale.')}</p>
-          <button type="button" onClick={() => onReview(top.name, 'expense')} className="mt-3 min-h-11 rounded-xl border border-amber-400/30 px-4 text-xs font-semibold">{copy('Выбрать, что сократить →', 'Review what to reduce →', 'Vezi ce poți reduce →')}</button>
+          <button type="button" onClick={() => onStartReview(top.name)} className="mt-3 min-h-11 rounded-xl border border-amber-400/30 px-4 text-xs font-semibold">{copy('Выбрать, что сократить →', 'Review what to reduce →', 'Vezi ce poți reduce →')}</button>
         </div>}
         <div className={`rounded-xl border p-4 ${card}`}>
           <h4 className="text-sm font-semibold">{copy('3. Один шаг на эту неделю', '3. One step this week', '3. Un pas săptămâna aceasta')}</h4>
