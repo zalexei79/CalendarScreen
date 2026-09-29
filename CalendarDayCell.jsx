@@ -185,11 +185,11 @@ export default function CalendarDayCell({
           isSelected ? 'selected-calendar-cell' : '',
           'min-h-[64px] sm:min-h-[110px] p-2 sm:p-3.5',
           isLight
-            ? (cell.inMonth ? (hasTrades ? 'bg-transparent' : hasPlans ? 'bg-amber-50/35' : 'bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)]') : 'bg-slate-50/60')
+            ? (cell.inMonth ? (hasTrades ? 'bg-transparent' : 'bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)]') : 'bg-slate-50/60')
             : (cell.inMonth ? (hasTrades ? 'bg-zinc-900' : 'bg-zinc-900/20') : ''),
           isLight
-            ? (cell.inMonth ? (hasTrades ? 'border-slate-300/80' : hasPlans ? 'border-amber-300/60' : 'border-slate-200/90') : 'border-slate-100')
-            : (cell.inMonth ? (hasTrades ? 'border-zinc-800' : hasPlans ? 'border-zinc-800/55' : 'border-zinc-800/30') : ''),
+            ? (cell.inMonth ? (hasTrades ? 'border-slate-300/80' : 'border-slate-200/90') : 'border-slate-100')
+            : (cell.inMonth ? (hasTrades ? 'border-zinc-800' : 'border-zinc-800/30') : ''),
           isSelected
             ? `${isLight ? 'bg-white' : 'bg-zinc-900/85'}`
             : isLight ? 'hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm' : 'hover:border-zinc-600 hover:bg-zinc-800/60',
