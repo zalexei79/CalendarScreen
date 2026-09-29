@@ -1,23 +1,22 @@
 DAYRIS PRO — MetaTrader 5
 
-This connector is available to every signed-in user with active DAYRIS PRO. Each user installs the exporter in their own terminal and imports into their own DAYRIS account. No account identifiers, passwords, keys or machine-specific paths are built into the exporter.
+Доступно каждому вошедшему пользователю с активным PRO. Пароли, API-ключи и разрешение на торговлю не нужны.
 
-1. Sign in to your existing broker account in MetaTrader 5.
-2. In DAYRIS > Platforms > MetaTrader 5, download DAYRIS_MT5.ex5.
-3. MT5 > File > Open Data Folder > MQL5 > Experts: copy DAYRIS_MT5.ex5 here. In Navigator, right-click Expert Advisors > Refresh. Attach DAYRIS_MT5 to ONE chart.
-4. The exporter only reads history and writes a file. It has no order, network or DLL calls. Trading permission, passwords and API keys are not required.
-5. In desktop Chrome/Edge, open DAYRIS > Platforms > MetaTrader 5 > Choose DAYRIS folder. Select:
-   %APPDATA%\MetaQuotes\Terminal\Common\Files\DAYRIS
-6. Review the import count and confirm importing into your current DAYRIS account. If the account has no closed positions, confirm connection with zero entries. Enable refresh every 30 seconds.
-7. Keep MT5 and DAYRIS open on the computer. Closing the connection dialog does not stop updates; closing/reloading the website does. Choose the folder again after reload. Sign-out, account change or loss of PRO access stops the connector.
-8. Saved trades reach your other devices through existing DAYRIS cloud sync. Mobile/Safari/Firefox cannot read a PC folder automatically; use CSV import or sync first on a PC.
-9. MT5 fully closed positions only: partial closes are combined once the whole position is closed. Profit, swap, entry/exit commissions and fees are included. Deposits/withdrawals are excluded. Account-level adjustments posted separately are not allocated to positions.
-10. Dates use broker time. Repeat imports skip the server/account/position marker in the comment. Preserve this marker. Broker corrections to already imported records are not applied automatically. Use one DAYRIS window per trading account to avoid concurrent duplicate imports.
-11. MT4 is experimental source only and has not been compiled or tested with an MT4 terminal. It is not offered as a ready production connection.
+1. Войдите в свой счёт в MT5. В DAYRIS → Площадки → MetaTrader 5 скачайте DAYRIS_MT5.ex5.
+2. MT5 → Файл → Открыть каталог данных → MQL5 → Experts. Скопируйте файл туда. Обновите «Советники» в Навигаторе и добавьте DAYRIS_MT5 на один график.
+3. В DAYRIS выберите папку %APPDATA%\MetaQuotes\Terminal\Common\Files\DAYRIS.
+4. Выберите счёт по номеру и серверу. В карточке будут брокер, Demo/Live/Contest, баланс и время снимка (по брокеру). Нажмите «Подключить и синхронизировать». Импортируется только выбранный счёт в текущий журнал DAYRIS.
+5. Для другого счёта войдите в него в MT5 и подключите экспортёр. Снова выберите папку в DAYRIS: оба сохранённых экспорта появятся в списке. Переключение в DAYRIS не переключает счёт в самом терминале. Неактивные счета показывают последний сохранённый снимок, а не текущий баланс.
+6. Включите автообновление каждые 30 секунд. Терминал и сайт должны быть открыты в Chrome/Edge на ПК. Закрытие окна подключения не останавливает обновление. После перезагрузки сайта выберите папку снова. Выход из аккаунта, смена счёта, потеря PRO или отключение останавливают автообновление. Отключение не удаляет сделки.
+7. На телефоне сделки появятся через существующую облачную синхронизацию DAYRIS. Это локальный мост, не прямое серверное подключение к брокеру как у cTrader. На других браузерах доступен ручной CSV-импорт.
 
-РУССКИЙ
-Подключение доступно каждому пользователю с активным PRO, отдельно для его собственного счёта.
-Скачайте готовый DAYRIS_MT5.ex5 в DAYRIS. В MT5 откройте «Файл > Открыть каталог данных > MQL5 > Experts» и скопируйте файл туда. Обновите «Советники» в Навигаторе и прикрепите DAYRIS_MT5 к одному графику.
-В DAYRIS выберите папку %APPDATA%\MetaQuotes\Terminal\Common\Files\DAYRIS, подтвердите импорт в текущий аккаунт и включите автообновление. Подключение возможно и до первой закрытой позиции.
-Сайт и терминал должны оставаться открытыми на компьютере. После перезагрузки сайта выберите папку заново. На телефон сохранённые сделки попадут через облачную синхронизацию DAYRIS.
-Пароли и ключи не нужны. Торговые разрешения и DLL включать для экспортёра не требуется. MT4 пока не проверен.
+Экспортируются только полностью закрытые позиции. Частичные закрытия объединяются, когда позиция полностью закрыта. В результат включены прибыль, своп, комиссии и сборы входа/выхода. Пополнения и выводы исключены. Отдельные корректировки баланса не распределяются по позициям. Даты — время брокера.
+Повторы определяются по маркеру сервера/счёта/позиции в комментарии: сохраняйте его. Коррекции уже импортированных сделок не применяются автоматически. Используйте одно окно DAYRIS для одного торгового счёта, чтобы избежать параллельного импорта.
+MT4 пока не проверен и не предлагается как готовое подключение.
+
+ENGLISH
+Every signed-in PRO user can connect their own terminal. No passwords, API keys or trading permissions are required.
+Install DAYRIS_MT5.ex5 in MT5's data folder under MQL5/Experts, refresh Expert Advisors and attach it to one chart. Choose the DAYRIS common-files folder in desktop Chrome/Edge. Select the account and confirm synchronization into your current DAYRIS journal. Only the selected account is imported, with duplicate markers preserved.
+Accounts include broker, server, login, mode, balance and snapshot timestamp, even when there are no closed trades. To add another account, log into it in MT5, attach the exporter and select the folder again. Selecting an account in DAYRIS does not change the terminal login. Inactive accounts show their last snapshot.
+Auto-sync requires both terminal and website open on PC. Select the folder again after reloading. Sign-out, changing accounts, disconnecting or losing PRO stops auto-sync. Existing trades are never deleted by disconnecting. Mobile receives saved trades through existing DAYRIS cloud sync. This is a local bridge, not direct broker-cloud access like cTrader.
+Fully closed positions only, including entry/exit fees and swap. No deposits/withdrawals; separately posted balance adjustments are not allocated. Broker time is preserved. Corrections to existing imports are not automatically reconciled. Use one DAYRIS window per trading account. MT4 remains unverified.

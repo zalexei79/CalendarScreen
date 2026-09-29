@@ -1,5 +1,5 @@
 #property strict
-#property version "1.00"
+#property version "1.10"
 #property description "Read-only DAYRIS closed-position exporter. No trading or network functions."
 input int RefreshSeconds=30;
 string Clean(string s) { StringReplace(s,";","_"); StringReplace(s,"\r"," "); StringReplace(s,"\n"," "); return s; }
@@ -26,6 +26,10 @@ void Export() {
   int f=FileOpen(temp,FILE_WRITE|FILE_CSV|FILE_ANSI|FILE_COMMON,';',CP_UTF8);
   if(f==INVALID_HANDLE) return;
   FileWrite(f,"platform","server","account","ticket","date","time","symbol","direction","profit","swap","commission","currency");
+  long mode=AccountInfoInteger(ACCOUNT_TRADE_MODE);
+  string label=(mode==ACCOUNT_TRADE_MODE_REAL ? "Live" : mode==ACCOUNT_TRADE_MODE_CONTEST ? "Contest" : "Demo");
+  string updated=TimeToString(TimeCurrent(),TIME_DATE|TIME_SECONDS); StringReplace(updated,".","-");
+  FileWrite(f,"ACCOUNT","MT5",server,(string)AccountInfoInteger(ACCOUNT_LOGIN),Clean(AccountInfoString(ACCOUNT_COMPANY)),label,DoubleToString(AccountInfoDouble(ACCOUNT_BALANCE),8),AccountInfoString(ACCOUNT_CURRENCY),updated);
   for(int j=0;j<count;j++) {
     if(!HistorySelectByPosition(ids[j])) { FileClose(f); return; }
     double netVolume=0,profit=0,swap=0,commission=0; datetime last=0,first=0;
