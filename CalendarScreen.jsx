@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import WealthPlan from './src/features/pro/WealthPlan.jsx';
 import {
   Inbox, TrendingUp, TrendingDown, Sparkles, Plus, X, Trash2,
   Calendar, ChevronDown, Link2, KeyRound, UploadCloud, FileText,
@@ -3355,7 +3356,7 @@ export default function CalendarScreen() {
     const previousExpense = sum(previousTrades, false);
     const change = (current, previous) => previous ? Math.round(((current - previous) / previous) * 100) : null;
     const smallGroups = {};
-    historyTrades.filter((item) => item.pnl < 0).forEach((item) => {
+    historyTrades.filter((item) => item.pnl < 0 && !isTradingHistoryRecord(item) && !isTradingInstrumentName(item.instrument) && Math.abs(item.pnl) <= historyExpense * 0.02).forEach((item) => {
       const name = item.instrument || 'Другое';
       const group = smallGroups[name] || { count: 0, amount: 0 };
       group.count += 1;
@@ -4887,6 +4888,12 @@ export default function CalendarScreen() {
                 }`}>
                   <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-amber-400/[0.10] blur-3xl" />
                   <div className="relative">
+                    <WealthPlan trades={historyTrades} isTrading={(item) => isTradingHistoryRecord(item) || isTradingInstrumentName(item.instrument)} currency={historyCurrency} symbol={historyCurrencySymbol} formatMoney={formatMoney} language={language} isLight={isLight} onReview={(name, scope) => {
+                      setHistoryNameFilter(name);
+                      setHistoryScope(scope);
+                      setHistoryWinLoss('all');
+                      requestAnimationFrame(() => historyDealsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+                    }} />
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <p className="font-data text-[10px] font-bold uppercase tracking-[0.20em] text-amber-500">PRO · {t('financialSummary')}</p>
