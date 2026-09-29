@@ -17,7 +17,7 @@ export default function ProWorkspaceActions({ visible, isLight, language, t, tra
             <span className="pro-control-toggle" aria-hidden="true"><span /></span>
           </button>
           {traderMode && <button type="button" className="pro-control pro-control-connect" title={connected ? t('connected') : t('connectPlatform')} aria-label={`cTrader · ${connected ? t('connected') : t('connectPlatform')}`} onClick={onConnect}>
-            <Link2 aria-hidden="true" /><span>cTrader</span><i data-connected={connected} aria-hidden="true" />
+            <Link2 aria-hidden="true" /><span>{locale === 'ru' ? 'Площадки' : locale === 'en' ? 'Platforms' : 'Platforme'}</span><i data-connected={connected} aria-hidden="true" />
           </button>}
           <button type="button" className="pro-control pro-control-info" title={t('proInfoAction')} aria-label={t('proInfoAction')} onClick={onOffer}><Sparkles aria-hidden="true" /></button>
         </div>

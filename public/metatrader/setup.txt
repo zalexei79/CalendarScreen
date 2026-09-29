@@ -1,0 +1,14 @@
+DAYRIS — MetaTrader 4 / 5
+
+1. Log in to your existing broker account in MetaTrader. No password or API key is entered into DAYRIS.
+2. File > Open Data Folder. Copy DAYRIS_MT5.mq5 into MQL5/Experts (MT4: DAYRIS_MT4.mq4 into MQL4/Experts).
+3. Open the file in MetaEditor and compile (F7). Refresh Navigator in MetaTrader. Attach the exporter to ONE chart.
+4. The exporter only reads history and writes a file. It contains no order, WebRequest or DLL calls. Do not grant trading or DLL permissions for it.
+5. Export folder: %APPDATA%\MetaQuotes\Terminal\Common\Files\DAYRIS. In DAYRIS > Platforms > MetaTrader 4 / 5, select this folder in desktop Chrome or Edge.
+6. Review the count and confirm import into your current DAYRIS account. Enable auto-refresh. The website checks every 30 seconds while it remains open. Folder permission must be granted again after reload. This is local terminal sync, not a hosted broker connection.
+7. MT4: choose Account History > All History first. MT5: fully closed positions only; partial closes are included once the position is fully closed. Profit + swap + entry/exit commission + fees are summed. Deposits/withdrawals are excluded. Separately posted account-level fees are not allocated.
+8. Dates are broker dates, not converted to your local timezone. Use the file import fallback on devices/browsers without folder access; mobile does not read your PC automatically.
+9. Repeat imports skip matching server/account/ticket markers stored in the trade comment. Do not edit these markers. If you delete an imported trade, a later sync will restore it. Corrections to already imported broker records are not applied automatically.
+10. Imported trades use the existing DAYRIS local/cloud save path and appear on other devices after cloud sync. Guest imports remain local. Do not sync the same trading account concurrently from several DAYRIS windows/devices.
+
+RU: Войдите в счёт самостоятельно. Установите экспортёр через «Файл > Открыть каталог данных», скомпилируйте в MetaEditor и прикрепите к одному графику. В DAYRIS выберите общую папку DAYRIS, подтвердите импорт и включите автообновление. Терминал и сайт должны оставаться открытыми на компьютере. Пароли и ключи не нужны.

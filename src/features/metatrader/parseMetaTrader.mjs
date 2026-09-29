@@ -1,0 +1,23 @@
+export function parseMetaTrader(source) {
+  const lines = source.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
+  const header = 'platform;server;account;ticket;date;time;symbol;direction;profit;swap;commission;currency';
+  if (lines[0] !== header || lines.at(-1) !== 'END') throw new Error('Incomplete or unsupported DAYRIS export');
+  if (lines.length > 100002) throw new Error('Export is too large');
+  const keys = new Set();
+  return lines.slice(1, -1).map(line => {
+    const [platform, server, account, ticket, dateKey, time, instrument, direction, profit, swap, commission, currency, ...extra] = line.split(';');
+    if (extra.length || !['MT4', 'MT5'].includes(platform) || !server || !/^\d+$/.test(account) || !/^\d+$/.test(ticket)
+      || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey) || new Date(`${dateKey}T00:00:00Z`).toISOString().slice(0, 10) !== dateKey
+      || !/^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(time) || !instrument || !['buy', 'sell'].includes(direction) || !/^[A-Z]{3}$/.test(currency)
+      || [profit, swap, commission].some(value => !value?.trim() || !Number.isFinite(Number(value)))) throw new Error('Invalid DAYRIS export row');
+    const marker = `[DAYRIS:${platform}:${encodeURIComponent(server)}:${account}:${ticket}]`;
+    if (keys.has(marker)) throw new Error('Duplicate ticket in export');
+    keys.add(marker);
+    return { dateKey, time: time.slice(0, 5), instrument, direction: direction === 'buy' ? 'LONG' : 'SHORT', signedPnl: Number(profit) + Number(swap) + Number(commission), platform, currency, traderMode: true, comment: marker };
+  });
+}
+
+export function pendingMetaTrader(rows, existing) {
+  const markers = new Set(Object.values(existing).flat().map(item => item.comment));
+  return rows.filter(row => !markers.has(row.comment));
+}

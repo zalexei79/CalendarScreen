@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import MetaTraderControl from './src/features/metatrader/MetaTraderControl.jsx';
 import WealthPlan from './src/features/pro/WealthPlan.jsx';
 import SavingsReview from './src/features/pro/SavingsReview.jsx';
 import {
@@ -1942,6 +1943,7 @@ export default function CalendarScreen() {
 
   // --- Connect-platform modal state (API keys / CSV import) -----------------
   const [connectOpen, setConnectOpen] = useState(false);
+  const [metaTraderOpen, setMetaTraderOpen] = useState(false);
   const [connectVisible, setConnectVisible] = useState(false);
   const [connectTab, setConnectTab] = useState('api'); // 'api' | 'csv'
   const [apiForm, setApiForm] = useState({ exchange: 'Bybit', key: '', secret: '' });
@@ -4268,7 +4270,7 @@ export default function CalendarScreen() {
         yearMenuRef={yearMenuRef} yearMenuOpen={yearMenuOpen} setYearMenuOpen={setYearMenuOpen}
         month={month} year={year} today={today} setViewMonth={setViewMonth} setViewYear={setViewYear}
         setSelectedKey={setSelectedKey} proView={proView} setProView={setProView} setTraderMode={setTraderMode} setPlatformFilter={setPlatformFilter}
-        platformFilter={platformFilter} platformOptions={['ALL', 'cTrader']}
+        platformFilter={platformFilter} platformOptions={['ALL', 'cTrader', 'MT4', 'MT5']}
         calendarTypeFilter={calendarTypeFilter} setCalendarTypeFilter={setCalendarTypeFilter}
         openConnectModal={openConnectModal} ctraderConnected={ctraderConnected}
         installInfoRef={installInfoRef} handleInstallClick={handleInstallClick}
@@ -6124,7 +6126,7 @@ export default function CalendarScreen() {
                             isLight ? 'bg-zinc-50 border-zinc-200 text-zinc-700' : 'bg-zinc-900 border-zinc-700 text-zinc-200'
                           }`}>
                           <option value="ALL">{t('allSources')}</option>
-                          {['cTrader'].map((item) => <option key={item} value={item}>{item}</option>)}
+                          {['cTrader', 'MT4', 'MT5'].map((item) => <option key={item} value={item}>{item}</option>)}
                         </select>
                         <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500">
                           <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" /></svg>
@@ -6750,10 +6752,12 @@ export default function CalendarScreen() {
 
       {/* cTrader control center: only the working integration is exposed. */}
       {connectOpen && (
+        <React.Fragment>
         <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${connectVisible ? 'opacity-100' : 'opacity-0'}`} onMouseDown={handleBackdropMouseDown} onClick={handleConnectBackdropClick}>
           <div role="dialog" aria-modal="true" aria-label="cTrader" className={`relative max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-3xl border p-5 shadow-2xl sm:p-6 ${isLight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-zinc-800 bg-zinc-950 text-zinc-100'}`}>
             <button onClick={closeConnectModal} aria-label={t('close')} className="absolute right-3 top-3 rounded-lg p-2 text-zinc-500 hover:text-amber-500"><X className="h-4 w-4" /></button>
             <CtraderControl t={t} isLight={isLight} connected={ctraderConnected} reconnect={ctraderReconnect} loading={ctraderLoading} syncing={syncingCtrader} accounts={ctraderAccounts} accountId={ctraderAccountId} onConnect={handleConnectCtrader} onSelect={handleSelectCtraderAccount} onSync={handleSyncCtraderTrades} onDisconnect={handleDisconnectCtrader} />
+            <button type="button" onClick={() => { closeConnectModal(); setMetaTraderOpen(true); }} className="mt-5 min-h-11 w-full rounded-xl border border-amber-400/25 px-4 text-sm font-semibold text-amber-500">MetaTrader 4 / 5 →</button>
             {ctraderNotice?.kind === 'error' && !(ctraderNotice.stage === 'accounts' && ctraderReconnect) && (
               <p role="status" className="mt-4 text-sm leading-relaxed text-amber-600">
                 {t(ctraderNotice.code === 'RECONNECT_REQUIRED' ? 'ctReconnect' : ctraderNotice.code === 'UNAUTHORIZED' ? 'ctLogin' : ctraderNotice.code === 'OFFLINE' ? 'ctOffline' : 'ctError')}
@@ -6762,7 +6766,9 @@ export default function CalendarScreen() {
             )}
           </div>
         </div>
+        </React.Fragment>
       )}
+      <MetaTraderControl trades={manualTrades} saveTrade={hookSaveTrade} userId={user?.id} visible={metaTraderOpen} onClose={() => setMetaTraderOpen(false)} language={language} isLight={isLight} />
 
       {/* ANALYSIS MODAL — free basic stats now, paid deep AI analysis coming later */}
       {analysisOpen && (
