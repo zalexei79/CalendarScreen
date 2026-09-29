@@ -6757,7 +6757,7 @@ export default function CalendarScreen() {
           <div role="dialog" aria-modal="true" aria-label="cTrader" className={`relative max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-3xl border p-5 shadow-2xl sm:p-6 ${isLight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-zinc-800 bg-zinc-950 text-zinc-100'}`}>
             <button onClick={closeConnectModal} aria-label={t('close')} className="absolute right-3 top-3 rounded-lg p-2 text-zinc-500 hover:text-amber-500"><X className="h-4 w-4" /></button>
             <CtraderControl t={t} isLight={isLight} connected={ctraderConnected} reconnect={ctraderReconnect} loading={ctraderLoading} syncing={syncingCtrader} accounts={ctraderAccounts} accountId={ctraderAccountId} onConnect={handleConnectCtrader} onSelect={handleSelectCtraderAccount} onSync={handleSyncCtraderTrades} onDisconnect={handleDisconnectCtrader} />
-            <button type="button" onClick={() => { closeConnectModal(); setMetaTraderOpen(true); }} className="mt-5 min-h-11 w-full rounded-xl border border-amber-400/25 px-4 text-sm font-semibold text-amber-500">MetaTrader 4 / 5 →</button>
+            <button type="button" disabled={!proAccessActive || !user?.id} onClick={() => { closeConnectModal(); setMetaTraderOpen(true); }} className="mt-5 min-h-11 w-full rounded-xl border border-amber-400/25 px-4 text-sm font-semibold text-amber-500 disabled:opacity-40">MetaTrader 5 · PRO →</button>
             {ctraderNotice?.kind === 'error' && !(ctraderNotice.stage === 'accounts' && ctraderReconnect) && (
               <p role="status" className="mt-4 text-sm leading-relaxed text-amber-600">
                 {t(ctraderNotice.code === 'RECONNECT_REQUIRED' ? 'ctReconnect' : ctraderNotice.code === 'UNAUTHORIZED' ? 'ctLogin' : ctraderNotice.code === 'OFFLINE' ? 'ctOffline' : 'ctError')}
@@ -6768,7 +6768,7 @@ export default function CalendarScreen() {
         </div>
         </React.Fragment>
       )}
-      <MetaTraderControl trades={manualTrades} saveTrade={hookSaveTrade} userId={user?.id} visible={metaTraderOpen} onClose={() => setMetaTraderOpen(false)} language={language} isLight={isLight} />
+      <MetaTraderControl trades={manualTrades} saveTrade={hookSaveTrade} userId={user?.id} enabled={proAccessActive && Boolean(user?.id)} visible={metaTraderOpen} onClose={() => setMetaTraderOpen(false)} language={language} isLight={isLight} />
 
       {/* ANALYSIS MODAL — free basic stats now, paid deep AI analysis coming later */}
       {analysisOpen && (
