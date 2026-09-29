@@ -24,9 +24,9 @@ export default function WealthPlan({ trades, isTrading, currency, symbol, format
   const tradingNet = trading.reduce((sum, item) => sum + (Number(item.pnl) || 0), 0);
   const saving = top ? top.amount * percent / 100 : 0;
   const card = isLight ? 'border-slate-200 bg-white' : 'border-white/10 bg-black/20';
-  return <section className={`mt-4 rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-amber-200 bg-amber-50/50' : 'border-amber-400/20 bg-amber-400/[0.04]'}`}>
-    <button type="button" aria-expanded={open} onClick={() => setOpen(value => !value)} className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl bg-amber-400 px-4 py-3 text-left font-semibold text-zinc-950 hover:bg-amber-300">
-      <span>✦ {copy('Стать богаче', 'Grow your wealth', 'Mai mulți bani')}</span><span aria-hidden="true">{open ? '−' : '+'}</span>
+  return <section className={`mb-4 rounded-2xl border p-3 sm:p-4 ${isLight ? 'border-slate-200 bg-white' : 'border-white/[0.08] bg-white/[0.02]'}`}>
+    <button type="button" aria-expanded={open} onClick={() => setOpen(value => !value)} className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition-colors ${isLight ? 'text-slate-900 hover:bg-slate-50' : 'text-zinc-100 hover:bg-white/[0.04]'}`}>
+      <span><span className="mr-2 text-amber-500">✦</span>{copy('Стать богаче', 'Grow your wealth', 'Mai mulți bani')}<span className="ml-2 text-[9px] tracking-widest text-amber-500">PRO</span></span><span aria-hidden="true" className="text-zinc-500">{open ? '−' : '+'}</span>
     </button>
     <p className="mt-2 text-xs leading-5 text-zinc-500">{copy('Ваш план: как оставлять больше денег · по записям выбранного периода', 'Your plan to keep more money · based on entries in this period', 'Planul tău pentru a păstra mai mulți bani · din perioada selectată')}</p>
     {open && <div className="mt-4 space-y-3">

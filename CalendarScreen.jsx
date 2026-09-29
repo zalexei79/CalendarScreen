@@ -2599,6 +2599,12 @@ export default function CalendarScreen() {
       .sort((a, b) => (a.dateKey === b.dateKey ? (b.time || '').localeCompare(a.time || '') : (b.dateKey || '').localeCompare(a.dateKey || '')));
   }, [manualTrades, platformFilter, historyWinLoss, historyCurrency, historyNameFilter, traderMode, historyScope]);
   const historyTrades = useMemo(() => historyFilteredTrades.filter(t => t.dateKey >= dateFrom && t.dateKey <= dateTo), [historyFilteredTrades, dateFrom, dateTo]);
+  const wealthPlanTrades = useMemo(() => Object.entries(manualTrades || {})
+    .flatMap(([dateKey, items]) => (Array.isArray(items) ? items : []).map(item => ({ ...item, dateKey })))
+    .filter(item => item.dateKey >= dateFrom && item.dateKey <= dateTo)
+    .filter(item => historyCurrency === 'ALL' || (item.currency || 'USD') === historyCurrency)
+    .filter(item => platformFilter === 'ALL' || item.platform === platformFilter),
+  [manualTrades, dateFrom, dateTo, historyCurrency, platformFilter]);
 
   function isTradingInstrumentName(value) {
     const normalized = String(value || '').trim().toUpperCase();
@@ -4888,7 +4894,7 @@ export default function CalendarScreen() {
                 }`}>
                   <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-amber-400/[0.10] blur-3xl" />
                   <div className="relative">
-                    <WealthPlan trades={historyTrades} isTrading={(item) => item.platform === 'cTrader' || isTradingInstrumentName(item.instrument) || (!getMoneyCategoryMeta(item.instrument) && isTradingHistoryRecord(item))} currency={historyCurrency} symbol={historyCurrencySymbol} formatMoney={formatMoney} language={language} isLight={isLight} onReview={(name, scope) => {
+                    <WealthPlan trades={wealthPlanTrades} isTrading={(item) => item.platform === 'cTrader' || isTradingInstrumentName(item.instrument) || (!getMoneyCategoryMeta(item.instrument) && isTradingHistoryRecord(item))} currency={historyCurrency} symbol={historyCurrencySymbol} formatMoney={formatMoney} language={language} isLight={isLight} onReview={(name, scope) => {
                       setHistoryNameFilter(name);
                       setHistoryScope(scope);
                       setHistoryWinLoss('all');
@@ -5356,7 +5362,7 @@ export default function CalendarScreen() {
                     </div>
                   )}
 
-                  <div className={`mb-2 flex items-center justify-between gap-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                  <div ref={historyDealsRef} tabIndex={-1} className={`mb-2 flex scroll-mt-4 items-center justify-between gap-2 outline-none ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
                     <div className="min-w-0">
                       <p className="truncate text-xs">{historyTrades.length} {t('records')}{historyNameFilter ? ` · ${historyNameFilter}` : ''}</p>
                       {periodPreset !== 'Вся история' && (
