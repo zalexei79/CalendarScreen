@@ -3,7 +3,7 @@ import {
   Inbox, TrendingUp, TrendingDown, Sparkles, Plus, X, Trash2,
   Calendar, ChevronDown, Link2, KeyRound, UploadCloud, FileText,
   CheckCircle2, RefreshCw, History, Download, Pencil, Share2,
-  Wallet, ShoppingCart, Home, Briefcase, ShoppingBag, CreditCard, MoreHorizontal, Cigarette, Utensils, Car, Gift, Gamepad2, Fish, ChartCandlestick, Repeat2, CircleDollarSign,
+  Wallet, ShoppingCart, Home, Briefcase, ShoppingBag, CreditCard, MoreHorizontal, Cigarette, Utensils, Car, Gift, Gamepad2, Fish, ChartCandlestick, Repeat2, CircleDollarSign, ArrowRight,
   Wifi, WifiOff, Zap, Award, Flame,
 } from 'lucide-react';
 import { supabase } from './src/supabaseClient';
@@ -2611,8 +2611,8 @@ export default function CalendarScreen() {
     .sort((a, b) => a.localeCompare(b, language)), [manualTrades, language, traderMode, historyScope]);
 
   useEffect(() => {
-    if ((!traderMode || historyScope === 'money') && historyNameFilter && isTradingInstrumentName(historyNameFilter)) setHistoryNameFilter('');
-  }, [traderMode, historyScope, historyNameFilter]);
+    if ((!traderMode || historyScope === 'money') && !isFinancialPro && historyNameFilter && isTradingInstrumentName(historyNameFilter)) setHistoryNameFilter('');
+  }, [traderMode, historyScope, historyNameFilter, isFinancialPro]);
 
   const historyByCurrency = useMemo(() => Object.entries(historyTrades.reduce((groups, trade) => {
     const code = trade.currency || 'USD';
@@ -4736,7 +4736,7 @@ export default function CalendarScreen() {
                 <h2 className={`font-display text-xl font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>
                   {traderMode && historyScope !== 'money'
                     ? (periodPreset === 'Вся история' ? t('allHistory') : dateFrom === dateTo ? dateFrom : `${dateFrom} — ${dateTo}`)
-                    : t('financialHistory')}
+                    : (isFinancialPro ? (language === 'ru' ? 'Финансовый разбор' : language === 'ro' || language === 'md' ? 'Analiză financiară' : 'Financial breakdown') : t('financialHistory'))}
                 </h2>
               </div>
               <div className="flex items-center gap-2">
@@ -4993,6 +4993,29 @@ export default function CalendarScreen() {
                         <p className="mt-1 text-[10px] leading-5 text-zinc-500">{language === 'ru' ? `Оценка расходов к концу периода · осталось ${historyPremiumInsights.remainingDays} дн. Расчёт основан только на среднем темпе за текущий период.` : `Estimated spending by period end · ${historyPremiumInsights.remainingDays} days left. Based only on the current average pace.`}</p>
                       </div>
                     )}
+
+                    {(() => {
+                      const [mainExpenseName, mainExpenseAmount] = historyAnalysis.expenseCategories[0] || [];
+                      const gap = Math.max(0, historyExpense - historyIncome);
+                      const title = language === 'ru' ? 'Ваш следующий шаг к большему капиталу' : language === 'ro' || language === 'md' ? 'Următorul pas spre mai mult capital' : 'Your next move toward more wealth';
+                      const body = gap > 0
+                        ? (language === 'ru' ? `Сейчас расходы выше доходов на ${historyCurrencySymbol}${formatMoney(gap)}. Начните с главной зоны — ${mainExpenseName || 'расходов'} — и найдите операции, которые можно сократить.` : `Expenses are above income by ${historyCurrencySymbol}${formatMoney(gap)}. Start with ${mainExpenseName || 'your largest category'} and find what can be reduced.`)
+                        : (language === 'ru' ? 'Доходы уже покрывают расходы. Следующий рычаг — сохранить разницу и не дать главной категории незаметно вырасти.' : 'Income covers expenses. The next lever is to protect the difference and keep the largest category from growing.');
+                      return (
+                        <div className={`mt-2 rounded-2xl border p-4 ${isLight ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-white' : 'border-emerald-400/15 bg-gradient-to-br from-emerald-500/[0.10] to-black/10'}`}>
+                          <div className="flex items-start gap-3">
+                            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-500 text-white"><TrendingUp className="h-4 w-4" /></div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold">{title}</p>
+                              <p className="mt-1 text-[11px] leading-5 text-zinc-500">{body}</p>
+                              {mainExpenseName && <button type="button" onClick={() => setHistoryNameFilter(mainExpenseName)} className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-xl bg-emerald-500 px-3 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-emerald-600 active:scale-[0.98]">
+                                {language === 'ru' ? `Разобрать ${mainExpenseName}` : `Review ${mainExpenseName}`} <ArrowRight className="h-3.5 w-3.5" />
+                              </button>}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </section>
               )}
