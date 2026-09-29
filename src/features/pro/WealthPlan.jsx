@@ -37,6 +37,10 @@ export default function WealthPlan({ trades, isTrading, currency, symbol, format
           <p className="mt-1 text-sm leading-6">{expenses > income ? copy(`Не хватает ${symbol}${formatMoney(expenses - income)}. Первое действие — проверить крупнейшие личные расходы.`, `Shortfall: ${symbol}${formatMoney(expenses - income)}. Review your largest personal expenses first.`, `Deficit: ${symbol}${formatMoney(expenses - income)}. Verifică cheltuielile personale principale.`) : copy(`Остаётся ${symbol}${formatMoney(income - expenses)}. Решите, какую часть этой разницы отложить до новых покупок.`, `${symbol}${formatMoney(income - expenses)} remains. Decide how much to set aside before new purchases.`, `Rămân ${symbol}${formatMoney(income - expenses)}. Decide cât să pui deoparte înainte de alte cumpărături.`)}</p>
           {!personal.length && <p className="mt-2 text-xs text-zinc-500">{copy('Личных записей нет — добавьте доходы и бытовые расходы, чтобы получить план.', 'Add personal income and spending to build a plan.', 'Adaugă venituri și cheltuieli personale pentru un plan.')}</p>}
         </div>
+        {!top && <div className={`rounded-xl border p-4 ${card}`}>
+          <h4 className="text-sm font-semibold">{copy('2. Проверить сценарий экономии', '2. Explore a savings scenario', '2. Explorează un scenariu de economisire')}</h4>
+          <p className="mt-2 text-sm leading-6">{copy('В выбранных записях нет личных расходов. Добавьте бытовые траты или измените фильтры — тогда здесь появится расчёт возможной экономии.', 'No personal expenses in the selected entries. Add spending or change filters to see a savings scenario.', 'Nu există cheltuieli personale selectate. Adaugă cheltuieli sau schimbă filtrele pentru un scenariu.')}</p>
+        </div>}
         {top && <div className={`rounded-xl border p-4 ${card}`}>
           <h4 className="text-sm font-semibold">{copy('2. Проверить сценарий экономии', '2. Explore a savings scenario', '2. Explorează un scenariu de economisire')}</h4>
           <p className="mt-2 text-sm">{top.name}: {symbol}{formatMoney(top.amount)} · {top.count} {copy('операций', 'entries', 'înregistrări')}</p>

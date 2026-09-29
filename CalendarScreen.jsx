@@ -4888,7 +4888,7 @@ export default function CalendarScreen() {
                 }`}>
                   <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-amber-400/[0.10] blur-3xl" />
                   <div className="relative">
-                    <WealthPlan trades={historyTrades} isTrading={(item) => isTradingHistoryRecord(item) || isTradingInstrumentName(item.instrument)} currency={historyCurrency} symbol={historyCurrencySymbol} formatMoney={formatMoney} language={language} isLight={isLight} onReview={(name, scope) => {
+                    <WealthPlan trades={historyTrades} isTrading={(item) => item.platform === 'cTrader' || isTradingInstrumentName(item.instrument) || (!getMoneyCategoryMeta(item.instrument) && isTradingHistoryRecord(item))} currency={historyCurrency} symbol={historyCurrencySymbol} formatMoney={formatMoney} language={language} isLight={isLight} onReview={(name, scope) => {
                       setHistoryNameFilter(name);
                       setHistoryScope(scope);
                       setHistoryWinLoss('all');
