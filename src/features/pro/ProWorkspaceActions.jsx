@@ -17,7 +17,7 @@ export default function ProWorkspaceActions({ visible, inPanel = false, isLight,
       <div id={platformsId} className={`pro-platform-reveal ${traderMode ? 'is-open' : ''}`} aria-hidden={!traderMode} inert={traderMode ? undefined : ''}>
         <div className="pro-platform-clip"><div className="pro-platform-row">
         { [['ctrader','cTrader',Link2,connected && !reconnect],['mt5','MT5',Monitor,metatrader.connected]].map(([id,name,Icon,ready])=>{
-          const status = id==='ctrader' && reconnect ? text('Нужен вход','Reconnect required','Reconectare necesară') : ready ? text('Подключён','Connected','Conectat') : text('Не подключён','Not connected','Neconectat');
+          const status = id === 'mt5' ? ready ? text('Подключён на ПК','Connected on PC','Conectat pe PC') : text('Нет связи на этом устройстве','No connection on this device','Fără conexiune pe acest dispozitiv') : id==='ctrader' && reconnect ? text('Нужен вход','Reconnect required','Reconectare necesară') : ready ? text('Подключён','Connected','Conectat') : text('Не подключён','Not connected','Neconectat');
           return <button key={id} type="button" disabled={!traderMode} className="pro-control pro-control-connect pro-control-platform" title={`${name} · ${status}`} aria-label={`${name} · ${status} · ${text('открыть меню','open menu','deschide meniul')}`} onClick={()=>onConnect(id)}><Icon aria-hidden="true"/><span className="pro-platform-label"><strong>{name}</strong><small>{status}</small></span><i data-connected={Boolean(ready && traderMode)} aria-hidden="true"/></button>;
         })}
         </div></div>

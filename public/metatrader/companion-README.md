@@ -16,3 +16,7 @@ The executable is unsigned; Windows may display a publisher warning. No certific
 The companion has buttons to open DAYRIS and MT5. Approval appears inside its window. Sync requires an already running terminal and never silently starts MT5; a failed IPC connection is reported and cleaned up. Restarting a running terminal is a separate user action.
 
 Build on Windows with Python 3.12 x64: create `.mt5-build` venv, install `companion-requirements.txt`, then run `scripts/build-mt5-companion.ps1`. Source is `companion.py`. Test: `.mt5-build/Scripts/python.exe tests/mt5-companion.py`.
+
+Download once; run the companion each time you want to update history after closing it or restarting Windows. There is no background Windows service or automatic startup. The browser session reconnects with consent. Mobile status describes that device, not the PC connection; use the same DAYRIS account to see saved history. Manual sync and initial connection show saved trade counts, instruments and dates before closing the web dialog in three seconds. Background sync does not close an open dialog.
+
+Read-only scope: history, account number/broker/server/type/balance/currency and open position identifiers (to exclude unfinished trades). Broker passwords are not requested or transmitted. The companion only serves the local browser; DAYRIS saves imported trades to the signed-in user’s cloud journal. Disconnect revokes local access without deleting saved history. Source: https://github.com/zalexei79/CalendarScreen/blob/main/public/metatrader/companion.py

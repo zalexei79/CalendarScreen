@@ -153,7 +153,7 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 return self.reply(404, {})
             self.reply(200, {'csv': csv, 'timeZone': 'broker'})
-            updates.put('История передана в DAYRIS. Подключение активно.')
+            updates.put('История передана календарю. Результат сохранения смотрите в DAYRIS.\nДля обновления нажмите «Синхронизировать» в календаре или оставьте автосинхронизацию включённой.')
         except (ValueError, KeyError, TypeError) as error:
             updates.put(str(error))
             self.reply(400, {'error': str(error)})
@@ -171,6 +171,10 @@ def main():
         root.update_idletasks()
         assert app.connect_button.winfo_reqwidth() > 0
         assert root.title() == 'DAYRIS · Подключение MT5'
+        for page in app.info_pages:
+            app.show_info(page)
+            root.update_idletasks()
+            assert root.winfo_reqheight() <= root.winfo_height(), 'Instructions exceed the window height'
         root.destroy()
         return
     try:
@@ -190,8 +194,9 @@ class CompanionWindow:
         self.root, self.pending = root, None
         bg, card, muted, amber = '#0c101a', '#171e2c', '#aab5c9', '#ffc238'
         root.title('DAYRIS · Подключение MT5')
-        root.geometry('520x560')
-        root.resizable(False, False)
+        root.geometry('540x740')
+        root.minsize(540, 740)
+        root.resizable(False, True)
         root.configure(bg=bg)
         icon = Path(getattr(sys, '_MEIPASS', Path(__file__).parent)) / 'icon-48.png'
         if icon.exists():
@@ -199,7 +204,7 @@ class CompanionWindow:
         frame = tk.Frame(root, bg=bg, padx=28, pady=24); frame.pack(fill='both', expand=True)
         def label(text, size=11, color='white', parent=frame):
             item = tk.Label(parent, text=text, bg=parent['bg'], fg=color, font=('Segoe UI', size),
-                            anchor='w', justify='left', wraplength=450)
+                            anchor='w', justify='left', wraplength=440 if parent == frame else 410)
             item.pack(fill='x', pady=(0, 12)); return item
         label('DAYRIS  /  MT5', 11, amber)
         label('Ваш терминал. Ваш календарь.', 19)
@@ -217,7 +222,21 @@ class CompanionWindow:
                   bg=amber, fg=bg, font=('Segoe UI', 11, 'bold'), relief='flat', pady=12, cursor='hand2').pack(fill='x', pady=(0, 10))
         tk.Button(frame, text='Открыть MetaTrader 5', command=self.open_terminal, bg=card, fg='white',
                   font=('Segoe UI', 11), relief='flat', pady=10, cursor='hand2').pack(fill='x')
-        label('Только чтение сделок · Без дополнительных платежей\nОставьте помощник открытым. Его можно свернуть.', 9, muted)
+        tabs = tk.Frame(frame, bg=bg); tabs.pack(fill='x', pady=(14, 10))
+        instructions, privacy = tk.Frame(frame, bg=bg), tk.Frame(frame, bg=bg)
+        def show_info(selected):
+            instructions.pack_forget(); privacy.pack_forget(); selected.pack(fill='x')
+        for title, page in [('Как синхронизировать', instructions), ('Какие данные читаем', privacy)]:
+            tk.Button(tabs, text=title, command=lambda page=page: show_info(page), bg=card, fg='white',
+                      font=('Segoe UI', 10), relief='flat', padx=12, pady=9, cursor='hand2').pack(side='left', padx=(0, 8))
+        label('1. Откройте MT5 и войдите в нужный счёт.\n2. Откройте DAYRIS → Трейдер → MT5.\n3. Нажмите «Подключить MT5» и разрешите доступ здесь.\nПервое подключение сразу загрузит закрытые позиции.', 10, muted, instructions)
+        label('В DAYRIS нажмите «Синхронизировать» или включите обновление каждые 30 секунд. MT5, это окно и календарь должны быть открыты на ПК. Помощник можно свернуть.\nПосле закрытия или перезагрузки ПК запустите помощник снова и подключите MT5 в DAYRIS. Скачать его повторно не нужно.', 10, muted, instructions)
+        label('На телефоне доступна сохранённая история через тот же аккаунт DAYRIS. Подключение работает на ПК; статус на телефоне не отключает его.\nБез дополнительных платежей за подключение MT5.', 9, muted, instructions)
+        label('Закрытые позиции: инструмент, направление, время, результат, комиссии и своп. Также номер счёта, брокер, сервер, Demo/Live, баланс и валюта. Открытые позиции проверяются, чтобы исключить незавершённые сделки.\nПароль брокера не запрашивается и не передаётся. Помощник не открывает и не закрывает сделки.', 10, muted, privacy)
+        label('Помощник передаёт данные календарю только на вашем ПК. Сделки сохраняются в ваш аккаунт DAYRIS для доступа на телефоне.\n«Отключить» в DAYRIS прекращает доступ помощника. Сохранённая история остаётся.', 10, muted, privacy)
+        show_info(instructions)
+        self.info_pages = (instructions, privacy)
+        self.show_info = show_info
         root.protocol('WM_DELETE_WINDOW', self.stop)
 
     def open_terminal(self):
@@ -238,6 +257,7 @@ class CompanionWindow:
         event, result, _ = self.pending
         result.append(allowed); event.set(); self.pending = None
         self.actions.pack_forget(); self.origin.pack_forget()
+        self.show_info(self.info_pages[0])
         self.status.configure(text='Читаем историю MT5…' if allowed else 'Подключение отменено. Сделки не переданы.')
 
     def poll(self):
@@ -246,7 +266,8 @@ class CompanionWindow:
         if not self.pending:
             try:
                 self.pending = requests.get_nowait()
-                self.status.configure(text='Разрешить календарю прочитать историю текущего счёта MT5? Пароли и торговые команды не передаются.')
+                for page in self.info_pages: page.pack_forget()
+                self.status.configure(text='Разрешить календарю прочитать историю и сведения о текущем счёте MT5? Пароль брокера не передаётся. Торговых команд нет.')
                 self.origin.configure(text=self.pending[2]); self.origin.pack(fill='x')
                 self.actions.pack(fill='x', pady=(4, 0))
                 self.root.deiconify(); self.root.lift()

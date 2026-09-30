@@ -18,7 +18,7 @@ export default function PlatformConnections({ language, isLight, ctrader, metatr
   const t = (r, e, m) => platformText(language, r, e, m);
   const items = [
     { id: 'ctrader', name: 'cTrader', Icon: Link2, ...ctrader, description: t('Прямое подключение к площадке. Выбор счёта и загрузка сделок.', 'Direct platform connection. Choose an account and load trades.', 'Conectare directă. Alege contul și încarcă tranzacțiile.') },
-    { id: 'mt5', name: 'MetaTrader 5', Icon: Monitor, ...metatrader, description: t('Через терминал на ПК. Для автообновления терминал и сайт должны быть открыты.', 'Through your PC terminal. Auto-refresh requires terminal and website open.', 'Prin terminalul de pe PC. Actualizarea automată necesită terminalul și site-ul deschise.') },
+    { id: 'mt5', name: 'MetaTrader 5', Icon: Monitor, ...metatrader, description: t('Подключение на этом устройстве. Для обновления откройте MT5, помощник и DAYRIS на ПК. На телефоне доступна сохранённая история.', 'Connection on this device. To update, keep MT5, the companion and DAYRIS open on your PC. Your phone shows saved history.', 'Conexiune pe acest dispozitiv. Pentru actualizare, menține MT5, asistentul și DAYRIS deschise pe PC. Telefonul afișează istoricul salvat.') },
   ];
   return <section aria-label={t('Торговые площадки', 'Trading platforms', 'Platforme de trading')}>
     <p className="text-[10px] tracking-widest text-amber-500">DAYRIS PRO</p>

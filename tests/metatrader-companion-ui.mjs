@@ -8,10 +8,13 @@ const bundle = await require('esbuild').build({ entryPoints: ['tests/metatrader-
 const browser = await chromium.launch({ channel: 'msedge', headless: true });
 try {
   const page = await browser.newPage({ viewport: { width: 900, height: 900 } });
+  await page.clock.install();
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   const actions = [];
+  let failSync = false;
   await page.route('http://127.0.0.1:17865/**', route => {
     actions.push(new URL(route.request().url()).pathname);
+    if (failSync) return route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'Не удалось прочитать историю MT5.' }) });
     return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ csv: 'platform;server;account;ticket;date;time;symbol;direction;profit;swap;commission;currency\nACCOUNT;MT5;Broker-Demo;42;Broker;Demo;1000;USD;2026-09-30 01:00:00\nMT5;Broker-Demo;42;123;2026-09-29;12:30:00;EURUSD;buy;20;0;-1;USD\nEND' }) });
   });
   await page.route('http://localhost:5173/**', route => route.fulfill({ contentType: 'text/html', body: `<html><meta charset="utf-8"><div id="root"></div><script>${bundle.outputFiles[0].text}</script></html>` }));
@@ -19,9 +22,31 @@ try {
   assert.equal(await page.getByRole('button', { name: 'Выбрать папку DAYRIS' }).isVisible(), false);
   await page.getByRole('button', { name: 'Подключить MT5', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('#saved').textContent === '1');
+  await page.getByText('В календарь добавлено сделок: 1', { exact: true }).waitFor();
+  await page.getByText('EURUSD · 2026-09-29', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Оставить окно открытым' }).click();
+  await page.clock.runFor(3500);
+  assert.equal(await page.getByRole('dialog').isVisible(), true);
+  await page.getByText('Какие данные читает DAYRIS?', { exact: true }).click();
+  assert.equal(await page.getByText(/Помощник не запрашивает и не передаёт пароль брокера/).isVisible(), true);
+  assert.equal(await page.locator('a[href*="github.com"]').count(), 0);
   await page.getByRole('button', { name: 'Синхронизировать', exact: true }).click();
   await page.getByRole('status').filter({ hasText: 'Добавлено: 0' }).waitFor();
+  await page.getByText('В календарь добавлено сделок: 0', { exact: true }).waitFor();
+  await page.clock.runFor(3500);
+  assert.equal(await page.getByRole('dialog').count(), 0);
   assert.equal(await page.locator('#saved').textContent(), '1');
+  await page.locator('#open').click();
+  await page.clock.runFor(30000);
+  await page.getByRole('status').filter({ hasText: 'Добавлено: 0' }).waitFor();
+  assert.equal(await page.getByRole('dialog').isVisible(), true);
+  assert.equal(await page.getByRole('button', { name: 'Оставить окно открытым' }).count(), 0);
+  failSync = true;
+  await page.getByRole('button', { name: 'Синхронизировать', exact: true }).click();
+  await page.getByRole('status').filter({ hasText: 'Не удалось прочитать историю MT5.' }).waitFor();
+  await page.clock.runFor(3500);
+  assert.equal(await page.getByRole('dialog').isVisible(), true);
+  failSync = false;
   await page.locator('#owner').click();
   await page.getByRole('button', { name: 'Подключить MT5', exact: true }).waitFor();
   assert.equal(await page.locator('#saved').textContent(), '0');
@@ -30,5 +55,11 @@ try {
   await page.locator('#owner').click();
   assert.equal(await page.locator('#saved').textContent(), '1');
   assert.deepEqual(errors, []);
-  console.log('Companion UI: connect imports, duplicate skip, owner revocation and history isolation PASS');
+  const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, userAgent: 'Mozilla/5.0 (Linux; Android 13) Chrome/120 Mobile' });
+  await phone.route('http://localhost:5173/**', route => route.fulfill({ contentType: 'text/html', body: `<html><meta charset="utf-8"><div id="root"></div><script>${bundle.outputFiles[0].text}</script></html>` }));
+  await phone.goto('http://localhost:5173');
+  assert.equal(await phone.getByText(/На телефоне отображается сохранённая история/).isVisible(), true);
+  assert.equal(await phone.getByRole('button', { name: 'Подключить MT5', exact: true }).count(), 0);
+  await phone.close();
+  console.log('Companion UI: result details, cancellable countdown, auto-sync stays open, mobile explanation, dedup and owner isolation PASS');
 } finally { await browser.close(); }

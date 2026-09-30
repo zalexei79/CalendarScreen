@@ -6,6 +6,7 @@ import { SyncSummary } from '../platforms/PlatformConnections';
 import MetaTraderSetup from './MetaTraderSetup';
 import './MetaTraderControl.css';
 import CompanionSetup from './CompanionSetup';
+import ConnectionInfo from './ConnectionInfo';
 import { companionToken, companionRequest, companionFolder } from './companion.mjs';
 
 export default function MetaTraderControl(props) {
@@ -18,6 +19,8 @@ function MetaTraderLocal({ trades, saveTrade, userId, enabled, visible, language
   const [status, setStatus] = useState(''), [busy, setBusy] = useState(false), [auto, setAuto] = useState(false);
   const [selecting, setSelecting] = useState(false), [confirming, setConfirming] = useState(false);
   const [lastSync, setLastSync] = useState(null);
+  const [countdown, setCountdown] = useState(null);
+  const visibleNow = useRef(visible); visibleNow.current = visible;
   const [sessionOwner, setSessionOwner] = useState(userId);
   const dialog = useRef(null), close = useRef(onClose), lock = useRef(false);
   const imported = useRef(new Set()), generation = useRef(0), live = useRef({});
@@ -30,6 +33,14 @@ function MetaTraderLocal({ trades, saveTrade, userId, enabled, visible, language
   const savedCount = Object.values(trades).flat().filter(row => row.platform === 'MT5').length;
   const accounts = snapshot?.accounts || [], selected = accounts.find(account => account.id === accountId);
   const selectedRows = rowsForMetaTraderAccount(snapshot?.rows || [], accountId);
+  useEffect(() => {
+    if (!visible || !enabled || confirming || selecting) { setCountdown(null); return; }
+    if (countdown === null) return;
+    if (countdown === 3) dialog.current?.scrollTo?.({ top: 0, behavior: 'smooth' });
+    if (countdown === 0) { setCountdown(null); close.current(); return; }
+    const timer = setTimeout(() => setCountdown(value => value === null ? null : value - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [countdown, visible, enabled, confirming, selecting]);
   useEffect(() => () => {
     if (activeCompanion.current) companionRequest('disconnect', activeCompanion.current).catch(() => {});
   }, []);
@@ -42,7 +53,7 @@ function MetaTraderLocal({ trades, saveTrade, userId, enabled, visible, language
     if (activeCompanion.current) companionRequest('disconnect', activeCompanion.current).catch(() => {});
     activeCompanion.current = null; pendingConnect.current = false;
     generation.current++; setSessionOwner(userId); setFolder(null); setSnapshot(null); setAccountId(''); setConnected(false); setAuto(false);
-    setStatus(''); setSelecting(false); setConfirming(false); setLastSync(null); imported.current.clear();
+    setCountdown(null); setStatus(''); setSelecting(false); setConfirming(false); setLastSync(null); imported.current.clear();
   }, [userId, enabled]);
   useEffect(() => {
     if (!visible || !enabled) return;
@@ -74,7 +85,7 @@ function MetaTraderLocal({ trades, saveTrade, userId, enabled, visible, language
   function preview(data, handle) {
     if (data.accounts.some(account => account.platform !== 'MT5')) throw new Error('Select a MetaTrader 5 export');
     if (!data.accounts.length) throw new Error(t('Файл найден, но в нём нет счёта. Обновите DAYRIS_MT5: скачайте экспортёр ниже, замените файл в Experts и добавьте его на график заново. Затем выберите папку снова. Сделку для подключения открывать не нужно.', 'File found, but it has no account. Update DAYRIS_MT5: download the exporter below, replace it in Experts and reattach it to a chart. Select the folder again. No trade is needed to connect.', 'Fișier găsit, dar fără cont. Actualizează DAYRIS_MT5, înlocuiește fișierul din Experts și atașează-l din nou la grafic. Alege din nou folderul. Nu este necesară o tranzacție.'));
-    generation.current++; setFolder(handle); setSnapshot(data); setAuto(false); setConnected(false); setStatus(''); setLastSync(null);
+    setCountdown(null); generation.current++; setFolder(handle); setSnapshot(data); setAuto(false); setConnected(false); setStatus(''); setLastSync(null);
     setAccountId(data.accounts[0]?.id || ''); setSelecting(data.accounts.length > 1);
   }
   async function chooseFolder() {
@@ -100,13 +111,14 @@ function MetaTraderLocal({ trades, saveTrade, userId, enabled, visible, language
     } catch (error) { if (session === generation.current) setStatus(error.message); }
     finally { setBusy(false); }
   }
-  async function sync(data, id, session) {
+  async function sync(data, id, session, announce = false) {
     if (lock.current || !live.current.enabled || !live.current.userId || session !== generation.current) return;
     if (!data.accounts.some(account => account.id === id)) throw new Error(t('Выбранный счёт не найден. Подключите его снова.', 'Selected account is missing. Reconnect it.', 'Contul selectat lipsește. Reconectează-l.'));
     lock.current = true; setBusy(true);
     const owner = live.current.userId;
     try {
-      const pending = pendingMetaTrader(rowsForMetaTraderAccount(data.rows, id), live.current.trades).filter(row => !imported.current.has(row.comment));
+      const checked = rowsForMetaTraderAccount(data.rows, id);
+      const pending = pendingMetaTrader(checked, live.current.trades).filter(row => !imported.current.has(row.comment));
       let count = 0;
       for (const row of pending) {
         if (live.current.userId !== owner || session !== generation.current || !live.current.enabled || live.current.accountId !== id) return;
@@ -117,21 +129,25 @@ function MetaTraderLocal({ trades, saveTrade, userId, enabled, visible, language
       }
       if (session !== generation.current) return;
       setSnapshot(data); setConnected(true);
-      setLastSync({ at: Date.now(), added: count, accountId: id });
+      setLastSync({ at: Date.now(), added: count, accountId: id, checked: checked.length,
+        instruments: [...new Set(pending.map(row => row.instrument))].join(', '),
+        dates: [...new Set(pending.map(row => row.dateKey))].sort().join(', ') });
       setStatus(t(`Добавлено: ${count} · Проверено в ${new Date().toLocaleTimeString()}`, `Added: ${count} · Checked at ${new Date().toLocaleTimeString()}`, `Adăugate: ${count} · Verificat la ${new Date().toLocaleTimeString()}`));
+      if (announce && visibleNow.current) setCountdown(3);
     } catch (error) { if (session === generation.current) { setAuto(false); setStatus(error.message); } }
     finally { lock.current = false; setBusy(false); }
   }
-  async function refresh() {
+  async function refresh(announce = false) {
+    if (announce) setCountdown(null);
     const session = generation.current, id = live.current.accountId;
-    try { const data = folder ? await readFolder(folder) : snapshot; if (session === generation.current && data) await sync(data, id, session); }
+    try { const data = folder ? await readFolder(folder) : snapshot; if (session === generation.current && data) await sync(data, id, session, announce); }
     catch (error) { if (session === generation.current) { setAuto(false); setStatus(error.message); } }
   }
   useEffect(() => {
     if (pendingConnect.current && folder?.companion && accountId && snapshot && !busy) {
       pendingConnect.current = false;
       setAuto(true);
-      sync(snapshot, accountId, generation.current);
+      sync(snapshot, accountId, generation.current, true);
     }
   }, [folder, accountId, snapshot, busy]);
   useEffect(() => {
@@ -141,7 +157,7 @@ function MetaTraderLocal({ trades, saveTrade, userId, enabled, visible, language
   }, [auto, folder, userId, enabled, connected, accountId]);
   function disconnect() {
     if (folder?.companion) companionRequest('disconnect', folder.token).catch(() => {});
-    activeCompanion.current = null; pendingConnect.current = false;
+    activeCompanion.current = null; pendingConnect.current = false; setCountdown(null);
     generation.current++; setAuto(false); setFolder(null); setSnapshot(null); setAccountId('');
     setConnected(false); setStatus(''); setConfirming(false); setSelecting(false); setLastSync(null);
   }
@@ -165,10 +181,17 @@ function MetaTraderLocal({ trades, saveTrade, userId, enabled, visible, language
       <div className="flex items-center gap-3 pr-12"><Link2 className="h-5 w-5 shrink-0 text-amber-500" /><div><p className="text-[10px] tracking-widest text-amber-500">DAYRIS · MT5</p><h2 id="mt5-title" className="mt-1 text-lg font-semibold">MetaTrader 5</h2><p className="mt-1 flex items-center gap-2 text-xs text-zinc-500"><span className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-emerald-500' : 'bg-zinc-500'}`} />{connected ? (folder ? t('Подключён на этом компьютере', 'Connected on this computer', 'Conectat pe acest calculator') : t('Файл импортирован · без автообновления', 'File imported · no auto-refresh', 'Fișier importat · fără actualizare automată')) : t('Подключение через компьютер', 'Connect through your computer', 'Conectare prin calculator')}</p></div></div>
       {!snapshot && savedCount > 0 && <p className="mt-4 text-xs leading-5 text-zinc-500">{t(`В вашем календаре уже есть сделки MT5: ${savedCount}. Это сохранённая история, а не подтверждение активного подключения на этом устройстве.`, `Your calendar already contains ${savedCount} MT5 trades. Saved history does not mean this device has an active connection.`, `Calendarul conține deja ${savedCount} tranzacții MT5. Istoricul salvat nu confirmă o conexiune activă pe acest dispozitiv.`)}</p>}
       <p role="status" className={status ? 'mt-4 rounded-xl border border-zinc-500/25 p-3 text-xs leading-5 break-words' : ''}>{status}</p>
+      {countdown !== null && lastSync && <div role="status" className="mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs leading-5">
+        <p className="font-semibold">{t(`В календарь добавлено сделок: ${lastSync.added}`, `Trades added to calendar: ${lastSync.added}`, `Tranzacții adăugate în calendar: ${lastSync.added}`)}</p>
+        <p>{lastSync.added ? `${lastSync.instruments} · ${lastSync.dates}` : t('Новых закрытых позиций нет. Сохранённые сделки не дублируются.', 'No new closed positions. Saved trades are not duplicated.', 'Nu există poziții închise noi. Tranzacțiile salvate nu sunt duplicate.')}</p>
+        <p>{t(`Проверено закрытых позиций: ${lastSync.checked}. Окно закроется через ${countdown} сек.`, `Closed positions checked: ${lastSync.checked}. Closing in ${countdown} sec.`, `Poziții închise verificate: ${lastSync.checked}. Închidere în ${countdown} sec.`)}</p>
+        <button className="mt-1 underline" onClick={() => setCountdown(null)}>{t('Оставить окно открытым', 'Keep this dialog open', 'Păstrează dialogul deschis')}</button>
+      </div>}
+      <ConnectionInfo t={t} mobile={mobile} />
       {confirming ? <div className="mt-5"><h3 className="font-semibold">{t('Отключить MT5?', 'Disconnect MT5?', 'Deconectezi MT5?')}</h3><p className="mt-2 text-xs leading-5 text-zinc-500">{t('Обновление остановится. Сохранённые сделки останутся в журнале.', 'Refresh stops. Saved trades remain in your journal.', 'Actualizarea se oprește. Tranzacțiile salvate rămân în jurnal.')}</p><div className="mt-4 flex gap-2"><button disabled={busy} className={secondary} onClick={() => setConfirming(false)}>{t('Отмена', 'Cancel', 'Anulează')}</button><button disabled={busy} className={secondary} onClick={disconnect}>{t('Отключить', 'Disconnect', 'Deconectează')}</button></div></div> : <>
         {selected && <div className={`mt-5 ${card}`}><h3 className="mb-4 text-xs font-semibold">{t(connected ? 'Выбранный счёт' : 'Проверьте счёт перед импортом', connected ? 'Selected account' : 'Review account before importing', connected ? 'Cont selectat' : 'Verifică contul înainte de import')}</h3><div className="flex items-center justify-between gap-3"><div className="min-w-0">{accountLabel(selected)}</div>{balance(selected)}</div>{selected.updated && <p className="mt-3 text-[10px] text-zinc-500">{t('Снимок терминала', 'Terminal snapshot', 'Instantaneu terminal')}: {selected.updated} · {folder?.companion ? 'UTC' : t('время брокера', 'broker time', 'ora brokerului')}</p>}</div>}
         {snapshot && (selecting || !selected) && <div className="mt-4" role="group" aria-label={t('Выберите счёт', 'Choose account', 'Alege contul')}><p className="mb-2 text-xs text-zinc-500">{t('Выберите счёт', 'Choose account', 'Alege contul')}</p><div className="max-h-60 space-y-2 overflow-y-auto">{accounts.map(account => <button key={account.id} disabled={busy} aria-pressed={accountId === account.id} onClick={() => { generation.current++; setAccountId(account.id); setAuto(false); setConnected(false); setStatus(''); setSelecting(false); }} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left disabled:opacity-40 ${accountId === account.id ? 'border-amber-400/60 bg-amber-400/10' : isLight ? 'border-zinc-200' : 'border-zinc-800'}`}><span className="min-w-0 flex-1">{accountLabel(account)}</span>{balance(account)}{accountId === account.id && <Check className="h-4 w-4 shrink-0 text-amber-500" />}</button>)}</div>{!accounts.length && <p className="text-xs leading-5 text-zinc-500">{t('Старый пустой экспорт не содержит счёт. Установите обновлённый экспортёр ниже и выберите папку снова.', 'Old empty export has no account. Install the updated exporter below and select the folder again.', 'Exportul vechi gol nu conține contul. Actualizează exportatorul și alege din nou folderul.')}</p>}</div>}
-        {selected && <><p className="mt-4 text-xs text-zinc-500">{t('Закрытых позиций', 'Closed positions', 'Poziții închise')}: {selectedRows.length} · {t('Новых', 'New', 'Noi')}: {pendingMetaTrader(selectedRows, trades).filter(row => !imported.current.has(row.comment)).length}</p><button disabled={busy} onClick={refresh} className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-zinc-950 disabled:opacity-40"><RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} />{t(busy ? 'Синхронизация…' : connected ? 'Синхронизировать' : 'Подключить и синхронизировать', busy ? 'Syncing…' : connected ? 'Synchronize' : 'Connect and synchronize', busy ? 'Sincronizare…' : connected ? 'Sincronizează' : 'Conectează și sincronizează')}</button><p className="mt-2 text-[11px] leading-5 text-zinc-500">{t('Только выбранный счёт → ваш текущий журнал DAYRIS. Повторы пропускаются.', 'Selected account only → your current DAYRIS journal. Duplicates are skipped.', 'Doar contul selectat → jurnalul DAYRIS curent. Duplicatele sunt omise.')}</p></>}
+        {selected && <><p className="mt-4 text-xs text-zinc-500">{t('Закрытых позиций', 'Closed positions', 'Poziții închise')}: {selectedRows.length} · {t('Новых', 'New', 'Noi')}: {pendingMetaTrader(selectedRows, trades).filter(row => !imported.current.has(row.comment)).length}</p><button disabled={busy} onClick={() => refresh(true)} className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-zinc-950 disabled:opacity-40"><RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} />{t(busy ? 'Синхронизация…' : connected ? 'Синхронизировать' : 'Подключить и синхронизировать', busy ? 'Syncing…' : connected ? 'Synchronize' : 'Connect and synchronize', busy ? 'Sincronizare…' : connected ? 'Sincronizează' : 'Conectează și sincronizează')}</button><p className="mt-2 text-[11px] leading-5 text-zinc-500">{t('Только выбранный счёт → ваш текущий журнал DAYRIS. Повторы пропускаются.', 'Selected account only → your current DAYRIS journal. Duplicates are skipped.', 'Doar contul selectat → jurnalul DAYRIS curent. Duplicatele sunt omise.')}</p></>}
         {snapshot && <div className="mt-3 flex flex-wrap gap-2"><button hidden={accounts.length < 2} disabled={busy} className={secondary} onClick={() => setSelecting(value => !value)}>{t('Выбрать счёт', 'Choose account', 'Alege contul')}</button><button disabled={busy} className={secondary} onClick={() => setConfirming(true)}>{t('Отключить', 'Disconnect', 'Deconectează')}</button></div>}
         {folder && connected && <label className="mt-4 flex items-center gap-3 text-xs"><input type="checkbox" checked={auto} disabled={busy} onChange={event => setAuto(event.target.checked)} className="h-4 w-4 accent-amber-400" />{t('Автосинхронизация каждые 30 секунд', 'Auto-sync every 30 seconds', 'Sincronizare automată la 30 secunde')}</label>}
         <CompanionSetup t={t} mobile={mobile} busy={busy} snapshot={snapshot} connect={connectCompanion} />
