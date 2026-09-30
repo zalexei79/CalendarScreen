@@ -95,6 +95,21 @@ try {
   assert.equal(await page.locator('#month').textContent(), '1');
   assert.equal(await page.locator('#selected').textContent(), '');
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  // The real dock component is portalled and measured, including wrapped text.
+  for (const [width, height] of [[320,568],[360,640],[412,915],[568,320],[768,1024],[1024,768],[1440,900]]) {
+    await page.setViewportSize({ width, height }); await fresh();
+    await page.evaluate(() => document.getElementById('root').style.transform = 'translateY(180px)');
+    for (const size of [14, 20, 24]) {
+      await page.locator('.history-fab button').evaluateAll((buttons, size) => buttons.forEach(button => button.style.fontSize = `${size}px`), size);
+      await page.waitForFunction(() => Math.abs(parseFloat(document.documentElement.style.getPropertyValue('--dayris-dock-height')) - document.querySelector('.history-fab').getBoundingClientRect().height) < 1);
+      const dock = await page.locator('.history-fab').boundingBox();
+      assert.ok(dock.y >= 0 && dock.y + dock.height <= height - 48, `dock clears navigation at ${width}x${height}, font ${size}`);
+      for (const button of await page.locator('.history-fab button').all()) {
+        const box = await button.boundingBox();
+        assert.ok(box.x >= 0 && box.x + box.width <= width && box.height >= 44, 'buttons stay visible and tappable');
+      }
+    }
+  }
   assert.deepEqual(errors, []);
   console.log('PASS: Android overscroll policy and slow pull round trip, visual viewport dock clearance, desktop middle-button round trip and guards, day-cell pull and feedback, snap-back, cancellation, no ghost click, month swipes, FREE gate, overlays, native scrolling, multitouch, reduced motion.');
 } finally { await browser.close(); }

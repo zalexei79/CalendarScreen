@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useWorkspaceViewport } from './src/shared/ui/useWorkspaceViewport';
+import WorkspaceDock from './src/shared/ui/WorkspaceDock';
 import MetaTraderControl from './src/features/metatrader/MetaTraderControl.jsx';
 import PlatformConnections, { PlatformHistoryActions } from './src/features/platforms/PlatformConnections.jsx';
 import WealthPlan from './src/features/pro/WealthPlan.jsx';
@@ -4679,7 +4680,7 @@ export default function CalendarScreen() {
       )}
 
       {/* Floating Action Dock: Prominent Center "+" Add Button + History */}
-      <div className="history-fab fixed inset-x-0 flex justify-center items-center z-30 pointer-events-none px-4">
+      <WorkspaceDock proView={proView} isLight={isLight}>
         <div className={`pointer-events-auto flex items-center gap-1.5 sm:gap-2.5 rounded-full border p-1.5 sm:p-2 backdrop-blur-2xl transition-all duration-300 ${
           isLight
             ? 'border-zinc-200/90 bg-white/95 shadow-[0_16px_45px_rgba(0,0,0,0.14)]'
@@ -4723,7 +4724,7 @@ export default function CalendarScreen() {
             </span>
           </button>
         </div>
-      </div>
+      </WorkspaceDock>
 
       {/* HISTORY MODAL — улучшен визуал для светлой темы + кнопка синхронизации cTrader */}
       {historyOpen && (
