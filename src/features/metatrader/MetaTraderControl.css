@@ -1,0 +1,6 @@
+.mt5-setup { margin-top: .5rem; }
+.mt5-setup-intro { display: flex; gap: .75rem; padding: 1rem; border-radius: 1rem; background: rgb(128 128 128 / .07); font-size: .75rem; line-height: 1.65; margin-bottom: 1.5rem; }
+.mt5-setup-intro > svg { flex-shrink: 0; margin-top: .15rem; }
+.mt5-setup-step { display: grid; grid-template-columns: 1.75rem minmax(0, 1fr); gap: .75rem; padding-bottom: 1.5rem; }
+.mt5-setup-step + .mt5-setup-step { padding-top: 1rem; border-top: 1px solid rgb(128 128 128 / .16); }
+.mt5-step-number { display: flex; align-items: center; justify-content: center; height: 1.75rem; border-radius: 50%; border: 1px solid rgb(128 128 128 / .3); font-size: .7rem; font-variant-numeric: tabular-nums; }

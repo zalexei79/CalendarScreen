@@ -6,7 +6,7 @@ import path from 'node:path';
 const require = createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE || import.meta.url);
 const { chromium } = require('playwright');
 const repoRequire = createRequire(path.resolve('package.json'));
-const bundle = await repoRequire('esbuild').build({ entryPoints: [path.resolve('tests/metatrader-ui.jsx')], bundle: true, write: false, format: 'iife', define: { 'process.env.NODE_ENV': '"production"' } });
+const bundle = await repoRequire('esbuild').build({ entryPoints: [path.resolve('tests/metatrader-ui.jsx')], bundle: true, write: false, format: 'iife', loader: { '.css': 'empty' }, define: { 'process.env.NODE_ENV': '"production"' } });
 const browser = await chromium.launch({ channel: 'msedge', headless: true });
 try {
  const page = await browser.newPage({viewport:{width:390,height:844}});
@@ -57,5 +57,28 @@ try {
  await page.getByRole('button',{name:'Подключить и синхронизировать',exact:true}).click();
  await page.waitForFunction(()=>document.querySelector('#saved').textContent==='1');
  assert.deepEqual(errors,[]);
+ // Regression: old exporter on an empty account must explain recovery, not strand the user.
+ await page.reload();
+ await page.evaluate(()=>{window.exports=['platform;server;account;ticket;date;time;symbol;direction;profit;swap;commission;currency\nEND'];});
+ await page.getByRole('button',{name:'Выбрать папку DAYRIS',exact:true}).click();
+ assert.match(await page.getByRole('dialog').getByRole('status').textContent(),/Файл найден, но в нём нет счёта/);
+ assert.equal(await page.locator('#saved').textContent(),'0');
+ assert.equal(await page.getByRole('button',{name:'Подключить и синхронизировать',exact:true}).count(),0);
+ // Mobile is a different workflow, not the desktop instructions with a missing picker.
+ const phone=await browser.newPage({viewport:{width:390,height:844},userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1'});
+ await phone.route('http://dayris.test/**', route => route.fulfill({contentType:'text/html',body:`<!doctype html><html><meta charset="UTF-8"><div id="root"></div><script>${bundle.outputFiles[0].text}</script></html>`}));
+ await phone.goto('http://dayris.test/');
+ assert.equal(await phone.getByText('Первое подключение — на компьютере',{exact:true}).count(),1);
+ assert.equal(await phone.getByRole('button',{name:'Выбрать папку DAYRIS'}).count(),0);
+ assert.equal(await phone.getByRole('link',{name:'Скачать экспортёр MT5'}).count(),0);
+ await phone.getByText('Разовый импорт CSV',{exact:true}).click();
+ await phone.locator('input[type=file]').setInputFiles({name:'dayris-mt5-demo.csv',mimeType:'text/csv',buffer:Buffer.from('platform;server;account;ticket;date;time;symbol;direction;profit;swap;commission;currency\nACCOUNT;MT5;Demo;42;Test Broker;Demo;1000;USD;2026-09-30 01:00:00\nMT5;Demo;42;1;2026-09-30;01:00:00;EURUSD;buy;1;0;0;USD\nEND')});
+ await phone.getByRole('button',{name:'Подключить и синхронизировать',exact:true}).click();
+ assert.equal(await phone.locator('#saved').textContent(),'1');
+ assert.equal(await phone.getByText('Файл импортирован · без автообновления',{exact:true}).count(),1);
+ assert.equal(await phone.getByRole('checkbox').count(),0);
+ await phone.getByRole('button',{name:'Синхронизировать',exact:true}).click();
+ assert.equal(await phone.locator('#saved').textContent(),'1');
+ console.log('PASS: old empty exporter recovery, mobile-first instructions, manual CSV import clearly labelled, no false auto-sync, manual duplicate prevention.');
  console.log('PASS: empty account, account selection, broker isolation, duplicate prevention, auto-sync, disconnect preserves history, owner isolation, PRO gate, desktop/mobile interaction. CSS unavailable: not visual QA.');
 } finally {await browser.close();}
