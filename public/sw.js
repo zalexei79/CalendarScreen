@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v15-event-reminders';
+const CACHE_NAME = 'atj-cache-v16-mt5-companion';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
@@ -97,6 +97,7 @@ self.addEventListener('fetch', (event) => {
   // Never cache Supabase, backend API, or OAuth calls
   if (
     url.hostname.includes('supabase.co') ||
+    url.pathname === '/metatrader/DAYRIS-MT5.exe' ||
     url.pathname.startsWith('/rest/') ||
     url.pathname.startsWith('/auth/') ||
     url.pathname.startsWith('/functions/')

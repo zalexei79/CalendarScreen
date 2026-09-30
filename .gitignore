@@ -1,4 +1,8 @@
 node_modules
+.mt5-build/
+.mt5-pyinstaller/
+DAYRIS-MT5.spec
+__pycache__/
 .env*
 !.env.example
 dist

@@ -4286,7 +4286,7 @@ export default function CalendarScreen() {
         platformFilter={platformFilter} platformOptions={['ALL', 'cTrader', 'MT4', 'MT5']}
         calendarTypeFilter={calendarTypeFilter} setCalendarTypeFilter={setCalendarTypeFilter}
         openConnectModal={openConnectModal} ctraderConnected={ctraderConnected} ctraderReconnect={ctraderReconnect}
-        metaTraderState={metaTraderState.owner === user?.id && proAccessActive ? metaTraderState : {}}
+        metaTraderState={metaTraderState.owner === user?.id ? metaTraderState : {}}
         installInfoRef={installInfoRef} handleInstallClick={handleInstallClick}
         pendingSyncCount={pendingSyncCount} installInfoOpen={installInfoOpen} installInstructions={installInstructions} isPwaInstalled={isPwaInstalled}
         failedSyncCount={failedSyncCount} retryFailedSync={retryFailedSync}
@@ -6755,7 +6755,7 @@ export default function CalendarScreen() {
         <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 transition-opacity duration-200 ${connectVisible ? 'opacity-100' : 'opacity-0'}`} onMouseDown={handleBackdropMouseDown} onClick={handleConnectBackdropClick}>
           <div role="dialog" aria-modal="true" aria-label={connectTab === 'ctrader' ? 'cTrader' : 'cTrader / MetaTrader 5'} className={`relative max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-3xl border p-5 shadow-2xl sm:p-6 ${isLight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-zinc-800 bg-zinc-950 text-zinc-100'}`}>
             <button onClick={closeConnectModal} aria-label={t('close')} className="absolute right-3 top-3 rounded-lg p-2 text-zinc-500 hover:text-amber-500"><X className="h-4 w-4" /></button>
-            {connectTab === 'ctrader' ? <CtraderControl t={t} language={language} isLight={isLight} connected={ctraderConnected} reconnect={ctraderReconnect} loading={ctraderLoading} syncing={syncingCtrader} accounts={ctraderAccounts} accountId={ctraderAccountId} onConnect={handleConnectCtrader} onSelect={handleSelectCtraderAccount} onSync={handleSyncCtraderTrades} onDisconnect={handleDisconnectCtrader} importedCount={Object.values(manualTrades).flat().filter(trade => trade.platform === 'cTrader' && trade.ctrader_account_id === ctraderAccountId).length} lastSync={ctraderLastSync?.accountId === ctraderAccountId ? ctraderLastSync : null} /> : <PlatformConnections language={language} isLight={isLight} onOpen={openConnectModal} ctrader={{ connected: ctraderConnected, reconnect: ctraderReconnect, busy: syncingCtrader, count: Object.values(manualTrades).flat().filter(trade => trade.platform === 'cTrader').length, lastSync: ctraderLastSync }} metatrader={{ ...(metaTraderState.owner === user?.id && proAccessActive ? metaTraderState : {}), count: Object.values(manualTrades).flat().filter(trade => trade.platform === 'MT5').length }} />}
+            {connectTab === 'ctrader' ? <CtraderControl t={t} language={language} isLight={isLight} connected={ctraderConnected} reconnect={ctraderReconnect} loading={ctraderLoading} syncing={syncingCtrader} accounts={ctraderAccounts} accountId={ctraderAccountId} onConnect={handleConnectCtrader} onSelect={handleSelectCtraderAccount} onSync={handleSyncCtraderTrades} onDisconnect={handleDisconnectCtrader} importedCount={Object.values(manualTrades).flat().filter(trade => trade.platform === 'cTrader' && trade.ctrader_account_id === ctraderAccountId).length} lastSync={ctraderLastSync?.accountId === ctraderAccountId ? ctraderLastSync : null} /> : <PlatformConnections language={language} isLight={isLight} onOpen={openConnectModal} ctrader={{ connected: ctraderConnected, reconnect: ctraderReconnect, busy: syncingCtrader, count: Object.values(manualTrades).flat().filter(trade => trade.platform === 'cTrader').length, lastSync: ctraderLastSync }} metatrader={{ ...(metaTraderState.owner === user?.id ? metaTraderState : {}), count: Object.values(manualTrades).flat().filter(trade => trade.platform === 'MT5').length }} />}
             {connectTab === 'ctrader' && ctraderNotice?.kind === 'error' && !(ctraderNotice.stage === 'accounts' && ctraderReconnect) && (
               <p role="status" className="mt-4 text-sm leading-relaxed text-amber-600">
                 {t(ctraderNotice.code === 'RECONNECT_REQUIRED' ? 'ctReconnect' : ctraderNotice.code === 'UNAUTHORIZED' ? 'ctLogin' : ctraderNotice.code === 'OFFLINE' ? 'ctOffline' : 'ctError')}
@@ -6766,7 +6766,7 @@ export default function CalendarScreen() {
         </div>
         </React.Fragment>
       )}
-      <MetaTraderControl trades={manualTrades} saveTrade={hookSaveTrade} userId={user?.id} enabled={proAccessActive && Boolean(user?.id)} visible={metaTraderOpen} onClose={() => setMetaTraderOpen(false)} onConnectionChange={setMetaTraderState} language={language} isLight={isLight} />
+      <MetaTraderControl trades={manualTrades} saveTrade={hookSaveTrade} userId={user?.id} enabled={Boolean(user?.id)} visible={metaTraderOpen} onClose={() => setMetaTraderOpen(false)} onConnectionChange={setMetaTraderState} language={language} isLight={isLight} />
 
       {/* ANALYSIS MODAL — free basic stats now, paid deep AI analysis coming later */}
       {analysisOpen && (

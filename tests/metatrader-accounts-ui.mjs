@@ -7,6 +7,11 @@ const require = createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE || import.me
 const { chromium } = require('playwright');
 const repoRequire = createRequire(path.resolve('package.json'));
 const bundle = await repoRequire('esbuild').build({ entryPoints: [path.resolve('tests/metatrader-ui.jsx')], bundle: true, write: false, format: 'iife', loader: { '.css': 'empty' }, define: { 'process.env.NODE_ENV': '"production"' } });
+async function legacyFolder(page) {
+ const button = page.getByRole('button', { name: 'Выбрать папку DAYRIS', exact: true });
+ if (!await button.isVisible()) await page.getByText('Дополнительные способы импорта', { exact: true }).click();
+ await button.click();
+}
 const browser = await chromium.launch({ channel: 'msedge', headless: true });
 try {
  const page = await browser.newPage({viewport:{width:390,height:844}});
@@ -21,7 +26,7 @@ try {
  await page.route('https://cdn.tailwindcss.com/**',route=>route.fulfill({body:''}));
  await page.route('http://dayris.test/**', route => route.fulfill({contentType:'text/html',body:`<!doctype html><html><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div><script>${bundle.outputFiles[0].text}</script></html>`}));
  await page.goto('http://dayris.test/',{waitUntil:'domcontentloaded',timeout:20000});
- await page.getByRole('button',{name:'Выбрать папку DAYRIS',exact:true}).click();
+ await legacyFolder(page);
  await page.getByRole('button',{name:/Broker A/}).click();
  await page.getByRole('button',{name:'Подключить и синхронизировать',exact:true}).click();
  assert.equal(await page.locator('#saved').textContent(),'0');
@@ -52,7 +57,7 @@ try {
  await page.locator('#pro').click(); await page.locator('#open').click();
  assert.equal(await page.getByRole('dialog').count(),0);
  await page.locator('#pro').click(); await page.setViewportSize({width:1280,height:900});
- await page.getByRole('button',{name:'Выбрать папку DAYRIS',exact:true}).click();
+ await legacyFolder(page);
  await page.getByRole('button',{name:/Broker B/}).click();
  await page.getByRole('button',{name:'Подключить и синхронизировать',exact:true}).click();
  await page.waitForFunction(()=>document.querySelector('#saved').textContent==='1');
@@ -60,7 +65,7 @@ try {
  // Regression: old exporter on an empty account must explain recovery, not strand the user.
  await page.reload();
  await page.evaluate(()=>{window.exports=['platform;server;account;ticket;date;time;symbol;direction;profit;swap;commission;currency\nEND'];});
- await page.getByRole('button',{name:'Выбрать папку DAYRIS',exact:true}).click();
+ await legacyFolder(page);
  assert.match(await page.getByRole('dialog').getByRole('status').textContent(),/Файл найден, но в нём нет счёта/);
  assert.equal(await page.locator('#saved').textContent(),'0');
  assert.equal(await page.getByRole('button',{name:'Подключить и синхронизировать',exact:true}).count(),0);
@@ -71,6 +76,7 @@ try {
  assert.equal(await phone.getByText('Первое подключение — на компьютере',{exact:true}).count(),1);
  assert.equal(await phone.getByRole('button',{name:'Выбрать папку DAYRIS'}).count(),0);
  assert.equal(await phone.getByRole('link',{name:'Скачать экспортёр MT5'}).count(),0);
+ await phone.getByText('Дополнительные способы импорта',{exact:true}).click();
  await phone.getByText('Разовый импорт CSV',{exact:true}).click();
  await phone.locator('input[type=file]').setInputFiles({name:'dayris-mt5-demo.csv',mimeType:'text/csv',buffer:Buffer.from('platform;server;account;ticket;date;time;symbol;direction;profit;swap;commission;currency\nACCOUNT;MT5;Demo;42;Test Broker;Demo;1000;USD;2026-09-30 01:00:00\nMT5;Demo;42;1;2026-09-30;01:00:00;EURUSD;buy;1;0;0;USD\nEND')});
  await phone.getByRole('button',{name:'Подключить и синхронизировать',exact:true}).click();
