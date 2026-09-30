@@ -36,7 +36,7 @@ function MetaTraderLocal({ trades, saveTrade, userId, enabled, visible, language
   useEffect(() => {
     if (!visible || !enabled || confirming || selecting) { setCountdown(null); return; }
     if (countdown === null) return;
-    if (countdown === 3) dialog.current?.scrollTo?.({ top: 0, behavior: 'smooth' });
+    if (countdown === 10) dialog.current?.scrollTo?.({ top: 0, behavior: 'smooth' });
     if (countdown === 0) { setCountdown(null); close.current(); return; }
     const timer = setTimeout(() => setCountdown(value => value === null ? null : value - 1), 1000);
     return () => clearTimeout(timer);
@@ -133,7 +133,7 @@ function MetaTraderLocal({ trades, saveTrade, userId, enabled, visible, language
         instruments: [...new Set(pending.map(row => row.instrument))].join(', '),
         dates: [...new Set(pending.map(row => row.dateKey))].sort().join(', ') });
       setStatus(t(`Добавлено: ${count} · Проверено в ${new Date().toLocaleTimeString()}`, `Added: ${count} · Checked at ${new Date().toLocaleTimeString()}`, `Adăugate: ${count} · Verificat la ${new Date().toLocaleTimeString()}`));
-      if (announce && visibleNow.current) setCountdown(3);
+      if (announce && visibleNow.current) setCountdown(10);
     } catch (error) { if (session === generation.current) { setAuto(false); setStatus(error.message); } }
     finally { lock.current = false; setBusy(false); }
   }

@@ -34,6 +34,8 @@ try {
   await page.getByRole('status').filter({ hasText: 'Добавлено: 0' }).waitFor();
   await page.getByText('В календарь добавлено сделок: 0', { exact: true }).waitFor();
   await page.clock.runFor(3500);
+  assert.equal(await page.getByRole('dialog').isVisible(), true);
+  await page.clock.runFor(7000);
   assert.equal(await page.getByRole('dialog').count(), 0);
   assert.equal(await page.locator('#saved').textContent(), '1');
   await page.locator('#open').click();
