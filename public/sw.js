@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v14-clean-reminders';
+const CACHE_NAME = 'atj-cache-v15-event-reminders';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
@@ -12,10 +12,13 @@ self.addEventListener('push', (event) => {
   const deliveryId = uuid(data.deliveryId) ? data.deliveryId : '';
   // Compatible with the existing sender and already queued reminder payloads.
   const eventTitle = typeof data.title === 'string' && data.title.trim() && data.title.length < 90 ? data.title.trim() : '';
-  const title = 'DAYRIS';
-  const body = eventTitle
-    ? eventTitle.replace(/ · ((?:[$€₽][\d\s.,]+|[\d\s.,]+ [A-Z]{1,6}))$/, '\n$1')
-    : 'DAYRIS';
+  // The OS already identifies the app (including "from DAYRIS" on Watch).
+  // Use this space for the event, not another copy of the brand. These are
+  // reminders, not proof that a payment arrived or an expense was completed.
+  const title = eventTitle || 'Напоминание';
+  const body = typeof data.body === 'string' && data.body.trim() && data.body.length <= 160
+    ? data.body.trim().replace(/\s+/g, ' ')
+    : 'Откройте календарь и отметьте выполнение.';
   event.waitUntil(self.registration.showNotification(title, {
     body,
     icon: '/icon-192.png?v=20260920-desktop-v4',
