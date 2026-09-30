@@ -1,12 +1,42 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Gift } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
+import './ProGrantNotice.css';
+
+function yearsLabel(days, language) {
+  if (days <= 365) return '';
+  const years = Math.round(days / 365.25 * 10) / 10;
+  const locale = language === 'en' ? 'en-US' : language === 'md' ? 'ro-RO' : 'ru-RU';
+  const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(years);
+  if (language === 'en') return `${number} ${years === 1 ? 'year' : 'years'}`;
+  if (language === 'md') return `${number} ${years === 1 ? 'an' : 'ani'}`;
+  const plural = new Intl.PluralRules('ru').select(years);
+  return `${number} ${{ one: 'год', few: 'года', many: 'лет', other: 'года' }[plural]}`;
+}
 
 export default function ProGrantNotice({ userId, active, until, language = 'ru', isLight }) {
   const [notice, setNotice] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(false);
   const acknowledged = useRef(new Set());
+  const confirmButton = useRef(null);
+  const visible = active && notice?.owner === userId && Number.isFinite(new Date(until).getTime()) && new Date(until).getTime() > Date.now();
+  useEffect(() => {
+    if (!visible) return undefined;
+    const previous = document.activeElement;
+    confirmButton.current?.focus();
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    function keepFocus(event) {
+      if (event.key === 'Tab') { event.preventDefault(); confirmButton.current?.focus(); }
+    }
+    document.addEventListener('keydown', keepFocus);
+    return () => {
+      document.body.style.overflow = overflow;
+      document.removeEventListener('keydown', keepFocus);
+      if (previous?.isConnected) previous.focus?.();
+    };
+  }, [visible]);
   useEffect(() => {
     setNotice(null);
     setError(false);
@@ -63,11 +93,18 @@ export default function ProGrantNotice({ userId, active, until, language = 'ru',
     finally { setSaving(false); }
   }
   return (
-    <aside role="status" aria-live="polite" className={`fixed bottom-24 left-4 right-4 z-[200] mx-auto max-w-sm rounded-3xl border p-5 shadow-2xl ${isLight ? 'border-amber-200 bg-white text-zinc-900' : 'border-amber-400/30 bg-zinc-900 text-white'}`}>
-      <div className="flex items-center gap-3"><Gift className="shrink-0 text-amber-500" size={26} /><h2 className="text-lg font-semibold">{copy[0]}</h2></div>
-      <p className="mt-3 text-sm">{copy[1]}: <strong className="text-amber-500">{days}</strong></p>
+    <div className={`pro-celebration ${isLight ? 'pro-celebration-light' : ''}`}>
+      <div className="pro-celebration-confetti" aria-hidden="true">
+        {Array.from({ length: 48 }, (_, i) => <i key={i} style={{ '--x': `${(i * 37 + 9) % 100}%`, '--delay': `${(i % 12) * 0.09}s`, '--drift': `${((i * 29) % 180) - 90}px`, '--spin': `${(i % 2 ? 1 : -1) * (360 + i * 17)}deg`, '--color': ['#fbbf24', '#fef3c7', '#34d399', '#f59e0b', '#a78bfa'][i % 5] }} />)}
+      </div>
+      <section role="dialog" aria-modal="true" aria-labelledby="pro-celebration-title" aria-describedby="pro-celebration-days" className="pro-celebration-card">
+      <div className="pro-celebration-gift" aria-hidden="true"><Gift size={40} strokeWidth={1.5} /></div>
+      <span className="pro-celebration-badge">DAYRIS PRO</span>
+      <h2 id="pro-celebration-title">{copy[0]}</h2>
+      <p id="pro-celebration-days" className="pro-celebration-duration">{copy[1]}: <strong>{days}</strong>{days > 365 && <span className="pro-celebration-years"> ({yearsLabel(days, language)})</span>}</p>
       {error && <p role="alert" className="mt-2 text-sm text-red-500">{copy[3]}</p>}
-      <button type="button" disabled={saving} onClick={dismiss} className="mt-4 w-full rounded-xl bg-amber-400 px-4 py-3 font-semibold text-zinc-950 disabled:opacity-50">{copy[2]}</button>
-    </aside>
+      <button ref={confirmButton} type="button" aria-disabled={saving} onClick={dismiss} className="pro-celebration-confirm">{copy[2]}</button>
+      </section>
+    </div>
   );
 }
