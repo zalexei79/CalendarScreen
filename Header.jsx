@@ -528,7 +528,6 @@ export default function Header({
 
           {/* The workspace selector is separate from server-side PRO entitlement. */}
           <div className="dayris-workspace-slot">
-            {user && proAccessActive && <button type="button" onClick={() => openConnectModal('mt5')} className="mb-2 min-h-11 rounded-xl border border-amber-400/25 px-4 text-xs font-semibold text-amber-500">MT5 · {language === 'ru' ? (metaTraderState?.connected ? 'Синхронизировать' : 'Подключить') : ['ro', 'md'].includes(language) ? (metaTraderState?.connected ? 'Sincronizează' : 'Conectează') : (metaTraderState?.connected ? 'Synchronize' : 'Connect')}</button>}
             <WorkspaceModePanel
               proView={proView} onModeChange={() => setProView((value) => !value)} isLight={isLight}
               language={language} t={t} traderMode={traderMode}
