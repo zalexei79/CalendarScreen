@@ -29,14 +29,30 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
     let suppressClickUntil = 0;
     let exiting = false;
     const reset = () => { gesture = null; setDrag(IDLE); };
+    const acceptsTarget = (target) => {
+      if (!(target instanceof Element)) return false;
+      const control = target.closest(INTERACTIVE);
+      return !control || (navigation === 'calendar' && control.matches('.calendar-days-grid > button'));
+    };
+    const canMiddleNavigate = (event) => event.button === 1 && !exiting && !config.current.disabled && config.current.onExit && acceptsTarget(event.target);
+    function middleDown(event) {
+      // Prevent the browser's middle-button autoscroll before it starts.
+      if (canMiddleNavigate(event)) event.preventDefault();
+    }
+    function middleClick(event) {
+      if (!canMiddleNavigate(event)) return;
+      event.preventDefault();
+      exiting = true;
+      reset();
+      config.current.onExit();
+    }
 
     function start(event) {
       reset();
       const target = event.target instanceof Element ? event.target : null;
       if (exiting || config.current.disabled || event.touches.length !== 1 || !target) return;
-      const control = target.closest(INTERACTIVE);
       // Calendar cells remain tappable, but may also be the start of a swipe.
-      if (control && !(navigation === 'calendar' && control.matches('.calendar-days-grid > button'))) return;
+      if (!acceptsTarget(target)) return;
       if (window.getSelection()?.toString() || (window.visualViewport?.scale || 1) > 1.05) return;
       const touch = event.touches[0];
       // Leave the browser's own edge navigation gestures available.
@@ -51,9 +67,11 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
       if (touch.identifier !== gesture.id) { reset(); return; }
       const dx = touch.clientX - gesture.x, dy = touch.clientY - gesture.y;
       if (!gesture.axis) {
-        if (Math.max(Math.abs(dx), Math.abs(dy)) < 12) return;
-        if (Math.abs(dx) > Math.abs(dy) * 1.5) gesture.axis = 'x';
-        else if (dy > Math.abs(dx) * 1.7 && gesture.atTop && config.current.onExit) gesture.axis = 'y';
+        // Claim a downward pull at the top before Android's native scroll slop
+        // takes ownership. The full release threshold still prevents accidental entry.
+        if (dy >= 4 && dy > Math.abs(dx) * 1.7 && gesture.atTop && config.current.onExit) gesture.axis = 'y';
+        else if (Math.max(Math.abs(dx), Math.abs(dy)) < 12) return;
+        else if (Math.abs(dx) > Math.abs(dy) * 1.5) gesture.axis = 'x';
         else { reset(); return; } // A scroll remains a scroll for this entire touch.
       }
       if (!event.cancelable) { reset(); return; }
@@ -91,12 +109,16 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
     surface.addEventListener('touchend', end, { passive: true });
     surface.addEventListener('touchcancel', reset, { passive: true });
     surface.addEventListener('click', preventGhostClick, true);
+    surface.addEventListener('mousedown', middleDown);
+    surface.addEventListener('auxclick', middleClick);
     return () => {
       surface.removeEventListener('touchstart', start);
       surface.removeEventListener('touchmove', move);
       surface.removeEventListener('touchend', end);
       surface.removeEventListener('touchcancel', reset);
       surface.removeEventListener('click', preventGhostClick, true);
+      surface.removeEventListener('mousedown', middleDown);
+      surface.removeEventListener('auxclick', middleClick);
     };
   }, [disabled, Boolean(onExit), navigation]);
 

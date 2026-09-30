@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useWorkspaceViewport } from './src/shared/ui/useWorkspaceViewport';
 import MetaTraderControl from './src/features/metatrader/MetaTraderControl.jsx';
 import PlatformConnections, { PlatformHistoryActions } from './src/features/platforms/PlatformConnections.jsx';
 import WealthPlan from './src/features/pro/WealthPlan.jsx';
@@ -100,6 +101,7 @@ import SwipeDismissSheet from './src/shared/ui/SwipeDismissSheet.jsx';
 import ProOffer from './src/features/pro/ProOffer.jsx';
 
 export default function CalendarScreen() {
+  useWorkspaceViewport();
   const [accountMode, setAccountMode] = useState(() => { try { return localStorage.getItem('dayris_account_mode') || 'main'; } catch { return 'main'; } });
   useEffect(() => { try { localStorage.setItem('dayris_account_mode', accountMode); } catch {} }, [accountMode]);
   const [today, setToday] = useState(() => new Date());
@@ -4239,9 +4241,6 @@ export default function CalendarScreen() {
         @keyframes premiumFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
         .premium-shell { min-height: 100dvh; }
         /* Reserve the dock's space in the scrollable calendar, including iOS's home indicator. */
-        .calendar-section { padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
-        .history-fab { bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
-        @media (min-width: 640px) { .history-fab { bottom: 26px; } }
         .premium-shell { font-size: 15px; }
         .premium-shell .font-data { letter-spacing: .055em; }
         @media (max-width: 640px) { .premium-shell { font-size: 16px; } .premium-shell p, .premium-shell button { -webkit-font-smoothing: antialiased; } }

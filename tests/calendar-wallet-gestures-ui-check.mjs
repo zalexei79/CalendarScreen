@@ -23,6 +23,23 @@ try {
   }
   async function fresh() { await page.goto('http://dayris.test/'); await page.locator('.calendar-days-grid').waitFor(); await page.waitForTimeout(50); }
   const remains = async () => assert.equal(await page.locator('.calendar-days-grid').count(), 1);
+  // Android: root overscroll is disabled before the gesture, including small moves.
+  await fresh();
+  for (const selector of ['html', 'body']) assert.equal(await page.locator(selector).evaluate(el => getComputedStyle(el).overscrollBehaviorY), 'none');
+  await send('touchStart', 195, 150);
+  for (const dy of [2, 5, 10, 20, 45, 90, 150, 180]) { await send('touchMove', 195, 150 + dy); await page.waitForTimeout(20); }
+  await send('touchEnd'); await page.locator('.wallet-panel-enter').waitFor();
+  await swipe(195, 115, 0, 180); await page.locator('.calendar-days-grid').waitFor();
+  // Browser bars/keyboard: keep the floating dock above the visible lower edge.
+  await fresh();
+  await page.evaluate(() => {
+    Object.defineProperty(visualViewport, 'height', { configurable: true, value: 550 });
+    visualViewport.dispatchEvent(new Event('resize'));
+  });
+  await page.waitForFunction(() => parseFloat(document.documentElement.style.getPropertyValue('--dayris-viewport-bottom')) > 200);
+  assert.ok((await page.locator('.history-fab').boundingBox()).y + 48 <= 550);
+  await page.evaluate(() => { delete visualViewport.height; visualViewport.dispatchEvent(new Event('resize')); });
+  await page.waitForFunction(() => document.documentElement.style.getPropertyValue('--dayris-viewport-bottom') === '0px');
   // Pull from a real day button: follows the finger, shows readiness, prevents ghost selection.
   await fresh(); await send('touchStart', 195, 150); await send('touchMove', 195, 220);
   assert.notEqual(await page.locator('.calendar-section').evaluate(el => getComputedStyle(el).transform), 'none');
@@ -65,11 +82,19 @@ try {
   // Desktop mouse month navigation remains independent from touch gestures.
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.setViewportSize({ width: 1280, height: 900 }); await fresh();
+  await page.mouse.click(650, 150, { button: 'middle' }); await page.locator('.wallet-panel-enter').waitFor();
+  await page.mouse.click(650, 115, { button: 'middle' }); await page.locator('.calendar-days-grid').waitFor();
+  assert.equal(await page.locator('#selected').textContent(), '');
+  await fresh(); await page.locator('#blocked').click();
+  await page.mouse.click(650, 150, { button: 'middle' }); await remains();
+  await fresh(); await page.locator('#pro').click();
+  await page.mouse.click(650, 150, { button: 'middle' }); await remains();
+  await fresh();
   await page.mouse.move(650, 150); await page.mouse.down();
   await page.mouse.move(480, 150, { steps: 8 }); await page.mouse.up();
   assert.equal(await page.locator('#month').textContent(), '1');
   assert.equal(await page.locator('#selected').textContent(), '');
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   assert.deepEqual(errors, []);
-  console.log('PASS: real day-cell pull and feedback, enter/exit round trip, snap-back, cancellation, no ghost day click, month swipes, FREE gate, overlays, native scrolling, multitouch, reduced motion.');
+  console.log('PASS: Android overscroll policy and slow pull round trip, visual viewport dock clearance, desktop middle-button round trip and guards, day-cell pull and feedback, snap-back, cancellation, no ghost click, month swipes, FREE gate, overlays, native scrolling, multitouch, reduced motion.');
 } finally { await browser.close(); }

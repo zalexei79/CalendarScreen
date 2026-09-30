@@ -1,0 +1,13 @@
+/* Suppress browser pull-to-refresh, not scrolling or horizontal edge navigation. */
+html, body { overscroll-behavior-y: none; }
+.wallet-panel-enter { overscroll-behavior-y: none; }
+.history-fab {
+  bottom: calc(26px + max(env(safe-area-inset-bottom, 0px), var(--dayris-viewport-bottom, 0px)));
+  max-width: 100%;
+}
+.calendar-section {
+  padding-bottom: calc(112px + max(env(safe-area-inset-bottom, 0px), var(--dayris-viewport-bottom, 0px)));
+}
+.wallet-panel-enter {
+  padding-bottom: calc(24px + max(env(safe-area-inset-bottom, 0px), var(--dayris-viewport-bottom, 0px)));
+}
