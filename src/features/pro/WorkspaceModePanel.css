@@ -1,0 +1,51 @@
+/* One deliberate layout, not a row of independently wrapping pills. */
+.workspace-mode-panel {
+  --pro-bg: #101112; --pro-surface: #191a1c; --pro-text: #f3f0e9;
+  --pro-muted: #a5a5aa; --pro-line: rgba(255,255,255,.10); --pro-gold: #edcd87;
+  display: grid; grid-template-columns: 86px 44px minmax(0,1fr) 44px;
+  align-items: center; column-gap: 4px; row-gap: 8px; width: 100%; min-width: 0;
+  padding: 10px; border: 1px solid var(--pro-line); border-radius: 20px;
+  color: var(--pro-text); background: linear-gradient(125deg,rgba(237,205,135,.035),transparent 55%),var(--pro-bg);
+  box-shadow: inset 0 1px rgba(255,255,255,.035),0 8px 28px rgba(0,0,0,.08);
+  font-family: Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  box-sizing: border-box;
+}
+.workspace-mode-panel.pro-light { --pro-bg:#fcfbf8; --pro-surface:#f1efea; --pro-text:#222325; --pro-muted:#67686c; --pro-line:rgba(30,30,35,.13); --pro-gold:#886224; box-shadow:inset 0 1px #fff,0 5px 18px rgba(30,30,35,.035); }
+.workspace-mode-panel *, .workspace-mode-panel *::before { box-sizing: border-box; }
+.workspace-mode-panel.is-pro { border-color: color-mix(in srgb,var(--pro-gold) 20%,var(--pro-line)); }
+.workspace-selector { grid-column:1; grid-row:1; display:grid; grid-template-columns:1fr 1fr; align-items:center; height:44px; padding:3px; border:1px solid var(--pro-line); border-radius:12px; background:var(--pro-surface); color:var(--pro-muted); font-family:inherit; font-size:9px; font-weight:600; letter-spacing:.02em; cursor:pointer; }
+.workspace-selector span { display:grid; place-items:center; height:34px; border-radius:8px; transition:background .2s,color .2s; white-space:nowrap; }
+.workspace-selector span[data-active="true"] { background:color-mix(in srgb,var(--pro-text) 10%,var(--pro-surface)); color:var(--pro-text); box-shadow:inset 0 1px rgba(255,255,255,.06); }
+.is-pro .workspace-selector span[data-active="true"] { background:#edcd87; color:#282111; box-shadow:inset 0 1px rgba(255,255,255,.3); }
+.workspace-free-caption { grid-column:2/-1; grid-row:1; display:flex; align-items:center; justify-content:space-between; gap:8px; padding-left:10px; color:var(--pro-muted); font-size:11px; }
+.workspace-free-caption button { display:grid; place-items:center; width:44px; height:44px; flex:0 0 auto; padding:0; border:0; background:transparent; color:var(--pro-muted); cursor:pointer; }
+.workspace-free-caption svg { width:17px; height:17px; stroke-width:1.6; }
+.dayris-workspace-slot { flex:0 0 100%; width:100%; min-width:0; margin-top:6px; }
+.pro-actions-reveal { display:block; min-width:0; width:100%; opacity:1; visibility:visible; transition:none; }
+.pro-actions-reveal .pro-actions { display:grid; grid-template-columns:44px minmax(0,1fr) 44px; gap:8px 4px; width:100%; min-width:0; max-width:none; padding:0; border:0; border-radius:0; background:none; box-shadow:none; }
+.pro-actions-reveal .pro-control { min-width:0; height:44px; min-height:44px; margin:0; padding:0; border:1px solid transparent; border-radius:11px; font-size:11px; background:transparent; }
+.pro-actions-reveal .pro-control-wallet { grid-column:1; grid-row:1; width:44px; color:var(--pro-gold); background:color-mix(in srgb,var(--pro-gold) 5%,transparent); border-color:color-mix(in srgb,var(--pro-gold) 12%,transparent); }
+.pro-actions-reveal .pro-control-wallet > span { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+.pro-actions-reveal .pro-control-trader { grid-column:2; grid-row:1; width:100%; gap:6px; padding:0 3px; justify-content:center; border-color:var(--pro-line); color:var(--pro-muted); }
+.pro-actions-reveal .pro-control-trader > span:not(.pro-control-toggle) { position:static; width:auto; height:auto; overflow:visible; clip-path:none; white-space:nowrap; font-size:10px; }
+.pro-actions-reveal .pro-control-trader[aria-checked="true"] { color:var(--pro-text); border-color:rgba(83,196,165,.22); background:rgba(83,196,165,.045); }
+.pro-actions-reveal .pro-control-toggle { flex:0 0 auto; width:26px; height:16px; padding:3px; }
+.pro-actions-reveal .pro-control-toggle > span { width:10px; height:10px; }
+.pro-actions-reveal .pro-control-trader[aria-checked="true"] .pro-control-toggle > span { transform:translateX(10px); }
+.pro-actions-reveal .pro-control-info { grid-column:3; grid-row:1; width:44px; color:var(--pro-muted); }
+.pro-actions-reveal .pro-control:hover:not(:disabled) { color:var(--pro-text); background:var(--pro-surface); }
+.pro-platform-row { grid-column:1/-1; grid-row:2; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; padding-top:8px; border-top:1px solid var(--pro-line); }
+.pro-actions-reveal .pro-control-platform { display:flex; align-items:center; justify-content:flex-start; gap:8px; width:100%; min-width:0; height:48px; padding:0 10px; border:1px solid var(--pro-line); border-radius:12px; background:color-mix(in srgb,var(--pro-surface) 45%,transparent); white-space:normal; }
+.pro-actions-reveal .pro-control-platform > svg { display:block; width:15px; height:15px; color:var(--pro-muted); }
+.pro-actions-reveal .pro-platform-label { display:flex; flex:1; flex-direction:column; align-items:flex-start; gap:3px; position:static; width:auto; height:auto; min-width:0; overflow:visible; clip-path:none; }
+.pro-platform-label strong { color:var(--pro-text); font-size:11px; font-weight:550; line-height:1.1; }
+.pro-platform-label small { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--pro-muted); font-size:9px; line-height:1.2; }
+.pro-actions-reveal .pro-control-platform i { flex:0 0 auto; width:5px; height:5px; }
+.pro-actions-reveal .pro-control-platform:disabled { cursor:not-allowed; opacity:.52; }
+.workspace-mode-panel .in-workspace-panel, .workspace-mode-panel .in-workspace-panel .pro-actions { display:contents; }
+.workspace-mode-panel .pro-control-wallet { grid-column:2; }
+.workspace-mode-panel .pro-control-trader { grid-column:3; }
+.workspace-mode-panel .pro-control-info { grid-column:4; }
+.workspace-mode-panel button:focus-visible { outline:2px solid var(--pro-gold); outline-offset:2px; }
+@media(min-width:640px) { .dayris-workspace-slot { flex:0 1 440px; width:440px; margin:0 0 0 8px; } .workspace-mode-panel { grid-template-columns:104px 44px minmax(0,1fr) 44px; gap:8px; } .workspace-selector { font-size:10px; } .pro-actions-reveal .pro-control-trader > span:not(.pro-control-toggle) { font-size:11px; } }
+@media(prefers-reduced-motion:reduce) { .workspace-selector span { transition:none; } }

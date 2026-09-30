@@ -7,7 +7,7 @@ import {
 import { LANGUAGES, CURRENCIES } from './src/shared/config/constants';
 import { monthsFor } from './src/shared/i18n';
 import BrandIcon from './src/shared/ui/BrandIcon.jsx';
-import ProWorkspaceActions from './src/features/pro/ProWorkspaceActions.jsx';
+import WorkspaceModePanel from './src/features/pro/WorkspaceModePanel.jsx';
 
 function pendingSyncText(count, traderMode, language) {
   const locale = language === 'md' ? 'ro' : language;
@@ -401,7 +401,7 @@ export default function Header({
       {/* Second row: Calendar month navigation + Free/PRO switch */}
       <div className="relative">
       <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 mb-2 sm:mb-4">
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+        <div className="flex w-full flex-wrap items-center gap-1.5 sm:gap-2">
           <button
             onClick={goToPrevMonth}
             aria-label={t('previousMonth')}
@@ -522,30 +522,9 @@ export default function Header({
           </div>
 
           {/* The workspace selector is separate from server-side PRO entitlement. */}
-          <div className="mt-1 flex w-full min-w-0 flex-wrap items-center gap-1.5 pb-1 sm:mt-0 sm:ml-2 sm:w-auto sm:max-w-full sm:flex-nowrap sm:pb-0">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={proView}
-              onClick={() => setProView((value) => !value)}
-              title={proView ? t('freePlan') : (proAccessActive ? 'PRO' : t('proOpenHint'))}
-              className={`relative h-9 w-[124px] shrink-0 rounded-full border p-0.5 font-data text-[10px] tracking-[0.14em] shadow-[inset_0_1px_1px_rgba(0,0,0,.2)] transition-all duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/60 ${
-                isLight ? 'border-zinc-300 bg-zinc-100' : 'border-zinc-700/80 bg-zinc-950'
-              }`}
-            >
-              <span aria-hidden="true" className={[
-                'absolute top-0.5 bottom-0.5 left-0.5 w-[58px] rounded-full border transition-all duration-300 ease-out',
-                proView
-                  ? 'translate-x-[60px] border-amber-300 bg-gradient-to-br from-amber-200 via-amber-400 to-amber-500 shadow-[0_0_26px_rgba(251,191,36,.34),inset_0_1px_rgba(255,255,255,.52)]'
-                  : isLight ? 'translate-x-0 border-zinc-400/40 bg-white shadow-sm' : 'translate-x-0 border-zinc-600/60 bg-zinc-800/90 shadow-sm',
-              ].join(' ')} />
-              <span className={`relative z-10 flex h-full items-center justify-center font-medium transition-colors ${!proView ? (isLight ? 'font-semibold text-zinc-900' : 'font-semibold text-zinc-100') : 'text-zinc-500'}`} style={{ width: '58px' }}>{t('freePlan')}</span>
-              <span className={`absolute bottom-0.5 right-0.5 top-0.5 z-10 flex items-center justify-center font-semibold ${proView ? 'text-zinc-950' : 'text-zinc-500'}`} style={{ width: '58px' }}>
-                <span className="flex items-center gap-1">{!proAccessLoading && !proAccessActive && !proView ? <LockKeyhole className="h-3 w-3 stroke-[1.9]" /> : <span>✦</span>} PRO</span>
-              </span>
-            </button>
-            <ProWorkspaceActions
-              visible={proView && accountMode === 'main'} isLight={isLight}
+          <div className="dayris-workspace-slot">
+            <WorkspaceModePanel
+              proView={proView} onModeChange={() => setProView((value) => !value)} isLight={isLight}
               language={language} t={t} traderMode={traderMode}
               onTraderChange={() => setTraderMode((value) => {
                 const next = !value;
