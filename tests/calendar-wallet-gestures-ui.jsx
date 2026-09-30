@@ -10,6 +10,7 @@ import WorkspaceDock from '../src/shared/ui/WorkspaceDock';
 function Fixture() {
   useWorkspaceViewport();
   const [view, setView] = useState('calendar'), [month, setMonth] = useState(0);
+  window.testNavigate = next => transitionView(() => setView(next));
   const [pro, setPro] = useState(true), [blocked, setBlocked] = useState(false), [selected, setSelected] = useState(null);
   const cells = Array.from({ length: 35 }, (_, i) => ({ key: `day-${i}`, date: new Date(2026, 8, i + 1), inMonth: true, isToday: false }));
   return <>

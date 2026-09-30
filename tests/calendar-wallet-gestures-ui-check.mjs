@@ -23,6 +23,27 @@ try {
   }
   async function fresh() { await page.goto('http://dayris.test/'); await page.locator('.calendar-days-grid').waitFor(); await page.waitForTimeout(50); }
   const remains = async () => assert.equal(await page.locator('.calendar-days-grid').count(), 1);
+  // Verify the actual browser timeline: departure, visible arrival, and no
+  // native snapshot overlay swallowing a second navigation during arrival.
+  await fresh();
+  await page.evaluate(() => window.testNavigate('wallet'));
+  assert.ok(await page.locator('.calendar-section').evaluate(el => el.getAnimations().some(animation => animation.effect.getTiming().duration === 120)));
+  await page.locator('.wallet-panel-enter').waitFor();
+  const motion = await page.locator('.wallet-panel-enter').evaluate(el => {
+    const animation = el.getAnimations().find(animation => animation.effect.getTiming().duration === 520);
+    if (!animation) return null;
+    animation.pause(); animation.currentTime = 0;
+    const style = getComputedStyle(el);
+    const result = { opacity: Number(style.opacity), translate: style.translate };
+    animation.play();
+    return result;
+  });
+  assert.ok(motion && motion.opacity < .8 && motion.translate.includes('26px'));
+  await page.evaluate(() => window.testNavigate('calendar'));
+  await page.locator('.calendar-days-grid').waitFor();
+  await page.waitForTimeout(650);
+  assert.equal(await page.locator('.calendar-section').evaluate(el => getComputedStyle(el).opacity), '1');
+  assert.equal(await page.locator('.calendar-days-grid > button').first().evaluate(el => getComputedStyle(el).animationName), 'none');
   // Android: root overscroll is disabled before the gesture, including small moves.
   await fresh();
   for (const selector of ['html', 'body']) assert.equal(await page.locator(selector).evaluate(el => getComputedStyle(el).overscrollBehaviorY), 'none');
