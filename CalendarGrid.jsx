@@ -1,6 +1,10 @@
 import React, { useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { ArrowDown } from 'lucide-react';
 import CalendarDayCell from './CalendarDayCell';
 import { WEEKDAYS } from './src/shared/config/constants';
+import { useWalletExitGesture } from './src/features/wallet/hooks/useWalletExitGesture';
+import './src/features/wallet/WalletGestures.css';
 
 export default function CalendarGrid({
   traderMode = false,
@@ -19,23 +23,33 @@ export default function CalendarGrid({
   formatPnlDisplay,
   onSelectDay,
   onEmptyClick,
-  onTouchStart,
-  onTouchEnd,
+  onOpenWallet,
+  gesturesDisabled = false,
   slideDirection,
   onNextMonth,
   onPreviousMonth,
 }) {
   const drag = useRef(null);
   const suppressClick = useRef(false);
+  // A workspace return reveals the complete month, without replaying 35 cells.
+  const animateCells = useRef(typeof document === 'undefined' || !document.documentElement.hasAttribute('data-workspace-transition'));
+  const { surfaceRef, drag: touchDrag } = useWalletExitGesture({
+    navigation: 'calendar', onExit: onOpenWallet, disabled: gesturesDisabled, onNextMonth, onPreviousMonth,
+  });
+  const pulling = touchDrag.axis === 'y';
+  const pullCopy = language === 'en' ? ['Pull to open wallet', 'Release to open wallet']
+    : language === 'ro' || language === 'md' ? ['Trage pentru a deschide portofelul', 'Eliberează pentru a deschide portofelul']
+    : ['Потяните вниз — в кошелёк', 'Отпустите — открыть кошелёк'];
   const animClass = slideDirection === 'next' ? 'animate-slide-next' : slideDirection === 'prev' ? 'animate-slide-prev' : '';
   return (
     <section
-      className={`calendar-section flex-1 flex flex-col px-1.5 sm:px-8 pt-2.5 sm:pt-6 border-b relative transition-colors duration-200 ${animClass} ${isLight ? 'border-slate-200/90 bg-slate-50/40' : 'border-zinc-800'}`}
+      ref={surfaceRef}
+      data-dragging={pulling}
+      data-cells-enter={animateCells.current}
+      className={`calendar-section wallet-gesture-content flex-1 flex flex-col px-1.5 sm:px-8 pt-2.5 sm:pt-6 border-b relative transition-colors duration-200 ${animClass} ${isLight ? 'border-slate-200/90 bg-slate-50/40' : 'border-zinc-800'}`}
       onClick={(e) => { if (e.target === e.currentTarget) onEmptyClick(); }}
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
       onPointerDown={e => {
-        if (e.pointerType !== 'mouse' || e.button !== 0) return;
+        if (gesturesDisabled || e.pointerType !== 'mouse' || e.button !== 0) return;
         suppressClick.current = false;
         drag.current = { x: e.clientX, y: e.clientY, id: e.pointerId, moved: false };
       }}
@@ -62,7 +76,7 @@ export default function CalendarGrid({
       onLostPointerCapture={() => { drag.current = null; }}
       onClickCapture={e => { if (suppressClick.current && e.detail !== 0) { e.preventDefault(); e.stopPropagation(); suppressClick.current = false; } }}
       onDragStart={e => e.preventDefault()}
-      style={{ userSelect: 'none' }}
+      style={{ userSelect: 'none', transform: pulling ? `translate3d(0,${touchDrag.y}px,0)` : 'none' }}
     >
       <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-3" onClick={(e) => { if (e.target === e.currentTarget) onEmptyClick(); }}>
         {WEEKDAYS.map((w) => <div key={w} className={`font-data text-[11px] sm:text-xs font-semibold tracking-wider text-center uppercase pb-1 ${isLight ? 'text-slate-600' : 'text-zinc-500'}`}>{w}</div>)}
@@ -76,6 +90,7 @@ export default function CalendarGrid({
           return <CalendarDayCell key={cell.key} planLabel={language === 'en' ? 'Plans' : language === 'ro' || language === 'md' ? 'Planuri' : 'Планы'} hasNote={!!notes[cell.key]} noteLabel={noteLabel} traderMode={traderMode} proView={proView} cell={cell} cellIndex={cellIndex} isSelected={isSelected} hasTrades={hasTrades} plans={plans} formatPlanAmount={formatPlanAmount} pnl={pnl} monthMaxAbsPnl={monthMaxAbsPnl} isLight={isLight} formatPnlDisplay={formatPnlDisplay} onSelect={() => onSelectDay(isSelected ? null : cell.key)} />;
         })}
       </div>
+      {pulling && createPortal(<div className="wallet-gesture-feedback" data-ready={touchDrag.ready} role="status"><ArrowDown aria-hidden="true" />{pullCopy[touchDrag.ready ? 1 : 0]}</div>, document.body)}
     </section>
   );
 }

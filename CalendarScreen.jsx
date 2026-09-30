@@ -407,7 +407,6 @@ export default function CalendarScreen() {
   const [firstRunGuideChoice, setFirstRunGuideChoice] = useState(null);
   const guideAmountRef = useRef(null);
   const guideCommentRef = useRef(null);
-  const calendarTouchStart = useRef(null);
 
   function openWalletFromCalendarGesture() {
     // The wallet is a PRO-only account. A swipe should never unexpectedly
@@ -4067,14 +4066,6 @@ export default function CalendarScreen() {
         .font-data { font-family: 'JetBrains Mono', monospace; }
         @keyframes cellGlowIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
         @keyframes themeIconPop { from { opacity: 0; transform: scale(0.4) rotate(-40deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
-        @keyframes walletHeaderEnter { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes walletPanelEnter { from { opacity: 0; transform: translateY(18px) scale(.992); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        @keyframes walletViewOld { to { opacity: 0; transform: translateY(-10px) scale(.992); filter: blur(3px); } }
-        @keyframes walletViewNew { from { opacity: 0; transform: translateY(14px) scale(.992); filter: blur(3px); } }
-        .wallet-focus-header { animation: walletHeaderEnter .44s cubic-bezier(.16,1,.3,1) both; }
-        .wallet-panel-enter { animation: walletPanelEnter .52s .04s cubic-bezier(.16,1,.3,1) both; }
-        ::view-transition-old(root) { animation: walletViewOld .26s cubic-bezier(.4,0,1,1) both; }
-        ::view-transition-new(root) { animation: walletViewNew .44s .06s cubic-bezier(.16,1,.3,1) both; }
         /* Premium light theme — stronger hierarchy and readable contrast */
         .theme-light.premium-shell {
           background-color: #f3f6fa;
@@ -4340,24 +4331,8 @@ export default function CalendarScreen() {
           setSelectedKey(dateKey);
         }}
         onEmptyClick={() => setSelectedKey(null)}
-        onTouchStart={(e) => {
-          const touch = e.touches[0];
-          calendarTouchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
-        }}
-        onTouchEnd={(e) => {
-          const startX = calendarTouchStart.current;
-          const touch = e.changedTouches[0];
-          calendarTouchStart.current = null;
-          if (!startX || !touch) return;
-          const dx = touch.clientX - startX.x;
-          const dy = touch.clientY - startX.y;
-          if (dy >= 80 && dy > Math.abs(dx) * 1.15) {
-            openWalletFromCalendarGesture();
-            return;
-          }
-          if (Math.abs(dx) < 48 || Math.abs(dx) <= Math.abs(dy) * 1.15) return;
-          if (dx < 0) goToNextMonth(); else goToPrevMonth();
-        }}
+        onOpenWallet={proAccessActive && !proAccessLoading ? openWalletFromCalendarGesture : undefined}
+        gesturesDisabled={Boolean(modalOpen || historyOpen || settingsOpen || connectOpen || metaTraderOpen || proAccessPromptOpen)}
       />
 
       {firstRunGuideStep === 1 && !traderMode && (

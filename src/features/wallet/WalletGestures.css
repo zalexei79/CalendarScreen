@@ -1,4 +1,5 @@
 .wallet-gesture-content { transition:transform .22s cubic-bezier(.22,1,.36,1); }
+.calendar-section.wallet-gesture-content { transition:transform .22s cubic-bezier(.22,1,.36,1), background-color .2s, border-color .2s; }
 .wallet-gesture-content[data-dragging="true"] { transition:none; will-change:transform; }
 .wallet-gesture-hint { display:none; }
 .wallet-gesture-feedback {
@@ -11,4 +12,4 @@
 .wallet-gesture-feedback[data-ready="true"] { color:#f3ddb0; border-color:rgba(213,188,131,.6); }
 .wallet-gesture-feedback svg { width:15px; height:15px; flex-shrink:0; }
 @media (pointer:coarse) { .wallet-gesture-hint { display:block; margin-top:10px; color:#85858d; font-size:11px; } }
-@media (prefers-reduced-motion:reduce) { .wallet-gesture-content { transition:none; } }
+@media (prefers-reduced-motion:reduce) { .wallet-gesture-content, .calendar-section.wallet-gesture-content { transition:none; } }

@@ -20,7 +20,8 @@ try {
   async function send(type,x,y) {
     await cdp.send('Input.dispatchTouchEvent',{type,touchPoints:type==='touchEnd'||type==='touchCancel'?[]:[{x,y,id:1,radiusX:2,radiusY:2}]});
   }
-  async function fresh() {await page.goto('http://dayris.test/');await page.locator('.wallet-gesture-content h2').waitFor();}
+  // Visibility can precede React's passive effect that installs native listeners.
+  async function fresh() {await page.goto('http://dayris.test/');await page.locator('.wallet-gesture-content h2').waitFor();await page.waitForTimeout(75);}
   async function swipe(x,y,dx,dy,{duration=160,cancel=false,steps=8}={}) {
     await send('touchStart',x,y);
     for(let i=1;i<=steps;i++){await delay(duration/steps);await send('touchMove',x+dx*i/steps,y+dy*i/steps);}

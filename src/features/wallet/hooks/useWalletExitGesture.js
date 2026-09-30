@@ -10,20 +10,21 @@ function isAtTop(target) {
   return (document.scrollingElement?.scrollTop || 0) <= 1;
 }
 
-function canExit(gesture, elapsed) {
+function canExit(gesture, elapsed, navigation) {
   if (gesture.axis === 'y') return gesture.dy >= 148 && gesture.dy > Math.abs(gesture.dx) * 1.7;
+  if (navigation === 'calendar') return Math.abs(gesture.dx) >= 48 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.5;
   return Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.5 && (Math.abs(gesture.dx) >= 96 || (Math.abs(gesture.dx) >= 48 && elapsed <= 450 && Math.abs(gesture.dx) / Math.max(elapsed, 1) >= .55));
 }
 
-export function useWalletExitGesture({ onExit, disabled }) {
+export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', onNextMonth, onPreviousMonth }) {
   const surfaceRef = useRef(null);
-  const config = useRef({ onExit, disabled });
-  config.current = { onExit, disabled };
+  const config = useRef({ onExit, disabled, onNextMonth, onPreviousMonth });
+  config.current = { onExit, disabled, onNextMonth, onPreviousMonth };
   const [drag, setDrag] = useState(IDLE);
 
   useEffect(() => {
     const surface = surfaceRef.current;
-    if (!surface || disabled || !onExit) { setDrag(IDLE); return; }
+    if (!surface || disabled || (!onExit && navigation !== 'calendar')) { setDrag(IDLE); return; }
     let gesture = null;
     let suppressClickUntil = 0;
     let exiting = false;
@@ -32,7 +33,10 @@ export function useWalletExitGesture({ onExit, disabled }) {
     function start(event) {
       reset();
       const target = event.target instanceof Element ? event.target : null;
-      if (exiting || config.current.disabled || event.touches.length !== 1 || !target || target.closest(INTERACTIVE)) return;
+      if (exiting || config.current.disabled || event.touches.length !== 1 || !target) return;
+      const control = target.closest(INTERACTIVE);
+      // Calendar cells remain tappable, but may also be the start of a swipe.
+      if (control && !(navigation === 'calendar' && control.matches('.calendar-days-grid > button'))) return;
       if (window.getSelection()?.toString() || (window.visualViewport?.scale || 1) > 1.05) return;
       const touch = event.touches[0];
       // Leave the browser's own edge navigation gestures available.
@@ -49,7 +53,7 @@ export function useWalletExitGesture({ onExit, disabled }) {
       if (!gesture.axis) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) < 12) return;
         if (Math.abs(dx) > Math.abs(dy) * 1.5) gesture.axis = 'x';
-        else if (dy > Math.abs(dx) * 1.7 && gesture.atTop) gesture.axis = 'y';
+        else if (dy > Math.abs(dx) * 1.7 && gesture.atTop && config.current.onExit) gesture.axis = 'y';
         else { reset(); return; } // A scroll remains a scroll for this entire touch.
       }
       if (!event.cancelable) { reset(); return; }
@@ -61,18 +65,21 @@ export function useWalletExitGesture({ onExit, disabled }) {
         axis: gesture.axis,
         x: reduced || gesture.axis !== 'x' ? 0 : Math.sign(dx) * Math.min(Math.abs(dx) * .4, 70),
         y: reduced || gesture.axis !== 'y' ? 0 : Math.min(Math.max(dy, 0) * .35, 70),
-        ready: canExit(gesture, performance.now() - gesture.started),
+        ready: canExit(gesture, performance.now() - gesture.started, navigation),
       });
     }
 
     function end(event) {
       if (!gesture) return;
       if (event.touches.length || !Array.from(event.changedTouches).some(touch => touch.identifier === gesture.id)) { reset(); return; }
-      const shouldExit = gesture.axis && canExit(gesture, performance.now() - gesture.started);
+      const shouldExit = gesture.axis && canExit(gesture, performance.now() - gesture.started, navigation);
+      const axis = gesture.axis, dx = gesture.dx;
       reset();
       if (shouldExit && !config.current.disabled && !exiting) {
         exiting = true;
-        config.current.onExit();
+        if (navigation === 'calendar' && axis === 'x') {
+          if (dx < 0) config.current.onNextMonth?.(); else config.current.onPreviousMonth?.();
+        } else config.current.onExit?.();
       }
     }
 
@@ -91,7 +98,7 @@ export function useWalletExitGesture({ onExit, disabled }) {
       surface.removeEventListener('touchcancel', reset);
       surface.removeEventListener('click', preventGhostClick, true);
     };
-  }, [disabled, Boolean(onExit)]);
+  }, [disabled, Boolean(onExit), navigation]);
 
   return { surfaceRef, drag };
 }

@@ -1,0 +1,16 @@
+/* Live content, not a frozen full-page snapshot. Keep it almost opaque. */
+.calendar-section[data-cells-enter="false"] .calendar-days-grid > button {
+  animation: none !important;
+}
+html[data-workspace-transition] .wallet-panel-enter,
+html[data-workspace-transition] .calendar-section {
+  animation: workspace-arrive 280ms cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes workspace-arrive {
+  from { opacity: .88; translate: 0 8px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-workspace-transition] .wallet-panel-enter,
+  html[data-workspace-transition] .calendar-section { animation: none !important; }
+}
