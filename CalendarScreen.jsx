@@ -408,6 +408,17 @@ export default function CalendarScreen() {
   const guideAmountRef = useRef(null);
   const guideCommentRef = useRef(null);
   const calendarTouchStart = useRef(null);
+
+  function openWalletFromCalendarGesture() {
+    // The wallet is a PRO-only account. A swipe should never unexpectedly
+    // open the offer for FREE users; the visible PRO control remains the
+    // discoverable entry point for upgrading.
+    if (proAccessLoading || !proAccessActive) return;
+    transitionView(() => {
+      setProViewInternal(true);
+      setAccountMode('wallet');
+    });
+  }
   const [displayMode, setDisplayMode] = useState('usd'); // 'usd' | 'percent'
   const [depositSize, setDepositSize] = useState(() => {
     try {
@@ -4329,13 +4340,23 @@ export default function CalendarScreen() {
           setSelectedKey(dateKey);
         }}
         onEmptyClick={() => setSelectedKey(null)}
-        onTouchStart={(e) => { calendarTouchStart.current = e.touches[0]?.clientX ?? null; }}
+        onTouchStart={(e) => {
+          const touch = e.touches[0];
+          calendarTouchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+        }}
         onTouchEnd={(e) => {
           const startX = calendarTouchStart.current;
-          const endX = e.changedTouches[0]?.clientX;
+          const touch = e.changedTouches[0];
           calendarTouchStart.current = null;
-          if (startX == null || endX == null || Math.abs(endX - startX) < 48) return;
-          if (endX < startX) goToNextMonth(); else goToPrevMonth();
+          if (!startX || !touch) return;
+          const dx = touch.clientX - startX.x;
+          const dy = touch.clientY - startX.y;
+          if (dy >= 80 && dy > Math.abs(dx) * 1.15) {
+            openWalletFromCalendarGesture();
+            return;
+          }
+          if (Math.abs(dx) < 48 || Math.abs(dx) <= Math.abs(dy) * 1.15) return;
+          if (dx < 0) goToNextMonth(); else goToPrevMonth();
         }}
       />
 
