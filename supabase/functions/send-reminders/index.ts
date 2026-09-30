@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.111.0';
 import webpush from 'npm:web-push@3.6.7';
 import { allowedEndpoint, resultForStatus } from './policy.mjs';
+import { proNotificationPayload } from './proNotification.mjs';
 
 const reply = (status: number, body: unknown) => Response.json(body, { status });
 const trimText = (value: unknown, limit: number) => String(value || '').trim().replace(/\s+/g, ' ').slice(0, limit);
@@ -66,7 +67,26 @@ Deno.serve(async (req: Request) => {
     const { error: finishError } = await db.rpc('dayris_finish_delivery', { p_id: job.delivery_id, p_token: job.token, p_result: result, p_code: code });
     return finishError ? 'record_failed' : result;
   }));
+  const { data: proJobs, error: proClaimError } = await db.rpc('dayris_claim_pro_notifications');
+  const proOutcomes = await Promise.all((proJobs || []).map(async (job: any) => {
+    let result = 'failed';
+    let code = 'INVALID_OR_EXPIRED';
+    const payload = proNotificationPayload(job);
+    if (payload && allowedEndpoint(job.endpoint)) {
+      try {
+        const details = webpush.generateRequestDetails({ endpoint: job.endpoint, keys: { p256dh: job.p256dh, auth: job.auth } },
+          JSON.stringify(payload), { TTL: Math.min(86400, Math.max(1, Math.floor((new Date(job.ends_at).getTime() - Date.now()) / 1000))), urgency: 'high', topic: job.delivery_id.replaceAll('-', ''), contentEncoding: 'aes128gcm' });
+        const response = await fetch(details.endpoint, { method: details.method, headers: details.headers, body: details.body, redirect: 'error', signal: AbortSignal.timeout(10000) });
+        result = resultForStatus(response.status);
+        code = `HTTP_${response.status}`;
+        await response.body?.cancel();
+      } catch { result = 'uncertain'; code = 'NETWORK_OR_ENCODING_ERROR'; }
+    }
+    const { error: finishError } = await db.rpc('dayris_finish_pro_notification', { p_id: job.delivery_id, p_token: job.token, p_result: result, p_code: code });
+    return finishError ? 'record_failed' : result;
+  }));
+  outcomes.push(...proOutcomes);
   const counts = outcomes.reduce((a: Record<string, number>, k: string) => ({ ...a, [k]: (a[k] || 0) + 1 }), {});
   console.info('[send-reminders]', JSON.stringify(counts));
-  return reply(outcomes.includes('record_failed') ? 500 : 200, { processed: outcomes.length, counts });
+  return reply(proClaimError || outcomes.includes('record_failed') ? 500 : 200, { processed: outcomes.length, counts, ...(proClaimError ? { error: 'PRO_CLAIM_FAILED' } : {}) });
 });

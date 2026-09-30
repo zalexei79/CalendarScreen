@@ -100,6 +100,7 @@ import WalletPanel from './src/features/wallet/WalletPanel.jsx';
 import { transitionView } from './src/shared/ui/transitionView';
 import SwipeDismissSheet from './src/shared/ui/SwipeDismissSheet.jsx';
 import ProOffer from './src/features/pro/ProOffer.jsx';
+import ProGrantNotice from './src/features/pro/ProGrantNotice.jsx';
 
 export default function CalendarScreen() {
   useWorkspaceViewport();
@@ -4064,6 +4065,7 @@ export default function CalendarScreen() {
 
   return (
     <div className={`premium-shell min-h-screen w-full flex flex-col transition-colors duration-500 ${proView ? 'pro-active-shell' : ''} ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
+      <ProGrantNotice userId={validUserId} active={proAccessActive && !proAccessLoading} until={proAccessUntil} language={language} isLight={isLight} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
         .font-display { font-family: 'Space Grotesk', sans-serif; }

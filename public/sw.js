@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v16-mt5-companion';
+const CACHE_NAME = 'atj-cache-v17-pro-notifications';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
@@ -10,6 +10,7 @@ self.addEventListener('push', (event) => {
   const uuid = value => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value || '');
   const reminderId = uuid(data.reminderId) ? data.reminderId : '';
   const deliveryId = uuid(data.deliveryId) ? data.deliveryId : '';
+  const proNotificationId = data.type === 'pro_granted' && uuid(data.proNotificationId) ? data.proNotificationId : '';
   // Compatible with the existing sender and already queued reminder payloads.
   const eventTitle = typeof data.title === 'string' && data.title.trim() && data.title.length < 90 ? data.title.trim() : '';
   // The OS already identifies the app (including "from DAYRIS" on Watch).
@@ -23,8 +24,8 @@ self.addEventListener('push', (event) => {
     body,
     icon: '/icon-192.png?v=20260920-desktop-v4',
     tag: deliveryId ? 'dayris-' + deliveryId : 'dayris-reminder',
-    data: { reminderId },
-    actions: [
+    data: { reminderId, ...(proNotificationId ? { proNotificationId } : {}) },
+    actions: proNotificationId ? [] : [
       { action: 'completed', title: 'Подтвердилось' },
       { action: 'missed', title: 'Не получилось' },
       { action: 'amount', title: 'Указать сумму' },
@@ -35,8 +36,8 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const target = new URL('/', self.location.origin);
   const id = event.notification.data?.reminderId;
-  if (typeof id === 'string') target.searchParams.set('reminder', id);
-  if (['completed', 'missed', 'amount'].includes(event.action)) target.searchParams.set('action', event.action);
+  if (typeof id === 'string' && id) target.searchParams.set('reminder', id);
+  if (id && ['completed', 'missed', 'amount'].includes(event.action)) target.searchParams.set('action', event.action);
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const existing = windows.find(client => new URL(client.url).origin === self.location.origin);
