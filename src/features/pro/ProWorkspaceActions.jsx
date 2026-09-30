@@ -13,7 +13,7 @@ export default function ProWorkspaceActions({ visible, inPanel = false, isLight,
     <div className="pro-actions" aria-label="DAYRIS PRO">
       {!inPanel && <button type="button" className="pro-control pro-control-wallet" onClick={onWallet} title={t('walletProHint')} aria-label={t('walletLabel')}><Wallet aria-hidden="true"/><span>{t('walletLabel')}</span></button>}
       <button type="button" role="switch" aria-checked={traderMode} aria-expanded={traderMode} aria-controls={platformsId} aria-label={t('traderModeLabel')} title={t('traderModeHint')} onClick={onTraderChange} className="pro-control pro-control-trader"><span>{text('Трейдер','Trader','Trader')}</span><span className="pro-control-toggle" aria-hidden="true"><span/></span></button>
-      <button type="button" className="pro-control pro-control-info" title={t('proInfoAction')} aria-label={t('proInfoAction')} onClick={onOffer}><Sparkles aria-hidden="true"/></button>
+      {!inPanel && <button type="button" className="pro-control pro-control-info" title={t('proInfoAction')} aria-label={t('proInfoAction')} onClick={onOffer}><Sparkles aria-hidden="true"/></button>}
       <div id={platformsId} className={`pro-platform-reveal ${traderMode ? 'is-open' : ''}`} aria-hidden={!traderMode} inert={traderMode ? undefined : ''}>
         <div className="pro-platform-clip"><div className="pro-platform-row">
         { [['ctrader','cTrader',Link2,connected && !reconnect],['mt5','MT5',Monitor,metatrader.connected]].map(([id,name,Icon,ready])=>{

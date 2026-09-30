@@ -409,8 +409,9 @@ export default function Header({
 
       {/* Second row: Calendar month navigation + Free/PRO switch */}
       <div className="relative">
-      <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 mb-2 sm:mb-4">
-        <div className="flex w-full flex-wrap items-center gap-1.5 sm:gap-2">
+      <div>
+        <div className="dayris-command-row">
+          <div className="dayris-date-navigation">
           <button
             onClick={goToPrevMonth}
             aria-label={t('previousMonth')}
@@ -504,8 +505,9 @@ export default function Header({
               {t('today')}
             </button>
           )}
-          {/* Account badge on desktop */}
-          <div className={`ml-2 hidden sm:flex items-center rounded-lg border font-data text-[10px] tracking-wide overflow-hidden ${isLight ? 'border-zinc-300 bg-zinc-100' : 'border-zinc-800 bg-zinc-900'}`}>
+          </div>
+          {/* Account details are also available from Settings. */}
+          <div className={`dayris-account-badge hidden items-center rounded-lg border font-data text-[10px] tracking-wide overflow-hidden ${isLight ? 'border-zinc-300 bg-zinc-100' : 'border-zinc-800 bg-zinc-900'}`}>
             {user ? (
               <div className="flex items-center gap-1 pl-2.5 pr-1 py-1">
                 <span className={`max-w-[90px] truncate ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>
