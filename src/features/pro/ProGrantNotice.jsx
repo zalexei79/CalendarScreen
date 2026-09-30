@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Gift } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import './ProGrantNotice.css';
@@ -20,20 +21,20 @@ export default function ProGrantNotice({ userId, active, until, language = 'ru',
   const [error, setError] = useState(false);
   const acknowledged = useRef(new Set());
   const confirmButton = useRef(null);
+  const dialog = useRef(null);
   const visible = active && notice?.owner === userId && Number.isFinite(new Date(until).getTime()) && new Date(until).getTime() > Date.now();
   useEffect(() => {
     if (!visible) return undefined;
     const previous = document.activeElement;
+    const modal = dialog.current;
+    if (!modal) return undefined;
+    if (!modal.open) modal.showModal();
     confirmButton.current?.focus();
     const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    function keepFocus(event) {
-      if (event.key === 'Tab') { event.preventDefault(); confirmButton.current?.focus(); }
-    }
-    document.addEventListener('keydown', keepFocus);
     return () => {
+      if (modal.open) modal.close();
       document.body.style.overflow = overflow;
-      document.removeEventListener('keydown', keepFocus);
       if (previous?.isConnected) previous.focus?.();
     };
   }, [visible]);
@@ -92,12 +93,12 @@ export default function ProGrantNotice({ userId, active, until, language = 'ru',
     } catch { setError(true); }
     finally { setSaving(false); }
   }
-  return (
-    <div className={`pro-celebration ${isLight ? 'pro-celebration-light' : ''}`}>
+  return createPortal(
+    <dialog ref={dialog} onCancel={event => event.preventDefault()} aria-labelledby="pro-celebration-title" aria-describedby="pro-celebration-days" className={`pro-celebration ${isLight ? 'pro-celebration-light' : ''}`}>
       <div className="pro-celebration-confetti" aria-hidden="true">
         {Array.from({ length: 48 }, (_, i) => <i key={i} style={{ '--x': `${(i * 37 + 9) % 100}%`, '--delay': `${(i % 12) * 0.09}s`, '--drift': `${((i * 29) % 180) - 90}px`, '--spin': `${(i % 2 ? 1 : -1) * (360 + i * 17)}deg`, '--color': ['#fbbf24', '#fef3c7', '#34d399', '#f59e0b', '#a78bfa'][i % 5] }} />)}
       </div>
-      <section role="dialog" aria-modal="true" aria-labelledby="pro-celebration-title" aria-describedby="pro-celebration-days" className="pro-celebration-card">
+      <section className="pro-celebration-card">
       <div className="pro-celebration-gift" aria-hidden="true"><Gift size={40} strokeWidth={1.5} /></div>
       <span className="pro-celebration-badge">DAYRIS PRO</span>
       <h2 id="pro-celebration-title">{copy[0]}</h2>
@@ -105,6 +106,6 @@ export default function ProGrantNotice({ userId, active, until, language = 'ru',
       {error && <p role="alert" className="mt-2 text-sm text-red-500">{copy[3]}</p>}
       <button ref={confirmButton} type="button" aria-disabled={saving} onClick={dismiss} className="pro-celebration-confirm">{copy[2]}</button>
       </section>
-    </div>
+    </dialog>, document.body
   );
 }

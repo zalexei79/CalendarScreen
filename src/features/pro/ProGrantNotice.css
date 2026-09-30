@@ -1,6 +1,13 @@
 .pro-celebration {
   position: fixed;
   inset: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  box-sizing: border-box;
+  border: 0;
   z-index: 200;
   display: grid;
   place-items: center;
@@ -10,6 +17,7 @@
   overflow: auto;
   isolation: isolate;
 }
+.pro-celebration::backdrop { background: transparent; }
 .pro-celebration-card {
   position: relative;
   width: min(100%, 390px);
