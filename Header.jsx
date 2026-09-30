@@ -52,8 +52,17 @@ export default function Header({
   }
 
   function changeAccountMode(nextMode) {
+    if (nextMode === 'wallet') {
+      if (proAccessLoading) return;
+      if (!proAccessActive) { openProPresentation(); return; }
+    }
     if (nextMode === accountMode) return;
-    const applyMode = () => flushSync(() => setAccountMode(nextMode));
+    const applyMode = () => flushSync(() => {
+      // Wallet requires both entitlement and the PRO view. Enter atomically so
+      // the parent's access effect cannot bounce a FREE-view subscriber back.
+      if (nextMode === 'wallet') setProView(true);
+      setAccountMode(nextMode);
+    });
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     if (!reduceMotion && typeof document.startViewTransition === 'function') {
       document.startViewTransition(applyMode);
@@ -532,6 +541,7 @@ export default function Header({
                 return next;
               })}
               onWallet={() => changeAccountMode('wallet')}
+              walletAccess={proAccessActive} walletLoading={proAccessLoading}
               onConnect={openConnectModal} connected={ctraderConnected}
               metatrader={metaTraderState} reconnect={ctraderReconnect}
               onOffer={openProPresentation}
