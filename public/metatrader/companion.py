@@ -10,6 +10,10 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import ctypes
+import subprocess
+import webbrowser
+import tkinter as tk
+from tkinter import messagebox
 import MetaTrader5 as mt5
 
 PORT = 17865
@@ -17,6 +21,19 @@ ORIGINS = {'https://ai-trade-journal-ejm8.onrender.com', 'http://localhost:5173'
 permissions = {}
 requests = queue.Queue()
 terminal_lock = threading.Lock()
+updates = queue.Queue()
+
+def installed_terminals():
+    paths = set()
+    for base in (os.environ.get('ProgramFiles'), os.environ.get('ProgramFiles(x86)')):
+        if base:
+            paths.update(Path(base).glob('*/terminal64.exe'))
+    return sorted(paths)
+
+def terminal_running():
+    result = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq terminal64.exe', '/FO', 'CSV', '/NH'],
+                            capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+    return b'terminal64.exe' in result.stdout.lower()
 
 def clean(value):
     return str(value).replace(';', '_').replace('\r', ' ').replace('\n', ' ')
@@ -47,16 +64,13 @@ def export_history(account, deals, positions):
 
 def snapshot(expected=None):
     with terminal_lock:
-        initialized = mt5.initialize(timeout=15000)
+        if not terminal_running():
+            raise ValueError('MT5 не открыт. Запустите терминал и войдите в свой счёт, затем повторите подключение.')
+        paths = installed_terminals()
+        initialized = mt5.initialize(str(paths[0]), timeout=15000) if len(paths) == 1 else mt5.initialize(timeout=15000)
         if not initialized:
-            paths = set()
-            for base in (os.environ.get('ProgramFiles'), os.environ.get('ProgramFiles(x86)')):
-                if base:
-                    paths.update(Path(base).glob('*/terminal64.exe'))
-            if len(paths) == 1:
-                initialized = mt5.initialize(str(next(iter(paths))), timeout=15000)
-        if not initialized:
-            raise ValueError('Откройте MT5 и войдите в свой торговый счёт, затем повторите подключение.')
+            mt5.shutdown()
+            raise ValueError('MT5 запущен, но не отвечает помощнику. Проверьте окно терминала и повторите подключение.')
         try:
             info, terminal = mt5.account_info(), mt5.terminal_info()
             if not info or not terminal or not terminal.connected:
@@ -120,6 +134,7 @@ class Handler(BaseHTTPRequestHandler):
                 event, result = threading.Event(), []
                 requests.put((event, result, origin))
                 if not event.wait(90) or not result or not result[0]:
+                    event.set()
                     return self.reply(403, {'error': 'Подключение отменено в помощнике DAYRIS.'})
                 identity, csv = snapshot()
                 permissions[token] = (origin, identity, time.monotonic())
@@ -134,7 +149,9 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 return self.reply(404, {})
             self.reply(200, {'csv': csv, 'timeZone': 'UTC'})
+            updates.put('История передана в DAYRIS. Подключение активно.')
         except (ValueError, KeyError, TypeError) as error:
+            updates.put(str(error))
             self.reply(400, {'error': str(error)})
         except Exception:
             self.reply(500, {'error': 'Не удалось прочитать MT5. Перезапустите помощник.'})
@@ -143,26 +160,109 @@ def main():
     if '--self-test' in sys.argv:
         print('DAYRIS companion runtime OK; MetaTrader5 module:', mt5.__version__)
         return
-    ctypes.windll.kernel32.SetConsoleTitleW('DAYRIS · MT5')
-    print('DAYRIS MT5 companion is running. Free, read-only.\nOpen DAYRIS calendar and click Connect MT5.\nKeep this window and MT5 open. Close this window to stop.\n')
+    root = tk.Tk()
+    root.withdraw()
+    app = CompanionWindow(root)
+    if '--ui-self-test' in sys.argv:
+        root.update_idletasks()
+        assert app.connect_button.winfo_reqwidth() > 0
+        assert root.title() == 'DAYRIS · Подключение MT5'
+        root.destroy()
+        return
     try:
         server = ThreadingHTTPServer(('127.0.0.1', PORT), Handler)
     except OSError:
-        ctypes.windll.user32.MessageBoxW(None, 'Помощник уже запущен. Откройте календарь и подключите MT5.', 'DAYRIS', 0x40)
+        messagebox.showinfo('DAYRIS', 'Помощник уже запущен. Откройте его окно или календарь и подключите MT5.', parent=root)
+        root.destroy()
         return
     threading.Thread(target=server.serve_forever, daemon=True).start()
-    try:
-        while True:
-            event, result, origin = requests.get()
-            answer = ctypes.windll.user32.MessageBoxW(None,
-                'Разрешить DAYRIS прочитать историю текущего счёта MT5?\n\n' + origin + '\n\nТорговые команды и пароли не передаются.',
-                'Подключить DAYRIS?', 0x4 | 0x20 | 0x10000 | 0x100)
-            result.append(answer == 6)
-            event.set()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server.shutdown()
+    root.deiconify()
+    app.poll()
+    root.mainloop()
+    server.shutdown()
+
+class CompanionWindow:
+    def __init__(self, root):
+        self.root, self.pending = root, None
+        bg, card, muted, amber = '#0c101a', '#171e2c', '#aab5c9', '#ffc238'
+        root.title('DAYRIS · Подключение MT5')
+        root.geometry('520x560')
+        root.resizable(False, False)
+        root.configure(bg=bg)
+        icon = Path(getattr(sys, '_MEIPASS', Path(__file__).parent)) / 'icon-48.png'
+        if icon.exists():
+            self.icon = tk.PhotoImage(file=str(icon)); root.iconphoto(True, self.icon)
+        frame = tk.Frame(root, bg=bg, padx=28, pady=24); frame.pack(fill='both', expand=True)
+        def label(text, size=11, color='white', parent=frame):
+            item = tk.Label(parent, text=text, bg=parent['bg'], fg=color, font=('Segoe UI', size),
+                            anchor='w', justify='left', wraplength=450)
+            item.pack(fill='x', pady=(0, 12)); return item
+        label('DAYRIS  /  MT5', 11, amber)
+        label('Ваш терминал. Ваш календарь.', 19)
+        label('Помощник готов к подключению', 12, '#62d5aa')
+        panel = tk.Frame(frame, bg=card, padx=16, pady=14); panel.pack(fill='x', pady=(2, 16))
+        self.status = label('Откройте MT5 с нужным счётом. Затем нажмите\n«Подключить MT5» в календаре DAYRIS.', 11, muted, panel)
+        self.origin = label('', 9, muted, panel); self.origin.pack_forget()
+        self.actions = tk.Frame(panel, bg=card)
+        self.connect_button = tk.Button(self.actions, text='Разрешить подключение', command=lambda: self.answer(True),
+                                       bg=amber, fg=bg, font=('Segoe UI', 10, 'bold'), relief='flat', padx=14, pady=9, cursor='hand2')
+        self.connect_button.pack(side='left')
+        tk.Button(self.actions, text='Отмена', command=lambda: self.answer(False), bg=card, fg=muted,
+                  relief='flat', padx=16, pady=9, cursor='hand2').pack(side='left', padx=8)
+        tk.Button(frame, text='Открыть календарь DAYRIS', command=lambda: webbrowser.open('https://ai-trade-journal-ejm8.onrender.com/'),
+                  bg=amber, fg=bg, font=('Segoe UI', 11, 'bold'), relief='flat', pady=12, cursor='hand2').pack(fill='x', pady=(0, 10))
+        tk.Button(frame, text='Открыть MetaTrader 5', command=self.open_terminal, bg=card, fg='white',
+                  font=('Segoe UI', 11), relief='flat', pady=10, cursor='hand2').pack(fill='x')
+        label('Только чтение сделок · Без дополнительных платежей\nОставьте помощник открытым. Его можно свернуть.', 9, muted)
+        root.protocol('WM_DELETE_WINDOW', self.stop)
+
+    def open_terminal(self):
+        try:
+            if terminal_running():
+                self.status.configure(text='MT5 уже запущен. Найдите его окно на панели задач.\nЕсли окно зависло, закройте терминал обычным способом и откройте снова.')
+                return
+            paths = installed_terminals()
+            if len(paths) != 1:
+                self.status.configure(text='Откройте нужный MT5 через его ярлык на компьютере.'); return
+            subprocess.Popen([str(paths[0])], cwd=str(paths[0].parent))
+            self.status.configure(text='MT5 запускается. Войдите в свой счёт в терминале, затем подключите календарь.')
+        except (OSError, subprocess.TimeoutExpired):
+            self.status.configure(text='Не удалось открыть MT5. Попробуйте запустить его через обычный ярлык.')
+
+    def answer(self, allowed):
+        if not self.pending: return
+        event, result, _ = self.pending
+        result.append(allowed); event.set(); self.pending = None
+        self.actions.pack_forget(); self.origin.pack_forget()
+        self.status.configure(text='Читаем историю MT5…' if allowed else 'Подключение отменено. Сделки не переданы.')
+
+    def poll(self):
+        while not updates.empty():
+            self.status.configure(text=updates.get_nowait())
+        if not self.pending:
+            try:
+                self.pending = requests.get_nowait()
+                self.status.configure(text='Разрешить календарю прочитать историю текущего счёта MT5? Пароли и торговые команды не передаются.')
+                self.origin.configure(text=self.pending[2]); self.origin.pack(fill='x')
+                self.actions.pack(fill='x', pady=(4, 0))
+                self.root.deiconify(); self.root.lift()
+            except queue.Empty:
+                pass
+        elif self.pending[0].is_set():
+            self.answer(False)
+        self.root.after(200, self.poll)
+
+    def stop(self):
+        if self.pending: self.answer(False)
+        self.root.destroy()
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception:
+        if '--diagnostic-file' in sys.argv:
+            import traceback
+            target = Path(sys.argv[sys.argv.index('--diagnostic-file') + 1])
+            target.write_text(traceback.format_exc(), encoding='utf-8')
+            raise SystemExit(1)
+        raise

@@ -19,6 +19,19 @@ def deal(ticket, kind, volume, entry, **fields):
 class Tests(unittest.TestCase):
     account = NS(trade_mode=0, server='Broker-Demo', login=42, company='Broker', balance=1000, currency='USD')
 
+    def test_closed_terminal_is_not_started_by_sync(self):
+        with patch.object(companion, 'terminal_running', return_value=False), patch.object(companion.mt5, 'initialize') as initialize:
+            with self.assertRaisesRegex(ValueError, 'MT5 не открыт'):
+                companion.snapshot()
+            initialize.assert_not_called()
+
+    def test_failed_ipc_attempt_is_cleaned_up_without_retry_launch(self):
+        with patch.object(companion, 'terminal_running', return_value=True), patch.object(companion, 'installed_terminals', return_value=[Path('C:/MT5/terminal64.exe')]), patch.object(companion.mt5, 'initialize', return_value=False) as initialize, patch.object(companion.mt5, 'shutdown') as shutdown:
+            with self.assertRaisesRegex(ValueError, 'не отвечает'):
+                companion.snapshot()
+            self.assertEqual(initialize.call_count, 1)
+            shutdown.assert_called_once()
+
     def test_closed_fees_and_partials(self):
         deals = [deal(1, 0, 1, 0), deal(2, 1, .4, 1, profit=10), deal(3, 1, .6, 1, profit=20, swap=-2, fee=-.5)]
         rows = companion.export_history(self.account, deals, []).splitlines()
