@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getProOfferCopy } from '../src/features/pro/proOfferCopy.js';
+import { getProOfferCopy, XAUUSD_SIGNALS_URL, XAUUSD_SIGNALS_BOT_URL } from '../src/features/pro/proOfferCopy.js';
 
 test('PRO presentation has complete, non-empty copy in every supported language', () => {
   const keys = Object.keys(getProOfferCopy('ru')).sort();
@@ -33,5 +33,19 @@ test('PRO booklet explains both platforms and desktop requirements in every loca
    assert.match(copy.traderBody, /MetaTrader 5/);
    assert.match(copy.mt5Guide, /Chrome\/Edge/);
    assert.ok(copy.ctraderGuide && copy.openPlatforms);
+ }
+});
+test('signal information points to the supplied channel without promising MT5 bot support', () => {
+ assert.equal(XAUUSD_SIGNALS_URL, 'https://t.me/xauusd_scalp_signal');
+ assert.equal(XAUUSD_SIGNALS_BOT_URL, 'https://t.me/XauusdScalpSignal_bot');
+ for (const language of ['ru', 'en', 'md']) {
+   const copy = getProOfferCopy(language);
+   assert.match(copy.signalsTitle, /XAUUSD/);
+   assert.match(copy.signalsBot, /cTrader/);
+   assert.match(copy.signalsBot, /Skalp_XAUUSD/);
+   assert.match(copy.signalsBot, /VPS/);
+   assert.doesNotMatch(copy.signalsBot, /MT5|MetaTrader/);
+   assert.match(copy.signalsNote, /DAYRIS/);
+   assert.ok(copy.signalsBody && copy.signalsAction && copy.signalsReceive);
  }
 });

@@ -1,6 +1,6 @@
 import React, { useId, useState } from 'react';
 import { ArrowDownLeft, ArrowRight, ArrowUpRight, ChartCandlestick, ChartNoAxesCombined, Check, CreditCard, Gift, RefreshCw, Wallet } from 'lucide-react';
-import { getProOfferCopy } from './proOfferCopy';
+import { getProOfferCopy, XAUUSD_SIGNALS_URL, XAUUSD_SIGNALS_BOT_URL } from './proOfferCopy';
 import './ProPresentation.css';
 
 // Presentation only. All account, referral and checkout actions stay with the caller.
@@ -42,6 +42,16 @@ export default function ProOffer({ language, copy, active, signedIn, referralLoa
             <ul>{text[`${feature}Points`].map(point => <li key={point}><Check aria-hidden="true" />{point}</li>)}</ul>
             {active && feature === 'wallet' && <button type="button" className="pro-text-action" onClick={onWallet}>{text.openWallet}<ArrowRight aria-hidden="true" /></button>}
             {feature === 'trader' && <div className="pro-platform-guide"><article><h4>cTrader</h4><p>{text.ctraderGuide}</p></article><article><h4>MetaTrader 5</h4><p>{text.mt5Guide}</p></article>{active && onPlatforms && <button type="button" className="pro-text-action" onClick={onPlatforms}>{text.openPlatforms}<ArrowRight aria-hidden="true" /></button>}</div>}
+            {feature === 'trader' && <details className="pro-signals-guide">
+              <summary><span>{text.signalsTitle}</span><span className="pro-signals-tag">Telegram</span></summary>
+              <div>
+                <p>{text.signalsBody}</p>
+                <a className="pro-text-action" href={XAUUSD_SIGNALS_BOT_URL} target="_blank" rel="noopener noreferrer">{text.signalsReceive}<ArrowRight aria-hidden="true" /></a>
+                <p>{text.signalsBot}</p>
+                <a className="pro-text-action" href={XAUUSD_SIGNALS_URL} target="_blank" rel="noopener noreferrer">{text.signalsAction}<ArrowRight aria-hidden="true" /></a>
+                <p className="pro-signals-note">{text.signalsNote}</p>
+              </div>
+            </details>}
           </div>
           <div className={`pro-example pro-example-${feature}`}>
             <p className="pro-example-label">{text.example}</p>

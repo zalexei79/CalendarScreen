@@ -71,6 +71,12 @@ const copy = {
 };
 
 Object.assign(copy.ru, {
+  signalsTitle: 'Автосигналы XAUUSD',
+  signalsBody: 'ИИ-анализ рынка, автоматические сигналы по золоту (XAUUSD) и отчёты о результатах — в Gold Scalping. Telegram-бот присылает сигналы: решение о торговле остаётся за вами.',
+  signalsBot: 'По желанию к этим же сигналам можно подключить Skalp_XAUUSD — бота автоторговли для cTrader. Установка в терминал или размещение на VPS оформляются отдельно; инструкции и актуальные условия — в канале.',
+  signalsNote: 'Это отдельное подключение: синхронизация журнала DAYRIS не запускает автоторговлю. Сигналы не гарантируют прибыль; торговля может привести к потере капитала.',
+  signalsAction: 'Канал и подключение автоторговли',
+  signalsReceive: 'Получать сигналы в Telegram-боте',
   traderTitle: 'Два подключения. Один торговый журнал.',
   traderBody: 'Включите режим трейдера: сделки, PnL, кривая результата и аналитика отдельно от личных денег. Подключайте cTrader и MetaTrader 5 через отдельные меню.',
   traderPoints: ['Журнал сделок и аналитика PnL', 'Выбор торгового счёта на каждой площадке', 'Своя синхронизация и результат загрузки'],
@@ -79,6 +85,12 @@ Object.assign(copy.ru, {
   openPlatforms: 'Открыть торговые площадки',
 });
 Object.assign(copy.en, {
+  signalsTitle: 'XAUUSD automated signals',
+  signalsBody: 'Gold Scalping provides AI market analysis, automated gold (XAUUSD) signals and result reports. The Telegram bot delivers signals; trading decisions remain yours.',
+  signalsBot: 'Optionally connect Skalp_XAUUSD, an automated trading bot for cTrader, to the same signals. Terminal installation or VPS hosting is arranged separately. See the channel for instructions and current terms.',
+  signalsNote: 'This is a separate connection: DAYRIS journal synchronization does not enable automated trading. Signals do not guarantee profits; trading can result in loss of capital.',
+  signalsAction: 'Channel and automated trading setup',
+  signalsReceive: 'Receive signals in the Telegram bot',
   traderTitle: 'Two connections. One trading journal.',
   traderBody: 'Enable Trader Mode for trades, PnL, your result curve and analytics, separate from personal money. Connect cTrader and MetaTrader 5 through dedicated menus.',
   traderPoints: ['Trade journal and PnL analytics', 'Choose a trading account per platform', 'Separate sync controls and import results'],
@@ -87,6 +99,12 @@ Object.assign(copy.en, {
   openPlatforms: 'Open trading platforms',
 });
 Object.assign(copy.ro, {
+  signalsTitle: 'Semnale automate XAUUSD',
+  signalsBody: 'Gold Scalping oferă analiză AI a pieței, semnale automate pentru aur (XAUUSD) și rapoarte de rezultate. Botul Telegram trimite semnalele; decizia de tranzacționare îți aparține.',
+  signalsBot: 'Opțional, conectează Skalp_XAUUSD, un bot de tranzacționare automată pentru cTrader, la aceleași semnale. Instalarea în terminal sau găzduirea pe VPS se stabilesc separat. Instrucțiunile și condițiile actuale sunt pe canal.',
+  signalsNote: 'Este o conectare separată: sincronizarea jurnalului DAYRIS nu activează tranzacționarea automată. Semnalele nu garantează profit; tranzacționarea poate duce la pierderea capitalului.',
+  signalsAction: 'Canal și conectare pentru trading automat',
+  signalsReceive: 'Primește semnale în botul Telegram',
   traderTitle: 'Două conexiuni. Un jurnal de trading.',
   traderBody: 'Activează modul Trader pentru tranzacții, PnL, curba rezultatului și analiză, separat de banii personali. Conectează cTrader și MetaTrader 5 prin meniuri separate.',
   traderPoints: ['Jurnal de tranzacții și analiză PnL', 'Alegerea contului pentru fiecare platformă', 'Sincronizare și rezultate de import separate'],
@@ -94,6 +112,9 @@ Object.assign(copy.ro, {
   mt5Guide: 'Conectare prin exportator în terminal. Actualizarea automată necesită MT5 și DAYRIS deschise în Chrome/Edge pe PC. Tranzacțiile ajung pe telefon prin cloud DAYRIS.',
   openPlatforms: 'Deschide platformele de trading',
 });
+
+export const XAUUSD_SIGNALS_URL = 'https://t.me/xauusd_scalp_signal';
+export const XAUUSD_SIGNALS_BOT_URL = 'https://t.me/XauusdScalpSignal_bot';
 
 export function getProOfferCopy(language) {
   const locale = String(language || 'ru').toLowerCase().split('-')[0];

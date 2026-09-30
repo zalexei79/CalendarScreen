@@ -37,6 +37,18 @@ try {
  await page.getByRole('tab',{name:'Трейдинг',exact:true}).click();
  await page.getByRole('tabpanel').getByRole('heading',{name:'MetaTrader 5',exact:true}).waitFor();
  await page.getByRole('tabpanel').getByText(/Chrome\/Edge/).waitFor();
+ const signals = page.locator('.pro-signals-guide');
+ assert.equal(await signals.getAttribute('open'),null);
+ await signals.locator('summary').click();
+ const channel = signals.getByRole('link',{name:'Канал и подключение автоторговли'});
+ assert.equal(await channel.getAttribute('href'),'https://t.me/xauusd_scalp_signal');
+ assert.equal(await channel.getAttribute('target'),'_blank');
+ assert.match(await channel.getAttribute('rel'),/noopener/);
+ const signalBot = signals.getByRole('link',{name:'Получать сигналы в Telegram-боте'});
+ assert.equal(await signalBot.getAttribute('href'),'https://t.me/XauusdScalpSignal_bot');
+ assert.equal(await signalBot.getAttribute('target'),'_blank');
+ assert.match(await signalBot.getAttribute('rel'),/noopener/);
+ await signals.getByText(/не запускает автоторговлю/).waitFor();
  await page.getByRole('button',{name:'Открыть торговые площадки',exact:true}).click();
  await menu.getByRole('heading',{name:'Торговые площадки',exact:true}).waitFor();
  await page.locator('#theme').click();

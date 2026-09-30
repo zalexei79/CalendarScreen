@@ -156,3 +156,14 @@
 .pro-platform-guide h4 { margin: 0 0 4px; font-size: 12px; color: var(--pro-gold); }
 .pro-platform-guide p { margin: 0; font-size: 11px; line-height: 1.6; color: var(--pro-muted); }
 .pro-platform-guide .pro-text-action { margin-top: 8px; }
+.pro-signals-guide { margin-top: 12px; border: 1px solid var(--pro-line); border-radius: 16px; background: var(--pro-surface); }
+.pro-signals-guide summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; padding: 12px 16px; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--pro-gold); }
+.pro-signals-guide summary::before { content: '+'; }
+.pro-signals-guide[open] summary::before { content: '−'; }
+.pro-signals-guide summary > span:first-child { flex: 1; }
+.pro-signals-tag { font-size: 9px; font-weight: 400; color: var(--pro-muted); }
+.pro-signals-guide > div { padding: 0 16px 16px; }
+.pro-signals-guide p { margin: 0 0 10px; color: var(--pro-muted); font-size: 11px; line-height: 1.65; }
+.pro-signals-guide .pro-text-action { min-height: 44px; margin-top: 0; }
+.pro-signals-guide .pro-signals-note { margin: 8px 0 0; font-size: 10px; }
+.pro-signals-guide summary:focus-visible, .pro-signals-guide a:focus-visible { outline: 2px solid var(--pro-gold); outline-offset: 2px; border-radius: 12px; }
