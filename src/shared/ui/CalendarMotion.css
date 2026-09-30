@@ -1,0 +1,21 @@
+/* Translate is independent of the transform used by the wallet pull gesture. */
+.calendar-section.animate-slide-next {
+  --calendar-enter-x: clamp(48px, 12vw, 100px);
+  animation: calendar-month-arrive 420ms cubic-bezier(.22, 1, .36, 1) both;
+}
+.calendar-section.animate-slide-prev {
+  --calendar-enter-x: clamp(-100px, -12vw, -48px);
+  animation: calendar-month-arrive 420ms cubic-bezier(.22, 1, .36, 1) both;
+}
+@keyframes calendar-month-arrive {
+  from { opacity: .4; translate: var(--calendar-enter-x) 0; }
+  to { opacity: 1; translate: 0 0; }
+}
+/* Keep the month coherent instead of replaying a vertical cascade of days. */
+.calendar-section[data-cells-enter="false"] .calendar-days-grid > button {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .calendar-section.animate-slide-next,
+  .calendar-section.animate-slide-prev { animation: none; }
+}

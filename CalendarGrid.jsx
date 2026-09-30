@@ -5,6 +5,7 @@ import CalendarDayCell from './CalendarDayCell';
 import { WEEKDAYS } from './src/shared/config/constants';
 import { useWalletExitGesture } from './src/features/wallet/hooks/useWalletExitGesture';
 import './src/features/wallet/WalletGestures.css';
+import './src/shared/ui/CalendarMotion.css';
 
 export default function CalendarGrid({
   traderMode = false,
@@ -32,7 +33,7 @@ export default function CalendarGrid({
   const drag = useRef(null);
   const suppressClick = useRef(false);
   // A workspace return reveals the complete month, without replaying 35 cells.
-  const animateCells = useRef(typeof document === 'undefined' || !document.documentElement.hasAttribute('data-workspace-transition'));
+  const animateCells = useRef(!slideDirection && (typeof document === 'undefined' || !document.documentElement.hasAttribute('data-workspace-transition')));
   const { surfaceRef, drag: touchDrag } = useWalletExitGesture({
     navigation: 'calendar', onExit: onOpenWallet, disabled: gesturesDisabled, onNextMonth, onPreviousMonth,
   });
