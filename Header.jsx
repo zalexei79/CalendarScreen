@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { flushSync } from 'react-dom';
+import { transitionView } from './src/shared/ui/transitionView';
 import {
   ChevronLeft, ChevronRight, Link2, LogIn, LogOut, Download, Smartphone, Monitor, Wifi, Cloud,
   Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw,
@@ -57,18 +57,12 @@ export default function Header({
       if (!proAccessActive) { openProPresentation(); return; }
     }
     if (nextMode === accountMode) return;
-    const applyMode = () => flushSync(() => {
+    transitionView(() => {
       // Wallet requires both entitlement and the PRO view. Enter atomically so
       // the parent's access effect cannot bounce a FREE-view subscriber back.
       if (nextMode === 'wallet') setProView(true);
       setAccountMode(nextMode);
     });
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (!reduceMotion && typeof document.startViewTransition === 'function') {
-      document.startViewTransition(applyMode);
-      return;
-    }
-    applyMode();
   }
 
   if (accountMode === 'wallet') {

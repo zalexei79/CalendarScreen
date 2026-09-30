@@ -95,6 +95,7 @@ import FinancePlanComposer from './src/features/reminders/FinancePlanComposer.js
 import FinancePlanList from './src/features/reminders/FinancePlanList.jsx';
 import { useWalletTransactions } from './src/features/wallet/hooks/useWalletTransactions';
 import WalletPanel from './src/features/wallet/WalletPanel.jsx';
+import { transitionView } from './src/shared/ui/transitionView';
 import SwipeDismissSheet from './src/shared/ui/SwipeDismissSheet.jsx';
 import ProOffer from './src/features/pro/ProOffer.jsx';
 
@@ -4292,7 +4293,7 @@ export default function CalendarScreen() {
         periodStats={periodStats} periodTrades={periodTrades} currencySymbol={currencySymbol} formatMoney={formatMoney}
       />
 
-      {accountMode === 'wallet' ? <WalletPanel language={language} isLight={isLight} currency={currency} {...wallet} onSave={wallet.saveTransaction} onDelete={wallet.deleteTransaction} onClearHistory={wallet.clearHistory} /> : null}
+      {accountMode === 'wallet' ? <WalletPanel language={language} isLight={isLight} currency={currency} {...wallet} onSave={wallet.saveTransaction} onDelete={wallet.deleteTransaction} onClearHistory={wallet.clearHistory} onBackToCalendar={() => transitionView(() => setAccountMode('main'))} /> : null}
       {accountMode === 'main' && <>
       <div className="px-3 sm:px-5">
         <MonthlyGoal

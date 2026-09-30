@@ -1,16 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
-  ArrowDownLeft, ArrowUpRight, BriefcaseBusiness, Check, ChevronDown,
+  ArrowDown, ArrowLeftRight, ArrowDownLeft, ArrowUpRight, BriefcaseBusiness, Check, ChevronDown,
   CircleDollarSign, CreditCard, Landmark, Plus, ShoppingBag, Trash2, Wallet, X,
 } from 'lucide-react';
 import { CURRENCIES, getCurrencyMeta } from '../../shared/config/constants';
 import SwipeDismissSheet from '../../shared/ui/SwipeDismissSheet.jsx';
+import { useWalletExitGesture } from './hooks/useWalletExitGesture';
+import './WalletGestures.css';
 
 const ONBOARDING_KEY = 'dayris_wallet_onboarding_v2';
 const fieldClass = 'w-full rounded-2xl border border-white/10 bg-white/[.045] px-4 py-3.5 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-amber-400/65 focus:bg-white/[.065]';
 
 const COPY = {
   ru: {
+    gestureHint: 'Свайп в сторону или вниз от начала — в календарь', gesturePull: 'Потяните, чтобы вернуться', gestureRelease: 'Отпустите — в календарь',
     eyebrow: 'PRO · ЛИЧНЫЕ ДЕНЬГИ', title: 'Мой кошелёк', subtitle: 'Сколько денег у тебя реально сейчас',
     balance: 'Доступный баланс', month: 'за этот месяц', add: 'Добавить деньги', withdraw: 'Вывести деньги',
     recent: 'Последние операции', empty: 'Операций пока нет', emptyHint: 'Добавь деньги, когда они действительно появились в кошельке.',
@@ -23,6 +27,7 @@ const COPY = {
     introOne: 'Добавляй деньги только когда они реально поступили.', introTwo: 'Вывод и расходы уменьшают фактический баланс.', introThree: 'Торговый PnL никогда не меняет кошелёк автоматически.', introAction: 'Понятно, начать',
   },
   en: {
+    gestureHint: 'Swipe sideways or pull down from the top to return', gesturePull: 'Pull to return', gestureRelease: 'Release to return to calendar',
     eyebrow: 'PRO · PERSONAL MONEY', title: 'My wallet', subtitle: 'How much money you actually have now',
     balance: 'Available balance', month: 'this month', add: 'Add money', withdraw: 'Take money out',
     recent: 'Recent activity', empty: 'No activity yet', emptyHint: 'Add money when it actually reaches your wallet.',
@@ -35,6 +40,7 @@ const COPY = {
     introOne: 'Add money only when it really arrives.', introTwo: 'Withdrawals and expenses reduce the real balance.', introThree: 'Trading PnL never changes the wallet automatically.', introAction: 'Got it, start',
   },
   ro: {
+    gestureHint: 'Glisează lateral sau trage în jos de la început pentru a reveni', gesturePull: 'Trage pentru a reveni', gestureRelease: 'Eliberează pentru a reveni la calendar',
     eyebrow: 'PRO · BANI PERSONALI', title: 'Portofelul meu', subtitle: 'Câți bani ai în realitate acum',
     balance: 'Sold disponibil', month: 'luna aceasta', add: 'Adaugă bani', withdraw: 'Scoate bani',
     recent: 'Operațiuni recente', empty: 'Nu există operațiuni', emptyHint: 'Adaugă bani când au ajuns cu adevărat în portofel.',
@@ -54,7 +60,7 @@ function localeOf(language) {
 
 export default function WalletPanel({
   language = 'ru', isLight, currency, transactions, transfers = [], balanceByCurrency,
-  loading, error, onSave, onDelete, onClearHistory = async () => {},
+  loading, error, onSave, onDelete, onClearHistory = async () => {}, onBackToCalendar,
 }) {
   const copy = COPY[localeOf(language)];
   const [code, setCode] = useState(currency || 'USD');
@@ -64,6 +70,7 @@ export default function WalletPanel({
   const [onboarding, setOnboarding] = useState(() => {
     try { return localStorage.getItem(ONBOARDING_KEY) !== '1'; } catch { return false; }
   });
+  const { surfaceRef, drag } = useWalletExitGesture({ onExit: onBackToCalendar, disabled: Boolean(composer || onboarding || busy) });
   const today = new Date().toISOString().slice(0, 10);
   const monthPrefix = today.slice(0, 7);
   const rows = useMemo(() => transactions.filter((item) => item.currency === code), [transactions, code]);
@@ -102,12 +109,13 @@ export default function WalletPanel({
     ? [['tradingProfit', BriefcaseBusiness, copy.tradingProfit], ['accountTopup', CreditCard, copy.accountTopup], ['otherIncome', CircleDollarSign, copy.otherIncome]]
     : [['accountWithdrawal', Landmark, copy.accountWithdrawal], ['expense', ShoppingBag, copy.expense], ['otherExpense', ArrowUpRight, copy.otherExpense]];
 
-  return <section className={`wallet-panel-enter min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-8 sm:py-8 ${isLight ? 'bg-[#f4f6f8]' : 'bg-[#08090c]'}`}>
-    <div className="mx-auto max-w-3xl">
+  return <section ref={surfaceRef} className={`wallet-panel-enter min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-8 sm:py-8 ${isLight ? 'bg-[#f4f6f8]' : 'bg-[#08090c]'}`}>
+    <div className="wallet-gesture-content mx-auto max-w-3xl" data-dragging={Boolean(drag.axis)} style={{ transform: drag.axis ? `translate3d(${drag.x}px,${drag.y}px,0)` : 'none' }}>
       <header className="mb-5">
         <p className="font-data text-[10px] uppercase tracking-[.28em] text-amber-500">{copy.eyebrow}</p>
         <h2 className={`mt-2 text-3xl font-semibold tracking-tight ${isLight ? 'text-zinc-950' : 'text-white'}`}>{copy.title}</h2>
         <p className="mt-1 text-sm text-zinc-500">{copy.subtitle}</p>
+        {onBackToCalendar && <p className="wallet-gesture-hint">{copy.gestureHint}</p>}
       </header>
 
       <div className="relative overflow-hidden rounded-[30px] border border-amber-400/20 bg-gradient-to-br from-[#211d12] via-[#121317] to-[#090a0d] p-6 shadow-[0_28px_90px_rgba(0,0,0,.35)] sm:p-8">
@@ -131,6 +139,7 @@ export default function WalletPanel({
       </div>
       {activities.length > 0 && <button type="button" onClick={async () => { if (window.confirm(copy.clearConfirm)) await onClearHistory(); }} className="mt-4 text-xs text-zinc-500 hover:text-red-400">{copy.clear}</button>}
     </div>
+    {drag.axis && createPortal(<div className="wallet-gesture-feedback" data-ready={drag.ready} role="status">{drag.axis === 'y' ? <ArrowDown aria-hidden="true"/> : <ArrowLeftRight aria-hidden="true"/>}{drag.ready ? copy.gestureRelease : copy.gesturePull}</div>, document.body)}
 
     {composer && <div className="fixed inset-0 z-[220] flex items-end justify-center bg-black/65 p-0 backdrop-blur-sm sm:items-center sm:p-5" onMouseDown={(event) => { if (event.target === event.currentTarget) setComposer(null); }}><SwipeDismissSheet as="form" onDismiss={() => setComposer(null)} disabled={busy} onSubmit={submit} className="w-full max-w-lg rounded-t-[30px] border border-white/10 bg-[#111216] p-5 shadow-2xl sm:rounded-[30px] sm:p-6" handleClassName="-mt-3 mb-1"><div className="flex items-start justify-between"><div><p className="font-data text-[10px] uppercase tracking-[.2em] text-amber-400">{composer.kind === 'income' ? copy.add : copy.withdraw}</p><h3 className="mt-1 text-2xl font-semibold text-white">{composer.kind === 'income' ? copy.add : copy.withdraw}</h3></div><button type="button" onClick={() => setComposer(null)} className="rounded-full bg-white/5 p-2 text-zinc-500"><X className="h-4 w-4" /></button></div><label className="mt-6 block text-xs text-zinc-500">{copy.howMuch}<div className="relative mt-2"><span className="absolute left-4 top-3.5 font-data text-lg text-amber-400">{symbol}</span><input autoFocus required type="number" min="0.01" step="0.01" value={composer.amount} onChange={(event) => setComposer({ ...composer, amount: event.target.value })} placeholder="0.00" className={`${fieldClass} pl-10 font-data text-lg`} /></div></label><p className="mt-5 text-xs text-zinc-500">{composer.kind === 'income' ? copy.source : copy.destination}</p><div className="mt-2 grid gap-2">{reasonOptions.map(([key, Icon, label]) => <button key={key} type="button" onClick={() => setComposer({ ...composer, reason: key })} className={`flex items-center gap-3 rounded-2xl border p-3 text-left text-sm transition ${composer.reason === key ? 'border-amber-400/45 bg-amber-400/[.09] text-amber-300' : 'border-white/[.07] bg-white/[.025] text-zinc-300'}`}><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5"><Icon className="h-4 w-4" /></span>{label}{composer.reason === key && <Check className="ml-auto h-4 w-4" />}</button>)}</div><div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-xs text-zinc-500">{copy.date}<input required type="date" value={composer.dateKey} onChange={(event) => setComposer({ ...composer, dateKey: event.target.value })} className={`${fieldClass} mt-1.5`} /></label><label className="text-xs text-zinc-500">{copy.comment}<input value={composer.comment} onChange={(event) => setComposer({ ...composer, comment: event.target.value })} className={`${fieldClass} mt-1.5`} /></label></div>{actionError && <p className="mt-3 text-xs text-red-400">{actionError}</p>}<button disabled={busy} className="mt-5 w-full rounded-2xl bg-amber-400 px-4 py-3.5 font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-60">{busy ? copy.saving : `${composer.kind === 'income' ? copy.saveAdd : copy.saveWithdraw} ${symbol}${composer.amount || '0'}`}</button></SwipeDismissSheet></div>}
 
