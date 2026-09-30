@@ -36,7 +36,8 @@ export function parseMetaTraderExport(source) {
 export function parseMetaTrader(source) { return parseMetaTraderExport(source).rows; }
 
 export function rowsForMetaTraderAccount(rows, id) {
-  return rows.filter(row => row.comment.startsWith(`[DAYRIS:${id}:`));
+  if (!id) return [];
+  return rows.filter(row => typeof row.comment === 'string' && row.comment.startsWith(`[DAYRIS:${id}:`));
 }
 
 export function pendingMetaTrader(rows, existing) {

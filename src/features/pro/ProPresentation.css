@@ -141,3 +141,18 @@
   .pro-actions-reveal, .pro-control, .pro-control-toggle > span { transition: none; }
   .pro-feature-layout { animation: none; }
 }
+
+/* Keep provider names visible, including on phones. */
+.pro-control-platform { gap: 5px; padding-inline: 10px; }
+.pro-control-platform > span { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+@media (max-width: 639px) {
+  .pro-control-platform { width: auto; min-width: 66px; padding-inline: 8px; font-size: 10px; }
+  .pro-control-platform svg { display: none; }
+  .pro-control-platform > span { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+  .pro-actions { flex-wrap: wrap; border-radius: 24px; }
+}
+.pro-platform-guide { display: grid; gap: 10px; margin-top: 18px; padding: 16px; border: 1px solid var(--pro-line); border-radius: 16px; }
+.pro-platform-guide article { min-width: 0; }
+.pro-platform-guide h4 { margin: 0 0 4px; font-size: 12px; color: var(--pro-gold); }
+.pro-platform-guide p { margin: 0; font-size: 11px; line-height: 1.6; color: var(--pro-muted); }
+.pro-platform-guide .pro-text-action { margin-top: 8px; }

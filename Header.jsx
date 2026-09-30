@@ -30,7 +30,7 @@ export default function Header({
   goToPrevMonth, goToNextMonth, monthMenuRef, monthMenuOpen, setMonthMenuOpen,
   yearMenuRef, yearMenuOpen, setYearMenuOpen, month, year, today,
   setViewMonth, setViewYear, setSelectedKey, setTraderMode, setPlatformFilter,
-  openConnectModal, ctraderConnected, installInfoRef, handleInstallClick,
+  openConnectModal, ctraderConnected, ctraderReconnect, metaTraderState, installInfoRef, handleInstallClick,
   pendingSyncCount, installInfoOpen, installInstructions, isPwaInstalled,
   failedSyncCount = 0, retryFailedSync = () => {},
   platformFilter, platformOptions = [], calendarTypeFilter, setCalendarTypeFilter,
@@ -522,7 +522,7 @@ export default function Header({
           </div>
 
           {/* The workspace selector is separate from server-side PRO entitlement. */}
-          <div className="mt-1 flex w-full min-w-0 items-center gap-1.5 overflow-x-auto pb-1 sm:mt-0 sm:ml-2 sm:w-auto sm:max-w-full sm:pb-0">
+          <div className="mt-1 flex w-full min-w-0 flex-wrap items-center gap-1.5 pb-1 sm:mt-0 sm:ml-2 sm:w-auto sm:max-w-full sm:flex-nowrap sm:pb-0">
             <button
               type="button"
               role="switch"
@@ -554,6 +554,7 @@ export default function Header({
               })}
               onWallet={() => changeAccountMode('wallet')}
               onConnect={openConnectModal} connected={ctraderConnected}
+              metatrader={metaTraderState} reconnect={ctraderReconnect}
               onOffer={openProPresentation}
             />
           </div>

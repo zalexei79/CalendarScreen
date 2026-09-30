@@ -26,3 +26,12 @@ test('PRO presentation resolves regional locales and safe fallbacks', () => {
   assert.equal(getProOfferCopy(undefined), getProOfferCopy('ru'));
   assert.equal(getProOfferCopy('unknown'), getProOfferCopy('ru'));
 });
+test('PRO booklet explains both platforms and desktop requirements in every locale', () => {
+ for (const language of ['ru', 'en', 'md']) {
+   const copy = getProOfferCopy(language);
+   assert.match(copy.traderBody, /cTrader/);
+   assert.match(copy.traderBody, /MetaTrader 5/);
+   assert.match(copy.mt5Guide, /Chrome\/Edge/);
+   assert.ok(copy.ctraderGuide && copy.openPlatforms);
+ }
+});

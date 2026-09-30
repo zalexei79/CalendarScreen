@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Check, Link2, RefreshCw } from 'lucide-react';
+import { SyncSummary } from '../platforms/PlatformConnections';
 
-export default function CtraderControl({ t, isLight, connected, reconnect, loading, syncing, accounts, accountId, onConnect, onSelect, onSync, onDisconnect }) {
+export default function CtraderControl({ t, language = 'ru', isLight, connected, reconnect, loading, syncing, accounts, accountId, onConnect, onSelect, onSync, onDisconnect, importedCount = 0, lastSync }) {
   const [selecting, setSelecting] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const busy = loading || syncing;
@@ -30,6 +31,7 @@ export default function CtraderControl({ t, isLight, connected, reconnect, loadi
           <div className="min-w-0 max-w-[48%]">{renderBalance(selected)}</div>
         </div>
       </div>}
+      {selected && <SyncSummary language={language} platform="cTrader" count={importedCount} lastSync={lastSync} />}
       {connected && !reconnect && (selecting || !selected) && <div className="mt-4" role="group" aria-label={t('ctChoose')}>
         <p className="mb-2 text-xs opacity-60">{t('ctChoose')}</p>
         <div className="max-h-56 space-y-2 overflow-y-auto">
@@ -41,7 +43,7 @@ export default function CtraderControl({ t, isLight, connected, reconnect, loadi
       </div>}
       <button disabled={busy || (connected && !reconnect && !selected)} onClick={connected && !reconnect ? onSync : onConnect} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-amber-300 disabled:opacity-40">
         {busy ? <RefreshCw className="h-4 w-4 animate-spin" /> : connected && !reconnect ? <RefreshCw className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
-        {t(syncing ? 'syncing' : loading ? 'connecting' : reconnect ? 'ctReconnect' : connected ? 'synchronize' : 'connectCtraderBtn')}
+        cTrader · {t(syncing ? 'syncing' : loading ? 'connecting' : reconnect ? 'ctReconnect' : connected ? 'synchronize' : 'connectCtraderBtn')}
       </button>
       {(connected || reconnect) && <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         {!reconnect && <button disabled={busy} onClick={() => setSelecting(v => !v)} className={secondary}>{t('ctSwitch')}</button>}

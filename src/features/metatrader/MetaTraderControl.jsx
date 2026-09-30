@@ -2,12 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link2, RefreshCw, Check, X } from 'lucide-react';
 import { parseMetaTraderExport, pendingMetaTrader, rowsForMetaTraderAccount } from './parseMetaTrader.mjs';
+import { SyncSummary } from '../platforms/PlatformConnections';
 
-export default function MetaTraderControl({ trades, saveTrade, userId, enabled, visible, language, isLight, onClose }) {
+export default function MetaTraderControl({ trades, saveTrade, userId, enabled, visible, language, isLight, onClose, onConnectionChange }) {
   const [folder, setFolder] = useState(null), [snapshot, setSnapshot] = useState(null);
   const [accountId, setAccountId] = useState(''), [connected, setConnected] = useState(false);
   const [status, setStatus] = useState(''), [busy, setBusy] = useState(false), [auto, setAuto] = useState(false);
   const [selecting, setSelecting] = useState(false), [confirming, setConfirming] = useState(false);
+  const [lastSync, setLastSync] = useState(null);
+  const [sessionOwner, setSessionOwner] = useState(userId);
   const dialog = useRef(null), close = useRef(onClose), lock = useRef(false);
   const imported = useRef(new Set()), generation = useRef(0), live = useRef({});
   close.current = onClose; live.current = { trades, saveTrade, userId, enabled, accountId };
@@ -15,9 +18,14 @@ export default function MetaTraderControl({ trades, saveTrade, userId, enabled, 
   const t = (r, e, m) => ru ? r : ro ? m : e;
   const accounts = snapshot?.accounts || [], selected = accounts.find(account => account.id === accountId);
   const selectedRows = rowsForMetaTraderAccount(snapshot?.rows || [], accountId);
+  const accountTrades = rowsForMetaTraderAccount(Object.values(trades).flat().filter(row => row.platform === 'MT5'), accountId).length;
   useEffect(() => {
-    generation.current++; setFolder(null); setSnapshot(null); setAccountId(''); setConnected(false); setAuto(false);
-    setStatus(''); setSelecting(false); setConfirming(false); imported.current.clear();
+    const current = sessionOwner === userId;
+    onConnectionChange?.({ owner: userId, connected: current && enabled && connected, auto: current && enabled && auto && Boolean(folder), busy: current && busy, accountId: current ? accountId : '', lastSync: current ? lastSync : null });
+  }, [onConnectionChange, userId, sessionOwner, enabled, connected, auto, folder, busy, accountId, lastSync]);
+  useEffect(() => {
+    generation.current++; setSessionOwner(userId); setFolder(null); setSnapshot(null); setAccountId(''); setConnected(false); setAuto(false);
+    setStatus(''); setSelecting(false); setConfirming(false); setLastSync(null); imported.current.clear();
   }, [userId, enabled]);
   useEffect(() => {
     if (!visible || !enabled) return;
@@ -48,7 +56,7 @@ export default function MetaTraderControl({ trades, saveTrade, userId, enabled, 
   }
   function preview(data, handle) {
     if (data.accounts.some(account => account.platform !== 'MT5')) throw new Error('Select a MetaTrader 5 export');
-    generation.current++; setFolder(handle); setSnapshot(data); setAuto(false); setConnected(false); setStatus('');
+    generation.current++; setFolder(handle); setSnapshot(data); setAuto(false); setConnected(false); setStatus(''); setLastSync(null);
     setAccountId(data.accounts[0]?.id || ''); setSelecting(data.accounts.length > 1);
   }
   async function chooseFolder() {
@@ -76,6 +84,7 @@ export default function MetaTraderControl({ trades, saveTrade, userId, enabled, 
       }
       if (session !== generation.current) return;
       setSnapshot(data); setConnected(true);
+      setLastSync({ at: Date.now(), added: count, accountId: id });
       setStatus(t(`Добавлено: ${count} · Проверено в ${new Date().toLocaleTimeString()}`, `Added: ${count} · Checked at ${new Date().toLocaleTimeString()}`, `Adăugate: ${count} · Verificat la ${new Date().toLocaleTimeString()}`));
     } catch (error) { if (session === generation.current) { setAuto(false); setStatus(error.message); } }
     finally { lock.current = false; setBusy(false); }
@@ -92,7 +101,7 @@ export default function MetaTraderControl({ trades, saveTrade, userId, enabled, 
   }, [auto, folder, userId, enabled, connected, accountId]);
   function disconnect() {
     generation.current++; setAuto(false); setFolder(null); setSnapshot(null); setAccountId('');
-    setConnected(false); setStatus(''); setConfirming(false); setSelecting(false);
+    setConnected(false); setStatus(''); setConfirming(false); setSelecting(false); setLastSync(null);
   }
   if (!visible || !enabled || !userId) return null;
   const secondary = `min-h-11 rounded-xl border px-4 py-3 text-xs font-semibold disabled:opacity-40 ${isLight ? 'border-zinc-200 hover:bg-zinc-50' : 'border-zinc-800 hover:bg-white/5'}`;
@@ -116,6 +125,7 @@ export default function MetaTraderControl({ trades, saveTrade, userId, enabled, 
           catch (error) { if (session === generation.current) setStatus(error.message); }
         }} /></label><p>{t('Для второго счёта войдите в него в MT5 и подключите экспортёр. Затем выберите папку заново: сохранённые экспорты обоих счетов будут в списке. Выбор здесь не переключает счёт в самом терминале.', 'For another account, log into it in MT5 and attach the exporter. Choose the folder again to list both saved exports. Selection here does not switch the terminal account.', 'Pentru alt cont, conectează-l în MT5 și atașează exportatorul. Alege din nou folderul pentru ambele exporturi. Contul terminalului nu este schimbat.')}</p></div></details>
       </>}
+      {selected && !confirming && <SyncSummary language={language} platform="MT5" count={accountTrades} lastSync={lastSync?.accountId === accountId ? lastSync : null} />}
       <p role="status" className="mt-3 break-words text-xs leading-5 text-zinc-500">{status}</p>
       <p className="mt-4 border-t border-zinc-500/20 pt-3 text-[11px] leading-5 text-zinc-500">{t('Автосинхронизация: Chrome/Edge на ПК, терминал и сайт открыты. После перезагрузки выберите папку снова. Баланс — снимок на указанное время. Сделки передаются на телефон через существующую облачную синхронизацию DAYRIS. MT4 пока не проверен.', 'Auto-sync: desktop Chrome/Edge with terminal and site open. Select the folder again after reload. Balance is a timestamped snapshot. Trades reach mobile through existing DAYRIS cloud sync. MT4 is not verified yet.', 'Sincronizare automată: Chrome/Edge pe PC, terminal și site deschise. Alege din nou folderul după reîncărcare. Soldul este un instantaneu. Tranzacțiile ajung pe telefon prin cloud DAYRIS. MT4 nu este încă verificat.')}</p>
       <a className="mt-3 inline-block text-xs text-amber-500" href="/metatrader/setup.txt" target="_blank" rel="noreferrer">{t('Инструкция', 'Instructions', 'Instrucțiuni')} →</a>

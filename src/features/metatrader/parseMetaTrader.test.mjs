@@ -39,3 +39,7 @@ test('reject mismatched metadata, invalid balance and trade-only malformed accou
  assert.throws(() => parseMetaTraderExport(csv(meta.replace(';100;', ';NaN;'))));
  assert.throws(() => parseMetaTraderExport(csv(meta.replace(';Demo;', ';Unknown;'))));
 });
+test('account journal count ignores manual entries without an import marker', () => {
+ assert.deepEqual(rowsForMetaTraderAccount([{platform:'MT5'}, {platform:'MT5',comment:null}], 'MT5:A:42'), []);
+ assert.deepEqual(rowsForMetaTraderAccount([{comment:'[DAYRIS:MT5:A:42:123]'}], ''), []);
+});

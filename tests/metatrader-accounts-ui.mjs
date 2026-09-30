@@ -26,11 +26,14 @@ try {
  await page.getByRole('button',{name:'Подключить и синхронизировать',exact:true}).click();
  assert.equal(await page.locator('#saved').textContent(),'0');
  await page.getByRole('checkbox').check();
+ await page.waitForFunction(()=>JSON.parse(document.querySelector('#connection').textContent).auto === true);
  await page.getByRole('button',{name:'Выбрать счёт',exact:true}).click();
  await page.getByRole('button',{name:/Broker B/}).click();
+ await page.waitForFunction(()=>JSON.parse(document.querySelector('#connection').textContent).auto === false);
  assert.equal(await page.getByRole('checkbox').count(),0);
  await page.getByRole('button',{name:'Подключить и синхронизировать',exact:true}).click();
  await page.waitForFunction(()=>document.querySelector('#saved').textContent==='1');
+ await page.waitForFunction(()=>JSON.parse(document.querySelector('#connection').textContent).lastSync?.added === 1);
  await page.getByRole('button',{name:'Синхронизировать',exact:true}).click();
  assert.equal(await page.locator('#saved').textContent(),'1');
  await page.getByRole('checkbox').check();
@@ -42,6 +45,7 @@ try {
  assert.equal(await page.locator('#saved').textContent(),'1');
  await page.getByRole('button',{name:'Закрыть',exact:true}).click();
  await page.locator('#owner').click(); await page.locator('#open').click();
+ await page.waitForFunction(()=>JSON.parse(document.querySelector('#connection').textContent).connected === false);
  assert.equal(await page.locator('#saved').textContent(),'0');
  assert.equal(await page.getByRole('button',{name:'Синхронизировать',exact:true}).count(),0);
  await page.getByRole('button',{name:'Закрыть',exact:true}).click();

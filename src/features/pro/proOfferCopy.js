@@ -70,6 +70,31 @@ const copy = {
   },
 };
 
+Object.assign(copy.ru, {
+  traderTitle: 'Два подключения. Один торговый журнал.',
+  traderBody: 'Включите режим трейдера: сделки, PnL, кривая результата и аналитика отдельно от личных денег. Подключайте cTrader и MetaTrader 5 через отдельные меню.',
+  traderPoints: ['Журнал сделок и аналитика PnL', 'Выбор торгового счёта на каждой площадке', 'Своя синхронизация и результат загрузки'],
+  ctraderGuide: 'Прямое подключение: выберите счёт и загрузите сделки. В меню видно, сколько записей в журнале и что добавила последняя проверка.',
+  mt5Guide: 'Подключение через экспортёр в вашем терминале. Автообновление требует открытых MT5 и DAYRIS в Chrome/Edge на ПК. На телефон сделки приходят через облачную синхронизацию DAYRIS.',
+  openPlatforms: 'Открыть торговые площадки',
+});
+Object.assign(copy.en, {
+  traderTitle: 'Two connections. One trading journal.',
+  traderBody: 'Enable Trader Mode for trades, PnL, your result curve and analytics, separate from personal money. Connect cTrader and MetaTrader 5 through dedicated menus.',
+  traderPoints: ['Trade journal and PnL analytics', 'Choose a trading account per platform', 'Separate sync controls and import results'],
+  ctraderGuide: 'Direct connection: choose an account and load trades. See journal entries and the result of your latest check.',
+  mt5Guide: 'Connect through an exporter in your terminal. Auto-refresh requires MT5 and DAYRIS open in desktop Chrome/Edge. Trades reach mobile through DAYRIS cloud sync.',
+  openPlatforms: 'Open trading platforms',
+});
+Object.assign(copy.ro, {
+  traderTitle: 'Două conexiuni. Un jurnal de trading.',
+  traderBody: 'Activează modul Trader pentru tranzacții, PnL, curba rezultatului și analiză, separat de banii personali. Conectează cTrader și MetaTrader 5 prin meniuri separate.',
+  traderPoints: ['Jurnal de tranzacții și analiză PnL', 'Alegerea contului pentru fiecare platformă', 'Sincronizare și rezultate de import separate'],
+  ctraderGuide: 'Conectare directă: alege contul și încarcă tranzacțiile. Vezi înregistrările din jurnal și rezultatul ultimei verificări.',
+  mt5Guide: 'Conectare prin exportator în terminal. Actualizarea automată necesită MT5 și DAYRIS deschise în Chrome/Edge pe PC. Tranzacțiile ajung pe telefon prin cloud DAYRIS.',
+  openPlatforms: 'Deschide platformele de trading',
+});
+
 export function getProOfferCopy(language) {
   const locale = String(language || 'ru').toLowerCase().split('-')[0];
   return copy[locale === 'md' ? 'ro' : locale] || copy.ru;

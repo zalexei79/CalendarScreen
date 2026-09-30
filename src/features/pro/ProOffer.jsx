@@ -4,7 +4,7 @@ import { getProOfferCopy } from './proOfferCopy';
 import './ProPresentation.css';
 
 // Presentation only. All account, referral and checkout actions stay with the caller.
-export default function ProOffer({ language, copy, active, signedIn, referralLoading, referralCode, referralError, checkoutLoading, checkoutError, onInvite, onCheckout, onInvites, onWallet }) {
+export default function ProOffer({ language, copy, active, signedIn, referralLoading, referralCode, referralError, checkoutLoading, checkoutError, onInvite, onCheckout, onInvites, onWallet, onPlatforms }) {
   const [feature, setFeature] = useState('wallet');
   const id = useId();
   const text = getProOfferCopy(language);
@@ -41,6 +41,7 @@ export default function ProOffer({ language, copy, active, signedIn, referralLoa
             <p>{text[`${feature}Body`]}</p>
             <ul>{text[`${feature}Points`].map(point => <li key={point}><Check aria-hidden="true" />{point}</li>)}</ul>
             {active && feature === 'wallet' && <button type="button" className="pro-text-action" onClick={onWallet}>{text.openWallet}<ArrowRight aria-hidden="true" /></button>}
+            {feature === 'trader' && <div className="pro-platform-guide"><article><h4>cTrader</h4><p>{text.ctraderGuide}</p></article><article><h4>MetaTrader 5</h4><p>{text.mt5Guide}</p></article>{active && onPlatforms && <button type="button" className="pro-text-action" onClick={onPlatforms}>{text.openPlatforms}<ArrowRight aria-hidden="true" /></button>}</div>}
           </div>
           <div className={`pro-example pro-example-${feature}`}>
             <p className="pro-example-label">{text.example}</p>
