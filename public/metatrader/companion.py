@@ -7,7 +7,7 @@ import os
 import sys
 from pathlib import Path
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import ctypes
 import subprocess
@@ -78,7 +78,11 @@ def snapshot(expected=None):
             identity = f'{info.server}:{info.login}'
             if expected and identity != expected:
                 raise ValueError('В MT5 сменился счёт. Отключите помощник в DAYRIS и подключите новый счёт.')
-            deals = mt5.history_deals_get(datetime(1970, 1, 1, tzinfo=timezone.utc), datetime.now(timezone.utc))
+            # MT5 deal timestamps use broker wall time. A UTC 'now' cutoff can
+            # omit today's closing deals on servers ahead of UTC. Include a
+            # margin covering server offsets; MT5 only returns existing deals.
+            history_end = datetime.now(timezone.utc) + timedelta(days=2)
+            deals = mt5.history_deals_get(datetime(1970, 1, 1, tzinfo=timezone.utc), history_end)
             positions = mt5.positions_get()
             if deals is None or positions is None:
                 raise ValueError('Не удалось прочитать историю MT5. Повторите синхронизацию.')
@@ -148,7 +152,7 @@ class Handler(BaseHTTPRequestHandler):
                 identity, csv = snapshot(permission[1])
             else:
                 return self.reply(404, {})
-            self.reply(200, {'csv': csv, 'timeZone': 'UTC'})
+            self.reply(200, {'csv': csv, 'timeZone': 'broker'})
             updates.put('История передана в DAYRIS. Подключение активно.')
         except (ValueError, KeyError, TypeError) as error:
             updates.put(str(error))

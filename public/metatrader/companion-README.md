@@ -9,7 +9,7 @@ Windows x64, installed MetaTrader 5, Chrome or Edge. No paid provider, API subsc
 
 The connection is scoped to the current browser session and terminal account. Switching the DAYRIS user revokes access. Switching the MT5 account requires reconnecting. Credentials are never stored. The loopback service binds only 127.0.0.1:17865, accepts specific DAYRIS origins and requires a random session token plus native consent. No trading API methods are called.
 
-Trade timestamps use UTC. Only fully closed positions are imported, including all their commissions, fees and swap. Position markers match the earlier DAYRIS exporter so repeated imports are skipped. Ordinary broker reports are not supported by the optional legacy CSV path.
+Trade timestamps preserve the broker clock shown in MT5 history. The terminal snapshot timestamp uses UTC. Only fully closed positions are imported, including all their commissions, fees and swap. Position markers match the earlier DAYRIS exporter so repeated imports are skipped. Ordinary broker reports are not supported by the optional legacy CSV path.
 
 The executable is unsigned; Windows may display a publisher warning. No certificate purchase or paid service is required.
 

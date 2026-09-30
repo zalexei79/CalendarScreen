@@ -19,6 +19,24 @@ def deal(ticket, kind, volume, entry, **fields):
 class Tests(unittest.TestCase):
     account = NS(trade_mode=0, server='Broker-Demo', login=42, company='Broker', balance=1000, currency='USD')
 
+    def test_recent_broker_time_closing_deal_is_included(self):
+        now = companion.datetime(2026, 9, 30, 21, 11, tzinfo=companion.timezone.utc)
+        closing_time = companion.datetime(2026, 9, 30, 23, 53, tzinfo=companion.timezone.utc)
+        opening = deal(1, 0, 1, 0)
+        closing = deal(2, 1, 1, 1, profit=10)
+        closing.time = int(closing_time.timestamp())
+        closing.time_msc = closing.time * 1000
+        def history(start, end):
+            return [opening, closing] if end >= closing_time else [opening]
+        with patch.object(companion, 'terminal_running', return_value=True), patch.object(companion, 'installed_terminals', return_value=[]), patch.object(companion.mt5, 'initialize', return_value=True), patch.object(companion.mt5, 'shutdown'), patch.object(companion.mt5, 'account_info', return_value=self.account), patch.object(companion.mt5, 'terminal_info', return_value=NS(connected=True)), patch.object(companion.mt5, 'positions_get', return_value=[]), patch.object(companion.mt5, 'history_deals_get', side_effect=history), patch.object(companion, 'datetime', wraps=companion.datetime) as clock:
+            clock.now.return_value = now
+            identity, csv = companion.snapshot()
+        self.assertEqual(identity, 'Broker-Demo:42')
+        rows = csv.splitlines()
+        self.assertEqual(len(rows), 4)
+        self.assertIn(';2026-09-30;23:53:00;', rows[2])
+        self.assertTrue(rows[2].endswith(';10;0;-2;USD'))
+
     def test_closed_terminal_is_not_started_by_sync(self):
         with patch.object(companion, 'terminal_running', return_value=False), patch.object(companion.mt5, 'initialize') as initialize:
             with self.assertRaisesRegex(ValueError, 'MT5 не открыт'):
