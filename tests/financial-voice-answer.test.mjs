@@ -2,6 +2,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {financialVoiceAnswer} from '../src/shared/lib/financialVoiceAnswer.js';
 import {parseCalendarVoiceCommand} from '../src/shared/lib/calendarVoiceCommand.js';
+test('asset aliases find broker symbols without mixing losses with spending',()=>{
+ const records={'2026-10-01':[{instrument:'XAUUSD',pnl:-100,currency:'USD'},{instrument:'XAU USD',pnl:40,currency:'USD'},{instrument:'XAU',pnl:-20,currency:'EUR'},{instrument:'XAUUSD.m',pnl:-10,currency:'USD'},{instrument:'BTCUSDT',pnl:-15,currency:'USD'},{instrument:'BTCUSD',pnl:25,currency:'USD'},{instrument:'BTCUP',pnl:-999,currency:'USD'}]};
+ const answer=category=>financialVoiceAnswer({records,monthKey:'2026-10',metric:'expense',category,isTrading:()=>true});
+ const gold=answer('золото');assert.match(gold,/Убытки по сделкам: 20.*евро; 110.*доллар/);assert.match(gold,/Итог торговли: -20.*евро; -70.*доллар/);assert.doesNotMatch(gold,/Личные расходы|999/);
+ assert.equal(answer('биток'),answer('биткоин'));assert.match(answer('биток'),/15.*доллар/);assert.match(answer('биток'),/Итог торговли: 10/);
+ assert.deepEqual(parseCalendarVoiceCommand('сколько заработал на золоте'),{type:'question',metric:'income',period:'current-month',category:'золоте'});
+ assert.match(financialVoiceAnswer({records,monthKey:'2026-10',metric:'income',category:'золоте',isTrading:()=>true}),/Прибыль по сделкам: 0.*евро; 40/);
+ assert.match(answer('эфир'),/сделок по инструменту/);
+});
+test('creation verbs cannot become category names by accident',()=>{
+ for(const phrase of ['создай категорию запиши','создай категорию','запиши категорию'])assert.deepEqual(parseCalendarVoiceCommand(phrase),{type:'category-prompt'});
+ assert.deepEqual(parseCalendarVoiceCommand('запиши категорию Сигареты'),{type:'category',name:'сигареты'});
+ assert.deepEqual(parseCalendarVoiceCommand('создай категорию запиши категорию Сигареты'),{type:'category',name:'сигареты'});
+});
 test('custom category commands and questions preserve arbitrary names',()=>{
  assert.deepEqual(parseCalendarVoiceCommand('Создай новый раздел Настольные игры'),{type:'category',name:'настольные игры'});
  assert.deepEqual(parseCalendarVoiceCommand('запиши расход 20 евро на сигареты'),{type:'entry',kind:'record',amount:'20',currency:'EUR',sign:'minus',category:'сигареты'});

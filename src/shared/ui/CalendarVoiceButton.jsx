@@ -57,7 +57,7 @@ export default function CalendarVoiceButton({language='ru',isLight,traderMode=fa
    const result=event.results[event.resultIndex];setTranscript(result[0].transcript);
    clearTimeout(speechPulseTimer.current);setTalking(!result.isFinal);
    if(!result.isFinal){speechPulseTimer.current=setTimeout(()=>setTalking(false),900);return;}
-   finalText=Array.from(result).map(item=>item.transcript).find(value=>parseCalendarVoiceCommand(value))||result[0].transcript;
+   finalText=Array.from(result).map(item=>item.transcript).find(value=>{const command=parseCalendarVoiceCommand(value);return command&&command.type!=='category-prompt';})||result[0].transcript;
    setPhase('processing');setMessage(ui.processing);recognition.stop();clearTimeout(timer.current);timer.current=setTimeout(()=>{if(session.current===recognition){stop();notify(text.error);}},5000);
   };
   recognition.onerror=event=>{if(session.current!==recognition)return;stop();notify(event.error==='not-allowed'||event.error==='service-not-allowed'?text.permission:text.error);};

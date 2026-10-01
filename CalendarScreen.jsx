@@ -4726,6 +4726,7 @@ export default function CalendarScreen() {
             </span>
           </button>
           <CalendarVoiceButton language={language} isLight={isLight} traderMode={traderMode} onCommand={(command) => {
+            if (command.type === 'category-prompt') return language === 'ru' ? 'Добавьте название после команды. Например: создай категорию Настольные игры.' : language === 'en' ? 'Include the category name in your command.' : 'Include numele categoriei în comandă.';
             const categoryNames = [...MONEY_CATEGORIES.map(item => item.key), ...voiceCategories.categories, ...Object.values(manualTrades).flat().filter(item => !isTradingHistoryRecord(item)).map(item => item.instrument)];
             const spokenCategory = command.category ? resolveVoiceCategory(command.category, categoryNames) : null;
             if (command.type === 'category') {

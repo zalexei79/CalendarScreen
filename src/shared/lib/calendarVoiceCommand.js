@@ -7,12 +7,16 @@ const months=[
 ];
 export function parseCalendarVoiceCommand(transcript){
  const text=String(transcript).toLowerCase().replace(/ё/g,'е').replace(/([\d])[,.](?=\d)/g,'$1DECIMAL').replace(/[,.!?]/g,' ').replace(/DECIMAL/g,',').replace(/\s+/g,' ').trim().replace(/^пожалуйста | пожалуйста$/g,'');
- const categoryCreate=text.match(/^(?:создай|создать|добавь|добавить) (?:новую |новый )?(?:категорию|раздел) (.+)$/);
- if(categoryCreate&&categoryCreate[1].length<=60)return {type:'category',name:categoryCreate[1].replace(/[«»"']/g,'').trim()};
- const categoryQuestion=text.replace(/^(?:скажи|расскажи) /,'').match(/^сколько (?:я )?(?:всего )?(?:потратил|потратила|потрачено)(?: (?:за|в) (?:(?:этот|этом|текущий|текущем) )?месяц(?:е)?)? на (.+)$/);
+ const categoryCreate=text.match(/^(?:создай|создать|добавь|добавить|запиши|записать) (?:новую |новый )?(?:категорию|раздел)(?: (.*))?$/);
+ if(categoryCreate){
+  const name=String(categoryCreate[1]||'').replace(/[«»"']/g,'').replace(/^(?:(?:создай|создать|добавь|добавить|запиши|записать)(?: категорию| раздел)? )+/,'').trim();
+  if(!name||/^(?:создай|создать|добавь|добавить|запиши|записать|категория|категорию|раздел)$/.test(name))return {type:'category-prompt'};
+  if(name.length<=60)return {type:'category',name};
+ }
+ const categoryQuestion=text.replace(/^(?:скажи|расскажи) /,'').match(/^сколько (?:я )?(?:всего )?(потратил|потратила|потрачено|заработал|заработала)(?: (?:за|в) (?:(?:этот|этом|текущий|текущем) )?месяц(?:е)?)? на (.+)$/);
  if(categoryQuestion){
-  const category=categoryQuestion[1].replace(/ (?:за|в) (?:(?:этот|этом|текущий|текущем) )?месяц(?:е)?$/,'').replace(/[«»"']/g,'').trim();
-  if(category&&category.length<=60&&!/прошл|предыдущ|год|недел|вчера/.test(category))return {type:'question',metric:'expense',period:'current-month',category};
+  const category=categoryQuestion[2].replace(/ (?:за|в) (?:(?:этот|этом|текущий|текущем) )?месяц(?:е)?$/,'').replace(/[«»"']/g,'').trim();
+  if(category&&category.length<=60&&!/прошл|предыдущ|год|недел|вчера/.test(category))return {type:'question',metric:categoryQuestion[1].startsWith('заработ')?'income':'expense',period:'current-month',category};
  }
  const categorized=text.match(/^(.+?) на (.+)$/);
  if(categorized&&!/^сколько/.test(text)){
