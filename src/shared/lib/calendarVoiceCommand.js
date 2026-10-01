@@ -7,6 +7,27 @@ const months=[
 ];
 export function parseCalendarVoiceCommand(transcript){
  const text=String(transcript).toLowerCase().replace(/ё/g,'е').replace(/([\d])[,.](?=\d)/g,'$1DECIMAL').replace(/[,.!?]/g,' ').replace(/DECIMAL/g,',').replace(/\s+/g,' ').trim().replace(/^пожалуйста | пожалуйста$/g,'');
+ const categoryCreate=text.match(/^(?:создай|создать|добавь|добавить) (?:новую |новый )?(?:категорию|раздел) (.+)$/);
+ if(categoryCreate&&categoryCreate[1].length<=60)return {type:'category',name:categoryCreate[1].replace(/[«»"']/g,'').trim()};
+ const categoryQuestion=text.replace(/^(?:скажи|расскажи) /,'').match(/^сколько (?:я )?(?:всего )?(?:потратил|потратила|потрачено)(?: (?:за|в) (?:(?:этот|этом|текущий|текущем) )?месяц(?:е)?)? на (.+)$/);
+ if(categoryQuestion){
+  const category=categoryQuestion[1].replace(/ (?:за|в) (?:(?:этот|этом|текущий|текущем) )?месяц(?:е)?$/,'').replace(/[«»"']/g,'').trim();
+  if(category&&category.length<=60&&!/прошл|предыдущ|год|недел|вчера/.test(category))return {type:'question',metric:'expense',period:'current-month',category};
+ }
+ const categorized=text.match(/^(.+?) на (.+)$/);
+ if(categorized&&!/^сколько/.test(text)){
+  const base=parseCalendarVoiceCommand(categorized[1]);
+  const category=categorized[2].replace(/[«»"']/g,'').trim();
+  if(base?.type==='entry'&&category&&category.length<=60)return {...base,category};
+  // Also accept “я потратил на сигареты двадцать евро”. Try each suffix
+  // as an amount; the conservative amount parser rejects category words.
+  const words=categorized[2].split(' ');
+  for(let i=1;i<words.length;i++){
+   const entry=parseCalendarVoiceCommand(`${categorized[1]} ${words.slice(i).join(' ')}`);
+   const name=words.slice(0,i).join(' ');
+   if(entry?.type==='entry'&&name.length<=60)return {...entry,category:name};
+  }
+ }
  if(/^(?:войди|зайди|перейди|открой)(?: в)? (?:мой )?кошелек$|^open (?:my )?wallet$|^deschide portofelul$/.test(text))return {type:'wallet'};
  const pro=text.match(/^(включи|включить|выключи|выключить|отключи|отключить) (?:режим )?(?:про|pro)$/);
  if(pro)return {type:'pro',enabled:/^включ/.test(pro[1])};

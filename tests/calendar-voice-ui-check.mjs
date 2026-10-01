@@ -5,8 +5,10 @@ import assert from 'node:assert/strict';
 const bundle=await createRequire(path.resolve('package.json'))('esbuild').build({stdin:{resolveDir:process.cwd(),loader:'jsx',contents:`
 import React,{useState} from 'react';import {createRoot} from 'react-dom/client';
 import Dock from './src/shared/ui/WorkspaceDock.jsx';import Voice from './src/shared/ui/CalendarVoiceButton.jsx';
+import useVoiceCategories from './src/shared/ui/useVoiceCategories.js';
+function CategoryFixture(){const[owner,setOwner]=useState('a');const categories=useVoiceCategories(owner);window.addCategory=categories.add;window.categoryNames=categories.categories;window.switchCategoryOwner=setOwner;return null;}
 function App(){const[hidden,setHidden]=useState(false);window.hideVoice=()=>setHidden(true);return <Dock hidden={hidden} proView><div className="pointer-events-auto flex items-center gap-1.5 rounded-full p-1.5"><button className="flex items-center gap-2 px-2 text-xs"><span className="w-6">◷</span>История</button><button className="flex items-center gap-2 px-3 text-xs"><span className="w-5">+</span>Добавить</button><Voice onCommand={c=>{window.commands.push(c);if(c.type==='question')return 'Личные расходы: 50 рублей.';}}/></div></Dock>}
-window.commands=[];createRoot(document.getElementById('root')).render(<App/>);
+window.commands=[];createRoot(document.getElementById('root')).render(<><CategoryFixture/><App/></>);
 `},bundle:true,write:false,outfile:'voice.js',format:'iife'});
 const utility=fs.readFileSync(path.join('dist/assets',fs.readdirSync('dist/assets').find(f=>f.endsWith('.css'))),'utf8');
 const browser=await createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE||import.meta.url)('playwright').chromium.launch({channel:'msedge',headless:true});
@@ -39,7 +41,7 @@ assert.equal(await page.locator('.calendar-voice-equalizer i').first().evaluate(
 await page.emulateMedia({reducedMotion:'no-preference'});
 await page.evaluate(()=>window.voice.onspeechend());
 assert.equal(await page.locator('.calendar-voice-glyph').getAttribute('data-talking'),'false');
-assert.match(await page.locator('.calendar-voice-message').textContent(),/Сегодня я потратил 50 рублей/);
+assert.match(await page.locator('.calendar-voice-message').textContent(),/Запиши расход 20 евро на сигареты/);
 await page.getByRole('button',{name:'Готово — обработать фразу'}).click();
 await page.getByRole('button',{name:'Голосовая команда'}).waitFor();
 await page.getByRole('button',{name:'Голосовая команда'}).click();await page.evaluate(()=>emit('удали запись'));
@@ -69,6 +71,10 @@ await page.getByRole('button',{name:'Прослушать ответ'}).click();
 assert.equal(await page.evaluate(()=>window.speakCount),4,'audio can be retried from a direct gesture');
 await page.evaluate(()=>hideVoice());await page.waitForFunction(()=>window.cancelCount===3);
 await page.reload();await page.locator('.calendar-voice-button').waitFor();
+await page.evaluate(()=>{addCategory('Настольные игры');addCategory('настольные игры');});
+await page.waitForFunction(()=>categoryNames.length===1);
+await page.evaluate(()=>switchCategoryOwner('b'));await page.waitForFunction(()=>categoryNames.length===0);
+await page.evaluate(()=>switchCategoryOwner('a'));await page.waitForFunction(()=>categoryNames[0]==='Настольные игры');
 await page.getByRole('button',{name:'Голосовая команда'}).click();
 await page.evaluate(()=>{
  const current=window.voice;

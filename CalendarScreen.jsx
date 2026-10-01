@@ -88,6 +88,8 @@ import MonthlyGoal from './MonthlyGoal';
 import AmountKeypad, {AmountInput} from './src/shared/ui/AmountEntry.jsx';
 import CalendarVoiceButton from './src/shared/ui/CalendarVoiceButton.jsx';
 import { financialVoiceAnswer } from './src/shared/lib/financialVoiceAnswer.js';
+import { categoryMatches, resolveVoiceCategory } from './src/shared/lib/voiceCategory.js';
+import useVoiceCategories from './src/shared/ui/useVoiceCategories.js';
 import CtraderControl from './src/features/ctrader/CtraderControl';
 import { createQrMatrix, drawQrToCanvas } from './qrCode.js';
 import { useReferral } from './src/features/referrals/useReferral.js';
@@ -1584,6 +1586,7 @@ export default function CalendarScreen() {
     refreshFromCloud,
   } = useTrades({ user });
   const wallet = useWalletTransactions({ user });
+  const voiceCategories = useVoiceCategories(user?.id);
 
   const {
     plans,
@@ -2477,6 +2480,7 @@ export default function CalendarScreen() {
       });
 
       const planIdToResolve = pendingPlanRecordId;
+      if (!saveAsTrade && !getMoneyCategoryMeta(instrument)) voiceCategories.add(instrument);
       if (planIdToResolve) {
         setPendingPlanRecordId(null);
         await resolvePlan(planIdToResolve, 'completed');
@@ -2596,6 +2600,7 @@ export default function CalendarScreen() {
 
   function isTradingHistoryRecord(item) {
     if (typeof item.traderMode === 'boolean') return item.traderMode;
+    if (item.platform !== 'cTrader' && item.platform !== 'MT5' && voiceCategories.categories.some(name => categoryMatches(name, item.instrument))) return false;
     const name = String(item.instrument || '').trim();
     return item.platform === 'cTrader'
       || item.take_profit != null
@@ -2634,8 +2639,8 @@ export default function CalendarScreen() {
   const historyNameOptions = useMemo(() => [...new Set(
     Object.values(manualTrades).flat().map((trade) => trade.instrument).filter(Boolean)
   )]
-    .filter((name) => (traderMode && historyScope !== 'money') || MONEY_CATEGORIES.some((category) => category.key.toUpperCase() === name.trim().toUpperCase()))
-    .sort((a, b) => a.localeCompare(b, language)), [manualTrades, language, traderMode, historyScope]);
+    .filter((name) => (traderMode && historyScope !== 'money') || [...MONEY_CATEGORIES.map(category => category.key), ...voiceCategories.categories].some(category => category.toUpperCase() === name.trim().toUpperCase()))
+    .sort((a, b) => a.localeCompare(b, language)), [manualTrades, language, traderMode, historyScope, voiceCategories.categories]);
 
   useEffect(() => {
     if ((!traderMode || historyScope === 'money') && !isFinancialPro && historyNameFilter && isTradingInstrumentName(historyNameFilter)) setHistoryNameFilter('');
@@ -3448,7 +3453,7 @@ export default function CalendarScreen() {
     return getMoneyCategoryMeta(instrument)?.icon || CircleDollarSign || MoreHorizontal;
   };
 
-  const moneyCategoriesWithIcons = MONEY_CATEGORIES.filter((item) =>
+  const moneyCategoriesWithIcons = [...MONEY_CATEGORIES, ...voiceCategories.categories.filter(name => !getMoneyCategoryMeta(name)).map(key => ({ key, icon: MoreHorizontal }))].filter((item) =>
     !item.type || item.type === form.sign || getMoneyCategoryMeta(form.instrument)?.key === item.key
   );
 
@@ -3885,7 +3890,7 @@ export default function CalendarScreen() {
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {moneyCategoriesWithIcons.map((category) => {
                 const Icon = category.icon;
-                const active = getMoneyCategoryMeta(form.instrument)?.key === category.key;
+                const active = getMoneyCategoryMeta(form.instrument)?.key === category.key || form.instrument === category.key;
                 return (
                   <button
                     key={category.key}
@@ -4721,12 +4726,19 @@ export default function CalendarScreen() {
             </span>
           </button>
           <CalendarVoiceButton language={language} isLight={isLight} traderMode={traderMode} onCommand={(command) => {
+            const categoryNames = [...MONEY_CATEGORIES.map(item => item.key), ...voiceCategories.categories, ...Object.values(manualTrades).flat().filter(item => !isTradingHistoryRecord(item)).map(item => item.instrument)];
+            const spokenCategory = command.category ? resolveVoiceCategory(command.category, categoryNames) : null;
+            if (command.type === 'category') {
+              const name = resolveVoiceCategory(command.name, categoryNames);
+              voiceCategories.add(name);
+              return language === 'ru' ? `Категория «${name}» готова. Скажите, например: запиши расход 20 евро на ${name}.` : language === 'en' ? `Category “${name}” is ready.` : `Categoria „${name}” este pregătită.`;
+            }
             if (command.type === 'month') { if (command.direction > 0) goToNextMonth(); else goToPrevMonth(); return; }
             if (command.type === 'pro') { setProView(command.enabled); return; }
             if (command.type === 'wallet') { if (proAccessActive && !proAccessLoading) openWalletFromCalendarGesture(); else setProView(true); return; }
             if (command.type === 'question') return financialVoiceAnswer({
-              records: manualTrades, monthKey: todayKey.slice(0, 7), metric: command.metric, language,
-              isTrading: (item) => item.platform === 'cTrader' || item.platform === 'MT5' || isTradingInstrumentName(item.instrument) || (!getMoneyCategoryMeta(item.instrument) && isTradingHistoryRecord(item)),
+              records: manualTrades, monthKey: todayKey.slice(0, 7), metric: command.metric, category: spokenCategory, language,
+              isTrading: (item) => item.platform === 'cTrader' || item.platform === 'MT5' || item.traderMode === true || isTradingInstrumentName(item.instrument) || (!getMoneyCategoryMeta(item.instrument) && isTradingHistoryRecord(item)),
             });
             if (command.type === 'date') {
               setSlideDirection(command.year * 12 + command.month >= year * 12 + month ? 'next' : 'prev');
@@ -4741,7 +4753,8 @@ export default function CalendarScreen() {
               if (command.kind === 'record') setForm((current) => ({ ...current, instrument: 'Зарплата' }));
             }
             if (command.type === 'entry') {
-              setForm((current) => ({ ...current, pnl: command.amount, currency: command.currency, sign: command.sign, instrument: 'Другое' }));
+              if (spokenCategory) voiceCategories.add(spokenCategory);
+              setForm((current) => ({ ...current, pnl: command.amount, currency: command.currency, sign: command.sign, instrument: spokenCategory || 'Другое' }));
               setDetailsOpen(true);
             }
           }} />
@@ -6641,7 +6654,7 @@ export default function CalendarScreen() {
                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="group" aria-label={t('category')}>
                         {moneyCategoriesWithIcons.map((category) => {
                           const Icon = category.icon;
-                          const active = getMoneyCategoryMeta(form.instrument)?.key === category.key;
+                          const active = getMoneyCategoryMeta(form.instrument)?.key === category.key || form.instrument === category.key;
                           return (
                             <button
                               key={category.key}
