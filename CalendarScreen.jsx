@@ -87,6 +87,7 @@ import CalendarGrid from './CalendarGrid';
 import MonthlyGoal from './MonthlyGoal';
 import AmountKeypad, {AmountInput} from './src/shared/ui/AmountEntry.jsx';
 import CalendarVoiceButton from './src/shared/ui/CalendarVoiceButton.jsx';
+import { financialVoiceAnswer } from './src/shared/lib/financialVoiceAnswer.js';
 import CtraderControl from './src/features/ctrader/CtraderControl';
 import { createQrMatrix, drawQrToCanvas } from './qrCode.js';
 import { useReferral } from './src/features/referrals/useReferral.js';
@@ -4720,6 +4721,10 @@ export default function CalendarScreen() {
             </span>
           </button>
           <CalendarVoiceButton language={language} isLight={isLight} traderMode={traderMode} onCommand={(command) => {
+            if (command.type === 'question') return financialVoiceAnswer({
+              records: manualTrades, monthKey: todayKey.slice(0, 7), metric: command.metric, language,
+              isTrading: (item) => item.platform === 'cTrader' || item.platform === 'MT5' || isTradingInstrumentName(item.instrument) || (!getMoneyCategoryMeta(item.instrument) && isTradingHistoryRecord(item)),
+            });
             if (command.type === 'date') {
               setSlideDirection(command.year * 12 + command.month >= year * 12 + month ? 'next' : 'prev');
               setAnimKey((value) => value + 1);

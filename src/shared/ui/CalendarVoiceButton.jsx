@@ -1,5 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {Mic,Square} from 'lucide-react';
+import {Mic,Square,Volume2,X} from 'lucide-react';
 import {parseCalendarVoiceCommand} from '../lib/calendarVoiceCommand.js';
 import './CalendarVoiceButton.css';
 
@@ -7,17 +7,32 @@ export default function CalendarVoiceButton({language='ru',isLight,traderMode=fa
  const locale=language==='en'?'en':language==='ro'||language==='md'?'ro':'ru';
  const text={ru:{start:'Голосовая команда',stop:'Остановить микрофон',hint:'«Добавь запись» или «открой 13 ноября 2048»',invalid:'Не понял команду. Скажите «добавь запись» или «открой 13 ноября 2048».',permission:'Разрешите доступ к микрофону в браузере.',error:'Голосовой ввод недоступен. Попробуйте ещё раз.',unsupported:'Браузер не поддерживает голосовые команды.'},en:{start:'Voice command',stop:'Stop microphone',hint:'“Add entry” or “open 13 November 2048”',invalid:'Try “add entry” or “open 13 November 2048”.',permission:'Allow microphone access in your browser.',error:'Voice input unavailable. Try again.',unsupported:'Voice commands are not supported by this browser.'},ro:{start:'Comandă vocală',stop:'Oprește microfonul',hint:'„Adaugă o înregistrare” sau „deschide 13 noiembrie 2048”',invalid:'Încearcă „adaugă o înregistrare” sau „deschide 13 noiembrie 2048”.',permission:'Permite accesul la microfon în browser.',error:'Introducerea vocală nu este disponibilă. Încearcă din nou.',unsupported:'Browserul nu acceptă comenzile vocale.'}}[locale];
  const [listening,setListening]=useState(false),[message,setMessage]=useState('');
+ const [answer,setAnswer]=useState(''),[speaking,setSpeaking]=useState(false);
+ const utterance=useRef(null);
+ const audioText={ru:{play:'Прослушать ответ',stop:'Остановить ответ',close:'Закрыть ответ'},en:{play:'Listen to answer',stop:'Stop answer',close:'Close answer'},ro:{play:'Ascultă răspunsul',stop:'Oprește răspunsul',close:'Închide răspunsul'}}[locale];
+ const financeHelp={ru:['Сколько я потратил за этот месяц','Сколько я заработал за этот месяц','Подведи итог за этот месяц'],en:['How much did I spend this month','How much did I earn this month','Summarize this month'],ro:['Cât am cheltuit luna aceasta','Cât am câștigat luna aceasta','Rezumat pentru luna aceasta']}[locale];
+ function stopSpeaking(){if(utterance.current){utterance.current.onend=null;utterance.current.onerror=null;utterance.current=null;window.speechSynthesis?.cancel();}setSpeaking(false);}
+ function speak(value){
+  stopSpeaking();if(!window.speechSynthesis||!window.SpeechSynthesisUtterance)return;
+  const speech=new window.SpeechSynthesisUtterance(value);utterance.current=speech;
+  speech.lang={ru:'ru-RU',en:'en-US',ro:'ro-RO'}[locale];speech.rate=.98;
+  const voices=window.speechSynthesis.getVoices();speech.voice=voices.find(v=>v.lang===speech.lang)||voices.find(v=>v.lang.toLowerCase().startsWith(locale))||null;
+  const finish=()=>{if(utterance.current===speech){utterance.current=null;setSpeaking(false);}};
+  speech.onend=finish;speech.onerror=finish;setSpeaking(true);
+  try{window.speechSynthesis.speak(speech);}catch{finish();}
+ }
  const help={ru:{title:'Что можно сказать',list:['Добавь запись','Сегодня я потратил 50 рублей','Сегодня я получил 50 евро','Открой 13 ноября 2048'],trade:'Добавь сделку',note:'Сумма и валюта заполнятся в форме. Проверьте запись перед сохранением.',listening:'Слушаю…'},en:{title:'Try these commands',list:['Add entry','Today I spent 50 euros','Today I received 50 dollars','Open 13 November 2048'],trade:'Add trade',note:'Amount and currency fill the form. Review the entry before saving.',listening:'Listening…'},ro:{title:'Comenzi disponibile',list:['Adaugă o înregistrare','Astăzi am cheltuit 50 lei','Astăzi am primit 50 euro','Deschide 13 noiembrie 2048'],trade:'Adaugă o tranzacție',note:'Suma și moneda se completează în formular. Verifică înainte de salvare.',listening:'Ascult…'}}[locale];
  const session=useRef(null),timer=useRef(null),messageTimer=useRef(null);
  const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
  function stop(){const current=session.current;session.current=null;clearTimeout(timer.current);if(current){current.onresult=null;current.onerror=null;current.onend=null;current.abort();}setListening(false);}
  function notify(value){setMessage(value);clearTimeout(messageTimer.current);messageTimer.current=setTimeout(()=>setMessage(''),6500);}
  useEffect(()=>{
-  const cancel=()=>{if(document.hidden){stop();setMessage('');}};
+  const cancel=()=>{if(document.hidden){stop();stopSpeaking();setMessage('');setAnswer('');}};
   document.addEventListener('visibilitychange',cancel);
-  return ()=>{document.removeEventListener('visibilitychange',cancel);clearTimeout(timer.current);clearTimeout(messageTimer.current);const current=session.current;session.current=null;if(current){current.onresult=null;current.onerror=null;current.onend=null;current.abort();}};
+  return ()=>{document.removeEventListener('visibilitychange',cancel);if(utterance.current){utterance.current.onend=null;utterance.current.onerror=null;utterance.current=null;window.speechSynthesis?.cancel();}clearTimeout(timer.current);clearTimeout(messageTimer.current);const current=session.current;session.current=null;if(current){current.onresult=null;current.onerror=null;current.onend=null;current.abort();}};
  },[]);
  function start(){
+  stopSpeaking();setAnswer('');
   if(session.current){stop();setMessage('');return;}
   if(!Speech){notify(text.unsupported);return;}
   const recognition=new Speech();session.current=recognition;
@@ -28,7 +43,8 @@ export default function CalendarVoiceButton({language='ru',isLight,traderMode=fa
    const result=event.results[event.resultIndex];if(!result.isFinal)return;
    const command=parseCalendarVoiceCommand(result[0].transcript);stop();
    if(!command){notify(text.invalid);return;}
-   setMessage('');onCommand(command);
+   setMessage('');const reply=onCommand(command);
+   if(typeof reply==='string'&&reply){setAnswer(reply);speak(reply);}
   };
   recognition.onerror=event=>{if(session.current!==recognition)return;stop();notify(event.error==='not-allowed'||event.error==='service-not-allowed'?text.permission:text.error);};
   recognition.onend=()=>{if(session.current!==recognition)return;stop();notify(text.invalid);};
@@ -36,6 +52,7 @@ export default function CalendarVoiceButton({language='ru',isLight,traderMode=fa
  }
  return <div className="calendar-voice-control" data-light={Boolean(isLight)}>
   <button type="button" className="calendar-voice-button" onClick={start} aria-pressed={listening} aria-label={listening?text.stop:text.start} title={text.start}>{listening?<Square size={15}/>:<Mic size={18}/>}</button>
-  {message&&<div className="calendar-voice-message"><p role="status" aria-live="polite">{message}</p>{Speech&&<><p className="calendar-voice-help-title">{help.title}</p><ul className="calendar-voice-commands">{[...help.list,...(traderMode?[help.trade]:[])].map(command=><li key={command}>«{command}»</li>)}</ul><p className="calendar-voice-help-note">{help.note}</p></>}</div>}
+  {answer&&<div className="calendar-voice-message calendar-voice-answer"><p role="status" aria-live="polite">{answer}</p><div className="calendar-voice-answer-actions">{window.speechSynthesis&&window.SpeechSynthesisUtterance&&<button type="button" aria-label={speaking?audioText.stop:audioText.play} onClick={()=>speaking?stopSpeaking():speak(answer)}>{speaking?<Square size={16}/>:<Volume2 size={18}/>}<span>{speaking?audioText.stop:audioText.play}</span></button>}<button type="button" aria-label={audioText.close} onClick={()=>{stopSpeaking();setAnswer('');}}><X size={18}/></button></div></div>}
+  {message&&<div className="calendar-voice-message"><p role="status" aria-live="polite">{message}</p>{Speech&&<><p className="calendar-voice-help-title">{help.title}</p><ul className="calendar-voice-commands">{[...help.list,...financeHelp,...(traderMode?[help.trade]:[])].map(command=><li key={command}>«{command}»</li>)}</ul><p className="calendar-voice-help-note">{help.note}</p></>}</div>}
  </div>;
 }

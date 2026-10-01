@@ -7,6 +7,9 @@ const months=[
 ];
 export function parseCalendarVoiceCommand(transcript){
  const text=String(transcript).toLowerCase().trim().replace(/[.!?]$/,'').replace(/ё/g,'е');
+ const question=text.replace(/^(расскажи[,]? |скажи[,]? |tell me |spune-mi )/,'');
+ const questions={expense:/^(?:сколько (?:я )?(?:потратил|потратила)|какие (?:мои )?расходы) (?:за |в )?(?:этом|этот|текущий) месяц(?:е)?$|^how much (?:did i spend|have i spent) this month$|^cât am cheltuit luna aceasta$/,income:/^сколько (?:я )?(?:заработал|заработала|получил|получила) (?:за |в )?(?:этом|этот|текущий) месяц(?:е)?$|^how much (?:did i earn|have i earned) this month$|^cât am câștigat luna aceasta$/,summary:/^(?:какой итог|подведи итог|итоги|итог) (?:за |в )?(?:этом|этот|текущий) месяц(?:е)?$|^(?:summarize|summary for) this month$|^rezumat pentru luna aceasta$/};
+ for(const [metric,pattern] of Object.entries(questions))if(pattern.test(question))return {type:'question',metric,period:'current-month'};
  const money=text.match(/^(?:сегодня )?(?:я )?(потратил|потратила|получил|получила|заработал|заработала) (.+) (рубль|рубля|рублей|евро|лей|лея|леев|доллар|доллара|долларов)$/)
   ||text.match(/^(?:today )?i (spent|received|earned) (.+) (rubles?|euros?|lei|dollars?)$/)
   ||text.match(/^(?:astăzi )?am (cheltuit|primit|câștigat) (.+) (ruble|euro|lei|dolari)$/);
