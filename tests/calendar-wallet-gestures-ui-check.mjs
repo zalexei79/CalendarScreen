@@ -38,7 +38,7 @@ try {
     animation.play();
     return result;
   });
-  assert.ok(motion && motion.opacity < .9 && motion.translate.includes('8px'));
+  assert.ok(motion && motion.opacity < .9 && motion.translate === 'none', 'wallet arrives without a whole-screen jump');
   await page.evaluate(() => window.testNavigate('calendar'));
   await page.locator('.calendar-days-grid').waitFor();
   await page.waitForTimeout(650);

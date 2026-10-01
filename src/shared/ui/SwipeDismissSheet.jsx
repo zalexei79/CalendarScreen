@@ -173,7 +173,7 @@ const SwipeDismissSheet = React.forwardRef(function SwipeDismissSheet({
     : {};
 
   return (
-    <Component ref={setSheetNode} data-glass-theme={isLight ? 'light' : 'dark'} className={`dayris-swipe-sheet ${className}`} style={{ ...style, ...swipeStyle }} {...props}>
+    <Component ref={setSheetNode} data-sheet-entrance="true" data-glass-theme={isLight ? 'light' : 'dark'} className={`dayris-swipe-sheet ${className}`} style={{ ...style, ...swipeStyle }} {...props}>
       <div
         aria-hidden="true"
         className={`flex h-7 shrink-0 touch-none cursor-grab items-center justify-center active:cursor-grabbing xl:hidden ${handleClassName}`}

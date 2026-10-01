@@ -11,8 +11,19 @@ html[data-workspace-transition] .calendar-section {
   from { opacity: .84; translate: 0 8px; }
   to { opacity: 1; translate: 0 0; }
 }
+html[data-workspace-transition] .wallet-panel-enter { animation-name:wallet-scene-arrive; }
+html[data-workspace-transition] .wallet-panel-enter .wallet-gesture-content > header,
+html[data-workspace-transition] .wallet-balance-card,
+html[data-workspace-transition] .wallet-activity-list {
+  animation:wallet-content-arrive 420ms cubic-bezier(.22,1,.36,1) both;
+}
+html[data-workspace-transition] .wallet-balance-card { animation-delay:35ms; }
+html[data-workspace-transition] .wallet-activity-list { animation-delay:70ms; }
+@keyframes wallet-scene-arrive { from { opacity:.84; } to { opacity:1; } }
+@keyframes wallet-content-arrive { from { opacity:.65; translate:0 6px; } to { opacity:1; translate:0 0; } }
 @media (prefers-reduced-motion: reduce) {
   html[data-workspace-transition] .wallet-panel-enter,
   html[data-workspace-transition] .calendar-section,
   html[data-workspace-transition] .premium-shell > header { animation: none !important; }
+  html[data-workspace-transition] .wallet-panel-enter * { animation:none !important; }
 }

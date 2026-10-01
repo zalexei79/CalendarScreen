@@ -8,6 +8,7 @@ import { CURRENCIES, getCurrencyMeta } from '../../shared/config/constants';
 import SwipeDismissSheet from '../../shared/ui/SwipeDismissSheet.jsx';
 import { useWalletExitGesture } from './hooks/useWalletExitGesture';
 import './WalletGestures.css';
+import '../../shared/ui/MotionSystem.css';
 
 const ONBOARDING_KEY = 'dayris_wallet_onboarding_v2';
 const fieldClass = 'w-full rounded-2xl border border-white/10 bg-white/[.045] px-4 py-3.5 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-amber-400/65 focus:bg-white/[.065]';
@@ -15,41 +16,41 @@ const fieldClass = 'w-full rounded-2xl border border-white/10 bg-white/[.045] px
 const COPY = {
   ru: {
     gestureHint: 'Свайп в сторону или вниз от начала — в календарь', gesturePull: 'Потяните, чтобы вернуться', gestureRelease: 'Отпустите — в календарь',
-    eyebrow: 'PRO · ЛИЧНЫЕ ДЕНЬГИ', title: 'Мой кошелёк', subtitle: 'Сколько денег у тебя реально сейчас',
-    balance: 'Доступный баланс', month: 'за этот месяц', add: 'Добавить деньги', withdraw: 'Вывести деньги',
+    eyebrow: 'PRO · ЛИЧНЫЕ ДЕНЬГИ', title: 'Мой кошелёк', subtitle: 'Баланс по добавленным поступлениям и расходам',
+    balance: 'Учтённый баланс', account: 'Личный кошелёк', loading: 'Загружаем операции…', syncError: 'Не удалось загрузить кошелёк. Проверьте подключение и повторите попытку.', setupError: 'Синхронизация кошелька пока недоступна. Попробуйте позже.', remove: 'Удалить операцию', month: 'за этот месяц', add: 'Добавить деньги', withdraw: 'Вывести деньги',
     recent: 'Последние операции', empty: 'Операций пока нет', emptyHint: 'Добавь деньги, когда они действительно появились в кошельке.',
     howMuch: 'Сколько?', source: 'Откуда деньги?', destination: 'Куда ушли деньги?', comment: 'Комментарий (необязательно)', date: 'Дата',
     tradingProfit: 'Прибыль с торговли', accountTopup: 'Пополнение счёта', otherIncome: 'Другой доход',
     accountWithdrawal: 'Вывел со счёта', expense: 'Расход', otherExpense: 'Другое',
     cancel: 'Отмена', saveAdd: 'Добавить', saveWithdraw: 'Вывести', saving: 'Сохраняю…', clear: 'Очистить историю',
     clearConfirm: 'Удалить всю историю кошелька? Это действие нельзя отменить.',
-    introTitle: 'Кошелёк — это реальные деньги', introBody: 'Календарь показывает результат сделок. Кошелёк показывает сумму, которой ты действительно располагаешь.',
+    introTitle: 'Отдельный учёт личных денег', introBody: 'В календаре — доходы, расходы и сделки. В кошельке — отдельный баланс по операциям, которые ты добавляешь сам.',
     introOne: 'Добавляй деньги только когда они реально поступили.', introTwo: 'Вывод и расходы уменьшают фактический баланс.', introThree: 'Торговый PnL никогда не меняет кошелёк автоматически.', introAction: 'Понятно, начать',
   },
   en: {
     gestureHint: 'Swipe sideways or pull down from the top to return', gesturePull: 'Pull to return', gestureRelease: 'Release to return to calendar',
-    eyebrow: 'PRO · PERSONAL MONEY', title: 'My wallet', subtitle: 'How much money you actually have now',
-    balance: 'Available balance', month: 'this month', add: 'Add money', withdraw: 'Take money out',
+    eyebrow: 'PRO · PERSONAL MONEY', title: 'My wallet', subtitle: 'Balance from the income and expenses you record',
+    balance: 'Recorded balance', account: 'Personal wallet', loading: 'Loading activity…', syncError: 'Could not load your wallet. Check your connection and try again.', setupError: 'Wallet sync is currently unavailable. Try again later.', remove: 'Delete transaction', month: 'this month', add: 'Add money', withdraw: 'Take money out',
     recent: 'Recent activity', empty: 'No activity yet', emptyHint: 'Add money when it actually reaches your wallet.',
     howMuch: 'How much?', source: 'Where did it come from?', destination: 'Where did it go?', comment: 'Comment (optional)', date: 'Date',
     tradingProfit: 'Trading profit', accountTopup: 'Account top-up', otherIncome: 'Other income',
     accountWithdrawal: 'Account withdrawal', expense: 'Expense', otherExpense: 'Other',
     cancel: 'Cancel', saveAdd: 'Add', saveWithdraw: 'Withdraw', saving: 'Saving…', clear: 'Clear history',
     clearConfirm: 'Delete the entire wallet history? This cannot be undone.',
-    introTitle: 'The wallet is real money', introBody: 'The calendar shows trading performance. The wallet shows money you can actually use.',
+    introTitle: 'Track personal money separately', introBody: 'The calendar tracks income, expenses and trades. Your wallet has a separate balance based on the transactions you add.',
     introOne: 'Add money only when it really arrives.', introTwo: 'Withdrawals and expenses reduce the real balance.', introThree: 'Trading PnL never changes the wallet automatically.', introAction: 'Got it, start',
   },
   ro: {
     gestureHint: 'Glisează lateral sau trage în jos de la început pentru a reveni', gesturePull: 'Trage pentru a reveni', gestureRelease: 'Eliberează pentru a reveni la calendar',
-    eyebrow: 'PRO · BANI PERSONALI', title: 'Portofelul meu', subtitle: 'Câți bani ai în realitate acum',
-    balance: 'Sold disponibil', month: 'luna aceasta', add: 'Adaugă bani', withdraw: 'Scoate bani',
+    eyebrow: 'PRO · BANI PERSONALI', title: 'Portofelul meu', subtitle: 'Soldul veniturilor și cheltuielilor înregistrate',
+    balance: 'Sold înregistrat', account: 'Portofel personal', loading: 'Se încarcă operațiunile…', syncError: 'Portofelul nu a putut fi încărcat. Verifică conexiunea și încearcă din nou.', setupError: 'Sincronizarea portofelului nu este disponibilă momentan. Încearcă mai târziu.', remove: 'Șterge operațiunea', month: 'luna aceasta', add: 'Adaugă bani', withdraw: 'Scoate bani',
     recent: 'Operațiuni recente', empty: 'Nu există operațiuni', emptyHint: 'Adaugă bani când au ajuns cu adevărat în portofel.',
     howMuch: 'Cât?', source: 'De unde vin banii?', destination: 'Unde au plecat banii?', comment: 'Comentariu (opțional)', date: 'Data',
     tradingProfit: 'Profit din tranzacționare', accountTopup: 'Alimentare cont', otherIncome: 'Alt venit',
     accountWithdrawal: 'Retragere din cont', expense: 'Cheltuială', otherExpense: 'Altceva',
     cancel: 'Anulează', saveAdd: 'Adaugă', saveWithdraw: 'Retrage', saving: 'Se salvează…', clear: 'Șterge istoricul',
     clearConfirm: 'Ștergi tot istoricul portofelului? Acțiunea nu poate fi anulată.',
-    introTitle: 'Portofelul înseamnă bani reali', introBody: 'Calendarul arată rezultatul tranzacțiilor. Portofelul arată banii pe care îi poți folosi.',
+    introTitle: 'Evidența separată a banilor personali', introBody: 'Calendarul urmărește veniturile, cheltuielile și tranzacțiile. Portofelul are un sold separat, calculat din operațiunile pe care le adaugi.',
     introOne: 'Adaugă bani doar când au intrat în realitate.', introTwo: 'Retragerile și cheltuielile reduc soldul real.', introThree: 'PnL-ul nu schimbă automat portofelul.', introAction: 'Am înțeles',
   },
 };
@@ -118,10 +119,10 @@ export default function WalletPanel({
         {onBackToCalendar && <p className="wallet-gesture-hint">{copy.gestureHint}</p>}
       </header>
 
-      <div className="relative overflow-hidden rounded-[30px] border border-amber-400/20 bg-gradient-to-br from-[#211d12] via-[#121317] to-[#090a0d] p-6 shadow-[0_28px_90px_rgba(0,0,0,.35)] sm:p-8">
+      <div className="wallet-balance-card relative overflow-hidden rounded-[30px] border border-amber-400/20 bg-gradient-to-br from-[#211d12] via-[#121317] to-[#090a0d] p-6 shadow-[0_28px_90px_rgba(0,0,0,.35)] sm:p-8">
         <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-amber-400/10 blur-3xl" />
         <div className="relative flex items-start justify-between gap-4">
-          <div><div className="flex items-center gap-2 text-amber-300"><Wallet className="h-4 w-4" /><span className="font-data text-[10px] uppercase tracking-[.2em]">Wallet account</span></div><p className="mt-8 text-xs text-zinc-500">{copy.balance}</p><p className={`mt-1 font-data text-4xl font-semibold tracking-tight text-white sm:text-5xl ${loading ? 'animate-pulse opacity-40' : ''}`}>{loading ? '—' : `${balance < 0 ? '−' : ''}${symbol}${Math.abs(balance).toLocaleString(localeOf(language), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</p><p className={`mt-2 text-xs ${monthNet >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{monthNet >= 0 ? '+' : '−'}{symbol}{Math.abs(monthNet).toFixed(2)} {copy.month}</p></div>
+          <div><div className="flex items-center gap-2 text-amber-300"><Wallet className="h-4 w-4" /><span className="font-data text-[10px] uppercase tracking-[.2em]">{copy.account}</span></div><p className="mt-8 text-xs text-zinc-500">{copy.balance}</p><p key={`${code}-${balance}-${loading}`} className={`wallet-value-reveal mt-1 font-data text-4xl font-semibold tracking-tight text-white sm:text-5xl ${loading ? 'animate-pulse opacity-40' : ''}`}>{loading ? '—' : `${balance < 0 ? '−' : ''}${symbol}${Math.abs(balance).toLocaleString(localeOf(language), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</p><p className={`mt-2 text-xs ${monthNet >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{loading ? '—' : (monthNet >= 0 ? '+' : '−') + symbol + Math.abs(monthNet).toFixed(2)} {copy.month}</p></div>
           <div className="relative"><select value={code} onChange={(event) => setCode(event.target.value)} className="appearance-none rounded-xl border border-white/10 bg-[#17181d] py-2.5 pl-3 pr-9 text-xs font-semibold text-zinc-100" style={{ colorScheme: 'dark' }}>{CURRENCIES.map((item) => <option key={item.code} value={item.code}>{item.code} · {item.symbol}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-3 h-3.5 w-3.5 text-zinc-500" /></div>
         </div>
         <div className="relative mt-8 grid grid-cols-2 gap-3">
@@ -130,12 +131,13 @@ export default function WalletPanel({
         </div>
       </div>
 
-      {error && <p className="mt-4 rounded-2xl border border-red-400/20 bg-red-400/[.06] p-4 text-xs text-red-300">{String(error).includes('MIGRATION') ? 'Wallet sync is not configured in Supabase.' : String(error)}</p>}
+      {error && <p role="alert" className="dayris-state-reveal mt-4 rounded-2xl border border-red-400/20 bg-red-400/[.06] p-4 text-xs text-red-300">{String(error).includes('MIGRATION') ? copy.setupError : copy.syncError}</p>}
 
       <div className="mt-8 flex items-center gap-2"><CreditCard className="h-4 w-4 text-amber-500" /><h3 className={`text-sm font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{copy.recent}</h3><span className="text-xs text-zinc-500">· {activities.length}</span></div>
-      <div className="mt-3 space-y-2">
+      <div className="wallet-activity-list mt-3 space-y-2" aria-busy={loading}>
+        {loading && activities.length === 0 && <div role="status" aria-label={copy.loading} className="wallet-loading-list">{[0,1,2].map(index => <div key={index} aria-hidden="true" className="wallet-loading-row"><span/><span/><span/></div>)}</div>}
         {!loading && activities.length === 0 && <div className={`rounded-3xl border border-dashed p-10 text-center ${isLight ? 'border-zinc-300 bg-white' : 'border-white/10 bg-white/[.02]'}`}><Wallet className="mx-auto h-8 w-8 text-zinc-600" /><p className="mt-3 text-sm font-semibold">{copy.empty}</p><p className="mt-1 text-xs text-zinc-500">{copy.emptyHint}</p></div>}
-        {activities.map((item) => { const positive = item.activityType === 'income' || item.activityType === 'legacyIncome'; const legacy = item.activityType.startsWith('legacy'); return <div key={item.id} className={`flex items-center gap-3 rounded-2xl border p-3.5 ${isLight ? 'border-zinc-200 bg-white' : 'border-white/[.07] bg-white/[.025]'}`}><span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${positive ? 'bg-emerald-400/10 text-emerald-400' : 'bg-red-400/10 text-red-400'}`}>{positive ? <ArrowDownLeft className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{item.title}</p><p className="text-xs text-zinc-500">{item.activityDate}{item.comment ? ` · ${item.comment}` : ''}</p></div><span className={`font-data text-sm font-semibold ${positive ? 'text-emerald-500' : 'text-red-500'}`}>{positive ? '+' : '−'}{getCurrencyMeta(item.currency).symbol}{Number(item.amount).toFixed(2)}</span>{!legacy && <button type="button" aria-label="Delete" onClick={() => onDelete(item.id)} className="rounded-lg p-2 text-zinc-600 hover:bg-red-400/10 hover:text-red-400"><Trash2 className="h-4 w-4" /></button>}</div>; })}
+        {activities.map((item) => { const positive = item.activityType === 'income' || item.activityType === 'legacyIncome'; const legacy = item.activityType.startsWith('legacy'); return <div key={item.id} className={`flex items-center gap-3 rounded-2xl border p-3.5 ${isLight ? 'border-zinc-200 bg-white' : 'border-white/[.07] bg-white/[.025]'}`}><span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${positive ? 'bg-emerald-400/10 text-emerald-400' : 'bg-red-400/10 text-red-400'}`}>{positive ? <ArrowDownLeft className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{item.title}</p><p className="text-xs text-zinc-500">{item.activityDate}{item.comment ? ` · ${item.comment}` : ''}</p></div><span className={`font-data text-sm font-semibold ${positive ? 'text-emerald-500' : 'text-red-500'}`}>{positive ? '+' : '−'}{getCurrencyMeta(item.currency).symbol}{Number(item.amount).toFixed(2)}</span>{!legacy && <button type="button" aria-label={copy.remove} onClick={() => onDelete(item.id)} className="rounded-lg p-2 text-zinc-600 hover:bg-red-400/10 hover:text-red-400"><Trash2 className="h-4 w-4" /></button>}</div>; })}
       </div>
       {activities.length > 0 && <button type="button" onClick={async () => { if (window.confirm(copy.clearConfirm)) await onClearHistory(); }} className="mt-4 text-xs text-zinc-500 hover:text-red-400">{copy.clear}</button>}
     </div>

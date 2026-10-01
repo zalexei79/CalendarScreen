@@ -43,8 +43,28 @@
 .calendar-days-grid > button:active { transition-duration:90ms; }
 .monthly-goal-bar { transition-property:background-color,border-color,color; transition-duration:var(--motion-standard); }
 .monthly-goal-bar > .grid { transition-timing-function:var(--motion-ease); transition-duration:var(--motion-standard); }
+.dayris-state-reveal, .wallet-value-reveal { animation:dayris-state-reveal 220ms var(--motion-ease) both; }
+.dayris-details-reveal { display:grid; grid-template-rows:0fr; opacity:0; transition:grid-template-rows 360ms var(--motion-ease),opacity 240ms; }
+.dayris-details-reveal[data-open="true"] { grid-template-rows:1fr; opacity:1; }
+@keyframes dayris-state-reveal { from { opacity:.35; } to { opacity:1; } }
+.wallet-loading-list { display:grid; gap:8px; }
+.wallet-loading-row { display:flex; align-items:center; gap:12px; height:70px; padding:14px; border:1px solid var(--glass-line); border-radius:16px; }
+.wallet-loading-row span { height:12px; border-radius:6px; background:var(--glass-control); animation:wallet-loading-breathe 1.8s ease-in-out infinite; }
+.wallet-loading-row span:first-child { width:40px; height:40px; border-radius:12px; }
+.wallet-loading-row span:nth-child(2) { width:42%; }
+.wallet-loading-row span:last-child { width:20%; margin-left:auto; }
+@keyframes wallet-loading-breathe { 0%,100% { opacity:.45; } 50% { opacity:.85; } }
+@media(hover:hover) {
+  .pro-feature-tabs button, .wallet-panel-enter button { transition:color 200ms,border-color 200ms,background-color 200ms,scale 160ms var(--motion-ease); }
+}
+.pro-feature-tabs button:active { scale:.98; }
+.dayris-swipe-sheet input, .dayris-swipe-sheet select { transition:border-color 180ms,background-color 180ms,box-shadow 180ms; }
 .premium-shell [role="dialog"]:not(.dayris-swipe-sheet):not(.plan-dialog) { animation:dayris-sheet-arrive 360ms var(--motion-ease) both; }
 @media (prefers-reduced-motion:reduce) {
+  .dayris-state-reveal, .wallet-value-reveal, .wallet-loading-row span { animation:none; }
+  .dayris-details-reveal { transition:none; }
+  .pro-feature-tabs button, .dayris-swipe-sheet input, .dayris-swipe-sheet select { transition:none; }
+  .pro-feature-tabs button:active { scale:1; }
   .dayris-header, .dayris-header button, .calendar-action-dock button,
   .wallet-panel-enter button, .dayris-settings-panel, .dayris-swipe-sheet,
   .calendar-days-grid > button { transition:none !important; animation:none !important; }

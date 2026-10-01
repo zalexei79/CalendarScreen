@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import '../../shared/ui/MotionSystem.css';
 
 export default function WealthPlan({ trades, isTrading, currency, symbol, formatMoney, language, isLight, onReview, onStartReview }) {
   const [open, setOpen] = useState(false);
@@ -29,7 +30,7 @@ export default function WealthPlan({ trades, isTrading, currency, symbol, format
       <span><span className="mr-2 text-amber-500">✦</span>{copy('Стать богаче', 'Grow your wealth', 'Mai mulți bani')}<span className="ml-2 text-[9px] tracking-widest text-amber-500">PRO</span></span><span aria-hidden="true" className="text-zinc-500">{open ? '−' : '+'}</span>
     </button>
     <p className="mt-2 text-xs leading-5 text-zinc-500">{copy('Ваш план: как оставлять больше денег · по записям выбранного периода', 'Your plan to keep more money · based on entries in this period', 'Planul tău pentru a păstra mai mulți bani · din perioada selectată')}</p>
-    {open && <div className="mt-4 space-y-3">
+    <div className="dayris-details-reveal" data-open={open} aria-hidden={!open} inert={open ? undefined : ''}><div className="min-h-0 overflow-hidden"><div className="pt-4 space-y-3">
       {mixed ? <p className="text-sm">{copy('Выберите одну валюту для расчёта плана: разные валюты нельзя складывать.', 'Choose one currency to calculate your plan.', 'Alege o singură monedă pentru calcul.')}</p> : <>
         <div className={`rounded-xl border p-4 ${card}`}>
           <h4 className="text-sm font-semibold">{copy('1. Понять, что остаётся', '1. See what remains', '1. Vezi ce rămâne')}</h4>
@@ -56,6 +57,6 @@ export default function WealthPlan({ trades, isTrading, currency, symbol, format
           {trading.length > 0 && <div className="mt-3 border-t border-zinc-500/20 pt-3"><p className="text-xs leading-5 text-zinc-500">{copy('Торговля выделена отдельно. Результат', 'Trading is separate. Net result', 'Tranzacționarea este separată. Rezultat net')}: {symbol}{formatMoney(tradingNet)}. {copy('Торговые убытки не считаются бытовыми тратами и не входят в сценарий экономии.', 'Trading losses are excluded from the personal savings scenario.', 'Pierderile din tranzacționare sunt excluse din scenariul de economisire.')}</p><button type="button" onClick={() => onReview(trading[0].instrument, 'all')} className="mt-2 min-h-11 text-xs font-semibold text-amber-500">{copy('Посмотреть торговые операции →', 'Review trading entries →', 'Vezi tranzacțiile →')}</button></div>}
         </div>
       </>}
-    </div>}
+    </div></div></div>
   </section>;
 }
