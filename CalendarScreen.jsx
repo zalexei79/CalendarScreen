@@ -4725,7 +4725,7 @@ export default function CalendarScreen() {
               {t('addAction')}
             </span>
           </button>
-          <CalendarVoiceButton language={language} isLight={isLight} traderMode={traderMode} onCommand={(command) => {
+          <CalendarVoiceButton language={language} isLight={isLight} traderMode={traderMode} categoryOptions={[...new Set([...MONEY_CATEGORIES.map(item => item.key), ...voiceCategories.categories])].map(value => ({ value, label: getMoneyCategoryLabel(value, language) }))} onCommand={(command) => {
             if (command.type === 'category-prompt') return language === 'ru' ? 'Добавьте название после команды. Например: создай категорию Настольные игры.' : language === 'en' ? 'Include the category name in your command.' : 'Include numele categoriei în comandă.';
             if (command.type === 'history') { openHistory(); return; }
             if (command.type === 'settings') { openSettings(); return; }
@@ -4745,7 +4745,7 @@ export default function CalendarScreen() {
               return language === 'ru' ? `Категория «${label}» готова. Скажите, например: запиши расход 20 евро на ${label}.` : language === 'en' ? `Category “${label}” is ready.` : `Categoria „${label}” este pregătită.`;
             }
             if (command.type === 'question') return financialVoiceAnswer({
-              records: manualTrades, monthKey: todayKey.slice(0, 7), metric: command.metric, category: spokenCategory, categoryLabel: spokenCategory ? getMoneyCategoryLabel(spokenCategory, language) : null, language,
+              records: manualTrades, monthKey: todayKey.slice(0, 7), metric: command.metric, period: command.period, category: spokenCategory, categoryLabel: spokenCategory ? getMoneyCategoryLabel(spokenCategory, language) : null, language,
               isTrading: (item) => item.platform === 'cTrader' || item.platform === 'MT5' || item.traderMode === true || isTradingInstrumentName(item.instrument) || (!getMoneyCategoryMeta(item.instrument) && isTradingHistoryRecord(item)),
             });
             if (command.type === 'date') {

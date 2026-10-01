@@ -77,3 +77,7 @@
 .calendar-voice-control[data-phase="speaking"] .calendar-voice-glyph { color:#dec694; }
 @keyframes calendar-assistant-enter { from { opacity:0; transform:translateY(9px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
 @media(prefers-reduced-motion:reduce) { .calendar-voice-message { animation:none; } .calendar-voice-options button,.calendar-voice-shortcuts button,.calendar-voice-reply-actions button { transition:none; transform:none !important; } }
+.calendar-voice-category-reply { display:grid; gap:8px; }
+.calendar-voice-category-reply select,.calendar-voice-category-reply button { width:100%; min-height:44px; border-radius:12px; border:1px solid rgba(213,188,131,.2); padding:8px; background:rgba(150,150,150,.08); color:inherit; }
+.calendar-voice-category-reply option { color:#222; background:#fff; }
+.calendar-voice-category-reply button[aria-pressed="true"] { border-color:#b89959; background:rgba(213,188,131,.15); }

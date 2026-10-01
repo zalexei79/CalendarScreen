@@ -1,13 +1,14 @@
 // Amounts stay in their recorded currency; personal cash flow excludes trades.
 import {categoryMatches} from './voiceCategory.js';
 import {resolveVoiceAsset,assetMatchesInstrument} from './voiceAsset.js';
-export function financialVoiceAnswer({records,monthKey,metric,category,categoryLabel=category,language='ru',isTrading=()=>false}){
+export function financialVoiceAnswer({records,monthKey,metric,category,categoryLabel=category,language='ru',period='current-month',isTrading=()=>false}){
  const locale=language==='en'?'en':['ro','md'].includes(language)?'ro':'ru';
  const labels={ru:{intro:'По вашим записям за этот месяц.',empty:'За этот месяц записей пока нет.',income:'Личные доходы',expense:'Личные расходы',net:'Разница доходов и расходов',trade:'Торговый результат отдельно',zero:'нет записей'},en:{intro:'Based on your entries this month.',empty:'There are no entries for this month yet.',income:'Personal income',expense:'Personal expenses',net:'Income minus expenses',trade:'Trading result separately',zero:'no entries'},ro:{intro:'Conform înregistrărilor tale din această lună.',empty:'Nu există înregistrări pentru această lună.',income:'Venituri personale',expense:'Cheltuieli personale',net:'Venituri minus cheltuieli',trade:'Rezultatul tranzacțiilor separat',zero:'fără înregistrări'}}[locale];
+ if(period==='all-time')labels.intro={ru:'По вашим сохранённым записям за всё время.',en:'Based on all your saved entries.',ro:'Conform tuturor înregistrărilor salvate.'}[locale];
  const totals=new Map();let count=0;
  const asset=category?resolveVoiceAsset(category):null;
  for(const [date,items] of Object.entries(records||{})){
-  if(!date.startsWith(`${monthKey}-`)||!Array.isArray(items))continue;
+  if((period!=='all-time'&&!date.startsWith(`${monthKey}-`))||!Array.isArray(items))continue;
   for(const item of items){
    if(!item||item.pnl==null||item.pnl==='')continue;
    if(asset&&!assetMatchesInstrument(asset,item.instrument))continue;
@@ -21,6 +22,7 @@ export function financialVoiceAnswer({records,monthKey,metric,category,categoryL
    else{total.personalCount++;total.net+=amount;if(amount>=0)total.income+=amount;else total.expense-=amount;}
   }
  }
+ if(!count&&period==='all-time')return locale==='ru'?`В сохранённых записях нет данных${category?` по категории «${categoryLabel}»`:''}.`:locale==='en'?'No matching saved entries.':'Nu există înregistrări salvate corespunzătoare.';
  if(!count&&asset)return locale==='ru'?`За этот месяц сделок по инструменту «${asset.label}» в ваших записях нет.`:locale==='en'?`No trades recorded this month for ${categoryLabel}.`:`Nu există tranzacții înregistrate în această lună pentru ${categoryLabel}.`;
  if(!count)return category?(locale==='ru'?`За этот месяц расходов в категории «${categoryLabel}» пока нет в ваших записях.`:locale==='en'?`No expenses recorded this month in “${categoryLabel}”.`:`Nu există cheltuieli înregistrate în această lună pentru „${categoryLabel}”.`):labels.empty;
  if(asset){
@@ -36,5 +38,5 @@ export function financialVoiceAnswer({records,monthKey,metric,category,categoryL
  if(metric==='summary')result.push(line('income'),line('expense'),line('net'));
  else result.push(line(metric==='income'?'income':'expense'));
  if([...totals.values()].some(v=>v.tradeCount))result.push(line('trade'));
- return result.join(' ');
+ return result.join(' ').replace(/за этот месяц|за эту месяц/gi,match=>period==='all-time'?'за всё время':match).replace(/this month/g,match=>period==='all-time'?'all time':match).replace(/din această lună/g,match=>period==='all-time'?'din toate înregistrările':match);
 }
