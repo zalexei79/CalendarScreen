@@ -6,9 +6,9 @@
 
     <!-- PWA Настройки и Иконки -->
     <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152-v5.png" />
-    <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167-v5.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180-v5.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152-v6.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167-v6.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180-v6.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png?v=20260920-favicon-v3" />
     <link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png?v=20260920-favicon-v3" />
     <link rel="icon" type="image/png" sizes="48x48" href="/icon-48.png?v=20260920-favicon-v3" />
@@ -22,10 +22,48 @@
     <meta property="og:site_name" content="DAYRIS" />
     <meta name="twitter:title" content="DAYRIS" />
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      html, body { margin: 0; background: #09090b; }
+      #boot-screen { position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #09090b; color: #f4f4f5; font-family: system-ui, sans-serif; transition: opacity 240ms ease; }
+      #boot-screen .boot-mark { width: 112px; height: 112px; padding: 17px; box-sizing: border-box; display: grid; grid-template-columns: 1fr 1fr; gap: 7px; border-radius: 29px; border: 1px solid #49605d; background: radial-gradient(ellipse at top right, #075c47, transparent 65%), linear-gradient(135deg, #43515c, #12191d 45%, #173c34); box-shadow: inset 1px 1px 3px #c0d5df88, inset -1px -1px 3px #10b98199, 0 16px 40px #0005; perspective: 400px; animation: boot-housing 700ms cubic-bezier(.22,1,.36,1) both; }
+      #boot-screen .boot-tile { border-radius: 11px; border: 1px solid #819c9c; background: linear-gradient(145deg, #7b919b, #263239 30%, #10171b 75%, #27554a); box-shadow: inset 1px 1px 3px #e2f0f4aa, inset -1px -1px 3px #34d39955, 0 2px 4px #0009; animation: boot-tile-enter 850ms cubic-bezier(.22,1,.36,1) both; animation-delay: var(--delay); }
+      #boot-screen .boot-tile:nth-child(1) { --delay: 80ms; }
+      #boot-screen .boot-tile:nth-child(2) { --delay: 180ms; border-color: #6fffd1; background: linear-gradient(145deg, #c3ffea, #13dc9a 30%, #048c62 75%, #41ffc0); box-shadow: inset 1px 1px 4px #edfff4, inset -1px -1px 4px #5affcb, 0 0 14px #10d99a66; }
+      #boot-screen .boot-tile:nth-child(3) { --delay: 380ms; }
+      #boot-screen .boot-tile:nth-child(4) { --delay: 280ms; }
+      #boot-screen .boot-tile::after { content: ''; display: block; width: 100%; height: 100%; border-radius: inherit; background: #6fffd1; animation: boot-tile-glow 2.8s ease-in-out infinite; animation-delay: calc(900ms + var(--delay)); opacity: 0; }
+      #boot-screen .boot-name { margin: 20px 0 24px; font-size: 19px; font-weight: 600; letter-spacing: .22em; padding-left: .22em; }
+      #boot-screen .boot-track { width: 72px; height: 2px; overflow: hidden; border-radius: 2px; background: #27272a; }
+      #boot-screen .boot-track::after { content: ''; display: block; width: 32px; height: 100%; background: #34d399; animation: boot-progress 1.2s ease-in-out infinite; }
+      #boot-screen[data-ready] { opacity: 0; pointer-events: none; }
+      html[data-booting] #root { visibility: hidden; }
+      @keyframes boot-progress { 0% { transform: translateX(-32px); } 100% { transform: translateX(72px); } }
+      @keyframes boot-housing { from { opacity: 0; transform: translateY(12px) scale(.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+      @keyframes boot-tile-enter { from { opacity: 0; transform: translateY(14px) rotateY(-65deg) rotateZ(-12deg) scale(.65); } to { opacity: 1; transform: translateY(0) rotateY(0) rotateZ(0) scale(1); } }
+      @keyframes boot-tile-glow { 0%, 55%, 100% { opacity: 0; } 22% { opacity: .2; } }
+      @media (prefers-reduced-motion: reduce) { #boot-screen { transition: none; } #boot-screen .boot-mark, #boot-screen .boot-tile, #boot-screen .boot-tile::after { animation: none; } #boot-screen .boot-track::after { animation: none; width: 100%; } }
+    </style>
+    <script>document.documentElement.setAttribute('data-booting', '');</script>
     <title>DAYRIS — Денежный календарь</title>
   </head>
   <body class="bg-zinc-950 text-zinc-100">
+    <div id="boot-screen" role="status" aria-label="DAYRIS загружается">
+      <div class="boot-mark" aria-hidden="true"><span class="boot-tile"></span><span class="boot-tile"></span><span class="boot-tile"></span><span class="boot-tile"></span></div>
+      <div class="boot-name">DAYRIS</div>
+      <div class="boot-track" aria-hidden="true"></div>
+    </div>
+    <script>
+      window.setTimeout(function () {
+        var splash = document.getElementById('boot-screen');
+        if (!splash || splash.hasAttribute('data-ready')) return;
+        var retry = document.createElement('button');
+        retry.textContent = 'Повторить загрузку';
+        retry.style.cssText = 'margin-top:24px;padding:12px 20px;border:1px solid #3f3f46;border-radius:12px;background:#18181b;color:#f4f4f5;font:inherit;cursor:pointer';
+        retry.onclick = function () { window.location.reload(); };
+        splash.appendChild(retry);
+      }, 15000);
+    </script>
+    <noscript><style>#boot-screen { display: none; }</style><p style="color:#f4f4f5;text-align:center;padding:24px">Для запуска DAYRIS включите JavaScript.</p></noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

@@ -8,7 +8,7 @@ Run `./scripts/build-icons.ps1` in PowerShell to reproduce the PNG exports. Desk
 
 Mobile exports are opaque square PNGs; the OS supplies the final mask:
 
-- Apple touch: 152/167/180 pixels, 102% of the crop, placing the actual outer rim almost edge-to-edge. Keep the root `apple-touch-icon.png` fallback and legacy `icon-180.png` in sync.
+- Apple touch v6: 152/167/180 pixels from `dayris-ios-square-v6.png`, an opaque full-bleed square master edited with ImageGen. The graphite/emerald housing fills every edge; iOS supplies the only rounded mask. Keep the root `apple-touch-icon.png` fallback and legacy `icon-180.png` in sync. The transparent master remains the source for desktop, in-app, and Android exports.
 - Android maskable: 192/512 pixels, 82% of the crop (formerly 72%). The four-button motif stays inside the guaranteed centered circle of radius 40%; decorative outer-rim pixels may be masked by aggressive launcher shapes. Check circle, rounded-square, teardrop and minimum-safe-zone previews.
 - Store listing: independent opaque 512px export, unchanged by launcher sizing adjustments.
 
@@ -18,4 +18,4 @@ Run `./scripts/test-icons.ps1` after generating icons to check desktop/favicons 
 
 `dayris-play-store-512.png` is the 512 × 512 store-listing asset. Upload it when preparing the Google Play listing. This repository has no native Android launcher resources; any separately generated Android package must be rebuilt with the updated icons.
 
-Favicons use revision `20260920-favicon-v3`; desktop `any` icons use `20260920-desktop-v4`; mobile filenames include `v5` to distinguish cached artwork. Bump the affected revision and the service-worker cache when replacing artwork again. Existing Home Screen installations may retain old icons; verify on a newly added shortcut before diagnosing a sizing regression. Do not remove an existing installation with unsynced local data just to refresh an icon.
+Favicons use revision `20260920-favicon-v3`; desktop `any` icons use `20260920-desktop-v4`; Apple touch filenames use `v6`, Android maskable filenames use `v5`. Bump the affected revision and the service-worker cache when replacing artwork again. Existing Home Screen installations may retain old icons; verify on a newly added shortcut before diagnosing a sizing regression. Do not remove an existing installation with unsynced local data just to refresh an icon.

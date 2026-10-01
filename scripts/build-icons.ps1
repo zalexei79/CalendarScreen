@@ -51,11 +51,25 @@ try {
     # iOS and adaptive launchers use opaque square canvases; desktop/PWA do not.
     # Almost edge-to-edge artwork: remove the former nested black frame on iOS.
     # The OS applies its own rounded mask, so export opaque square PNGs.
-    Export-Icon 'public/icon-180.png' 180 1.02 $true
-    Export-Icon 'public/apple-touch-icon.png' 180 1.02 $true
-    foreach ($size in @(152, 167, 180)) {
-        Export-Icon "public/apple-touch-icon-$size-v5.png" $size 1.02 $true
-    }
+    # iOS supplies the rounded mask. Use a full-bleed square housing instead
+    # of placing a pre-rounded transparent icon on a black square.
+    $iosSource = [System.Drawing.Image]::FromFile((Join-Path $projectPath 'assets/brand/dayris-ios-square-v6.png'))
+    try {
+        foreach ($size in @(152, 167, 180)) {
+            $iosBitmap = [System.Drawing.Bitmap]::new($size, $size)
+            $iosGraphics = [System.Drawing.Graphics]::FromImage($iosBitmap)
+            try {
+                $iosGraphics.Clear([System.Drawing.Color]::FromArgb(255, 9, 9, 11))
+                $iosGraphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+                $iosGraphics.DrawImage($iosSource, 0, 0, $size, $size)
+                $iosBitmap.Save((Join-Path $projectPath "public/apple-touch-icon-$size-v6.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+                if ($size -eq 180) {
+                    $iosBitmap.Save((Join-Path $projectPath 'public/apple-touch-icon.png'), [System.Drawing.Imaging.ImageFormat]::Png)
+                    $iosBitmap.Save((Join-Path $projectPath 'public/icon-180.png'), [System.Drawing.Imaging.ImageFormat]::Png)
+                }
+            } finally { $iosGraphics.Dispose(); $iosBitmap.Dispose() }
+        }
+    } finally { $iosSource.Dispose() }
     Export-Icon 'public/brand-mark-192.png' 192 1.0
     # The four buttons fit inside the r=40% safe circle at 82% scale.
     # The decorative outer rim may be masked by more aggressive launcher shapes.

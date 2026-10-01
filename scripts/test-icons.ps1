@@ -41,9 +41,9 @@ foreach ($size in @(16, 32, 48, 192, 512)) {
 # Opaque mobile files must fill the icon slot, but adaptive icons still need
 # enough room for the four-button motif to survive the minimum safe circle.
 $mobileCases = @(
-    @{ Name='apple-touch-icon-152-v5.png'; Size=152; Min=0.96; Max=1.0 },
-    @{ Name='apple-touch-icon-167-v5.png'; Size=167; Min=0.96; Max=1.0 },
-    @{ Name='apple-touch-icon-180-v5.png'; Size=180; Min=0.96; Max=1.0 },
+    @{ Name='apple-touch-icon-152-v6.png'; Size=152; Min=0.96; Max=1.0 },
+    @{ Name='apple-touch-icon-167-v6.png'; Size=167; Min=0.96; Max=1.0 },
+    @{ Name='apple-touch-icon-180-v6.png'; Size=180; Min=0.96; Max=1.0 },
     @{ Name='icon-maskable-192-v5.png'; Size=192; Min=0.77; Max=0.84 },
     @{ Name='icon-maskable-512-v5.png'; Size=512; Min=0.77; Max=0.84 }
 )

@@ -1,5 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import './styles.css'
 import CalendarScreen from '../CalendarScreen.jsx'
 import InstallPage from './InstallPage.jsx'
 import { supabase } from './supabaseClient'
@@ -101,10 +102,27 @@ if (/^[A-Z0-9]{4,32}$/.test(incomingReferral)) {
 const normalizedPath = window.location.pathname.replace(/\/+$/, '') || '/'
 const showInstallPage = params.get('install') === '1' || normalizedPath === '/install'
 
+function AppReady({ children }) {
+  React.useEffect(() => {
+    // The CSS is bundled with the app; reveal only after React has committed.
+    const frame = requestAnimationFrame(() => {
+      document.documentElement.removeAttribute('data-booting')
+      const splash = document.getElementById('boot-screen')
+      if (!splash) return
+      splash.setAttribute('data-ready', '')
+      window.setTimeout(() => splash.remove(), 260)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [])
+  return children
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
+    <AppReady>
     <AppErrorBoundary>
       {showInstallPage ? <InstallPage /> : <CalendarScreen />}
     </AppErrorBoundary>
+    </AppReady>
   </React.StrictMode>
 )
