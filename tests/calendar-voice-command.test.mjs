@@ -1,6 +1,16 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {parseCalendarVoiceCommand as parse} from '../src/shared/lib/calendarVoiceCommand.js';
+test('navigation and conversational expenses',()=>{
+ for(const phrase of ['войди в кошелёк','открой кошелек'])assert.deepEqual(parse(phrase),{type:'wallet'});
+ assert.deepEqual(parse('включи режим про'),{type:'pro',enabled:true});
+ assert.deepEqual(parse('выключи режим pro'),{type:'pro',enabled:false});
+ assert.deepEqual(parse('перемотай на следующий месяц'),{type:'month',direction:1});
+ assert.deepEqual(parse('перемотай назад'),{type:'month',direction:-1});
+ for(const phrase of ['добавь 60 лей я сегодня потратил в календарь добавь','я сегодня потратил 60 лей запиши в календарь','запиши расход шестьдесят лей'])assert.deepEqual(parse(phrase),{type:'entry',kind:'record',amount:'60',currency:'MDL',sign:'minus'});
+ assert.equal(parse('я не потратил 60 лей'),null);
+ assert.equal(parse('я потратил 60 лей и 50 евро'),null);
+});
 test('calendar command vocabulary is explicit and localized',()=>{
  assert.deepEqual(parse('добавь запись'),{type:'add',kind:'record'});
  assert.deepEqual(parse('Добавь новую сделку.'),{type:'add',kind:'trade'});

@@ -4721,6 +4721,9 @@ export default function CalendarScreen() {
             </span>
           </button>
           <CalendarVoiceButton language={language} isLight={isLight} traderMode={traderMode} onCommand={(command) => {
+            if (command.type === 'month') { if (command.direction > 0) goToNextMonth(); else goToPrevMonth(); return; }
+            if (command.type === 'pro') { setProView(command.enabled); return; }
+            if (command.type === 'wallet') { if (proAccessActive && !proAccessLoading) openWalletFromCalendarGesture(); else setProView(true); return; }
             if (command.type === 'question') return financialVoiceAnswer({
               records: manualTrades, monthKey: todayKey.slice(0, 7), metric: command.metric, language,
               isTrading: (item) => item.platform === 'cTrader' || item.platform === 'MT5' || isTradingInstrumentName(item.instrument) || (!getMoneyCategoryMeta(item.instrument) && isTradingHistoryRecord(item)),

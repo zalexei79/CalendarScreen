@@ -6,7 +6,19 @@ const months=[
  ['октябрь','октября','october','octombrie'],['ноябрь','ноября','november','noiembrie'],['декабрь','декабря','december','decembrie'],
 ];
 export function parseCalendarVoiceCommand(transcript){
- const text=String(transcript).toLowerCase().trim().replace(/[.!?]$/,'').replace(/ё/g,'е');
+ const text=String(transcript).toLowerCase().replace(/ё/g,'е').replace(/([\d])[,.](?=\d)/g,'$1DECIMAL').replace(/[,.!?]/g,' ').replace(/DECIMAL/g,',').replace(/\s+/g,' ').trim().replace(/^пожалуйста | пожалуйста$/g,'');
+ if(/^(?:войди|зайди|перейди|открой)(?: в)? (?:мой )?кошелек$|^open (?:my )?wallet$|^deschide portofelul$/.test(text))return {type:'wallet'};
+ const pro=text.match(/^(включи|включить|выключи|выключить|отключи|отключить) (?:режим )?(?:про|pro)$/);
+ if(pro)return {type:'pro',enabled:/^включ/.test(pro[1])};
+ if(/^(?:turn|switch) (on|off) pro(?: mode)?$/.test(text))return {type:'pro',enabled:/ on /.test(text)};
+ if(/^(?:перемотай|перелистни|переключи|листай|перейди)(?: (?:на|в))? (?:следующий месяц|вперед)$|^следующий месяц$|^next month$/.test(text))return {type:'month',direction:1};
+ if(/^(?:перемотай|перелистни|переключи|листай|перейди)(?: (?:на|в))? (?:предыдущий месяц|прошлый месяц|назад)$|^предыдущий месяц$|^previous month$/.test(text))return {type:'month',direction:-1};
+ // Flexible Russian word order, but exactly one amount/currency and a clear intent.
+ if(/(?:рубль|рубля|рублей|евро|лей|лея|леев|доллар|доллара|долларов)/.test(text) && /(?:потратил|потратила|расход|получил|получила|заработал|заработала|доход)/.test(text)){
+  const stripped=text.replace(/в календарь|в календаре/g,' ').split(' ').filter(word=>!['добавь','добавить','запиши','записать','я','сегодня','потратил','потратила','получил','получила','заработал','заработала','расход','доход','запись'].includes(word)).join(' ').trim();
+  const amountMatch=stripped.match(/^(.+?) (рубль|рубля|рублей|евро|лей|лея|леев|доллар|доллара|долларов)$/);
+  if(amountMatch){const amount=parseSpokenAmount(amountMatch[1]);if(amount!==null&&Number(amount)>0){const expense=/потратил|потратила|расход/.test(text),income=/получил|получила|заработал|заработала|доход/.test(text);if(expense!==income)return {type:'entry',kind:'record',amount,currency:/^руб/.test(amountMatch[2])?'RUB':amountMatch[2]==='евро'?'EUR':/^ле/.test(amountMatch[2])?'MDL':'USD',sign:expense?'minus':'plus'};}}
+ }
  const question=text.replace(/^(расскажи[,]? |скажи[,]? |tell me |spune-mi )/,'');
  const questions={expense:/^(?:сколько (?:я )?(?:потратил|потратила)|какие (?:мои )?расходы) (?:за |в )?(?:этом|этот|текущий) месяц(?:е)?$|^how much (?:did i spend|have i spent) this month$|^cât am cheltuit luna aceasta$/,income:/^сколько (?:я )?(?:заработал|заработала|получил|получила) (?:за |в )?(?:этом|этот|текущий) месяц(?:е)?$|^how much (?:did i earn|have i earned) this month$|^cât am câștigat luna aceasta$/,summary:/^(?:какой итог|подведи итог|итоги|итог) (?:за |в )?(?:этом|этот|текущий) месяц(?:е)?$|^(?:summarize|summary for) this month$|^rezumat pentru luna aceasta$/};
  for(const [metric,pattern] of Object.entries(questions))if(pattern.test(question))return {type:'question',metric,period:'current-month'};

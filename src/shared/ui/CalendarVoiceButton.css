@@ -21,3 +21,13 @@
 .calendar-voice-answer-actions { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px; }
 .calendar-voice-answer-actions button { display:flex; align-items:center; justify-content:center; gap:8px; min-height:44px; min-width:44px; padding:0 10px; border-radius:12px; background:rgba(150,150,150,.08); }
 .calendar-voice-answer-actions button:focus-visible { outline:2px solid #d5bc83; outline-offset:2px; }
+.calendar-action-dock .calendar-dock-actions > div:has(.calendar-voice-control[data-active="true"]) > button { display:none; }
+.calendar-voice-control[data-active="true"] { display:flex; align-items:center; gap:4px; width:min(272px,calc(100vw - 72px)); }
+.calendar-voice-control[data-active="true"] .calendar-voice-button { width:auto; flex:1; gap:8px; padding:0 12px; border-radius:24px; }
+.calendar-voice-button span { font-size:11px; }
+.calendar-voice-close { width:44px; height:44px; flex:none; display:flex; align-items:center; justify-content:center; border-radius:50%; }
+.calendar-voice-close:focus-visible { outline:2px solid #d5bc83; }
+.calendar-voice-transcript { margin-top:8px; color:#c5af82; }
+.calendar-voice-audio-error { margin-top:8px; color:#b89959; font-size:11px; }
+.calendar-voice-control[data-active="true"] .calendar-voice-button span { animation:calendar-voice-enter 180ms ease-out both; }
+@media(prefers-reduced-motion:reduce) { .calendar-voice-control .calendar-voice-button span { animation:none; } }
