@@ -20,5 +20,10 @@ try{
   await page.evaluate(()=>window.visible(true));await page.locator('#assistant-voice').waitFor();
   assert.equal(await page.locator('#assistant-voice').inputValue(),uri,'preference survives remount');
  }
- assert.ok(await page.evaluate(()=>window.cancelled)>=3,'closing settings cancels preview');assert.deepEqual(errors,[]);console.log('Voice settings: locale filtering, preview, persistence and cleanup passed');
+ assert.ok(await page.evaluate(()=>window.cancelled)>=3,'closing settings cancels preview');
+ await page.evaluate(()=>{window.language('ru');window.spoken=null;window.speechSynthesis.getVoices=()=>[{voiceURI:'en',name:'English',lang:'en-US'}];});
+ await page.getByRole('button',{name:'Послушать'}).click();
+ assert.equal(await page.evaluate(()=>window.spoken),null,'missing Russian voice never falls back to English');
+ assert.match(await page.getByRole('alert').textContent(),/Синтез речи/);
+ assert.deepEqual(errors,[]);console.log('Voice settings: locale filtering, preview, persistence, missing-language guard and cleanup passed');
 }finally{await browser.close();}

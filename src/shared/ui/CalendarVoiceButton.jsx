@@ -28,7 +28,7 @@ export default function CalendarVoiceButton({language='ru',isLight,traderMode=fa
   stopSpeaking();setAudioError('');if(!window.speechSynthesis||!window.SpeechSynthesisUtterance){setAudioError(ui.audio);return;}
   const speech=new window.SpeechSynthesisUtterance(value);utterance.current=speech;
   speech.lang={ru:'ru-RU',en:'en-US',ro:'ro-RO'}[locale];speech.rate=1;speech.pitch=1;speech.volume=1;
-  const available=window.speechSynthesis.getVoices();setVoices(available);const voice=selectPlaybackVoice(available,locale,preferredVoice,navigator.onLine!==false);if(voice)speech.voice=voice;
+  const available=window.speechSynthesis.getVoices();setVoices(available);const voice=selectPlaybackVoice(available,locale,preferredVoice,navigator.onLine!==false);if(!voice){utterance.current=null;setAudioError(playbackLabels.missing);return;}speech.voice=voice;
   const finish=()=>{if(utterance.current===speech){clearTimeout(audioTimer.current);utterance.current=null;setSpeaking(false);}};
   speech.onstart=()=>{if(utterance.current===speech){clearTimeout(audioTimer.current);setSpeaking(true);}};
   speech.onend=finish;speech.onerror=()=>{finish();setAudioError(ui.audio);};
@@ -48,14 +48,15 @@ export default function CalendarVoiceButton({language='ru',isLight,traderMode=fa
   document.addEventListener('visibilitychange',cancel);
   return ()=>{document.removeEventListener('visibilitychange',cancel);clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);clearTimeout(audioTimer.current);clearTimeout(releaseTimer.current);if(utterance.current){utterance.current.onstart=null;utterance.current.onend=null;utterance.current.onerror=null;utterance.current=null;window.speechSynthesis?.cancel();}clearTimeout(timer.current);clearTimeout(messageTimer.current);const current=session.current;session.current=null;if(current){current.onspeechstart=null;current.onspeechend=null;current.onstart=null;current.onresult=null;current.onerror=null;current.onend=null;current.abort();}};
  },[]);
+ useEffect(()=>{stop();stopSpeaking();setActive(false);setMessage('');setAnswer('');clearTimeout(messageTimer.current);},[locale]);
  function start(){
   if(session.current){finish();return;}
   clearTimeout(releaseTimer.current);stopSpeaking();setAnswer('');setAudioError('');setTranscript('');setActive(true);window.speechSynthesis?.getVoices();
   // Initialize Safari's speech channel inside the microphone tap, before the
   // asynchronous recognition result. Actual answers still wait for mic release.
-  if(window.speechSynthesis&&window.SpeechSynthesisUtterance){try{const warmup=new window.SpeechSynthesisUtterance('');warmup.volume=0;window.speechSynthesis.speak(warmup);}catch{/* The visible replay action can retry with a fresh user gesture. */}}
+  if(/iPad|iPhone|iPod/.test(navigator.userAgent)&&window.speechSynthesis&&window.SpeechSynthesisUtterance){try{const warmup=new window.SpeechSynthesisUtterance('');warmup.lang={ru:'ru-RU',en:'en-US',ro:'ro-RO'}[locale];warmup.volume=0;window.speechSynthesis.speak(warmup);}catch{/* The visible replay action can retry with a fresh user gesture. */}}
   if(!Speech){notify(text.unsupported);return;}
-  const recognition=new Speech();session.current=recognition;let finalText='';
+  const recognition=new Speech();session.current=recognition;let finalText='',latestText='';
   recognition.lang={ru:'ru-RU',en:'en-US',ro:'ro-RO'}[locale];recognition.continuous=true;recognition.interimResults=true;recognition.maxAlternatives=3;
   clearTimeout(messageTimer.current);setListening(true);setPhase('starting');setMessage(ui.opening);
   recognition.onstart=()=>{if(session.current===recognition){setPhase('listening');setMessage(ui.listen);}};
@@ -68,7 +69,7 @@ export default function CalendarVoiceButton({language='ru',isLight,traderMode=fa
    finalText=finalResults.map(result=>result[0].transcript).join(' ').trim();
    // A single-result recognizer can offer a better alternative for the whole phrase.
    if(finalResults.length===1)finalText=Array.from(finalResults[0]).map(item=>item.transcript).find(value=>{const command=parseCalendarVoiceCommand(value);return command&&command.type!=='category-prompt';})||finalText;
-   setTranscript(results.map(result=>result[0].transcript).join(' ').trim());
+   latestText=results.map(result=>result[0].transcript).join(' ').trim();setTranscript(latestText);
    clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);
    const interim=results.some(result=>!result.isFinal);setTalking(interim);
    if(interim){speechPulseTimer.current=setTimeout(()=>setTalking(false),900);return;}
@@ -76,8 +77,8 @@ export default function CalendarVoiceButton({language='ru',isLight,traderMode=fa
    // Keep a brief pause available for the category or remaining words.
    phraseTimer.current=setTimeout(()=>{if(session.current===recognition)finish();},command&&command.type!=='category-prompt'?1400:2600);
   };
-  recognition.onerror=event=>{if(session.current!==recognition)return;stop();notify(event.error==='not-allowed'||event.error==='service-not-allowed'?text.permission:text.error);};
-  recognition.onend=()=>{if(session.current!==recognition)return;stop();const command=parseCalendarVoiceCommand(finalText);if(!command){notify(text.invalid);return;}setMessage('');const reply=onCommand(command);if(typeof reply==='string'&&reply){setAnswer(reply);releaseTimer.current=setTimeout(()=>speak(reply),180);}else setActive(false);};
+  recognition.onerror=event=>{if(session.current!==recognition)return;stop();notify(event.error==='not-allowed'||event.error==='service-not-allowed'?text.permission:event.error==='language-not-supported'?({ru:'Распознавание русского языка недоступно на устройстве. Проверьте языки голосового ввода Google.',en:'English recognition is unavailable. Check Google voice input languages.',ro:'Recunoașterea limbii române nu este disponibilă. Verifică limbile introducerii vocale Google.'}[locale]):text.error);};
+  recognition.onend=()=>{if(session.current!==recognition)return;stop();const command=parseCalendarVoiceCommand(finalText||latestText);if(!command){notify(text.invalid);return;}setMessage('');const reply=onCommand(command);if(typeof reply==='string'&&reply){setAnswer(reply);releaseTimer.current=setTimeout(()=>speak(reply),180);}else setActive(false);};
   try{recognition.start();timer.current=setTimeout(()=>{if(session.current===recognition)finish();},20000);}catch{stop();notify(text.error);}
  }
  return <div className="calendar-voice-control" data-light={Boolean(isLight)} data-active={active}>
