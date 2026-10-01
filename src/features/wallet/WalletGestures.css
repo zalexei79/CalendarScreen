@@ -1,5 +1,5 @@
 .wallet-gesture-content { transition:transform .22s cubic-bezier(.22,1,.36,1); }
-.calendar-section.wallet-gesture-content { transition:transform .22s cubic-bezier(.22,1,.36,1), background-color .2s, border-color .2s; }
+.calendar-section.wallet-gesture-content { transition:transform .22s cubic-bezier(.22,1,.36,1), opacity .22s, background-color .2s, border-color .2s; }
 .wallet-gesture-content[data-dragging="true"] { transition:none; will-change:transform; }
 .wallet-gesture-hint { display:none; }
 .wallet-gesture-feedback {

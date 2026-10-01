@@ -64,9 +64,9 @@ try {
   // Pull from a real day button: follows the finger, shows readiness, prevents ghost selection.
   await fresh(); await send('touchStart', 195, 150); await send('touchMove', 195, 220);
   assert.notEqual(await page.locator('.calendar-section').evaluate(el => getComputedStyle(el).transform), 'none');
-  assert.equal(await page.getByRole('status').textContent(), 'Pull to open wallet');
+  assert.equal(await page.locator('.calendar-dock-wallet').textContent(), 'Pull down to open wallet');
   await send('touchMove', 195, 325);
-  assert.equal(await page.getByRole('status').textContent(), 'Release to open wallet');
+  assert.equal(await page.locator('.calendar-dock-wallet').textContent(), 'Release to open wallet');
   await send('touchEnd'); await page.locator('.wallet-panel-enter').waitFor();
   assert.equal(await page.locator('#selected').textContent(), '');
   // Return uses the existing wallet interaction, then another pull enters again.
@@ -81,11 +81,11 @@ try {
   assert.equal(await page.locator('#selected').textContent(), '');
   await swipe(195, 150, 0, 180, true); await remains();
   // Month swipes still work once per gesture, including FREE.
-  await swipe(195, 150, -120, 0); assert.equal(await page.locator('#month').textContent(), '1');
-  await swipe(195, 150, 120, 0); assert.equal(await page.locator('#month').textContent(), '0');
+  await swipe(195, 150, -120, 0); await page.waitForFunction(() => document.querySelector('#month').textContent === '1'); assert.equal(await page.locator('#month').textContent(), '1');
+  await swipe(195, 150, 120, 0); await page.waitForFunction(() => document.querySelector('#month').textContent === '0'); assert.equal(await page.locator('#month').textContent(), '0');
   await page.getByRole('button', { name: 'PRO', exact: true }).click();
   await swipe(195, 150, 0, 180); await remains();
-  await swipe(195, 150, -120, 0); assert.equal(await page.locator('#month').textContent(), '1');
+  await swipe(195, 150, -120, 0); await page.waitForFunction(() => document.querySelector('#month').textContent === '1'); assert.equal(await page.locator('#month').textContent(), '1');
   // Ordinary scrolling, taps, overlays, and multiple fingers do not open the wallet.
   await fresh(); await page.locator('.calendar-days-grid > button').nth(10).tap();
   assert.equal(await page.locator('#selected').textContent(), 'day-10');

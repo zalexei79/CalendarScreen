@@ -28,7 +28,12 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
     let gesture = null;
     let suppressClickUntil = 0;
     let exiting = false;
-    const reset = () => { gesture = null; setDrag(IDLE); };
+    let releaseTimer;
+    const updateDrag = (value) => {
+      setDrag(value);
+      if (navigation === 'calendar') window.dispatchEvent(new CustomEvent('dayris-calendar-pull', { detail: value.axis === 'y' ? value : IDLE }));
+    };
+    const reset = () => { gesture = null; updateDrag(IDLE); };
     const acceptsTarget = (target) => {
       if (!(target instanceof Element)) return false;
       const control = target.closest(INTERACTIVE);
@@ -79,9 +84,9 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
       gesture.dx = dx; gesture.dy = dy;
       suppressClickUntil = performance.now() + 500;
       const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-      setDrag({
+      updateDrag({
         axis: gesture.axis,
-        x: reduced || gesture.axis !== 'x' ? 0 : Math.sign(dx) * Math.min(Math.abs(dx) * .4, 70),
+        x: reduced || gesture.axis !== 'x' ? 0 : Math.sign(dx) * Math.min(Math.abs(dx) * (navigation === 'calendar' ? .85 : .4), navigation === 'calendar' ? surface.clientWidth * .8 : 70),
         y: reduced || gesture.axis !== 'y' ? 0 : Math.min(Math.max(dy, 0) * .35, 70),
         ready: canExit(gesture, performance.now() - gesture.started, navigation),
       });
@@ -92,6 +97,20 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
       if (event.touches.length || !Array.from(event.changedTouches).some(touch => touch.identifier === gesture.id)) { reset(); return; }
       const shouldExit = gesture.axis && canExit(gesture, performance.now() - gesture.started, navigation);
       const axis = gesture.axis, dx = gesture.dx;
+      if (shouldExit && navigation === 'calendar' && axis === 'x' && !config.current.disabled && !exiting) {
+        exiting = true;
+        gesture = null;
+        const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        updateDrag({ x: reduced ? 0 : Math.sign(dx) * surface.clientWidth, y: 0, axis: 'x', settling: true, ready: true });
+        releaseTimer = setTimeout(() => {
+          if (!config.current.disabled) {
+            if (dx < 0) config.current.onNextMonth?.(); else config.current.onPreviousMonth?.();
+          }
+          reset();
+          exiting = false;
+        }, reduced ? 0 : 220);
+        return;
+      }
       reset();
       if (shouldExit && !config.current.disabled && !exiting) {
         exiting = true;
@@ -112,6 +131,8 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
     surface.addEventListener('mousedown', middleDown);
     surface.addEventListener('auxclick', middleClick);
     return () => {
+      clearTimeout(releaseTimer);
+      if (navigation === 'calendar') window.dispatchEvent(new CustomEvent('dayris-calendar-pull', { detail: IDLE }));
       surface.removeEventListener('touchstart', start);
       surface.removeEventListener('touchmove', move);
       surface.removeEventListener('touchend', end);
