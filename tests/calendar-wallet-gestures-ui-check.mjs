@@ -27,10 +27,10 @@ try {
   // native snapshot overlay swallowing a second navigation during arrival.
   await fresh();
   await page.evaluate(() => window.testNavigate('wallet'));
-  assert.ok(await page.locator('.calendar-section').evaluate(el => el.getAnimations().some(animation => animation.effect.getTiming().duration === 120)));
+  assert.ok(await page.locator('.calendar-section').evaluate(el => el.getAnimations().some(animation => animation.effect.getTiming().duration === 160)));
   await page.locator('.wallet-panel-enter').waitFor();
   const motion = await page.locator('.wallet-panel-enter').evaluate(el => {
-    const animation = el.getAnimations().find(animation => animation.effect.getTiming().duration === 520);
+    const animation = el.getAnimations().find(animation => animation.effect.getTiming().duration === 420);
     if (!animation) return null;
     animation.pause(); animation.currentTime = 0;
     const style = getComputedStyle(el);
@@ -38,7 +38,7 @@ try {
     animation.play();
     return result;
   });
-  assert.ok(motion && motion.opacity < .8 && motion.translate.includes('26px'));
+  assert.ok(motion && motion.opacity < .9 && motion.translate.includes('8px'));
   await page.evaluate(() => window.testNavigate('calendar'));
   await page.locator('.calendar-days-grid').waitFor();
   await page.waitForTimeout(650);

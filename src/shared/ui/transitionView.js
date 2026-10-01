@@ -28,9 +28,9 @@ export function transitionView(update) {
   delete root.dataset.workspaceTransition;
   // A short live departure bridges the content change. Unlike native screenshot
   // transitions, the new screen stays interactive throughout its longer arrival.
-  departing = [surface, document.querySelector('.premium-shell > header')].filter(Boolean).map(node => node.animate([
+  departing = [surface].map(node => node.animate([
     { opacity: 1, translate: '0 0' },
-    { opacity: .72, translate: '0 -10px' },
-  ], { duration: 120, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' }));
+    { opacity: .84, translate: '0 -4px' },
+  ], { duration: 160, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' }));
   Promise.all(departing.map(animation => animation.finished.catch(() => {}))).then(arrive);
 }

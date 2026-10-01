@@ -23,14 +23,14 @@
 /* Light belongs to the viewport, so neighbouring pages share it from the first
    frame. It never remounts or fades in at the end of a gesture. */
 .calendar-motion-light {
-  position:absolute; inset:0 -48px auto; height:240px;
+  position:absolute; inset:-150px -48px auto; height:390px;
   pointer-events:none; z-index:1; opacity:.82;
-  background:radial-gradient(ellipse at 50% 0%,rgba(255,255,255,.025),transparent 72%);
+  background:radial-gradient(ellipse at 50% 40%,rgba(255,255,255,.025),transparent 72%);
   transform:translate3d(0,0,0);
 }
 .calendar-pages-viewport[data-pro="true"] .calendar-motion-light {
-  background:radial-gradient(ellipse at 50% -12%,rgba(251,191,36,.115),transparent 68%),
-    radial-gradient(ellipse at 85% 0%,rgba(16,185,129,.025),transparent 55%);
+  background:radial-gradient(ellipse at 50% 40%,rgba(251,191,36,.04),transparent 72%),
+    radial-gradient(ellipse at 85% 40%,rgba(16,185,129,.01),transparent 65%);
 }
 .calendar-pages-viewport[data-light="true"] .calendar-motion-light { opacity:.55 !important; }
 .pro-active-shell .calendar-pages-viewport .calendar-section { background-image:none; }

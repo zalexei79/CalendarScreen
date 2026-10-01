@@ -4150,20 +4150,22 @@ export default function CalendarScreen() {
           animation: none;
         }
         .pro-active-shell .dayris-header {
-          border-bottom-color: rgba(251,191,36,.16);
-          background-image: linear-gradient(180deg, rgba(251,191,36,.035), transparent 88%);
-          box-shadow: 0 18px 42px -38px rgba(251,191,36,.75);
+          border-bottom-color: transparent;
+          background-color: transparent;
+          background-image: linear-gradient(180deg, var(--glass-surface) 0%, var(--glass-surface) 58%, transparent 100%);
+          box-shadow: none;
         }
         .pro-active-shell .monthly-goal-bar {
-          border-color: rgba(251,191,36,.15);
-          background-image: linear-gradient(90deg, rgba(251,191,36,.035), transparent 32%, rgba(16,185,129,.018));
+          border-color: transparent;
+          background-image: none;
+          box-shadow: none;
         }
         .pro-active-shell .calendar-section {
           background-image:
             radial-gradient(circle at 50% -8%, rgba(251,191,36,.045), transparent 30%),
             linear-gradient(180deg, rgba(255,255,255,.008), transparent 22%);
         }
-        .pro-active-shell .pro-calendar-day::before {
+        .pro-active-shell .pro-calendar-day:not(.calendar-day-surface)::before {
           content: '';
           position: absolute;
           inset: 0;

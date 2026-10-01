@@ -4,18 +4,11 @@
 }
 html[data-workspace-transition] .wallet-panel-enter,
 html[data-workspace-transition] .calendar-section {
-  animation: workspace-arrive 520ms cubic-bezier(.22,1,.36,1) both;
+  animation: workspace-arrive 420ms cubic-bezier(.22,1,.36,1) both;
   will-change: opacity, translate;
 }
-html[data-workspace-transition] .premium-shell > header {
-  animation: workspace-header-arrive 440ms cubic-bezier(.22,1,.36,1) both;
-}
 @keyframes workspace-arrive {
-  from { opacity: .72; translate: 0 26px; }
-  to { opacity: 1; translate: 0 0; }
-}
-@keyframes workspace-header-arrive {
-  from { opacity: .72; translate: 0 10px; }
+  from { opacity: .84; translate: 0 8px; }
   to { opacity: 1; translate: 0 0; }
 }
 @media (prefers-reduced-motion: reduce) {

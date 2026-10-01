@@ -98,7 +98,7 @@ export default function CalendarDayCell({
         onClick={onSelect}
         style={{ ...heatmapStyle, ...proStyle }}
         className={[
-          'relative overflow-hidden rounded-xl border flex flex-col justify-between text-left transition-all duration-200 ease-out',
+          'calendar-day-surface relative overflow-hidden rounded-xl border flex flex-col justify-between text-left transition-all duration-200 ease-out',
           premiumCalendar ? 'pro-calendar-day' : '',
           hasPlans ? 'has-calendar-plans' : '',
           cell.isToday ? 'today-calendar-cell' : '',

@@ -21,7 +21,7 @@
   --glass-highlight:rgba(255,255,255,.10);
   --glass-shadow:rgba(0,0,0,.30);
 }
-.dayris-header.dayris-header {
+.premium-shell .dayris-header {
   position:relative; z-index:20;
   background-color:var(--glass-surface);
   border-bottom-color:var(--glass-line);
