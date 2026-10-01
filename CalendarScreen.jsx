@@ -85,6 +85,7 @@ import PnlCurve from './src/features/trades-sync/components/PnlCurve';
 import PeriodDynamics from './src/features/trades-sync/components/PeriodDynamics';
 import CalendarGrid from './CalendarGrid';
 import MonthlyGoal from './MonthlyGoal';
+import AmountKeypad, {AmountInput} from './src/shared/ui/AmountEntry.jsx';
 import CtraderControl from './src/features/ctrader/CtraderControl';
 import { createQrMatrix, drawQrToCanvas } from './qrCode.js';
 import { useReferral } from './src/features/referrals/useReferral.js';
@@ -3834,14 +3835,13 @@ export default function CalendarScreen() {
             <span className={`font-data text-3xl ${form.sign === 'minus' ? 'text-red-400/70' : isFinanceEntry ? 'text-amber-400/70' : 'text-emerald-400/70'}`}>
               {CURRENCIES.find((item) => item.code === form.currency)?.symbol || form.currency}
             </span>
-            <input
+            <AmountInput
               ref={guideAmountRef}
               type="text"
               inputMode="decimal"
               pattern="[0-9]*[.,]?[0-9]*"
               enterKeyHint="done"
               autoComplete="off"
-              autoFocus
               value={form.pnl}
               onChange={(event) => {
                 const nextValue = event.target.value.replace(',', '.');
@@ -3873,6 +3873,7 @@ export default function CalendarScreen() {
           </div>
         </div>
 
+        <AmountKeypad value={form.pnl} language={language} isLight={isLight} onChange={(pnl) => { setForm((current) => ({ ...current, pnl })); setFormError(''); }} />
         {isFinanceEntry ? (
           <div>
             <div className="mb-2 flex items-center justify-between">
@@ -6392,14 +6393,13 @@ export default function CalendarScreen() {
                       {CURRENCIES.find((c) => c.code === form.currency)?.symbol || form.currency}
                     </span>
                   )}
-                  <input
+                  <AmountInput
                     ref={guideAmountRef}
                     type="text"
                     inputMode="decimal"
                     pattern="[0-9]*[.,]?[0-9]*"
                     enterKeyHint="done"
                     autoComplete="off"
-                    autoFocus
                     value={form.pnl}
                     onChange={(e) => {
                       const nextValue = e.target.value.replace(',', '.');
@@ -6459,6 +6459,7 @@ export default function CalendarScreen() {
                 </div>
               )}
 
+              <AmountKeypad value={form.pnl} language={language} isLight={isLight} onChange={(pnl) => { setForm((current) => ({ ...current, pnl })); setFormError(''); }} />
               {/* Time is available, but deliberately quiet */}
               <div className={`mt-2 flex ${traderMode ? 'justify-end' : 'justify-center'}`}>
                 <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] transition-colors ${
