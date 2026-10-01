@@ -94,6 +94,10 @@ try {
   assert.equal(await page.locator('.calendar-motion-sheen').count(), 0, 'no decorative stripe between months');
   const trackedX = await page.locator('.calendar-section').evaluate(el => new DOMMatrix(getComputedStyle(el).transform).m41);
   assert.ok(Math.abs(trackedX + 100) < 1, 'month follows the finger one-to-one');
+  const depth = await page.locator('.calendar-section > .calendar-days-grid').evaluate(el => Number(el.style.getPropertyValue('--month-scale')));
+  assert.ok(depth < 1 && depth > .96, 'outgoing month recedes gently during drag');
+  const incomingDepth = await page.locator('.calendar-month-preview').last().locator('.calendar-days-grid').evaluate(el => Number(el.style.getPropertyValue('--month-scale')));
+  assert.ok(incomingDepth > .96 && incomingDepth < 1, 'incoming month unfolds continuously with swipe progress');
   const previewBox = await page.locator('.calendar-month-preview').last().boundingBox();
   assert.ok(previewBox.x < 390 && previewBox.x > 0, 'next month enters the viewport behind the finger');
   await send('touchCancel');
@@ -104,6 +108,8 @@ try {
     const sample = () => {
       if (!window.sampleMonthFrames) return;
       const boxes = [...document.querySelectorAll('.calendar-section, .calendar-month-preview')].map(el => el.getBoundingClientRect());
+      const incoming = document.querySelector('.calendar-section[data-settling="true"] .calendar-month-preview:last-child .calendar-days-grid');
+      if (incoming) window.lastIncomingScale = new DOMMatrix(getComputedStyle(incoming).transform).m11;
       // The incoming and outgoing pages must cover the viewport throughout.
       const left = Math.min(...boxes.map(box => box.left)), right = Math.max(...boxes.map(box => box.right));
       if (left > 1 || right < innerWidth - 1) window.monthFrameGaps.push({left,right});
@@ -114,6 +120,7 @@ try {
   await swipe(195, 150, -120, 0); await page.waitForFunction(() => document.querySelector('#month').textContent === '1'); assert.equal(await page.locator('#month').textContent(), '1');
   await page.evaluate(() => window.sampleMonthFrames = false);
   assert.deepEqual(await page.evaluate(() => window.monthFrameGaps), [], 'no blank page frame during release and commit');
+  assert.ok(await page.evaluate(() => window.lastIncomingScale > .999), 'incoming page reaches full size before the month is committed');
   await swipe(195, 150, 120, 0); await page.waitForFunction(() => document.querySelector('#month').textContent === '0'); assert.equal(await page.locator('#month').textContent(), '0');
   await page.getByRole('button', { name: 'PRO', exact: true }).click();
   await swipe(195, 150, 0, 180); await remains();

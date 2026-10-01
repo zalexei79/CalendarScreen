@@ -8,6 +8,9 @@ import './src/shared/ui/MotionSystem.css';
 import { useCalendarFit } from './src/shared/ui/useCalendarFit';
 
 const CalendarMonthPreview = React.memo(function CalendarMonthPreview({ preview, isLight, language, traderMode, proView, selectedKey, notes, noteLabel, tradesForDayFiltered, plansForDay, formatPlanAmount, totalPnlForDay, monthMaxAbsPnl, formatPnlDisplay }) {
+  // Match the target month's heatmap before it becomes the active page.
+  // Reusing the departing month's range caused a colour jump at commit.
+  monthMaxAbsPnl = preview.cells.reduce((max, cell) => cell.inMonth ? Math.max(max, Math.abs(totalPnlForDay(cell.key))) : max, 0);
   return <div className="calendar-month-preview" aria-hidden="true" inert="" style={{ left: `${preview.direction * 100}%` }}>
     <div className="calendar-weekdays grid grid-cols-7 gap-1 sm:gap-2 mb-3">{WEEKDAYS.map(day => <div key={day} className={`font-data text-[11px] sm:text-xs font-semibold tracking-wider text-center uppercase pb-1 ${isLight ? 'text-slate-600' : 'text-zinc-500'}`}>{day}</div>)}</div>
     <div className="calendar-days-grid calendar-preview-days grid grid-cols-7 gap-1 sm:gap-2" style={{ flex: 1, minHeight: 0, gridAutoRows: 'auto', gridTemplateRows: `repeat(${preview.cells.length / 7},minmax(0,1fr))` }}>

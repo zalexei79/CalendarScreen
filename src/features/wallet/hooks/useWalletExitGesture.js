@@ -32,6 +32,21 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
     let releaseTimer;
     let motionFrame;
     const light = navigation === 'calendar' ? surface.parentElement.querySelector('.calendar-motion-light') : null;
+    const updateDepth = (x, settling = false, duration = 220) => {
+      if (navigation !== 'calendar') return;
+      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      const progress = reduced ? 0 : Math.min(Math.abs(x) / surface.clientWidth, 1);
+      const incoming = x < 0 ? 1 : -1;
+      for (const grid of surface.querySelectorAll('.calendar-days-grid')) {
+        const page = grid.closest('.calendar-month-preview');
+        const isIncoming = page && Math.sign(parseFloat(page.style.left)) === incoming;
+        const scale = page ? (isIncoming ? .96 + progress * .04 : .96) : 1 - progress * .035;
+        const opacity = page ? (isIncoming ? .82 + progress * .18 : .82) : 1 - progress * .12;
+        grid.style.transition = settling && !reduced ? `transform ${duration}ms cubic-bezier(.16,1,.3,1), opacity ${duration}ms cubic-bezier(.16,1,.3,1)` : 'none';
+        grid.style.setProperty('--month-scale', reduced ? '1' : String(scale));
+        grid.style.setProperty('--month-opacity', reduced ? '1' : String(opacity));
+      }
+    };
     const updateDrag = (value) => {
       // Horizontal tracking is a compositor update, not a rerender of three
       // calendars for every touch sample. React handles gesture boundaries.
@@ -40,6 +55,7 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
         cancelAnimationFrame(motionFrame);
         motionFrame = requestAnimationFrame(() => {
           surface.style.transform = `translate3d(${value.x}px,0,0)`;
+          updateDepth(value.x);
           // A shallow light drift follows the hand, returning to the same
           // resting position before the page swap. Only compositor properties.
           if (light) {
@@ -50,6 +66,7 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
       } else {
         cancelAnimationFrame(motionFrame);
         surface.style.setProperty('--calendar-settle-duration', `${value.duration || 360}ms`);
+        updateDepth(value.axis === 'x' ? value.x : 0, true, value.duration || 220);
         if (light) {
           light.style.transition = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'none' : `transform ${value.duration || 360}ms cubic-bezier(.16,1,.3,1)`;
           light.style.transform = 'translate3d(0,0,0)';
