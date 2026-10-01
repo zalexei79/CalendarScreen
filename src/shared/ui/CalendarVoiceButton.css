@@ -56,3 +56,12 @@
 .calendar-voice-glyph .calendar-voice-equalizer:last-child i { animation-delay:-120ms; }
 @keyframes calendar-voice-level { 0% { transform:scaleY(.22); } 45% { transform:scaleY(.9); } 100% { transform:scaleY(.38); } }
 @media(prefers-reduced-motion:reduce) { .calendar-voice-equalizer { transition:none; } .calendar-voice-glyph[data-talking="true"] i { animation:none; transform:scaleY(.6); } }
+.calendar-voice-replies { margin-top:12px; }
+.calendar-voice-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+.calendar-voice-options button,.calendar-voice-reply-actions button,.calendar-voice-replies input { min-height:44px; border:1px solid rgba(160,160,160,.2); border-radius:12px; background:rgba(150,150,150,.08); padding:8px; color:inherit; }
+.calendar-voice-options button[aria-pressed="true"] { background:rgba(213,188,131,.15); border-color:#b89959; }
+.calendar-voice-reply-actions { display:flex; gap:6px; margin-top:8px; }
+.calendar-voice-reply-actions button { flex:1; display:flex; align-items:center; justify-content:center; gap:5px; }
+.calendar-voice-reply-actions button:disabled { opacity:.4; }
+.calendar-voice-replies input { width:100%; }
+.calendar-voice-replies button:focus-visible,.calendar-voice-replies input:focus-visible { outline:2px solid #d5bc83; outline-offset:2px; }

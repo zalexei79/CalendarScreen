@@ -10,7 +10,7 @@ export function voiceEntryDialog(phrase,draft=null,locale='ru'){
  if(!draft&&full)return null;
  const next={...draft};
  if(/потрат|расход|spent|expense|cheltuit|cheltuial/.test(text))next.sign='minus';
- if(/получ|заработ|доход|received|earned|income|primit|castig|câștig/.test(text))next.sign='plus';
+ if(/получ|заработ|доход|received|earned|income|primit|venit|castig|câștig/.test(text))next.sign='plus';
  const currency=text.match(/руб\w*|руб[а-я]*|ruble?s?|rub|евро|euros?|eur|ле[йя]|леев|lei|leu|mdl|доллар[а-я]*|dollars?|usd/iu);
  if(currency)next.currency=/руб|rub/i.test(currency[0])?'RUB':/евро|eur/i.test(currency[0])?'EUR':/ле|lei|leu|mdl/i.test(currency[0])?'MDL':'USD';
  const category=text.match(/(?: на | on | pe )(.+)$/);if(category&&category[1].length<=60)next.category=category[1];
