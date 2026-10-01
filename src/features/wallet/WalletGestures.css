@@ -13,3 +13,17 @@
 .wallet-gesture-feedback svg { width:15px; height:15px; flex-shrink:0; }
 @media (pointer:coarse) { .wallet-gesture-hint { display:block; margin-top:10px; color:#85858d; font-size:11px; } }
 @media (prefers-reduced-motion:reduce) { .wallet-gesture-content, .calendar-section.wallet-gesture-content { transition:none; } }
+
+/* Keep the wallet amount composer inside the visual viewport. */
+.wallet-composer {
+  box-sizing: border-box;
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 12px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
+}
+.wallet-composer input { min-width: 0; box-sizing: border-box; }
+.wallet-composer .amount-keypad { margin-top: 8px; }
+.wallet-composer .amount-digits button { min-height: 44px; }
+.wallet-composer.wallet-composer { margin: 0; }

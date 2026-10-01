@@ -51,9 +51,9 @@ try {
   await fresh();const select=await page.locator('select').boundingBox();await swipe(select.x+select.width/2,select.y+select.height/2,-110,0);await remains();
   await fresh();await page.getByRole('button',{name:'Add money',exact:true}).click();
   await page.locator('form').waitFor();await swipe(195,110,130,0);await remains();
-  await page.locator('input[type="number"]').fill('42');
-  const input=await page.locator('input[type="number"]').boundingBox();await swipe(input.x+input.width/2,input.y+input.height/2,80,0);await remains();
-  assert.equal(await page.locator('input[type="number"]').inputValue(),'42');
+  await page.getByRole('button',{name:'4',exact:true}).click();await page.getByRole('button',{name:'2',exact:true}).click();
+  const input=await page.locator('input[aria-label="How much?"]').boundingBox();await swipe(input.x+input.width/2,input.y+input.height/2,80,0);await remains();
+  assert.equal(await page.locator('input[aria-label="How much?"]').inputValue(),'42');
   // A second finger cancels; lifting it cannot resume the old navigation gesture.
   await fresh();await send('touchStart',130,110);await send('touchMove',180,110);
   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:180,y:110,id:1},{x:230,y:150,id:2}]});
