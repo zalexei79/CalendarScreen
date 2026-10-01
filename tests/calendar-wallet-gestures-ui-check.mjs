@@ -91,8 +91,9 @@ try {
   assert.equal(await page.evaluate(() => window.testTradesReads), readsBeforeTracking, 'tracking must not rerender day data');
   assert.notEqual(await page.locator('.calendar-motion-light').evaluate(el => el.style.transform), 'translate3d(0px, 0px, 0px)', 'shared light follows the swipe');
   assert.equal(await page.locator('.calendar-motion-light').count(), 1, 'all three pages share a single light layer');
-  assert.ok(await page.locator('.calendar-motion-sheen').evaluate(el => Number(el.style.opacity) > 0), 'page boundary has a visible travelling highlight');
-  assert.equal(await page.locator('.calendar-motion-sheen').evaluate(el => getComputedStyle(el).pointerEvents), 'none');
+  assert.equal(await page.locator('.calendar-motion-sheen').count(), 0, 'no decorative stripe between months');
+  const trackedX = await page.locator('.calendar-section').evaluate(el => new DOMMatrix(getComputedStyle(el).transform).m41);
+  assert.ok(Math.abs(trackedX + 100) < 1, 'month follows the finger one-to-one');
   const previewBox = await page.locator('.calendar-month-preview').last().boundingBox();
   assert.ok(previewBox.x < 390 && previewBox.x > 0, 'next month enters the viewport behind the finger');
   await send('touchCancel');

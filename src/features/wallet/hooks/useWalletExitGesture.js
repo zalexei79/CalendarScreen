@@ -32,7 +32,6 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
     let releaseTimer;
     let motionFrame;
     const light = navigation === 'calendar' ? surface.parentElement.querySelector('.calendar-motion-light') : null;
-    const sheen = navigation === 'calendar' ? surface.parentElement.querySelector('.calendar-motion-sheen') : null;
     const updateDrag = (value) => {
       // Horizontal tracking is a compositor update, not a rerender of three
       // calendars for every touch sample. React handles gesture boundaries.
@@ -41,28 +40,18 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
         cancelAnimationFrame(motionFrame);
         motionFrame = requestAnimationFrame(() => {
           surface.style.transform = `translate3d(${value.x}px,0,0)`;
-          if (sheen) {
-            sheen.style.transition = 'none';
-            sheen.style.transform = `translate3d(${value.x < 0 ? surface.clientWidth + value.x : value.x}px,0,0)`;
-            sheen.style.opacity = String(Math.min(Math.abs(value.x) / surface.clientWidth * 2, .65));
-          }
           // A shallow light drift follows the hand, returning to the same
           // resting position before the page swap. Only compositor properties.
           if (light) {
             light.style.transition = 'none';
-            light.style.transform = `translate3d(${Math.sin(value.x / surface.clientWidth * Math.PI) * 38}px,0,0)`;
-            light.style.opacity = String(.82 + Math.abs(Math.sin(value.x / surface.clientWidth * Math.PI)) * .18);
+            light.style.transform = `translate3d(${Math.sin(value.x / surface.clientWidth * Math.PI) * 8}px,0,0)`;
           }
         });
       } else {
         cancelAnimationFrame(motionFrame);
-        if (sheen) {
-          sheen.style.transition = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'none' : 'transform 320ms cubic-bezier(.22,.68,0,1), opacity 320ms ease';
-          sheen.style.transform = `translate3d(${value.x < 0 ? 0 : surface.clientWidth}px,0,0)`;
-          sheen.style.opacity = '0';
-        }
+        surface.style.setProperty('--calendar-settle-duration', `${value.duration || 360}ms`);
         if (light) {
-          light.style.transition = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'none' : 'transform 320ms cubic-bezier(.22,.68,0,1), opacity 320ms ease';
+          light.style.transition = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'none' : `transform ${value.duration || 360}ms cubic-bezier(.16,1,.3,1)`;
           light.style.transform = 'translate3d(0,0,0)';
           light.style.opacity = '.82';
         }
@@ -100,7 +89,7 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
       const touch = event.touches[0];
       // Leave the browser's own edge navigation gestures available.
       if (touch.clientX < 24 || touch.clientX > window.innerWidth - 24) return;
-      gesture = { id: touch.identifier, x: touch.clientX, y: touch.clientY, dx: 0, dy: 0, atTop: isAtTop(target), axis: null, started: performance.now() };
+      gesture = { id: touch.identifier, x: touch.clientX, y: touch.clientY, dx: 0, dy: 0, atTop: isAtTop(target), axis: null, started: performance.now(), sampled: performance.now(), velocity: 0 };
     }
 
     function move(event) {
@@ -119,12 +108,15 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
       }
       if (!event.cancelable) { reset(); return; }
       event.preventDefault();
+      const now = performance.now();
+      gesture.velocity = gesture.velocity * .6 + (dx - gesture.dx) / Math.max(now - gesture.sampled, 1) * .4;
+      gesture.sampled = now;
       gesture.dx = dx; gesture.dy = dy;
       suppressClickUntil = performance.now() + 500;
       const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
       updateDrag({
         axis: gesture.axis,
-        x: reduced || gesture.axis !== 'x' ? 0 : Math.sign(dx) * Math.min(Math.abs(dx) * (navigation === 'calendar' ? .85 : .4), navigation === 'calendar' ? surface.clientWidth * .8 : 70),
+        x: reduced || gesture.axis !== 'x' ? 0 : Math.sign(dx) * Math.min(Math.abs(dx) * (navigation === 'calendar' ? 1 : .4), navigation === 'calendar' ? surface.clientWidth * .96 : 70),
         y: reduced || gesture.axis !== 'y' ? 0 : Math.min(Math.max(dy, 0) * .35, 70),
         ready: canExit(gesture, performance.now() - gesture.started, navigation),
       });
@@ -137,9 +129,14 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
       const axis = gesture.axis, dx = gesture.dx;
       if (shouldExit && navigation === 'calendar' && axis === 'x' && !config.current.disabled && !exiting) {
         exiting = true;
+        // Longer travel gets a longer landing; a decisive flick finishes faster.
+        // The final deceleration has no bounce and no second entrance animation.
+        const remaining = Math.max(0, surface.clientWidth - Math.abs(dx));
+        const recentVelocity = performance.now() - gesture.sampled < 100 ? Math.abs(gesture.velocity) : 0;
+        const duration = Math.round(Math.max(260, Math.min(440, 260 + remaining * .35 - recentVelocity * 75)));
         gesture = null;
         const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-        updateDrag({ x: reduced ? 0 : Math.sign(dx) * surface.clientWidth, y: 0, axis: 'x', settling: true, ready: true });
+        updateDrag({ x: reduced ? 0 : Math.sign(dx) * surface.clientWidth, y: 0, axis: 'x', settling: true, ready: true, duration });
         releaseTimer = setTimeout(() => {
           if (!config.current.disabled) {
             document.documentElement.setAttribute('data-calendar-swipe-arrival', '');
@@ -152,7 +149,7 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
           }
           reset();
           exiting = false;
-        }, reduced ? 0 : 330);
+        }, reduced ? 0 : duration + 20);
         return;
       }
       reset();

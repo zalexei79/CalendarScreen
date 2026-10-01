@@ -65,7 +65,6 @@ export default function CalendarGrid({
   return (
     <div className="calendar-pages-viewport" data-pro={proView} data-light={isLight}>
       <div className="calendar-motion-light" aria-hidden="true" />
-      <div className="calendar-motion-sheen" aria-hidden="true" />
     <section
       ref={surfaceRef}
       data-dragging={Boolean(touchDrag.axis) && !touchDrag.settling}

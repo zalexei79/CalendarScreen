@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Clock3 } from 'lucide-react';
+import './CalendarDayCell.css';
 
 export default function CalendarDayCell({
   traderMode = false,
@@ -92,88 +93,6 @@ export default function CalendarDayCell({
 
   return (
     <>
-      <style>{`
-        .today-calendar-cell {
-          border-color: rgba(251, 191, 36, .58) !important;
-          box-shadow:
-            0 0 0 1px rgba(251, 191, 36, .12),
-            0 0 18px rgba(245, 158, 11, .12) !important;
-          z-index: 3;
-        }
-        .today-calendar-cell::after {
-          content: ''; position: absolute; inset: 0; border-radius: inherit;
-          pointer-events: none;
-          background: radial-gradient(ellipse at 50% 0%,rgba(251,191,36,.12),transparent 65%);
-          animation: todayAmbientGlow 5s ease-in-out infinite;
-        }
-
-        .today-calendar-cell:hover {
-          border-color: rgba(251, 191, 36, .82) !important;
-          box-shadow:
-            0 0 0 1px rgba(251, 191, 36, .18),
-            0 0 24px rgba(245, 158, 11, .20) !important;
-        }
-
-        .today-pulse-ring {
-          position: absolute;
-          inset: 2px;
-          border: 1px solid rgba(251, 191, 36, .9);
-          border-radius: inherit;
-          pointer-events: none;
-          z-index: 20;
-          box-shadow: 0 0 0 4px rgba(251, 191, 36, .28), 0 0 22px rgba(245, 158, 11, .42);
-          animation: todayPulse .5s ease-in-out 2;
-        }
-
-        .today-calendar-pulse {
-          /* сама ячейка больше не масштабируется — мигает только кольцо выше */
-        }
-
-        @keyframes todayAmbientGlow {
-          0%, 100% { opacity: .35; }
-          50% { opacity: .85; }
-        }
-
-        @keyframes todayPulse {
-          0%, 100% {
-            opacity: 0;
-          }
-
-          50% {
-            opacity: 1;
-          }
-        }
-
-        .selected-calendar-cell {
-          z-index: 12;
-          transform: translateY(-1px) scale(1.006);
-          border-color: rgba(245, 158, 11, .66) !important;
-          box-shadow:
-            inset 0 0 0 1px rgba(251, 191, 36, .08),
-            inset 0 0 18px rgba(251, 191, 36, .035),
-            0 8px 22px -17px rgba(245, 158, 11, .62) !important;
-        }
-
-        .selected-calendar-cell:active {
-          transform: translateY(0) scale(.992);
-        }
-
-        @media (min-width: 640px) {
-          .selected-calendar-cell {
-            transform: translateY(-1px) scale(1.008);
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .today-calendar-cell,
-          .today-calendar-cell::after,
-          .today-pulse-ring,
-          .today-calendar-pulse {
-            animation: none !important;
-          }
-        }
-      `}</style>
-
       <button
         data-today-cell={cell.isToday ? 'true' : undefined}
         onClick={onSelect}
