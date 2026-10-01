@@ -17,10 +17,10 @@ export function useCalendarFit(surfaceRef, cellCount) {
       for (let node = grid; node; node = node.offsetParent) top += node.offsetTop;
       const dock = document.querySelector('.history-fab');
       const dockTop = dock ? parseFloat(getComputedStyle(dock).top) : NaN;
-      const bottom = Number.isFinite(dockTop) ? dockTop : (viewport?.height || window.innerHeight) - 128;
+      const bottom = Number.isFinite(dockTop) ? dockTop : (viewport?.height || window.innerHeight) - 76;
       const rows = Math.max(1, Math.ceil(cellCount / 7));
       const gap = parseFloat(getComputedStyle(grid).rowGap) || 0;
-      const rowHeight = Math.max(56, Math.min(104, Math.floor((bottom - top - 12 - gap * (rows - 1)) / rows)));
+      const rowHeight = Math.max(56, (bottom - top - 12 - gap * (rows - 1)) / rows);
       const value = `${rowHeight}px`;
       if (surface.style.getPropertyValue('--calendar-row-height') !== value) surface.style.setProperty('--calendar-row-height', value);
     };

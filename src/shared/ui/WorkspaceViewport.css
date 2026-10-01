@@ -1,14 +1,12 @@
 /* Suppress browser pull-to-refresh, not scrolling or horizontal edge navigation. */
 html, body { overscroll-behavior-y: none; }
-:root { --dayris-dock-safe: max(env(safe-area-inset-bottom, 0px), env(safe-area-max-inset-bottom, 0px)); }
-/* Older embedded browsers can report zero despite a native navigation overlay. */
-@media (pointer: coarse) {
-  :root { --dayris-dock-safe: max(48px, env(safe-area-inset-bottom, 0px), env(safe-area-max-inset-bottom, 0px)); }
-}
+:root { --dayris-dock-safe: env(safe-area-inset-bottom, 0px); }
+/* The visible viewport already excludes Android system navigation. Reserve
+   only the inset reported by the browser, including the iOS home indicator. */
 .wallet-panel-enter { overscroll-behavior-y: none; }
 .history-fab {
   position: fixed;
-  top: calc(var(--dayris-viewport-top, 0px) + var(--dayris-viewport-height, 100dvh) - var(--dayris-dock-height, 64px) - var(--dayris-dock-safe) - 16px);
+  top: calc(var(--dayris-viewport-top, 0px) + var(--dayris-viewport-height, 100dvh) - var(--dayris-dock-height, 64px) - var(--dayris-dock-safe) - 12px);
   bottom: auto;
   left: 0; right: 0;
   display: flex; justify-content: center;
@@ -20,7 +18,7 @@ html, body { overscroll-behavior-y: none; }
 .history-fab button { min-width: 0; min-height: 44px; }
 .history-fab button > span:last-child { overflow-wrap: anywhere; }
 .calendar-section {
-  padding-bottom: calc(var(--dayris-dock-height, 64px) + var(--dayris-dock-safe) + 40px);
+  padding-bottom: calc(var(--dayris-dock-height, 64px) + var(--dayris-dock-safe) + 24px);
 }
 .wallet-panel-enter {
   padding-bottom: calc(24px + max(env(safe-area-inset-bottom, 0px), var(--dayris-viewport-bottom, 0px)));

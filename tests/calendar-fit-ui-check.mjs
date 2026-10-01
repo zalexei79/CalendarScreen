@@ -17,7 +17,7 @@ try {
     if (name.endsWith('.png')) return route.fulfill({ path: path.join('public', name), contentType: 'image/png' });
     return route.fulfill({ contentType: 'text/html', body: `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>${builtCss}\n${css}</style><div id="root"></div><script>${js}</script>` });
   });
-  for (const [width, height] of [[412,915], [360,800], [390,844], [360,740], [360,640], [320,568]]) {
+  for (const [width, height] of [[412,915], [430,932], [393,852], [360,800], [390,844], [360,740], [360,640], [320,568]]) {
     await page.setViewportSize({ width, height });
     await page.goto('http://dayris.test/');
     await page.locator('.calendar-days-grid').waitFor();
@@ -27,6 +27,11 @@ try {
         await page.evaluate(month => window.testMonth(month), month);
         await page.waitForTimeout(650);
         await page.evaluate(() => window.scrollTo(0, 0));
+        if (height >= 800 || height === 740 && month === 9) await page.waitForFunction(() => {
+          const grid = document.querySelector('.calendar-days-grid').getBoundingClientRect();
+          const dock = document.querySelector('.history-fab').getBoundingClientRect();
+          return dock.top - grid.bottom >= 10 && dock.top - grid.bottom <= 13;
+        });
         const box = await page.locator('.calendar-days-grid').boundingBox();
         const dock = await page.locator('.history-fab').boundingBox();
         const cell = await page.locator('.calendar-days-grid > button').first().boundingBox();
@@ -35,6 +40,9 @@ try {
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no horizontal overflow');
         if (height >= 800 || height === 740 && count === 35) {
           assert.ok(box.y + box.height <= dock.y - 10, `${width}x${height}, trader=${trader}, ${count} days clear the dock: ${JSON.stringify({box,dock,cell})}`);
+          assert.ok(dock.y - box.y - box.height <= 13, 'calendar uses all space up to the controls');
+          assert.ok(Math.abs(height - dock.y - dock.height - 12) < 1, 'no arbitrary navigation padding');
+          assert.ok(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 2), 'fitted month has no empty scroll tail');
         } else {
           await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
           const last = await page.locator('.calendar-days-grid > button').last().boundingBox();
@@ -50,10 +58,26 @@ try {
   await page.getByRole('switch').click();
   await page.waitForTimeout(650);
   await page.setViewportSize({ width: 412, height: 800 });
-  await page.waitForTimeout(100);
+  await page.waitForFunction(() => {
+    const grid = document.querySelector('.calendar-days-grid').getBoundingClientRect();
+    const dock = document.querySelector('.history-fab').getBoundingClientRect();
+    return dock.top - grid.bottom >= 10 && dock.top - grid.bottom <= 13;
+  });
   const grid = await page.locator('.calendar-days-grid').boundingBox();
   const dock = await page.locator('.history-fab').boundingBox();
   assert.ok(grid.y + grid.height <= dock.y - 10, 'fits when Android browser bars reduce viewport');
+  // Simulate a browser-reported iOS home-indicator inset. Both the dock and
+  // calendar must follow it, without adding another hard-coded phone margin.
+  await page.evaluate(() => document.documentElement.style.setProperty('--dayris-dock-safe', '34px'));
+  await page.waitForFunction(() => {
+    const grid = document.querySelector('.calendar-days-grid').getBoundingClientRect();
+    const dock = document.querySelector('.history-fab').getBoundingClientRect();
+    return Math.abs(innerHeight - dock.bottom - 46) < 1 && dock.top - grid.bottom >= 10 && dock.top - grid.bottom <= 13;
+  });
+  const iosDock = await page.locator('.history-fab').boundingBox();
+  const iosGrid = await page.locator('.calendar-days-grid').boundingBox();
+  assert.ok(Math.abs(800 - iosDock.y - iosDock.height - 46) < 1);
+  assert.ok(iosDock.y - iosGrid.y - iosGrid.height >= 10 && iosDock.y - iosGrid.y - iosGrid.height <= 13);
   assert.deepEqual(errors, []);
   console.log('PASS: mobile PRO/trader, five/six weeks, 320–412px screens, short-screen scrolling, viewport resize, no dock overlap.');
 } finally { await browser.close(); }

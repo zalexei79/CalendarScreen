@@ -76,7 +76,7 @@ try {
   assert.equal(await page.locator('.calendar-days-grid > button').first().evaluate(el => getComputedStyle(el).animationName), 'none');
   await swipe(195, 150, 0, 180); await page.locator('.wallet-panel-enter').waitFor();
   await fresh(); await swipe(195, 150, 0, 70); await remains();
-  await page.waitForTimeout(250);
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('.calendar-section')).transform === 'none');
   assert.equal(await page.locator('.calendar-section').evaluate(el => getComputedStyle(el).transform), 'none');
   assert.equal(await page.locator('#selected').textContent(), '');
   await swipe(195, 150, 0, 180, true); await remains();
@@ -124,7 +124,7 @@ try {
       await page.locator('.history-fab button').evaluateAll((buttons, size) => buttons.forEach(button => button.style.fontSize = `${size}px`), size);
       await page.waitForFunction(() => Math.abs(parseFloat(document.documentElement.style.getPropertyValue('--dayris-dock-height')) - document.querySelector('.history-fab').getBoundingClientRect().height) < 1);
       const dock = await page.locator('.history-fab').boundingBox();
-      assert.ok(dock.y >= 0 && dock.y + dock.height <= height - 48, `dock clears navigation at ${width}x${height}, font ${size}`);
+      assert.ok(dock.y >= 0 && dock.y + dock.height <= height - 12, `dock stays inside the visible viewport at ${width}x${height}, font ${size}`);
       for (const button of await page.locator('.history-fab button').all()) {
         const box = await button.boundingBox();
         assert.ok(box.x >= 0 && box.x + box.width <= width && box.height >= 44, 'buttons stay visible and tappable');
