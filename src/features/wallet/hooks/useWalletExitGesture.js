@@ -31,6 +31,7 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
     let exiting = false;
     let releaseTimer;
     let motionFrame;
+    const light = navigation === 'calendar' ? surface.parentElement.querySelector('.calendar-motion-light') : null;
     const updateDrag = (value) => {
       // Horizontal tracking is a compositor update, not a rerender of three
       // calendars for every touch sample. React handles gesture boundaries.
@@ -39,9 +40,21 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
         cancelAnimationFrame(motionFrame);
         motionFrame = requestAnimationFrame(() => {
           surface.style.transform = `translate3d(${value.x}px,0,0)`;
+          // A shallow light drift follows the hand, returning to the same
+          // resting position before the page swap. Only compositor properties.
+          if (light) {
+            light.style.transition = 'none';
+            light.style.transform = `translate3d(${Math.sin(value.x / surface.clientWidth * Math.PI) * 38}px,0,0)`;
+            light.style.opacity = String(.82 + Math.abs(Math.sin(value.x / surface.clientWidth * Math.PI)) * .18);
+          }
         });
       } else {
         cancelAnimationFrame(motionFrame);
+        if (light) {
+          light.style.transition = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'none' : 'transform 320ms cubic-bezier(.22,.68,0,1), opacity 320ms ease';
+          light.style.transform = 'translate3d(0,0,0)';
+          light.style.opacity = '.82';
+        }
         setDrag(value);
       }
       if (navigation === 'calendar') window.dispatchEvent(new CustomEvent('dayris-calendar-pull', { detail: value.axis === 'y' ? value : IDLE }));

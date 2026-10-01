@@ -20,6 +20,24 @@
   .calendar-section.animate-slide-prev { animation: none; }
 }
 .calendar-pages-viewport { overflow-x:clip; overflow-y:visible; position:relative; min-width:0; }
+/* Light belongs to the viewport, so neighbouring pages share it from the first
+   frame. It never remounts or fades in at the end of a gesture. */
+.calendar-motion-light {
+  position:absolute; inset:0 -48px auto; height:240px;
+  pointer-events:none; z-index:1; opacity:.82;
+  background:radial-gradient(ellipse at 42% 0%,rgba(251,191,36,.065),transparent 68%),
+    radial-gradient(ellipse at 85% 0%,rgba(16,185,129,.025),transparent 55%);
+  transform:translate3d(0,0,0);
+}
+.calendar-pages-viewport[data-pro="true"] .calendar-motion-light {
+  background:radial-gradient(ellipse at 42% 0%,rgba(251,191,36,.12),transparent 68%),
+    radial-gradient(ellipse at 85% 0%,rgba(16,185,129,.045),transparent 55%);
+}
+.calendar-pages-viewport[data-light="true"] .calendar-motion-light { opacity:.55 !important; }
+.pro-active-shell .calendar-pages-viewport .calendar-section { background-image:none; }
+.calendar-month-preview {
+  background-image:linear-gradient(180deg,rgba(255,255,255,.008),transparent 22%);
+}
 .calendar-month-preview { position:absolute; top:0; bottom:calc(var(--dayris-dock-height,64px) + var(--dayris-dock-safe) + 24px); width:100%; padding:6px 6px 0; display:flex; flex-direction:column; pointer-events:none; }
 .calendar-section[data-settling="true"] { transition:transform .32s cubic-bezier(.22,.68,0,1); will-change:transform; }
 .calendar-section[data-dragging="true"], html[data-workspace-transition] .calendar-section[data-dragging="true"] { animation:none; translate:0 0; }

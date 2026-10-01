@@ -62,7 +62,8 @@ export default function CalendarGrid({
   }, [cells]);
   const animClass = swipeArrival.current ? '' : slideDirection === 'next' ? 'animate-slide-next' : slideDirection === 'prev' ? 'animate-slide-prev' : '';
   return (
-    <div className="calendar-pages-viewport">
+    <div className="calendar-pages-viewport" data-pro={proView} data-light={isLight}>
+      <div className="calendar-motion-light" aria-hidden="true" />
     <section
       ref={surfaceRef}
       data-dragging={Boolean(touchDrag.axis) && !touchDrag.settling}

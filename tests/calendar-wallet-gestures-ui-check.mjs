@@ -89,6 +89,8 @@ try {
   await send('touchMove', 95, 150);
   await page.evaluate(() => new Promise(requestAnimationFrame));
   assert.equal(await page.evaluate(() => window.testTradesReads), readsBeforeTracking, 'tracking must not rerender day data');
+  assert.notEqual(await page.locator('.calendar-motion-light').evaluate(el => el.style.transform), 'translate3d(0px, 0px, 0px)', 'shared light follows the swipe');
+  assert.equal(await page.locator('.calendar-motion-light').count(), 1, 'all three pages share a single light layer');
   const previewBox = await page.locator('.calendar-month-preview').last().boundingBox();
   assert.ok(previewBox.x < 390 && previewBox.x > 0, 'next month enters the viewport behind the finger');
   await send('touchCancel');
