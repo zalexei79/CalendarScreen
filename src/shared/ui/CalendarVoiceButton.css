@@ -13,6 +13,17 @@
 .calendar-voice-commands { list-style:none; padding:0; margin:0; display:grid; gap:7px; }
 .calendar-voice-commands li { padding:7px 9px; border-radius:10px; background:rgba(255,255,255,.04); font-size:11px; }
 .calendar-voice-help-note { margin:10px 0 0; font-size:10px; color:#94949e; }
+.calendar-voice-help-groups { display:grid; gap:5px; }
+.calendar-voice-help-groups details { border-radius:12px; background:rgba(150,150,150,.06); }
+.calendar-voice-help-groups summary { display:flex; align-items:center; gap:8px; min-height:44px; padding:8px 10px; cursor:pointer; list-style:none; }
+.calendar-voice-help-groups summary::-webkit-details-marker { display:none; }
+.calendar-voice-help-groups summary span { font-size:12px; font-weight:600; }
+.calendar-voice-help-groups summary small { margin-left:auto; color:#94949e; font-size:10px; }
+.calendar-voice-help-groups summary::after { content:'›'; color:#bba87f; font-size:16px; }
+.calendar-voice-help-groups details[open] summary::after { transform:rotate(90deg); }
+.calendar-voice-help-groups summary:focus-visible { outline:2px solid #d5bc83; outline-offset:2px; border-radius:12px; }
+.calendar-voice-help-groups .calendar-voice-commands { padding:0 8px 8px; gap:3px; }
+.calendar-voice-help-groups .calendar-voice-commands li { padding:5px 7px; background:transparent; }
 .calendar-voice-control[data-light="true"] .calendar-voice-commands li { background:rgba(15,23,42,.035); }
 .calendar-voice-control[data-light="true"] .calendar-voice-help-title { color:#886224; }
 @keyframes calendar-voice-enter { from { opacity:0; translate:0 4px; } to { opacity:1; translate:0 0; } }

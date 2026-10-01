@@ -30,7 +30,10 @@ await page.getByRole('button',{name:'Голосовая команда'}).click(
 await page.waitForFunction(()=>window.commands.length===2);
 assert.equal(await page.evaluate(()=>window.commands[1].type),'add');
 await page.getByRole('button',{name:'Голосовая команда'}).click();
-assert.equal(await page.locator('.calendar-voice-commands li').count(),13);
+assert.equal(await page.locator('.calendar-voice-help-groups details').count(),4);
+assert.equal(await page.locator('.calendar-voice-commands li:visible').count(),0,'templates start collapsed');
+await page.locator('.calendar-voice-help-groups summary').first().click();
+assert.equal(await page.locator('.calendar-voice-commands li:visible').count(),3);
 assert.equal(await page.locator('.calendar-dock-actions > div > button').first().isVisible(),false,'voice mode replaces history and add');
 assert.match(await page.locator('[role="status"]').textContent(),/Слушаю/);
 await page.evaluate(()=>window.voice.onspeechstart());
@@ -41,7 +44,8 @@ assert.equal(await page.locator('.calendar-voice-equalizer i').first().evaluate(
 await page.emulateMedia({reducedMotion:'no-preference'});
 await page.evaluate(()=>window.voice.onspeechend());
 assert.equal(await page.locator('.calendar-voice-glyph').getAttribute('data-talking'),'false');
-assert.match(await page.locator('.calendar-voice-message').textContent(),/Запиши расход 20 евро на сигареты/);
+assert.match(await page.locator('.calendar-voice-message').textContent(),/Потратил \[сумма\] \[валюта\] на \[категория\]/);
+assert.doesNotMatch(await page.locator('.calendar-voice-help-groups').textContent(),/\d/,'no fixed example amounts or dates');
 await page.getByRole('button',{name:'Готово — обработать фразу'}).click();
 await page.getByRole('button',{name:'Голосовая команда'}).waitFor();
 await page.getByRole('button',{name:'Голосовая команда'}).click();await page.evaluate(()=>emit('удали запись'));
