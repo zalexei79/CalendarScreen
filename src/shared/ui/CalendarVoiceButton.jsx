@@ -2,6 +2,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import {Mic,Square,Volume2,X} from 'lucide-react';
 import {parseCalendarVoiceCommand} from '../lib/calendarVoiceCommand.js';
 import {voiceHelp} from '../lib/voiceHelp.js';
+import {voicesForLocale,selectPlaybackVoice} from '../lib/voicePlayback.js';
 import './CalendarVoiceButton.css';
 
 export default function CalendarVoiceButton({language='ru',isLight,traderMode=false,onCommand}){
@@ -13,6 +14,12 @@ export default function CalendarVoiceButton({language='ru',isLight,traderMode=fa
  const audioTimer=useRef(null),releaseTimer=useRef(null);
  const [talking,setTalking]=useState(false);
  const speechPulseTimer=useRef(null);
+ const phraseTimer=useRef(null);
+ const [voices,setVoices]=useState(()=>window.speechSynthesis?.getVoices()||[]);
+ const [preferredVoice,setPreferredVoice]=useState(()=>{try{return localStorage.getItem(`dayris_voice:${locale}`)||'';}catch{return '';}});
+ const playbackLabels={ru:{voice:'Голос',auto:'Автоматически',missing:'Русский голос не найден среди установленных на устройстве.'},en:{voice:'Voice',auto:'Automatic',missing:'No English voice is installed on this device.'},ro:{voice:'Voce',auto:'Automat',missing:'Nu există o voce română instalată pe dispozitiv.'}}[locale];
+ useEffect(()=>{const synth=window.speechSynthesis;if(!synth)return;const update=()=>setVoices(synth.getVoices());update();synth.addEventListener?.('voiceschanged',update);return()=>synth.removeEventListener?.('voiceschanged',update);},[]);
+ useEffect(()=>{try{setPreferredVoice(localStorage.getItem(`dayris_voice:${locale}`)||'');}catch{setPreferredVoice('');}},[locale]);
  const ui={ru:{opening:'Включаю микрофон…',listen:'Слушаю — говорите',processing:'Обрабатываю…',done:'Готово — обработать фразу',hint:'После паузы команда отправится сама. Или нажмите «Готово».',audio:'Звук не запустился. Нажмите «Прослушать ответ».',close:'Закрыть голосовой режим'},en:{opening:'Starting microphone…',listen:'Listening — speak now',processing:'Processing…',done:'Done — send phrase',hint:'Pause to send automatically, or tap Done.',audio:'Audio did not start. Tap Listen to answer.',close:'Close voice mode'},ro:{opening:'Pornesc microfonul…',listen:'Ascult — vorbește acum',processing:'Procesez…',done:'Gata — trimite fraza',hint:'Pauza trimite automat. Sau apasă Gata.',audio:'Sunetul nu a pornit. Apasă Ascultă răspunsul.',close:'Închide modul vocal'}}[locale];
  const utterance=useRef(null);
  const audioText={ru:{play:'Прослушать ответ',stop:'Остановить ответ',close:'Закрыть ответ'},en:{play:'Listen to answer',stop:'Stop answer',close:'Close answer'},ro:{play:'Ascultă răspunsul',stop:'Oprește răspunsul',close:'Închide răspunsul'}}[locale];
@@ -20,8 +27,8 @@ export default function CalendarVoiceButton({language='ru',isLight,traderMode=fa
  function speak(value){
   stopSpeaking();setAudioError('');if(!window.speechSynthesis||!window.SpeechSynthesisUtterance){setAudioError(ui.audio);return;}
   const speech=new window.SpeechSynthesisUtterance(value);utterance.current=speech;
-  speech.lang={ru:'ru-RU',en:'en-US',ro:'ro-RO'}[locale];speech.rate=.98;speech.volume=1;
-  const voices=window.speechSynthesis.getVoices();speech.voice=voices.find(v=>v.lang===speech.lang)||voices.find(v=>v.lang.toLowerCase().startsWith(locale))||null;
+  speech.lang={ru:'ru-RU',en:'en-US',ro:'ro-RO'}[locale];speech.rate=1;speech.pitch=1;speech.volume=1;
+  const available=window.speechSynthesis.getVoices();setVoices(available);const voice=selectPlaybackVoice(available,locale,preferredVoice,navigator.onLine!==false);if(voice)speech.voice=voice;
   const finish=()=>{if(utterance.current===speech){clearTimeout(audioTimer.current);utterance.current=null;setSpeaking(false);}};
   speech.onstart=()=>{if(utterance.current===speech){clearTimeout(audioTimer.current);setSpeaking(true);}};
   speech.onend=finish;speech.onerror=()=>{finish();setAudioError(ui.audio);};
@@ -29,15 +36,17 @@ export default function CalendarVoiceButton({language='ru',isLight,traderMode=fa
   try{if(window.speechSynthesis.paused)window.speechSynthesis.resume();window.speechSynthesis.speak(speech);}catch{speech.onerror();}
  }
  const compactHelp=voiceHelp(locale,traderMode);
+ const localeVoices=voicesForLocale(voices,locale);
+ const voicePicker=<label className="calendar-voice-picker"><span>{playbackLabels.voice}</span><select aria-label={playbackLabels.voice} value={localeVoices.some(voice=>voice.voiceURI===preferredVoice)?preferredVoice:''} onChange={event=>{stopSpeaking();setPreferredVoice(event.target.value);try{localStorage.setItem(`dayris_voice:${locale}`,event.target.value);}catch{/* Session preference still works. */}}}><option value="">{playbackLabels.auto}</option>{localeVoices.map(voice=><option key={voice.voiceURI} value={voice.voiceURI}>{voice.name}</option>)}</select></label>;
  const session=useRef(null),timer=useRef(null),messageTimer=useRef(null);
  const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
- function stop(){const current=session.current;session.current=null;clearTimeout(speechPulseTimer.current);setTalking(false);clearTimeout(timer.current);clearTimeout(releaseTimer.current);if(current){current.onspeechstart=null;current.onspeechend=null;current.onstart=null;current.onresult=null;current.onerror=null;current.onend=null;current.abort();}setListening(false);setPhase('idle');}
- function finish(){const current=session.current;if(!current||phase==='processing')return;setPhase('processing');setMessage(ui.processing);clearTimeout(timer.current);try{current.stop();timer.current=setTimeout(()=>{if(session.current===current){stop();notify(text.error);}},5000);}catch{stop();notify(text.error);}}
+ function stop(){const current=session.current;session.current=null;clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);setTalking(false);clearTimeout(timer.current);clearTimeout(releaseTimer.current);if(current){current.onspeechstart=null;current.onspeechend=null;current.onstart=null;current.onresult=null;current.onerror=null;current.onend=null;current.abort();}setListening(false);setPhase('idle');}
+ function finish(){const current=session.current;if(!current||phase==='processing')return;clearTimeout(phraseTimer.current);setPhase('processing');setMessage(ui.processing);clearTimeout(timer.current);try{current.stop();timer.current=setTimeout(()=>{if(session.current===current){stop();notify(text.error);}},5000);}catch{stop();notify(text.error);}}
  function notify(value){setMessage(value);clearTimeout(messageTimer.current);messageTimer.current=setTimeout(()=>setMessage(''),6500);}
  useEffect(()=>{
   const cancel=()=>{if(document.hidden){stop();stopSpeaking();setActive(false);setMessage('');setAnswer('');}};
   document.addEventListener('visibilitychange',cancel);
-  return ()=>{document.removeEventListener('visibilitychange',cancel);clearTimeout(speechPulseTimer.current);clearTimeout(audioTimer.current);clearTimeout(releaseTimer.current);if(utterance.current){utterance.current.onstart=null;utterance.current.onend=null;utterance.current.onerror=null;utterance.current=null;window.speechSynthesis?.cancel();}clearTimeout(timer.current);clearTimeout(messageTimer.current);const current=session.current;session.current=null;if(current){current.onspeechstart=null;current.onspeechend=null;current.onstart=null;current.onresult=null;current.onerror=null;current.onend=null;current.abort();}};
+  return ()=>{document.removeEventListener('visibilitychange',cancel);clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);clearTimeout(audioTimer.current);clearTimeout(releaseTimer.current);if(utterance.current){utterance.current.onstart=null;utterance.current.onend=null;utterance.current.onerror=null;utterance.current=null;window.speechSynthesis?.cancel();}clearTimeout(timer.current);clearTimeout(messageTimer.current);const current=session.current;session.current=null;if(current){current.onspeechstart=null;current.onspeechend=null;current.onstart=null;current.onresult=null;current.onerror=null;current.onend=null;current.abort();}};
  },[]);
  function start(){
   if(session.current){finish();return;}
@@ -47,18 +56,25 @@ export default function CalendarVoiceButton({language='ru',isLight,traderMode=fa
   if(window.speechSynthesis&&window.SpeechSynthesisUtterance){try{const warmup=new window.SpeechSynthesisUtterance('');warmup.volume=0;window.speechSynthesis.speak(warmup);}catch{/* The visible replay action can retry with a fresh user gesture. */}}
   if(!Speech){notify(text.unsupported);return;}
   const recognition=new Speech();session.current=recognition;let finalText='';
-  recognition.lang={ru:'ru-RU',en:'en-US',ro:'ro-RO'}[locale];recognition.continuous=false;recognition.interimResults=true;recognition.maxAlternatives=3;
+  recognition.lang={ru:'ru-RU',en:'en-US',ro:'ro-RO'}[locale];recognition.continuous=true;recognition.interimResults=true;recognition.maxAlternatives=3;
   clearTimeout(messageTimer.current);setListening(true);setPhase('starting');setMessage(ui.opening);
   recognition.onstart=()=>{if(session.current===recognition){setPhase('listening');setMessage(ui.listen);}};
-  recognition.onspeechstart=()=>{if(session.current===recognition){clearTimeout(speechPulseTimer.current);setTalking(true);}};
+  recognition.onspeechstart=()=>{if(session.current===recognition){clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);setTalking(true);}};
   recognition.onspeechend=()=>{if(session.current===recognition){clearTimeout(speechPulseTimer.current);setTalking(false);}};
   recognition.onresult=event=>{
    if(session.current!==recognition)return;
-   const result=event.results[event.resultIndex];setTranscript(result[0].transcript);
-   clearTimeout(speechPulseTimer.current);setTalking(!result.isFinal);
-   if(!result.isFinal){speechPulseTimer.current=setTimeout(()=>setTalking(false),900);return;}
-   finalText=Array.from(result).map(item=>item.transcript).find(value=>{const command=parseCalendarVoiceCommand(value);return command&&command.type!=='category-prompt';})||result[0].transcript;
-   setPhase('processing');setMessage(ui.processing);recognition.stop();clearTimeout(timer.current);timer.current=setTimeout(()=>{if(session.current===recognition){stop();notify(text.error);}},5000);
+   const results=Array.from(event.results);
+   const finalResults=results.filter(result=>result.isFinal);
+   finalText=finalResults.map(result=>result[0].transcript).join(' ').trim();
+   // A single-result recognizer can offer a better alternative for the whole phrase.
+   if(finalResults.length===1)finalText=Array.from(finalResults[0]).map(item=>item.transcript).find(value=>{const command=parseCalendarVoiceCommand(value);return command&&command.type!=='category-prompt';})||finalText;
+   setTranscript(results.map(result=>result[0].transcript).join(' ').trim());
+   clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);
+   const interim=results.some(result=>!result.isFinal);setTalking(interim);
+   if(interim){speechPulseTimer.current=setTimeout(()=>setTalking(false),900);return;}
+   const command=parseCalendarVoiceCommand(finalText);
+   // Keep a brief pause available for the category or remaining words.
+   phraseTimer.current=setTimeout(()=>{if(session.current===recognition)finish();},command&&command.type!=='category-prompt'?1400:2600);
   };
   recognition.onerror=event=>{if(session.current!==recognition)return;stop();notify(event.error==='not-allowed'||event.error==='service-not-allowed'?text.permission:text.error);};
   recognition.onend=()=>{if(session.current!==recognition)return;stop();const command=parseCalendarVoiceCommand(finalText);if(!command){notify(text.invalid);return;}setMessage('');const reply=onCommand(command);if(typeof reply==='string'&&reply){setAnswer(reply);releaseTimer.current=setTimeout(()=>speak(reply),180);}else setActive(false);};
@@ -67,7 +83,7 @@ export default function CalendarVoiceButton({language='ru',isLight,traderMode=fa
  return <div className="calendar-voice-control" data-light={Boolean(isLight)} data-active={active}>
   <button type="button" className="calendar-voice-button" disabled={phase==='processing'} onClick={start} aria-pressed={listening} aria-label={listening?ui.done:text.start} title={text.start}><span className="calendar-voice-glyph" data-talking={talking&&phase==='listening'} aria-hidden="true"><span className="calendar-voice-equalizer"><i/><i/><i/></span>{phase==='processing'?<Square size={15}/>:<Mic size={18}/>}<span className="calendar-voice-equalizer"><i/><i/><i/></span></span> {active&&<span>{listening?(phase==='processing'?ui.processing:phase==='starting'?ui.opening:ui.done):speaking?({ru:'Отвечаю',en:'Speaking',ro:'Răspund'}[locale]):text.start}</span>}</button>
   {active&&<button type="button" className="calendar-voice-close" aria-label={ui.close} onClick={()=>{stop();stopSpeaking();setActive(false);setMessage('');setAnswer('');}}><X size={18}/></button>}
-  {answer&&<div className="calendar-voice-message calendar-voice-answer"><p role="status" aria-live="polite">{answer}</p>{audioError&&<p className="calendar-voice-audio-error" role="alert">{audioError}</p>}<div className="calendar-voice-answer-actions">{window.speechSynthesis&&window.SpeechSynthesisUtterance&&<button type="button" aria-label={speaking?audioText.stop:audioText.play} onClick={()=>speaking?stopSpeaking():speak(answer)}>{speaking?<Square size={16}/>:<Volume2 size={18}/>}<span>{speaking?audioText.stop:audioText.play}</span></button>}<button type="button" aria-label={audioText.close} onClick={()=>{clearTimeout(releaseTimer.current);stopSpeaking();setAnswer('');setActive(false);}}><X size={18}/></button></div></div>}
+  {answer&&<div className="calendar-voice-message calendar-voice-answer"><p role="status" aria-live="polite">{answer}</p>{audioError&&<p className="calendar-voice-audio-error" role="alert">{audioError}</p>}{localeVoices.length>0?voicePicker:voices.length>0&&<p className="calendar-voice-help-note">{playbackLabels.missing}</p>}<div className="calendar-voice-answer-actions">{window.speechSynthesis&&window.SpeechSynthesisUtterance&&<button type="button" aria-label={speaking?audioText.stop:audioText.play} onClick={()=>speaking?stopSpeaking():speak(answer)}>{speaking?<Square size={16}/>:<Volume2 size={18}/>}<span>{speaking?audioText.stop:audioText.play}</span></button>}<button type="button" aria-label={audioText.close} onClick={()=>{clearTimeout(releaseTimer.current);stopSpeaking();setAnswer('');setActive(false);}}><X size={18}/></button></div></div>}
   {message&&<div className="calendar-voice-message"><p role="status" aria-live="polite">{message}</p>{listening&&<p>{ui.hint}</p>}{transcript&&<p className="calendar-voice-transcript">«{transcript}»</p>}{Speech&&<><p className="calendar-voice-help-title">{compactHelp.title}</p><div className="calendar-voice-help-groups">{compactHelp.groups.map(group=><details key={group.title}><summary><span>{group.title}</span><small>{group.hint}</small></summary><ul className="calendar-voice-commands">{group.phrases.map(phrase=><li key={phrase}>{phrase}</li>)}</ul></details>)}</div><p className="calendar-voice-help-note">{compactHelp.note}</p></>}</div>}
  </div>;
 }

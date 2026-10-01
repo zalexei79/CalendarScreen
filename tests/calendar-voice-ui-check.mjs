@@ -90,11 +90,17 @@ assert.match(await page.locator('.calendar-voice-transcript').textContent(),/60 
 await page.getByRole('button',{name:'Готово — обработать фразу'}).click();
 await page.waitForFunction(()=>window.commands.length===1);
 assert.equal(await page.evaluate(()=>window.commands[0].amount),'60','Done processes the final result instead of aborting it');
+await page.getByRole('button',{name:'Голосовая команда'}).click();
+await page.evaluate(()=>emit('запиши'));
+assert.equal(await page.evaluate(()=>window.commands.length),1,'an introductory word does not end the recording');
+await page.evaluate(()=>window.voice.onresult({resultIndex:1,results:['запиши','потратил 80 лей','на пиво'].map(transcript=>Object.assign([{transcript}],{isFinal:true}))}));
+await page.waitForFunction(()=>window.commands.length===2);
+assert.deepEqual(await page.evaluate(()=>window.commands[1]),{type:'entry',kind:'record',amount:'80',currency:'MDL',sign:'minus',category:'пиво'});
 await page.getByRole('button',{name:'Голосовая команда'}).click();await page.getByRole('button',{name:'Закрыть голосовой режим'}).click();
 await page.locator('.calendar-dock-actions > div > button').first().waitFor({state:'visible'});
 await page.getByRole('button',{name:'Голосовая команда'}).click();await page.evaluate(()=>{window.lateResult=window.voice.onresult;hideVoice();});
 await page.waitForFunction(()=>window.voice.aborted);
 await page.evaluate(()=>window.lateResult({resultIndex:0,results:[Object.assign([{transcript:'добавь запись'}],{isFinal:true})]}));
-assert.equal(await page.evaluate(()=>window.commands.length),1,'unmounted controls never execute late commands');
+assert.equal(await page.evaluate(()=>window.commands.length),2,'unmounted controls never execute late commands');
 assert.deepEqual(errors,[]);console.log('PASS: phone voice commands, safe rejection, permission failure, unmount cancellation and dock at 320–1280px.');
 }finally{await browser.close();}

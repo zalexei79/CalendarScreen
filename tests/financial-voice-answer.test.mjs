@@ -17,6 +17,7 @@ test('creation verbs cannot become category names by accident',()=>{
  assert.deepEqual(parseCalendarVoiceCommand('создай категорию запиши категорию Сигареты'),{type:'category',name:'сигареты'});
 });
 test('custom category commands and questions preserve arbitrary names',()=>{
+ assert.deepEqual(parseCalendarVoiceCommand('запиши потратил 80 лей на пиво'),{type:'entry',kind:'record',amount:'80',currency:'MDL',sign:'minus',category:'пиво'});
  assert.deepEqual(parseCalendarVoiceCommand('Создай новый раздел Настольные игры'),{type:'category',name:'настольные игры'});
  assert.deepEqual(parseCalendarVoiceCommand('запиши расход 20 евро на сигареты'),{type:'entry',kind:'record',amount:'20',currency:'EUR',sign:'minus',category:'сигареты'});
  assert.deepEqual(parseCalendarVoiceCommand('я потратил на сигареты двадцать евро'),{type:'entry',kind:'record',amount:'20',currency:'EUR',sign:'minus',category:'сигареты'});
