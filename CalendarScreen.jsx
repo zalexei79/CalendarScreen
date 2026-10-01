@@ -4665,7 +4665,12 @@ export default function CalendarScreen() {
       )}
 
       {/* Floating Action Dock: Prominent Center "+" Add Button + History */}
-      <WorkspaceDock proView={proView} isLight={isLight}>
+      <WorkspaceDock proView={proView} isLight={isLight} hidden={Boolean(
+        selectedKey || planComposerOpen || planConfirm || planDeleteConfirm ||
+        historyOpen || modalOpen || settingsOpen || connectOpen || metaTraderOpen ||
+        analysisOpen || exportOpen || installInfoOpen || nicknameModalOpen || setupStep ||
+        proAccessPromptOpen || referralShareOpen || historyShareOpen
+      )}>
         <div className={`pointer-events-auto flex items-center gap-1.5 sm:gap-2.5 rounded-full border p-1.5 sm:p-2 backdrop-blur-2xl transition-all duration-300 ${
           isLight
             ? 'border-zinc-200/90 bg-white/95 shadow-[0_16px_45px_rgba(0,0,0,0.14)]'
