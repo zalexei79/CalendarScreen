@@ -1,3 +1,4 @@
+import {parseVoiceNavigation} from './voiceNavigation.js';
 import {parseSpokenAmount} from './spokenAmount.js';
 import {parseLocalizedVoiceCommand} from './localizedVoiceCommand.js';
 const months=[
@@ -8,6 +9,7 @@ const months=[
 ];
 export function parseCalendarVoiceCommand(transcript){
  const text=String(transcript).toLowerCase().replace(/ё/g,'е').replace(/([\d])[,.](?=\d)/g,'$1DECIMAL').replace(/[,.!?]/g,' ').replace(/DECIMAL/g,',').replace(/\s+/g,' ').trim().replace(/^пожалуйста | пожалуйста$/g,'');
+ const navigation=parseVoiceNavigation(text);if(navigation)return navigation;
  const localized=parseLocalizedVoiceCommand(text);if(localized)return localized;
  const categoryCreate=text.match(/^(?:создай|создать|добавь|добавить|запиши|записать) (?:новую |новый )?(?:категорию|раздел)(?: (.*))?$/);
  if(categoryCreate){

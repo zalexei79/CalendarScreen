@@ -4736,6 +4736,11 @@ export default function CalendarScreen() {
               const label = getMoneyCategoryLabel(name, language);
               return language === 'ru' ? `Категория «${label}» готова. Скажите, например: запиши расход 20 евро на ${label}.` : language === 'en' ? `Category “${label}” is ready.` : `Categoria „${label}” este pregătită.`;
             }
+            if (command.type === 'history') { openHistory(); return; }
+            if (command.type === 'settings') { openSettings(); return; }
+            if (command.type === 'theme') { setTheme(command.theme); return; }
+            if (command.type === 'trader') { setTraderMode(command.enabled); return; }
+            if (command.type === 'today') { jumpToTradeDate(todayKey); setSelectedKey(null); return; }
             if (command.type === 'month') { if (command.direction > 0) goToNextMonth(); else goToPrevMonth(); return; }
             if (command.type === 'pro') { setProView(command.enabled); return; }
             if (command.type === 'wallet') { if (proAccessActive && !proAccessLoading) openWalletFromCalendarGesture(); else setProView(true); return; }
