@@ -4719,7 +4719,7 @@ export default function CalendarScreen() {
               {t('addAction')}
             </span>
           </button>
-          <CalendarVoiceButton language={language} isLight={isLight} onCommand={(command) => {
+          <CalendarVoiceButton language={language} isLight={isLight} traderMode={traderMode} onCommand={(command) => {
             if (command.type === 'date') {
               setSlideDirection(command.year * 12 + command.month >= year * 12 + month ? 'next' : 'prev');
               setAnimKey((value) => value + 1);
@@ -4731,6 +4731,10 @@ export default function CalendarScreen() {
               setProEntryChoiceOpen(false);
               setProEntryMode(command.kind === 'record' ? 'finance' : 'trade');
               if (command.kind === 'record') setForm((current) => ({ ...current, instrument: 'Зарплата' }));
+            }
+            if (command.type === 'entry') {
+              setForm((current) => ({ ...current, pnl: command.amount, currency: command.currency, sign: command.sign, instrument: 'Другое' }));
+              setDetailsOpen(true);
             }
           }} />
         </div>

@@ -7,6 +7,15 @@ const months=[
 ];
 export function parseCalendarVoiceCommand(transcript){
  const text=String(transcript).toLowerCase().trim().replace(/[.!?]$/,'').replace(/ё/g,'е');
+ const money=text.match(/^(?:сегодня )?(?:я )?(потратил|потратила|получил|получила|заработал|заработала) (.+) (рубль|рубля|рублей|евро|лей|лея|леев|доллар|доллара|долларов)$/)
+  ||text.match(/^(?:today )?i (spent|received|earned) (.+) (rubles?|euros?|lei|dollars?)$/)
+  ||text.match(/^(?:astăzi )?am (cheltuit|primit|câștigat) (.+) (ruble|euro|lei|dolari)$/);
+ if(money){
+  const amount=parseSpokenAmount(money[2]);
+  if(amount===null||Number(amount)<=0)return null;
+  const currency=/^(руб|rubl)/.test(money[3])?'RUB':/^(евро|euro)/.test(money[3])?'EUR':/^(лей|лея|леев|lei)$/.test(money[3])?'MDL':'USD';
+  return {type:'entry',kind:'record',amount,currency,sign:/^(потрат|spent|cheltuit)/.test(money[1])?'minus':'plus'};
+ }
  if(/^(добавь|добавить|создай) (новую )?(запись|сделку)$/.test(text))return {type:'add',kind:text.endsWith('сделку')?'trade':'record'};
  if(/^(add|create) (a |new )?(record|entry|trade)$/.test(text))return {type:'add',kind:text.endsWith('trade')?'trade':'record'};
  if(/^adaugă (o )?(înregistrare|tranzacție)$/.test(text))return {type:'add',kind:text.endsWith('tranzacție')?'trade':'record'};

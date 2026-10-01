@@ -24,6 +24,10 @@ await page.getByRole('button',{name:'Голосовая команда'}).click(
 assert.equal(await page.evaluate(()=>window.commands[0]?.dateKey),'2048-11-13');
 await page.getByRole('button',{name:'Голосовая команда'}).click();await page.evaluate(()=>emit('добавь запись'));
 assert.equal(await page.evaluate(()=>window.commands[1].type),'add');
+await page.getByRole('button',{name:'Голосовая команда'}).click();
+assert.equal(await page.locator('.calendar-voice-commands li').count(),4);
+assert.match(await page.locator('.calendar-voice-message').textContent(),/Сегодня я потратил 50 рублей/);
+await page.getByRole('button',{name:'Остановить микрофон'}).click();
 await page.getByRole('button',{name:'Голосовая команда'}).click();await page.evaluate(()=>emit('удали запись'));
 assert.equal(await page.evaluate(()=>window.commands.length),2);
 assert.match(await page.locator('[role="status"]').textContent(),/Не понял/);

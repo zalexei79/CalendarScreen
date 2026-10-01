@@ -3,10 +3,11 @@ import {Mic,Square} from 'lucide-react';
 import {parseCalendarVoiceCommand} from '../lib/calendarVoiceCommand.js';
 import './CalendarVoiceButton.css';
 
-export default function CalendarVoiceButton({language='ru',isLight,onCommand}){
+export default function CalendarVoiceButton({language='ru',isLight,traderMode=false,onCommand}){
  const locale=language==='en'?'en':language==='ro'||language==='md'?'ro':'ru';
  const text={ru:{start:'Голосовая команда',stop:'Остановить микрофон',hint:'«Добавь запись» или «открой 13 ноября 2048»',invalid:'Не понял команду. Скажите «добавь запись» или «открой 13 ноября 2048».',permission:'Разрешите доступ к микрофону в браузере.',error:'Голосовой ввод недоступен. Попробуйте ещё раз.',unsupported:'Браузер не поддерживает голосовые команды.'},en:{start:'Voice command',stop:'Stop microphone',hint:'“Add entry” or “open 13 November 2048”',invalid:'Try “add entry” or “open 13 November 2048”.',permission:'Allow microphone access in your browser.',error:'Voice input unavailable. Try again.',unsupported:'Voice commands are not supported by this browser.'},ro:{start:'Comandă vocală',stop:'Oprește microfonul',hint:'„Adaugă o înregistrare” sau „deschide 13 noiembrie 2048”',invalid:'Încearcă „adaugă o înregistrare” sau „deschide 13 noiembrie 2048”.',permission:'Permite accesul la microfon în browser.',error:'Introducerea vocală nu este disponibilă. Încearcă din nou.',unsupported:'Browserul nu acceptă comenzile vocale.'}}[locale];
  const [listening,setListening]=useState(false),[message,setMessage]=useState('');
+ const help={ru:{title:'Что можно сказать',list:['Добавь запись','Сегодня я потратил 50 рублей','Сегодня я получил 50 евро','Открой 13 ноября 2048'],trade:'Добавь сделку',note:'Сумма и валюта заполнятся в форме. Проверьте запись перед сохранением.',listening:'Слушаю…'},en:{title:'Try these commands',list:['Add entry','Today I spent 50 euros','Today I received 50 dollars','Open 13 November 2048'],trade:'Add trade',note:'Amount and currency fill the form. Review the entry before saving.',listening:'Listening…'},ro:{title:'Comenzi disponibile',list:['Adaugă o înregistrare','Astăzi am cheltuit 50 lei','Astăzi am primit 50 euro','Deschide 13 noiembrie 2048'],trade:'Adaugă o tranzacție',note:'Suma și moneda se completează în formular. Verifică înainte de salvare.',listening:'Ascult…'}}[locale];
  const session=useRef(null),timer=useRef(null),messageTimer=useRef(null);
  const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
  function stop(){const current=session.current;session.current=null;clearTimeout(timer.current);if(current){current.onresult=null;current.onerror=null;current.onend=null;current.abort();}setListening(false);}
@@ -21,7 +22,7 @@ export default function CalendarVoiceButton({language='ru',isLight,onCommand}){
   if(!Speech){notify(text.unsupported);return;}
   const recognition=new Speech();session.current=recognition;
   recognition.lang={ru:'ru-RU',en:'en-US',ro:'ro-RO'}[locale];recognition.continuous=false;recognition.interimResults=false;recognition.maxAlternatives=1;
-  clearTimeout(messageTimer.current);setListening(true);setMessage(text.hint);
+  clearTimeout(messageTimer.current);setListening(true);setMessage(help.listening);
   recognition.onresult=event=>{
    if(session.current!==recognition)return;
    const result=event.results[event.resultIndex];if(!result.isFinal)return;
@@ -35,6 +36,6 @@ export default function CalendarVoiceButton({language='ru',isLight,onCommand}){
  }
  return <div className="calendar-voice-control" data-light={Boolean(isLight)}>
   <button type="button" className="calendar-voice-button" onClick={start} aria-pressed={listening} aria-label={listening?text.stop:text.start} title={text.start}>{listening?<Square size={15}/>:<Mic size={18}/>}</button>
-  {message&&<div className="calendar-voice-message" role="status" aria-live="polite">{message}</div>}
+  {message&&<div className="calendar-voice-message"><p role="status" aria-live="polite">{message}</p>{Speech&&<><p className="calendar-voice-help-title">{help.title}</p><ul className="calendar-voice-commands">{[...help.list,...(traderMode?[help.trade]:[])].map(command=><li key={command}>«{command}»</li>)}</ul><p className="calendar-voice-help-note">{help.note}</p></>}</div>}
  </div>;
 }

@@ -8,5 +8,12 @@
 .calendar-voice-message { position:absolute; bottom:calc(100% + 16px); right:0; width:240px; max-width:calc(100vw - 40px); padding:12px 14px; border:1px solid #ffffff20; border-radius:18px; background:rgba(18,19,24,.96); color:#ddd; font-size:12px; line-height:1.5; box-shadow:0 10px 30px #0003; backdrop-filter:blur(12px); animation:calendar-voice-enter 200ms ease-out both; }
 .calendar-voice-control[data-light="true"] .calendar-voice-message { background:rgba(255,255,255,.96); color:#333; border-color:#0001; }
 @keyframes calendar-voice-listen { 0%,100% { opacity:.3; } 50% { opacity:1; } }
+.calendar-voice-message { width:286px; max-height:calc(100dvh - 130px); overflow-y:auto; }
+.calendar-voice-help-title { margin:10px 0 6px; font-size:10px; font-weight:600; letter-spacing:.05em; color:#bba87f; }
+.calendar-voice-commands { list-style:none; padding:0; margin:0; display:grid; gap:7px; }
+.calendar-voice-commands li { padding:7px 9px; border-radius:10px; background:rgba(255,255,255,.04); font-size:11px; }
+.calendar-voice-help-note { margin:10px 0 0; font-size:10px; color:#94949e; }
+.calendar-voice-control[data-light="true"] .calendar-voice-commands li { background:rgba(15,23,42,.035); }
+.calendar-voice-control[data-light="true"] .calendar-voice-help-title { color:#886224; }
 @keyframes calendar-voice-enter { from { opacity:0; translate:0 4px; } to { opacity:1; translate:0 0; } }
 @media(prefers-reduced-motion:reduce) { .calendar-voice-button,.calendar-voice-message { transition:none; animation:none; } .calendar-voice-button::after { animation:none !important; } .calendar-voice-button:active { scale:1; } }
