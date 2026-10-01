@@ -86,6 +86,7 @@ import PeriodDynamics from './src/features/trades-sync/components/PeriodDynamics
 import CalendarGrid from './CalendarGrid';
 import MonthlyGoal from './MonthlyGoal';
 import AmountKeypad, {AmountInput} from './src/shared/ui/AmountEntry.jsx';
+import CalendarVoiceButton from './src/shared/ui/CalendarVoiceButton.jsx';
 import CtraderControl from './src/features/ctrader/CtraderControl';
 import { createQrMatrix, drawQrToCanvas } from './qrCode.js';
 import { useReferral } from './src/features/referrals/useReferral.js';
@@ -4685,7 +4686,7 @@ export default function CalendarScreen() {
           <button
             type="button"
             onClick={openHistory}
-            className={`group flex items-center gap-2 rounded-full px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all duration-200 ${
+            className={`group flex items-center gap-2 rounded-full px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all duration-200 ${
               isLight
                 ? 'text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/80'
                 : 'text-zinc-300 hover:text-white hover:bg-zinc-900/90'
@@ -4703,7 +4704,7 @@ export default function CalendarScreen() {
             onClick={() => openModal()}
             title={t('addAction')}
             aria-label={t('addAction')}
-            className={`group relative flex items-center gap-2 rounded-full px-4 sm:px-5 py-2 sm:py-2.5 font-medium transition-all duration-200 active:scale-[0.97] border ${
+            className={`group relative flex items-center gap-2 rounded-full px-3 sm:px-5 py-2 sm:py-2.5 font-medium transition-all duration-200 active:scale-[0.97] border ${
               isLight
                 ? 'border-slate-800 bg-slate-900 text-white hover:bg-slate-800 shadow-sm'
                 : 'border-zinc-700/80 bg-zinc-900 text-zinc-100 hover:border-amber-400/50 hover:bg-zinc-800 shadow-sm'
@@ -4718,6 +4719,20 @@ export default function CalendarScreen() {
               {t('addAction')}
             </span>
           </button>
+          <CalendarVoiceButton language={language} isLight={isLight} onCommand={(command) => {
+            if (command.type === 'date') {
+              setSlideDirection(command.year * 12 + command.month >= year * 12 + month ? 'next' : 'prev');
+              setAnimKey((value) => value + 1);
+              jumpToTradeDate(command.dateKey);
+              return;
+            }
+            openModal(null, todayKey);
+            if (traderMode) {
+              setProEntryChoiceOpen(false);
+              setProEntryMode(command.kind === 'record' ? 'finance' : 'trade');
+              if (command.kind === 'record') setForm((current) => ({ ...current, instrument: 'Зарплата' }));
+            }
+          }} />
         </div>
       </WorkspaceDock>
 
