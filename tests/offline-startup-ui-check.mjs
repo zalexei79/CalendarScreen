@@ -7,6 +7,10 @@ const require = createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE || import.me
 let brokenUpdate = false;
 const server = http.createServer((request, response) => {
   const name = new URL(request.url, 'http://localhost').pathname;
+  if (brokenUpdate === 'wrong-mime' && name === '/assets/unavailable-build.js') {
+    response.writeHead(200, { 'Content-Type': 'text/html' });
+    response.end('<!doctype html><title>Deployment pending</title>'); return;
+  }
   const file = path.resolve('dist', name === '/' ? 'index.html' : '.' + name);
   if (!file.startsWith(path.resolve('dist') + path.sep) || !fs.existsSync(file)) {
     response.writeHead(404); response.end(); return;
@@ -63,9 +67,17 @@ try {
   // A deploy with an unavailable JS chunk must not replace the usable shell.
   brokenUpdate = true;
   const before = await page.evaluate(async () => (await caches.match('/index.html')).text());
+  for (const failure of [true, 'wrong-mime']) {
+  brokenUpdate = failure;
   const probe = await context.newPage();
+  const probeErrors = [];
+  probe.on('pageerror', error => probeErrors.push(error.message));
   await probe.goto(origin, { waitUntil: 'domcontentloaded' });
+  await probe.locator('.calendar-days-grid').waitFor();
+  await probe.waitForFunction(() => !document.getElementById('boot-screen'));
+  assert.deepEqual(probeErrors, [], 'Unavailable deploy keeps the working calendar visible');
   await probe.close();
+  }
   const after = await page.evaluate(async () => (await caches.match('/index.html')).text());
   assert.equal(after, before);
   brokenUpdate = false;

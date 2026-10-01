@@ -74,7 +74,14 @@ async function cacheAppShell(cache, response, request = '/index.html') {
   if (!assets.length) throw new Error('App bundle missing from shell');
   const missing = [];
   for (const asset of assets) if (!await cache.match(asset)) missing.push(asset);
-  if (missing.length) await cache.addAll(missing);
+  const downloaded = await Promise.all(missing.map(async asset => {
+    const file = await fetch(asset, { cache: 'reload' });
+    const type = file.headers.get('content-type') || '';
+    const validType = asset.endsWith('.js') ? /javascript|ecmascript/i.test(type) : /text\/css/i.test(type);
+    if (!file.ok || !validType) throw new Error('App asset unavailable: ' + asset);
+    return [asset, file];
+  }));
+  await Promise.all(downloaded.map(([asset, file]) => cache.put(asset, file)));
   await Promise.all([
     cache.put(request, response.clone()),
     cache.put('/', response.clone()),
@@ -137,7 +144,13 @@ self.addEventListener('fetch', (event) => {
             try {
               if (isAppShellNavigation) await cacheAppShell(cache, response, event.request);
               else await cache.put(event.request, response.clone());
-            } catch (err) { console.warn('[sw] Shell cache update postponed:', err); }
+            } catch (err) {
+              console.warn('[sw] Shell cache update postponed:', err);
+              if (isAppShellNavigation) {
+                const previous = await cache.match('/index.html');
+                if (previous) return previous;
+              }
+            }
           }
           return response;
         })
