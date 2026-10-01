@@ -1,0 +1,80 @@
+/* Glass belongs to navigation and floating surfaces. Calendar data and form
+   fields stay solid so contrast never depends on what is behind them. */
+:root {
+  --glass-surface:rgba(18,19,24,.84);
+  --glass-control:rgba(36,37,45,.56);
+  --glass-line:rgba(255,255,255,.13);
+  --glass-highlight:rgba(255,255,255,.10);
+  --glass-shadow:rgba(0,0,0,.30);
+}
+.theme-light, .plan-light, .pro-light,
+.dayris-swipe-sheet[data-glass-theme="light"] {
+  --glass-surface:rgba(255,255,255,.87);
+  --glass-control:rgba(255,255,255,.65);
+  --glass-line:rgba(100,116,139,.18);
+  --glass-highlight:rgba(255,255,255,.85);
+  --glass-shadow:rgba(15,23,42,.10);
+}
+.dayris-swipe-sheet[data-glass-theme="dark"] {
+  --glass-surface:rgba(18,19,24,.84);
+  --glass-line:rgba(255,255,255,.13);
+  --glass-highlight:rgba(255,255,255,.10);
+  --glass-shadow:rgba(0,0,0,.30);
+}
+.dayris-header.dayris-header {
+  position:relative; z-index:20;
+  background-color:var(--glass-surface);
+  border-bottom-color:var(--glass-line);
+  backdrop-filter:blur(14px) saturate(1.15);
+  -webkit-backdrop-filter:blur(14px) saturate(1.15);
+}
+.dayris-settings-panel.dayris-settings-panel,
+.dayris-date-menu.dayris-date-menu,
+.dayris-status-menu.dayris-status-menu,
+.dayris-swipe-sheet.dayris-swipe-sheet,
+.pro-dialog.pro-dialog,
+.premium-shell [role="dialog"]:not(.plan-dialog) {
+  background-color:var(--glass-surface);
+  background-image:linear-gradient(145deg,var(--glass-highlight),transparent 34%);
+  border-color:var(--glass-line);
+  box-shadow:inset 0 1px 0 var(--glass-highlight),0 24px 70px var(--glass-shadow);
+  backdrop-filter:blur(16px) saturate(1.15);
+  -webkit-backdrop-filter:blur(16px) saturate(1.15);
+}
+.dayris-header button.rounded-full,
+.workspace-mode-toggle.workspace-mode-toggle {
+  background-color:var(--glass-control);
+  border-color:var(--glass-line);
+  box-shadow:inset 0 1px 0 var(--glass-highlight),0 3px 12px var(--glass-shadow);
+}
+/* Inner content panels add depth without a second backdrop-filter layer. */
+.dayris-settings-panel > .rounded-2xl {
+  background-color:var(--glass-control);
+  border-color:var(--glass-line);
+}
+.plan-dialog .plan-header, .plan-dialog .plan-footer,
+.pro-dialog .pro-dialog-header, .pro-dialog .pro-dialog-footer {
+  background-color:transparent;
+  border-color:var(--glass-line);
+}
+@media(max-width:600px) {
+  /* A full-screen form has nothing meaningful to refract behind it. */
+  .plan-dialog.plan-dialog { background:var(--plan-bg); backdrop-filter:none; -webkit-backdrop-filter:none; }
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  .dayris-swipe-sheet.dayris-swipe-sheet, .pro-dialog.pro-dialog,
+  .dayris-settings-panel.dayris-settings-panel,
+  .dayris-date-menu.dayris-date-menu, .dayris-status-menu.dayris-status-menu { background-color:#15161b; }
+  .theme-light .dayris-settings-panel, .theme-light .dayris-date-menu,
+  .theme-light .dayris-status-menu, .pro-dialog.pro-light,
+  .dayris-swipe-sheet[data-glass-theme="light"] { background-color:#fafafa; }
+}
+@media(prefers-reduced-transparency:reduce) {
+  :root { --glass-surface:#15161b; --glass-control:#25262d; }
+  .theme-light, .plan-light, .pro-light,
+  .dayris-swipe-sheet[data-glass-theme="light"] { --glass-surface:#fafafa; --glass-control:#fff; }
+  .dayris-swipe-sheet[data-glass-theme="dark"] { --glass-surface:#15161b; }
+  .dayris-header, .dayris-swipe-sheet, .dayris-settings-panel,
+  .dayris-date-menu, .dayris-status-menu, .pro-dialog,
+  .premium-shell [role="dialog"] { backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }
+}

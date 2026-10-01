@@ -12,7 +12,7 @@ const bundle = await createRequire(path.resolve('package.json'))('esbuild').buil
     createRoot(document.getElementById('root')).render(<main className="premium-shell">
       <header className="dayris-header"><button>DAYRIS</button></header>
       <div className="calendar-days-grid"><Cell cell={{key:'today',inMonth:true,isToday:true,date:new Date()}} cellIndex={0} notes={{}} plans={[]} pnl={0} monthMaxAbsPnl={1} formatPnlDisplay={String}/></div>
-      <Sheet data-sheet-entrance="true" style={{background:'#18181b',padding:20}}><h2>Планировщик</h2><button>Запланировать</button></Sheet>
+      <Sheet data-sheet-entrance="true" style={{padding:20}}><h2>Планировщик</h2><button>Запланировать</button></Sheet>
       <div className="calendar-action-dock" data-pulling="false"><div className="calendar-dock-morph"><div className="calendar-dock-actions">История · Добавить</div><div className="calendar-dock-wallet">Открыть кошелёк</div></div></div>
     </main>);
   ` }, bundle: true, write: false, outfile: 'motion.js', format: 'iife', define: {'process.env.NODE_ENV':'"production"'},
@@ -26,6 +26,11 @@ try {
   await page.route('http://motion.test/**',route=>route.fulfill({contentType:'text/html',body:`<html><style>${css}body{background:#09090b;color:#eee;font:16px system-ui}button{height:44px}.calendar-days-grid{height:160px;display:grid}.today-calendar-cell{position:relative}</style><div id="root"></div><script>${js}</script></html>`}));
   await page.goto('http://motion.test');
   await page.locator('.dayris-swipe-sheet').waitFor();
+  assert.equal(await page.locator('.dayris-swipe-sheet').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(18, 19, 24, 0.84)', 'dark floating sheet uses tinted glass');
+  assert.match(await page.locator('.dayris-swipe-sheet').evaluate(el=>getComputedStyle(el).backdropFilter), /blur\(16px\)/);
+  await page.locator('.dayris-swipe-sheet').evaluate(el=>el.dataset.glassTheme='light');
+  assert.equal(await page.locator('.dayris-swipe-sheet').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(255, 255, 255, 0.87)', 'portal sheets carry their own light theme');
+  assert.equal(await page.locator('.calendar-days-grid').evaluate(el=>getComputedStyle(el).backdropFilter),'none', 'calendar data stays free of backdrop blur');
   const sheet = await page.locator('.dayris-swipe-sheet').evaluate(el=>{
     const animation=el.getAnimations()[0]; animation.pause(); animation.currentTime=0;
     return {duration:animation.effect.getTiming().duration,translate:getComputedStyle(el).translate};
@@ -33,7 +38,8 @@ try {
   assert.equal(sheet.duration,360); assert.equal(sheet.translate,'0px 24px');
   assert.equal(await page.locator('.today-calendar-cell').evaluate(el=>getComputedStyle(el,'::after').animationName),'todayAmbientGlow');
   const dock = page.locator('.calendar-action-dock');
-  await dock.evaluate(el=>el.dataset.pulling='true'); await page.waitForTimeout(350);
+  await dock.evaluate(el=>el.dataset.pulling='true');
+  await page.waitForFunction(()=>getComputedStyle(document.querySelector('.calendar-dock-wallet')).opacity === '1');
   assert.equal(await page.locator('.calendar-dock-wallet').evaluate(el=>getComputedStyle(el).opacity),'1');
   assert.equal(await page.locator('.calendar-dock-actions').evaluate(el=>getComputedStyle(el).opacity),'0');
   assert.equal(await page.locator('.calendar-dock-wallet').evaluate(el=>getComputedStyle(el).filter),'none');
