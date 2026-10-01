@@ -4666,6 +4666,7 @@ export default function CalendarScreen() {
 
       {/* Floating Action Dock: Prominent Center "+" Add Button + History */}
       <WorkspaceDock proView={proView} isLight={isLight} hidden={Boolean(
+        accountMode !== 'main' ||
         selectedKey || planComposerOpen || planConfirm || planDeleteConfirm ||
         historyOpen || modalOpen || settingsOpen || connectOpen || metaTraderOpen ||
         analysisOpen || exportOpen || installInfoOpen || nicknameModalOpen || setupStep ||
