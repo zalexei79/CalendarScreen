@@ -81,6 +81,14 @@ try {
   assert.equal(await page.locator('#selected').textContent(), '');
   await swipe(195, 150, 0, 180, true); await remains();
   // Month swipes still work once per gesture, including FREE.
+  await send('touchStart', 195, 150);
+  await send('touchMove', 115, 150);
+  await page.locator('.calendar-month-preview').first().waitFor({ state: 'attached' });
+  assert.equal(await page.locator('.calendar-month-preview').count(), 2, 'both adjacent months are available during drag');
+  const previewBox = await page.locator('.calendar-month-preview').last().boundingBox();
+  assert.ok(previewBox.x < 390 && previewBox.x > 0, 'next month enters the viewport behind the finger');
+  await send('touchCancel');
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('.calendar-section')).transform === 'none');
   await swipe(195, 150, -120, 0); await page.waitForFunction(() => document.querySelector('#month').textContent === '1'); assert.equal(await page.locator('#month').textContent(), '1');
   await swipe(195, 150, 120, 0); await page.waitForFunction(() => document.querySelector('#month').textContent === '0'); assert.equal(await page.locator('#month').textContent(), '0');
   await page.getByRole('button', { name: 'PRO', exact: true }).click();

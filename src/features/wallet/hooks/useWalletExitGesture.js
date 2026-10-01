@@ -104,7 +104,9 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
         updateDrag({ x: reduced ? 0 : Math.sign(dx) * surface.clientWidth, y: 0, axis: 'x', settling: true, ready: true });
         releaseTimer = setTimeout(() => {
           if (!config.current.disabled) {
+            document.documentElement.setAttribute('data-calendar-swipe-arrival', '');
             if (dx < 0) config.current.onNextMonth?.(); else config.current.onPreviousMonth?.();
+            requestAnimationFrame(() => document.documentElement.removeAttribute('data-calendar-swipe-arrival'));
           }
           reset();
           exiting = false;

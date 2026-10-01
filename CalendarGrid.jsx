@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import CalendarDayCell from './CalendarDayCell';
 import { WEEKDAYS } from './src/shared/config/constants';
 import { useWalletExitGesture } from './src/features/wallet/hooks/useWalletExitGesture';
@@ -37,8 +37,23 @@ export default function CalendarGrid({
     navigation: 'calendar', onExit: onOpenWallet, disabled: gesturesDisabled, onNextMonth, onPreviousMonth,
   });
   useCalendarFit(surfaceRef, cells.length);
-  const animClass = slideDirection === 'next' ? 'animate-slide-next' : slideDirection === 'prev' ? 'animate-slide-prev' : '';
+  const swipeArrival = useRef(typeof document !== 'undefined' && document.documentElement.hasAttribute('data-calendar-swipe-arrival'));
+  const adjacentMonths = useMemo(() => {
+    const anchor = cells.find(cell => cell.inMonth)?.date;
+    if (!anchor) return [];
+    return [-1, 1].map(direction => {
+      const first = new Date(anchor.getFullYear(), anchor.getMonth() + direction, 1);
+      const offset = (first.getDay() + 6) % 7;
+      const count = Math.ceil((offset + new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate()) / 7) * 7;
+      return { direction, cells: Array.from({ length: count }, (_, index) => {
+        const date = new Date(first.getFullYear(), first.getMonth(), 1 - offset + index);
+        return { date, key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`, inMonth: date.getMonth() === first.getMonth(), isToday: date.toDateString() === new Date().toDateString() };
+      }) };
+    });
+  }, [cells]);
+  const animClass = swipeArrival.current ? '' : slideDirection === 'next' ? 'animate-slide-next' : slideDirection === 'prev' ? 'animate-slide-prev' : '';
   return (
+    <div className="calendar-pages-viewport">
     <section
       ref={surfaceRef}
       data-dragging={Boolean(touchDrag.axis) && !touchDrag.settling}
@@ -74,7 +89,7 @@ export default function CalendarGrid({
       onLostPointerCapture={() => { drag.current = null; }}
       onClickCapture={e => { if (suppressClick.current && e.detail !== 0) { e.preventDefault(); e.stopPropagation(); suppressClick.current = false; } }}
       onDragStart={e => e.preventDefault()}
-      style={{ userSelect: 'none', transform: touchDrag.axis ? `translate3d(${touchDrag.x}px,${touchDrag.y}px,0)` : 'none', opacity: touchDrag.settling ? 0 : 1 }}
+      style={{ userSelect: 'none', transform: touchDrag.axis ? `translate3d(${touchDrag.x}px,${touchDrag.y}px,0)` : 'none' }}
     >
       <div className="calendar-weekdays grid grid-cols-7 gap-1 sm:gap-2 mb-3" onClick={(e) => { if (e.target === e.currentTarget) onEmptyClick(); }}>
         {WEEKDAYS.map((w) => <div key={w} className={`font-data text-[11px] sm:text-xs font-semibold tracking-wider text-center uppercase pb-1 ${isLight ? 'text-slate-600' : 'text-zinc-500'}`}>{w}</div>)}
@@ -88,6 +103,13 @@ export default function CalendarGrid({
           return <CalendarDayCell key={cell.key} planLabel={language === 'en' ? 'Plans' : language === 'ro' || language === 'md' ? 'Planuri' : 'Планы'} hasNote={!!notes[cell.key]} noteLabel={noteLabel} traderMode={traderMode} proView={proView} cell={cell} cellIndex={cellIndex} isSelected={isSelected} hasTrades={hasTrades} plans={plans} formatPlanAmount={formatPlanAmount} pnl={pnl} monthMaxAbsPnl={monthMaxAbsPnl} isLight={isLight} formatPnlDisplay={formatPnlDisplay} onSelect={() => onSelectDay(isSelected ? null : cell.key)} />;
         })}
       </div>
+      {touchDrag.axis === 'x' && adjacentMonths.map(preview => <div key={preview.direction} className="calendar-month-preview" aria-hidden="true" inert="" style={{ left: `${preview.direction * 100}%` }}>
+        <div className="calendar-weekdays grid grid-cols-7 gap-1 sm:gap-2 mb-3">{WEEKDAYS.map(day => <div key={day} className="font-data text-[11px] sm:text-xs font-semibold tracking-wider text-center uppercase pb-1">{day}</div>)}</div>
+        <div className="calendar-preview-days" style={{ gridTemplateRows: `repeat(${preview.cells.length / 7},minmax(0,1fr))` }}>
+          {preview.cells.map((cell, index) => <CalendarDayCell key={cell.key} cell={cell} cellIndex={index} traderMode={traderMode} proView={proView} isLight={isLight} isSelected={false} hasTrades={tradesForDayFiltered(cell.key).length > 0} plans={plansForDay?.(cell.key) || []} formatPlanAmount={formatPlanAmount} pnl={totalPnlForDay(cell.key)} monthMaxAbsPnl={monthMaxAbsPnl} formatPnlDisplay={formatPnlDisplay} onSelect={() => {}} />)}
+        </div>
+      </div>)}
     </section>
+    </div>
   );
 }
