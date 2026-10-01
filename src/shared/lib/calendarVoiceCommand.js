@@ -1,4 +1,5 @@
 import {parseSpokenAmount} from './spokenAmount.js';
+import {parseLocalizedVoiceCommand} from './localizedVoiceCommand.js';
 const months=[
  ['январь','января','january','ianuarie'],['февраль','февраля','february','februarie'],['март','марта','march','martie'],
  ['апрель','апреля','april','aprilie'],['май','мая','may','mai'],['июнь','июня','june','iunie'],
@@ -7,6 +8,7 @@ const months=[
 ];
 export function parseCalendarVoiceCommand(transcript){
  const text=String(transcript).toLowerCase().replace(/ё/g,'е').replace(/([\d])[,.](?=\d)/g,'$1DECIMAL').replace(/[,.!?]/g,' ').replace(/DECIMAL/g,',').replace(/\s+/g,' ').trim().replace(/^пожалуйста | пожалуйста$/g,'');
+ const localized=parseLocalizedVoiceCommand(text);if(localized)return localized;
  const categoryCreate=text.match(/^(?:создай|создать|добавь|добавить|запиши|записать) (?:новую |новый )?(?:категорию|раздел)(?: (.*))?$/);
  if(categoryCreate){
   const name=String(categoryCreate[1]||'').replace(/[«»"']/g,'').replace(/^(?:(?:создай|создать|добавь|добавить|запиши|записать)(?: категорию| раздел)? )+/,'').trim();
@@ -67,7 +69,7 @@ export function parseCalendarVoiceCommand(transcript){
  if(/^(добавь|добавить|создай) (новую )?(запись|сделку)$/.test(text))return {type:'add',kind:text.endsWith('сделку')?'trade':'record'};
  if(/^(add|create) (a |new )?(record|entry|trade)$/.test(text))return {type:'add',kind:text.endsWith('trade')?'trade':'record'};
  if(/^adaugă (o )?(înregistrare|tranzacție)$/.test(text))return {type:'add',kind:text.endsWith('tranzacție')?'trade':'record'};
- const date=text.replace(/^(открой|открыть|покажи|включи|перейди на|open|show|go to|deschide|arată)\s+/,'');
+ const date=text.replace(/^(открой|открыть|покажи|включи|перейди на|open|show|go to|deschide|arată|arata)\s+/,'');
  if(date===text)return null;
  const match=date.match(new RegExp(`^(.+?)\\s+(${months.flat().join('|')})\\s+(.+)$`));
  if(!match)return null;

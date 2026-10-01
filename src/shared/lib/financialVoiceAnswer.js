@@ -1,7 +1,7 @@
 // Amounts stay in their recorded currency; personal cash flow excludes trades.
 import {categoryMatches} from './voiceCategory.js';
 import {resolveVoiceAsset,assetMatchesInstrument} from './voiceAsset.js';
-export function financialVoiceAnswer({records,monthKey,metric,category,language='ru',isTrading=()=>false}){
+export function financialVoiceAnswer({records,monthKey,metric,category,categoryLabel=category,language='ru',isTrading=()=>false}){
  const locale=language==='en'?'en':['ro','md'].includes(language)?'ro':'ru';
  const labels={ru:{intro:'По вашим записям за этот месяц.',empty:'За этот месяц записей пока нет.',income:'Личные доходы',expense:'Личные расходы',net:'Разница доходов и расходов',trade:'Торговый результат отдельно',zero:'нет записей'},en:{intro:'Based on your entries this month.',empty:'There are no entries for this month yet.',income:'Personal income',expense:'Personal expenses',net:'Income minus expenses',trade:'Trading result separately',zero:'no entries'},ro:{intro:'Conform înregistrărilor tale din această lună.',empty:'Nu există înregistrări pentru această lună.',income:'Venituri personale',expense:'Cheltuieli personale',net:'Venituri minus cheltuieli',trade:'Rezultatul tranzacțiilor separat',zero:'fără înregistrări'}}[locale];
  const totals=new Map();let count=0;
@@ -21,8 +21,8 @@ export function financialVoiceAnswer({records,monthKey,metric,category,language=
    else{total.personalCount++;total.net+=amount;if(amount>=0)total.income+=amount;else total.expense-=amount;}
   }
  }
- if(!count&&asset)return locale==='ru'?`За этот месяц сделок по инструменту «${asset.label}» в ваших записях нет.`:locale==='en'?`No trades recorded this month for ${category}.`:`Nu există tranzacții înregistrate în această lună pentru ${category}.`;
- if(!count)return category?(locale==='ru'?`За этот месяц расходов в категории «${category}» пока нет в ваших записях.`:locale==='en'?`No expenses recorded this month in “${category}”.`:`Nu există cheltuieli înregistrate în această lună pentru „${category}”.`):labels.empty;
+ if(!count&&asset)return locale==='ru'?`За этот месяц сделок по инструменту «${asset.label}» в ваших записях нет.`:locale==='en'?`No trades recorded this month for ${categoryLabel}.`:`Nu există tranzacții înregistrate în această lună pentru ${categoryLabel}.`;
+ if(!count)return category?(locale==='ru'?`За этот месяц расходов в категории «${categoryLabel}» пока нет в ваших записях.`:locale==='en'?`No expenses recorded this month in “${categoryLabel}”.`:`Nu există cheltuieli înregistrate în această lună pentru „${categoryLabel}”.`):labels.empty;
  if(asset){
   const values=key=>[...totals].sort(([a],[b])=>a.localeCompare(b)).map(([currency,total])=>new Intl.NumberFormat(locale,{style:'currency',currency,currencyDisplay:'name',maximumFractionDigits:2}).format(total[key])).join('; ');
   const words=locale==='ru'?['Убытки по сделкам','Прибыль по сделкам','Итог торговли']:locale==='en'?['Trading losses','Trading profits','Trading result']:['Pierderi din tranzacții închise','Profit din tranzacții închise','Rezultatul tranzacțiilor'];
@@ -32,7 +32,7 @@ export function financialVoiceAnswer({records,monthKey,metric,category,language=
   const parts=[...totals].sort(([a],[b])=>a.localeCompare(b)).filter(([,v])=>key==='trade'?v.tradeCount:v.personalCount).map(([currency,v])=>new Intl.NumberFormat(locale,{style:'currency',currency,currencyDisplay:'name',maximumFractionDigits:2}).format(v[key]));
   return `${labels[key]}: ${parts.join('; ')||labels.zero}.`;
  }
- const result=[labels.intro,...(category?[locale==='ru'?`Категория «${category}».`:locale==='en'?`Category “${category}”.`:`Categoria „${category}”.`]:[])];
+ const result=[labels.intro,...(category?[locale==='ru'?`Категория «${categoryLabel}».`:locale==='en'?`Category “${categoryLabel}”.`:`Categoria „${categoryLabel}”.`]:[])];
  if(metric==='summary')result.push(line('income'),line('expense'),line('net'));
  else result.push(line(metric==='income'?'income':'expense'));
  if([...totals.values()].some(v=>v.tradeCount))result.push(line('trade'));

@@ -6,6 +6,7 @@ import {
   Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw,
 } from 'lucide-react';
 import { LANGUAGES, CURRENCIES } from './src/shared/config/constants';
+import VoiceSettings from './src/shared/ui/VoiceSettings.jsx';
 import { monthsFor } from './src/shared/i18n';
 import BrandIcon from './src/shared/ui/BrandIcon.jsx';
 import AnimatedMonthLabel from './src/shared/ui/AnimatedMonthLabel.jsx';
@@ -265,7 +266,7 @@ export default function Header({
               <div
                 className={[
                   'dayris-settings-panel absolute right-0 top-full mt-3 z-50 rounded-3xl border shadow-2xl p-4 origin-top-right backdrop-blur-xl',
-                  'w-[min(320px,calc(100vw-32px))] sm:w-[310px]',
+                  'w-[min(320px,calc(100vw-32px))] sm:w-[310px] max-h-[calc(100dvh-160px)] overflow-y-auto',
                   'transition-all duration-200 ease-out',
                   settingsVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-1.5 scale-95',
                   isLight ? 'border-zinc-200 bg-white shadow-[0_20px_60px_rgba(0,0,0,.14)]' : 'border-zinc-800 bg-zinc-900',
@@ -349,6 +350,7 @@ export default function Header({
                     </div>
                   </div>
 
+                  <VoiceSettings language={language} isLight={isLight} />
                   {/* Currency */}
                   <div>
                     <p className={`text-[11px] mb-1.5 ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>{t('currency')}</p>

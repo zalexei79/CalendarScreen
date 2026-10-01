@@ -7,16 +7,18 @@ const words = {
   un:1,o:1,unu:1,una:1,doi:2,două:2,trei:3,patru:4,cinci:5,șase:6,șapte:7,opt:8,nouă:9,zece:10,unsprezece:11,doisprezece:12,treisprezece:13,paisprezece:14,cincisprezece:15,șaisprezece:16,șaptesprezece:17,optsprezece:18,nouăsprezece:19,douăzeci:20,treizeci:30,patruzeci:40,cincizeci:50,șaizeci:60,șaptezeci:70,optzeci:80,nouăzeci:90,
 };
 const scales={тысяча:1000,тысячи:1000,тысяч:1000,миллион:1000000,миллиона:1000000,миллионов:1000000,thousand:1000,million:1000000,mie:1000,mii:1000,milion:1000000,milioane:1000000};
+const romanianPlain=value=>value.replace(/[șş]/g,'s').replace(/[țţ]/g,'t').replace(/[ăâ]/g,'a').replace(/î/g,'i');
+const plainWords=Object.fromEntries(Object.entries(words).map(([word,value])=>[romanianPlain(word),value]));
 const units='рубль|рубля|рублей|доллар|доллара|долларов|евро|лей|лея|леев|dollar|dollars|euro|euros|ruble|rubles|leu|lei|usd|eur|rub|mdl';
 const cents='копейка|копейки|копеек|цент|цента|центов|cent|cents|ban|bani';
 function integer(text) {
   text=text.trim();
-  if(!text||/^(and|și|de)\b|\b(and|și|de)$/.test(text))return null;
+  if(!text||/^(and|și|si|de)\b|\b(and|și|si|de)$/.test(text))return null;
   if(/^\d+$/.test(text))return Number(text);
   let total=0,group=0,rank=Infinity,lastScale=Infinity;
   for(const token of text.split(/\s+/)) {
-    if(token==='and'||token==='și'||token==='de')continue;
-    if(token==='hundred'||token==='sută'||token==='sute') {
+    if(token==='and'||token==='și'||token==='si'||token==='de')continue;
+    if(token==='hundred'||token==='sută'||token==='suta'||token==='sute') {
       if(group>9||rank!==1)return null;
       group*=100;rank=100;continue;
     }
@@ -24,7 +26,7 @@ function integer(text) {
       if(scales[token]>=lastScale)return null;
       total+=(group||1)*scales[token];group=0;rank=Infinity;lastScale=scales[token];continue;
     }
-    const n=words[token];if(n===undefined)return null;
+    const n=words[token]??plainWords[romanianPlain(token)];if(n===undefined)return null;
     const nextRank=n>=100?100:n>=10?10:1;
     if(nextRank>=rank)return null;
     group+=n;rank=nextRank;
@@ -38,7 +40,7 @@ export function parseSpokenAmount(transcript) {
   text=text.replace(/^(?:сумма|amount|suma)\s+/,'');
   if(!text)return null;
   let value;
-  const centsMatch=text.match(new RegExp(`^(.+?)\\s+(?:${units})\\s+(?:(?:and|и|și)\\s+)?(.+?)\\s+(?:${cents})$`));
+  const centsMatch=text.match(new RegExp(`^(.+?)\\s+(?:${units})\\s+(?:(?:and|и|și|si)\\s+)?(.+?)\\s+(?:${cents})$`));
   if(centsMatch) {
     const main=integer(centsMatch[1]),fraction=integer(centsMatch[2]);
     if(main===null||fraction===null||fraction>99)return null;
@@ -48,7 +50,7 @@ export function parseSpokenAmount(transcript) {
     if(/^\d{1,3}(?:[ \u00a0]\d{3})+(?:[.,]\d{1,2})?$/.test(text))text=text.replace(/[ \u00a0]/g,'');
     if(/^\d+(?:[.,]\d{1,2})?$/.test(text))value=Number(text.replace(',','.'));
     else {
-      const parts=text.split(/\s+(?:точка|запятая|point|comma|virgulă)\s+/);
+      const parts=text.split(/\s+(?:точка|запятая|point|comma|virgulă|virgula)\s+/);
       if(parts.length>2)return null;
       const main=integer(parts[0]);if(main===null)return null;
       if(parts.length===1)value=main;

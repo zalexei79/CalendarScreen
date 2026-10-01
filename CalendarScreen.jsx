@@ -88,7 +88,7 @@ import MonthlyGoal from './MonthlyGoal';
 import AmountKeypad, {AmountInput} from './src/shared/ui/AmountEntry.jsx';
 import CalendarVoiceButton from './src/shared/ui/CalendarVoiceButton.jsx';
 import { financialVoiceAnswer } from './src/shared/lib/financialVoiceAnswer.js';
-import { categoryMatches, resolveVoiceCategory } from './src/shared/lib/voiceCategory.js';
+import { resolveLocalizedCategory } from './src/shared/lib/voiceCategory.js';
 import useVoiceCategories from './src/shared/ui/useVoiceCategories.js';
 import CtraderControl from './src/features/ctrader/CtraderControl';
 import { createQrMatrix, drawQrToCanvas } from './qrCode.js';
@@ -4728,17 +4728,19 @@ export default function CalendarScreen() {
           <CalendarVoiceButton language={language} isLight={isLight} traderMode={traderMode} onCommand={(command) => {
             if (command.type === 'category-prompt') return language === 'ru' ? 'Добавьте название после команды. Например: создай категорию Настольные игры.' : language === 'en' ? 'Include the category name in your command.' : 'Include numele categoriei în comandă.';
             const categoryNames = [...MONEY_CATEGORIES.map(item => item.key), ...voiceCategories.categories, ...Object.values(manualTrades).flat().filter(item => !isTradingHistoryRecord(item)).map(item => item.instrument)];
-            const spokenCategory = command.category ? resolveVoiceCategory(command.category, categoryNames) : null;
+            const resolveCategory = (name) => resolveLocalizedCategory(name, MONEY_CATEGORIES, categoryNames);
+            const spokenCategory = command.category ? resolveCategory(command.category) : null;
             if (command.type === 'category') {
-              const name = resolveVoiceCategory(command.name, categoryNames);
+              const name = resolveCategory(command.name);
               voiceCategories.add(name);
-              return language === 'ru' ? `Категория «${name}» готова. Скажите, например: запиши расход 20 евро на ${name}.` : language === 'en' ? `Category “${name}” is ready.` : `Categoria „${name}” este pregătită.`;
+              const label = getMoneyCategoryLabel(name, language);
+              return language === 'ru' ? `Категория «${label}» готова. Скажите, например: запиши расход 20 евро на ${label}.` : language === 'en' ? `Category “${label}” is ready.` : `Categoria „${label}” este pregătită.`;
             }
             if (command.type === 'month') { if (command.direction > 0) goToNextMonth(); else goToPrevMonth(); return; }
             if (command.type === 'pro') { setProView(command.enabled); return; }
             if (command.type === 'wallet') { if (proAccessActive && !proAccessLoading) openWalletFromCalendarGesture(); else setProView(true); return; }
             if (command.type === 'question') return financialVoiceAnswer({
-              records: manualTrades, monthKey: todayKey.slice(0, 7), metric: command.metric, category: spokenCategory, language,
+              records: manualTrades, monthKey: todayKey.slice(0, 7), metric: command.metric, category: spokenCategory, categoryLabel: spokenCategory ? getMoneyCategoryLabel(spokenCategory, language) : null, language,
               isTrading: (item) => item.platform === 'cTrader' || item.platform === 'MT5' || item.traderMode === true || isTradingInstrumentName(item.instrument) || (!getMoneyCategoryMeta(item.instrument) && isTradingHistoryRecord(item)),
             });
             if (command.type === 'date') {
