@@ -97,7 +97,7 @@ export function useAuth() {
   const handleGoogleLogout = useCallback(async () => {
     try { await disablePush(); }
     catch { window.alert(authCopy('pushDisableBeforeLogout')); return; }
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) console.error('[auth] ошибка при выходе:', error);
   }, [authCopy]);
 
