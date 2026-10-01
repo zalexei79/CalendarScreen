@@ -91,11 +91,28 @@ try {
   assert.equal(await page.evaluate(() => window.testTradesReads), readsBeforeTracking, 'tracking must not rerender day data');
   assert.notEqual(await page.locator('.calendar-motion-light').evaluate(el => el.style.transform), 'translate3d(0px, 0px, 0px)', 'shared light follows the swipe');
   assert.equal(await page.locator('.calendar-motion-light').count(), 1, 'all three pages share a single light layer');
+  assert.ok(await page.locator('.calendar-motion-sheen').evaluate(el => Number(el.style.opacity) > 0), 'page boundary has a visible travelling highlight');
+  assert.equal(await page.locator('.calendar-motion-sheen').evaluate(el => getComputedStyle(el).pointerEvents), 'none');
   const previewBox = await page.locator('.calendar-month-preview').last().boundingBox();
   assert.ok(previewBox.x < 390 && previewBox.x > 0, 'next month enters the viewport behind the finger');
   await send('touchCancel');
   await page.waitForFunction(() => getComputedStyle(document.querySelector('.calendar-section')).transform === 'none');
+  await page.evaluate(() => {
+    window.monthFrameGaps = [];
+    window.sampleMonthFrames = true;
+    const sample = () => {
+      if (!window.sampleMonthFrames) return;
+      const boxes = [...document.querySelectorAll('.calendar-section, .calendar-month-preview')].map(el => el.getBoundingClientRect());
+      // The incoming and outgoing pages must cover the viewport throughout.
+      const left = Math.min(...boxes.map(box => box.left)), right = Math.max(...boxes.map(box => box.right));
+      if (left > 1 || right < innerWidth - 1) window.monthFrameGaps.push({left,right});
+      requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
   await swipe(195, 150, -120, 0); await page.waitForFunction(() => document.querySelector('#month').textContent === '1'); assert.equal(await page.locator('#month').textContent(), '1');
+  await page.evaluate(() => window.sampleMonthFrames = false);
+  assert.deepEqual(await page.evaluate(() => window.monthFrameGaps), [], 'no blank page frame during release and commit');
   await swipe(195, 150, 120, 0); await page.waitForFunction(() => document.querySelector('#month').textContent === '0'); assert.equal(await page.locator('#month').textContent(), '0');
   await page.getByRole('button', { name: 'PRO', exact: true }).click();
   await swipe(195, 150, 0, 180); await remains();

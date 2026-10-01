@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Pencil, Sparkles, Target, X } from 'lucide-react';
 
+// Also guard remounts when browser storage is temporarily unavailable.
+const celebratedGoals = new Map();
+
 const COPY = {
   ru: {
     title: 'Цель месяца',
@@ -62,7 +65,15 @@ function formatGoalNumber(value, language) {
   }).format(Number(value) || 0);
 }
 
-export default function MonthlyGoal({
+export default function MonthlyGoal(props) {
+  // Remount the entire state/effect scope before rendering another month's PnL.
+  // An effect-based reset runs too late: achievement effects can still see
+  // the previous goal together with the new month's storage key and PnL.
+  const scopeKey = JSON.stringify([props.userId || 'guest', props.year, props.month, props.currency]);
+  return <MonthlyGoalForMonth key={scopeKey} {...props} />;
+}
+
+function MonthlyGoalForMonth({
   year,
   month,
   currency,
@@ -93,17 +104,9 @@ export default function MonthlyGoal({
   const [draft, setDraft] = useState(goal ? String(goal) : '');
   const [error, setError] = useState('');
   const [celebrating, setCelebrating] = useState(false);
-  const [displayProgress, setDisplayProgress] = useState(0);
+  const [displayProgress, setDisplayProgress] = useState(() => goal > 0
+    ? Math.min(100, Math.max(0, (Number(currentPnl) || 0) / goal * 100)) : 0);
   const celebrationTimerRef = useRef(null);
-
-  useEffect(() => {
-    const next = readGoal();
-    setGoal(next);
-    setDraft(next ? String(next) : '');
-    setEditing(false);
-    setDetailsOpen(false);
-    setError('');
-  }, [goalStorageKey]);
 
   useEffect(() => () => {
     if (celebrationTimerRef.current) window.clearTimeout(celebrationTimerRef.current);
@@ -135,11 +138,11 @@ export default function MonthlyGoal({
   useEffect(() => {
     if (!goal || !achieved) return;
 
-    let alreadyCelebrated = false;
+    let alreadyCelebrated = celebratedGoals.get(celebrationStorageKey) === String(goal);
     try {
-      alreadyCelebrated = window.localStorage.getItem(celebrationStorageKey) === String(goal);
+      alreadyCelebrated ||= window.localStorage.getItem(celebrationStorageKey) === String(goal);
     } catch {
-      alreadyCelebrated = false;
+      // Keep the in-memory acknowledgement when storage is blocked.
     }
     if (alreadyCelebrated) return;
 
@@ -150,6 +153,7 @@ export default function MonthlyGoal({
       reduceMotion = false;
     }
 
+    celebratedGoals.set(celebrationStorageKey, String(goal));
     try {
       window.localStorage.setItem(celebrationStorageKey, String(goal));
     } catch {
@@ -201,6 +205,8 @@ export default function MonthlyGoal({
     }
 
     const previousGoal = goal;
+    if (netPnl >= nextGoal) celebratedGoals.set(celebrationStorageKey, String(nextGoal));
+    else if (nextGoal > previousGoal) celebratedGoals.delete(celebrationStorageKey);
 
     try {
       window.localStorage.setItem(goalStorageKey, String(nextGoal));

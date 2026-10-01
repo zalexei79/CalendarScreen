@@ -420,10 +420,10 @@ export default function Header({
                 onClick={() => { setMonthMenuOpen((v) => !v); setYearMenuOpen(false); }}
                 className={`font-display text-2xl sm:text-[28px] font-semibold transition-colors ${isLight ? 'text-zinc-900 hover:text-amber-600' : 'text-zinc-50 hover:text-amber-400'}`}
               >
-                {monthsFor(language)[month]}
+                <span key={`${year}-${month}`} className="dayris-month-label">{monthsFor(language)[month]}</span>
               </button>
               {monthMenuOpen && (
-                <div className={`absolute left-0 top-full mt-2 w-40 max-h-64 overflow-y-auto rounded-xl border shadow-xl z-50 p-1 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900'}`}>
+                <div className={`dayris-date-menu absolute left-0 top-full mt-2 w-40 max-h-64 overflow-y-auto rounded-xl border shadow-xl z-50 p-1 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900'}`}>
                   {monthsFor(language).map((m, i) => (
                     <button
                       key={m}
@@ -450,7 +450,7 @@ export default function Header({
                 {year}
               </button>
               {yearMenuOpen && (
-                <div className={`absolute left-0 top-full mt-2 w-24 max-h-64 overflow-y-auto rounded-xl border shadow-xl z-50 p-1 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900'}`}>
+                <div className={`dayris-date-menu absolute left-0 top-full mt-2 w-24 max-h-64 overflow-y-auto rounded-xl border shadow-xl z-50 p-1 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900'}`}>
                   {Array.from({ length: 12 }, (_, i) => today.getFullYear() - 6 + i).map((y) => (
                     <button
                       key={y}

@@ -69,8 +69,11 @@ export default function ProOffer({ language, copy, active, daysRemaining, untilL
               </div>
             </>}
             {feature === 'money' && <>
-              <p className="pro-example-caption">{text.expenses}</p><strong className="pro-example-amount">$120<span>.00</span></strong>
-              <div className="pro-example-categories">{text.categories.map((name, i) => <div key={name}><div><span>{name}</span><b>{[60, 25, 15][i]}%</b></div><span className="pro-example-bar"><i style={{ width: `${[60, 25, 15][i]}%` }} /></span></div>)}</div>
+              <p className="pro-example-caption">{text.categories[0]} · $120</p>
+              <p className="pro-example-caption">{text.savingsCaption}</p>
+              <strong className="pro-example-amount pro-positive">+$18<span>.00</span></strong>
+              <p className="pro-example-caption">{text.savingsResult}</p>
+              <div className="pro-example-categories"><div><div><span>$120 → $102</span><b>−15%</b></div><span className="pro-example-bar"><i style={{ width: '85%' }} /></span></div></div>
             </>}
             {feature === 'trader' && <>
               <div className="pro-example-heading"><ChartCandlestick aria-hidden="true" /><span>EUR / USD</span></div>

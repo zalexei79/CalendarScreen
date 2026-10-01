@@ -32,6 +32,7 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
     let releaseTimer;
     let motionFrame;
     const light = navigation === 'calendar' ? surface.parentElement.querySelector('.calendar-motion-light') : null;
+    const sheen = navigation === 'calendar' ? surface.parentElement.querySelector('.calendar-motion-sheen') : null;
     const updateDrag = (value) => {
       // Horizontal tracking is a compositor update, not a rerender of three
       // calendars for every touch sample. React handles gesture boundaries.
@@ -40,6 +41,11 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
         cancelAnimationFrame(motionFrame);
         motionFrame = requestAnimationFrame(() => {
           surface.style.transform = `translate3d(${value.x}px,0,0)`;
+          if (sheen) {
+            sheen.style.transition = 'none';
+            sheen.style.transform = `translate3d(${value.x < 0 ? surface.clientWidth + value.x : value.x}px,0,0)`;
+            sheen.style.opacity = String(Math.min(Math.abs(value.x) / surface.clientWidth * 2, .65));
+          }
           // A shallow light drift follows the hand, returning to the same
           // resting position before the page swap. Only compositor properties.
           if (light) {
@@ -50,6 +56,11 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
         });
       } else {
         cancelAnimationFrame(motionFrame);
+        if (sheen) {
+          sheen.style.transition = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'none' : 'transform 320ms cubic-bezier(.22,.68,0,1), opacity 320ms ease';
+          sheen.style.transform = `translate3d(${value.x < 0 ? 0 : surface.clientWidth}px,0,0)`;
+          sheen.style.opacity = '0';
+        }
         if (light) {
           light.style.transition = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'none' : 'transform 320ms cubic-bezier(.22,.68,0,1), opacity 320ms ease';
           light.style.transform = 'translate3d(0,0,0)';

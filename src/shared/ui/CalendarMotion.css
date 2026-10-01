@@ -23,17 +23,28 @@
 /* Light belongs to the viewport, so neighbouring pages share it from the first
    frame. It never remounts or fades in at the end of a gesture. */
 .calendar-motion-light {
-  position:absolute; inset:0 -48px auto; height:240px;
+  position:absolute; inset:0 -48px auto; height:320px;
   pointer-events:none; z-index:1; opacity:.82;
   background:radial-gradient(ellipse at 42% 0%,rgba(251,191,36,.065),transparent 68%),
     radial-gradient(ellipse at 85% 0%,rgba(16,185,129,.025),transparent 55%);
   transform:translate3d(0,0,0);
 }
 .calendar-pages-viewport[data-pro="true"] .calendar-motion-light {
-  background:radial-gradient(ellipse at 42% 0%,rgba(251,191,36,.12),transparent 68%),
+  background:radial-gradient(ellipse at 42% 0%,rgba(251,191,36,.20),transparent 68%),
     radial-gradient(ellipse at 85% 0%,rgba(16,185,129,.045),transparent 55%);
 }
 .calendar-pages-viewport[data-light="true"] .calendar-motion-light { opacity:.55 !important; }
+.calendar-motion-sheen {
+  position:absolute; top:20px; bottom:calc(var(--dayris-dock-height,64px) + var(--dayris-dock-safe) + 24px);
+  left:-24px; width:48px; z-index:2; pointer-events:none; opacity:0;
+  background:linear-gradient(90deg,transparent,rgba(255,235,192,.10),transparent);
+  mask-image:linear-gradient(transparent,black 18%,black 75%,transparent);
+  -webkit-mask-image:linear-gradient(transparent,black 18%,black 75%,transparent);
+}
+.calendar-pages-viewport[data-pro="true"] .calendar-motion-sheen {
+  background:linear-gradient(90deg,transparent,rgba(251,191,36,.17),rgba(255,246,218,.24),transparent);
+}
+@media(prefers-reduced-motion:reduce) { .calendar-motion-sheen { display:none; } }
 .pro-active-shell .calendar-pages-viewport .calendar-section { background-image:none; }
 .calendar-month-preview {
   background-image:linear-gradient(180deg,rgba(255,255,255,.008),transparent 22%);
