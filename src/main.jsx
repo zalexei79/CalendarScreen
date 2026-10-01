@@ -106,6 +106,7 @@ function AppReady({ children }) {
   React.useEffect(() => {
     // The CSS is bundled with the app; reveal only after React has committed.
     const frame = requestAnimationFrame(() => {
+      if (window.dayrisBoot) { window.dayrisBoot.ready(); return }
       document.documentElement.removeAttribute('data-booting')
       const splash = document.getElementById('boot-screen')
       if (!splash) return

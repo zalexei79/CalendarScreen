@@ -6,9 +6,9 @@
 
     <!-- PWA Настройки и Иконки -->
     <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152-v6.png" />
-    <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167-v6.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180-v6.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152-v7.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167-v7.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180-v7.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png?v=20260920-favicon-v3" />
     <link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png?v=20260920-favicon-v3" />
     <link rel="icon" type="image/png" sizes="48x48" href="/icon-48.png?v=20260920-favicon-v3" />
@@ -36,6 +36,13 @@
       #boot-screen .boot-track { width: 72px; height: 2px; overflow: hidden; border-radius: 2px; background: #27272a; }
       #boot-screen .boot-track::after { content: ''; display: block; width: 32px; height: 100%; background: #34d399; animation: boot-progress 1.2s ease-in-out infinite; }
       #boot-screen[data-ready] { opacity: 0; pointer-events: none; }
+      #boot-connection { max-width: 290px; padding: 0 24px; text-align: center; }
+      #boot-connection[hidden] { display: none; }
+      #boot-connection svg { width: 22px; height: 22px; margin: 22px auto 10px; color: #e6ba72; }
+      #boot-message { margin: 0; font-size: 15px; font-weight: 600; }
+      #boot-detail { color: #a1a1aa; font-size: 12px; line-height: 1.6; margin: 8px 0 18px; }
+      #boot-action { padding: 12px 22px; min-height: 46px; border: 1px solid #3c5c50; border-radius: 14px; background: linear-gradient(135deg,#173d31,#14251f); color: #d8f6e8; font: inherit; font-size: 14px; cursor: pointer; }
+      #boot-action:disabled { opacity: .5; cursor: default; }
       html[data-booting] #root { visibility: hidden; }
       @keyframes boot-progress { 0% { transform: translateX(-32px); } 100% { transform: translateX(72px); } }
       @keyframes boot-housing { from { opacity: 0; transform: translateY(12px) scale(.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -51,17 +58,55 @@
       <div class="boot-mark" aria-hidden="true"><span class="boot-tile"></span><span class="boot-tile"></span><span class="boot-tile"></span><span class="boot-tile"></span></div>
       <div class="boot-name">DAYRIS</div>
       <div class="boot-track" aria-hidden="true"></div>
+      <div id="boot-connection" hidden aria-live="polite">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m3 3 18 18M8.5 8.5A13 13 0 0 1 21 8M3 8a13 13 0 0 1 2-1.4M6 12a9 9 0 0 1 3-1.7M12.5 10a9 9 0 0 1 5.5 2M9 16a5 5 0 0 1 6 0"/><circle cx="12" cy="20" r=".7"/></svg>
+        <p id="boot-message"></p><p id="boot-detail"></p><button id="boot-action" type="button"></button>
+      </div>
     </div>
     <script>
-      window.setTimeout(function () {
+      (function () {
+        var ready = false, stalled = false, accepted = false;
         var splash = document.getElementById('boot-screen');
-        if (!splash || splash.hasAttribute('data-ready')) return;
-        var retry = document.createElement('button');
-        retry.textContent = 'Повторить загрузку';
-        retry.style.cssText = 'margin-top:24px;padding:12px 20px;border:1px solid #3f3f46;border-radius:12px;background:#18181b;color:#f4f4f5;font:inherit;cursor:pointer';
-        retry.onclick = function () { window.location.reload(); };
-        splash.appendChild(retry);
-      }, 15000);
+        var panel = document.getElementById('boot-connection');
+        var message = document.getElementById('boot-message');
+        var detail = document.getElementById('boot-detail');
+        var action = document.getElementById('boot-action');
+        var language = 'ru';
+        try { language = localStorage.getItem('atj_language') || navigator.language || 'ru'; } catch (_) {}
+        var copy = /^en/.test(language)
+          ? ['You are offline', 'Your saved calendar is available on this device.', 'Continue offline', 'Preparing your saved calendar…', 'Open DAYRIS online once to prepare offline access.', 'Retry loading', 'Loading is taking longer', 'Check your connection and try again.']
+          : /^(ro|md)/.test(language)
+          ? ['Sunteți offline', 'Calendarul salvat este disponibil pe acest dispozitiv.', 'Continuă offline', 'Se pregătește calendarul salvat…', 'Deschideți DAYRIS online o dată pentru acces offline.', 'Reîncearcă', 'Încărcarea durează mai mult', 'Verificați conexiunea și încercați din nou.']
+          : ['Нет подключения к интернету', 'Сохранённый календарь доступен на этом устройстве.', 'Перейти в офлайн', 'Подготавливаем сохранённый календарь…', 'Для подготовки офлайн-доступа откройте DAYRIS с интернетом.', 'Повторить загрузку', 'Загрузка занимает больше времени', 'Проверьте подключение и попробуйте ещё раз.'];
+        function reveal() {
+          if (!ready || splash.hasAttribute('data-ready')) return;
+          document.documentElement.removeAttribute('data-booting');
+          splash.setAttribute('data-ready', '');
+          window.setTimeout(function () { splash.remove(); }, 260);
+          window.removeEventListener('offline', update);
+          window.removeEventListener('online', update);
+        }
+        function update() {
+          if (splash.hasAttribute('data-ready')) return;
+          if (ready && (navigator.onLine || accepted)) { reveal(); return; }
+          var offline = !navigator.onLine;
+          panel.hidden = !offline && !stalled;
+          if (panel.hidden) return;
+          message.textContent = copy[offline ? 0 : 6];
+          detail.textContent = copy[offline ? (ready ? 1 : stalled ? 4 : 3) : 7];
+          action.textContent = copy[offline && (ready || !stalled) ? 2 : 5];
+          action.disabled = offline && !ready && !stalled;
+          action.onclick = function () {
+            if (offline && ready) { accepted = true; reveal(); }
+            else window.location.reload();
+          };
+        }
+        window.dayrisBoot = { ready: function () { ready = true; update(); } };
+        window.addEventListener('offline', update);
+        window.addEventListener('online', update);
+        window.setTimeout(function () { stalled = true; update(); }, 15000);
+        update();
+      })();
     </script>
     <noscript><style>#boot-screen { display: none; }</style><p style="color:#f4f4f5;text-align:center;padding:24px">Для запуска DAYRIS включите JavaScript.</p></noscript>
     <div id="root"></div>

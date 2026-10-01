@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v19-ios-motion';
+const CACHE_NAME = 'atj-cache-v21-offline-startup';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
@@ -57,23 +57,43 @@ const PRECACHE_ASSETS = [
   '/icon-32.png?v=20260920-favicon-v3',
   '/icon-48.png?v=20260920-favicon-v3',
   '/apple-touch-icon.png',
-  '/apple-touch-icon-152-v6.png',
-  '/apple-touch-icon-167-v6.png',
-  '/apple-touch-icon-180-v6.png',
+  '/apple-touch-icon-152-v7.png',
+  '/apple-touch-icon-167-v7.png',
+  '/apple-touch-icon-180-v7.png',
   '/icon-192.png?v=20260920-desktop-v4',
   '/icon-512.png?v=20260920-desktop-v4',
   '/icon-maskable-192-v5.png',
   '/icon-maskable-512-v5.png'
 ];
 
+async function cacheAppShell(cache, response, request = '/index.html') {
+  // Never save new HTML without its matching hashed JS/CSS. Otherwise the
+  // next offline launch can display a loader but cannot mount the calendar.
+  const html = await response.clone().text();
+  const assets = [...new Set(html.match(/\/assets\/[^"'\s<>]+\.(?:js|css)/g) || [])];
+  if (!assets.length) throw new Error('App bundle missing from shell');
+  const missing = [];
+  for (const asset of assets) if (!await cache.match(asset)) missing.push(asset);
+  if (missing.length) await cache.addAll(missing);
+  await Promise.all([
+    cache.put(request, response.clone()),
+    cache.put('/', response.clone()),
+    cache.put('/index.html', response.clone()),
+  ]);
+}
+
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS).catch((err) => {
-        console.warn('[sw] Precache warning:', err);
-      });
-    }).then(() => self.skipWaiting())
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    const response = await fetch('/index.html', { cache: 'reload' });
+    if (!response.ok) throw new Error('App shell unavailable');
+    // Failure here leaves the previous worker/cache active and usable.
+    await cacheAppShell(cache, response);
+    await cache.addAll(PRECACHE_ASSETS.filter(asset => asset !== '/' && asset !== '/index.html')).catch(err => {
+      console.warn('[sw] Optional icon precache warning:', err);
+    });
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', (event) => {
@@ -111,18 +131,13 @@ self.addEventListener('fetch', (event) => {
     const isAppShellNavigation = url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/install';
     event.respondWith(
       fetch(event.request)
-        .then((response) => {
+        .then(async (response) => {
           if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, clone);
-              // Only the app shell may become the offline fallback for `/`.
-              // Pages such as /privacy.html must not replace the cached app.
-              if (isAppShellNavigation) {
-                cache.put('/', clone.clone());
-                cache.put('/index.html', clone.clone());
-              }
-            });
+            const cache = await caches.open(CACHE_NAME);
+            try {
+              if (isAppShellNavigation) await cacheAppShell(cache, response, event.request);
+              else await cache.put(event.request, response.clone());
+            } catch (err) { console.warn('[sw] Shell cache update postponed:', err); }
           }
           return response;
         })
@@ -148,18 +163,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request)
-        .then((networkResponse) => {
+  const fetchPromise = fetch(event.request)
+        .then(async (networkResponse) => {
           if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
-            const clone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+            const cache = await caches.open(CACHE_NAME);
+            if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/install') {
+              try { await cacheAppShell(cache, networkResponse, event.request); }
+              catch (err) { console.warn('[sw] Shell cache update postponed:', err); }
+            } else await cache.put(event.request, networkResponse.clone());
           }
           return networkResponse;
         })
         .catch(() => null);
-
+  event.waitUntil(fetchPromise.then(() => {}));
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }

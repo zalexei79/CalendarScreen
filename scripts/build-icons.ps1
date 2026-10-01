@@ -53,7 +53,7 @@ try {
     # The OS applies its own rounded mask, so export opaque square PNGs.
     # iOS supplies the rounded mask. Use a full-bleed square housing instead
     # of placing a pre-rounded transparent icon on a black square.
-    $iosSource = [System.Drawing.Image]::FromFile((Join-Path $projectPath 'assets/brand/dayris-ios-square-v6.png'))
+    $iosSource = [System.Drawing.Image]::FromFile((Join-Path $projectPath 'assets/brand/dayris-ios-glass-v7.png'))
     try {
         foreach ($size in @(152, 167, 180)) {
             $iosBitmap = [System.Drawing.Bitmap]::new($size, $size)
@@ -62,7 +62,7 @@ try {
                 $iosGraphics.Clear([System.Drawing.Color]::FromArgb(255, 9, 9, 11))
                 $iosGraphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
                 $iosGraphics.DrawImage($iosSource, 0, 0, $size, $size)
-                $iosBitmap.Save((Join-Path $projectPath "public/apple-touch-icon-$size-v6.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+                $iosBitmap.Save((Join-Path $projectPath "public/apple-touch-icon-$size-v7.png"), [System.Drawing.Imaging.ImageFormat]::Png)
                 if ($size -eq 180) {
                     $iosBitmap.Save((Join-Path $projectPath 'public/apple-touch-icon.png'), [System.Drawing.Imaging.ImageFormat]::Png)
                     $iosBitmap.Save((Join-Path $projectPath 'public/icon-180.png'), [System.Drawing.Imaging.ImageFormat]::Png)
