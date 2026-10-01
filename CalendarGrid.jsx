@@ -6,6 +6,7 @@ import { WEEKDAYS } from './src/shared/config/constants';
 import { useWalletExitGesture } from './src/features/wallet/hooks/useWalletExitGesture';
 import './src/features/wallet/WalletGestures.css';
 import './src/shared/ui/CalendarMotion.css';
+import { useCalendarFit } from './src/shared/ui/useCalendarFit';
 
 export default function CalendarGrid({
   traderMode = false,
@@ -37,6 +38,7 @@ export default function CalendarGrid({
   const { surfaceRef, drag: touchDrag } = useWalletExitGesture({
     navigation: 'calendar', onExit: onOpenWallet, disabled: gesturesDisabled, onNextMonth, onPreviousMonth,
   });
+  useCalendarFit(surfaceRef, cells.length);
   const pulling = touchDrag.axis === 'y';
   const pullCopy = language === 'en' ? ['Pull to open wallet', 'Release to open wallet']
     : language === 'ro' || language === 'md' ? ['Trage pentru a deschide portofelul', 'Eliberează pentru a deschide portofelul']
@@ -46,6 +48,7 @@ export default function CalendarGrid({
     <section
       ref={surfaceRef}
       data-dragging={pulling}
+      data-calendar-fit="true"
       data-cells-enter={animateCells.current}
       className={`calendar-section wallet-gesture-content flex-1 flex flex-col px-1.5 sm:px-8 pt-2.5 sm:pt-6 border-b relative transition-colors duration-200 ${animClass} ${isLight ? 'border-slate-200/90 bg-slate-50/40' : 'border-zinc-800'}`}
       onClick={(e) => { if (e.target === e.currentTarget) onEmptyClick(); }}
@@ -79,7 +82,7 @@ export default function CalendarGrid({
       onDragStart={e => e.preventDefault()}
       style={{ userSelect: 'none', transform: pulling ? `translate3d(0,${touchDrag.y}px,0)` : 'none' }}
     >
-      <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-3" onClick={(e) => { if (e.target === e.currentTarget) onEmptyClick(); }}>
+      <div className="calendar-weekdays grid grid-cols-7 gap-1 sm:gap-2 mb-3" onClick={(e) => { if (e.target === e.currentTarget) onEmptyClick(); }}>
         {WEEKDAYS.map((w) => <div key={w} className={`font-data text-[11px] sm:text-xs font-semibold tracking-wider text-center uppercase pb-1 ${isLight ? 'text-slate-600' : 'text-zinc-500'}`}>{w}</div>)}
       </div>
       <div className="calendar-days-grid grid flex-none grid-cols-7 auto-rows-[64px] gap-1 sm:flex-1 sm:auto-rows-auto sm:gap-2" onClick={(e) => { if (e.target === e.currentTarget) onEmptyClick(); }}>

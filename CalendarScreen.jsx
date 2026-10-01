@@ -4221,9 +4221,6 @@ export default function CalendarScreen() {
         @keyframes proEmber { 0%,100% { opacity:.55; transform:scale(.85) } 50% { opacity:1; transform:scale(1.15) } }
         .pro-ember { animation: proEmber 1.8s ease-in-out infinite; }
         @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
-        @media (max-width: 639px) {
-          .calendar-days-grid { flex: 1 0 auto; grid-auto-rows: minmax(76px, 1fr); }
-        }
       `}</style>
 
       {/* HEADER */}

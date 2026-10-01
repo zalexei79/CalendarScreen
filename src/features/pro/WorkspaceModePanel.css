@@ -1,4 +1,10 @@
 /* Full-width calendar navigation and a quiet, borderless tool rail. */
+@media(max-width:639px) {
+  .dayris-header { padding-top:8px; padding-bottom:8px; }
+  .dayris-header .dayris-brand-row { margin-bottom:6px; }
+  .dayris-header .dayris-command-row { gap:6px; }
+  .dayris-header .pro-platform-row { margin-top:2px; padding:2px 0; }
+}
 .dayris-command-row { display:grid; gap:10px; align-items:start; width:100%; }
 .dayris-date-navigation { display:flex; align-items:center; gap:6px; min-height:44px; min-width:0; }
 .dayris-date-navigation > button { flex-shrink:0; }

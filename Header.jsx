@@ -91,7 +91,7 @@ export default function Header({
   return (
     <header className={`dayris-header px-3 sm:px-8 pt-3 sm:pt-5 pb-3 sm:pb-4 border-b transition-all duration-500 ${isLight ? 'border-slate-200/70 bg-white/80' : 'border-white/[0.06] bg-zinc-950/70'}`}>
       {/* Top row: Brand app icon + Title on left, [Download] [Theme] [Settings] on right */}
-      <div className="flex items-center justify-between gap-3 mb-2.5">
+      <div className="dayris-brand-row flex items-center justify-between gap-3 mb-2.5">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="relative shrink-0 flex items-center justify-center">
             <BrandIcon

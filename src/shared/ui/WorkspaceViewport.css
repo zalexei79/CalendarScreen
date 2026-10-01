@@ -25,3 +25,12 @@ html, body { overscroll-behavior-y: none; }
 .wallet-panel-enter {
   padding-bottom: calc(24px + max(env(safe-area-inset-bottom, 0px), var(--dayris-viewport-bottom, 0px)));
 }
+@media (max-width: 639px) {
+  .calendar-section[data-calendar-fit="true"] { flex: none; padding-top: 6px; }
+  .calendar-section[data-calendar-fit="true"] .calendar-weekdays { margin-bottom: 8px; }
+  .calendar-section[data-calendar-fit="true"] .calendar-days-grid {
+    flex: none;
+    grid-auto-rows: var(--calendar-row-height, 64px);
+  }
+  .calendar-section[data-calendar-fit="true"] .calendar-days-grid > button { min-height: 56px; }
+}
