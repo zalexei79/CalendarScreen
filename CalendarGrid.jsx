@@ -57,6 +57,7 @@ export default function CalendarGrid({
     <section
       ref={surfaceRef}
       data-dragging={Boolean(touchDrag.axis) && !touchDrag.settling}
+      data-settling={Boolean(touchDrag.settling)}
       data-calendar-fit="true"
       data-cells-enter={animateCells.current}
       className={`calendar-section wallet-gesture-content flex-1 flex flex-col px-1.5 sm:px-8 pt-2.5 sm:pt-6 border-b relative transition-colors duration-200 ${animClass} ${isLight ? 'border-slate-200/90 bg-slate-50/40' : 'border-zinc-800'}`}
@@ -104,9 +105,9 @@ export default function CalendarGrid({
         })}
       </div>
       {touchDrag.axis === 'x' && adjacentMonths.map(preview => <div key={preview.direction} className="calendar-month-preview" aria-hidden="true" inert="" style={{ left: `${preview.direction * 100}%` }}>
-        <div className="calendar-weekdays grid grid-cols-7 gap-1 sm:gap-2 mb-3">{WEEKDAYS.map(day => <div key={day} className="font-data text-[11px] sm:text-xs font-semibold tracking-wider text-center uppercase pb-1">{day}</div>)}</div>
-        <div className="calendar-preview-days" style={{ gridTemplateRows: `repeat(${preview.cells.length / 7},minmax(0,1fr))` }}>
-          {preview.cells.map((cell, index) => <CalendarDayCell key={cell.key} cell={cell} cellIndex={index} traderMode={traderMode} proView={proView} isLight={isLight} isSelected={false} hasTrades={tradesForDayFiltered(cell.key).length > 0} plans={plansForDay?.(cell.key) || []} formatPlanAmount={formatPlanAmount} pnl={totalPnlForDay(cell.key)} monthMaxAbsPnl={monthMaxAbsPnl} formatPnlDisplay={formatPnlDisplay} onSelect={() => {}} />)}
+        <div className="calendar-weekdays grid grid-cols-7 gap-1 sm:gap-2 mb-3">{WEEKDAYS.map(day => <div key={day} className={`font-data text-[11px] sm:text-xs font-semibold tracking-wider text-center uppercase pb-1 ${isLight ? 'text-slate-600' : 'text-zinc-500'}`}>{day}</div>)}</div>
+        <div className="calendar-days-grid calendar-preview-days grid grid-cols-7 gap-1 sm:gap-2" style={{ flex: 1, minHeight: 0, gridAutoRows: 'auto', gridTemplateRows: `repeat(${preview.cells.length / 7},minmax(0,1fr))` }}>
+          {preview.cells.map((cell, index) => <CalendarDayCell key={cell.key} cell={cell} cellIndex={index} traderMode={traderMode} proView={proView} isLight={isLight} isSelected={cell.key === selectedKey} hasNote={!!notes[cell.key]} noteLabel={noteLabel} hasTrades={tradesForDayFiltered(cell.key).length > 0} plans={plansForDay?.(cell.key) || []} formatPlanAmount={formatPlanAmount} pnl={totalPnlForDay(cell.key)} monthMaxAbsPnl={monthMaxAbsPnl} formatPnlDisplay={formatPnlDisplay} onSelect={() => {}} />)}
         </div>
       </div>)}
     </section>

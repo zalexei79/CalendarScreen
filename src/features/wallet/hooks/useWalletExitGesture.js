@@ -110,7 +110,7 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
           }
           reset();
           exiting = false;
-        }, reduced ? 0 : 220);
+        }, reduced ? 0 : 330);
         return;
       }
       reset();
