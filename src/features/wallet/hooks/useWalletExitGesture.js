@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 
 const INTERACTIVE = 'button,a,input,textarea,select,label,[contenteditable]:not([contenteditable="false"]),[role="button"],[role="slider"],[data-wallet-gesture-ignore]';
 const IDLE = { x: 0, y: 0, axis: null, ready: false };
@@ -29,8 +30,20 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
     let suppressClickUntil = 0;
     let exiting = false;
     let releaseTimer;
+    let motionFrame;
     const updateDrag = (value) => {
-      setDrag(value);
+      // Horizontal tracking is a compositor update, not a rerender of three
+      // calendars for every touch sample. React handles gesture boundaries.
+      if (navigation === 'calendar' && value.axis === 'x' && !value.settling) {
+        setDrag(previous => previous.axis === 'x' && !previous.settling ? previous : value);
+        cancelAnimationFrame(motionFrame);
+        motionFrame = requestAnimationFrame(() => {
+          surface.style.transform = `translate3d(${value.x}px,0,0)`;
+        });
+      } else {
+        cancelAnimationFrame(motionFrame);
+        setDrag(value);
+      }
       if (navigation === 'calendar') window.dispatchEvent(new CustomEvent('dayris-calendar-pull', { detail: value.axis === 'y' ? value : IDLE }));
     };
     const reset = () => { gesture = null; updateDrag(IDLE); };
@@ -53,6 +66,7 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
     }
 
     function start(event) {
+      if (exiting) return;
       reset();
       const target = event.target instanceof Element ? event.target : null;
       if (exiting || config.current.disabled || event.touches.length !== 1 || !target) return;
@@ -105,7 +119,11 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
         releaseTimer = setTimeout(() => {
           if (!config.current.disabled) {
             document.documentElement.setAttribute('data-calendar-swipe-arrival', '');
-            if (dx < 0) config.current.onNextMonth?.(); else config.current.onPreviousMonth?.();
+            // Commit the new page and its fitted geometry before removing the
+            // completed swipe. No intermediate frame may snap the old page back.
+            flushSync(() => {
+              if (dx < 0) config.current.onNextMonth?.(); else config.current.onPreviousMonth?.();
+            });
             requestAnimationFrame(() => document.documentElement.removeAttribute('data-calendar-swipe-arrival'));
           }
           reset();
@@ -134,6 +152,7 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
     surface.addEventListener('auxclick', middleClick);
     return () => {
       clearTimeout(releaseTimer);
+      cancelAnimationFrame(motionFrame);
       if (navigation === 'calendar') window.dispatchEvent(new CustomEvent('dayris-calendar-pull', { detail: IDLE }));
       surface.removeEventListener('touchstart', start);
       surface.removeEventListener('touchmove', move);

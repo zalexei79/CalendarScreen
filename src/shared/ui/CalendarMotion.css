@@ -22,7 +22,7 @@
 .calendar-pages-viewport { overflow-x:clip; overflow-y:visible; position:relative; min-width:0; }
 .calendar-month-preview { position:absolute; top:0; bottom:calc(var(--dayris-dock-height,64px) + var(--dayris-dock-safe) + 24px); width:100%; padding:6px 6px 0; display:flex; flex-direction:column; pointer-events:none; }
 .calendar-section[data-settling="true"] { transition:transform .32s cubic-bezier(.22,.68,0,1); will-change:transform; }
-.calendar-section[data-dragging="true"] { animation:none; translate:0 0; }
+.calendar-section[data-dragging="true"], html[data-workspace-transition] .calendar-section[data-dragging="true"] { animation:none; translate:0 0; }
 .calendar-preview-days { flex:1; min-height:0; display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; }
 .calendar-preview-days > button { animation:none !important; min-height:0 !important; }
 @media(min-width:640px) { .calendar-month-preview { padding:24px 32px 0; } .calendar-preview-days { gap:8px; } }

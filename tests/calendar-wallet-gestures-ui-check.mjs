@@ -85,6 +85,10 @@ try {
   await send('touchMove', 115, 150);
   await page.locator('.calendar-month-preview').first().waitFor({ state: 'attached' });
   assert.equal(await page.locator('.calendar-month-preview').count(), 2, 'both adjacent months are available during drag');
+  const readsBeforeTracking = await page.evaluate(() => window.testTradesReads);
+  await send('touchMove', 95, 150);
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  assert.equal(await page.evaluate(() => window.testTradesReads), readsBeforeTracking, 'tracking must not rerender day data');
   const previewBox = await page.locator('.calendar-month-preview').last().boundingBox();
   assert.ok(previewBox.x < 390 && previewBox.x > 0, 'next month enters the viewport behind the finger');
   await send('touchCancel');
