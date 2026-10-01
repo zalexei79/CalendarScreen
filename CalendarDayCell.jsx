@@ -60,7 +60,7 @@ export default function CalendarDayCell({
             ? `inset 0 -10px 22px -18px rgba(${glowRgb},${(0.18 + effectiveIntensity * 0.10).toFixed(2)}), 0 2px 8px rgba(15,23,42,.035)`
             : `inset 0 -12px 24px -20px rgba(${glowRgb},${(0.28 + effectiveIntensity * 0.12).toFixed(2)}), 0 7px 22px -18px rgba(${glowRgb},${(0.26 + effectiveIntensity * 0.10).toFixed(2)})`,
           animation: 'cellGlowIn 0.35s ease-out both',
-          animationDelay: `${cellIndex * 18}ms`,
+          animationDelay: `${Math.min(Math.floor(cellIndex / 7) * 20, 100)}ms`,
         }
       : !cell.inMonth && hasTrades && !isSelected
       ? {
@@ -69,9 +69,9 @@ export default function CalendarDayCell({
           borderColor: isLight ? `rgba(${glowRgb},0.12)` : `rgba(${glowRgb},0.12)`,
           boxShadow: `0 0 6px rgba(${glowRgb},0.04)`,
           animation: 'cellGlowIn 0.35s ease-out both',
-          animationDelay: `${cellIndex * 18}ms`,
+          animationDelay: `${Math.min(Math.floor(cellIndex / 7) * 20, 100)}ms`,
         }
-      : { ...adjacentBaseStyle, animation: 'cellGlowIn 0.35s ease-out both', animationDelay: `${cellIndex * 18}ms` };
+      : { ...adjacentBaseStyle, animation: 'cellGlowIn 0.35s ease-out both', animationDelay: `${Math.min(Math.floor(cellIndex / 7) * 20, 100)}ms` };
 
   // Pro: jewel-toned light under the surface, never a flashing animation.
   const proRgb = pnl > 0 ? '16,155,115' : '190,35,75';
@@ -98,8 +98,13 @@ export default function CalendarDayCell({
           box-shadow:
             0 0 0 1px rgba(251, 191, 36, .12),
             0 0 18px rgba(245, 158, 11, .12) !important;
-          animation: todayAmbientGlow 4s ease-in-out infinite;
           z-index: 3;
+        }
+        .today-calendar-cell::after {
+          content: ''; position: absolute; inset: 0; border-radius: inherit;
+          pointer-events: none;
+          background: radial-gradient(ellipse at 50% 0%,rgba(251,191,36,.12),transparent 65%);
+          animation: todayAmbientGlow 5s ease-in-out infinite;
         }
 
         .today-calendar-cell:hover {
@@ -125,12 +130,8 @@ export default function CalendarDayCell({
         }
 
         @keyframes todayAmbientGlow {
-          0%, 100% {
-            box-shadow: 0 0 0 1px rgba(251, 191, 36, .10), 0 0 14px rgba(245, 158, 11, .08);
-          }
-          50% {
-            box-shadow: 0 0 0 1px rgba(251, 191, 36, .18), 0 0 24px rgba(245, 158, 11, .18);
-          }
+          0%, 100% { opacity: .35; }
+          50% { opacity: .85; }
         }
 
         @keyframes todayPulse {
@@ -165,6 +166,7 @@ export default function CalendarDayCell({
 
         @media (prefers-reduced-motion: reduce) {
           .today-calendar-cell,
+          .today-calendar-cell::after,
           .today-pulse-ring,
           .today-calendar-pulse {
             animation: none !important;

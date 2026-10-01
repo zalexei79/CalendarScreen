@@ -8,7 +8,7 @@
   animation: calendar-month-arrive 420ms cubic-bezier(.22, 1, .36, 1) both;
 }
 @keyframes calendar-month-arrive {
-  from { opacity: .4; translate: var(--calendar-enter-x) 0; }
+  from { opacity: .82; translate: var(--calendar-enter-x) 0; }
   to { opacity: 1; translate: 0 0; }
 }
 /* Keep the month coherent instead of replaying a vertical cascade of days. */

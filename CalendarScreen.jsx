@@ -4057,8 +4057,8 @@ export default function CalendarScreen() {
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
         .font-display { font-family: 'Space Grotesk', sans-serif; }
         .font-data { font-family: 'JetBrains Mono', monospace; }
-        @keyframes cellGlowIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
-        @keyframes themeIconPop { from { opacity: 0; transform: scale(0.4) rotate(-40deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
+        @keyframes cellGlowIn { from { opacity: .55; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes themeIconPop { from { opacity: .3; transform: scale(.88) rotate(-16deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
         /* Premium light theme — stronger hierarchy and readable contrast */
         .theme-light.premium-shell {
           background-color: #f3f6fa;
@@ -4147,7 +4147,7 @@ export default function CalendarScreen() {
             radial-gradient(circle at 14% -8%, rgba(251,191,36,.18), transparent 31%),
             radial-gradient(circle at 88% 1%, rgba(16,185,129,.075), transparent 25%),
             linear-gradient(180deg, rgba(251,191,36,.018), transparent 34%);
-          animation: proShellReveal .7s cubic-bezier(.16,1,.3,1) both;
+          animation: none;
         }
         .pro-active-shell .dayris-header {
           border-bottom-color: rgba(251,191,36,.16);
@@ -4414,6 +4414,7 @@ export default function CalendarScreen() {
       >
       <SwipeDismissSheet
         onDismiss={() => setSelectedKey(null)}
+        data-sheet-entrance="true"
         isLight={isLight}
         className={`absolute inset-x-0 bottom-0 max-h-[82vh] rounded-t-2xl border-t shadow-2xl overflow-y-auto transition-colors duration-200 ${isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-950'}`}
         onMouseDown={(e) => e.stopPropagation()}
@@ -4732,7 +4733,7 @@ export default function CalendarScreen() {
             className={`relative w-full ${traderMode || isFinancialPro ? 'sm:max-w-5xl' : 'sm:max-w-lg'} flex flex-col overflow-hidden rounded-t-[28px] border shadow-2xl transition-all duration-300 ease-out sm:rounded-[24px] ${
               historyVisible
                 ? 'opacity-100 translate-y-0 sm:scale-100'
-                : 'opacity-0 translate-y-full sm:translate-y-0 sm:scale-95'
+                : 'opacity-0 translate-y-6 sm:translate-y-2 sm:scale-[0.985]'
             } ${
               isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
             }`}

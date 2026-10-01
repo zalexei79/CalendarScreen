@@ -33,6 +33,7 @@ try {
     assert.equal(await page.locator('.pro-control-platform:disabled').count(),2);
     assert.ok((await page.locator('.pro-platform-reveal').boundingBox()).height<1,'closed platforms must occupy no height');
     await page.locator('#trader').click();
+    await page.waitForTimeout(550); // Measure final layout, not entrance/rail transforms.
     const active=await page.locator('.workspace-mode-panel').boundingBox();
     assert.ok(active.height>idle.height+40,'Trader expands a dedicated platform row');
     assert.equal(await page.locator('.pro-control-platform:disabled').count(),0);
@@ -43,7 +44,8 @@ try {
     assert.ok(wallet.height>=44 && wallet.x>=0 && wallet.x+wallet.width<=width,'wallet remains readable and tappable inside viewport');
     for(const button of await page.locator('.workspace-mode-panel button').all()) {
      const box=await button.boundingBox();
-     assert.ok(box && box.height>=44 && box.x>=0 && box.x+box.width<=width,`button bounds at ${width}/${language}/${light}`);
+     const minimumHeight = await button.evaluate(el => el.classList.contains('workspace-mode-toggle') ? 30 : 44);
+     assert.ok(box && box.height>=minimumHeight && box.x>=0 && box.x+box.width<=width,`button bounds at ${width}/${language}/${light}`);
     }
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
    }

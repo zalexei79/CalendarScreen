@@ -4,6 +4,7 @@ import { WEEKDAYS } from './src/shared/config/constants';
 import { useWalletExitGesture } from './src/features/wallet/hooks/useWalletExitGesture';
 import './src/features/wallet/WalletGestures.css';
 import './src/shared/ui/CalendarMotion.css';
+import './src/shared/ui/MotionSystem.css';
 import { useCalendarFit } from './src/shared/ui/useCalendarFit';
 
 const CalendarMonthPreview = React.memo(function CalendarMonthPreview({ preview, isLight, language, traderMode, proView, selectedKey, notes, noteLabel, tradesForDayFiltered, plansForDay, formatPlanAmount, totalPnlForDay, monthMaxAbsPnl, formatPnlDisplay }) {

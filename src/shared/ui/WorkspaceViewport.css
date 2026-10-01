@@ -18,15 +18,17 @@ html, body { overscroll-behavior-y: none; }
 .calendar-dock-morph { position:relative; border-radius:999px; background:rgba(9,9,11,.95); border:1px solid #ffffff18; box-shadow:0 16px 50px #0006; }
 .calendar-action-dock[data-light="true"] .calendar-dock-morph { background:rgba(255,255,255,.95); border-color:#00000018; box-shadow:0 16px 45px #0002; }
 .calendar-dock-actions > div { background:transparent !important; background-image:none !important; border-color:transparent !important; box-shadow:none !important; }
-.calendar-dock-actions { transition:opacity .28s,filter .28s; }
+.calendar-dock-actions { transition:opacity .28s,transform .28s cubic-bezier(.22,1,.36,1); }
 .calendar-dock-wallet { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; gap:8px; padding:0 14px; border:1px solid #d5bc8340; border-radius:999px; background:#141416; color:#ddd4c1; font-size:12px; opacity:0; transform:translateY(8px); transition:opacity .18s,transform .24s cubic-bezier(.22,1,.36,1); }
 .calendar-dock-wallet svg { width:16px; height:16px; flex-shrink:0; }
-.calendar-action-dock[data-pulling="true"] .calendar-dock-actions { opacity:0; filter:blur(3px); pointer-events:none; }
+.calendar-action-dock[data-pulling="true"] .calendar-dock-actions { opacity:0; transform:translateY(-5px); pointer-events:none; }
 .calendar-action-dock[data-pulling="true"] .calendar-dock-wallet { opacity:1; transform:none; }
 .calendar-action-dock[data-ready="true"] .calendar-dock-wallet { border-color:#d5bc83aa; color:#f3ddb0; }
 .calendar-action-dock[data-light="true"] .calendar-dock-wallet { background:#fafafa; color:#886224; }
-.calendar-dock-wallet { border:0; background:transparent; transform:none; transition:opacity .28s,filter .28s; filter:blur(3px); }
-.calendar-action-dock[data-pulling="true"] .calendar-dock-wallet { filter:blur(0); }
+.calendar-dock-wallet { border:0; background:transparent; transform:translateY(5px); transition:opacity .28s,transform .28s cubic-bezier(.22,1,.36,1); }
+.calendar-action-dock[data-pulling="true"] .calendar-dock-wallet { transform:translateY(0); }
+.calendar-dock-morph { transition:border-color .28s,box-shadow .28s; }
+.calendar-action-dock[data-ready="true"] .calendar-dock-morph { border-color:#d5bc8370; box-shadow:0 16px 50px #0006,0 0 24px -12px #d5bc8380; }
 .calendar-action-dock[data-light="true"] .calendar-dock-wallet { background:transparent; }
 @media(prefers-reduced-motion:reduce) { .calendar-dock-actions,.calendar-dock-wallet { transition:none; } }
 .calendar-action-dock[data-pro="true"] > div {

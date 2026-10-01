@@ -262,7 +262,7 @@ export default function Header({
             {settingsOpen && (
               <div
                 className={[
-                  'absolute right-0 top-full mt-3 z-50 rounded-3xl border shadow-2xl p-4 origin-top-right backdrop-blur-xl',
+                  'dayris-settings-panel absolute right-0 top-full mt-3 z-50 rounded-3xl border shadow-2xl p-4 origin-top-right backdrop-blur-xl',
                   'w-[min(320px,calc(100vw-32px))] sm:w-[310px]',
                   'transition-all duration-200 ease-out',
                   settingsVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-1.5 scale-95',

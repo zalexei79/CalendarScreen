@@ -29,6 +29,7 @@ const SwipeDismissSheet = React.forwardRef(function SwipeDismissSheet({
   const pointerGesture = useRef(null);
   const touchGesture = useRef(null);
   const offsetRef = useRef(0);
+  const hasDragged = useRef(false);
   const dismissTimer = useRef(null);
   const configRef = useRef({ disabled, onDismiss });
   const [offset, setOffset] = useState(0);
@@ -46,6 +47,7 @@ const SwipeDismissSheet = React.forwardRef(function SwipeDismissSheet({
   }
 
   function updateOffset(value) {
+    hasDragged.current = true;
     const next = Math.max(0, value);
     offsetRef.current = next;
     setOffset(next);
@@ -161,7 +163,7 @@ const SwipeDismissSheet = React.forwardRef(function SwipeDismissSheet({
     settleDrag(current.startedAt);
   }
 
-  const swipeStyle = offset > 0
+  const swipeStyle = offset > 0 || dragging || hasDragged.current
     ? {
         transform: `translate3d(0, ${offset}px, 0)`,
         transition: dragging ? 'none' : 'transform 210ms cubic-bezier(.22,1,.36,1)',
@@ -170,7 +172,7 @@ const SwipeDismissSheet = React.forwardRef(function SwipeDismissSheet({
     : {};
 
   return (
-    <Component ref={setSheetNode} className={className} style={{ ...style, ...swipeStyle }} {...props}>
+    <Component ref={setSheetNode} className={`dayris-swipe-sheet ${className}`} style={{ ...style, ...swipeStyle }} {...props}>
       <div
         aria-hidden="true"
         className={`flex h-7 shrink-0 touch-none cursor-grab items-center justify-center active:cursor-grabbing xl:hidden ${handleClassName}`}

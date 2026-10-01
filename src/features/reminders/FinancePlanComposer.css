@@ -50,7 +50,7 @@
   border-radius: 28px;
   background: var(--plan-bg);
   box-shadow: 0 32px 100px rgb(0 0 0 / 35%);
-  animation: plan-enter 180ms ease-out both;
+  animation: plan-enter 360ms cubic-bezier(.22,1,.36,1) both;
 }
 .plan-dialog button, .plan-dialog input, .plan-dialog select { font-family: inherit; }
 .plan-dialog button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
@@ -74,7 +74,7 @@
 .plan-intro h2 { margin: 0; padding: 0; font-size: 28px; font-weight: 600; letter-spacing: -.045em; line-height: 1.17; outline: none; }
 .plan-intro p { margin: 8px 0 0; color: var(--plan-muted); font-size: 13px; }
 .plan-fields { min-width: 0; border: 0; margin: 0; padding: 0; }
-.plan-page { animation: plan-page-enter 150ms ease-out both; }
+.plan-page { animation: plan-page-enter 240ms cubic-bezier(.22,1,.36,1) both; }
 .plan-templates { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .plan-templates button { position: relative; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 13px; min-height: 92px; padding: 16px; border: 1px solid var(--plan-line); border-radius: 14px; background: var(--plan-field); color: var(--plan-text); font-size: 14px; font-weight: 500; text-align: left; }
 .plan-templates button > svg { color: var(--plan-muted); }
@@ -173,7 +173,7 @@
   .plan-review { padding: 16px; }
   .plan-actions button { gap: 5px; padding-inline: 8px; }
 }
-@keyframes plan-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes plan-enter { from { opacity: .3; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes plan-page-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) {
   .plan-dialog, .plan-page { animation: none; }
