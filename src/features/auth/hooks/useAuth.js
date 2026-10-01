@@ -4,6 +4,7 @@ import { getValidUserId } from '../../../shared/lib/formatters';
 import { LANGUAGE_STORAGE_KEY, ONBOARDING_V2_COMPLETED_STORAGE_KEY } from '../../../shared/config/constants';
 import { translate } from '../../../shared/i18n';
 import { disablePush } from '../../reminders/pushClient';
+import { restoreUser } from '../sessionRecovery';
 
 /**
  * useAuth: manages Supabase authentication, session detection, and user profile state.
@@ -27,48 +28,27 @@ export function useAuth() {
   }, []);
 
   useEffect(() => {
-    async function init() {
-      // Google returns tokens in URL hash (#access_token=...).
-      if (window.location.hash.includes('access_token')) {
-        const params = new URLSearchParams(window.location.hash.substring(1));
-        const access_token = params.get('access_token');
-        const refresh_token = params.get('refresh_token');
-        if (access_token && refresh_token) {
-          const { error } = await supabase.auth.setSession({ access_token, refresh_token });
-          console.log('[auth] setSession вручную →', error ? 'ошибка' : 'успех', error || '');
-          try { window.history.replaceState(null, '', window.location.pathname); } catch {}
-        }
-      }
-
-      const { data, error } = await supabase.auth.getSession();
-      console.log('[auth] getSession →', data.session ? 'сессия найдена' : 'сессии нет', error || '');
-
-      // getSession() only reads the cached browser token. Verify it with the
-      // Auth server so a stale desktop session cannot masquerade as signed in
-      // while every protected request fails.
-      let currentUser = null;
-      if (data.session) {
-        const { data: verified, error: verificationError } = await supabase.auth.getUser();
-        if (verificationError || !verified?.user) {
-          console.warn('[auth] cached session is no longer valid');
-          await supabase.auth.signOut({ scope: 'local' });
-        } else {
-          currentUser = verified.user;
-        }
-      }
-      const normalizedUser = getValidUserId(currentUser) ? currentUser : null;
-      setUser(normalizedUser);
-    }
-    init();
-
+    let mounted = true;
+    let revision = 0;
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[auth] событие:', event, session ? session.user.email : '(нет пользователя)');
+      if (event !== 'INITIAL_SESSION') revision += 1;
+      if (!mounted) return;
       const activeUser = session?.user ?? null;
       const normalizedUser = getValidUserId(activeUser) ? activeUser : null;
       setUser(normalizedUser);
     });
 
-    return () => listener.subscription.unsubscribe();
+    const initialRevision = revision;
+    restoreUser(supabase.auth).then((activeUser) => {
+      if (mounted && revision === initialRevision) {
+        setUser(getValidUserId(activeUser) ? activeUser : null);
+      }
+    }).catch(() => { /* Keep the SDK's current state during a temporary failure. */ });
+
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   // Prompt nickname modal once after fresh login if not set yet

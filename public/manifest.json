@@ -5,7 +5,7 @@
   "description": "DAYRIS — Денежный календарь. Каждый день имеет значение.",
   "start_url": "/",
   "scope": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#09090b",
   "theme_color": "#09090b",
   "orientation": "portrait-primary",
