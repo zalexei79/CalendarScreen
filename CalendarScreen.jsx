@@ -643,6 +643,23 @@ export default function CalendarScreen() {
 
   useEffect(() => {
     try { window.localStorage.setItem(THEME_STORAGE_KEY, theme); } catch { /* ignore */ }
+    // Keep browser chrome and the area behind Android gesture controls in
+    // the same theme as the calendar, including after returning to the PWA.
+    const syncBrowserTheme = () => {
+      const color = theme === 'light' ? '#fafafa' : '#09090b';
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
+      document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', theme);
+      document.documentElement.style.colorScheme = theme;
+      document.documentElement.style.backgroundColor = color;
+      document.body.style.backgroundColor = color;
+    };
+    syncBrowserTheme();
+    window.addEventListener('pageshow', syncBrowserTheme);
+    document.addEventListener('visibilitychange', syncBrowserTheme);
+    return () => {
+      window.removeEventListener('pageshow', syncBrowserTheme);
+      document.removeEventListener('visibilitychange', syncBrowserTheme);
+    };
   }, [theme]);
 
   useEffect(() => {
