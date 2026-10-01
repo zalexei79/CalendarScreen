@@ -1,3 +1,4 @@
+import {saveVoiceDestinations} from './src/shared/lib/saveVoiceDestinations.js';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useWorkspaceViewport } from './src/shared/ui/useWorkspaceViewport';
 import WorkspaceDock from './src/shared/ui/WorkspaceDock';
@@ -2205,8 +2206,10 @@ export default function CalendarScreen() {
   // ---- FIX: prevent double-save and improve id generation ----
   const [isSaving, setIsSaving] = useState(false);
   const saveInFlightRef = useRef(false);
+  const voiceSaveProgress = useRef({});
 
   function openModal(tradeToEdit, dateKeyOverride = null) {
+    voiceSaveProgress.current = {};
     if (tradeToEdit) {
       setEditingTrade({ id: tradeToEdit.id, dateKey: tradeToEdit.dateKey || modalDateKey || targetDateKey });
       setModalDateKey(tradeToEdit.dateKey || modalDateKey || targetDateKey);
@@ -2461,9 +2464,11 @@ export default function CalendarScreen() {
         ? parseFloat(form.stopLoss)
         : null;
 
-      if (!saveAsTrade && proEntryMode === 'finance' && traderMode && proAccessActive && form.accountTarget === 'wallet') {
-        await wallet.saveTransaction({ dateKey, time, title: instrument, amount: magnitude, kind: signedPnl < 0 ? 'expense' : 'income', currency: form.currency || currency, comment });
-      } else await hookSaveTrade({
+      const destination = !saveAsTrade ? (form.voiceDestination || (proEntryMode === 'finance' && traderMode && proAccessActive ? form.accountTarget : 'main') || 'main') : 'main';
+      if (destination !== 'main' && (!proAccessActive || proAccessLoading)) throw new Error('Кошелёк доступен с активным PRO. Выберите календарь.');
+      await saveVoiceDestinations({destination,key:JSON.stringify({destination,dateKey,time,instrument,signedPnl,comment,currency:form.currency || currency}),progress:voiceSaveProgress.current,
+        saveWallet:()=>wallet.saveTransaction({dateKey,time,title:instrument,amount:magnitude,kind:signedPnl<0?'expense':'income',currency:form.currency || currency,comment}),
+        saveCalendar:()=>hookSaveTrade({
         dateKey,
         isEditing: Boolean(editingTrade),
         editingTradeId: editingTrade?.id,
@@ -2477,8 +2482,8 @@ export default function CalendarScreen() {
         takeProfit: tp,
         stopLoss: sl,
         traderMode: saveAsTrade,
+      }),
       });
-
       const planIdToResolve = pendingPlanRecordId;
       if (!saveAsTrade && !getMoneyCategoryMeta(instrument)) voiceCategories.add(instrument);
       if (planIdToResolve) {
@@ -2500,6 +2505,10 @@ export default function CalendarScreen() {
       }
     } catch (err) {
       console.error('[save] unexpected error:', err);
+      if (form.voiceDestination === 'both' && voiceSaveProgress.current.wallet && !voiceSaveProgress.current.calendar) {
+        setFormError(language === 'ru' ? 'В кошельке запись сохранена, в календаре — ещё нет. Повторите сохранение с исходными полями.' : language === 'en' ? 'Saved in the wallet, but not in the calendar yet. Retry with the original fields.' : 'Salvat în portofel, dar încă nu în calendar. Reîncearcă fără a modifica datele.');
+        return;
+      }
       const isUserForeignKeyError = err?.code === '23503' && String(err?.message || '').includes('trades_user_id_fkey');
       setFormError(
         isUserForeignKeyError
@@ -3787,7 +3796,7 @@ export default function CalendarScreen() {
           </button>
         </div>
 
-        {isFinanceEntry && !editingTrade && (
+        {isFinanceEntry && !editingTrade && !form.voiceDestination && (
           <div className={`mt-3 rounded-2xl border p-3 ${isLight ? 'border-amber-200 bg-amber-50/60' : 'border-amber-400/15 bg-amber-400/[.04]'}`}>
             <p className="text-[10px] font-semibold uppercase tracking-[.16em] text-amber-500">Куда записать операцию?</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
@@ -4725,7 +4734,7 @@ export default function CalendarScreen() {
               {t('addAction')}
             </span>
           </button>
-          <CalendarVoiceButton language={language} isLight={isLight} traderMode={traderMode} categoryOptions={[...new Set([...MONEY_CATEGORIES.map(item => item.key), ...voiceCategories.categories])].map(value => ({ value, label: getMoneyCategoryLabel(value, language) }))} onCommand={(command) => {
+          <CalendarVoiceButton askDestination defaultCurrency={currency} walletAvailable={proAccessActive && !proAccessLoading} language={language} isLight={isLight} traderMode={traderMode} categoryOptions={[...new Set([...MONEY_CATEGORIES.map(item => item.key), ...voiceCategories.categories])].map(value => ({ value, label: getMoneyCategoryLabel(value, language) }))} onCommand={(command) => {
             if (command.type === 'category-prompt') return language === 'ru' ? 'Добавьте название после команды. Например: создай категорию Настольные игры.' : language === 'en' ? 'Include the category name in your command.' : 'Include numele categoriei în comandă.';
             if (command.type === 'history') { openHistory(); return; }
             if (command.type === 'settings') { openSettings(); return; }
@@ -4762,7 +4771,7 @@ export default function CalendarScreen() {
             }
             if (command.type === 'entry') {
               if (spokenCategory) voiceCategories.add(spokenCategory);
-              setForm((current) => ({ ...current, pnl: command.amount, currency: command.currency, sign: command.sign, instrument: spokenCategory || 'Другое' }));
+              setForm((current) => ({ ...current, pnl: command.amount, currency: command.currency, sign: command.sign, voiceDestination: command.destination || 'main', instrument: spokenCategory || 'Другое' }));
               setDetailsOpen(true);
             }
           }} />
@@ -6310,7 +6319,7 @@ export default function CalendarScreen() {
                     ? (editingTrade ? proEntryCopy.editEntry : proEntryCopy.newEntry)
                     : (editingTrade ? t('editRecord') : t('addRecord'))}
                 </p>
-                <div className="mt-1 flex items-center gap-1.5">
+                {form.voiceDestination && <label className="mt-1 block text-xs text-amber-500">{language === 'ru' ? 'Место записи' : language === 'en' ? 'Save to' : 'Salvare în'}<select aria-label={language === 'ru' ? 'Место записи' : language === 'en' ? 'Save to' : 'Salvare în'} value={form.voiceDestination} onChange={event=>setForm(current=>({...current,voiceDestination:event.target.value}))} className="ml-2 rounded-lg border border-amber-400/20 bg-zinc-900 p-1 text-zinc-200"><option value="main">{language === 'ru' ? 'Календарь' : 'Calendar'}</option>{proAccessActive&&<><option value="wallet">{language === 'ru' ? 'Кошелёк' : language === 'en' ? 'Wallet' : 'Portofel'}</option><option value="both">{language === 'ru' ? 'Календарь и кошелёк' : language === 'en' ? 'Calendar + Wallet' : 'Calendar + Portofel'}</option></>}</select></label>}<div className="mt-1 flex items-center gap-1.5">
                   <input
                     type="date"
                     max={todayKey}
