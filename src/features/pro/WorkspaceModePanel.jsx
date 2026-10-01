@@ -1,4 +1,5 @@
 import React from 'react';
+import { Sparkles } from 'lucide-react';
 import ProWorkspaceActions from './ProWorkspaceActions';
 import WalletEntry from './WalletEntry';
 import { platformText } from '../platforms/PlatformConnections';
@@ -12,8 +13,11 @@ export default function WorkspaceModePanel({ proView, onModeChange, isLight, lan
     <WalletEntry language={language} access={walletAccess} loading={walletLoading} onOpen={onWallet} onOffer={onOffer}/>
     <ProWorkspaceActions inPanel visible={proView} isLight={isLight} language={language} t={t} traderMode={traderMode} onTraderChange={onTraderChange} onWallet={onWallet} onConnect={onConnect} connected={connected} metatrader={metatrader} reconnect={reconnect} onOffer={onOffer}/>
     <div className="workspace-selector" role="group" aria-label={text('Режим DAYRIS','DAYRIS mode','Mod DAYRIS')}>
-      <button type="button" aria-pressed={!proView} onClick={() => { if (proView) onModeChange(); }}>FREE</button>
-      <button type="button" aria-pressed={proView} onClick={proView ? onOffer : onModeChange} title={proView ? t('proInfoAction') : text('Открыть PRO','Open PRO','Deschide PRO')}>PRO</button>
+      <button className="workspace-mode-toggle" type="button" role="switch" aria-checked={proView} aria-label={text('Режим PRO','PRO mode','Mod PRO')} onClick={onModeChange}>
+        <span className="workspace-toggle-thumb" aria-hidden="true" />
+        <span>FREE</span><span>PRO</span>
+      </button>
+      {proView && <button className="workspace-pro-info" type="button" onClick={onOffer} aria-label={text('Мой PRO: срок и возможности','My PRO: access and features','PRO-ul meu: acces și funcții')} title={t('proInfoAction')}><Sparkles aria-hidden="true" /></button>}
     </div>
     </section>
   </div>;

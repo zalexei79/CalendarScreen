@@ -7096,6 +7096,7 @@ export default function CalendarScreen() {
               {proOfferTab === 'offer' ? (
                 <ProOffer
                   language={language} copy={proAccessCopy} active={proAccessActive}
+                  daysRemaining={proDaysRemaining} untilLabel={formatProUntilDate(proAccessUntil)}
                   signedIn={Boolean(user)} referralLoading={referralCodeLoading}
                   referralCode={referralCode} referralError={referralCodeError}
                   checkoutLoading={proCheckoutLoading} checkoutError={proCheckoutError}

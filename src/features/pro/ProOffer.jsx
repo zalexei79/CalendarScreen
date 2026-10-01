@@ -4,7 +4,7 @@ import { getProOfferCopy, XAUUSD_SIGNALS_URL, XAUUSD_SIGNALS_BOT_URL } from './p
 import './ProPresentation.css';
 
 // Presentation only. All account, referral and checkout actions stay with the caller.
-export default function ProOffer({ language, copy, active, signedIn, referralLoading, referralCode, referralError, checkoutLoading, checkoutError, onInvite, onCheckout, onInvites, onWallet, onPlatforms }) {
+export default function ProOffer({ language, copy, active, daysRemaining, untilLabel, signedIn, referralLoading, referralCode, referralError, checkoutLoading, checkoutError, onInvite, onCheckout, onInvites, onWallet, onPlatforms }) {
   const [feature, setFeature] = useState('wallet');
   const id = useId();
   const text = getProOfferCopy(language);
@@ -24,6 +24,10 @@ export default function ProOffer({ language, copy, active, signedIn, referralLoa
   const inviteLabel = !signedIn ? copy.signIn : referralCode ? text.inviteAction : referralError ? copy.retryInvite : copy.preparing;
 
   return <div className="pro-offer">
+    {active && <section className="pro-membership-status" aria-label={copy.myPro}>
+      <div><span className="pro-eyebrow">{copy.myPro}</span><strong>{copy.proRemaining}: {daysRemaining} {copy.daysShort}</strong><p>{copy.proUntil} {untilLabel}</p></div>
+      <Check aria-hidden="true" />
+    </section>}
     <section className="pro-offer-intro">
       <h2 id="pro-offer-title">{text.title}<br /><span>{text.titleAccent}</span></h2>
       <p>{text.intro}</p>
