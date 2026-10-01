@@ -31,6 +31,14 @@ await page.getByRole('button',{name:'Голосовая команда'}).click(
 assert.equal(await page.locator('.calendar-voice-commands li').count(),13);
 assert.equal(await page.locator('.calendar-dock-actions > div > button').first().isVisible(),false,'voice mode replaces history and add');
 assert.match(await page.locator('[role="status"]').textContent(),/Слушаю/);
+await page.evaluate(()=>window.voice.onspeechstart());
+assert.equal(await page.locator('.calendar-voice-glyph').getAttribute('data-talking'),'true');
+assert.equal(await page.locator('.calendar-voice-equalizer i').count(),6);
+await page.emulateMedia({reducedMotion:'reduce'});
+assert.equal(await page.locator('.calendar-voice-equalizer i').first().evaluate(el=>getComputedStyle(el).animationName),'none');
+await page.emulateMedia({reducedMotion:'no-preference'});
+await page.evaluate(()=>window.voice.onspeechend());
+assert.equal(await page.locator('.calendar-voice-glyph').getAttribute('data-talking'),'false');
 assert.match(await page.locator('.calendar-voice-message').textContent(),/Сегодня я потратил 50 рублей/);
 await page.getByRole('button',{name:'Готово — обработать фразу'}).click();
 await page.getByRole('button',{name:'Голосовая команда'}).waitFor();

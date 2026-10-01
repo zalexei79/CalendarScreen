@@ -20,6 +20,14 @@ export function parseCalendarVoiceCommand(transcript){
   if(amountMatch){const amount=parseSpokenAmount(amountMatch[1]);if(amount!==null&&Number(amount)>0){const expense=/потратил|потратила|расход/.test(text),income=/получил|получила|заработал|заработала|доход/.test(text);if(expense!==income)return {type:'entry',kind:'record',amount,currency:/^руб/.test(amountMatch[2])?'RUB':amountMatch[2]==='евро'?'EUR':/^ле/.test(amountMatch[2])?'MDL':'USD',sign:expense?'minus':'plus'};}}
  }
  const question=text.replace(/^(расскажи[,]? |скажи[,]? |tell me |spune-mi )/,'');
+ // Optional pronouns/month qualifiers should not change a read-only question.
+ const monthly=question.match(/^(.*?) (?:за|в) (?:(?:этот|этом|текущий|текущем) )?месяц(?:е)?$/);
+ if(monthly){
+  const intent=monthly[1];
+  if(/^(?:сколько (?:я )?(?:заработал|заработала|получил|получила)|(?:какие|сколько) (?:у меня )?(?:мои )?доходы)$/.test(intent))return {type:'question',metric:'income',period:'current-month'};
+  if(/^(?:сколько (?:я )?(?:потратил|потратила|потрачено)|(?:какие|сколько) (?:у меня )?(?:мои )?расходы)$/.test(intent))return {type:'question',metric:'expense',period:'current-month'};
+  if(/^(?:подведи (?:итог|итоги)|(?:какой|какие) (?:итог|итоги)|итог|итоги|покажи итог|расскажи итог)$/.test(intent))return {type:'question',metric:'summary',period:'current-month'};
+ }
  const questions={expense:/^(?:сколько (?:я )?(?:потратил|потратила)|какие (?:мои )?расходы) (?:за |в )?(?:этом|этот|текущий) месяц(?:е)?$|^how much (?:did i spend|have i spent) this month$|^cât am cheltuit luna aceasta$/,income:/^сколько (?:я )?(?:заработал|заработала|получил|получила) (?:за |в )?(?:этом|этот|текущий) месяц(?:е)?$|^how much (?:did i earn|have i earned) this month$|^cât am câștigat luna aceasta$/,summary:/^(?:какой итог|подведи итог|итоги|итог) (?:за |в )?(?:этом|этот|текущий) месяц(?:е)?$|^(?:summarize|summary for) this month$|^rezumat pentru luna aceasta$/};
  for(const [metric,pattern] of Object.entries(questions))if(pattern.test(question))return {type:'question',metric,period:'current-month'};
  const money=text.match(/^(?:сегодня )?(?:я )?(потратил|потратила|получил|получила|заработал|заработала) (.+) (рубль|рубля|рублей|евро|лей|лея|леев|доллар|доллара|долларов)$/)

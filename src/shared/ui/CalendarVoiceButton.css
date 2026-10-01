@@ -31,3 +31,14 @@
 .calendar-voice-audio-error { margin-top:8px; color:#b89959; font-size:11px; }
 .calendar-voice-control[data-active="true"] .calendar-voice-button span { animation:calendar-voice-enter 180ms ease-out both; }
 @media(prefers-reduced-motion:reduce) { .calendar-voice-control .calendar-voice-button span { animation:none; } }
+.calendar-voice-glyph { display:flex; align-items:center; justify-content:center; gap:3px; flex:none; }
+.calendar-voice-equalizer { display:flex; gap:2px; height:20px; align-items:center; opacity:0; transition:opacity 180ms ease; }
+.calendar-voice-control[data-active="false"] .calendar-voice-equalizer { display:none; }
+.calendar-voice-equalizer i { display:block; width:2px; height:18px; border-radius:2px; background:currentColor; transform:scaleY(.2); }
+.calendar-voice-glyph[data-talking="true"] .calendar-voice-equalizer { opacity:.85; }
+.calendar-voice-glyph[data-talking="true"] i { animation:calendar-voice-level 620ms ease-in-out infinite alternate; }
+.calendar-voice-glyph i:nth-child(2) { animation-delay:-240ms; }
+.calendar-voice-glyph i:nth-child(3) { animation-delay:-420ms; }
+.calendar-voice-glyph .calendar-voice-equalizer:last-child i { animation-delay:-120ms; }
+@keyframes calendar-voice-level { 0% { transform:scaleY(.22); } 45% { transform:scaleY(.9); } 100% { transform:scaleY(.38); } }
+@media(prefers-reduced-motion:reduce) { .calendar-voice-equalizer { transition:none; } .calendar-voice-glyph[data-talking="true"] i { animation:none; transform:scaleY(.6); } }

@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import {financialVoiceAnswer} from '../src/shared/lib/financialVoiceAnswer.js';
 import {parseCalendarVoiceCommand} from '../src/shared/lib/calendarVoiceCommand.js';
 test('financial questions never create entries',()=>{
+ for(const [phrase,metric] of [['сколько заработал за месяц','income'],['сколько я заработала за текущий месяц','income'],['расскажи сколько получил в этом месяце','income'],['сколько потратил за месяц','expense'],['какие у меня расходы за месяц','expense'],['подведи итог за месяц','summary'],['скажи итоги за текущий месяц','summary']])assert.deepEqual(parseCalendarVoiceCommand(phrase),{type:'question',metric,period:'current-month'});
  for(const [phrase,metric] of [['Расскажи сколько я потратил за этот месяц','expense'],['Сколько я заработал за этот месяц','income'],['Подведи итог за этот месяц','summary'],['How much did I spend this month','expense'],['Cât am cheltuit luna aceasta','expense']])assert.deepEqual(parseCalendarVoiceCommand(phrase),{type:'question',metric,period:'current-month'});
  assert.equal(parseCalendarVoiceCommand('сколько я потратил за прошлый месяц'),null);
+ assert.equal(parseCalendarVoiceCommand('сколько заработал за год'),null);
 });
 test('current month only, currencies stay separate, trading excluded from expenses',()=>{
  const records={'2026-10-01':[{pnl:-50,currency:'RUB'},{pnl:100,currency:'EUR'},{pnl:-20,currency:'EUR'},{pnl:-500,currency:'USD',traderMode:true},{pnl:NaN,currency:'USD'}],'2026-09-30':[{pnl:-999,currency:'RUB'}]};
