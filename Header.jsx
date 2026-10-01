@@ -8,6 +8,7 @@ import {
 import { LANGUAGES, CURRENCIES } from './src/shared/config/constants';
 import { monthsFor } from './src/shared/i18n';
 import BrandIcon from './src/shared/ui/BrandIcon.jsx';
+import AnimatedMonthLabel from './src/shared/ui/AnimatedMonthLabel.jsx';
 import WorkspaceModePanel from './src/features/pro/WorkspaceModePanel.jsx';
 
 function pendingSyncText(count, traderMode, language) {
@@ -421,7 +422,7 @@ export default function Header({
                 onClick={() => { setMonthMenuOpen((v) => !v); setYearMenuOpen(false); }}
                 className={`font-display text-2xl sm:text-[28px] font-semibold transition-colors ${isLight ? 'text-zinc-900 hover:text-amber-600' : 'text-zinc-50 hover:text-amber-400'}`}
               >
-                <span key={`${year}-${month}`} className="dayris-month-label">{monthsFor(language)[month]}</span>
+                <AnimatedMonthLabel year={year} month={month} label={monthsFor(language)[month]} />
               </button>
               {monthMenuOpen && (
                 <div className={`dayris-date-menu absolute left-0 top-full mt-2 w-40 max-h-64 overflow-y-auto rounded-xl border shadow-xl z-50 p-1 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900'}`}>

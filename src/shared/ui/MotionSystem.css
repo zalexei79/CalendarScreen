@@ -16,7 +16,17 @@
 .dayris-header button, .calendar-action-dock button, .wallet-panel-enter button { transition:scale 160ms var(--motion-ease),transform 160ms var(--motion-ease),background-color 200ms,border-color 200ms,color 200ms,opacity 160ms; }
 .dayris-settings-panel { transition-property:opacity,transform; transition-duration:280ms; transition-timing-function:var(--motion-ease); }
 .dayris-settings-panel.opacity-0 { transition-duration:150ms; transition-timing-function:var(--motion-exit); }
-.dayris-month-label { display:inline-block; animation:dayris-label-arrive 260ms var(--motion-ease) both; }
+.dayris-month-label { display:inline-block; position:relative; vertical-align:bottom; white-space:nowrap; }
+.dayris-month-incoming { display:inline-block; animation:dayris-month-enter 420ms var(--motion-ease) both; }
+.dayris-month-outgoing { position:absolute; left:0; top:0; pointer-events:none; animation:dayris-month-leave 300ms var(--motion-ease) both; }
+@keyframes dayris-month-enter {
+  from { opacity:0; transform:translateX(calc(var(--label-direction) * 18px)); }
+  to { opacity:1; transform:translateX(0); }
+}
+@keyframes dayris-month-leave {
+  from { opacity:1; transform:translateX(0); }
+  to { opacity:0; transform:translateX(calc(var(--label-direction) * -14px)); }
+}
 .dayris-date-menu { animation:dayris-label-arrive 220ms var(--motion-ease) both; transform-origin:top left; }
 @keyframes dayris-label-arrive {
   from { opacity:.4; translate:0 4px; }
@@ -40,6 +50,8 @@
   .calendar-days-grid > button { transition:none !important; animation:none !important; }
   .monthly-goal-bar, .monthly-goal-bar > .grid, .premium-shell [role="dialog"] { transition:none !important; animation:none !important; }
   .dayris-month-label, .dayris-date-menu { animation:none; }
+  .dayris-month-incoming { animation:none; }
+  .dayris-month-outgoing { display:none; }
   .dayris-header button:active, .calendar-action-dock button:active,
   .wallet-panel-enter button:active { scale:1; }
 }
