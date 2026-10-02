@@ -75,7 +75,7 @@
 @keyframes calendar-assistant-enter { from { opacity:0; transform:translateY(9px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
 @media(prefers-reduced-motion:reduce) { .calendar-voice-message { animation:none; } .calendar-voice-options button,.calendar-voice-reply-actions button { transition:none; transform:none !important; } }
 .calendar-voice-category-reply { display:grid; gap:8px; }
-.calendar-voice-category-reply select,.calendar-voice-category-reply button { width:100%; min-height:44px; border-radius:12px; border:1px solid rgba(213,188,131,.2); padding:8px; background:rgba(150,150,150,.08); color:inherit; }
+.calendar-voice-category-reply > button { width:100%; min-height:44px; border-radius:12px; border:1px solid rgba(213,188,131,.2); padding:8px; background:rgba(150,150,150,.08); color:inherit; }
 .calendar-voice-category-reply option { color:#222; background:#fff; }
 .calendar-voice-category-reply button[aria-pressed="true"] { border-color:#b89959; background:rgba(213,188,131,.15); }
 .calendar-voice-review-summary { display:grid; gap:5px; margin:12px 0; overflow-wrap:anywhere; }
@@ -93,6 +93,7 @@
 .calendar-voice-control[data-light="true"] .calendar-voice-edit-fields input,.calendar-voice-control[data-light="true"] .calendar-voice-edit-fields select { color-scheme:light; }
 .calendar-voice-edit-fields option { background:#fff; color:#222; }
 .calendar-voice-field-wide { grid-column:1 / -1; }
+.calendar-voice-edit-fields > .calendar-voice-field-wide { display:grid; gap:4px; font-size:11px; min-width:0; }
 .calendar-voice-review :is(button,input,select):focus-visible { outline:2px solid #d5bc83; outline-offset:2px; }
 .calendar-voice-live { position:absolute; bottom:calc(100% + 8px); right:0; width:100%; padding:8px 12px; border-radius:12px; background:#26251f; color:#e8d09c; font-size:11px; z-index:2; pointer-events:none; }
 .calendar-voice-live span { display:block; overflow-wrap:anywhere; }

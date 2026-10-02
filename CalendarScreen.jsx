@@ -89,8 +89,9 @@ import MonthlyGoal from './MonthlyGoal';
 import AmountKeypad, {AmountInput} from './src/shared/ui/AmountEntry.jsx';
 import CalendarVoiceButton from './src/shared/ui/CalendarVoiceButton.jsx';
 import { financialVoiceAnswer } from './src/shared/lib/financialVoiceAnswer.js';
-import { categoryMatches, resolveLocalizedCategory } from './src/shared/lib/voiceCategory.js';
+import { categoryMatches, normalizeVoiceCategory, resolveLocalizedCategory } from './src/shared/lib/voiceCategory.js';
 import useVoiceCategories from './src/shared/ui/useVoiceCategories.js';
+import CategoryPicker from './src/shared/ui/CategoryPicker.jsx';
 import CtraderControl from './src/features/ctrader/CtraderControl';
 import { createQrMatrix, drawQrToCanvas } from './qrCode.js';
 import { useReferral } from './src/features/referrals/useReferral.js';
@@ -2434,8 +2435,8 @@ export default function CalendarScreen() {
       });
     }
     setFormError('');
-    // FREE keeps its current expanded category flow. PRO starts intentionally minimal;
-    // editing opens details only when the saved record actually contains extra context.
+    // Categories open in the compact picker. PRO opens extra details only when
+    // the saved record contains a note, trade limits or a connected source.
     setDetailsOpen(!traderMode || Boolean(traderMode && tradeToEdit && (tradeToEdit.comment || tradeToEdit.take_profit != null || tradeToEdit.stop_loss != null || (tradeToEdit.platform && tradeToEdit.platform !== 'Manual'))));
     setModalOpen(true);
     requestAnimationFrame(() => setModalVisible(true));
@@ -2666,7 +2667,7 @@ export default function CalendarScreen() {
       }),
       });
       const planIdToResolve = pendingPlanRecordId;
-      if (!saveAsTrade && !getMoneyCategoryMeta(instrument)) voiceCategories.add(instrument);
+      if (!saveAsTrade) voiceCategories.add(instrument);
       if (planIdToResolve) {
         setPendingPlanRecordId(null);
         await resolvePlan(planIdToResolve, 'completed');
@@ -2715,7 +2716,7 @@ export default function CalendarScreen() {
     const destination = entry.destination || 'main';
     if (!['main', 'wallet', 'both'].includes(destination)) throw new Error(t('entrySaveFailed'));
     if (destination !== 'main' && (!proAccessActive || proAccessLoading)) throw new Error(language === 'zh-CN' ? "钱包需要 PRO，请选择日历。" : (language === 'ru' ? 'Кошелёк доступен с PRO. Выберите календарь.' : language === 'en' ? 'Wallet requires PRO. Choose Calendar.' : 'Portofelul necesită PRO. Alege calendarul.'));
-    const names = [...MONEY_CATEGORIES.map(item => item.key), ...voiceCategories.categories];
+    const names = moneyCategoryNames;
     const instrument = resolveLocalizedCategory(entry.category || 'Другое', MONEY_CATEGORIES, names).trim().toUpperCase();
     if (!instrument || instrument.length > 60) throw new Error(t('enterSymbolOrCategory'));
     const signedPnl = entry.sign === 'minus' ? -magnitude : magnitude;
@@ -2726,7 +2727,7 @@ export default function CalendarScreen() {
         saveWallet: () => wallet.saveTransaction({dateKey, time, title: instrument, amount: magnitude, kind: signedPnl < 0 ? 'expense' : 'income', currency: entry.currency, comment: ''}),
         saveCalendar: () => hookSaveTrade({dateKey, isEditing: false, time, instrument, direction: signedPnl < 0 ? 'SHORT' : 'LONG', signedPnl, comment: '', platform: 'Manual', currency: entry.currency, takeProfit: null, stopLoss: null, traderMode: false}),
       });
-      if (!getMoneyCategoryMeta(instrument)) voiceCategories.add(instrument);
+      voiceCategories.add(instrument);
     } catch (error) {
       if (destination === 'both' && progress.wallet && !progress.calendar) throw new Error(language === 'zh-CN' ? "已保存到钱包，请点击保存以完成日历保存。" : (language === 'ru' ? 'В кошельке запись сохранена, в календаре — ещё нет. Нажмите «Сохранить» для завершения.' : language === 'en' ? 'Saved in the wallet. Tap Save to finish saving in the calendar.' : 'Salvat în portofel. Apasă Salvează pentru a finaliza în calendar.'));
       throw error;
@@ -2773,7 +2774,6 @@ export default function CalendarScreen() {
   const [historyCurrency, setHistoryCurrency] = useState(() => currency || 'USD');
   const [historyNameFilter, setHistoryNameFilter] = useState('');
   const [savingsReview, setSavingsReview] = useState(null);
-  const [historyCategoryMenuOpen, setHistoryCategoryMenuOpen] = useState(false);
   const [historyFiltersOpen, setHistoryFiltersOpen] = useState(false);
   const [historyPeriodMenuOpen, setHistoryPeriodMenuOpen] = useState(false);
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
@@ -2855,10 +2855,16 @@ export default function CalendarScreen() {
     return DEFAULT_ASSET_TAGS.includes(normalized) || /BTC|ETH|SOL|XRP|DOGE|BNB|ADA|USDT|XAU|XAG|GOLD|SILVER|EURUSD|GBPUSD|USDJPY|NDX|NASDAQ|SPX|OIL|WTI|BRENT|КРИПТ|ЗОЛОТ|СЕРЕБР/.test(normalized);
   }
 
+  const moneyCategoryNames = useMemo(() => {
+    const names = [...MONEY_CATEGORIES.map(item => item.key), ...voiceCategories.categories,
+      ...Object.values(manualTrades || {}).flat().filter(item => !isTradingHistoryRecord(item)).map(item => item.instrument)];
+    return names.filter((name, index) => typeof name === 'string' && name.trim() && name.length <= 60
+      && names.findIndex(other => normalizeVoiceCategory(other) === normalizeVoiceCategory(name)) === index);
+  }, [manualTrades, voiceCategories.categories]);
+
   const historyNameOptions = useMemo(() => [...new Set(
-    Object.values(manualTrades).flat().map((trade) => trade.instrument).filter(Boolean)
+    Object.values(manualTrades).flat().filter(item => (traderMode && historyScope !== 'money') || !isTradingHistoryRecord(item)).map((trade) => trade.instrument).filter(Boolean)
   )]
-    .filter((name) => (traderMode && historyScope !== 'money') || [...MONEY_CATEGORIES.map(category => category.key), ...voiceCategories.categories].some(category => category.toUpperCase() === name.trim().toUpperCase()))
     .sort((a, b) => a.localeCompare(b, language)), [manualTrades, language, traderMode, historyScope, voiceCategories.categories]);
 
   useEffect(() => {
@@ -3693,69 +3699,15 @@ export default function CalendarScreen() {
     return getMoneyCategoryMeta(instrument)?.icon || CircleDollarSign || MoreHorizontal;
   };
 
-  const moneyCategoriesWithIcons = [...MONEY_CATEGORIES, ...voiceCategories.categories.filter(name => !getMoneyCategoryMeta(name)).map(key => ({ key, icon: MoreHorizontal }))].filter((item) =>
+  const moneyCategoriesWithIcons = moneyCategoryNames.map(key => ({key, ...getMoneyCategoryMeta(key), icon: getHistoryCategoryIcon(key)})).filter((item) =>
     !item.type || item.type === form.sign || getMoneyCategoryMeta(form.instrument)?.key === item.key
   );
 
-  const renderHistoryCategoryPicker = (className = '') => {
-    const ActiveIcon = historyNameFilter ? getHistoryCategoryIcon(historyNameFilter) : CircleDollarSign;
-    return (
-      <div className={`relative ${className}`}>
-        <button
-          type="button"
-          onClick={() => setHistoryCategoryMenuOpen((open) => !open)}
-          className={`flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors ${
-            isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-amber-400/50' : 'border-zinc-800 bg-black/20 text-zinc-200 hover:border-amber-400/35'
-          }`}
-        >
-          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${
-            isLight
-              ? 'border-amber-200/80 bg-gradient-to-br from-amber-50 to-white text-amber-600 shadow-sm'
-              : 'border-amber-400/15 bg-gradient-to-br from-amber-400/[0.10] to-zinc-950 text-amber-400'
-          }`}>
-            <ActiveIcon className="h-4 w-4 stroke-[1.8]" />
-          </span>
-          <span className="min-w-0 flex-1 truncate text-xs font-data">{(traderMode && historyScope !== 'money' ? historyNameFilter : getMoneyCategoryLabel(historyNameFilter, language)) || t('all')}</span>
-          <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-zinc-500 transition-transform ${historyCategoryMenuOpen ? 'rotate-180' : ''}`} />
-        </button>
-        {historyCategoryMenuOpen && (
-          <div className={`absolute left-0 top-full z-40 mt-2 w-full min-w-[210px] overflow-hidden rounded-2xl border p-1.5 shadow-2xl ${
-            isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950'
-          }`}>
-            <div className="max-h-64 overflow-y-auto pr-1">
-              {[{ name: '', Icon: CircleDollarSign, label: t('all') }, ...historyNameOptions.map((name) => ({ name, Icon: getHistoryCategoryIcon(name), label: traderMode && historyScope !== 'money' ? name : getMoneyCategoryLabel(name, language) }))].map(({ name, Icon, label }) => {
-                const active = historyNameFilter === name;
-                return (
-                  <button
-                    key={name || '__all__'}
-                    type="button"
-                    onClick={() => { setHistoryNameFilter(name); setHistoryCategoryMenuOpen(false); }}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs transition-colors ${
-                      active
-                        ? 'bg-amber-400/12 text-amber-600'
-                        : isLight ? 'text-zinc-700 hover:bg-zinc-50' : 'text-zinc-300 hover:bg-zinc-900'
-                    }`}
-                  >
-                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
-                      active
-                        ? 'border-amber-400/25 bg-amber-400/[0.12] text-amber-600'
-                        : isLight
-                          ? 'border-zinc-200 bg-white text-zinc-500 shadow-sm'
-                          : 'border-white/[0.06] bg-white/[0.03] text-zinc-400'
-                    }`}>
-                      <Icon className="h-4 w-4 stroke-[1.8]" />
-                    </span>
-                    <span className="min-w-0 flex-1 truncate font-medium">{label}</span>
-                    {active && <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
+  const renderHistoryCategoryPicker = (className = '') => (
+    <CategoryPicker className={className} userId={traderMode && historyScope !== 'money' ? `${user?.id || 'guest'}:instruments` : user?.id} language={language} isLight={isLight}
+      value={historyNameFilter} onChange={setHistoryNameFilter} allOption={t('all')}
+      options={historyNameOptions.map(value => ({value, label: traderMode && historyScope !== 'money' ? value : getMoneyCategoryLabel(value, language), icon: getHistoryCategoryIcon(value)}))}/>
+  );
 
   function openHistory() {
     setHistoryOpen(true);
@@ -3784,7 +3736,6 @@ export default function CalendarScreen() {
     setHistoryVisible(false);
     setHistoryOpen(false);
     setHistoryFiltersOpen(false);
-    setHistoryCategoryMenuOpen(false);
     openModal(trade, trade.dateKey);
   }
 
@@ -3994,7 +3945,6 @@ export default function CalendarScreen() {
 
   const renderProTradeComposer = () => {
     const isFinanceEntry = proEntryMode === 'finance';
-    const selectedMoneyCategory = getMoneyCategoryMeta(form.instrument);
 
     return (
       <div className={`mt-3 sm:min-h-0 ${detailsOpen ? 'sm:overflow-y-auto sm:overscroll-contain sm:pr-1' : 'sm:overflow-visible'}`}>
@@ -4126,36 +4076,10 @@ export default function CalendarScreen() {
           <div>
             <div className="mb-2 flex items-center justify-between">
               <p className={`font-data text-[9px] uppercase tracking-[0.20em] ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{proEntryCopy.category}</p>
-              {selectedMoneyCategory && <span className={`text-[10px] ${isLight ? 'text-zinc-400' : 'text-zinc-700'}`}>{getMoneyCategoryLabel(selectedMoneyCategory.key, language)}</span>}
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {moneyCategoriesWithIcons.map((category) => {
-                const Icon = category.icon;
-                const active = getMoneyCategoryMeta(form.instrument)?.key === category.key || form.instrument === category.key;
-                return (
-                  <button
-                    key={category.key}
-                    type="button"
-                    onClick={() => { setForm((current) => ({ ...current, instrument: category.key })); setFormError(''); }}
-                    className={`flex min-h-[58px] items-center gap-2.5 rounded-2xl border px-3 text-left transition-all ${
-                      active
-                        ? 'border-amber-400/30 bg-amber-400/[0.08] text-amber-400'
-                        : isLight ? 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300' : 'border-white/[0.06] bg-white/[0.02] text-zinc-400 hover:border-white/[0.11] hover:bg-white/[0.035]'
-                    }`}
-                  >
-                    <Icon className="h-4 w-4 shrink-0 stroke-[1.7]" />
-                    <span className="min-w-0 truncate text-[11px] font-medium">{getMoneyCategoryLabel(category.key, language)}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <input
-              type="text"
-              value={selectedMoneyCategory ? '' : form.instrument}
-              onChange={(event) => { setForm((current) => ({ ...current, instrument: event.target.value })); setFormError(''); }}
-              className={`mt-2.5 w-full rounded-2xl border bg-transparent px-4 py-3 text-sm outline-none transition-colors ${isLight ? 'border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-amber-400/60' : 'border-white/[0.06] text-zinc-200 placeholder:text-zinc-700 focus:border-amber-400/35'}`}
-              placeholder={`+ ${proEntryCopy.customCategory}`}
-            />
+            <CategoryPicker options={moneyCategoriesWithIcons.map(category => ({value: category.key, label: getMoneyCategoryLabel(category.key, language), icon: category.icon}))}
+              value={form.instrument} onChange={instrument => {setForm(current => ({...current, instrument}));setFormError('');}}
+              userId={user?.id} language={language} isLight={isLight} allowCreate ariaLabel={t('category')}/>
 
             <button
               type="button"
@@ -4966,7 +4890,7 @@ export default function CalendarScreen() {
               {t('addAction')}
             </span>
           </button>
-          <CalendarVoiceButton onSaveEntry={saveReviewedVoiceEntry} defaultCurrency={currency} walletAvailable={proAccessActive && !proAccessLoading} language={language} isLight={isLight} traderMode={traderMode} categoryOptions={[...new Set([...MONEY_CATEGORIES.map(item => item.key), ...voiceCategories.categories])].map(value => ({ value, label: getMoneyCategoryLabel(value, language) }))} onCommand={(command) => {
+          <CalendarVoiceButton userId={user?.id} onSaveEntry={saveReviewedVoiceEntry} defaultCurrency={currency} walletAvailable={proAccessActive && !proAccessLoading} language={language} isLight={isLight} traderMode={traderMode} categoryOptions={moneyCategoryNames.map(value => ({value, label: getMoneyCategoryLabel(value, language), icon: getHistoryCategoryIcon(value)}))} onCommand={(command) => {
             if (command.type === 'category-prompt') return language === 'zh-CN' ? "请在命令中包含类别名称。" : (language === 'ru' ? 'Добавьте название после команды. Например: создай категорию Настольные игры.' : language === 'en' ? 'Include the category name in your command.' : 'Include numele categoriei în comandă.');
             if (command.type === 'history') { openHistory(); return; }
             if (command.type === 'settings') { openSettings(); return; }
@@ -4976,7 +4900,7 @@ export default function CalendarScreen() {
             if (command.type === 'month') { if (command.direction > 0) goToNextMonth(); else goToPrevMonth(); return; }
             if (command.type === 'pro') { setProView(command.enabled); return; }
             if (command.type === 'wallet') { if (proAccessActive && !proAccessLoading) openWalletFromCalendarGesture(); else setProView(true); return; }
-            const categoryNames = [...MONEY_CATEGORIES.map(item => item.key), ...voiceCategories.categories, ...Object.values(manualTrades).flat().filter(item => !isTradingHistoryRecord(item)).map(item => item.instrument)];
+            const categoryNames = moneyCategoryNames;
             const resolveCategory = (name) => resolveLocalizedCategory(name, MONEY_CATEGORIES, categoryNames);
             const spokenCategory = command.category ? resolveCategory(command.category) : null;
             if (command.type === 'category') {
@@ -6901,41 +6825,9 @@ export default function CalendarScreen() {
                       <label className={`mb-1.5 block font-data text-[10px] tracking-widest uppercase ${isLight ? 'text-zinc-600' : 'text-zinc-600'}`}>
                         {t('category')}
                       </label>
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="group" aria-label={t('category')}>
-                        {moneyCategoriesWithIcons.map((category) => {
-                          const Icon = category.icon;
-                          const active = getMoneyCategoryMeta(form.instrument)?.key === category.key || form.instrument === category.key;
-                          return (
-                            <button
-                              key={category.key}
-                              type="button"
-                              aria-pressed={active}
-                              onClick={() => { setForm((f) => ({ ...f, instrument: category.key })); setFormError(''); }}
-                              className={[
-                                'flex min-h-[72px] flex-col items-start justify-center gap-2 rounded-xl border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400',
-                                active
-                                  ? 'border-amber-400/70 bg-amber-400/10 text-amber-600'
-                                  : isLight
-                                  ? 'border-zinc-200 bg-white text-zinc-600 hover:border-amber-400/50'
-                                  : 'border-white/[0.07] bg-white/[0.025] text-zinc-300 hover:border-amber-400/40 hover:bg-white/5',
-                              ].join(' ')}
-                            >
-                              <Icon className="h-5 w-5 shrink-0 stroke-[1.6]" />
-                              <span className="text-xs font-medium">{getMoneyCategoryLabel(category.key, language)}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <input
-                        type="text"
-                        value={getMoneyCategoryLabel(form.instrument, language)}
-                        aria-label={t('ownCategory')}
-                        onChange={(e) => { setForm((f) => ({ ...f, instrument: e.target.value })); setFormError(''); }}
-                        className={`mt-1.5 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-emerald-400/50 ${
-                          isLight ? 'bg-white border-zinc-300 text-zinc-900' : 'bg-zinc-950 border-zinc-800 text-zinc-100'
-                        }`}
-                        placeholder={t('ownCategory')}
-                      />
+                      <CategoryPicker options={moneyCategoriesWithIcons.map(category => ({value: category.key, label: getMoneyCategoryLabel(category.key, language), icon: category.icon}))}
+                        value={form.instrument} onChange={instrument => {setForm(current => ({...current, instrument}));setFormError('');}}
+                        userId={user?.id} language={language} isLight={isLight} allowCreate ariaLabel={t('category')}/>
                     </div>
                   )}
 

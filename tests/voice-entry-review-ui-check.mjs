@@ -58,7 +58,7 @@ try{
  await phrase('запиши в кошелёк');assert.match(await page.locator('.calendar-voice-review-summary').textContent(),/Кошелёк/);
  await phrase('непонятная фраза');assert.match(await page.locator('.calendar-voice-review [role="alert"]').textContent(),/Не понял/);assert.equal(await page.evaluate(()=>window.saves.length),0);
  await page.getByRole('button',{name:'Исправить',exact:true}).click();await page.getByLabel('Сумма',{exact:true}).fill('400');
- await page.getByLabel('Категория',{exact:true}).fill('Кафе');await page.getByLabel('Место записи',{exact:true}).selectOption('main');
+ await page.getByRole('button',{name:'Категория',exact:true}).click();await page.getByRole('textbox',{name:'Найти раздел'}).fill('Кафе');await page.getByRole('button',{name:'Кафе',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});await page.getByLabel('Место записи',{exact:true}).selectOption('main');
  await page.getByLabel('Сумма',{exact:true}).fill('');assert.equal(await page.getByRole('button',{name:'Сохранить',exact:true}).isDisabled(),true);await page.getByLabel('Сумма',{exact:true}).fill('400');
  await page.locator('.calendar-voice-feedback input').uncheck();assert.equal(await page.locator('[data-voice-settings] input[type=checkbox]').isChecked(),false);
  await page.evaluate(()=>window.waitSave=true);await page.getByRole('button',{name:'Сохранить',exact:true}).evaluate(button=>{button.click();button.click();});
@@ -85,7 +85,7 @@ try{
  await phrase('350 лей и 400 лей');assert.match(await page.locator('.calendar-voice-answer').textContent(),/несколько сумм/);assert.equal(await page.locator('.calendar-voice-review').count(),0);
  await phrase('400');await page.locator('.calendar-voice-review').waitFor();assert.match(await page.locator('.calendar-voice-review-summary').textContent(),/Сегодня · Продукты\+400 MDL/);
  await phrase('на продукты и на кафе');assert.match(await page.locator('.calendar-voice-answer').textContent(),/одну категорию/);assert.equal(await page.getByRole('button',{name:/Создать/}).count(),0);
- await page.getByLabel('Категория',{exact:true}).selectOption('Продукты');await page.locator('.calendar-voice-review').waitFor();
+ await page.getByRole('button',{name:'Категория',exact:true}).click();await page.getByRole('textbox',{name:'Найти раздел'}).fill('Продукты');await page.getByRole('button',{name:'Продукты',exact:true}).click();await page.locator('.calendar-voice-review').waitFor();
  assert.equal(await page.evaluate(()=>window.saves.length),0);await phrase('отмена');assert.equal(await page.locator('.calendar-voice-review').count(),0);
  await phrase('открой историю');assert.equal(await page.evaluate(()=>window.commands[0].type),'history');
  await page.locator('[data-voice-settings] input[type=checkbox]').check();await phrase('потратил 20');await page.waitForFunction(()=>window.spoken?.text.includes('леях'));
