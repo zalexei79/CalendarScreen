@@ -6,10 +6,11 @@ const bundle=await createRequire(path.resolve('package.json'))('esbuild').build(
 import React,{useState} from 'react';import {createRoot} from 'react-dom/client';
 import CategoryPicker from './src/shared/ui/CategoryPicker.jsx';import useVoiceCategories from './src/shared/ui/useVoiceCategories.js';
 import {MONEY_CATEGORIES,getMoneyCategoryLabel} from './src/shared/config/constants.js';
-function App(){const[owner,setOwner]=useState('a'),[light,setLight]=useState(false),[language,setLanguage]=useState('ru'),[value,setValue]=useState('Продукты');const categories=useVoiceCategories(owner);
- window.switchOwner=setOwner;window.setLight=setLight;window.setLanguage=setLanguage;window.addCategory=categories.add;
- const options=[...MONEY_CATEGORIES,...categories.categories.map(key=>({key}))].map(item=>({value:item.key,label:getMoneyCategoryLabel(item.key,language),icon:item.icon}));
- return <main style={{maxWidth:500,margin:'60px auto',padding:16}}><h1 style={{color:light?'#222':'#eee',fontSize:24,marginBottom:24}}>DAYRIS</h1><CategoryPicker options={options} value={value} onChange={setValue} userId={owner} language={language} isLight={light} allowCreate/><div style={{marginTop:20}}><CategoryPicker options={options} value={value} onChange={setValue} userId={owner} language={language} isLight={light} allOption="Все"/></div><output>{value}</output></main>;
+function App(){const[owner,setOwner]=useState('a'),[light,setLight]=useState(false),[language,setLanguage]=useState('ru'),[value,setValue]=useState('Продукты'),[management,setManagement]=useState(false);const categories=useVoiceCategories(owner);
+ window.switchOwner=setOwner;window.setLight=setLight;window.setLanguage=setLanguage;window.addCategory=categories.add;window.setManagement=setManagement;
+ const options=[...MONEY_CATEGORIES,...categories.categories.map(key=>({key}))].filter(item=>!categories.hidden.some(name=>name.toLowerCase()===item.key.toLowerCase())).map(item=>({value:item.key,label:getMoneyCategoryLabel(item.key,language),icon:item.icon}));
+ const actions=management?{onCreate:categories.add,onDelete:async name=>{if(window.failRemoval)throw new Error('retry');categories.remove(name);}}:{};
+ return <main style={{maxWidth:500,margin:'60px auto',padding:16}}><h1 style={{color:light?'#222':'#eee',fontSize:24,marginBottom:24}}>DAYRIS</h1><CategoryPicker {...actions} options={options} value={value} onChange={setValue} userId={owner} language={language} isLight={light} allowCreate/><div style={{marginTop:20}}><CategoryPicker options={options} value={value} onChange={setValue} userId={owner} language={language} isLight={light} allOption="Все"/></div><output>{value}</output></main>;
 }createRoot(document.getElementById('root')).render(<App/>);
 `},bundle:true,write:false,outfile:'categories.js',format:'iife'});
 const utility=fs.readFileSync(path.join('dist/assets',fs.readdirSync('dist/assets').find(file=>file.endsWith('.css'))),'utf8');
@@ -66,5 +67,16 @@ try{
  await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});assert.equal(await page.locator('#root').evaluate(element=>element.inert),false);
  const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('dayris_category_library:a')));assert.equal(stored.favorites.length,6);
  await page.reload();await open();assert.equal(await page.locator('.category-picker-quick .category-picker-choice').count(),6);await close();
- assert.deepEqual(errors,[]);console.log('PASS: 100 categories, quick access, live search, favorites limit/order, recents, owner isolation, synchronized pickers, creation draft, keyboard/focus, light/dark 320–1280px, reduced motion');
+ await page.evaluate(()=>setManagement(true));
+ for(const width of [320,390,1280])for(const light of [false,true]){
+  await page.setViewportSize({width,height:844});await page.evaluate(light=>setLight(light),light);await open();
+  await page.getByRole('button',{name:'Добавить раздел',exact:true}).click();await page.getByRole('textbox',{name:'Название раздела'}).fill('Ручной раздел');
+  if(width===390&&light)await page.screenshot({path:'tests/category-create-light.png',animations:'disabled'});
+  await page.getByRole('button',{name:'Создать',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});assert.equal(await page.locator('output').textContent(),'Ручной раздел');
+  await open();await page.getByRole('button',{name:'Управлять разделами'}).click();await search().fill('Ручной раздел');await page.getByRole('button',{name:'Удалить раздел Ручной раздел',exact:true}).click();
+  const rect=await page.locator('.category-picker-sheet').boundingBox();assert.ok(rect.x>=0&&rect.x+rect.width<=width&&rect.y>=0&&rect.y+rect.height<=844);
+  if(width===320&&!light){await page.evaluate(()=>window.failRemoval=true);await page.getByRole('button',{name:'Удалить',exact:true}).click();await page.getByRole('alert').waitFor();assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem('dayris_money_categories:a')).includes('Ручной раздел')));await page.evaluate(()=>window.failRemoval=false);}
+  await page.getByRole('button',{name:'Удалить',exact:true}).click();await page.locator('.category-picker-confirm').waitFor({state:'detached'});assert.equal(await page.locator('output').textContent(),'Другое');await close();
+ }
+ assert.deepEqual(errors,[]);console.log('PASS: manual create/delete/retry, 100 categories, favorites/recents, owner isolation, keyboard/focus, light/dark 320–1280px, reduced motion');
 }finally{await browser.close();}

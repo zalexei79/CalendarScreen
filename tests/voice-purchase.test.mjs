@@ -13,8 +13,14 @@ test('purchase asks for amount and category, accepts existing or separate catego
  assert.equal(dialog('отмена',state.draft).cancelled,true);
 });
 test('speech text omits escape syntax and expands currency codes',()=>{
- assert.equal(spokenText('55 \\n / 100 USD'),'55 из 100 долларов');
+ assert.equal(spokenText('55 \\n / 100 USD'),'55, 100 долларов');
  assert.equal(spokenText('Доход \\u0440\\u0443\\u0431'),'Доход руб');
+});
+test('slashes become pauses in every voice language, including escaped and Unicode slashes',()=>{
+ for(const locale of ['ru','en','ro','zh']){
+  assert.equal(spokenText('сохрани / отмена ／ да ∕ нет ⁄ выбор',locale),'сохрани, отмена, да, нет, выбор');
+  assert.doesNotMatch(spokenText('a / / b \\u002f c \\ d',locale),/[\\/⁄∕／]|сл[эе]ш|из|out of| din /);
+ }
 });
 test('category totals can include earlier months without mixing currencies',()=>{
  const command=parse('сколько потратил на крем за всё время');assert.equal(command.period,'all-time');assert.equal(command.category,'крем');

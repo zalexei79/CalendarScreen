@@ -1765,6 +1765,7 @@ export default function CalendarScreen() {
     retryFailedSync,
     saveTrade: hookSaveTrade,
     deleteTrade: hookDeleteTrade,
+    detachMoneyCategory,
     clearAllTrades: hookClearAllTrades,
     refreshFromCloud,
   } = useTrades({ user });
@@ -2858,9 +2859,21 @@ export default function CalendarScreen() {
   const moneyCategoryNames = useMemo(() => {
     const names = [...MONEY_CATEGORIES.map(item => item.key), ...voiceCategories.categories,
       ...Object.values(manualTrades || {}).flat().filter(item => !isTradingHistoryRecord(item)).map(item => item.instrument)];
-    return names.filter((name, index) => typeof name === 'string' && name.trim() && name.length <= 60
-      && names.findIndex(other => normalizeVoiceCategory(other) === normalizeVoiceCategory(name)) === index);
-  }, [manualTrades, voiceCategories.categories]);
+    const unique = new Map(), hidden = new Set(voiceCategories.hidden.map(normalizeVoiceCategory));
+    for (const name of names) {
+      const id=normalizeVoiceCategory(name);
+      if(typeof name==='string'&&name.trim()&&name.length<=60&&!hidden.has(id)&&!unique.has(id))unique.set(id,name);
+    }
+    return [...unique.values()];
+  }, [manualTrades, voiceCategories.categories, voiceCategories.hidden]);
+
+  async function removeMoneyCategory(name) {
+    if(saveInFlightRef.current)throw new Error(t('saving'));
+    await detachMoneyCategory(name,item=>!isTradingHistoryRecord(item));
+    voiceCategories.remove(name);
+    if(normalizeVoiceCategory(historyNameFilter)===normalizeVoiceCategory(name))setHistoryNameFilter('');
+    setForm(current=>normalizeVoiceCategory(current.instrument)===normalizeVoiceCategory(name)?{...current,instrument:'Другое'}:current);
+  }
 
   const historyNameOptions = useMemo(() => [...new Set(
     Object.values(manualTrades).flat().filter(item => (traderMode && historyScope !== 'money') || !isTradingHistoryRecord(item)).map((trade) => trade.instrument).filter(Boolean)
@@ -3705,6 +3718,7 @@ export default function CalendarScreen() {
 
   const renderHistoryCategoryPicker = (className = '') => (
     <CategoryPicker className={className} userId={traderMode && historyScope !== 'money' ? `${user?.id || 'guest'}:instruments` : user?.id} language={language} isLight={isLight}
+      onCreate={traderMode && historyScope !== 'money' ? undefined : voiceCategories.add} onDelete={traderMode && historyScope !== 'money' ? undefined : removeMoneyCategory}
       value={historyNameFilter} onChange={setHistoryNameFilter} allOption={t('all')}
       options={historyNameOptions.map(value => ({value, label: traderMode && historyScope !== 'money' ? value : getMoneyCategoryLabel(value, language), icon: getHistoryCategoryIcon(value)}))}/>
   );
@@ -4078,6 +4092,8 @@ export default function CalendarScreen() {
               <p className={`font-data text-[9px] uppercase tracking-[0.20em] ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{proEntryCopy.category}</p>
             </div>
             <CategoryPicker options={moneyCategoriesWithIcons.map(category => ({value: category.key, label: getMoneyCategoryLabel(category.key, language), icon: category.icon}))}
+              onCreate={voiceCategories.add} onDelete={removeMoneyCategory}
+              managementOptions={moneyCategoryNames.map(value=>({value,label:getMoneyCategoryLabel(value,language),icon:getHistoryCategoryIcon(value)}))}
               value={form.instrument} onChange={instrument => {setForm(current => ({...current, instrument}));setFormError('');}}
               userId={user?.id} language={language} isLight={isLight} allowCreate ariaLabel={t('category')}/>
 
@@ -4890,7 +4906,7 @@ export default function CalendarScreen() {
               {t('addAction')}
             </span>
           </button>
-          <CalendarVoiceButton userId={user?.id} onSaveEntry={saveReviewedVoiceEntry} defaultCurrency={currency} walletAvailable={proAccessActive && !proAccessLoading} language={language} isLight={isLight} traderMode={traderMode} categoryOptions={moneyCategoryNames.map(value => ({value, label: getMoneyCategoryLabel(value, language), icon: getHistoryCategoryIcon(value)}))} onCommand={(command) => {
+          <CalendarVoiceButton userId={user?.id} onCreateCategory={voiceCategories.add} onDeleteCategory={removeMoneyCategory} onSaveEntry={saveReviewedVoiceEntry} defaultCurrency={currency} walletAvailable={proAccessActive && !proAccessLoading} language={language} isLight={isLight} traderMode={traderMode} categoryOptions={moneyCategoryNames.map(value => ({value, label: getMoneyCategoryLabel(value, language), icon: getHistoryCategoryIcon(value)}))} onCommand={(command) => {
             if (command.type === 'category-prompt') return language === 'zh-CN' ? "请在命令中包含类别名称。" : (language === 'ru' ? 'Добавьте название после команды. Например: создай категорию Настольные игры.' : language === 'en' ? 'Include the category name in your command.' : 'Include numele categoriei în comandă.');
             if (command.type === 'history') { openHistory(); return; }
             if (command.type === 'settings') { openSettings(); return; }
@@ -6826,6 +6842,8 @@ export default function CalendarScreen() {
                         {t('category')}
                       </label>
                       <CategoryPicker options={moneyCategoriesWithIcons.map(category => ({value: category.key, label: getMoneyCategoryLabel(category.key, language), icon: category.icon}))}
+                        onCreate={voiceCategories.add} onDelete={removeMoneyCategory}
+                        managementOptions={moneyCategoryNames.map(value=>({value,label:getMoneyCategoryLabel(value,language),icon:getHistoryCategoryIcon(value)}))}
                         value={form.instrument} onChange={instrument => {setForm(current => ({...current, instrument}));setFormError('');}}
                         userId={user?.id} language={language} isLight={isLight} allowCreate ariaLabel={t('category')}/>
                     </div>

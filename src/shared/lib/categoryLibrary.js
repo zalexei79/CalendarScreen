@@ -1,6 +1,10 @@
 import {normalizeVoiceCategory} from './voiceCategory.js';
 
 export const FAVORITE_LIMIT = 6;
+export function forgetCategory(profile,value){
+ const id=normalizeVoiceCategory(value);
+ return {...profile,favorites:profile.favorites.filter(item=>normalizeVoiceCategory(item)!==id),recent:profile.recent.filter(item=>normalizeVoiceCategory(item)!==id)};
+}
 export function cleanCategoryProfile(value) {
  const unique = (items, limit) => [...new Map((Array.isArray(items) ? items : [])
   .filter(item => typeof item === 'string' && item.trim() && item.length <= 60)

@@ -170,6 +170,20 @@ export function useOfflineQueue({ user, onSyncedInsert }) {
     return true;
   }, [activeUserId, readOfflineQueue, writeOfflineQueue, updateQueueState]);
 
+  // Preserve pending category edits during a cloud refresh. Only the label is
+  // overlaid; balances, dates and other financial fields remain authoritative.
+  const getPendingInstrumentUpdates = useCallback(() => {
+    const labels = new Map();
+    for (const item of readOfflineQueue()) {
+      if (item.user_id !== activeUserId) continue;
+      const instrument = item.action === 'insert' ? item.trade?.instrument : item.action === 'update' ? item.updates?.instrument : null;
+      const id = item.action === 'insert' ? item.tempId : item.tradeId;
+      if (typeof instrument === 'string') labels.set(`${item.date_key}:${id}`, instrument);
+      if (item.action === 'delete') labels.delete(`${item.date_key}:${id}`);
+    }
+    return labels;
+  }, [activeUserId, readOfflineQueue]);
+
   const flushOfflineQueue = useCallback(async () => {
     if (!activeUserId || !navigator.onLine || isFlushingRef.current) return;
 
@@ -303,6 +317,7 @@ export function useOfflineQueue({ user, onSyncedInsert }) {
     failedSyncCount,
     enqueueOperation,
     amendPendingInsert,
+    getPendingInstrumentUpdates,
     retryFailedSync,
     flushOfflineQueue,
   };

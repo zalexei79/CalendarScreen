@@ -4,6 +4,7 @@ import { getValidUserId } from '../../../shared/lib/formatters';
 import { getTradesCacheKey } from '../../../shared/config/constants';
 import { fromSupabaseTradeRow, toSupabaseTradePayload, toSupabaseTradeUpdates } from '../lib/tradeMapper';
 import { isRetryableNetworkError, useOfflineQueue } from './useOfflineQueue';
+import {categoryRemovalTargets,detachCategoryLabels,UNCATEGORIZED} from '../../../shared/lib/categoryRemoval.js';
 
 function normalizeCurrency(value) {
   const code = String(value || '').trim().toUpperCase();
@@ -71,6 +72,7 @@ export function useTrades({ user }) {
     failedSyncCount,
     enqueueOperation,
     amendPendingInsert,
+    getPendingInstrumentUpdates,
     retryFailedSync: retryQueuedOperations,
     flushOfflineQueue,
   } = useOfflineQueue({ user, onSyncedInsert: handleSyncedInsert });
@@ -82,7 +84,10 @@ export function useTrades({ user }) {
   }, [retryQueuedOperations, flushOfflineQueue]);
 
   const reconcileCloudRows = useCallback((rows) => {
-    const cloud = groupRows(rows);
+    const cloud = groupRows(rows), pendingLabels = getPendingInstrumentUpdates();
+    for (const [dateKey, items] of Object.entries(cloud)) {
+      cloud[dateKey] = items.map(item => pendingLabels.has(`${dateKey}:${item.id}`) ? {...item, instrument: pendingLabels.get(`${dateKey}:${item.id}`)} : item);
+    }
     setManualTrades((prev) => {
       if (currentOwnerRef.current !== cloudUserId) return prev;
       const next = { ...cloud };
@@ -96,7 +101,7 @@ export function useTrades({ user }) {
       cacheTradesLocally(next, cloudUserId);
       return next;
     });
-  }, [cacheTradesLocally, cloudUserId]);
+  }, [cacheTradesLocally, cloudUserId, getPendingInstrumentUpdates]);
 
   const refreshFromCloud = useCallback(async () => {
     if (!cloudUserId || !navigator.onLine) return false;
@@ -254,6 +259,28 @@ export function useTrades({ user }) {
     }
   }, [cloudUserId, cacheTradesLocally, enqueueOperation, amendPendingInsert, refreshFromCloud]);
 
+  const detachMoneyCategory = useCallback(async (name, isMoney) => {
+    if (currentOwnerRef.current !== owner || loadedOwner !== owner) throw new Error('Дождитесь загрузки записей.');
+    const targets = categoryRemovalTargets(manualTradesRef.current, name, isMoney);
+    if (cloudUserId) {
+      for (const target of targets) {
+        if (String(target.id).startsWith('guest-')) continue;
+        const operation = {action:'update',user_id:cloudUserId,tradeId:target.id,date_key:target.dateKey,updates:{instrument:UNCATEGORIZED}};
+        enqueueOperation(operation);
+      }
+      const pending = getPendingInstrumentUpdates();
+      if (targets.some(item => !String(item.id).startsWith('guest-') && pending.get(`${item.dateKey}:${item.id}`) !== UNCATEGORIZED)) {
+        throw new Error('Не удалось сохранить изменение. Попробуйте ещё раз.');
+      }
+    }
+    setManualTrades(prev => {
+      if (currentOwnerRef.current !== owner) return prev;
+      const next = detachCategoryLabels(prev, targets);
+      manualTradesRef.current = next; cacheTradesLocally(next, cloudUserId); return next;
+    });
+    if (cloudUserId && navigator.onLine) void flushOfflineQueue();
+  }, [owner, loadedOwner, cloudUserId, enqueueOperation, getPendingInstrumentUpdates, cacheTradesLocally, flushOfflineQueue]);
+
   const deleteTrade = useCallback(async (dateKey, tradeId) => {
     setManualTrades((prev) => {
       const next = { ...prev, [dateKey]: (prev[dateKey] || []).filter((t) => String(t.id) !== String(tradeId)) };
@@ -288,6 +315,6 @@ export function useTrades({ user }) {
   return {
     manualTrades, setManualTrades, manualTradesRef, cacheTradesLocally,
     pendingSyncCount, failedSyncCount, retryFailedSync,
-    saveTrade, deleteTrade, clearAllTrades, refreshFromCloud,
+    saveTrade, deleteTrade, detachMoneyCategory, clearAllTrades, refreshFromCloud,
   };
 }

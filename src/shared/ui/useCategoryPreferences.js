@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from 'react';
-import {cleanCategoryProfile, rememberCategory, toggleFavorite} from '../lib/categoryLibrary.js';
+import {cleanCategoryProfile, rememberCategory, toggleFavorite, forgetCategory} from '../lib/categoryLibrary.js';
 const eventName = 'dayris-category-library';
 
 export default function useCategoryPreferences(userId) {
@@ -28,5 +28,5 @@ export default function useCategoryPreferences(userId) {
   try {localStorage.setItem(key, JSON.stringify(next));} catch {/* Keep the current session usable. */}
   window.dispatchEvent(new CustomEvent(eventName, {detail: {key, profile: next}}));
  }
- return {profile, remember: value => update(current => rememberCategory(current, value)), toggle: value => update(current => toggleFavorite(current, value))};
+ return {profile, remember: value => update(current => rememberCategory(current, value)), toggle: value => update(current => toggleFavorite(current, value)), forget:value=>update(current=>forgetCategory(current,value))};
 }

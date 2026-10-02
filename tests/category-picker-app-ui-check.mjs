@@ -53,6 +53,29 @@ try{
  await page.getByRole('button',{name:'АКВАРИУМ',exact:true}).click();await page.getByRole('dialog',{name:'Разделы'}).waitFor({state:'detached'});
  assert.match(await page.locator('.category-picker-trigger').textContent(),/АКВАРИУМ/);assert.equal((await cache()).length,3,'history filter preserves records');
  await page.reload();await ready();await page.getByRole('button',{name:'Добавить',exact:true}).click();await page.getByRole('button',{name:'Категория',exact:true}).click();
- assert.equal(await page.locator('.category-picker-quick .category-picker-choice').textContent(),'АКВАРИУМ');assert.deepEqual(errors,[]);
- console.log('PASS: real app manual/voice saves, legacy category discovery, shared favorites/recents, persistence, nested Escape and history filter');
+ assert.equal(await page.locator('.category-picker-quick .category-picker-choice').textContent(),'АКВАРИУМ');
+ // Create a section independently of a financial entry.
+ await page.getByRole('button',{name:'Добавить раздел',exact:true}).click();
+ await page.getByRole('textbox',{name:'Название раздела'}).fill('Настольные игры');
+ await page.getByRole('button',{name:'Создать',exact:true}).click();await page.getByRole('dialog',{name:'Разделы'}).waitFor({state:'detached'});
+ assert.equal((await cache()).length,3);assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem('dayris_money_categories:guest')).includes('Настольные игры')));
+ await page.getByRole('button',{name:'Категория',exact:true}).click();await page.getByRole('textbox',{name:'Найти раздел'}).fill('Настольные игры');
+ assert.equal(await page.getByRole('button',{name:'Настольные игры',exact:true}).count(),1);
+ await page.getByRole('button',{name:'Управлять разделами'}).click();await page.getByRole('button',{name:'Удалить раздел Настольные игры',exact:true}).click();
+ await page.getByRole('button',{name:'Отмена',exact:true}).click();assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem('dayris_money_categories:guest')).includes('Настольные игры')));
+ await page.getByRole('textbox',{name:'Найти раздел'}).fill('АКВАРИУМ');await page.getByRole('button',{name:'Удалить раздел АКВАРИУМ',exact:true}).click();
+ assert.match(await page.locator('.category-picker-confirm').textContent(),/Записи, суммы и даты сохранятся/);
+ const before=await cache();await page.screenshot({path:'tests/category-delete-confirm.png',animations:'disabled'});
+ await page.getByRole('button',{name:'Удалить',exact:true}).dblclick();await page.locator('.category-picker-confirm').waitFor({state:'detached'});
+ const after=await cache();assert.deepEqual(after,before.map(item=>item.instrument==='АКВАРИУМ'?{...item,instrument:'Другое'}:item));
+ assert.equal(await page.getByRole('button',{name:'АКВАРИУМ',exact:true}).count(),0);
+ assert.ok(!await page.evaluate(()=>JSON.parse(localStorage.getItem('dayris_category_library:guest')).favorites.includes('АКВАРИУМ')));
+ await page.getByRole('textbox',{name:'Найти раздел'}).fill('Продукты');await page.getByRole('button',{name:'Удалить раздел Продукты',exact:true}).click();await page.getByRole('button',{name:'Удалить',exact:true}).click();await page.locator('.category-picker-confirm').waitFor({state:'detached'});
+ await page.getByRole('textbox',{name:'Найти раздел'}).fill('Другое');assert.equal(await page.getByRole('button',{name:'Удалить раздел Другое',exact:true}).count(),0);
+ await page.reload();await ready();assert.deepEqual(await cache(),after);
+ await page.getByRole('button',{name:'Добавить',exact:true}).click();await page.getByRole('button',{name:'Категория',exact:true}).click();
+ await page.getByRole('textbox',{name:'Найти раздел'}).fill('АКВАРИУМ');assert.equal(await page.locator('.category-picker-choice').count(),0,'removed section never reappears from old records');
+ await page.getByRole('button',{name:'Создать «АКВАРИУМ»'}).click();await page.getByRole('dialog',{name:'Разделы'}).waitFor({state:'detached'});assert.deepEqual(await cache(),after,'recreating a category does not relabel old money');
+ assert.deepEqual(errors,[]);
+ console.log('PASS: real app independent category creation, cancel/delete, exact preservation of records and amounts, builtin removal, persistence, recreation, manual/voice saves and history filter');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
