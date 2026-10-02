@@ -5,6 +5,19 @@ import { Check, ChevronDown, Pencil, Sparkles, Target, X } from 'lucide-react';
 const celebratedGoals = new Map();
 
 const COPY = {
+  zh: {
+    title: "本月目标",
+    setGoal: "设置目标",
+    editGoal: "修改目标",
+    remaining: "剩余",
+    achieved: "目标已达成",
+    progress: "进度",
+    save: "保存",
+    cancel: "取消",
+    placeholder: "例如 30000",
+    invalid: "请输入大于 0 的金额",
+    celebration: "本月目标已达成！",
+  },
   ru: {
     title: 'Цель месяца',
     setGoal: 'Задать цель',
@@ -48,13 +61,14 @@ const COPY = {
 
 function resolveLanguage(language) {
   const code = String(language || '').toLowerCase();
+  if (code.startsWith('zh')) return 'zh';
   if (code === 'en' || code.startsWith('en-')) return 'en';
   if (['ro', 'md', 'mo', 'ron', 'rum'].includes(code) || code.startsWith('ro-')) return 'ro';
   return 'ru';
 }
 
 function formatGoalNumber(value, language) {
-  const locale = resolveLanguage(language) === 'ro'
+  const locale = resolveLanguage(language) === 'zh' ? 'zh-CN' : resolveLanguage(language) === 'ro'
     ? 'ro-RO'
     : resolveLanguage(language) === 'en'
       ? 'en-US'

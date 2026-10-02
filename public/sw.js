@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v21-offline-startup';
+const CACHE_NAME = 'atj-cache-v22-chinese-localization';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

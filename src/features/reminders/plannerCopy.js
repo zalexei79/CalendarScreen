@@ -1,11 +1,15 @@
 export function plannerLanguage(language) {
   const code = String(language || '').toLowerCase();
+  if (code.startsWith('zh')) return 'zh';
   if (code === 'en' || code.startsWith('en-')) return 'en';
   if (code === 'md' || code === 'ro' || code.startsWith('ro-')) return 'ro';
   return 'ru';
 }
 
 export const PLANNER_COPY = {
+  zh: {
+    locale:'zh-CN', badge:'个人计划', editBadge:'编辑计划', close:'关闭', steps:['事项','时间安排','完成'], headings:['计划什么？','何时提醒？','准备就绪'], descriptions:['选择常用事项，或创建自己的事项。','一次或定期，由你决定。','确认详情，其余交给 DAYRIS。'], templates:[['贷款','偿还贷款','expense'],['手机话费','手机充值','expense'],['房租','支付房租','expense'],['工资','工资','income']], custom:'自定义事项',customHint:'记录重要事项',title:'事项名称',placeholder:'例如，支付学费',addAmount:'添加金额',optional:'选填',amount:'金额',currency:'货币',expense:'支出',income:'收入',amountLater:'可以稍后填写金额',date:'事项日期',firstDate:'首次日期',time:'时间',localTime:'当地时间',repeat:'重复？',frequencies:['仅一次','每月','每周','每年'],monthly:day=>`每月 ${day} 日`,shortMonth:'较短月份在最后一天执行。',limit:'何时结束？',unlimited:'无限制',total:'事项次数',until:'结束日期',countSummary:count=>`共 ${count} 次`,untilSummary:date=>`截至 ${date}`,limitsHint:'首次事项计入次数。若同时设置两种限制，以先达到的为准。',notify:'提醒我',offsets:['事项发生时','提前一天','提前三天','提前一周'],notification:'通知',firstNotification:'首次通知',late:'首次事项已无法提前提醒，将在事项发生时通知。后续按所选规则提醒。',note:'计划立即显示在日历中，确认后才计入余额。',editNote:'更新提醒，已发送的通知不会重复。',change:'修改',noAmount:'无金额',back:'返回',details:'设置详情',review:'确认计划',createNow:'立即创建',saveNow:'保存',create:'创建提醒',save:'保存更改',saving:'正在保存…',requiredTitle:'请输入事项名称。',invalidAmount:'请输入大于或等于 0 的金额，或留空。',future:'请选择未来日期及有效时间。',invalidUntil:'结束日期不能早于首次事项。',invalidCount:'请选择 1 至 600 次。',failed:'无法保存，请重试。',push:'请在浏览器设置中允许通知后重试。',
+  },
   ru: {
     locale: 'ru-RU', badge: 'Личный план', editBadge: 'Редактирование', close: 'Закрыть',
     steps: ['Событие', 'Расписание', 'Готово'],

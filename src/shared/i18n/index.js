@@ -1,4 +1,5 @@
 import { APP_NAME, APP_TITLE, PRO_PLAN_NAME, APP_SLOGAN } from '../config/brand.js';
+import zh from './zh.js';
 
 export const MONTHS = [
   'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
@@ -16,6 +17,7 @@ export const MONTHS_MD = [
 ];
 
 export function monthsFor(language) {
+  if (String(language).toLowerCase().startsWith('zh')) return Array.from({ length: 12 }, (_, i) => `${i + 1}月`);
   if (language === 'en') return MONTHS_EN;
   if (language === 'md' || language === 'ro') return MONTHS_MD;
   return MONTHS;
@@ -839,6 +841,16 @@ Object.assign(TRANSLATIONS.md, {
 });
 
 export function translate(language, key) {
-  const langKey = language === 'ro' ? 'md' : language;
+  const langKey = String(language).toLowerCase().startsWith('zh') ? 'zh-CN' : language === 'ro' ? 'md' : language;
   return (TRANSLATIONS[langKey] && TRANSLATIONS[langKey][key]) || (TRANSLATIONS.en && TRANSLATIONS.en[key]) || TRANSLATIONS.ru[key] || key;
 }
+
+TRANSLATIONS['zh-CN'] = zh;
+
+const extraCopy = {
+  ru: { privacyPolicy:'Политика конфиденциальности', deleteAccountData:'Удалить аккаунт и данные', entryDestination:'Куда записать операцию?', mainAccount:'Основной счёт', longDirection:'LONG', shortDirection:'SHORT', takeProfit:'Take Profit', stopLoss:'Stop Loss', journalLabel:'JOURNAL', tradingScorecard:'PRO Scorecard', scoreLabel:'SCORE', profitFactor:'Profit Factor', payoff:'Payoff', disconnectLabel:'disconnect' },
+  en: { privacyPolicy:'Privacy policy', deleteAccountData:'Delete account and data', entryDestination:'Where should this entry go?', mainAccount:'Main account', longDirection:'LONG', shortDirection:'SHORT', takeProfit:'Take Profit', stopLoss:'Stop Loss', journalLabel:'JOURNAL', tradingScorecard:'PRO Scorecard', scoreLabel:'SCORE', profitFactor:'Profit Factor', payoff:'Payoff', disconnectLabel:'disconnect' },
+  md: { privacyPolicy:'Politica de confidențialitate', deleteAccountData:'Șterge contul și datele', entryDestination:'Unde salvăm înregistrarea?', mainAccount:'Cont principal', longDirection:'LONG', shortDirection:'SHORT', takeProfit:'Take Profit', stopLoss:'Stop Loss', journalLabel:'JURNAL', tradingScorecard:'PRO Scorecard', scoreLabel:'SCOR', profitFactor:'Profit Factor', payoff:'Payoff', disconnectLabel:'deconectează' },
+  'zh-CN': { privacyPolicy:'隐私政策', deleteAccountData:'删除账户和数据', entryDestination:'将记录保存到哪里？', mainAccount:'主账户', longDirection:'做多', shortDirection:'做空', takeProfit:'止盈', stopLoss:'止损', journalLabel:'日志', tradingScorecard:'PRO 交易评分', scoreLabel:'评分', profitFactor:'盈利因子', payoff:'盈亏比', disconnectLabel:'断开连接' },
+};
+for (const [locale, copy] of Object.entries(extraCopy)) Object.assign(TRANSLATIONS[locale], copy);

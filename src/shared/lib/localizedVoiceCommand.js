@@ -1,5 +1,7 @@
 import {parseSpokenAmount} from './spokenAmount.js';
+import {parseChineseVoiceCommand} from './chineseVoiceCommand.js';
 export function parseLocalizedVoiceCommand(text){
+ const chinese=parseChineseVoiceCommand(text);if(chinese)return chinese;
  const normalized=text.replace(/[șş]/g,'s').replace(/[țţ]/g,'t').replace(/[ăâ]/g,'a').replace(/î/g,'i');
  const restore=value=>value?text.slice(normalized.lastIndexOf(value),normalized.lastIndexOf(value)+value.length):value;
  const created=normalized.match(/^(?:create|add) (?:a )?(?:new )?(?:category|section)(?: (.*))?$/)||normalized.match(/^(?:creeaza|adauga|inregistreaza) (?:o |un )?(?:noua |nou )?(?:categorie|categoria|sectiune|sectiunea)(?: (.*))?$/);

@@ -24,24 +24,24 @@ export const INSTRUMENT_INFO = {
 };
 
 export const MONEY_CATEGORIES = [
-  { key: 'Зарплата', icon: Wallet, type: 'plus', en: 'Salary', ro: 'Salariu' },
-  { key: 'Фриланс', icon: Laptop, type: 'plus', en: 'Freelance', ro: 'Freelance' },
-  { key: 'Инвестиции', icon: TrendingUp, type: 'plus', en: 'Investments', ro: 'Investiții' },
-  { key: 'Возврат', icon: RotateCcw, type: 'plus', en: 'Refund', ro: 'Rambursare' },
-  { key: 'Продукты', icon: ShoppingCart, type: 'minus', en: 'Groceries', ro: 'Alimente' },
-  { key: 'Кафе', icon: Coffee, type: 'minus', en: 'Cafés & dining', ro: 'Cafenele' },
-  { key: 'Жильё', icon: Home, type: 'minus', en: 'Housing', ro: 'Locuință' },
-  { key: 'Транспорт', icon: Car, type: 'minus', en: 'Transport', ro: 'Transport' },
-  { key: 'Покупки', icon: ShoppingBag, type: 'minus', en: 'Shopping', ro: 'Cumpărături' },
-  { key: 'Подписки', icon: CreditCard, type: 'minus', en: 'Subscriptions', ro: 'Abonamente' },
-  { key: 'Здоровье', icon: HeartPulse, type: 'minus', en: 'Health', ro: 'Sănătate' },
-  { key: 'Образование', icon: GraduationCap, type: 'minus', en: 'Education', ro: 'Educație' },
-  { key: 'Путешествия', icon: Plane, type: 'minus', en: 'Travel', ro: 'Călătorii' },
-  { key: 'Развлечения', icon: Gamepad2, type: 'minus', en: 'Entertainment', ro: 'Divertisment' },
-  { key: 'Сигареты', icon: Cigarette, type: 'minus', en: 'Tobacco', ro: 'Tutun' },
-  { key: 'Работа', icon: Briefcase, en: 'Work', ro: 'Muncă' },
-  { key: 'Подарки', icon: Gift, en: 'Gifts', ro: 'Cadouri' },
-  { key: 'Другое', icon: MoreHorizontal, en: 'Other', ro: 'Altele' },
+  { key: 'Зарплата', icon: Wallet, type: 'plus', en: 'Salary', ro: 'Salariu', 'zh-CN': '工资' },
+  { key: 'Фриланс', icon: Laptop, type: 'plus', en: 'Freelance', ro: 'Freelance', 'zh-CN': '自由职业' },
+  { key: 'Инвестиции', icon: TrendingUp, type: 'plus', en: 'Investments', ro: 'Investiții', 'zh-CN': '投资' },
+  { key: 'Возврат', icon: RotateCcw, type: 'plus', en: 'Refund', ro: 'Rambursare', 'zh-CN': '退款' },
+  { key: 'Продукты', icon: ShoppingCart, type: 'minus', en: 'Groceries', ro: 'Alimente', 'zh-CN': '食品' },
+  { key: 'Кафе', icon: Coffee, type: 'minus', en: 'Cafés & dining', ro: 'Cafenele', 'zh-CN': '餐饮' },
+  { key: 'Жильё', icon: Home, type: 'minus', en: 'Housing', ro: 'Locuință', 'zh-CN': '住房' },
+  { key: 'Транспорт', icon: Car, type: 'minus', en: 'Transport', ro: 'Transport', 'zh-CN': '交通' },
+  { key: 'Покупки', icon: ShoppingBag, type: 'minus', en: 'Shopping', ro: 'Cumpărături', 'zh-CN': '购物' },
+  { key: 'Подписки', icon: CreditCard, type: 'minus', en: 'Subscriptions', ro: 'Abonamente', 'zh-CN': '订阅' },
+  { key: 'Здоровье', icon: HeartPulse, type: 'minus', en: 'Health', ro: 'Sănătate', 'zh-CN': '健康' },
+  { key: 'Образование', icon: GraduationCap, type: 'minus', en: 'Education', ro: 'Educație', 'zh-CN': '教育' },
+  { key: 'Путешествия', icon: Plane, type: 'minus', en: 'Travel', ro: 'Călătorii', 'zh-CN': '旅行' },
+  { key: 'Развлечения', icon: Gamepad2, type: 'minus', en: 'Entertainment', ro: 'Divertisment', 'zh-CN': '娱乐' },
+  { key: 'Сигареты', icon: Cigarette, type: 'minus', en: 'Tobacco', ro: 'Tutun', 'zh-CN': '烟草' },
+  { key: 'Работа', icon: Briefcase, en: 'Work', ro: 'Muncă', 'zh-CN': '工作' },
+  { key: 'Подарки', icon: Gift, en: 'Gifts', ro: 'Cadouri', 'zh-CN': '礼物' },
+  { key: 'Другое', icon: MoreHorizontal, en: 'Other', ro: 'Altele', 'zh-CN': '其他' },
 ];
 
 export const EXCHANGES = ['Bybit', 'Binance', 'OKX', 'MT4/MT5', 'cTrader'];
@@ -95,6 +95,7 @@ export const LANGUAGES = [
   { code: 'ru', label: 'RU' },
   { code: 'en', label: 'EN' },
   { code: 'md', label: 'MD' },
+  { code: 'zh-CN', label: '简体中文' },
 ];
 
 export const CURRENCIES = [
@@ -102,6 +103,7 @@ export const CURRENCIES = [
   { code: 'EUR', symbol: '€', label: 'EUR' },
   { code: 'MDL', symbol: 'L', label: 'MDL' },
   { code: 'RUB', symbol: '₽', label: 'RUB' },
+  { code: 'CNY', symbol: '¥', label: 'CNY' },
 ];
 
 export function getCurrencyMeta(code) {

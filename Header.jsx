@@ -13,6 +13,7 @@ import AnimatedMonthLabel from './src/shared/ui/AnimatedMonthLabel.jsx';
 import WorkspaceModePanel from './src/features/pro/WorkspaceModePanel.jsx';
 
 function pendingSyncText(count, traderMode, language) {
+  if (String(language).startsWith('zh')) return `${count} ${traderMode ? '笔交易' : '条记录'}等待同步。`;
   const locale = language === 'md' ? 'ro' : language;
   if (locale === 'en') return `${count} ${traderMode ? (count === 1 ? 'trade' : 'trades') : (count === 1 ? 'entry' : 'entries')} waiting for sync.`;
   if (locale === 'ro') return `${count} ${traderMode ? (count === 1 ? 'tranzacție' : 'tranzacții') : (count === 1 ? 'înregistrare' : 'înregistrări')} așteaptă sincronizarea.`;
@@ -376,7 +377,7 @@ export default function Header({
                 </div>
 
                 <a
-                  href="/privacy.html"
+                  href={language === 'zh-CN' ? '/privacy-zh.html' : '/privacy.html'}
                   target="_blank"
                   rel="noreferrer"
                   className={`block rounded-xl border px-3 py-2.5 text-xs transition-colors ${
@@ -385,10 +386,10 @@ export default function Header({
                       : 'border-zinc-800 text-zinc-400 hover:border-amber-400/30 hover:bg-amber-400/5 hover:text-amber-300'
                   }`}
                 >
-                  Политика конфиденциальности
+                  {t('privacyPolicy')}
                 </a>
                 <a
-                  href="/delete-account.html"
+                  href={language === 'zh-CN' ? '/delete-account-zh.html' : '/delete-account.html'}
                   target="_blank"
                   rel="noreferrer"
                   className={`mt-2 block rounded-xl border px-3 py-2.5 text-xs transition-colors ${
@@ -397,7 +398,7 @@ export default function Header({
                       : 'border-zinc-800 text-zinc-400 hover:border-red-400/30 hover:bg-red-400/5 hover:text-red-300'
                   }`}
                 >
-                  Удалить аккаунт и данные
+                  {t('deleteAccountData')}
                 </a>
               </div>
             )}

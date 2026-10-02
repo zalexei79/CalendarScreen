@@ -21,8 +21,12 @@ export function formatSignedShort(n) {
   return `${n >= 0 ? '+' : '-'}$${formatMoney(n)}`;
 }
 
-export function formatMoneyShort(n) {
+export function formatMoneyShort(n, language = 'ru') {
   const abs = Math.abs(n);
+  if (String(language).startsWith('zh')) {
+    const [divisor, suffix] = abs >= 1e8 ? [1e8, '亿'] : abs >= 1e4 ? [1e4, '万'] : [1, ''];
+    return String(Math.round(abs / divisor)) + suffix;
+  }
   const [divisor, suffix] = abs >= 1e9 ? [1e9, 'б'] : abs >= 1e6 ? [1e6, 'м'] : abs >= 1e3 ? [1e3, 'к'] : [1, ''];
   return String(Math.round(abs / divisor)) + suffix;
 }

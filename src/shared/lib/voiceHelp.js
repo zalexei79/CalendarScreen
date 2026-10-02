@@ -1,5 +1,11 @@
 export function voiceHelp(locale,traderMode){
  const groups={
+  zh:[
+   {title:'记录',hint:'收入和支出',phrases:['支出[金额][货币]用于[类别]','收入[金额][货币]','添加记录',...(traderMode?['添加交易']:[])]},
+   {title:'类别',hint:'自定义分类',phrases:['创建类别[名称]','这个月[类别]花了多少']},
+   {title:'总结',hint:'本月',phrases:['这个月花了多少','这个月收入多少','总结这个月']},
+   {title:'导航',hint:'日历、钱包、PRO',phrases:['下个月 / 上个月','打开[年]年[月]月[日]日','打开钱包','打开历史','打开设置','返回今天','切换深色主题','开启交易模式','开启 / 关闭 PRO 模式']},
+  ],
   ru:[
    {title:'Записи',hint:'Доходы и расходы',phrases:['Потратил [сумма] [валюта] на [категория]','Получил [сумма] [валюта]','Добавь запись',...(traderMode?['Добавь сделку']:[])]},
    {title:'Категории',hint:'Свои разделы',phrases:['Создай категорию [название]','Сколько потратил на [категория] за месяц?']},
@@ -19,5 +25,7 @@ export function voiceHelp(locale,traderMode){
    {title:'Navigare',hint:'Calendar, portofel, PRO',phrases:['Luna următoare / precedentă','Deschide [zi] [lună] [an]','Deschide portofelul','Deschide istoricul','Deschide setări','Deschide astăzi','Activează tema întunecată','Activează modul trader','Activează / dezactivează modul PRO']},
   ],
  }[locale];
- return {groups,title:{ru:'Что можно голосом',en:'Voice actions',ro:'Acțiuni vocale'}[locale],note:{ru:'Откройте раздел. В [скобках] — ваши данные. Формулировку можно менять.',en:'Open a section. Replace [brackets] with your details.',ro:'Deschide o secțiune. Înlocuiește [parantezele] cu datele tale.'}[locale]};
+ return {groups,title:{
+  zh: "语音操作",ru:'Что можно голосом',en:'Voice actions',ro:'Acțiuni vocale'}[locale],note:{
+  zh: "打开分组，将[括号]替换为你的内容。",ru:'Порядок слов можно менять. В [скобках] — ваши данные. Запись сохраняется после проверки.',en:'Word order can vary. Replace [brackets] with your details. Review entries before saving.',ro:'Poți schimba ordinea cuvintelor. Înlocuiește [parantezele] cu datele tale. Verifică înainte de salvare.'}[locale]};
 }

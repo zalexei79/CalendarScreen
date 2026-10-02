@@ -15,6 +15,19 @@ const ONBOARDING_KEY = 'dayris_wallet_onboarding_v2';
 const fieldClass = 'w-full rounded-2xl border border-white/10 bg-white/[.045] px-4 py-3.5 text-base text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-amber-400/65 focus:bg-white/[.065]';
 
 const COPY = {
+  zh: {
+    gestureHint: "横向滑动或从顶部下拉返回", gesturePull: "下拉返回", gestureRelease: "松开返回日历",
+    eyebrow: "PRO · 个人财务", title: "我的钱包", subtitle: "根据所记录收入和支出计算的余额",
+    balance: "已记录余额", account: "个人钱包", loading: "正在加载收支…", syncError: "无法加载钱包，请检查网络后重试。", setupError: "钱包同步暂不可用，请稍后重试。", remove: "删除操作", month: "本月", add: "添加资金", withdraw: "扣减资金",
+    recent: "最近收支", empty: "暂无收支记录", emptyHint: "资金实际进入钱包时再添加。",
+    howMuch: "多少金额？", source: "资金来自哪里？", destination: "资金花在哪里？", comment: "备注（选填）", date: "日期",
+    tradingProfit: "交易盈利", accountTopup: "账户充值", otherIncome: "其他收入",
+    accountWithdrawal: "账户提现", expense: "支出", otherExpense: "其他",
+    cancel: "取消", saveAdd: "添加", saveWithdraw: "扣减", saving: "正在保存…", clear: "清空历史",
+    clearConfirm: "删除全部钱包历史？此操作无法撤销。",
+    introTitle: "独立记录个人财务", introBody: "日历记录收入、支出和交易。钱包根据你添加的收支独立计算余额。",
+    introOne: "仅在资金实际到账后添加。", introTwo: "提现和支出会减少实际余额。", introThree: "交易盈亏不会自动改变钱包余额。", introAction: "知道了，开始",
+  },
   ru: {
     gestureHint: 'Свайп в сторону или вниз от начала — в календарь', gesturePull: 'Потяните, чтобы вернуться', gestureRelease: 'Отпустите — в календарь',
     eyebrow: 'PRO · ЛИЧНЫЕ ДЕНЬГИ', title: 'Мой кошелёк', subtitle: 'Баланс по добавленным поступлениям и расходам',
@@ -57,7 +70,7 @@ const COPY = {
 };
 
 function localeOf(language) {
-  return language === 'en' ? 'en' : language === 'ro' || language === 'md' ? 'ro' : 'ru';
+  return String(language).startsWith('zh') ? 'zh' : language === 'en' ? 'en' : language === 'ro' || language === 'md' ? 'ro' : 'ru';
 }
 
 export default function WalletPanel({
@@ -99,7 +112,7 @@ export default function WalletPanel({
       accountWithdrawal: copy.accountWithdrawal, expense: copy.expense, otherExpense: copy.otherExpense,
     };
     if (!Number.isFinite(Number(composer.amount)) || Number(composer.amount) <= 0) {
-      setActionError(localeOf(language) === 'ru' ? 'Введите сумму больше нуля.' : localeOf(language) === 'en' ? 'Enter an amount greater than zero.' : 'Introdu o sumă mai mare decât zero.');
+      setActionError(localeOf(language) === 'zh' ? '请输入大于零的金额。' : localeOf(language) === 'ru' ? 'Введите сумму больше нуля.' : localeOf(language) === 'en' ? 'Enter an amount greater than zero.' : 'Introdu o sumă mai mare decât zero.');
       return;
     }
     setBusy(true); setActionError('');

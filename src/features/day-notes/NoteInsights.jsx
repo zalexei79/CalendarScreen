@@ -4,6 +4,7 @@ import { useCurveNotes } from './useCurveNotes';
 import { NOTE_TAGS, noteStats } from './noteStats.mjs';
 
 const COPY = {
+  'zh-CN': ['交易与我的笔记','按计划','匆忙','疲惫','违反规则','天','盈利天数','在当天详情中添加标签，即可查看比较。','使用当前筛选条件。带多个标签的日期计入各组，相关性不代表因果关系。','正在加载笔记…','无法加载笔记','重试','数据有限，仅供观察','登录以查看笔记。'],
   ru: ['Торговля и мои отметки', 'По плану', 'Спешил', 'Устал', 'Нарушил правила', 'дней', 'прибыльных дней', 'Добавьте отметку в окне дня — здесь появится сравнение.', 'По текущим фильтрам. День с несколькими отметками входит в каждую группу. Совпадение не означает причину.', 'Загружаем отметки…', 'Не удалось загрузить отметки', 'Повторить', 'Мало данных — пока только наблюдаем', 'Войдите, чтобы видеть свои отметки.'],
   en: ['Trading and my notes', 'Followed plan', 'Rushed', 'Tired', 'Broke rules', 'days', 'profitable days', 'Add a tag in a day’s details to see comparisons here.', 'Uses current filters. Days with multiple tags appear in each group. Correlation does not imply causation.', 'Loading notes…', 'Could not load notes', 'Retry', 'Limited data — observations only', 'Sign in to see your notes.'],
   md: ['Tranzacțiile și notițele mele', 'După plan', 'M-am grăbit', 'Obosit', 'Am încălcat regulile', 'zile', 'zile profitabile', 'Adaugă o etichetă în detaliile zilei pentru comparații aici.', 'Conform filtrelor curente. Zilele cu mai multe etichete apar în fiecare grup. Corelația nu implică o cauză.', 'Se încarcă notițele…', 'Notițele nu au putut fi încărcate', 'Reîncearcă', 'Date limitate — doar observații', 'Autentifică-te pentru a vedea notițele.'],
@@ -11,7 +12,7 @@ const COPY = {
 
 export default function NoteInsights({ userId, trades, revision, language, isLight, onDay }) {
   const c = COPY[language === 'ro' ? 'md' : language] || COPY.en;
-  const locale = language === 'ru' ? 'ru-RU' : ['ro', 'md'].includes(language) ? 'ro-RO' : 'en-US';
+  const locale = language === 'zh-CN' ? 'zh-CN' : language === 'ru' ? 'ru-RU' : ['ro', 'md'].includes(language) ? 'ro-RO' : 'en-US';
   const [retry, setRetry] = useState(0);
   const dates = useMemo(() => trades.map(t => t.dateKey).filter(Boolean).sort(), [trades]);
   const { notes, state } = useCurveNotes(userId, dates[0], dates.at(-1), `${revision}:${retry}`);

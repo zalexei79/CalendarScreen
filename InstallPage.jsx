@@ -14,10 +14,12 @@ import {
 function getLang() {
   try {
     const stored = window.localStorage.getItem('atj_language');
+    if (String(stored).startsWith('zh')) return 'zh';
     if (stored === 'en') return 'en';
     if (stored === 'md' || stored === 'ro') return 'ro';
   } catch { /* ignore */ }
   const nav = String(navigator.language || '').toLowerCase();
+  if (nav.startsWith('zh')) return 'zh';
   if (nav.startsWith('ro')) return 'ro';
   if (nav.startsWith('en')) return 'en';
   return 'ru';
@@ -33,6 +35,27 @@ function getInitialLight() {
 }
 
 const COPY = {
+  zh: {
+    eyebrow: "一键安装",
+    title: "将 DAYRIS 添加到主屏幕",
+    subtitle: "像独立应用一样打开，没有地址栏或额外浏览器标签页。",
+    install: "安装到主屏幕",
+    showHow: "查看安装步骤",
+    open: "打开日历",
+    ready: "应用已安装",
+    readyHint: "可以直接从主屏幕打开。",
+    benefit1: "像普通应用一样快速启动",
+    benefit2: "主屏幕上的应用图标",
+    benefit3: "无需 App Store 或 Google Play",
+    iosTitle: "在 iPhone 上只需几秒",
+    ios1: "点击浏览器的分享按钮。",
+    ios2: "选择“添加到主屏幕”。",
+    ios3: "点击“添加”。",
+    androidTitle: "未出现安装提示时",
+    android1: "打开浏览器菜单",
+    android2: "选择“安装应用”或“添加到主屏幕”。",
+    secure: "与网站相同，只是以应用方式打开。",
+  },
   ru: {
     eyebrow: 'УСТАНОВКА В 1 КАСАНИЕ',
     title: 'DAYRIS на главном экране',

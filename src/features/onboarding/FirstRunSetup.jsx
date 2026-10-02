@@ -4,6 +4,16 @@ import { CURRENCIES } from '../../shared/config/constants';
 import BrandIcon from '../../shared/ui/BrandIcon.jsx';
 
 const COPY = {
+  zh: {
+    steps: ['语言', '你的节奏', '第一天'], next: '继续', back: '返回', skip: '自行探索',
+    languageTitle: '用你熟悉的语言。', languageHint: '选择你喜欢的语言。',
+    currencyTitle: '为你量身设置。', currencyHint: '使用哪种货币记账？',
+    later: '可以随时在设置中更改货币和外观。', appearance: '外观', light: '浅色', dark: '深色',
+    introTitle: '财务全貌。\n从每一条记录开始。', introHint: '收入和支出记录每一天，日历将这些日子汇成清晰的财务全貌。',
+    create: '我的第一条记录', example: '示例 · 不会保存', coffee: '咖啡', income: '兼职收入', balance: '当日结余',
+    tagline: '每一天\n都重要。', caption: '你的资金，你的选择，你的节奏。',
+    currencies: ['美元', '欧元', '摩尔多瓦列伊', '俄罗斯卢布', '人民币'], finish: '最后一步：添加第一条记录。',
+  },
   ru: {
     steps: ['Язык', 'Твой ритм', 'Первый день'], next: 'Продолжить', back: 'Назад', skip: 'Осмотрюсь сам',
     languageTitle: 'Давай на твоём языке.', languageHint: 'Выбери язык, на котором тебе удобно.',
@@ -12,7 +22,7 @@ const COPY = {
     introTitle: 'Большая картина.\nИз маленьких записей.', introHint: 'Доходы и расходы складываются в историю дня. А дни — в понятный календарь.',
     create: 'Моя первая запись', example: 'Пример · без сохранения', coffee: 'Кофе', income: 'Подработка', balance: 'Итог дня',
     tagline: 'Каждый день\nимеет значение.', caption: 'Твои деньги. Твои решения. Твой ритм.',
-    currencies: ['Доллар США', 'Евро', 'Молдавский лей', 'Российский рубль'],
+    currencies: ['Доллар США', 'Евро', 'Молдавский лей', 'Российский рубль', 'Китайский юань'],
     finish: 'Последний шаг — твоя первая запись.',
   },
   en: {
@@ -23,7 +33,7 @@ const COPY = {
     introTitle: 'The big picture.\nOne entry at a time.', introHint: 'Income and expenses tell the story of a day. Your calendar brings those days together.',
     create: 'My first entry', example: 'Example · not saved', coffee: 'Coffee', income: 'Side job', balance: 'Daily balance',
     tagline: 'Every day\nmatters.', caption: 'Your money. Your choices. Your rhythm.',
-    currencies: ['US dollar', 'Euro', 'Moldovan leu', 'Russian ruble'], finish: 'One last step: your first entry.',
+    currencies: ['US dollar', 'Euro', 'Moldovan leu', 'Russian ruble', 'Chinese yuan'], finish: 'One last step: your first entry.',
   },
   ro: {
     steps: ['Limba', 'Ritmul tău', 'Prima zi'], next: 'Continuă', back: 'Înapoi', skip: 'Explorez singur',
@@ -33,15 +43,15 @@ const COPY = {
     introTitle: 'Imaginea de ansamblu.\nÎnregistrare cu înregistrare.', introHint: 'Veniturile și cheltuielile spun povestea zilei. Calendarul adună toate aceste zile.',
     create: 'Prima mea înregistrare', example: 'Exemplu · nu se salvează', coffee: 'Cafea', income: 'Venit suplimentar', balance: 'Bilanțul zilei',
     tagline: 'Fiecare zi\ncontează.', caption: 'Banii tăi. Alegerile tale. Ritmul tău.',
-    currencies: ['Dolar american', 'Euro', 'Leu moldovenesc', 'Rublă rusească'], finish: 'Ultimul pas: prima ta înregistrare.',
+    currencies: ['Dolar american', 'Euro', 'Leu moldovenesc', 'Rublă rusească', 'Yuan chinezesc'], finish: 'Ultimul pas: prima ta înregistrare.',
   },
 };
-const LANGUAGES = [{ code: 'ru', name: 'Русский', hint: 'Russian' }, { code: 'en', name: 'English', hint: 'English' }, { code: 'md', name: 'Română', hint: 'Romanian' }];
+const LANGUAGES = [{ code: 'ru', name: 'Русский', hint: 'Russian' }, { code: 'en', name: 'English', hint: 'English' }, { code: 'md', name: 'Română', hint: 'Romanian' }, { code: 'zh-CN', name: '简体中文', hint: 'Simplified Chinese' }];
 
 export default function FirstRunSetup({ step, language, currency, theme, onLanguage, onCurrency, onTheme, onStep, onStart, onSkip }) {
   const dialogRef = useRef(null);
   const headingRef = useRef(null);
-  const lang = language === 'md' || language === 'ro' ? 'ro' : language === 'en' ? 'en' : 'ru';
+  const lang = language === 'zh-CN' ? 'zh' : language === 'md' || language === 'ro' ? 'ro' : language === 'en' ? 'en' : 'ru';
   const copy = COPY[lang];
   const light = theme === 'light';
   const index = step === 'language' ? 0 : step === 'intro' ? 2 : 1;

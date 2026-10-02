@@ -27,7 +27,7 @@ export default function ConnectionStatus({ language = 'ru', isLight = false }) {
     };
   }, []);
   if (online && !restored) return null;
-  const copy = language === 'en'
+  const copy = language === 'zh-CN' ? ['当前离线', '可以使用此设备上保存的数据', '已重新联网！', '网络已恢复', '关闭'] : language === 'en'
     ? ['You are offline', 'Saved data is available on this device', 'You are back online!', 'Connection restored', 'Close']
     : language === 'ro' || language === 'md'
     ? ['Sunteți offline', 'Datele salvate sunt disponibile pe dispozitiv', 'Sunteți din nou online!', 'Conexiune restabilită', 'Închide']

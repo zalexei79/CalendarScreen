@@ -9,6 +9,7 @@ function yearsLabel(days, language) {
   const years = Math.round(days / 365.25 * 10) / 10;
   const locale = language === 'en' ? 'en-US' : language === 'md' ? 'ro-RO' : 'ru-RU';
   const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(years);
+  if (String(language).startsWith('zh')) return `${years} 年`;
   if (language === 'en') return `${number} ${years === 1 ? 'year' : 'years'}`;
   if (language === 'md') return `${number} ${years === 1 ? 'an' : 'ani'}`;
   const plural = new Intl.PluralRules('ru').select(years);
@@ -70,11 +71,11 @@ export default function ProGrantNotice({ userId, active, until, language = 'ru',
 
   const days = Math.max(0, Math.ceil((new Date(until).getTime() - Date.now()) / 86400000));
   if (!active || !notice || notice.owner !== userId || !Number.isFinite(days) || days <= 0) return null;
-  const copy = language === 'en'
+  const copy = language === 'zh-CN' ? ["恭喜！PRO 已激活", "剩余天数", "谢谢！", "无法保存，请重试。"] : (language === 'en'
     ? ['Congratulations! PRO is active', 'Days remaining', 'Thank you!', 'Could not save. Please try again.']
     : language === 'md'
       ? ['Felicitări! PRO este activ', 'Zile rămase', 'Mulțumesc!', 'Nu s-a putut salva. Încearcă din nou.']
-      : ['Поздравляем! У вас PRO', 'Осталось дней', 'Спасибо!', 'Не удалось сохранить. Попробуйте ещё раз.'];
+      : ['Поздравляем! У вас PRO', 'Осталось дней', 'Спасибо!', 'Не удалось сохранить. Попробуйте ещё раз.']);
   async function dismiss() {
     if (saving) return;
     setSaving(true);

@@ -1,6 +1,8 @@
 import { supabase } from './supabaseClient'
+import { translate } from './shared/i18n'
 
 export default function Login() {
+  const language = window.localStorage.getItem('atj_language') || navigator.language;
   async function handleGoogleLogin() {
     await supabase.auth.signInWithOAuth({ provider: 'google' })
   }
@@ -34,7 +36,7 @@ export default function Login() {
             cursor: 'pointer',
           }}
         >
-          Войти через Google
+          {translate(language, 'signIn')}
         </button>
       </div>
     </div>

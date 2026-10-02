@@ -74,7 +74,11 @@
         var action = document.getElementById('boot-action');
         var language = 'ru';
         try { language = localStorage.getItem('atj_language') || navigator.language || 'ru'; } catch (_) {}
-        var copy = /^en/.test(language)
+        document.documentElement.lang = /^zh/i.test(language) ? 'zh-CN' : /^(ro|md)/.test(language) ? 'ro' : /^en/.test(language) ? 'en' : 'ru';
+        splash.setAttribute('aria-label', /^zh/i.test(language) ? 'DAYRIS 正在加载' : /^en/.test(language) ? 'DAYRIS is loading' : /^(ro|md)/.test(language) ? 'DAYRIS se încarcă' : 'DAYRIS загружается');
+        var copy = /^zh/i.test(language)
+          ? ['当前离线', '可以使用此设备上保存的日历。', '离线继续', '正在准备已保存的日历…', '请先联网打开一次 DAYRIS，以准备离线访问。', '重试加载', '加载时间较长', '请检查网络后重试。']
+          : /^en/.test(language)
           ? ['You are offline', 'Your saved calendar is available on this device.', 'Continue offline', 'Preparing your saved calendar…', 'Open DAYRIS online once to prepare offline access.', 'Retry loading', 'Loading is taking longer', 'Check your connection and try again.']
           : /^(ro|md)/.test(language)
           ? ['Sunteți offline', 'Calendarul salvat este disponibil pe acest dispozitiv.', 'Continuă offline', 'Se pregătește calendarul salvat…', 'Deschideți DAYRIS online o dată pentru acces offline.', 'Reîncearcă', 'Încărcarea durează mai mult', 'Verificați conexiunea și încercați din nou.']

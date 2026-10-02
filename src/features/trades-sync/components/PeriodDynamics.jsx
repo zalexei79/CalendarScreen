@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 
 const copy = {
+  zh: ["时段走势", "截至所选最新交易的十天", "盈利", "亏损", "暂无交易", "交易日", "笔交易", "点击日期，在下方查看准确金额", "结果", "货币", "使用所选筛选条件"],
   ru: ['Динамика периода', '10 дней до последней сделки в выборке', 'Прибыль', 'Убытки', 'Нет сделок', 'торговых дней', 'сделок', 'Нажмите на день — ниже точные суммы', 'Результат', 'Валюта', 'По выбранным фильтрам'],
   en: ['Period dynamics', '10 days ending with the latest selected trade', 'Profit', 'Losses', 'No trades', 'trading days', 'trades', 'Tap a day for exact amounts below', 'Result', 'Currency', 'Selected filters apply'],
   md: ['Dinamica perioadei', '10 zile până la ultima tranzacție selectată', 'Profit', 'Pierderi', 'Fără tranzacții', 'zile de tranzacționare', 'tranzacții', 'Apasă o zi pentru sumele exacte de mai jos', 'Rezultat', 'Valută', 'Conform filtrelor selectate'],
@@ -8,7 +9,7 @@ const copy = {
 
 export default function PeriodDynamics({ trades, language, isLight }) {
   const locale = language === 'md' || language === 'ro' ? 'ro' : language || 'en';
-  const c = copy[locale === 'ro' ? 'md' : locale] || copy.en;
+  const c = copy[locale.startsWith('zh') ? 'zh' : locale === 'ro' ? 'md' : locale] || copy.en;
   const [currencyChoice, setCurrencyChoice] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const currencies = [...new Set(trades.map(t => t.currency || 'USD'))].sort();

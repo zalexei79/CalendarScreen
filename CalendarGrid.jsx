@@ -1,6 +1,7 @@
 import React, { useRef, useMemo } from 'react';
 import CalendarDayCell from './CalendarDayCell';
 import { WEEKDAYS } from './src/shared/config/constants';
+const weekdaysFor = language => language === 'zh-CN' ? ['周一', '周二', '周三', '周四', '周五', '周六', '周日'] : WEEKDAYS;
 import { useWalletExitGesture } from './src/features/wallet/hooks/useWalletExitGesture';
 import './src/features/wallet/WalletGestures.css';
 import './src/shared/ui/CalendarMotion.css';
@@ -12,7 +13,7 @@ const CalendarMonthPreview = React.memo(function CalendarMonthPreview({ preview,
   // Reusing the departing month's range caused a colour jump at commit.
   monthMaxAbsPnl = preview.cells.reduce((max, cell) => cell.inMonth ? Math.max(max, Math.abs(totalPnlForDay(cell.key))) : max, 0);
   return <div className="calendar-month-preview" aria-hidden="true" inert="" style={{ left: `${preview.direction * 100}%` }}>
-    <div className="calendar-weekdays grid grid-cols-7 gap-1 sm:gap-2 mb-3">{WEEKDAYS.map(day => <div key={day} className={`font-data text-[11px] sm:text-xs font-semibold tracking-wider text-center uppercase pb-1 ${isLight ? 'text-slate-600' : 'text-zinc-500'}`}>{day}</div>)}</div>
+    <div className="calendar-weekdays grid grid-cols-7 gap-1 sm:gap-2 mb-3">{weekdaysFor(language).map(day => <div key={day} className={`font-data text-[11px] sm:text-xs font-semibold tracking-wider text-center uppercase pb-1 ${isLight ? 'text-slate-600' : 'text-zinc-500'}`}>{day}</div>)}</div>
     <div className="calendar-days-grid calendar-preview-days grid grid-cols-7 gap-1 sm:gap-2" style={{ flex: 1, minHeight: 0, gridAutoRows: 'auto', gridTemplateRows: `repeat(${preview.cells.length / 7},minmax(0,1fr))` }}>
       {preview.cells.map((cell, index) => <CalendarDayCell key={cell.key} cell={cell} cellIndex={index} traderMode={traderMode} proView={proView} isLight={isLight} isSelected={cell.key === selectedKey} hasNote={!!notes[cell.key]} noteLabel={noteLabel} hasTrades={tradesForDayFiltered(cell.key).length > 0} plans={plansForDay?.(cell.key) || []} formatPlanAmount={formatPlanAmount} pnl={totalPnlForDay(cell.key)} monthMaxAbsPnl={monthMaxAbsPnl} formatPnlDisplay={formatPnlDisplay} onSelect={() => {}} />)}
     </div>
@@ -107,7 +108,7 @@ export default function CalendarGrid({
       style={{ userSelect: 'none', transform: touchDrag.axis ? `translate3d(${touchDrag.x}px,${touchDrag.y}px,0)` : 'none' }}
     >
       <div className="calendar-weekdays grid grid-cols-7 gap-1 sm:gap-2 mb-3" onClick={(e) => { if (e.target === e.currentTarget) onEmptyClick(); }}>
-        {WEEKDAYS.map((w) => <div key={w} className={`font-data text-[11px] sm:text-xs font-semibold tracking-wider text-center uppercase pb-1 ${isLight ? 'text-slate-600' : 'text-zinc-500'}`}>{w}</div>)}
+        {weekdaysFor(language).map((w) => <div key={w} className={`font-data text-[11px] sm:text-xs font-semibold tracking-wider text-center uppercase pb-1 ${isLight ? 'text-slate-600' : 'text-zinc-500'}`}>{w}</div>)}
       </div>
       <div className="calendar-days-grid grid flex-none grid-cols-7 auto-rows-[64px] gap-1 sm:flex-1 sm:auto-rows-auto sm:gap-2" onClick={(e) => { if (e.target === e.currentTarget) onEmptyClick(); }}>
         {cells.map((cell, cellIndex) => {

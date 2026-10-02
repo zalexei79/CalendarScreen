@@ -89,15 +89,15 @@ await page.evaluate(()=>{
 });
 assert.match(await page.locator('.calendar-voice-transcript').textContent(),/60 лей/);
 await page.getByRole('button',{name:'Готово — обработать фразу'}).click();
-await page.waitForFunction(()=>window.commands.length===1);
+await page.getByRole('button',{name:'Сохранить',exact:true}).click();await page.waitForFunction(()=>window.commands.length===1);
 assert.equal(await page.evaluate(()=>window.voice.lang),'ru-RU');assert.equal(await page.evaluate(()=>window.warmups||0),0,'Android starts microphone without competing speech warmup');
 assert.equal(await page.evaluate(()=>window.commands[0].amount),'60','Done processes the final result instead of aborting it');
 await page.getByRole('button',{name:'Голосовая команда'}).click();
 await page.evaluate(()=>emit('запиши'));
 assert.equal(await page.evaluate(()=>window.commands.length),1,'an introductory word does not end the recording');
 await page.evaluate(()=>window.voice.onresult({resultIndex:1,results:['запиши','потратил 80 лей','на пиво'].map(transcript=>Object.assign([{transcript}],{isFinal:true}))}));
-await page.waitForFunction(()=>window.commands.length===2);
-assert.deepEqual(await page.evaluate(()=>window.commands[1]),{type:'entry',kind:'record',amount:'80',currency:'MDL',sign:'minus',category:'пиво'});
+await page.getByRole('button',{name:'Сохранить',exact:true}).click();await page.waitForFunction(()=>window.commands.length===2);
+assert.deepEqual(await page.evaluate(()=>{const {dateKey,destination,...entry}=window.commands[1];return entry;}),{type:'entry',kind:'record',amount:'80',currency:'MDL',sign:'minus',category:'пиво'});
 await page.getByRole('button',{name:'Голосовая команда'}).click();await page.getByRole('button',{name:'Закрыть голосовой режим'}).click();
 await page.locator('.calendar-dock-actions > div > button').first().waitFor({state:'visible'});
 await page.getByRole('button',{name:'Голосовая команда'}).click();await page.evaluate(()=>window.voice.onresult({resultIndex:0,results:[Object.assign([{transcript:'добавь запись'}],{isFinal:false})]}));await page.getByRole('button',{name:'Готово — обработать фразу'}).click();await page.waitForFunction(()=>window.commands.length===3);assert.equal(await page.evaluate(()=>window.commands[2].type),'add','complete interim phrase is handled when Android ends without a final result');await page.getByRole('button',{name:'Голосовая команда'}).click();await page.evaluate(()=>window.voiceLanguage('en'));await page.getByRole('button',{name:'Voice command'}).waitFor();assert.equal(await page.evaluate(()=>window.voice.aborted),true,'language change ends old recognition');await page.getByRole('button',{name:'Voice command'}).click();assert.equal(await page.evaluate(()=>window.voice.lang),'en-US');await page.evaluate(()=>window.voiceLanguage('md'));await page.getByRole('button',{name:'Comandă vocală'}).click();assert.equal(await page.evaluate(()=>window.voice.lang),'ro-RO');await page.evaluate(()=>window.voiceLanguage('ru'));await page.getByRole('button',{name:'Голосовая команда'}).click();assert.equal(await page.evaluate(()=>window.voice.lang),'ru-RU');await page.evaluate(()=>{window.lateResult=window.voice.onresult;hideVoice();});

@@ -14,6 +14,6 @@ export function resolveLocalizedCategory(name,categories,existing){
  const exact=existing.find(value=>normalizeVoiceCategory(value)===normalized);
  if(exact)return exact;
  const aliases={cigarettes:'Сигареты',smoking:'Сигареты',tigari:'Сигареты',coffee:'Кафе',cafe:'Кафе',cafenea:'Кафе',cafea:'Кафе'};
- const translated=categories.find(item=>[item.key,item.en,item.ro].some(label=>label&&categoryMatches(label,name)));
+ const translated=categories.find(item=>[item.key,item.en,item.ro,item['zh-CN']].some(label=>label&&categoryMatches(label,name)));
  return translated?.key||aliases[normalized]||resolveVoiceCategory(name,existing);
 }

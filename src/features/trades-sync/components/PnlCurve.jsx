@@ -4,12 +4,14 @@ import { comparePeriod, curveGroupKey, previousPeriod } from '../lib/periodCompa
 import { useCurveNotes } from '../../day-notes/useCurveNotes';
 
 const detailsCopy = {
+  'zh-CN': ['与上一时段比较','盈亏','回撤','暂无交易可比较','在筛选中选择时段进行比较','当天笔记','全天的个人笔记，不仅限于此账户。','曲线上的点表示交易日笔记，点击查看。','无法加载笔记，请重新打开历史重试。','正在加载笔记…','按计划','匆忙','疲惫','违反规则','上一等长时段 · 相同筛选条件','笔交易'],
   ru: ['К предыдущему периоду', 'PnL', 'Просадка', 'Нет сделок для сравнения', 'Выберите период в фильтрах для сравнения', 'Заметка ко дню', 'Личная заметка ко всему дню, не только к выбранному счёту.', 'Точки на кривой — заметки к дням со сделками. Нажмите, чтобы прочитать.', 'Не удалось загрузить заметки. Переоткройте историю для повтора.', 'Загружаем заметки…', 'По плану', 'Спешил', 'Устал', 'Нарушил правила', 'Предыдущий период той же длины · те же фильтры', 'сделок'],
   en: ['Versus previous period', 'PnL', 'Drawdown', 'No trades to compare', 'Select a period in filters to compare', 'Day note', 'A personal note for the whole day, not just this account.', 'Dots on the curve mark notes on trading days. Tap to read.', 'Could not load notes. Reopen history to retry.', 'Loading notes…', 'Followed plan', 'Rushed', 'Tired', 'Broke rules', 'Previous equal-length period · same filters', 'trades'],
   md: ['Față de perioada precedentă', 'PnL', 'Declin', 'Nu există tranzacții pentru comparație', 'Selectează o perioadă în filtre pentru comparație', 'Notița zilei', 'Notiță personală pentru întreaga zi, nu doar pentru acest cont.', 'Punctele de pe curbă indică notițe din zilele cu tranzacții. Apasă pentru a citi.', 'Notițele nu au putut fi încărcate. Redeschide istoricul.', 'Se încarcă notițele…', 'După plan', 'M-am grăbit', 'Obosit', 'Am încălcat regulile', 'Perioadă precedentă de aceeași durată · aceleași filtre', 'tranzacții'],
 };
 
 const copy = {
+  'zh-CN': ['收益曲线','累计盈亏','最大回撤','恢复','尚未恢复','天','该时段暂无交易','从零开始的每日已实现盈亏，使用所选筛选条件，不代表账户净值或日内回撤。','日期','手动记录','账户和货币','时段开始'],
   ru: ['Кривая результата', 'Накопленный PnL', 'Макс. просадка', 'Восстановление', 'Ещё не восстановлена', 'дн.', 'Нет сделок за этот период', 'Закрытый PnL по итогам дня, от нуля. По выбранным фильтрам; не баланс счёта и не внутридневная просадка.', 'День', 'Ручные записи', 'Счёт и валюта', 'Начало периода'],
   en: ['Performance curve', 'Cumulative PnL', 'Max drawdown', 'Recovery', 'Not recovered yet', 'days', 'No trades in this period', 'End-of-day realized PnL, starting at zero. Selected filters apply; not account equity or intraday drawdown.', 'Day', 'Manual entries', 'Account and currency', 'Period start'],
   md: ['Curba rezultatului', 'PnL cumulat', 'Declin maxim', 'Recuperare', 'Încă nerecuperat', 'zile', 'Nu există tranzacții în această perioadă', 'PnL realizat la sfârșitul zilei, pornind de la zero. Cu filtrele selectate; nu reprezintă soldul sau declinul intrazilnic.', 'Zi', 'Înregistrări manuale', 'Cont și valută', 'Începutul perioadei'],

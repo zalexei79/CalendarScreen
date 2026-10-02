@@ -45,7 +45,7 @@ import {
   textValue,
   formatMoney,
   formatSignedShort,
-  formatMoneyShort,
+  formatMoneyShort as formatMoneyShortBase,
   getValidUserId,
 } from './src/shared/lib/formatters';
 import {
@@ -605,7 +605,7 @@ export default function CalendarScreen() {
   const [language, setLanguage] = useState(() => {
     try {
       const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
-      return LANGUAGES.some((l) => l.code === stored) ? stored : 'ru';
+      return LANGUAGES.some((l) => l.code === stored) ? stored : String(navigator.language).toLowerCase().startsWith('zh') ? 'zh-CN' : 'ru';
     } catch {
       return 'ru';
     }
@@ -678,6 +678,7 @@ export default function CalendarScreen() {
   }, [settingsOpen]);
 
   const t = (key) => translate(language, key);
+  const formatMoneyShort = value => formatMoneyShortBase(value, language);
 
   useEffect(() => {
     document.documentElement.lang = language === 'md' ? 'ro' : language;
@@ -695,6 +696,8 @@ export default function CalendarScreen() {
       ? String(itemOrCode?.label || '').toLowerCase()
       : String(label || '').toLowerCase();
 
+    if (code.startsWith('zh')) return 'zh';
+
     if (code === 'en' || code.startsWith('en-') || name.includes('english') || name.includes('англ')) return 'en';
     if (['ro', 'md', 'mo', 'ron', 'rum'].includes(code) || code.startsWith('ro-') || name.includes('rom') || name.includes('mold')) return 'ro';
     return 'ru';
@@ -708,6 +711,43 @@ export default function CalendarScreen() {
   }
 
   const onboardingCopy = {
+  zh: {
+      setup: "设置",
+      of: "/",
+      chooseLanguage: "选择语言",
+      chooseCurrency: "选择货币",
+      currencyHint: "可以随时在设置中更改货币。",
+      chooseTheme: "选择主题",
+      light: "日期",
+      dark: "夜间",
+      title: "每一天都有自己的故事。",
+      subtitle: "记录对你重要的事情。",
+      exampleDate: "9月16日",
+      exampleDay: "示例日期",
+      coffee: "咖啡",
+      groceries: "食品",
+      sideJob: "兼职收入",
+      greatDay: "美好的一天",
+      noAmount: "无金额",
+      total: "当日合计",
+      create: "创建第一条记录 →",
+      skip: "跳过",
+      guideTapToday: "从今天开始",
+      guideTapTodayHint: "点击高亮日期，创建第一条真实记录。",
+      guideExpense: "支出",
+      guideIncome: "收入",
+      guideNote: "记住这件事",
+      guideChooseType: "今天发生了什么？",
+      guideChooseTypeHint: "选择一项，我会准备表单，你可以按需填写。",
+      guideAmountHint: "现在只需输入金额。",
+      guideNoteHint: "写下想记住的想法或事项。",
+      guideSuccess: "完成了，日历会自动汇集你的日常记录。",
+      guideMore: "如何编辑记录",
+      guideDayTip: "随时查看每日历史",
+      guideDayTipHint: "点击铅笔编辑，点击垃圾桶删除。打开任意日期即可查看当天历史。",
+      guideDone: "知道了",
+      guideSkip: "我自己试试",
+    },
     ru: {
       setup: 'Настройка',
       of: 'из',
@@ -915,6 +955,92 @@ export default function CalendarScreen() {
   }[resolveOnboardingLanguage(language)];
 
   const proAccessCopy = {
+  zh: {
+      eyebrow: 'PRO',
+      title: "轻松掌控财务。",
+      body: "个人钱包、清晰的财务全貌和交易模式，按需使用。",
+      invitesHubTitle: "我的邀请",
+      invitesHubBody: "查看受邀用户、状态和获得的 PRO 天数。",
+      featuresTitle: "PRO 带来什么变化",
+      featurePlatform: "交易自动显示",
+      featurePlatformHint: "连接 cTrader，自动同步交易结果",
+      featureAnalytics: "立即查看结果",
+      featureAnalyticsHint: "盈亏曲线、走势和统计呈现实际表现",
+      featureJournal: "为每笔交易保留背景",
+      featureJournalHint: "品种、方向、止盈/止损和笔记集中保存",
+      featureInsights: "发现自己的交易规律",
+      featureInsightsHint: "历史记录帮助你保持好的决策并发现错误",
+      featureWallet: "个人资金与交易分开",
+      featureWalletHint: "个人余额和支出历史与交易盈亏分别计算",
+      previewTitle: "清楚掌握个人财务。",
+      previewBody: "余额、收入和支出与交易盈亏分别计算。",
+      previewWallet: "钱包",
+      previewWalletHint: "余额和收支",
+      previewPlans: "计划",
+      previewHistory: "历史",
+      previewHistoryHint: "收入和支出",
+      previewTraderHint: "按需使用",
+      featureReminders: "重要事项一目了然",
+      featureRemindersHint: "付款、房租和预计收入一目了然",
+      featureHistory: "清晰的财务全貌",
+      featureHistoryHint: "独立查看收入和支出",
+      traderRevealEyebrow: "交易功能 · 包含在 PRO 中",
+      traderRevealTitle: "你进行交易吗？",
+      traderRevealBody: "PRO 还包含交易模式：交易日志、盈亏、分析和 cTrader，随时按需使用。",
+      traderRevealAction: "开启交易模式",
+      freeTitle: "邀请好友，获得 26 天 PRO",
+      freeBody: "好友获得 7 天 PRO，好友的第一条记录为你解锁 26 天。",
+      reward: "你获得 +26 天 PRO",
+      rewardHint: "好友获得 +7 天 PRO",
+      share: "邀请好友解锁 PRO",
+      signIn: "登录以获取邀请",
+      preparing: "正在准备邀请…",
+      retryInvite: "请重试创建邀请",
+      buyTitle: "直接开启 PRO",
+      buyPrice: '$1.99',
+      buyPeriod: "/ 月",
+      buyBody: "按月使用 PRO，无需邀请。",
+      buyButton: "开启 PRO",
+      renewTitle: "续订 PRO",
+      renewBody: "当前权限保持有效，付款后追加新的使用时长。",
+      renewButton: "续订 PRO",
+      buyLoading: "正在打开付款页面…",
+      buySignIn: "登录以开启 PRO",
+      buyActive: "PRO 已启用",
+      buyError: "无法打开付款页面，请重试。",
+      comingSoon: "由 Lemon Squeezy 提供安全付款",
+      paymentSuccessTitle: "PRO 已激活",
+      paymentSuccessBody: "订阅已确认，PRO 权限已激活。",
+      invitedLabel: "已邀请",
+      offerTab: "解锁 PRO",
+      invitesTab: "我的邀请",
+      invitedPeople: "已邀请",
+      activatedPeople: "已激活",
+      waitingPeople: "等待中",
+      earnedDays: "获得的 PRO",
+      daysShort: "天",
+      myPro: "我的 PRO",
+      proRemaining: "剩余",
+      proUntil: "截至",
+      proInactive: "PRO 尚未启用",
+      currencyTitle: "分析货币",
+      currencyHint: "所选货币用于概览、分析、交易和分享卡片。",
+      mixedCurrencyHint: "选择一种货币获取准确金额，不同货币不能合并计算。",
+      historyTitle: "最近邀请",
+      noInvitesTitle: "暂无邀请",
+      noInvitesBody: "创建个人邀请后，新用户的进度会显示在这里。",
+      inviteMore: "继续邀请",
+      pendingStatus: "等待第一条记录",
+      qualifiedStatus: "正在发放奖励",
+      rewardedStatus: "+26 天 PRO",
+      joinedAt: "已加入",
+      rewardedAt: "奖励",
+      signInHistory: "登录以查看邀请历史。",
+      inviteWaiting: "分享邀请，好友可获得 7 天 PRO。",
+      invitePending: "好友已加入，等待第一条记录。",
+      inviteDone: "已完成，PRO 奖励已发放。",
+      close: "暂时不用",
+    },
     ru: {
       eyebrow: 'PRO',
       title: 'Деньги под контролем. Без лишнего.',
@@ -1228,7 +1354,7 @@ export default function CalendarScreen() {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '';
 
-    const locale = resolveOnboardingLanguage(language) === 'ru'
+    const locale = resolveOnboardingLanguage(language) === 'zh' ? 'zh-CN' : resolveOnboardingLanguage(language) === 'ru'
       ? 'ru-RU'
       : resolveOnboardingLanguage(language) === 'ro'
         ? 'ro-RO'
@@ -1246,7 +1372,7 @@ export default function CalendarScreen() {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '';
 
-    const locale = resolveOnboardingLanguage(language) === 'ru'
+    const locale = resolveOnboardingLanguage(language) === 'zh' ? 'zh-CN' : resolveOnboardingLanguage(language) === 'ru'
       ? 'ru-RU'
       : resolveOnboardingLanguage(language) === 'ro'
         ? 'ro-RO'
@@ -1260,6 +1386,31 @@ export default function CalendarScreen() {
   }
 
   const proHistoryCopy = {
+  zh: {
+      overview: "概览",
+      analytics: "分析",
+      trades: "日志",
+      commandCenter: "PRO 概览",
+      commandTitle: "该时段的交易全貌",
+      commandSubtitle: "专注重要信息：结果、交易质量和关键模式。",
+      result: "结果",
+      winrate: "胜率",
+      tradesCount: "交易",
+      averageTrade: "平均交易结果",
+      proValue: "PRO 解锁哪些功能",
+      platform: "平台连接",
+      platformHint: "cTrader 和交易同步",
+      curve: "收益曲线",
+      curveHint: "盈亏和回撤走势",
+      discipline: "纪律",
+      disciplineHint: "笔记与交易模式",
+      comparison: "时段比较",
+      comparisonHint: "走势与结果质量",
+      deeperTitle: "深入分析",
+      deeperBody: "不止交易列表，还能查看结果结构、纪律和时段表现。",
+      tradesTitle: "交易日志",
+      tradesBody: "清晰地筛选、查看和编辑交易。",
+    },
     ru: {
       overview: 'Обзор',
       analytics: 'Аналитика',
@@ -1389,6 +1540,16 @@ export default function CalendarScreen() {
   ]);
 
   const referralNoticeCopy = {
+  zh: {
+      claimedTitle: "邀请已接受",
+      claimedBody: "创建第一条真实记录，即可解锁 7 天 PRO。",
+      friendJoinedTitle: "好友已加入 · 1/1",
+      friendJoinedBody: "已加入，等待好友创建第一条真实记录。",
+      inviterRewardTitle: "已发放 +26 天 PRO",
+      inviterRewardBody: "好友已创建第一条记录，你的奖励已生效。",
+      friendRewardTitle: "已解锁 7 天 PRO",
+      friendRewardBody: "第一条记录已完成，欢迎 PRO 已激活。",
+    },
     ru: {
       claimedTitle: 'Приглашение принято',
       claimedBody: 'Создай первую настоящую запись — после неё тебе откроется 7 дней PRO.',
@@ -1607,11 +1768,11 @@ export default function CalendarScreen() {
   const [pendingPlanRecordId, setPendingPlanRecordId] = useState(null);
   const [pendingPushAction, setPendingPushAction] = useState(null);
   const reminderFocusHandled = useRef(false);
-  const planDeleteText = language === 'en'
+  const planDeleteText = language === 'zh-CN' ? { eyebrow: "删除计划？", recurring: "此重复计划的所有未来提醒都会取消。", once: "此提醒将从日历移除，不再发送。", cancel: "取消", removing: "正在删除…", remove: "删除" } : (language === 'en'
     ? { eyebrow: 'Delete plan?', recurring: 'All future reminders in this repeating plan will be cancelled.', once: 'This reminder will disappear from the calendar and will not be sent.', cancel: 'Cancel', removing: 'Deleting…', remove: 'Delete' }
     : language === 'ro'
       ? { eyebrow: 'Ștergi planul?', recurring: 'Toate mementourile viitoare ale acestui plan repetitiv vor fi anulate.', once: 'Mementoul va dispărea din calendar și nu va mai fi trimis.', cancel: 'Anulează', removing: 'Se șterge…', remove: 'Șterge' }
-      : { eyebrow: 'Удалить план?', recurring: 'Все будущие напоминания по этому повторяющемуся плану будут отменены.', once: 'Напоминание исчезнет из календаря и больше не придёт.', cancel: 'Отмена', removing: 'Удаляю…', remove: 'Удалить' };
+      : { eyebrow: 'Удалить план?', recurring: 'Все будущие напоминания по этому повторяющемуся плану будут отменены.', once: 'Напоминание исчезнет из календаря и больше не придёт.', cancel: 'Отмена', removing: 'Удаляю…', remove: 'Удалить' });
 
   useEffect(() => {
     const reminderId = new URLSearchParams(window.location.search).get('reminder');
@@ -2195,7 +2356,7 @@ export default function CalendarScreen() {
   const targetDateKey = selectedCell ? selectedCell.key : keyFromDate(today);
   const todayKey = keyFromDate(today);
   const isFutureSelected = targetDateKey > todayKey;
-  const targetDateLabel = parseDateKeyLocal(targetDateKey).toLocaleDateString(language === 'en' ? 'en-US' : language === 'ro' || language === 'md' ? 'ro-RO' : 'ru-RU', {
+  const targetDateLabel = parseDateKeyLocal(targetDateKey).toLocaleDateString(language === 'zh-CN' ? 'zh-CN' : language === 'en' ? 'en-US' : language === 'ro' || language === 'md' ? 'ro-RO' : 'ru-RU', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -2506,7 +2667,7 @@ export default function CalendarScreen() {
     } catch (err) {
       console.error('[save] unexpected error:', err);
       if (form.voiceDestination === 'both' && voiceSaveProgress.current.wallet && !voiceSaveProgress.current.calendar) {
-        setFormError(language === 'ru' ? 'В кошельке запись сохранена, в календаре — ещё нет. Повторите сохранение с исходными полями.' : language === 'en' ? 'Saved in the wallet, but not in the calendar yet. Retry with the original fields.' : 'Salvat în portofel, dar încă nu în calendar. Reîncearcă fără a modifica datele.');
+        setFormError(language === 'zh-CN' ? "已保存到钱包，尚未保存到日历。请保留原始字段并重试。" : (language === 'ru' ? 'В кошельке запись сохранена, в календаре — ещё нет. Повторите сохранение с исходными полями.' : language === 'en' ? 'Saved in the wallet, but not in the calendar yet. Retry with the original fields.' : 'Salvat în portofel, dar încă nu în calendar. Reîncearcă fără a modifica datele.'));
         return;
       }
       const isUserForeignKeyError = err?.code === '23503' && String(err?.message || '').includes('trades_user_id_fkey');
@@ -2521,6 +2682,35 @@ export default function CalendarScreen() {
       saveInFlightRef.current = false;
       setIsSaving(false);
     }
+  }
+
+  async function saveReviewedVoiceEntry(entry, progress) {
+    if (saveInFlightRef.current) throw new Error(t('saving'));
+    const dateKey = entry.dateKey || todayKey;
+    const magnitude = Number(entry.amount);
+    const checkedDate = parseDateKeyLocal(dateKey);
+    if (keyFromDate(checkedDate) !== dateKey || dateKey > todayKey) throw new Error(t('recordFutureBlocked'));
+    if (!Number.isFinite(magnitude) || magnitude <= 0 || magnitude >= 1e12) throw new Error(t('amountMustBePositive'));
+    if (!['plus', 'minus'].includes(entry.sign) || !CURRENCIES.some(item => item.code === entry.currency)) throw new Error(t('entrySaveFailed'));
+    const destination = entry.destination || 'main';
+    if (!['main', 'wallet', 'both'].includes(destination)) throw new Error(t('entrySaveFailed'));
+    if (destination !== 'main' && (!proAccessActive || proAccessLoading)) throw new Error(language === 'zh-CN' ? "钱包需要 PRO，请选择日历。" : (language === 'ru' ? 'Кошелёк доступен с PRO. Выберите календарь.' : language === 'en' ? 'Wallet requires PRO. Choose Calendar.' : 'Portofelul necesită PRO. Alege calendarul.'));
+    const names = [...MONEY_CATEGORIES.map(item => item.key), ...voiceCategories.categories];
+    const instrument = resolveLocalizedCategory(entry.category || 'Другое', MONEY_CATEGORIES, names).trim().toUpperCase();
+    if (!instrument || instrument.length > 60) throw new Error(t('enterSymbolOrCategory'));
+    const signedPnl = entry.sign === 'minus' ? -magnitude : magnitude;
+    const time = progress.time || (progress.time = currentTimeHHMM());
+    saveInFlightRef.current = true;
+    try {
+      await saveVoiceDestinations({destination, key: JSON.stringify({destination, dateKey, instrument, signedPnl, currency: entry.currency}), progress,
+        saveWallet: () => wallet.saveTransaction({dateKey, time, title: instrument, amount: magnitude, kind: signedPnl < 0 ? 'expense' : 'income', currency: entry.currency, comment: ''}),
+        saveCalendar: () => hookSaveTrade({dateKey, isEditing: false, time, instrument, direction: signedPnl < 0 ? 'SHORT' : 'LONG', signedPnl, comment: '', platform: 'Manual', currency: entry.currency, takeProfit: null, stopLoss: null, traderMode: false}),
+      });
+      if (!getMoneyCategoryMeta(instrument)) voiceCategories.add(instrument);
+    } catch (error) {
+      if (destination === 'both' && progress.wallet && !progress.calendar) throw new Error(language === 'zh-CN' ? "已保存到钱包，请点击保存以完成日历保存。" : (language === 'ru' ? 'В кошельке запись сохранена, в календаре — ещё нет. Нажмите «Сохранить» для завершения.' : language === 'en' ? 'Saved in the wallet. Tap Save to finish saving in the calendar.' : 'Salvat în portofel. Apasă Salvează pentru a finaliza în calendar.'));
+      throw error;
+    } finally { saveInFlightRef.current = false; }
   }
 
   async function handleDeleteTrade(dateKey, tradeId) {
@@ -2705,6 +2895,27 @@ export default function CalendarScreen() {
   }
 
   function drawWrappedCanvasText(ctx, value, x, y, maxWidth, lineHeight, maxLines = 3) {
+    if (/[\u3400-\u9fff]/.test(String(value || ''))) {
+      const chars = Array.from(String(value || ''));
+      const wrapped = [];
+      let current = '';
+      for (let index = 0; index < chars.length; index += 1) {
+        const next = current + chars[index];
+        if (current && ctx.measureText(next).width > maxWidth) {
+          wrapped.push(current);
+          current = chars[index];
+          if (wrapped.length === maxLines - 1) {
+            current += chars.slice(index + 1).join('');
+            while (current && ctx.measureText(current + '…').width > maxWidth) current = Array.from(current).slice(0, -1).join('');
+            current += '…';
+            break;
+          }
+        } else current = next;
+      }
+      if (current) wrapped.push(current);
+      wrapped.slice(0, maxLines).forEach((text, index) => ctx.fillText(text, x, y + index * lineHeight));
+      return Math.min(wrapped.length, maxLines);
+    }
     const words = String(value || '').split(/\s+/).filter(Boolean);
     const lines = [];
     let line = '';
@@ -2740,7 +2951,7 @@ export default function CalendarScreen() {
   function getHistorySharePeriodText() {
     if (dateFrom === '0000-01-01' && dateTo === '9999-12-31') return historyShareCopy.allHistory;
 
-    const locale = resolveOnboardingLanguage(language) === 'ru'
+    const locale = resolveOnboardingLanguage(language) === 'zh' ? 'zh-CN' : resolveOnboardingLanguage(language) === 'ru'
       ? 'ru-RU'
       : resolveOnboardingLanguage(language) === 'ro'
         ? 'ro-RO'
@@ -3312,7 +3523,7 @@ export default function CalendarScreen() {
     const latePurchases = historyTrades.filter((t) => t.pnl < 0 && t.instrument === 'Покупки' && Number(textValue(t.time).slice(0, 2)) >= 20);
     for (const t of historyTrades.filter((t) => t.pnl < 0)) expensesByCategory[t.instrument || 'Другое'] = (expensesByCategory[t.instrument || 'Другое'] || 0) + Math.abs(t.pnl);
     const [topCategory, topAmount] = Object.entries(expensesByCategory).sort((a, b) => b[1] - a[1])[0] || [];
-    const insights = topCategory ? [t('historyTopExpense').replace('{0}', topCategory).replace('{1}', Math.round((topAmount / historyExpense) * 100))] : [];
+    const insights = topCategory ? [t('historyTopExpense').replace('{0}', getMoneyCategoryLabel(topCategory, language)).replace('{1}', Math.round((topAmount / historyExpense) * 100))] : [];
     if (latePurchases.length >= 2) insights.push(t('historyLatePurchases').replace('{0}', latePurchases.length));
     return insights;
   }, [historyTrades, historyExpense, traderMode, language]);
@@ -3662,7 +3873,9 @@ export default function CalendarScreen() {
 
 
   const proEntryLanguage = resolveOnboardingLanguage(language);
-  const proEntryCopy = proEntryLanguage === 'ru'
+  const proEntryCopy = proEntryLanguage === 'zh' ? {
+    newEntry:'新增记录',editEntry:'编辑记录',finance:'财务',trade:'交易',income:'收入',expense:'支出',profit:'盈利',loss:'亏损',amount:'金额',category:'类别',instrument:'品种',direction:'方向',customCategory:'自定义类别',addNote:'添加笔记',addDetails:'添加交易详情',hideDetails:'收起详情',detailsHint:'止盈、止损、来源和笔记',note:'笔记',noteFinance:'例如：午餐、房租、月薪…',noteTrade:'这笔交易发生了什么？',source:'来源',saveFinance:'保存记录',saveTrade:'保存交易',financeHint:'收入和支出',tradeHint:'交易日志',time:'时间',quickPick:'快捷选择',chooseType:'添加什么？',chooseTypeHint:'请先选择记录类型',reminder:'提醒',
+  } : proEntryLanguage === 'ru'
     ? {
         newEntry: 'Новая запись', editEntry: 'Редактировать запись', finance: 'Финансы', trade: 'Сделка',
         income: 'Доход', expense: 'Расход', profit: 'Профит', loss: 'Убыток', amount: 'Сумма',
@@ -3798,9 +4011,9 @@ export default function CalendarScreen() {
 
         {isFinanceEntry && !editingTrade && !form.voiceDestination && (
           <div className={`mt-3 rounded-2xl border p-3 ${isLight ? 'border-amber-200 bg-amber-50/60' : 'border-amber-400/15 bg-amber-400/[.04]'}`}>
-            <p className="text-[10px] font-semibold uppercase tracking-[.16em] text-amber-500">Куда записать операцию?</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[.16em] text-amber-500">{t('entryDestination')}</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
-              {['main', ...(proAccessActive ? ['wallet'] : [])].map((target) => <button key={target} type="button" onClick={() => setForm((current) => ({ ...current, accountTarget: target }))} className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${form.accountTarget === target ? 'bg-amber-400 text-zinc-950' : isLight ? 'bg-white text-zinc-500' : 'bg-white/[.06] text-zinc-400'}`}>{target === 'wallet' ? 'Кошелёк · PRO' : 'Основной счёт'}</button>)}
+              {['main', ...(proAccessActive ? ['wallet'] : [])].map((target) => <button key={target} type="button" onClick={() => setForm((current) => ({ ...current, accountTarget: target }))} className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${form.accountTarget === target ? 'bg-amber-400 text-zinc-950' : isLight ? 'bg-white text-zinc-500' : 'bg-white/[.06] text-zinc-400'}`}>{target === 'wallet' ? t('walletLabel') + ' · PRO' : t('mainAccount')}</button>)}
             </div>
           </div>
         )}
@@ -4014,11 +4227,11 @@ export default function CalendarScreen() {
               <div className={`mt-2.5 overflow-hidden rounded-2xl border ${isLight ? 'border-zinc-200 bg-zinc-50/70' : 'border-white/[0.06] bg-black/15'}`}>
                 <div className={`grid grid-cols-2 ${isLight ? 'divide-x divide-zinc-200' : 'divide-x divide-white/[0.06]'}`}>
                   <label className="px-4 py-3.5">
-                    <span className={`block font-data text-[8px] uppercase tracking-[0.18em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>Take Profit</span>
+                    <span className={`block font-data text-[8px] uppercase tracking-[0.18em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('takeProfit')}</span>
                     <input type="number" step="any" value={form.takeProfit} onChange={(event) => setForm((current) => ({ ...current, takeProfit: event.target.value }))} className={`mt-1.5 w-full bg-transparent font-data text-sm outline-none placeholder:text-zinc-700 ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`} placeholder="—" />
                   </label>
                   <label className="px-4 py-3.5">
-                    <span className={`block font-data text-[8px] uppercase tracking-[0.18em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>Stop Loss</span>
+                    <span className={`block font-data text-[8px] uppercase tracking-[0.18em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('stopLoss')}</span>
                     <input type="number" step="any" value={form.stopLoss} onChange={(event) => setForm((current) => ({ ...current, stopLoss: event.target.value }))} className={`mt-1.5 w-full bg-transparent font-data text-sm outline-none placeholder:text-zinc-700 ${isLight ? 'text-zinc-900' : 'text-zinc-300'}`} placeholder="—" />
                   </label>
                 </div>
@@ -4734,8 +4947,8 @@ export default function CalendarScreen() {
               {t('addAction')}
             </span>
           </button>
-          <CalendarVoiceButton askDestination defaultCurrency={currency} walletAvailable={proAccessActive && !proAccessLoading} language={language} isLight={isLight} traderMode={traderMode} categoryOptions={[...new Set([...MONEY_CATEGORIES.map(item => item.key), ...voiceCategories.categories])].map(value => ({ value, label: getMoneyCategoryLabel(value, language) }))} onCommand={(command) => {
-            if (command.type === 'category-prompt') return language === 'ru' ? 'Добавьте название после команды. Например: создай категорию Настольные игры.' : language === 'en' ? 'Include the category name in your command.' : 'Include numele categoriei în comandă.';
+          <CalendarVoiceButton onSaveEntry={saveReviewedVoiceEntry} defaultCurrency={currency} walletAvailable={proAccessActive && !proAccessLoading} language={language} isLight={isLight} traderMode={traderMode} categoryOptions={[...new Set([...MONEY_CATEGORIES.map(item => item.key), ...voiceCategories.categories])].map(value => ({ value, label: getMoneyCategoryLabel(value, language) }))} onCommand={(command) => {
+            if (command.type === 'category-prompt') return language === 'zh-CN' ? "请在命令中包含类别名称。" : (language === 'ru' ? 'Добавьте название после команды. Например: создай категорию Настольные игры.' : language === 'en' ? 'Include the category name in your command.' : 'Include numele categoriei în comandă.');
             if (command.type === 'history') { openHistory(); return; }
             if (command.type === 'settings') { openSettings(); return; }
             if (command.type === 'theme') { setTheme(command.theme); return; }
@@ -4751,7 +4964,7 @@ export default function CalendarScreen() {
               const name = resolveCategory(command.name);
               voiceCategories.add(name);
               const label = getMoneyCategoryLabel(name, language);
-              return language === 'ru' ? `Категория «${label}» готова. Скажите, например: запиши расход 20 евро на ${label}.` : language === 'en' ? `Category “${label}” is ready.` : `Categoria „${label}” este pregătită.`;
+              return language === 'zh-CN' ? `类别“${label}”已创建。` : (language === 'ru' ? `Категория «${label}» готова. Скажите, например: запиши расход 20 евро на ${label}.` : language === 'en' ? `Category “${label}” is ready.` : `Categoria „${label}” este pregătită.`);
             }
             if (command.type === 'question') return financialVoiceAnswer({
               records: manualTrades, monthKey: todayKey.slice(0, 7), metric: command.metric, period: command.period, category: spokenCategory, categoryLabel: spokenCategory ? getMoneyCategoryLabel(spokenCategory, language) : null, language,
@@ -4807,7 +5020,7 @@ export default function CalendarScreen() {
                 <h2 className={`font-display text-xl font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>
                   {traderMode && historyScope !== 'money'
                     ? (periodPreset === 'Вся история' ? t('allHistory') : dateFrom === dateTo ? dateFrom : `${dateFrom} — ${dateTo}`)
-                    : (isFinancialPro ? (language === 'ru' ? 'Финансовый разбор' : language === 'ro' || language === 'md' ? 'Analiză financiară' : 'Financial breakdown') : t('financialHistory'))}
+                    : (isFinancialPro ? (language === 'zh-CN' ? '财务分析' : language === 'ru' ? 'Финансовый разбор' : language === 'ro' || language === 'md' ? 'Analiză financiară' : 'Financial breakdown') : t('financialHistory'))}
                 </h2>
               </div>
               <div className="flex items-center gap-2">
@@ -4968,7 +5181,7 @@ export default function CalendarScreen() {
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <p className="font-data text-[10px] font-bold uppercase tracking-[0.20em] text-amber-500">PRO · {t('financialSummary')}</p>
-                    <h3 className={`mt-2 text-xl font-semibold tracking-tight ${isLight ? 'text-slate-950' : 'text-zinc-100'}`}>{language === 'ru' ? 'Финансовый разбор' : language === 'ro' || language === 'md' ? 'Analiză financiară' : 'Financial breakdown'}</h3>
+                    <h3 className={`mt-2 text-xl font-semibold tracking-tight ${isLight ? 'text-slate-950' : 'text-zinc-100'}`}>{language === 'zh-CN' ? "财务分析" : (language === 'ru' ? 'Финансовый разбор' : language === 'ro' || language === 'md' ? 'Analiză financiară' : 'Financial breakdown')}</h3>
                       </div>
                       <span className={`rounded-xl border px-2.5 py-1 font-data text-[9px] font-semibold ${isLight ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-amber-400/15 bg-amber-400/[0.06] text-amber-300'}`}>{historyCurrency}</span>
                     </div>
@@ -5046,29 +5259,29 @@ export default function CalendarScreen() {
                     <div className="mt-4 grid gap-2 sm:grid-cols-2">
                       <div className={`rounded-xl border p-3 ${isLight ? 'border-slate-200 bg-white' : 'border-white/[0.06] bg-white/[0.02]'}`}>
                         <div className="flex items-center justify-between gap-2">
-                          <p className="text-xs font-semibold">{language === 'ru' ? 'Что изменилось' : language === 'ro' || language === 'md' ? 'Ce s-a schimbat' : 'What changed'}</p>
-                          <span className="text-[9px] text-zinc-500">{historyPremiumInsights.previousAvailable ? (language === 'ru' ? 'к прошлому периоду' : 'vs previous') : '—'}</span>
+                          <p className="text-xs font-semibold">{language === 'zh-CN' ? "有什么变化" : (language === 'ru' ? 'Что изменилось' : language === 'ro' || language === 'md' ? 'Ce s-a schimbat' : 'What changed')}</p>
+                          <span className="text-[9px] text-zinc-500">{historyPremiumInsights.previousAvailable ? (language === 'zh-CN' ? '与上一时段比较' : language === 'ru' ? 'к прошлому периоду' : 'vs previous') : '—'}</span>
                         </div>
                         {historyPremiumInsights.previousAvailable ? (
                           <div className="mt-3 space-y-2 text-[11px]">
                             <div className="flex justify-between gap-3"><span className="text-zinc-500">{t('incomeLabel')}</span><b className={historyPremiumInsights.incomeChange >= 0 ? 'text-emerald-500' : 'text-red-400'}>{historyPremiumInsights.incomeChange > 0 ? '+' : ''}{historyPremiumInsights.incomeChange}%</b></div>
                             <div className="flex justify-between gap-3"><span className="text-zinc-500">{t('expenseLabel')}</span><b className={historyPremiumInsights.expenseChange <= 0 ? 'text-emerald-500' : 'text-red-400'}>{historyPremiumInsights.expenseChange > 0 ? '+' : ''}{historyPremiumInsights.expenseChange}%</b></div>
                           </div>
-                        ) : <p className="mt-3 text-[11px] leading-5 text-zinc-500">{language === 'ru' ? 'Недостаточно данных для честного сравнения.' : 'Not enough data for a reliable comparison.'}</p>}
+                        ) : <p className="mt-3 text-[11px] leading-5 text-zinc-500">{language === 'zh-CN' ? "数据不足以进行可靠比较。" : (language === 'ru' ? 'Недостаточно данных для честного сравнения.' : 'Not enough data for a reliable comparison.')}</p>}
                       </div>
                       <div className={`rounded-xl border p-3 ${isLight ? 'border-slate-200 bg-white' : 'border-white/[0.06] bg-white/[0.02]'}`}>
-                        <p className="text-xs font-semibold">{language === 'ru' ? 'Незаметные расходы' : language === 'ro' || language === 'md' ? 'Cheltuieli frecvente' : 'Easy-to-miss spending'}</p>
-                        {historyPremiumInsights.recurring ? <p className="mt-2 text-[11px] leading-5 text-zinc-500"><b className="text-zinc-900 dark:text-zinc-200">{historyPremiumInsights.recurring[0]}</b> · {historyPremiumInsights.recurring[1].count} {language === 'ru' ? 'операции' : 'entries'} · <b className="text-red-400">{historyCurrencySymbol}{formatMoney(historyPremiumInsights.recurring[1].amount)}</b></p> : <p className="mt-2 text-[11px] leading-5 text-zinc-500">{language === 'ru' ? 'Повторяющихся небольших трат не обнаружено.' : 'No reliable recurring pattern found.'}</p>}
+                        <p className="text-xs font-semibold">{language === 'zh-CN' ? "容易忽略的支出" : (language === 'ru' ? 'Незаметные расходы' : language === 'ro' || language === 'md' ? 'Cheltuieli frecvente' : 'Easy-to-miss spending')}</p>
+                        {historyPremiumInsights.recurring ? <p className="mt-2 text-[11px] leading-5 text-zinc-500"><b className="text-zinc-900 dark:text-zinc-200">{getMoneyCategoryLabel(historyPremiumInsights.recurring[0], language)}</b> · {historyPremiumInsights.recurring[1].count} {language === 'zh-CN' ? "条记录" : (language === 'ru' ? 'операции' : 'entries')} · <b className="text-red-400">{historyCurrencySymbol}{formatMoney(historyPremiumInsights.recurring[1].amount)}</b></p> : <p className="mt-2 text-[11px] leading-5 text-zinc-500">{language === 'zh-CN' ? "未发现可靠的重复支出模式。" : (language === 'ru' ? 'Повторяющихся небольших трат не обнаружено.' : 'No reliable recurring pattern found.')}</p>}
                       </div>
                     </div>
 
                     {historyPremiumInsights.projectedExpense !== null && historyCurrency !== 'ALL' && (
                       <div className={`mt-2 rounded-xl border p-3 ${isLight ? 'border-amber-200 bg-amber-50/60' : 'border-amber-400/10 bg-amber-400/[0.05]'}`}>
                         <div className="flex items-center justify-between gap-3">
-                          <p className="text-xs font-semibold">{language === 'ru' ? 'Если так продолжится' : language === 'ro' || language === 'md' ? 'Dacă ritmul continuă' : 'If this pace continues'}</p>
+                          <p className="text-xs font-semibold">{language === 'zh-CN' ? "如果保持当前节奏" : (language === 'ru' ? 'Если так продолжится' : language === 'ro' || language === 'md' ? 'Dacă ritmul continuă' : 'If this pace continues')}</p>
                           <span className="font-data text-xs font-semibold text-amber-500">≈ {historyCurrencySymbol}{formatMoney(Math.round(historyPremiumInsights.projectedExpense))}</span>
                         </div>
-                        <p className="mt-1 text-[10px] leading-5 text-zinc-500">{language === 'ru' ? `Оценка расходов к концу периода · осталось ${historyPremiumInsights.remainingDays} дн. Расчёт основан только на среднем темпе за текущий период.` : `Estimated spending by period end · ${historyPremiumInsights.remainingDays} days left. Based only on the current average pace.`}</p>
+                        <p className="mt-1 text-[10px] leading-5 text-zinc-500">{language === 'zh-CN' ? `时段结束时的预计支出，还剩 ${historyPremiumInsights.remainingDays} 天。仅根据当前平均支出速度估算。` : (language === 'ru' ? `Оценка расходов к концу периода · осталось ${historyPremiumInsights.remainingDays} дн. Расчёт основан только на среднем темпе за текущий период.` : `Estimated spending by period end · ${historyPremiumInsights.remainingDays} days left. Based only on the current average pace.`)}</p>
                       </div>
                     )}
 
@@ -5079,13 +5292,14 @@ export default function CalendarScreen() {
                         return groups;
                       }, {});
                       const [mainExpenseName] = Object.entries(expenseGroups).sort((a, b) => b[1] - a[1])[0] || [];
+                      const mainExpenseLabel = mainExpenseName ? getMoneyCategoryLabel(mainExpenseName, language) : '';
                       const personalExpense = personalEntries.reduce((sum, item) => sum + Math.max(0, -item.pnl), 0);
                       const personalIncome = personalEntries.reduce((sum, item) => sum + Math.max(0, item.pnl), 0);
                       const gap = Math.max(0, personalExpense - personalIncome);
-                      const title = language === 'ru' ? 'Ваш следующий шаг к большему капиталу' : language === 'ro' || language === 'md' ? 'Următorul pas spre mai mult capital' : 'Your next move toward more wealth';
+                      const title = language === 'zh-CN' ? "积累更多财富的下一步" : (language === 'ru' ? 'Ваш следующий шаг к большему капиталу' : language === 'ro' || language === 'md' ? 'Următorul pas spre mai mult capital' : 'Your next move toward more wealth');
                       const body = gap > 0
-                        ? (language === 'ru' ? `Сейчас расходы выше доходов на ${historyCurrencySymbol}${formatMoney(gap)}. Начните с главной зоны — ${mainExpenseName || 'расходов'} — и найдите операции, которые можно сократить.` : `Expenses are above income by ${historyCurrencySymbol}${formatMoney(gap)}. Start with ${mainExpenseName || 'your largest category'} and find what can be reduced.`)
-                        : (language === 'ru' ? 'Доходы уже покрывают расходы. Следующий рычаг — сохранить разницу и не дать главной категории незаметно вырасти.' : 'Income covers expenses. The next lever is to protect the difference and keep the largest category from growing.');
+                        ? (language === 'zh-CN' ? `支出比收入多 ${historyCurrencySymbol}${formatMoney(gap)}。从${mainExpenseLabel || '最大的支出类别'}开始，找出可以减少的支出。` : language === 'ru' ? `Сейчас расходы выше доходов на ${historyCurrencySymbol}${formatMoney(gap)}. Начните с главной зоны — ${mainExpenseName || 'расходов'} — и найдите операции, которые можно сократить.` : `Expenses are above income by ${historyCurrencySymbol}${formatMoney(gap)}. Start with ${mainExpenseName || 'your largest category'} and find what can be reduced.`)
+                        : (language === 'zh-CN' ? '收入已经覆盖支出。下一步是存下结余，并控制最大支出类别的增长。' : language === 'ru' ? 'Доходы уже покрывают расходы. Следующий рычаг — сохранить разницу и не дать главной категории незаметно вырасти.' : 'Income covers expenses. The next lever is to protect the difference and keep the largest category from growing.');
                       return (
                         <div className={`mt-2 rounded-2xl border p-4 ${isLight ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-white' : 'border-emerald-400/15 bg-gradient-to-br from-emerald-500/[0.10] to-black/10'}`}>
                           <div className="flex items-start gap-3">
@@ -5094,7 +5308,7 @@ export default function CalendarScreen() {
                               <p className="text-sm font-semibold">{title}</p>
                               <p className="mt-1 text-[11px] leading-5 text-zinc-500">{body}</p>
                               {mainExpenseName && historyCurrency !== 'ALL' && !isTradingInstrumentName(mainExpenseName) && <button type="button" onClick={() => setSavingsReview({ category: mainExpenseName })} className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-xl bg-emerald-500 px-3 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-emerald-600 active:scale-[0.98]">
-                                {language === 'ru' ? `Разобрать ${mainExpenseName}` : `Review ${mainExpenseName}`} <ArrowRight className="h-3.5 w-3.5" />
+                                {language === 'zh-CN' ? `查看 ${mainExpenseLabel}` : (language === 'ru' ? `Разобрать ${mainExpenseName}` : `Review ${mainExpenseName}`)} <ArrowRight className="h-3.5 w-3.5" />
                               </button>}
                             </div>
                           </div>
@@ -5836,14 +6050,14 @@ export default function CalendarScreen() {
                               </svg>
                               <div className="absolute inset-0 flex flex-col items-center justify-center text-center leading-none">
                                 <span className={`font-display text-4xl font-bold tabular-nums tracking-tight ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>{score}</span>
-                                <span className={`mt-1.5 text-[8px] font-bold uppercase tracking-[0.2em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>SCORE</span>
+                                <span className={`mt-1.5 text-[8px] font-bold uppercase tracking-[0.2em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('scoreLabel')}</span>
                               </div>
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className={`text-base font-semibold leading-tight ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{scoreLabel}</p>
                               <p className="mt-1.5 text-[11px] text-zinc-500 leading-relaxed max-w-xs mx-auto sm:mx-0">{t('scoreDescription')}</p>
                               <div className={`mt-4 inline-flex items-baseline gap-2 border-t pt-3 sm:border-t-0 sm:pt-0 sm:border-l sm:pl-5 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
-                                <span className="text-[10px] uppercase tracking-wider text-zinc-500">Profit Factor</span>
+                                <span className="text-[10px] uppercase tracking-wider text-zinc-500">{t('profitFactor')}</span>
                                 <span className={`font-display text-2xl font-bold tabular-nums ${profitFactor >= 1.5 ? 'text-emerald-500' : profitFactor >= 1 ? (isLight ? 'text-zinc-800' : 'text-zinc-200') : 'text-red-500'}`}>{profitFactor === Infinity ? 'MAX' : profitFactor.toFixed(2)}</span>
                               </div>
                             </div>
@@ -5852,7 +6066,7 @@ export default function CalendarScreen() {
 
                         <div className={`grid grid-cols-3 divide-x rounded-2xl px-1 py-4 ${isLight ? 'divide-zinc-200' : 'divide-zinc-800'}`}>
                           <div className="px-3 text-center">
-                            <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1.5">Payoff</p>
+                            <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1.5">{t('payoff')}</p>
                             <p className={`font-display text-lg font-semibold tabular-nums ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{payoffRatio > 0 ? `1:${payoffRatio.toFixed(2)}` : '—'}</p>
                           </div>
                           <div className="px-3 text-center">
@@ -6319,7 +6533,7 @@ export default function CalendarScreen() {
                     ? (editingTrade ? proEntryCopy.editEntry : proEntryCopy.newEntry)
                     : (editingTrade ? t('editRecord') : t('addRecord'))}
                 </p>
-                {form.voiceDestination && <label className="mt-1 block text-xs text-amber-500">{language === 'ru' ? 'Место записи' : language === 'en' ? 'Save to' : 'Salvare în'}<select aria-label={language === 'ru' ? 'Место записи' : language === 'en' ? 'Save to' : 'Salvare în'} value={form.voiceDestination} onChange={event=>setForm(current=>({...current,voiceDestination:event.target.value}))} className="ml-2 rounded-lg border border-amber-400/20 bg-zinc-900 p-1 text-zinc-200"><option value="main">{language === 'ru' ? 'Календарь' : 'Calendar'}</option>{proAccessActive&&<><option value="wallet">{language === 'ru' ? 'Кошелёк' : language === 'en' ? 'Wallet' : 'Portofel'}</option><option value="both">{language === 'ru' ? 'Календарь и кошелёк' : language === 'en' ? 'Calendar + Wallet' : 'Calendar + Portofel'}</option></>}</select></label>}<div className="mt-1 flex items-center gap-1.5">
+                {form.voiceDestination && <label className="mt-1 block text-xs text-amber-500">{language === 'zh-CN' ? "保存位置" : (language === 'ru' ? 'Место записи' : language === 'en' ? 'Save to' : 'Salvare în')}<select aria-label={language === 'zh-CN' ? "保存位置" : (language === 'ru' ? 'Место записи' : language === 'en' ? 'Save to' : 'Salvare în')} value={form.voiceDestination} onChange={event=>setForm(current=>({...current,voiceDestination:event.target.value}))} className="ml-2 rounded-lg border border-amber-400/20 bg-zinc-900 p-1 text-zinc-200"><option value="main">{language === 'zh-CN' ? "日历" : (language === 'ru' ? 'Календарь' : 'Calendar')}</option>{proAccessActive&&<><option value="wallet">{language === 'zh-CN' ? "钱包" : (language === 'ru' ? 'Кошелёк' : language === 'en' ? 'Wallet' : 'Portofel')}</option><option value="both">{language === 'zh-CN' ? "日历 + 钱包" : (language === 'ru' ? 'Календарь и кошелёк' : language === 'en' ? 'Calendar + Wallet' : 'Calendar + Portofel')}</option></>}</select></label>}<div className="mt-1 flex items-center gap-1.5">
                   <input
                     type="date"
                     max={todayKey}
@@ -6635,7 +6849,7 @@ export default function CalendarScreen() {
                             value={form.takeProfit}
                             onChange={(e) => setForm((f) => ({ ...f, takeProfit: e.target.value }))}
                             className={`w-full bg-transparent font-data text-sm outline-none placeholder:text-zinc-600 ${isLight ? 'text-zinc-900' : 'text-zinc-200'}`}
-                            placeholder="Take Profit"
+                            placeholder={t('takeProfit')}
                           />
                         </label>
                         <label className={`group rounded-2xl border px-3.5 py-3 transition-all focus-within:ring-2 focus-within:ring-red-400/[0.05] ${isLight ? 'border-zinc-200 bg-zinc-50 focus-within:border-red-400/40' : 'border-white/[0.07] bg-black/20 focus-within:border-red-400/25'}`}>
@@ -6646,7 +6860,7 @@ export default function CalendarScreen() {
                             value={form.stopLoss}
                             onChange={(e) => setForm((f) => ({ ...f, stopLoss: e.target.value }))}
                             className={`w-full bg-transparent font-data text-sm outline-none placeholder:text-zinc-600 ${isLight ? 'text-zinc-900' : 'text-zinc-200'}`}
-                            placeholder="Stop Loss"
+                            placeholder={t('stopLoss')}
                           />
                         </label>
                       </div>
@@ -6811,7 +7025,7 @@ export default function CalendarScreen() {
             {connectTab === 'ctrader' && ctraderNotice?.kind === 'error' && !(ctraderNotice.stage === 'accounts' && ctraderReconnect) && (
               <p role="status" className="mt-4 text-sm leading-relaxed text-amber-600">
                 {t(ctraderNotice.code === 'RECONNECT_REQUIRED' ? 'ctReconnect' : ctraderNotice.code === 'UNAUTHORIZED' ? 'ctLogin' : ctraderNotice.code === 'OFFLINE' ? 'ctOffline' : 'ctError')}
-                {ctraderNotice.stage === 'disconnect' && <span className="mt-2 block font-mono text-[11px] opacity-70">disconnect · {ctraderNotice.code}{ctraderNotice.status ? ` · HTTP ${ctraderNotice.status}` : ''}{ctraderNotice.backendStage ? ` · ${ctraderNotice.backendStage}` : ''}</span>}
+                {ctraderNotice.stage === 'disconnect' && <span className="mt-2 block font-mono text-[11px] opacity-70">{t('disconnectLabel')} · {ctraderNotice.code}{ctraderNotice.status ? ` · HTTP ${ctraderNotice.status}` : ''}{ctraderNotice.backendStage ? ` · ${ctraderNotice.backendStage}` : ''}</span>}
               </p>
             )}
           </div>
@@ -6933,14 +7147,14 @@ export default function CalendarScreen() {
                       </svg>
                       <div className="absolute inset-0 flex flex-col items-center justify-center text-center leading-none">
                         <span className={`font-display text-4xl font-bold tabular-nums tracking-tight ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>{traderScore.score}</span>
-                        <span className={`mt-1.5 text-[8px] font-bold uppercase tracking-[0.2em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>SCORE</span>
+                        <span className={`mt-1.5 text-[8px] font-bold uppercase tracking-[0.2em] ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{t('scoreLabel')}</span>
                       </div>
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className={`text-base font-semibold leading-tight ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{traderScore.label}</p>
                       <p className="mt-1.5 text-[11px] text-zinc-500 leading-relaxed max-w-xs mx-auto sm:mx-0">{t('scoreDescription')}</p>
                       <div className={`mt-4 inline-flex items-baseline gap-2 border-t pt-3 sm:border-t-0 sm:pt-0 sm:border-l sm:pl-5 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
-                        <span className="text-[10px] uppercase tracking-wider text-zinc-500">Profit Factor</span>
+                        <span className="text-[10px] uppercase tracking-wider text-zinc-500">{t('profitFactor')}</span>
                         <span className={`font-display text-2xl font-bold tabular-nums ${basicAnalysis.profitFactor >= 1.5 ? 'text-emerald-500' : basicAnalysis.profitFactor >= 1 ? (isLight ? 'text-zinc-800' : 'text-zinc-200') : 'text-red-500'}`}>
                           {basicAnalysis.profitFactor === Infinity ? 'MAX' : basicAnalysis.profitFactor.toFixed(2)}
                         </span>
@@ -6952,7 +7166,7 @@ export default function CalendarScreen() {
                 {/* ── Secondary metrics — borderless stat row, no boxes ─ */}
                 <div className={`grid grid-cols-3 divide-x rounded-2xl px-1 py-4 ${isLight ? 'divide-zinc-200' : 'divide-zinc-800'}`}>
                   <div className="px-3 text-center">
-                    <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1.5">Payoff</p>
+                    <p className="text-[9px] uppercase tracking-wider text-zinc-500 mb-1.5">{t('payoff')}</p>
                     <p className={`font-display text-lg font-semibold tabular-nums ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>
                       {basicAnalysis.payoffRatio > 0 ? `1:${basicAnalysis.payoffRatio.toFixed(2)}` : '—'}
                     </p>

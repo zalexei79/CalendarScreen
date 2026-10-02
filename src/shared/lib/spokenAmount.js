@@ -1,3 +1,4 @@
+import {parseChineseAmount} from './chineseNumber.js';
 const words = {
   ноль:0,один:1,одна:1,два:2,две:2,три:3,четыре:4,пять:5,шесть:6,семь:7,восемь:8,девять:9,
   десять:10,одиннадцать:11,двенадцать:12,тринадцать:13,четырнадцать:14,пятнадцать:15,шестнадцать:16,семнадцать:17,восемнадцать:18,девятнадцать:19,
@@ -36,6 +37,7 @@ function integer(text) {
 // Accept an amount phrase only. Dates, signs, unrelated words and multiple
 // amounts are rejected instead of picking the first number from a sentence.
 export function parseSpokenAmount(transcript) {
+  if (/[零〇一二两三四五六七八九十百千万亿点元块角分]|人民币|美元|美金|欧元|卢布|列伊/.test(String(transcript))) return parseChineseAmount(transcript);
   let text=String(transcript).toLowerCase().trim().replace(/[.!?]$/,'').replace(/ё/g,'е');
   text=text.replace(/^(?:сумма|amount|suma)\s+/,'');
   if(!text)return null;

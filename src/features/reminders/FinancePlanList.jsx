@@ -4,6 +4,7 @@ import { getCurrencyMeta } from '../../shared/config/constants';
 import { planDateKey, planTime } from './useFinancePlans';
 
 const COPY = {
+  zh: {title:'当天计划',later:'稍后填写金额',confirmed:'已确认',missed:'未完成',overdue:'已逾期',waiting:'等待结果',planned:'已安排提醒',weekly:'每周',monthly:'每月',yearly:'每年',atTime:'事项发生时',day:'提前一天',days:'提前三天',week:'提前一周',edit:'编辑',deletePlan:'删除计划',addAmount:'填写金额',success:'已确认',saving:'正在保存…',count:'个计划',of:'/',until:'截至'},
   ru: { title: 'Планы на этот день', later: 'сумма позже', confirmed: 'Подтверждено', missed: 'Не получилось', overdue: 'Просрочено', waiting: 'Ожидает результата', planned: 'Напоминание запланировано', weekly: 'каждую неделю', monthly: 'каждый месяц', yearly: 'каждый год', atTime: 'в момент события', day: 'за 1 день', days: 'за 3 дня', week: 'за неделю', edit: 'Изменить', deletePlan: 'Удалить план', addAmount: 'Указать сумму', success: 'Подтвердилось', saving: 'Сохраняю…', count: 'планов', of: 'из', until: 'до' },
   en: { title: 'Plans for this day', later: 'amount later', confirmed: 'Confirmed', missed: 'Did not happen', overdue: 'Overdue', waiting: 'Awaiting result', planned: 'Reminder scheduled', weekly: 'every week', monthly: 'every month', yearly: 'every year', atTime: 'at event time', day: '1 day before', days: '3 days before', week: '1 week before', edit: 'Edit', deletePlan: 'Delete plan', addAmount: 'Add amount', success: 'Confirmed', saving: 'Saving…', count: 'plans', of: 'of', until: 'until' },
   ro: { title: 'Planuri pentru această zi', later: 'sumă mai târziu', confirmed: 'Confirmat', missed: 'Nu s-a reușit', overdue: 'Expirat', waiting: 'Așteaptă rezultatul', planned: 'Memento programat', weekly: 'în fiecare săptămână', monthly: 'în fiecare lună', yearly: 'în fiecare an', atTime: 'la ora evenimentului', day: 'cu 1 zi înainte', days: 'cu 3 zile înainte', week: 'cu 1 săptămână înainte', edit: 'Editează', deletePlan: 'Șterge planul', addAmount: 'Adaugă suma', success: 'Confirmat', saving: 'Se salvează…', count: 'planuri', of: 'din', until: 'până la' },
@@ -11,6 +12,7 @@ const COPY = {
 
 function resolveLanguage(language) {
   const code = String(language || '').toLowerCase();
+  if (code.startsWith('zh')) return 'zh';
   if (code === 'en' || code.startsWith('en-')) return 'en';
   if (code === 'ro' || code.startsWith('ro-') || code === 'md') return 'ro';
   return 'ru';
@@ -19,12 +21,12 @@ function resolveLanguage(language) {
 function amount(plan, localeCode, copy) {
   if (plan.amount == null) return copy.later;
   const symbol = getCurrencyMeta(plan.currency || 'USD').symbol;
-  const locale = localeCode === 'en' ? 'en-US' : localeCode === 'ro' ? 'ro-RO' : 'ru-RU';
+  const locale = localeCode === 'zh' ? 'zh-CN' : localeCode === 'en' ? 'en-US' : localeCode === 'ro' ? 'ro-RO' : 'ru-RU';
   return `${plan.kind === 'income' ? '+' : '−'}${symbol}${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(Number(plan.amount) || 0)}`;
 }
 
 function endDateLabel(value, localeCode) {
-  const locale = localeCode === 'en' ? 'en-US' : localeCode === 'ro' ? 'ro-RO' : 'ru-RU';
+  const locale = localeCode === 'zh' ? 'zh-CN' : localeCode === 'en' ? 'en-US' : localeCode === 'ro' ? 'ro-RO' : 'ru-RU';
   return new Date(`${value}T12:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
