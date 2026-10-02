@@ -862,6 +862,19 @@ export default function CalendarScreen() {
   }[onboardingLang];
 
   const historyShareCopy = {
+    zh: {
+      share: '分享', shareTitle: '分享结果', preview: '预览', myResults: '我的结果',
+      period: '时间范围', result: '结果', income: '收入', expense: '支出', records: '记录',
+      trades: '交易', winrate: '胜率', profitable: '盈利', losing: '亏损',
+      saveImage: '保存 PNG', preparing: '正在生成卡片…', caption: '看看我的结果',
+      createdWith: '使用 DAYRIS 创建', close: '关闭', mixedCurrencies: '所有货币',
+      allHistory: '全部时间', installCta: '加入我', scanToInstall: '扫描二维码或打开链接',
+      viralTagline: t('slogan'), referralBonus: '通过我的链接获得 7 天 PRO',
+      shareInviteLine: '每一天都很重要。',
+      shareBonusLine: '通过我的链接完成第一条记录后，可获得 7 天 PRO。',
+      shareGenericLine: '试试 DAYRIS，开始记录自己的日历。',
+      shareLinkHint: '分享图片时会同时附上可点击的安装链接',
+    },
     ru: {
       share: 'Поделиться',
       shareTitle: 'Поделиться результатами',
@@ -1302,6 +1315,13 @@ export default function CalendarScreen() {
   }[resolveOnboardingLanguage(language)];
 
   const referralShareCopy = {
+    zh: {
+      preview: '专属邀请', shareTitle: '邀请加入 DAYRIS', hero: '加入我，一起记录每一天',
+      tagline: t('slogan'), friendBonus: '7 天 PRO', friendBonusHint: '完成第一条记录后即可开始体验',
+      qrHint: '扫描二维码安装应用', honestLine: '你完成第一条记录后，我也会获得 PRO 奖励。',
+      saveImage: '保存 PNG', share: '分享', preparing: '正在生成邀请…', close: '关闭',
+      shareText: '每一天都很重要。通过我的链接完成第一条记录后，即可获得 7 天 PRO。',
+    },
     ru: {
       preview: 'ПЕРСОНАЛЬНОЕ ПРИГЛАШЕНИЕ',
       shareTitle: 'Пригласить в DAYRIS',
@@ -3744,7 +3764,6 @@ export default function CalendarScreen() {
     setProFiltersOpen(false);
     setProHistoryTab('overview');
     setConfirmingClear(false);
-    setHistoryAnalysisOpen(false);
     setFreeHistoryPanel(null);
     setFreeTimelineSelected(null);
     setFreeTimelineOffset(0);

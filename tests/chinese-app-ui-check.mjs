@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
+import {translate} from '../src/shared/i18n/index.js';
 const root=path.resolve('dist');
 const server=http.createServer((request,response)=>{
  const name=new URL(request.url,'http://localhost').pathname,file=path.resolve(root,name==='/'?'index.html':'.'+name);
@@ -37,6 +38,21 @@ try{
  assert.equal(Object.values(await cache()).flat().length,2,'saved records survive app reload');
  await page.locator('.calendar-voice-button').click();await page.evaluate(()=>finishPhrase('支出80元保存到钱包'));
  assert.match(await page.locator('.calendar-voice-answer').textContent(),/PRO/);assert.equal(Object.values(await cache()).flat().length,2,'FREE cannot write to wallet');
- await page.getByRole('button',{name:'关闭语音模式'}).click();assert.deepEqual(errors,[]);
+ await page.getByRole('button',{name:'关闭语音模式'}).click();
+ await page.locator('.calendar-voice-button').click();await page.evaluate(()=>finishPhrase('打开历史'));
+ await page.getByRole('button',{name:'分享',exact:true}).waitFor();
+ for (const language of ['ru','en','md','zh-CN']) {
+  const localizedContext=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  await localizedContext.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
+  await localizedContext.addInitScript(language=>{
+   localStorage.setItem('dayris_onboarding_v2_completed','1');localStorage.setItem('calendar_guide_completed','1');localStorage.setItem('atj_language',language);
+  },language);
+  const localizedPage=await localizedContext.newPage();localizedPage.on('pageerror',error=>errors.push(error.message));
+  await localizedPage.goto(origin);await localizedPage.locator('.calendar-days-grid').waitFor();await localizedPage.waitForFunction(()=>!document.getElementById('boot-screen'));
+  await localizedPage.getByRole('button',{name:translate(language,'history'),exact:true}).click();
+  await localizedPage.getByRole('button',{name:({ru:'Поделиться',en:'Share',md:'Distribuie','zh-CN':'分享'})[language],exact:true}).waitFor();
+  await localizedContext.close();
+ }
+ assert.deepEqual(errors,[]);
  console.log('PASS: full app review, amount correction, direct expense/income save, local dates, persistence and FREE wallet restriction');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
