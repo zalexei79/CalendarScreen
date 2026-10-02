@@ -41,6 +41,14 @@ export function parseSpokenAmount(transcript) {
   let text=String(transcript).toLowerCase().trim().replace(/[.!?]$/,'').replace(/ё/g,'е');
   text=text.replace(/^(?:сумма|amount|suma)\s+/,'');
   if(!text)return null;
+  const shortThousands=text.replace(new RegExp(`\\s+(?:${units})$`),'').match(/^(.+?\s+|\d+(?:[.,]\d{1,2})?)(?:к|k|ка)$/u);
+  if(shortThousands){
+    const baseText=shortThousands[1].trim();
+    if(/[кk]$|\sка$/.test(baseText))return null;
+    const base=/^(?:полтора|полторы)$/.test(baseText)?'1.5':parseSpokenAmount(baseText);
+    const scaled=base===null?NaN:Number(base)*1000;
+    return Number.isFinite(scaled)&&scaled>=0&&scaled<1e12?String(Math.round(scaled*100)/100):null;
+  }
   let value;
   const centsMatch=text.match(new RegExp(`^(.+?)\\s+(?:${units})\\s+(?:(?:and|и|și|si)\\s+)?(.+?)\\s+(?:${cents})$`));
   if(centsMatch) {

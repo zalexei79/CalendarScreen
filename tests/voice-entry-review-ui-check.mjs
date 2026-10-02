@@ -30,6 +30,15 @@ try{
  await page.evaluate(()=>window.delayStart=true);await mic().click();
  assert.match(await page.locator('.calendar-voice-message').textContent(),/Включаю микрофон/);assert.equal(await page.evaluate(()=>window.cues||0),0);
  await page.evaluate(()=>{window.delayStart=false;window.voice.onstart();});assert.equal(await page.evaluate(()=>window.cues),1);
+ assert.equal(await page.locator('.calendar-voice-shortcuts').count(),0);
+ assert.equal(await page.locator('.calendar-voice-help-groups details').count(),4);
+ const interim=async text=>page.evaluate(text=>window.voice.onresult({results:[Object.assign([{transcript:text}],{isFinal:false})]}),text);
+ await interim('потратил');await page.locator('.calendar-voice-suggestions[data-filtered="true"]').waitFor();
+ assert.equal(await page.locator('.calendar-voice-help-groups').count(),0);assert.match(await page.locator('.calendar-voice-suggestions').textContent(),/\[сумма\] \[валюта\]/);
+ assert.doesNotMatch(await page.locator('.calendar-voice-suggestions').textContent(),/Получил|Открой|Сколько/);
+ await page.screenshot({path:'tests/voice-filtered-help.png',animations:'disabled'});
+ await interim('потратил 80 лей');assert.doesNotMatch(await page.locator('.calendar-voice-suggestions').textContent(),/\[сумма\]|\[валюта\]/);assert.match(await page.locator('.calendar-voice-suggestions').textContent(),/на \[категория\]/);
+ await interim('');await page.locator('.calendar-voice-help-groups').waitFor();
  await page.evaluate(()=>window.emit('потратил 250 леев на продукты вчера'));
  await page.locator('.calendar-voice-review').waitFor();assert.equal(await page.evaluate(()=>window.saves.length),0);
  assert.match(await page.locator('.calendar-voice-review-summary').textContent(),/Вчера · Продукты/);
@@ -43,6 +52,8 @@ try{
  await page.locator('.calendar-voice-review').screenshot({path:'tests/voice-review-dark.png',animations:'disabled'});
  await page.evaluate(()=>setLight(true));await page.locator('.calendar-voice-review').screenshot({path:'tests/voice-review-light.png',animations:'disabled'});await page.evaluate(()=>setLight(false));
  await phrase('нет, 350');assert.match(await page.locator('.calendar-voice-review-summary').textContent(),/−350 MDL/);
+ await phrase('потратил на сок');assert.match(await page.locator('.calendar-voice-review-summary').textContent(),/Вчера · сок−350 MDL/);
+ await phrase('на продукты');
  await phrase('это доход');assert.match(await page.locator('.calendar-voice-review-summary').textContent(),/\+350 MDL/);
  await phrase('запиши в кошелёк');assert.match(await page.locator('.calendar-voice-review-summary').textContent(),/Кошелёк/);
  await phrase('непонятная фраза');assert.match(await page.locator('.calendar-voice-review [role="alert"]').textContent(),/Не понял/);assert.equal(await page.evaluate(()=>window.saves.length),0);
@@ -56,7 +67,7 @@ try{
  assert.match(await page.locator('.calendar-voice-answer').textContent(),/Записал доход 400 MDL/);assert.equal(await page.evaluate(()=>window.speechCount||0),0,'disabled speech never plays');
  assert.equal(await page.evaluate(()=>window.saves[0].category),'Кафе');
  await phrase('потратил 90');assert.match(await page.locator('.calendar-voice-answer').textContent(),/леях/);const starts=await page.evaluate(()=>window.starts);await page.waitForTimeout(400);assert.equal(await page.evaluate(()=>window.starts),starts,'silent prompts wait for user');
- await page.getByRole('button',{name:'€ EUR',exact:true}).click();await page.getByRole('button',{name:'Отправить',exact:true}).click();await page.locator('.calendar-voice-review').waitFor();
+ await page.getByRole('button',{name:'€ EUR',exact:true}).click();await page.locator('.calendar-voice-review').waitFor();
  await page.evaluate(()=>window.failSave=true);await page.getByRole('button',{name:'Сохранить',exact:true}).click();assert.match(await page.locator('.calendar-voice-review [role="alert"]').textContent(),/Не удалось/);
  await page.getByRole('button',{name:'Сохранить',exact:true}).click();await page.locator('.calendar-voice-review').waitFor({state:'detached'});
  await phrase('потратил 60 евро');await page.getByRole('button',{name:'Отмена',exact:true}).click();assert.equal(await page.locator('.calendar-voice-review').count(),0);
@@ -64,13 +75,17 @@ try{
  assert.equal(await page.getByRole('button',{name:'Исправить',exact:true}).isDisabled(),true);assert.equal(await mic().isDisabled(),true);
  await page.getByRole('button',{name:'Сохранить',exact:true}).click();await page.locator('.calendar-voice-review').waitFor({state:'detached'});
  await page.reload();assert.equal(await page.locator('[data-voice-settings] input[type=checkbox]').isChecked(),false,'preference survives reload');
+ await phrase('потратил 80 лей');await page.locator('.calendar-voice-review').waitFor();assert.match(await page.locator('.calendar-voice-review-summary').textContent(),/Другое/);
+ await phrase('потратил на сок');assert.match(await page.locator('.calendar-voice-review-summary').textContent(),/сок−80 MDL/);assert.equal(await page.evaluate(()=>window.saves.length),0);await phrase('отмена');
+ await phrase('запиши 40 евро');assert.equal(await page.getByRole('button',{name:'Отправить',exact:true}).count(),0);await page.getByRole('button',{name:'Расход',exact:true}).click();await page.locator('.calendar-voice-review').waitFor();await phrase('отмена');
+ await phrase('потратил 40 евро завтра');await page.getByLabel('Дата',{exact:true}).fill(await page.evaluate(()=>{const d=new Date();d.setDate(d.getDate()-1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}));await page.locator('.calendar-voice-review').waitFor();assert.match(await page.locator('.calendar-voice-review-summary').textContent(),/Вчера/);await phrase('отмена');
  await phrase('вчера на продукты 250 лей ушло');await page.locator('.calendar-voice-review').waitFor();
  await phrase('не 250, а 350');await phrase('не вчера, а сегодня');await phrase('не расход, а доход');
  assert.match(await page.locator('.calendar-voice-review-summary').textContent(),/Сегодня · Продукты\+350 MDL/);
  await phrase('350 лей и 400 лей');assert.match(await page.locator('.calendar-voice-answer').textContent(),/несколько сумм/);assert.equal(await page.locator('.calendar-voice-review').count(),0);
  await phrase('400');await page.locator('.calendar-voice-review').waitFor();assert.match(await page.locator('.calendar-voice-review-summary').textContent(),/Сегодня · Продукты\+400 MDL/);
  await phrase('на продукты и на кафе');assert.match(await page.locator('.calendar-voice-answer').textContent(),/одну категорию/);assert.equal(await page.getByRole('button',{name:/Создать/}).count(),0);
- await page.getByLabel('Категория',{exact:true}).selectOption('Продукты');await page.getByRole('button',{name:'Отправить',exact:true}).click();await page.locator('.calendar-voice-review').waitFor();
+ await page.getByLabel('Категория',{exact:true}).selectOption('Продукты');await page.locator('.calendar-voice-review').waitFor();
  assert.equal(await page.evaluate(()=>window.saves.length),0);await phrase('отмена');assert.equal(await page.locator('.calendar-voice-review').count(),0);
  await phrase('открой историю');assert.equal(await page.evaluate(()=>window.commands[0].type),'history');
  await page.locator('[data-voice-settings] input[type=checkbox]').check();await phrase('потратил 20');await page.waitForFunction(()=>window.spoken?.text.includes('леях'));
@@ -78,5 +93,5 @@ try{
  await page.evaluate(()=>window.finishPhrase('да'));await page.locator('.calendar-voice-review').waitFor();assert.equal(await page.evaluate(()=>window.saves.length),0);
  await mic().click();await page.evaluate(()=>{window.lateResult=window.voice.onresult;window.hideVoice(true);});await page.waitForFunction(()=>window.voice.aborted);
  await page.evaluate(()=>window.lateResult({results:[Object.assign([{transcript:'сохрани'}],{isFinal:true})]}));assert.equal(await page.evaluate(()=>window.saves.length),0);
- assert.deepEqual(errors,[]);console.log('PASS: review, corrections, manual editing, explicit save, retry, double-tap protection, audio preference, readiness and cancellation at 320–1280px');
+ assert.deepEqual(errors,[]);console.log('PASS: live filtered hints, one-tap answers, arbitrary category corrections, review, manual editing, explicit save, retry, double-tap protection, audio preference, readiness and cancellation at 320–1280px');
 }finally{await browser.close();}

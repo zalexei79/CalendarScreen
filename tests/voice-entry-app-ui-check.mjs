@@ -33,10 +33,16 @@ try{
  assert.equal(records[dateKey][0].pnl,-350);assert.equal(records[dateKey][0].currency,'MDL');assert.equal(records[dateKey][0].instrument,'ПРОДУКТЫ');
  await page.locator('.calendar-voice-button').click();await page.evaluate(()=>finishPhrase('евро 100 сегодня пришло'));
  await page.locator('.calendar-voice-review').waitFor();await page.getByRole('button',{name:'Сохранить',exact:true}).click();await page.waitForFunction(()=>Object.values(JSON.parse(localStorage.getItem('money_calendar_guest_trades_cache')||'{}')).flat().length===2);
+ await page.locator('.calendar-voice-button').click();await page.evaluate(()=>finishPhrase('80 на сок, 50 на такси и 30к на монитор'));
+ await page.getByRole('button',{name:'L MDL',exact:true}).click();await page.locator('.calendar-voice-batch').waitFor();assert.equal(await page.locator('.calendar-voice-batch-row').count(),3);assert.equal(Object.values(await cache()).flat().length,2,'batch is reviewed before saving');
+ await page.locator('.calendar-voice-button').click();await page.evaluate(()=>finishPhrase('во второй записи сумма 60'));assert.match(await page.locator('.calendar-voice-batch-row').nth(1).textContent(),/60 MDL/);
+ await page.screenshot({path:'tests/voice-batch-app.png',animations:'disabled'});
+ await page.getByRole('button',{name:'Сохранить всё',exact:true}).click();await page.waitForFunction(()=>Object.values(JSON.parse(localStorage.getItem('money_calendar_guest_trades_cache')||'{}')).flat().length===5);
+ const savedBatch=Object.values(await cache()).flat();for(const [category,amount] of [['СОК',-80],['ТАКСИ',-60],['МОНИТОР',-30000]])assert.ok(savedBatch.some(record=>record.instrument===category&&record.pnl===amount&&record.currency==='MDL'),category);
  await page.reload();await page.locator('.calendar-days-grid').waitFor();await page.waitForFunction(()=>!document.getElementById('boot-screen'));
- assert.equal(Object.values(await cache()).flat().length,2,'saved records survive app reload');
+ assert.equal(Object.values(await cache()).flat().length,5,'saved records survive app reload');
  await page.locator('.calendar-voice-button').click();await page.evaluate(()=>finishPhrase('в кошелек 80 лей ушло'));
- assert.match(await page.locator('.calendar-voice-answer').textContent(),/PRO/);assert.equal(Object.values(await cache()).flat().length,2,'FREE cannot write to wallet');
+ assert.match(await page.locator('.calendar-voice-answer').textContent(),/PRO/);assert.equal(Object.values(await cache()).flat().length,5,'FREE cannot write to wallet');
  await page.getByRole('button',{name:'Закрыть голосовой режим'}).click();assert.deepEqual(errors,[]);
- console.log('PASS: full app review, amount correction, direct expense/income save, local dates, persistence and FREE wallet restriction');
+ console.log('PASS: full app batch, k shorthand, numbered corrections, review, amount correction, direct expense/income save, local dates, persistence and FREE wallet restriction');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

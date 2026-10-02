@@ -18,7 +18,7 @@ const income=/^(?:получил[аи]?|получено|получить|зар
 const purchase=/^(?:купил[аи]?|покупка|bought|cumparat|cumpărat)$/u;
 const transfer=/^(?:перевел[аи]?|перевод|отдал[аи]?|одолжил[аи]?|transferred|transfer)$/u;
 const request=/^(?:запиши|записать|добавь|добавить|внеси|занеси|учти|сохрани|исправь|измени|поменяй|замени|record|add|save|note|change|correct|adauga|adaugă|inregistreaza|înregistrează|noteaza|notează|schimba|schimbă)$/u;
-const filler=new Set('я мне это было был была ну вот пожалуйста давай сегодня за в на к по сумма сумму суммой всего итого около примерно только запись запишем деньги денег вышло составил составила the i it a an am was is amount total for to in of please on pe pentru în din de o un'.split(' '));
+const filler=new Set('я мне это было был была ну вот пожалуйста давай сегодня за в на по сумма сумму суммой всего итого около примерно только запись запишем деньги денег вышло составил составила the i it a an am was is amount total for to in of please on pe pentru în din de o un'.split(' '));
 const currencies=[
  ['RUB',/^(?:рубль|рубля|рублей|рубли|рублях|руб|ruble|rubles|rublă|ruble|rub|₽)$/u],
  ['EUR',/^(?:евро|еврах|euro|euros|eur|€)$/u],
@@ -33,6 +33,8 @@ function naturalAmount(value){
  const direct=parseSpokenAmount(value);if(direct!==null)return direct;
  let text=value.trim();const tail=text.split(/\s+/).at(-1);
  if(currencies.some(([,pattern])=>pattern.test(tail)))text=text.slice(0,text.length-tail.length).trim();
+ const shortThousands=text.match(/^(.+?\s+|\d+(?:[.,]\d{1,2})?)(?:к|k|ка)$/u);
+ if(shortThousands&&!/[кk]$|\sка$/.test(shortThousands[1])){const base=naturalAmount(shortThousands[1]);return base!==null&&Number(base)*1000<1e12?String(Math.round(Number(base)*100000)/100):null;}
  const halves={полсотни:50,полтысячи:500,полмиллиона:500000,полтора:1.5,полторы:1.5};
  if(halves[text])return String(halves[text]);
  const fraction=text.match(/^(полтора|полторы|.+? с половиной)(?:\s+(сотни|сотня|сотен|тысяча|тысячи|тысяч|миллион|миллиона|миллионов))?$/);
@@ -60,6 +62,7 @@ export function parseNaturalVoiceEntry(value,{draft=null,categories=[]}={}){
   if(tokens[start].used)continue;
   for(let end=Math.min(tokens.length,start+12);end>start;end--){
    const name=text.slice(tokens[start].start,tokens[end-1].end);
+   if(/^(?:к|k|ка)$/.test(name)&&start>0&&naturalAmount(tokens[start-1].value)!==null)continue;
    const matches=[...new Set(known.filter(item=>item.size===end-start&&categoryMatches(item.label,name)).map(item=>item.value))];
    const alias=aliases[normalizeVoiceCategory(name)];
    if(!matches.length&&alias&&categories.some(item=>item.value===alias))matches.push(alias);
@@ -128,5 +131,5 @@ export function parseNaturalVoiceEntry(value,{draft=null,categories=[]}={}){
  if(leftover.some(token=>!token.used)&&!hasTransfer)return {invalid:true};
  if(!draft&&!hasRequest&&!signs.size&&!hasTransfer&&!patch.category&&!patch.currency)return null;
  for(const field of ambiguous)delete patch[field];
- return {patch,provided:[...provided],ambiguous:[...ambiguous]};
+ return {patch,provided:[...provided],ambiguous:[...ambiguous],amountRanges:amounts.map(({start,end,amount})=>({start:tokens[start].start,end:tokens[end-1].end,amount}))};
 }

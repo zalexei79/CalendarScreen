@@ -70,7 +70,7 @@ export function voiceEntryReview(phrase,draft=null,locale='ru',categories=[],opt
  const route=locale==='zh'&&raw.match(/(?:^|[, ]+)(?:(?:запиши|записать|добавь|сохрани|save|record|înregistrează|inregistreaza|salvează|salveaza)\s+(?:это\s+|it\s+)?)?(?:в |to |in |în )?(календарь и (?:в )?кошелек|кошелек и (?:в )?календарь|calendar and wallet|calendar și portofel|calendar si portofel|оба|both|ambele|кошелек|wallet|portofel|календарь|calendar)$/i);
  if(route&&!/(?:^|\s)(?:не|not|nu)\s*$/.test(raw.slice(0,route.index))){destination=/оба|both|ambele| и | and | și | si /.test(route[1])?'both':/кошелек|wallet|portofel/.test(route[1])?'wallet':'main';raw=raw.slice(0,route.index).trim();}
  const next=draft?{...draft}:null;
- const dateError=date.invalid||date.dateKey>today;
+ const dateError=date.invalid||date.dateKey>today||(!date.dateKey&&next?.dateKey>today);
  if(next&&date.dateKey&&!dateError){next.dateKey=date.dateKey;delete next.datePending;}
  const category=next&&raw.match(/^(?:категория|в категорию|на|category|on|categoria|pe)\s+(.+)$/i);
  let result;

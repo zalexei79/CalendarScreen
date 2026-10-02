@@ -34,7 +34,7 @@ await page.getByRole('button',{name:'Голосовая команда'}).click(
 assert.equal(await page.locator('.calendar-voice-help-groups details').count(),4);
 assert.equal(await page.locator('.calendar-voice-commands li:visible').count(),0,'templates start collapsed');
 await page.locator('.calendar-voice-help-groups summary').first().click();
-assert.equal(await page.locator('.calendar-voice-commands li:visible').count(),3);
+assert.equal(await page.locator('.calendar-voice-commands li:visible').count(),4);
 assert.equal(await page.locator('.calendar-dock-actions > div > button').first().isVisible(),false,'voice mode replaces history and add');
 assert.match(await page.locator('[role="status"]').textContent(),/Слушаю/);
 await page.evaluate(()=>window.voice.onspeechstart());
