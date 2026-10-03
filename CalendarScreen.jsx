@@ -5,9 +5,11 @@ import WorkspaceDock from './src/shared/ui/WorkspaceDock';
 import MetaTraderControl from './src/features/metatrader/MetaTraderControl.jsx';
 import PlatformConnections, { PlatformHistoryActions } from './src/features/platforms/PlatformConnections.jsx';
 import WealthPlan from './src/features/pro/WealthPlan.jsx';
+import FinancialHistoryOverview from './src/features/pro/FinancialHistoryOverview.jsx';
+import useVoiceConversation from './src/shared/ui/useVoiceConversation.js';
 import SavingsReview from './src/features/pro/SavingsReview.jsx';
 import {
-  Inbox, TrendingUp, TrendingDown, Sparkles, Plus, X, Trash2,
+  Inbox, TrendingUp, TrendingDown, Sparkles, Plus, X, Trash2, Mic,
   Calendar, ChevronDown, Link2, KeyRound, UploadCloud, FileText,
   CheckCircle2, RefreshCw, History, Download, Pencil, Share2,
   Wallet, ShoppingCart, Home, Briefcase, ShoppingBag, CreditCard, MoreHorizontal, Cigarette, Utensils, Car, Gift, Gamepad2, Fish, ChartCandlestick, Repeat2, CircleDollarSign, ArrowRight,
@@ -88,7 +90,7 @@ import CalendarGrid from './CalendarGrid';
 import MonthlyGoal from './MonthlyGoal';
 import AmountKeypad, {AmountInput} from './src/shared/ui/AmountEntry.jsx';
 import CalendarVoiceButton from './src/shared/ui/CalendarVoiceButton.jsx';
-import { financialVoiceAnswer } from './src/shared/lib/financialVoiceAnswer.js';
+import {financialQueryResult, financialRecordKey, resolveFinancialQueryCategory} from './src/shared/lib/financialVoiceQuery.js';
 import { categoryMatches, normalizeVoiceCategory, resolveLocalizedCategory } from './src/shared/lib/voiceCategory.js';
 import useVoiceCategories from './src/shared/ui/useVoiceCategories.js';
 import CategoryPicker from './src/shared/ui/CategoryPicker.jsx';
@@ -1766,6 +1768,7 @@ export default function CalendarScreen() {
     saveTrade: hookSaveTrade,
     deleteTrade: hookDeleteTrade,
     detachMoneyCategory,
+    mutateVoiceRecord,
     clearAllTrades: hookClearAllTrades,
     refreshFromCloud,
   } = useTrades({ user });
@@ -2102,6 +2105,7 @@ export default function CalendarScreen() {
   const [yearMenuOpen, setYearMenuOpen] = useState(false);
 
   function handlePresetChange(preset) {
+    setVoiceHistoryKeys(null);
     setSelectedKey(null);
     setPeriodPreset(preset);
     const range = getPresetRange(preset, today);
@@ -2110,12 +2114,14 @@ export default function CalendarScreen() {
   }
 
   function handleDateFromChange(value) {
+    setVoiceHistoryKeys(null);
     setSelectedKey(null);
     setDateFrom(value);
     setPeriodPreset('custom');
   }
 
   function handleDateToChange(value) {
+    setVoiceHistoryKeys(null);
     setSelectedKey(null);
     setDateTo(value);
     setPeriodPreset('custom');
@@ -2227,7 +2233,7 @@ export default function CalendarScreen() {
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
       .filter((t) => (t.currency || 'USD') === currency)
       .filter((t) => calendarTypeFilter === 'all' || (calendarTypeFilter === 'income' ? t.pnl >= 0 : t.pnl < 0))
-      .sort((a, b) => (a.dateKey === b.dateKey ? b.time.localeCompare(a.time) : b.dateKey.localeCompare(a.dateKey)));
+      .sort((a, b) => (a.dateKey === b.dateKey ? String(b.time||'').localeCompare(String(a.time||'')) : b.dateKey.localeCompare(a.dateKey)));
   }, [manualTrades, effectiveFrom, effectiveTo, platformFilter, currency, calendarTypeFilter]);
 
   const selectedDayTrades = useMemo(() => {
@@ -2236,7 +2242,7 @@ export default function CalendarScreen() {
       .map((t) => ({ ...t, dateKey: selectedKey }))
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
       .filter((t) => calendarTypeFilter === 'all' || (calendarTypeFilter === 'income' ? t.pnl >= 0 : t.pnl < 0))
-      .sort((a, b) => b.time.localeCompare(a.time));
+      .sort((a, b) => String(b.time||'').localeCompare(String(a.time||'')));
   }, [selectedKey, manualTrades, periodTrades, platformFilter, calendarTypeFilter]);
 
   const periodStats = useMemo(() => {
@@ -2285,7 +2291,7 @@ export default function CalendarScreen() {
     const avgPnl = analysisStats.pnl / analysisTrades.length;
 
     const chronological = [...analysisTrades].sort((a, b) =>
-      a.dateKey === b.dateKey ? a.time.localeCompare(b.time) : a.dateKey.localeCompare(b.dateKey)
+      a.dateKey === b.dateKey ? String(a.time||'').localeCompare(String(b.time||'')) : a.dateKey.localeCompare(b.dateKey)
     );
     let longestLossStreak = 0;
     let current = 0;
@@ -2729,6 +2735,7 @@ export default function CalendarScreen() {
         saveCalendar: () => hookSaveTrade({dateKey, isEditing: false, time, instrument, direction: signedPnl < 0 ? 'SHORT' : 'LONG', signedPnl, comment: '', platform: 'Manual', currency: entry.currency, takeProfit: null, stopLoss: null, traderMode: false}),
       });
       voiceCategories.add(instrument);
+      voiceConversation.recordSave(entry, progress);
     } catch (error) {
       if (destination === 'both' && progress.wallet && !progress.calendar) throw new Error(language === 'zh-CN' ? "已保存到钱包，请点击保存以完成日历保存。" : (language === 'ru' ? 'В кошельке запись сохранена, в календаре — ещё нет. Нажмите «Сохранить» для завершения.' : language === 'en' ? 'Saved in the wallet. Tap Save to finish saving in the calendar.' : 'Salvat în portofel. Apasă Salvează pentru a finaliza în calendar.'));
       throw error;
@@ -2749,6 +2756,8 @@ export default function CalendarScreen() {
 
   // --- History browser: filterable, shows a total, click a trade to jump to its day
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [voiceHistoryKeys, setVoiceHistoryKeys] = useState(null);
+  useEffect(() => { setVoiceHistoryKeys(null); }, [user?.id]);
   const [historyScope, setHistoryScope] = useState('all'); // 'all' | 'trades' | 'money'
   const historyDealsRef = useRef(null);
   const historyScrollRef = useRef(null);
@@ -2838,11 +2847,12 @@ export default function CalendarScreen() {
         return true;
       })
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
+      .filter((t) => !voiceHistoryKeys || voiceHistoryKeys.has(financialRecordKey(t)))
       .filter((t) => historyCurrency === 'ALL' || (t.currency || 'USD') === historyCurrency)
       .filter((t) => !historyNameFilter || String(t.instrument || '').trim().toUpperCase() === historyNameFilter.trim().toUpperCase())
       .filter((t) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? (Number(t.pnl) || 0) >= 0 : (Number(t.pnl) || 0) < 0))
       .sort((a, b) => (a.dateKey === b.dateKey ? (b.time || '').localeCompare(a.time || '') : (b.dateKey || '').localeCompare(a.dateKey || '')));
-  }, [manualTrades, platformFilter, historyWinLoss, historyCurrency, historyNameFilter, traderMode, historyScope]);
+  }, [manualTrades, platformFilter, historyWinLoss, historyCurrency, historyNameFilter, traderMode, historyScope, voiceHistoryKeys]);
   const historyTrades = useMemo(() => historyFilteredTrades.filter(t => t.dateKey >= dateFrom && t.dateKey <= dateTo), [historyFilteredTrades, dateFrom, dateTo]);
   const wealthPlanTrades = useMemo(() => Object.entries(manualTrades || {})
     .flatMap(([dateKey, items]) => (Array.isArray(items) ? items : []).map(item => ({ ...item, dateKey })))
@@ -3724,6 +3734,7 @@ export default function CalendarScreen() {
   );
 
   function openHistory() {
+    setVoiceHistoryKeys(null);
     setHistoryOpen(true);
     setHistoryVisible(true);
     setHistoryFiltersOpen(false);
@@ -4239,6 +4250,69 @@ export default function CalendarScreen() {
   };
 
 
+  const voiceConversation = useVoiceConversation({userId:user?.id,recordsRef:manualTradesRef,categories:moneyCategoryNames,todayKey,
+    isTrading:item=>item.platform==='cTrader'||item.platform==='MT5'||item.traderMode===true||isTradingInstrumentName(item.instrument)||(!getMoneyCategoryMeta(item.instrument)&&isTradingHistoryRecord(item)),
+    mutateRecord:mutateVoiceRecord,saveRecord:hookSaveTrade,deleteWallet:wallet.deleteTransaction,saveWallet:wallet.saveTransaction});
+  function handleCalendarVoiceCommand(command) {
+    if(command.type==='voice-confirm')return voiceConversation.confirm(command.entry);
+    if(command.type==='voice-calendar'){closeHistory();setSelectedKey(null);return {text:'Календарь открыт.',context:null,contextLabel:'',help:['Что записал вчера?','Добавь 200 на продукты']};}
+
+            if (command.type === 'category-prompt') return language === 'zh-CN' ? "请在命令中包含类别名称。" : (language === 'ru' ? 'Добавьте название после команды. Например: создай категорию Настольные игры.' : language === 'en' ? 'Include the category name in your command.' : 'Include numele categoriei în comandă.');
+            if (command.type === 'history') { openHistory(); return {text:'История открыта.',context:null,contextLabel:'',compact:true,help:['Вернись в календарь','Покажи расходы за прошлый месяц']}; }
+            if (command.type === 'settings') { openSettings(); return; }
+            if (command.type === 'theme') { setTheme(command.theme); return; }
+            if (command.type === 'trader') { setTraderMode(command.enabled); return; }
+            if (command.type === 'today') { jumpToTradeDate(todayKey); setSelectedKey(null); return; }
+            if (command.type === 'month') { if (command.direction > 0) goToNextMonth(); else goToPrevMonth(); return; }
+            if (command.type === 'pro') { setProView(command.enabled); return; }
+            if (command.type === 'wallet') { if (proAccessActive && !proAccessLoading) openWalletFromCalendarGesture(); else setProView(true); return; }
+            const categoryNames = moneyCategoryNames;
+            const resolveCategory = (name) => resolveLocalizedCategory(name, MONEY_CATEGORIES, categoryNames);
+            const spokenCategory = command.category ? resolveCategory(command.category) : null;
+            if (command.type === 'category') {
+              const name = resolveCategory(command.name);
+              voiceCategories.add(name);
+              const label = getMoneyCategoryLabel(name, language);
+              return language === 'zh-CN' ? `类别“${label}”已创建。` : (language === 'ru' ? `Категория «${label}» готова. Скажите, например: запиши расход 20 евро на ${label}.` : language === 'en' ? `Category “${label}” is ready.` : `Categoria „${label}” este pregătită.`);
+            }
+            if (command.type === 'question' || command.type === 'financial-search') {
+              const category = resolveFinancialQueryCategory(command.category, MONEY_CATEGORIES, categoryNames);
+              const result = financialQueryResult({records: manualTrades, command, todayKey, category,
+                categoryLabel: category ? getMoneyCategoryLabel(category, language) : null, language,
+                isTrading: item => item.platform === 'cTrader' || item.platform === 'MT5' || item.traderMode === true || isTradingInstrumentName(item.instrument) || (!getMoneyCategoryMeta(item.instrument) && isTradingHistoryRecord(item)),
+              });
+              const showRecords = () => {
+                openHistory(); setSelectedKey(null); setPeriodPreset(result.range.from === '0000-01-01' ? 'Вся история' : 'custom'); setDateFrom(result.range.from); setDateTo(result.range.to);
+                setHistoryScope(traderMode ? (result.asset ? 'trades' : 'money') : command.metric === 'expense' ? 'expense' : command.metric === 'income' ? 'income' : 'all');
+                const currencies = [...new Set(result.items.map(item => item.currency || 'USD'))];
+                setPlatformFilter('ALL'); setHistoryCurrency(currencies.length === 1 ? currencies[0] : 'ALL'); setHistoryNameFilter(''); setHistoryWinLoss('all');
+                setVoiceHistoryKeys(new Set(result.items.map(financialRecordKey)));
+                setProHistoryTab('trades');
+              };
+              voiceConversation.rememberQuery(command,result,showRecords);
+            const contextLabel = `${category ? getMoneyCategoryLabel(category,language) : command.categories ? command.categories.join(', ') : t('myMoney')} · ${result.range.from === '0000-01-01' ? t('allHistory') : `${formatDateLabel(result.range.from)} — ${formatDateLabel(result.range.to)}`}`;
+            if ((command.mode === 'search'||command.openRecords) && result.items.length) showRecords();
+              return {text: result.text, context:command, contextLabel, compact:command.mode==='search', actionLabel: result.actionLabel, onAction: result.items.length ? showRecords : undefined, help:command.mode==='day-review'?['Обед забыл — добавь 120','Покажи эти записи','Вернись в календарь']:['А за прошлую неделю?','А на транспорт?','Покажи эти записи','Открой последнюю']};
+            }
+            if (command.type === 'date') {
+              setSlideDirection(command.year * 12 + command.month >= year * 12 + month ? 'next' : 'prev');
+              setAnimKey((value) => value + 1);
+              jumpToTradeDate(command.dateKey);
+              voiceConversation.reset();return {text:`Открыт день ${formatDateLabel(command.dateKey)}. Можно добавить запись голосом.`,context:null,contextLabel:formatDateLabel(command.dateKey),compact:true,help:['Потратил 250 лей на продукты','Вернись в календарь']};
+            }
+            openModal(null, todayKey);
+            if (traderMode) {
+              setProEntryChoiceOpen(false);
+              setProEntryMode(command.kind === 'record' ? 'finance' : 'trade');
+              if (command.kind === 'record') setForm((current) => ({ ...current, instrument: 'Зарплата' }));
+            }
+            if (command.type === 'entry') {
+              if (spokenCategory) voiceCategories.add(spokenCategory);
+              setForm((current) => ({ ...current, pnl: command.amount, currency: command.currency, sign: command.sign, voiceDestination: command.destination || 'main', instrument: spokenCategory || 'Другое' }));
+              setDetailsOpen(true);
+            }
+  }
+
   return (
     <div className={`premium-shell min-h-screen w-full flex flex-col transition-colors duration-500 ${proView ? 'pro-active-shell' : ''} ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
       <ProGrantNotice userId={validUserId} active={proAccessActive} until={proAccessUntil} language={language} isLight={isLight} />
@@ -4668,6 +4742,7 @@ export default function CalendarScreen() {
             </div>
           </div>
 
+          <button type="button" className="day-voice-entry" aria-label={language==='ru'?'Голосовая запись за выбранный день':'Voice entry for selected day'} onClick={()=>window.dispatchEvent(new CustomEvent('dayris-start-voice'))}><Mic size={16}/>{language==='ru'?'Добавить голосом':'Add by voice'}</button>
           <div className="flex items-center self-start">
             <button
               onClick={() => isFutureSelected ? openPlanComposer() : openModal()}
@@ -4857,7 +4932,7 @@ export default function CalendarScreen() {
       )}
 
       {/* Floating Action Dock: Prominent Center "+" Add Button + History */}
-      <WorkspaceDock proView={proView} isLight={isLight} language={language} hidden={Boolean(
+      <WorkspaceDock preserveChildren={historyOpen||Boolean(selectedKey)} proView={proView} isLight={isLight} language={language} hidden={Boolean(
         accountMode !== 'main' ||
         selectedKey || planComposerOpen || planConfirm || planDeleteConfirm ||
         historyOpen || modalOpen || settingsOpen || connectOpen || metaTraderOpen ||
@@ -4906,47 +4981,7 @@ export default function CalendarScreen() {
               {t('addAction')}
             </span>
           </button>
-          <CalendarVoiceButton userId={user?.id} onCreateCategory={voiceCategories.add} onDeleteCategory={removeMoneyCategory} onSaveEntry={saveReviewedVoiceEntry} defaultCurrency={currency} walletAvailable={proAccessActive && !proAccessLoading} language={language} isLight={isLight} traderMode={traderMode} categoryOptions={moneyCategoryNames.map(value => ({value, label: getMoneyCategoryLabel(value, language), icon: getHistoryCategoryIcon(value)}))} onCommand={(command) => {
-            if (command.type === 'category-prompt') return language === 'zh-CN' ? "请在命令中包含类别名称。" : (language === 'ru' ? 'Добавьте название после команды. Например: создай категорию Настольные игры.' : language === 'en' ? 'Include the category name in your command.' : 'Include numele categoriei în comandă.');
-            if (command.type === 'history') { openHistory(); return; }
-            if (command.type === 'settings') { openSettings(); return; }
-            if (command.type === 'theme') { setTheme(command.theme); return; }
-            if (command.type === 'trader') { setTraderMode(command.enabled); return; }
-            if (command.type === 'today') { jumpToTradeDate(todayKey); setSelectedKey(null); return; }
-            if (command.type === 'month') { if (command.direction > 0) goToNextMonth(); else goToPrevMonth(); return; }
-            if (command.type === 'pro') { setProView(command.enabled); return; }
-            if (command.type === 'wallet') { if (proAccessActive && !proAccessLoading) openWalletFromCalendarGesture(); else setProView(true); return; }
-            const categoryNames = moneyCategoryNames;
-            const resolveCategory = (name) => resolveLocalizedCategory(name, MONEY_CATEGORIES, categoryNames);
-            const spokenCategory = command.category ? resolveCategory(command.category) : null;
-            if (command.type === 'category') {
-              const name = resolveCategory(command.name);
-              voiceCategories.add(name);
-              const label = getMoneyCategoryLabel(name, language);
-              return language === 'zh-CN' ? `类别“${label}”已创建。` : (language === 'ru' ? `Категория «${label}» готова. Скажите, например: запиши расход 20 евро на ${label}.` : language === 'en' ? `Category “${label}” is ready.` : `Categoria „${label}” este pregătită.`);
-            }
-            if (command.type === 'question') return financialVoiceAnswer({
-              records: manualTrades, monthKey: todayKey.slice(0, 7), metric: command.metric, period: command.period, category: spokenCategory, categoryLabel: spokenCategory ? getMoneyCategoryLabel(spokenCategory, language) : null, language,
-              isTrading: (item) => item.platform === 'cTrader' || item.platform === 'MT5' || item.traderMode === true || isTradingInstrumentName(item.instrument) || (!getMoneyCategoryMeta(item.instrument) && isTradingHistoryRecord(item)),
-            });
-            if (command.type === 'date') {
-              setSlideDirection(command.year * 12 + command.month >= year * 12 + month ? 'next' : 'prev');
-              setAnimKey((value) => value + 1);
-              jumpToTradeDate(command.dateKey);
-              return;
-            }
-            openModal(null, todayKey);
-            if (traderMode) {
-              setProEntryChoiceOpen(false);
-              setProEntryMode(command.kind === 'record' ? 'finance' : 'trade');
-              if (command.kind === 'record') setForm((current) => ({ ...current, instrument: 'Зарплата' }));
-            }
-            if (command.type === 'entry') {
-              if (spokenCategory) voiceCategories.add(spokenCategory);
-              setForm((current) => ({ ...current, pnl: command.amount, currency: command.currency, sign: command.sign, voiceDestination: command.destination || 'main', instrument: spokenCategory || 'Другое' }));
-              setDetailsOpen(true);
-            }
-          }} />
+          <CalendarVoiceButton userId={user?.id} onCreateCategory={voiceCategories.add} onDeleteCategory={removeMoneyCategory} onSaveEntry={saveReviewedVoiceEntry} defaultCurrency={currency} walletAvailable={proAccessActive && !proAccessLoading} language={language} isLight={isLight} traderMode={traderMode} categoryOptions={moneyCategoryNames.map(value => ({value, label: getMoneyCategoryLabel(value, language), icon: getHistoryCategoryIcon(value)}))} onResetConversation={voiceConversation.reset} onConversation={voiceConversation.handle} selectedDate={selectedKey} onCommand={handleCalendarVoiceCommand} />
         </div>
       </WorkspaceDock>
 
@@ -4962,7 +4997,7 @@ export default function CalendarScreen() {
           <SwipeDismissSheet
             onDismiss={closeHistory}
             isLight={isLight}
-            className={`relative w-full ${traderMode || isFinancialPro ? 'sm:max-w-5xl' : 'sm:max-w-lg'} flex flex-col overflow-hidden rounded-t-[28px] border shadow-2xl transition-all duration-300 ease-out sm:rounded-[24px] ${
+            className={`${isFinancialPro ? `financial-history-dialog ${isLight ? 'is-light' : ''}` : ''} relative w-full ${traderMode || isFinancialPro ? 'sm:max-w-5xl' : 'sm:max-w-lg'} flex flex-col overflow-hidden rounded-t-[28px] border shadow-2xl transition-all duration-300 ease-out sm:rounded-[24px] ${
               historyVisible
                 ? 'opacity-100 translate-y-0 sm:scale-100'
                 : 'opacity-0 translate-y-6 sm:translate-y-2 sm:scale-[0.985]'
@@ -5023,6 +5058,7 @@ export default function CalendarScreen() {
                     type="button"
                     onClick={() => {
                       setHistoryScope(key);
+                      setVoiceHistoryKeys(null);
                       setHistoryFiltersOpen(false);
                       setProFiltersOpen(false);
                       if (key === 'money' || !traderMode) {
@@ -5122,162 +5158,6 @@ export default function CalendarScreen() {
               } ${isLight ? 'bg-[#f5f7fa]' : ''}`}
               style={{ overscrollBehavior: 'contain' }}
             >
-              {isFinancialPro && (
-                <section className={`pro-premium-card relative mb-4 overflow-hidden border p-4 sm:p-5 ${
-                  isLight
-                    ? 'border-amber-200 bg-white'
-                    : 'border-amber-400/15 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black'
-                }`}>
-                  <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-amber-400/[0.10] blur-3xl" />
-                  <div className="relative">
-                    {savingsReview && <SavingsReview trades={wealthPlanTrades} category={savingsReview.category} symbol={historyCurrencySymbol} formatMoney={formatMoney} language={language} isLight={isLight} onClose={() => setSavingsReview(null)} />}
-                    <WealthPlan trades={wealthPlanTrades} onStartReview={(category) => setSavingsReview({ category })} isTrading={(item) => item.platform === 'cTrader' || isTradingInstrumentName(item.instrument) || (!getMoneyCategoryMeta(item.instrument) && isTradingHistoryRecord(item))} currency={historyCurrency} symbol={historyCurrencySymbol} formatMoney={formatMoney} language={language} isLight={isLight} onReview={(name, scope) => {
-                      setHistoryNameFilter(name);
-                      setHistoryScope(scope);
-                      setHistoryWinLoss('all');
-                      requestAnimationFrame(() => historyDealsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-                    }} />
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="font-data text-[10px] font-bold uppercase tracking-[0.20em] text-amber-500">PRO · {t('financialSummary')}</p>
-                    <h3 className={`mt-2 text-xl font-semibold tracking-tight ${isLight ? 'text-slate-950' : 'text-zinc-100'}`}>{language === 'zh-CN' ? "财务分析" : (language === 'ru' ? 'Финансовый разбор' : language === 'ro' || language === 'md' ? 'Analiză financiară' : 'Financial breakdown')}</h3>
-                      </div>
-                      <span className={`rounded-xl border px-2.5 py-1 font-data text-[9px] font-semibold ${isLight ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-amber-400/15 bg-amber-400/[0.06] text-amber-300'}`}>{historyCurrency}</span>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-3 gap-2">
-                      {[
-                        [t('incomeLabel'), historyIncome, 'text-emerald-500', '+'],
-                        [t('expenseLabel'), historyExpense, 'text-red-400', '−'],
-                        [t('balanceLabel'), Math.abs(historyTotal), historyTotal >= 0 ? 'text-emerald-500' : 'text-red-400', historyTotal >= 0 ? '+' : '−'],
-                      ].map(([label, amount, tone, prefix]) => (
-                        <div key={label} className={`min-w-0 rounded-xl border p-2.5 ${isLight ? 'border-slate-200 bg-slate-50' : 'border-white/[0.06] bg-white/[0.025]'}`}>
-                          <p className="truncate text-[9px] text-zinc-500">{label}</p>
-                          <p className={`mt-1 truncate font-data text-xs font-bold tabular-nums sm:text-sm ${tone}`}>{prefix}{historyCurrencySymbol}{formatMoney(amount)}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className={`mt-4 rounded-2xl border p-3 sm:p-4 ${isLight ? 'border-slate-200 bg-slate-50/70' : 'border-white/[0.06] bg-black/20'}`}>
-                      {(() => {
-                        const totalFlow = historyIncome + historyExpense;
-                        const incomeShare = totalFlow > 0 ? Math.round((historyIncome / totalFlow) * 100) : 0;
-                        const expenseShare = totalFlow > 0 ? 100 - incomeShare : 0;
-                        return (
-                          <>
-                            <div className="flex items-center justify-between gap-3">
-                              <p className="text-xs font-semibold">{t('financialSummary')}</p>
-                              <span className="font-data text-[10px] text-zinc-500">{historyTrades.length} {t('records')}</span>
-                            </div>
-                            {historyCurrency === 'ALL' ? (
-                              <p className="mt-2 text-[11px] leading-5 text-zinc-500">{t('allCurrenciesNotice')}</p>
-                            ) : (
-                              <>
-                                <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-zinc-500/10">
-                                  <span className="h-full bg-emerald-500 transition-[width] duration-500" style={{ width: `${incomeShare}%` }} />
-                                  <span className="h-full bg-red-400 transition-[width] duration-500" style={{ width: `${expenseShare}%` }} />
-                                </div>
-                                <div className="mt-2 grid grid-cols-2 gap-3 text-[10px]">
-                                  <span className="flex items-center justify-between gap-2 text-emerald-500"><span>{t('incomeLabel')}</span><b className="font-data">{incomeShare}%</b></span>
-                                  <span className="flex items-center justify-between gap-2 text-red-400"><span>{t('expenseLabel')}</span><b className="font-data">{expenseShare}%</b></span>
-                                </div>
-                              </>
-                            )}
-                          </>
-                        );
-                      })()}
-                    </div>
-
-                    {(() => {
-                      const [incomeName, incomeAmount] = historyAnalysis.incomeSources[0] || [];
-                      const [expenseName, expenseAmount] = historyAnalysis.expenseCategories[0] || [];
-                      const incomePart = historyIncome > 0 && incomeAmount ? Math.round((incomeAmount / historyIncome) * 100) : 0;
-                      const expensePart = historyExpense > 0 && expenseAmount ? Math.round((expenseAmount / historyExpense) * 100) : 0;
-                      return (
-                        <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                          {[
-                            [t('mainSource'), incomeName, incomeAmount, incomePart, 'emerald'],
-                            [t('expenseZone'), expenseName, expenseAmount, expensePart, 'rose'],
-                          ].map(([label, name, amount, share, tone]) => (
-                            <button type="button" onClick={() => name && setHistoryNameFilter(name)} className={`text-left rounded-xl border p-3 transition-transform active:scale-[0.99] ${tone === 'emerald' ? (isLight ? 'border-emerald-100 bg-emerald-50/50 hover:bg-emerald-50' : 'border-emerald-400/10 bg-emerald-500/[0.04] hover:bg-emerald-500/[0.08]') : (isLight ? 'border-rose-100 bg-rose-50/50 hover:bg-rose-50' : 'border-red-400/10 bg-red-500/[0.04] hover:bg-red-500/[0.08]')}`}>
-                              <div className="flex items-center justify-between gap-3">
-                                <p className="text-[10px] text-zinc-500">{label}</p>
-                                <span className={`font-data text-[10px] font-semibold ${tone === 'emerald' ? 'text-emerald-500' : 'text-red-400'}`}>{share ? `${share}%` : '—'}</span>
-                              </div>
-                              <p className="mt-1 truncate text-sm font-semibold">{name || '—'}</p>
-                              <p className={`mt-1 font-data text-xs font-semibold tabular-nums ${tone === 'emerald' ? 'text-emerald-500' : 'text-red-400'}`}>{amount ? `${tone === 'emerald' ? '+' : '−'}${historyCurrencySymbol}${formatMoney(amount)}` : '—'}</p>
-                              <div className="mt-2 h-1 overflow-hidden rounded-full bg-zinc-500/10">
-                                <span className={`block h-full rounded-full ${tone === 'emerald' ? 'bg-emerald-500' : 'bg-red-400'}`} style={{ width: `${share}%` }} />
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      );
-                    })()}
-
-                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                      <div className={`rounded-xl border p-3 ${isLight ? 'border-slate-200 bg-white' : 'border-white/[0.06] bg-white/[0.02]'}`}>
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-xs font-semibold">{language === 'zh-CN' ? "有什么变化" : (language === 'ru' ? 'Что изменилось' : language === 'ro' || language === 'md' ? 'Ce s-a schimbat' : 'What changed')}</p>
-                          <span className="text-[9px] text-zinc-500">{historyPremiumInsights.previousAvailable ? (language === 'zh-CN' ? '与上一时段比较' : language === 'ru' ? 'к прошлому периоду' : 'vs previous') : '—'}</span>
-                        </div>
-                        {historyPremiumInsights.previousAvailable ? (
-                          <div className="mt-3 space-y-2 text-[11px]">
-                            <div className="flex justify-between gap-3"><span className="text-zinc-500">{t('incomeLabel')}</span><b className={historyPremiumInsights.incomeChange >= 0 ? 'text-emerald-500' : 'text-red-400'}>{historyPremiumInsights.incomeChange > 0 ? '+' : ''}{historyPremiumInsights.incomeChange}%</b></div>
-                            <div className="flex justify-between gap-3"><span className="text-zinc-500">{t('expenseLabel')}</span><b className={historyPremiumInsights.expenseChange <= 0 ? 'text-emerald-500' : 'text-red-400'}>{historyPremiumInsights.expenseChange > 0 ? '+' : ''}{historyPremiumInsights.expenseChange}%</b></div>
-                          </div>
-                        ) : <p className="mt-3 text-[11px] leading-5 text-zinc-500">{language === 'zh-CN' ? "数据不足以进行可靠比较。" : (language === 'ru' ? 'Недостаточно данных для честного сравнения.' : 'Not enough data for a reliable comparison.')}</p>}
-                      </div>
-                      <div className={`rounded-xl border p-3 ${isLight ? 'border-slate-200 bg-white' : 'border-white/[0.06] bg-white/[0.02]'}`}>
-                        <p className="text-xs font-semibold">{language === 'zh-CN' ? "容易忽略的支出" : (language === 'ru' ? 'Незаметные расходы' : language === 'ro' || language === 'md' ? 'Cheltuieli frecvente' : 'Easy-to-miss spending')}</p>
-                        {historyPremiumInsights.recurring ? <p className="mt-2 text-[11px] leading-5 text-zinc-500"><b className="text-zinc-900 dark:text-zinc-200">{getMoneyCategoryLabel(historyPremiumInsights.recurring[0], language)}</b> · {historyPremiumInsights.recurring[1].count} {language === 'zh-CN' ? "条记录" : (language === 'ru' ? 'операции' : 'entries')} · <b className="text-red-400">{historyCurrencySymbol}{formatMoney(historyPremiumInsights.recurring[1].amount)}</b></p> : <p className="mt-2 text-[11px] leading-5 text-zinc-500">{language === 'zh-CN' ? "未发现可靠的重复支出模式。" : (language === 'ru' ? 'Повторяющихся небольших трат не обнаружено.' : 'No reliable recurring pattern found.')}</p>}
-                      </div>
-                    </div>
-
-                    {historyPremiumInsights.projectedExpense !== null && historyCurrency !== 'ALL' && (
-                      <div className={`mt-2 rounded-xl border p-3 ${isLight ? 'border-amber-200 bg-amber-50/60' : 'border-amber-400/10 bg-amber-400/[0.05]'}`}>
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-xs font-semibold">{language === 'zh-CN' ? "如果保持当前节奏" : (language === 'ru' ? 'Если так продолжится' : language === 'ro' || language === 'md' ? 'Dacă ritmul continuă' : 'If this pace continues')}</p>
-                          <span className="font-data text-xs font-semibold text-amber-500">≈ {historyCurrencySymbol}{formatMoney(Math.round(historyPremiumInsights.projectedExpense))}</span>
-                        </div>
-                        <p className="mt-1 text-[10px] leading-5 text-zinc-500">{language === 'zh-CN' ? `时段结束时的预计支出，还剩 ${historyPremiumInsights.remainingDays} 天。仅根据当前平均支出速度估算。` : (language === 'ru' ? `Оценка расходов к концу периода · осталось ${historyPremiumInsights.remainingDays} дн. Расчёт основан только на среднем темпе за текущий период.` : `Estimated spending by period end · ${historyPremiumInsights.remainingDays} days left. Based only on the current average pace.`)}</p>
-                      </div>
-                    )}
-
-                    {(() => {
-                      const personalEntries = wealthPlanTrades.filter(item => item.platform !== 'cTrader' && !isTradingInstrumentName(item.instrument) && (getMoneyCategoryMeta(item.instrument) || !isTradingHistoryRecord(item)));
-                      const expenseGroups = personalEntries.filter(item => item.pnl < 0).reduce((groups, item) => {
-                        groups[item.instrument] = (groups[item.instrument] || 0) + Math.abs(item.pnl);
-                        return groups;
-                      }, {});
-                      const [mainExpenseName] = Object.entries(expenseGroups).sort((a, b) => b[1] - a[1])[0] || [];
-                      const mainExpenseLabel = mainExpenseName ? getMoneyCategoryLabel(mainExpenseName, language) : '';
-                      const personalExpense = personalEntries.reduce((sum, item) => sum + Math.max(0, -item.pnl), 0);
-                      const personalIncome = personalEntries.reduce((sum, item) => sum + Math.max(0, item.pnl), 0);
-                      const gap = Math.max(0, personalExpense - personalIncome);
-                      const title = language === 'zh-CN' ? "积累更多财富的下一步" : (language === 'ru' ? 'Ваш следующий шаг к большему капиталу' : language === 'ro' || language === 'md' ? 'Următorul pas spre mai mult capital' : 'Your next move toward more wealth');
-                      const body = gap > 0
-                        ? (language === 'zh-CN' ? `支出比收入多 ${historyCurrencySymbol}${formatMoney(gap)}。从${mainExpenseLabel || '最大的支出类别'}开始，找出可以减少的支出。` : language === 'ru' ? `Сейчас расходы выше доходов на ${historyCurrencySymbol}${formatMoney(gap)}. Начните с главной зоны — ${mainExpenseName || 'расходов'} — и найдите операции, которые можно сократить.` : `Expenses are above income by ${historyCurrencySymbol}${formatMoney(gap)}. Start with ${mainExpenseName || 'your largest category'} and find what can be reduced.`)
-                        : (language === 'zh-CN' ? '收入已经覆盖支出。下一步是存下结余，并控制最大支出类别的增长。' : language === 'ru' ? 'Доходы уже покрывают расходы. Следующий рычаг — сохранить разницу и не дать главной категории незаметно вырасти.' : 'Income covers expenses. The next lever is to protect the difference and keep the largest category from growing.');
-                      return (
-                        <div className={`mt-2 rounded-2xl border p-4 ${isLight ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-white' : 'border-emerald-400/15 bg-gradient-to-br from-emerald-500/[0.10] to-black/10'}`}>
-                          <div className="flex items-start gap-3">
-                            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-500 text-white"><TrendingUp className="h-4 w-4" /></div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold">{title}</p>
-                              <p className="mt-1 text-[11px] leading-5 text-zinc-500">{body}</p>
-                              {mainExpenseName && historyCurrency !== 'ALL' && !isTradingInstrumentName(mainExpenseName) && <button type="button" onClick={() => setSavingsReview({ category: mainExpenseName })} className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-xl bg-emerald-500 px-3 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-emerald-600 active:scale-[0.98]">
-                                {language === 'zh-CN' ? `查看 ${mainExpenseLabel}` : (language === 'ru' ? `Разобрать ${mainExpenseName}` : `Review ${mainExpenseName}`)} <ArrowRight className="h-3.5 w-3.5" />
-                              </button>}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </section>
-              )}
-
               {/* FREE stays exactly as it was; the PRO money view has its own focused overview above. */}
               {(!isFinancialPro && (!traderMode || historyScope === 'money')) && (
                 <section className="mb-4">
@@ -5534,8 +5414,9 @@ export default function CalendarScreen() {
 
               {(!traderMode || historyScope === 'money') ? (
                 <>
+                  {voiceHistoryKeys && <div className="voice-history-filter-note"><span>{language === 'ru' ? 'Результаты голосового поиска' : language === 'zh-CN' ? '语音搜索结果' : language === 'ro' || language === 'md' ? 'Rezultatele căutării vocale' : 'Voice search results'}</span><button type="button" onClick={() => {setVoiceHistoryKeys(null);setHistoryCurrency('ALL');setPlatformFilter('ALL');setHistoryNameFilter('');setHistoryWinLoss('all');setHistoryScope(traderMode ? 'money' : 'all');setPeriodPreset('Вся история');setDateFrom('0000-01-01');setDateTo('9999-12-31');}}>{language === 'ru' ? 'Сбросить поиск' : language === 'zh-CN' ? '清除搜索' : language === 'ro' || language === 'md' ? 'Resetează căutarea' : 'Clear search'}</button></div>}
                   {/* Compact period selector */}
-                  <div className="relative flex items-center gap-2 mb-3">
+                  <div className={`relative flex items-center gap-2 mb-3 ${isFinancialPro ? 'financial-history-controls' : ''}`}>
                     <button
                       onClick={() => setHistoryPeriodMenuOpen((v) => !v)}
                       className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs transition-colors ${isLight ? 'border-zinc-300 bg-white text-zinc-700 hover:border-amber-400/40' : 'border-zinc-700 bg-zinc-950 text-zinc-300 hover:border-amber-400/30'}`}
@@ -5557,6 +5438,10 @@ export default function CalendarScreen() {
                     >
                       {t('filters')}
                     </button>
+                    {isFinancialPro && historyNameFilter && <button type="button" className="financial-filter-chip" aria-label={language === 'ru' ? 'Сбросить раздел' : language === 'zh-CN' ? '清除类别' : language === 'ro' || language === 'md' ? 'Șterge filtrul categoriei' : 'Clear category filter'} onClick={() => { setHistoryNameFilter(''); setHistoryScope('all'); setHistoryWinLoss('all'); }}><span>{getMoneyCategoryLabel(historyNameFilter, language)}</span><X size={14}/></button>}
+                    {isFinancialPro && <div className="financial-history-currencies" role="group" aria-label={t('allCurrencies')}>
+                      {[{code: 'ALL', symbol: t('all'), label: t('allCurrencies')}, ...CURRENCIES].map(c => <button key={c.code} type="button" title={c.label} aria-label={c.code === 'ALL' ? t('allCurrencies') : c.code} aria-pressed={historyCurrency === c.code} onClick={() => setHistoryCurrency(c.code)}>{c.code === 'ALL' ? c.symbol : c.code}</button>)}
+                    </div>}
                   </div>
 
                   {historyFiltersOpen && (
@@ -5607,7 +5492,24 @@ export default function CalendarScreen() {
                     </div>
                   )}
 
-                  <div ref={historyDealsRef} tabIndex={-1} className={`mb-2 flex scroll-mt-4 items-center justify-between gap-2 outline-none ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                  {isFinancialPro && <FinancialHistoryOverview
+                    income={historyIncome} expense={historyExpense} total={historyTotal} count={historyTrades.length}
+                    currency={historyCurrency} symbol={historyCurrencySymbol} formatMoney={formatMoney}
+                    analysis={historyAnalysis} insights={historyPremiumInsights} language={language} isLight={isLight} scope={historyScope}
+                    hasTrading={historyTrades.some(item => item.platform === 'cTrader' || isTradingInstrumentName(item.instrument) || (!getMoneyCategoryMeta(item.instrument) && isTradingHistoryRecord(item)))}
+                    onCategory={(name, scope) => {
+                      setHistoryNameFilter(name); setHistoryScope(scope); setHistoryWinLoss('all');
+                      requestAnimationFrame(() => historyDealsRef.current?.scrollIntoView({behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start'}));
+                    }}
+                  >
+                    {savingsReview && <SavingsReview trades={wealthPlanTrades} category={savingsReview.category} symbol={historyCurrencySymbol} formatMoney={formatMoney} language={language} isLight={isLight} onClose={() => setSavingsReview(null)} />}
+                    <WealthPlan trades={wealthPlanTrades} onStartReview={category => setSavingsReview({category})}
+                      isTrading={item => item.platform === 'cTrader' || isTradingInstrumentName(item.instrument) || (!getMoneyCategoryMeta(item.instrument) && isTradingHistoryRecord(item))}
+                      currency={historyCurrency} symbol={historyCurrencySymbol} formatMoney={formatMoney} language={language} isLight={isLight}
+                      onReview={(name, scope) => { setHistoryNameFilter(name); setHistoryScope(scope); setHistoryWinLoss('all'); requestAnimationFrame(() => historyDealsRef.current?.scrollIntoView({behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start'})); }} />
+                  </FinancialHistoryOverview>}
+
+                  <div ref={historyDealsRef} tabIndex={-1} className={`${isFinancialPro ? 'financial-history-record-heading' : ''} mb-2 flex scroll-mt-4 items-center justify-between gap-2 outline-none ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
                     <div className="min-w-0">
                       <p className="truncate text-xs">{historyTrades.length} {t('records')}{historyNameFilter ? ` · ${historyNameFilter}` : ''}</p>
                       {periodPreset !== 'Вся история' && (
@@ -5616,7 +5518,7 @@ export default function CalendarScreen() {
                         </button>
                       )}
                     </div>
-                    <div className={`inline-flex shrink-0 gap-1 rounded-xl border p-1 ${
+                    <div className={`${isFinancialPro ? 'hidden' : ''} inline-flex shrink-0 gap-1 rounded-xl border p-1 ${
                       isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800 bg-zinc-950'
                     }`}>
                       {[{ code: 'ALL', symbol: t('all'), label: t('allCurrencies') }, ...CURRENCIES].map((c) => (
@@ -5633,17 +5535,18 @@ export default function CalendarScreen() {
                   </div>
 
                   {historyTrades.length > 0 ? (
-                    <div className={`rounded-2xl border overflow-hidden ${
+                    <div className={`${isFinancialPro ? 'financial-record-list' : ''} rounded-2xl border overflow-hidden ${
                       isLight ? 'bg-white border-zinc-300' : 'bg-zinc-950 border-zinc-800'
                     }`}>
-                      {historyTrades.map((entry) => {
+                      {historyTrades.map((entry, index) => {
                         const Icon = getHistoryCategoryIcon(entry.instrument);
                         return (
+                          <React.Fragment key={entry.id}>
+                          {isFinancialPro && (index === 0 || historyTrades[index - 1].dateKey !== entry.dateKey) && <h4 className="financial-record-date">{formatDateLabel(entry.dateKey)}</h4>}
                           <button
-                            key={entry.id}
                             onClick={() => editTradeFromHistory(entry)}
                             aria-label={t('editRecord')}
-                            className={`group w-full min-h-[64px] px-3.5 py-3 flex items-center gap-3 text-left border-b last:border-b-0 transition-colors ${
+                            className={`${isFinancialPro ? 'financial-record-row' : ''} group w-full min-h-[64px] px-3.5 py-3 flex items-center gap-3 text-left border-b last:border-b-0 transition-colors ${
                               isLight
                                 ? 'border-zinc-200 hover:bg-zinc-50 active:bg-zinc-100 text-zinc-800'
                                 : 'border-zinc-800/80 hover:bg-zinc-900 active:bg-zinc-800/80 text-zinc-100'
@@ -5658,7 +5561,7 @@ export default function CalendarScreen() {
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className={`block text-sm font-medium truncate ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{entry.instrument || t('catOther')}</span>
-                              <span className={`block text-[11px] mt-0.5 truncate ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{formatDateLabel(entry.dateKey)} · {entry.time}{entry.comment ? ` · ${entry.comment}` : ''}</span>
+                              <span className={`block text-[11px] mt-0.5 truncate ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{isFinancialPro ? entry.time : `${formatDateLabel(entry.dateKey)} · ${entry.time}`}{entry.comment ? ` · ${entry.comment}` : ''}</span>
                             </span>
                             <span className="flex shrink-0 items-center gap-2">
                               <span className={`font-data text-sm font-medium tabular-nums whitespace-nowrap ${entry.pnl >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -5671,6 +5574,7 @@ export default function CalendarScreen() {
                               </span>
                             </span>
                           </button>
+                          </React.Fragment>
                         );
                       })}
                     </div>

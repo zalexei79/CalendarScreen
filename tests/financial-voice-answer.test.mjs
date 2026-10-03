@@ -22,7 +22,7 @@ test('custom category commands and questions preserve arbitrary names',()=>{
  assert.deepEqual(parseCalendarVoiceCommand('запиши расход 20 евро на сигареты'),{type:'entry',kind:'record',amount:'20',currency:'EUR',sign:'minus',category:'сигареты'});
  assert.deepEqual(parseCalendarVoiceCommand('я потратил на сигареты двадцать евро'),{type:'entry',kind:'record',amount:'20',currency:'EUR',sign:'minus',category:'сигареты'});
  for(const phrase of ['сколько я всего потратил за этот месяц на сигареты','сколько потратил на сигареты за месяц'])assert.deepEqual(parseCalendarVoiceCommand(phrase),{type:'question',metric:'expense',period:'current-month',category:'сигареты'});
- assert.equal(parseCalendarVoiceCommand('сколько потратил на сигареты за прошлый месяц'),null);
+ assert.deepEqual(parseCalendarVoiceCommand('сколько потратил на сигареты за прошлый месяц'),{type:'question',metric:'expense',period:'last-month',category:'сигареты'});
 });
 test('category answers count only matching personal expenses in each currency',()=>{
  const records={'2026-10-01':[{instrument:'Сигареты',pnl:-500,currency:'EUR'},{instrument:'Продукты',pnl:-70,currency:'EUR'},{instrument:'Сигареты',pnl:25,currency:'EUR'},{instrument:'Сигареты',pnl:-100,currency:'RUB'}]};
@@ -33,7 +33,7 @@ test('category answers count only matching personal expenses in each currency',(
 test('financial questions never create entries',()=>{
  for(const [phrase,metric] of [['сколько заработал за месяц','income'],['сколько я заработала за текущий месяц','income'],['расскажи сколько получил в этом месяце','income'],['сколько потратил за месяц','expense'],['какие у меня расходы за месяц','expense'],['подведи итог за месяц','summary'],['скажи итоги за текущий месяц','summary']])assert.deepEqual(parseCalendarVoiceCommand(phrase),{type:'question',metric,period:'current-month'});
  for(const [phrase,metric] of [['Расскажи сколько я потратил за этот месяц','expense'],['Сколько я заработал за этот месяц','income'],['Подведи итог за этот месяц','summary'],['How much did I spend this month','expense'],['Cât am cheltuit luna aceasta','expense']])assert.deepEqual(parseCalendarVoiceCommand(phrase),{type:'question',metric,period:'current-month'});
- assert.equal(parseCalendarVoiceCommand('сколько я потратил за прошлый месяц'),null);
+ assert.deepEqual(parseCalendarVoiceCommand('сколько я потратил за прошлый месяц'),{type:'question',metric:'expense',period:'last-month'});
  assert.equal(parseCalendarVoiceCommand('сколько заработал за год'),null);
 });
 test('current month only, currencies stay separate, trading excluded from expenses',()=>{

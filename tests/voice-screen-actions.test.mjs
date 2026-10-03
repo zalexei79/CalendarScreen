@@ -8,8 +8,8 @@ test('actual screen classification resolves custom categories with its actual im
  assert.equal(classify({instrument:'Пиво'}),false);assert.equal(classify({instrument:'Пиво',platform:'cTrader'}),true);
 });
 test('actual screen navigation executes before custom category calculations',()=>{
- const section=source.slice(source.indexOf('<CalendarVoiceButton'),source.indexOf('}} />',source.indexOf('<CalendarVoiceButton')));
- const body=section.slice(section.indexOf('onCommand={(command) => {')+'onCommand={(command) => {'.length);
+ const section=source.slice(source.indexOf('  function handleCalendarVoiceCommand(command) {'),source.indexOf('            const categoryNames = moneyCategoryNames;',source.indexOf('  function handleCalendarVoiceCommand(command) {')));
+ const body=section.slice(section.indexOf('{')+1);
  let action='';
  const execute=new Function('command','language','openHistory','openSettings',body);
  execute({type:'history'},'ru',()=>action='history',()=>action='settings');assert.equal(action,'history');

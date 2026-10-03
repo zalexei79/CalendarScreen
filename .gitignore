@@ -21,3 +21,6 @@ dist
 /android/*.aab
 /android/*.apk
 /android/*.idsig
+
+# Generated UI screenshots (keep locally, exclude from commits)
+/tests/*.png

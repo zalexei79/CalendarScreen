@@ -9,13 +9,13 @@ export function voiceHelp(locale,traderMode){
   ru:[
    {title:'Записи',hint:'Доходы и расходы',phrases:['Потратил [сумма] [валюта] на [категория]','Получил [сумма] [валюта]','Добавь запись','[сумма] на [категория], [сумма] на [категория]',...(traderMode?['Добавь сделку']:[])]},
    {title:'Категории',hint:'Свои разделы',phrases:['Создай категорию [название]','Сколько потратил на [категория] за месяц?']},
-   {title:'Итоги',hint:'Вопросы за месяц',phrases:['Сколько потратил за месяц?','Сколько заработал за месяц?','Подведи итог за месяц']},
+   {title:'Поиск и итоги',hint:'Записи, периоды, суммы',phrases:['Сколько потратил на еду на этой неделе?','Покажи расходы на машину за сентябрь','Когда я последний раз платил за интернет?','Сколько заработал за прошлый месяц?','Подведи итог за месяц']},
    {title:'Навигация',hint:'Месяцы, кошелёк, PRO',phrases:['Следующий / предыдущий месяц','Открой [день] [месяц] [год]','Войди в кошелёк','Зайди в историю','Открой настройки','Вернись на сегодня','Включи тёмную тему','Включи режим трейдера','Включи / выключи режим про']},
   ],
   en:[
    {title:'Entries',hint:'Income and expenses',phrases:['I spent [amount] [currency] on [category]','I received [amount] [currency]','Add entry','[amount] on [category], [amount] on [category]',...(traderMode?['Add trade']:[])]},
    {title:'Categories',hint:'Your own sections',phrases:['Create category [name]','How much did I spend on [category] this month?']},
-   {title:'Summary',hint:'This month',phrases:['How much did I spend this month?','How much did I earn this month?','Summarize this month']},
+   {title:'Search and summary',hint:'Entries, periods, totals',phrases:['How much did I spend on food this week?','Show expenses on car in September','When did I last pay for internet?','How much did I earn last month?','Summarize this month']},
    {title:'Navigation',hint:'Calendar, wallet, PRO',phrases:['Next / previous month','Open [day] [month] [year]','Open wallet','Open history','Open settings','Go to today','Switch to dark theme','Enable trader mode','Turn on / off pro']},
   ],
   ro:[

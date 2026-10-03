@@ -11,6 +11,7 @@ test('expense hints narrow down with partial recognition and filled fields',()=>
  help=voiceSuggestions('ru',false,{phrase:'потратил 80 лей на сок вчера'});assert.doesNotMatch(help.phrases.join(' '),/сумма|валюта|категория|вчера/);
  help=voiceSuggestions('ru',false,{phrase:'потратил',walletAvailable:true});assert.match(help.phrases.join(' '),/кошелёк/);
  assert.equal(voiceSuggestions('ru',false,{phrase:''}).filtered,false,'clearing speech restores all help');
+ const pending=voiceSuggestions('ru',false,{draft:{sign:'minus',dateKey:'2026-10-02'}});assert.equal(pending.filtered,true);assert.ok(pending.phrases.includes('[сумма] [валюта]'));assert.doesNotMatch(pending.phrases.join(' '),/Открой|Сколько/);
 });
 test('questions and navigation do not become expense continuation hints',()=>{
  const question=voiceSuggestions('ru',false,{phrase:'сколько потратил'});assert.ok(question.phrases.length);assert.ok(question.phrases.every(phrase=>phrase.startsWith('Сколько')));

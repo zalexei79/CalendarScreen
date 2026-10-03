@@ -14,8 +14,8 @@ const nav=value=>normalize(value).replace(/^(?:зайди|войди|покаж�
 export function voiceSuggestions(locale,traderMode,{phrase='',draft=null,review=false,categories=[],walletAvailable=false}={}){
  const help=voiceHelp(locale,traderMode),c=copy[locale]||copy.ru;
  const text=resolveVoiceCorrections(phrase).text;
- if(!text)return review?{filtered:true,title:c.title,phrases:c.corrections}:{...help,filtered:false};
- const isQuestion=/(?:^|\s)(?:сколько|итог|подведи|how|summarize|cât|cat|rezumat)(?:\s|$)|花了多少|收入多少|总结/.test(text);
+ if(!text&&(!draft||review))return review?{filtered:true,title:c.title,phrases:c.corrections}:{...help,filtered:false};
+ const isQuestion=/(?:^|\s)(?:сколько|когда|итог|подведи|how|when|summarize|cât|cat|rezumat)(?:\s|$)|花了多少|收入多少|总结/.test(text);
  const isNavigation=/(?:^|\s)(?:открой|зайди|войди|покажи|вернись|включи|выключи|следующий|предыдущий|open|next|previous|enable|switch|deschide|activează)(?:\s|$)|打开|开启|关闭|下个月|上个月/.test(text);
  const date=extractEntryDate(text),natural=parseNaturalVoiceEntry(date.text,{draft,categories});
  const parsed=natural&&!natural.invalid?natural.patch:{};
@@ -29,10 +29,10 @@ export function voiceSuggestions(locale,traderMode,{phrase='',draft=null,review=
   else if(!slots.currency)phrases.push(c.currency);
   if(!slots.category||review&&!parsed.category)phrases.push(c.category);
   if(!date.dateKey&&!draft?.dateKey)phrases.push(c.date);
-  if(!parsed.destination&&!draft?.destination)phrases.push(c.route+(walletAvailable?` / ${c.wallet}`:''));
+  if(walletAvailable&&!parsed.destination&&!draft?.destination)phrases.push(`${c.route} / ${c.wallet}`);
   if(review)phrases.push(c.corrections[1],c.corrections[2]);
   if(!phrases.length)phrases.push(c.review);
-  return {filtered:true,title:c.title,phrases};
+  return {filtered:true,title:c.title,phrases,intent:slots.sign};
  }
  const words=nav(text).split(/\s+/).filter(word=>!['я','i','am','пожалуйста','please'].includes(word));
  const phrases=help.groups.flatMap(group=>group.phrases).filter(phrase=>words.every(word=>nav(phrase).includes(word)));

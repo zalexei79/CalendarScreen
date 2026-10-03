@@ -184,6 +184,17 @@ export function useOfflineQueue({ user, onSyncedInsert }) {
     return labels;
   }, [activeUserId, readOfflineQueue]);
 
+  const getPendingVoiceChanges = useCallback(() => {
+    const changes = new Map();
+    for (const item of readOfflineQueue()) {
+      if (item.user_id !== activeUserId) continue;
+      const key = `${item.date_key}:${item.tradeId}`;
+      if (item.action === 'delete') changes.set(key, {remove:true});
+      if (item.action === 'update' && Number.isFinite(item.updates?.pnl)) changes.set(key, {pnl:item.updates.pnl});
+    }
+    return changes;
+  }, [activeUserId, readOfflineQueue]);
+
   const flushOfflineQueue = useCallback(async () => {
     if (!activeUserId || !navigator.onLine || isFlushingRef.current) return;
 
@@ -318,6 +329,7 @@ export function useOfflineQueue({ user, onSyncedInsert }) {
     enqueueOperation,
     amendPendingInsert,
     getPendingInstrumentUpdates,
+    getPendingVoiceChanges,
     retryFailedSync,
     flushOfflineQueue,
   };

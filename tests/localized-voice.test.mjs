@@ -14,7 +14,7 @@ test('English and Romanian commands cover navigation, categories and finance',()
  for(const phrase of ['Record I spent eighty lei on beer','Înregistrează am cheltuit optzeci de lei pe bere']){const result=parse(phrase);assert.equal(result.amount,'80');assert.equal(result.currency,'MDL');assert.equal(result.sign,'minus');}
  assert.equal(parse('Am cheltuit douăzeci și cinci virgulă cinci lei pe țigări').amount,'25.5');
  assert.equal(parse('Am cheltuit douăzeci și cinci lei pe țigări').category,'țigări');
- assert.equal(parse('How much did I spend on beer last month'),null);
+ assert.deepEqual(parse('How much did I spend on beer last month'),{type:'question',metric:'expense',period:'last-month',category:'beer'});
 });
 test('translated categories reuse canonical records and preserve custom categories',()=>{
  const categories=[{key:'Сигареты',en:'Tobacco',ro:'Tutun'},{key:'Покупки',en:'Shopping',ro:'Cumpărături'}];

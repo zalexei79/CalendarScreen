@@ -33,12 +33,14 @@ export function useWalletTransactions({ user }) {
   const [error, setError] = useState('');
   const [transfers, setTransfers] = useState([]);
   const refreshVersion = useRef(0);
+  const currentOwner=useRef(owner);currentOwner.current=owner;
 
   const cache = useCallback((next) => {
     try { localStorage.setItem(cacheKey(owner), JSON.stringify(next)); } catch { /* guest cache is best effort */ }
   }, [owner]);
 
   const refresh = useCallback(async () => {
+    if(currentOwner.current!==owner)return [];
     if (!userId) { setLoading(false); setReady(true); return []; }
     const version = ++refreshVersion.current;
     setLoading(true);
@@ -46,7 +48,7 @@ export function useWalletTransactions({ user }) {
       supabase.from('wallet_transactions').select('*').eq('user_id', userId).order('date_key', { ascending: false }).order('time', { ascending: false }),
       supabase.from('wallet_transfers').select('*').eq('user_id', userId).order('date_key', { ascending: false }),
     ]);
-    if (version !== refreshVersion.current) return [];
+    if (version !== refreshVersion.current||currentOwner.current!==owner) return [];
     setLoading(false);
     if (queryError || transferError) {
       setReady(false);
@@ -73,19 +75,21 @@ export function useWalletTransactions({ user }) {
   }, [userId, refresh]);
 
   const saveTransaction = useCallback(async (item) => {
+    if(currentOwner.current!==owner)throw new Error('Аккаунт изменился.');
     const local = { ...item, id: item.id || `wallet-local-${Date.now()}-${Math.random().toString(36).slice(2)}` };
-    const next = item.id ? transactions.map((row) => row.id === item.id ? local : row) : [local, ...transactions];
-    setTransactions(next); cache(next);
+    setTransactions(current=>{if(currentOwner.current!==owner)return current;const next=item.id?current.map(row=>row.id===item.id?local:row):[local,...current];cache(next);return next;});
     if (!userId) return local;
     const result = item.id
       ? await supabase.from('wallet_transactions').update(payload(local, userId)).eq('id', item.id).eq('user_id', userId).select().single()
       : await supabase.from('wallet_transactions').insert(payload(local, userId)).select().single();
+    if(currentOwner.current!==owner)throw new Error('Аккаунт изменился.');
     if (result.error) { await refresh(); throw result.error; }
     await refresh(); return normalize(result.data);
   }, [transactions, userId, cache, refresh]);
 
   const deleteTransaction = useCallback(async (id) => {
-    const next = transactions.filter((row) => row.id !== id); setTransactions(next); cache(next);
+    if(currentOwner.current!==owner)throw new Error('Аккаунт изменился.');
+    setTransactions(current=>{if(currentOwner.current!==owner)return current;const next=current.filter(row=>row.id!==id);cache(next);return next;});
     if (!userId || String(id).startsWith('wallet-local-')) return;
     const { error: deleteError } = await supabase.from('wallet_transactions').delete().eq('id', id).eq('user_id', userId);
     if (deleteError) { await refresh(); throw deleteError; }

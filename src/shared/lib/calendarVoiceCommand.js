@@ -1,6 +1,7 @@
 import {parseVoiceNavigation} from './voiceNavigation.js';
 import {parseSpokenAmount} from './spokenAmount.js';
 import {parseLocalizedVoiceCommand} from './localizedVoiceCommand.js';
+import {parseFinancialVoiceQuery} from './financialVoiceQuery.js';
 const months=[
  ['январь','января','january','ianuarie'],['февраль','февраля','february','februarie'],['март','марта','march','martie'],
  ['апрель','апреля','april','aprilie'],['май','мая','may','mai'],['июнь','июня','june','iunie'],
@@ -9,8 +10,9 @@ const months=[
 ];
 export function parseCalendarVoiceCommand(transcript){
  const text=String(transcript).toLowerCase().replace(/ё/g,'е').replace(/([\d])[,.](?=\d)/g,'$1DECIMAL').replace(/[,.!?]/g,' ').replace(/DECIMAL/g,',').replace(/\s+/g,' ').trim().replace(/^пожалуйста | пожалуйста$/g,'');
- const lifetime=text.match(/^сколько (?:я )?(?:всего )?(?:потратил|потратила)(?: за все время)? на (.+?)(?: за все время)?$/);if(lifetime&&text.includes('за все время'))return {type:'question',metric:'expense',period:'all-time',category:lifetime[1]};
  const navigation=parseVoiceNavigation(text);if(navigation)return navigation;
+ const financialQuery=parseFinancialVoiceQuery(transcript);if(financialQuery)return financialQuery;
+ const lifetime=text.match(/^сколько (?:я )?(?:всего )?(?:потратил|потратила)(?: за все время)? на (.+?)(?: за все время)?$/);if(lifetime&&text.includes('за все время'))return {type:'question',metric:'expense',period:'all-time',category:lifetime[1]};
  const localized=parseLocalizedVoiceCommand(text);if(localized)return localized;
  const categoryCreate=text.match(/^(?:создай|создать|добавь|добавить|запиши|записать) (?:новую |новый )?(?:категорию|раздел)(?: (.*))?$/);
  if(categoryCreate){

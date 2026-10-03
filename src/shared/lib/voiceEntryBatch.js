@@ -10,26 +10,26 @@ function resultFor(batch,locale){
  if(state.draft)return {...state,batch:next,prompt:(prefixes[locale]||prefixes.ru)(activeIndex,batch.states.length,batch.commonFields.includes(state.field))+state.prompt};
  return {batch:next,entry:state.entry};
 }
-function naturalPart(text,categories){return parseNaturalVoiceEntry(extractEntryDate(text).text,{categories});}
-function meaningful(parts,categories){
- const parsed=parts.map(part=>naturalPart(part,categories));
+function naturalPart(text,categories,today){return parseNaturalVoiceEntry(extractEntryDate(text,today).text,{categories});}
+function meaningful(parts,categories,today){
+ const parsed=parts.map(part=>naturalPart(part,categories,today));
  if(parts.length<2||parsed.some(state=>!state||state.invalid||state.ambiguous.length||!state.patch.amount||!(state.patch.category||state.patch.item||state.patch.sign)))return false;
- const explicit=parts.map(part=>part.split(/\s+/).some(word=>naturalPart(word,categories)?.patch?.sign));
+ const explicit=parts.map(part=>part.split(/\s+/).some(word=>naturalPart(word,categories,today)?.patch?.sign));
  return parsed.filter(state=>state.patch.category||state.patch.item).length>=2||explicit.every(Boolean)||new Set(parsed.map(state=>state.patch.sign).filter(Boolean)).size>1;
 }
-function partsFor(text,categories){
- const dates=extractEntryDate(text);
+function partsFor(text,categories,today){
+ const dates=extractEntryDate(text,today);
  // Amount ranges preserve decimals, spoken numbers, cents and numeric category
  // names. Each range must have its own category or explicit money action.
  if(!dates.invalid){
   const parsed=parseNaturalVoiceEntry(dates.text,{categories}),ranges=parsed?.amountRanges;
   if(ranges?.length>=2){
    const parts=ranges.map((range,index)=>trimConnector(dates.text.slice(index?range.start:0,ranges[index+1]?.start||dates.text.length)));
-   if(meaningful(parts,categories))return {parts,sharedDate:dates.dateKey};
+   if(meaningful(parts,categories,today))return {parts,sharedDate:dates.dateKey};
   }
  }
  const parts=text.split(/;\s*|,\s+|\s+(?:и|and|și|si)\s+/u).map(part=>part.trim()).filter(Boolean);
- return meaningful(parts,categories)?{parts,sharedDate:!dates.invalid?dates.dateKey:null}:null;
+ return meaningful(parts,categories,today)?{parts,sharedDate:!dates.invalid?dates.dateKey:null}:null;
 }
 const targetNumbers={первой:1,первая:1,второй:2,вторая:2,третьей:3,третья:3,четвертой:4,четвертая:4,пятой:5,пятая:5,шестой:6,шестая:6,седьмой:7,седьмая:7,восьмой:8,восьмая:8,девятой:9,девятая:9,десятой:10,десятая:10,first:1,second:2,third:3};
 export function voiceEntryBatch(phrase,batch=null,locale='ru',categories=[],options={}){
@@ -52,9 +52,9 @@ export function voiceEntryBatch(phrase,batch=null,locale='ru',categories=[],opti
   return resultFor({...batch,states,activeIndex:index,commonFields:batch.commonFields.filter(name=>states.some(state=>state.field===name))},locale);
  }
  if(corrected.negated||text.length>1500)return null;
- const split=partsFor(text,categories);if(!split)return null;
+ const split=partsFor(text,categories,options.todayKey);if(!split)return null;
  if(split.parts.length>10)return {invalid:true};
- const parsed=split.parts.map(part=>naturalPart(part,categories));
+ const parsed=split.parts.map(part=>naturalPart(part,categories,options.todayKey));
  const shared={};
  for(const field of ['sign','currency','destination']){
   const values=[...new Set(parsed.map(state=>state.patch[field]).filter(Boolean))];
@@ -75,7 +75,7 @@ export async function saveVoiceBatch(entries,progress,saveEntry){
  const key=JSON.stringify(entries);
  if(progress.batchKey!==key){
   if(voiceBatchHasProgress(progress))throw new Error('Часть записей уже сохранена. Завершите сохранение исходного списка.');
-  progress.batchKey=key;progress.entries=entries.map(()=>({}));
+  progress.batchKey=key;progress.entries=entries.map(()=>progress.undoGroup?{undoGroup:progress.undoGroup}:{});
  }
  for(let index=0;index<entries.length;index++){
   if(progress.entries[index].done)continue;

@@ -1,3 +1,4 @@
+import {OFFLINE_QUEUE_KEY} from '../../../shared/config/constants.js';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { getValidUserId } from '../../../shared/lib/formatters';
@@ -73,6 +74,7 @@ export function useTrades({ user }) {
     enqueueOperation,
     amendPendingInsert,
     getPendingInstrumentUpdates,
+    getPendingVoiceChanges,
     retryFailedSync: retryQueuedOperations,
     flushOfflineQueue,
   } = useOfflineQueue({ user, onSyncedInsert: handleSyncedInsert });
@@ -84,9 +86,9 @@ export function useTrades({ user }) {
   }, [retryQueuedOperations, flushOfflineQueue]);
 
   const reconcileCloudRows = useCallback((rows) => {
-    const cloud = groupRows(rows), pendingLabels = getPendingInstrumentUpdates();
+    const cloud = groupRows(rows), pendingLabels = getPendingInstrumentUpdates(), pendingVoice = getPendingVoiceChanges();
     for (const [dateKey, items] of Object.entries(cloud)) {
-      cloud[dateKey] = items.map(item => pendingLabels.has(`${dateKey}:${item.id}`) ? {...item, instrument: pendingLabels.get(`${dateKey}:${item.id}`)} : item);
+      cloud[dateKey] = items.filter(item => !pendingVoice.get(`${dateKey}:${item.id}`)?.remove).map(item => ({...item,...(pendingLabels.has(`${dateKey}:${item.id}`)?{instrument:pendingLabels.get(`${dateKey}:${item.id}`)}:{}),...(pendingVoice.has(`${dateKey}:${item.id}`)?pendingVoice.get(`${dateKey}:${item.id}`):{})}));
     }
     setManualTrades((prev) => {
       if (currentOwnerRef.current !== cloudUserId) return prev;
@@ -101,7 +103,7 @@ export function useTrades({ user }) {
       cacheTradesLocally(next, cloudUserId);
       return next;
     });
-  }, [cacheTradesLocally, cloudUserId, getPendingInstrumentUpdates]);
+  }, [cacheTradesLocally, cloudUserId, getPendingInstrumentUpdates, getPendingVoiceChanges]);
 
   const refreshFromCloud = useCallback(async () => {
     if (!cloudUserId || !navigator.onLine) return false;
@@ -176,6 +178,7 @@ export function useTrades({ user }) {
     const { dateKey, isEditing, editingTradeId, time, instrument, direction, signedPnl, comment, platform, currency, takeProfit, stopLoss, traderMode } = args;
     const generatedId = globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const localId = `local-${generatedId}`;
+    let savedId = localId;
     const localTrade = {
       id: isEditing ? editingTradeId : localId,
       time, instrument, direction, pnl: signedPnl, comment, platform,
@@ -195,18 +198,18 @@ export function useTrades({ user }) {
       return next;
     });
 
-    if (!cloudUserId) return;
+    if (!cloudUserId) return localTrade;
     const payload = toSupabaseTradePayload(localTrade, dateKey, cloudUserId);
     const updates = toSupabaseTradeUpdates(localTrade, dateKey);
     const temporary = isEditing && isTemporaryId(editingTradeId);
 
-    if (temporary && amendPendingInsert({ action: 'update', user_id: cloudUserId, tradeId: editingTradeId, date_key: dateKey, updates })) return;
+    if (temporary && amendPendingInsert({ action: 'update', user_id: cloudUserId, tradeId: editingTradeId, date_key: dateKey, updates })) return localTrade;
 
     const operation = isEditing
       ? { action: 'update', user_id: cloudUserId, tradeId: editingTradeId, date_key: dateKey, updates }
       : { action: 'insert', user_id: cloudUserId, tempId: localId, date_key: dateKey, trade: payload };
 
-    if (!navigator.onLine || temporary) { enqueueOperation(operation); return; }
+    if (!navigator.onLine || temporary) { enqueueOperation(operation); return localTrade; }
 
     try {
       if (isEditing) {
@@ -226,6 +229,7 @@ export function useTrades({ user }) {
       } else {
         const { data, error } = await supabase.from('trades').insert(payload).select().single();
         if (error) throw error;
+        savedId = data.id;
         setManualTrades((prev) => {
           const next = {
             ...prev,
@@ -257,7 +261,36 @@ export function useTrades({ user }) {
         throw error;
       }
     }
+    return {...localTrade, id:isEditing ? editingTradeId : savedId};
   }, [cloudUserId, cacheTradesLocally, enqueueOperation, amendPendingInsert, refreshFromCloud]);
+
+  // Voice edits/removals commit one explicit field or row. A reviewed snapshot
+  // cannot overwrite a record that changed while the user was speaking.
+  const mutateVoiceRecord = useCallback(async ({snapshot, amount, remove=false}) => {
+    if(currentOwnerRef.current!==owner || loadedOwner!==owner)throw new Error('Дождитесь загрузки записей.');
+    const row=(manualTradesRef.current[snapshot.dateKey]||[]).find(item=>String(item.id)===String(snapshot.id));
+    if(!row || ['pnl','instrument','currency','time','comment'].some(key=>row[key]!==snapshot[key]))throw new Error('Запись уже изменилась. Найдите её ещё раз.');
+    if(!remove && (!Number.isFinite(amount)||Math.abs(amount)<=0||Math.abs(amount)>=1e12))throw new Error('Назовите корректную сумму.');
+    const nextRow={...row,...(!remove?{pnl:amount}:{})};
+    if(cloudUserId && !String(row.id).startsWith('guest-')){
+      const operation={action:remove?'delete':'update',user_id:cloudUserId,tradeId:row.id,date_key:snapshot.dateKey,...(!remove?{updates:{pnl:amount}}:{})};
+      if(!navigator.onLine || isTemporaryId(row.id)){
+        enqueueOperation(operation);
+        const queue=JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY)||'[]');
+        // Enqueue folds a patch into a pending insert, and removes a temporary
+        // insert entirely when it is cancelled.
+        const queued=queue.some(item=>item.user_id===cloudUserId && (String(item.tradeId)===String(row.id)||String(item.tempId)===String(row.id)) && (remove?item.action==='delete':(item.updates?.pnl===amount||item.trade?.pnl===amount)));
+        const cancelledInsert=remove&&isTemporaryId(row.id)&&!queue.some(item=>String(item.tempId)===String(row.id));
+        if(!queued&&!cancelledInsert)throw new Error('Не удалось сохранить изменение на устройстве.');
+      }else{
+        const query=remove?supabase.from('trades').delete():supabase.from('trades').update({pnl:amount});
+        const {error,data}=await query.eq('id',row.id).eq('user_id',cloudUserId).eq('pnl',row.pnl).eq('instrument',row.instrument).select('id').maybeSingle();if(error)throw new Error(error.message||'Не удалось сохранить изменение.');if(!data)throw new Error('Запись уже изменилась на другом устройстве. Найдите её ещё раз.');
+      }
+    }
+    if(currentOwnerRef.current!==owner)throw new Error('Аккаунт изменился.');
+    setManualTrades(previous=>{const day=previous[snapshot.dateKey]||[];const next={...previous,[snapshot.dateKey]:remove?day.filter(item=>String(item.id)!==String(row.id)):day.map(item=>String(item.id)===String(row.id)?nextRow:item)};manualTradesRef.current=next;cacheTradesLocally(next,cloudUserId);return next;});
+    return {...nextRow,dateKey:snapshot.dateKey};
+  },[owner,loadedOwner,cloudUserId,enqueueOperation,cacheTradesLocally]);
 
   const detachMoneyCategory = useCallback(async (name, isMoney) => {
     if (currentOwnerRef.current !== owner || loadedOwner !== owner) throw new Error('Дождитесь загрузки записей.');
@@ -315,6 +348,6 @@ export function useTrades({ user }) {
   return {
     manualTrades, setManualTrades, manualTradesRef, cacheTradesLocally,
     pendingSyncCount, failedSyncCount, retryFailedSync,
-    saveTrade, deleteTrade, detachMoneyCategory, clearAllTrades, refreshFromCloud,
+    saveTrade, deleteTrade, mutateVoiceRecord, detachMoneyCategory, clearAllTrades, refreshFromCloud,
   };
 }

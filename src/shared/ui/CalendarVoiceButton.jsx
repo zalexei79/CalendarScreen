@@ -13,13 +13,21 @@ import VoiceSuggestions from './VoiceSuggestions.jsx';
 import VoiceReplyControls from './VoiceReplyControls.jsx';
 import {voicesForLocale,selectPlaybackVoice} from '../lib/voicePlayback.js';
 import './CalendarVoiceButton.css';
+import VoiceWorkspace from './VoiceWorkspace.jsx';
+import {prepareConversationEntry,parseVoiceConversation} from '../lib/voiceConversation.js';
 
-export default function CalendarVoiceButton({onCreateCategory,onDeleteCategory,userId,language='ru',isLight,traderMode=false,categoryOptions=[],defaultCurrency,askDestination=false,walletAvailable=false,onCommand,onSaveEntry}){
+export default function CalendarVoiceButton({onResetConversation,onConversation,selectedDate,onCreateCategory,onDeleteCategory,userId,language='ru',isLight,traderMode=false,categoryOptions=[],defaultCurrency,askDestination=false,walletAvailable=false,onCommand,onSaveEntry}){
  const locale=String(language).startsWith('zh')?'zh':language==='en'?'en':language==='ro'||language==='md'?'ro':'ru';
+ const interactionCopy={ru:{correct:'Можно исправить голосом',next:'Можно сказать дальше',saving:'Сохраняю…',amountUpdated:'Сумма исправлена.',entry:['Потратил на сок','Нет, 350','Это доход'],mutation:['Нет, 350'],batch:['Во второй записи сумма 100'],after:['Отмени это','Что записал сегодня?','Добавь ещё одну запись']},en:{correct:'Correct by voice',next:'You can continue',saving:'Saving…',amountUpdated:'Amount updated.',entry:['Spent on juice','No, 350','Income'],mutation:['No, 350'],batch:['In second entry amount 100'],after:['Open history','Spent 20 USD on groceries']},ro:{correct:'Corectează vocal',next:'Poți continua',saving:'Salvez…',amountUpdated:'Suma corectată.',entry:['Cheltuit pe suc','Nu, 350','Venit'],mutation:['Nu, 350'],batch:['Nu, 100'],after:['Deschide istoricul']},zh:{correct:'可以语音修改',next:'可以继续说',saving:'正在保存…',amountUpdated:'金额已修改。',entry:['用于果汁','不，350','收入'],mutation:['不，350'],batch:['不，100'],after:['打开历史']}}[locale];
  const text={
   zh: {start:"语音命令",stop:"停止麦克风",hint:"“添加记录”或“打开2048年11月13日”",invalid:"请尝试说“添加记录”或“打开2048年11月13日”。",permission:"请允许浏览器使用麦克风。",error:"语音输入不可用，请重试。",unsupported:"此浏览器不支持语音命令。"},ru:{start:'Голосовая команда',stop:'Остановить микрофон',hint:'«Добавь запись» или «открой 13 ноября 2048»',invalid:'Не понял эту фразу. Попробуйте сказать иначе или выбрать пример ниже.',permission:'Разрешите доступ к микрофону в браузере.',error:'Голосовой ввод недоступен. Попробуйте ещё раз.',unsupported:'Браузер не поддерживает голосовые команды.'},en:{start:'Voice command',stop:'Stop microphone',hint:'“Add entry” or “open 13 November 2048”',invalid:'Try “add entry” or “open 13 November 2048”.',permission:'Allow microphone access in your browser.',error:'Voice input unavailable. Try again.',unsupported:'Voice commands are not supported by this browser.'},ro:{start:'Comandă vocală',stop:'Oprește microfonul',hint:'„Adaugă o înregistrare” sau „deschide 13 noiembrie 2048”',invalid:'Încearcă „adaugă o înregistrare” sau „deschide 13 noiembrie 2048”.',permission:'Permite accesul la microfon în browser.',error:'Introducerea vocală nu este disponibilă. Încearcă din nou.',unsupported:'Browserul nu acceptă comenzile vocale.'}}[locale];
  const [listening,setListening]=useState(false),[message,setMessage]=useState('');
  const [answer,setAnswer]=useState(''),[speaking,setSpeaking]=useState(false);
+ const [answerAction,setAnswerAction]=useState(null);
+ const [heard,setHeard]=useState(''),[nextHelp,setNextHelp]=useState(null),[choices,setChoices]=useState([]),[contextLabel,setContextLabel]=useState(''),[compact,setCompact]=useState(false);
+ const conversationContext=useRef(null),pendingPhrase=useRef(''),requestGeneration=useRef(0),handlers=useRef(null);
+ handlers.current={onCommand,onConversation,onSaveEntry,onResetConversation,selectedDate,userId};
+ const lifecycle=useRef(null);lifecycle.current={start,finish,handlePhrase:processPhrase,saveEntry};
  const [review,setReview]=useState(null),[saving,setSaving]=useState(false),[saveError,setSaveError]=useState(''),[saveLocked,setSaveLocked]=useState(false);
  const saveBusy=useRef(false),saveProgress=useRef({}),cue=useRef(null),mounted=useRef(true);
  const [batch,setBatch]=useState(null),batchDraft=useRef(null);
@@ -56,7 +64,7 @@ export default function CalendarVoiceButton({onCreateCategory,onDeleteCategory,u
   audioTimer.current=setTimeout(()=>{if(utterance.current===speech){stopSpeaking();setAudioError(ui.audio);if(after)releaseTimer.current=setTimeout(after,250);}},3500);
   try{if(window.speechSynthesis.paused)window.speechSynthesis.resume();window.speechSynthesis.speak(speech);}catch{speech.onerror();}
  }
- function respond(value,after){if(feedback&&!document.hidden&&mounted.current)speak(value,after);}
+ function respond(value,after){if(feedback&&!document.hidden&&mounted.current)speak(value,after);else if(after&&mounted.current)releaseTimer.current=setTimeout(after,160);}
  useEffect(()=>{if(!feedback){clearTimeout(releaseTimer.current);stopSpeaking();}},[feedback]);
  const compactHelp=voiceSuggestions(locale,traderMode,{phrase:transcript,draft:entryDraft.current,review:Boolean(review),categories:categoryOptions,walletAvailable});
  const localeVoices=voicesForLocale(voices,locale);
@@ -64,22 +72,26 @@ export default function CalendarVoiceButton({onCreateCategory,onDeleteCategory,u
  const session=useRef(null),timer=useRef(null),messageTimer=useRef(null);
  const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
  function stop(){const current=session.current;session.current=null;clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);setTalking(false);clearTimeout(timer.current);clearTimeout(releaseTimer.current);if(current){current.onspeechstart=null;current.onspeechend=null;current.onstart=null;current.onresult=null;current.onerror=null;current.onend=null;current.abort();}setListening(false);setPhase('idle');}
- function finish(){const current=session.current;if(!current||phase==='processing')return;clearTimeout(phraseTimer.current);setPhase('processing');setMessage(ui.processing);clearTimeout(timer.current);try{current.stop();timer.current=setTimeout(()=>{if(session.current===current){stop();notify(text.error);}},5000);}catch{stop();notify(text.error);}}
- function notify(value){if(review)setSaveError(value);setMessage(value);clearTimeout(messageTimer.current);messageTimer.current=setTimeout(()=>setMessage(''),6500);}
+ function finish(){if(!session.current||phase==='processing')return;const value=pendingPhrase.current;stop();if(value)lifecycle.current.handlePhrase(value);}
+
+ function notify(value){if(review)setSaveError(value);else setAnswer('');setMessage(value);clearTimeout(messageTimer.current);messageTimer.current=setTimeout(()=>setMessage(''),6500);}
  useEffect(()=>{
   mounted.current=true;
   const cancel=()=>{if(document.hidden){stop();stopSpeaking();setMessage('');}};
   document.addEventListener('visibilitychange',cancel);
   return ()=>{mounted.current=false;cue.current?.close().catch(()=>{});cue.current=null;document.removeEventListener('visibilitychange',cancel);clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);clearTimeout(audioTimer.current);clearTimeout(releaseTimer.current);if(utterance.current){utterance.current.onstart=null;utterance.current.onend=null;utterance.current.onerror=null;utterance.current=null;window.speechSynthesis?.cancel();}clearTimeout(timer.current);clearTimeout(messageTimer.current);const current=session.current;session.current=null;if(current){current.onspeechstart=null;current.onspeechend=null;current.onstart=null;current.onresult=null;current.onerror=null;current.onend=null;current.abort();}};
  },[]);
- useEffect(()=>{if(saveBusy.current||voiceBatchHasProgress(saveProgress.current))return;entryDraft.current=null;batchDraft.current=null;setBatch(null);setReview(null);setQuestionField(null);stop();stopSpeaking();setActive(false);setMessage('');setAnswer('');clearTimeout(messageTimer.current);},[locale]);
- function cancelDraft(){if(saveBusy.current)return;entryDraft.current=null;batchDraft.current=null;setBatch(null);setReview(null);setQuestionField(null);setSaveError('');setSaveLocked(false);saveProgress.current={};stop();stopSpeaking();setActive(false);setAnswer('');setMessage('');}
+ useEffect(()=>{const begin=()=>lifecycle.current.start();window.addEventListener('dayris-start-voice',begin);return()=>window.removeEventListener('dayris-start-voice',begin);},[]);
+ useEffect(()=>{requestGeneration.current++;conversationContext.current=null;setHeard('');setChoices([]);setNextHelp(null);setContextLabel('');if(saveBusy.current||voiceBatchHasProgress(saveProgress.current))return;entryDraft.current=null;batchDraft.current=null;setBatch(null);setReview(null);setQuestionField(null);stop();stopSpeaking();setActive(false);setMessage('');setAnswer('');setAnswerAction(null);clearTimeout(messageTimer.current);},[locale,userId]);
+ function cancelDraft(){if(saveBusy.current)return;handlers.current.onResetConversation?.();requestGeneration.current++;conversationContext.current=null;setHeard('');setNextHelp(null);setChoices([]);setContextLabel('');setCompact(false);entryDraft.current=null;batchDraft.current=null;setBatch(null);setReview(null);setQuestionField(null);setSaveError('');setSaveLocked(false);saveProgress.current={};stop();stopSpeaking();setActive(false);setAnswer('');setAnswerAction(null);setMessage('');}
  function changeReview(entry){if(saveBusy.current||saveLocked)return;if(batchDraft.current){const next={...batchDraft.current,states:batchDraft.current.states.map((state,index)=>index===batchDraft.current.activeIndex?{entry}:state)};batchDraft.current=next;setBatch(next);}entryDraft.current=entry;setReview(entry);setSaveError('');}
  function applyDialog(dialog){
+  if(dialog?.entry&&entryDraft.current?.mutation)dialog={...dialog,entry:{...dialog.entry,mutation:true,beforeAmount:entryDraft.current.beforeAmount,mutationSnapshot:entryDraft.current.mutationSnapshot}};
+  if(dialog?.entry||dialog?.draft){setNextHelp(null);setChoices([]);setCompact(false);}
   if(dialog?.batch){batchDraft.current=dialog.batch;setBatch(dialog.batch);}
   if(dialog?.cancelled){cancelDraft();return true;}
   if(dialog?.invalid){setSaveError(text.invalid);setAudioError(text.invalid);return true;}
-  if(dialog?.entry){entryDraft.current=dialog.entry;setReview(dialog.entry);setQuestionField(null);setAnswer('');setMessage('');setAudioError('');setSaveError('');setActive(true);return true;}
+  if(dialog?.entry){entryDraft.current=dialog.entry;setReview(dialog.entry);setQuestionField(null);setAnswer('');setMessage('');setAudioError('');setSaveError('');setActive(true);releaseTimer.current=setTimeout(()=>start(true),220);return true;}
   if(dialog?.draft){entryDraft.current=dialog.draft;setReview(null);setQuestionField(dialog.field);setMessage('');setAnswer(dialog.prompt);releaseTimer.current=setTimeout(()=>respond(dialog.prompt,()=>start(true)),180);return true;}
   return false;
  }
@@ -87,38 +99,63 @@ export default function CalendarVoiceButton({onCreateCategory,onDeleteCategory,u
  function removeBatchEntry(){if(saveBusy.current||saveLocked||!batchDraft.current)return;const next={...batchDraft.current,states:batchDraft.current.states.filter((_,index)=>index!==batchDraft.current.activeIndex)};applyDialog(selectVoiceBatchEntry(next,Math.min(next.activeIndex,next.states.length-1),locale));}
  async function saveEntry(){
   if(saveBusy.current||!entryDraft.current||!review)return;
-  const entry={...entryDraft.current},entries=batchDraft.current?.states.map(state=>state.entry);saveBusy.current=true;setSaving(true);setSaveError('');stop();stopSpeaking();
+  const saveHandlers=handlers.current,saveOwner=saveHandlers.userId;
+  const saveOne=(item,progress)=>{if(handlers.current.userId!==saveOwner)throw new Error('Аккаунт изменился. Начните запись заново.');return saveHandlers.onSaveEntry?saveHandlers.onSaveEntry(item,progress):saveHandlers.onCommand(item);};
+  const entry={...entryDraft.current},entries=batchDraft.current?.states.map(state=>state.entry);const group=saveProgress.current.undoGroup||(saveProgress.current.undoGroup=globalThis.crypto?.randomUUID?.()||String(Date.now()));if(entries){saveProgress.current.entries??=entries.map(()=>({}));saveProgress.current.entries.forEach(progress=>progress.undoGroup=group);}saveBusy.current=true;setSaving(true);setSaveError('');stop();stopSpeaking();
   try{
-   if(entries)await saveVoiceBatch(entries,saveProgress.current,async (item,progress)=>onSaveEntry?onSaveEntry(item,progress):onCommand(item));
-   else if(onSaveEntry)await onSaveEntry(entry,saveProgress.current);
-   else await onCommand(entry);
-   if(!mounted.current)return;
+   if(entry.mutation)await saveHandlers.onCommand({type:'voice-confirm',entry});
+   else if(entries)await saveVoiceBatch(entries,saveProgress.current,saveOne);
+   else await saveOne(entry,saveProgress.current);
+   if(!mounted.current||handlers.current.userId!==saveOwner)return;
    entryDraft.current=null;batchDraft.current=null;setBatch(null);setReview(null);setQuestionField(null);saveProgress.current={};setSaveLocked(false);setActive(true);
-   const reply=entries?({ru:`Сохранено записей: ${entries.length}.`,en:`Saved ${entries.length} entries.`,ro:`Am salvat ${entries.length} înregistrări.`,zh:`已保存${entries.length}条记录。`}[locale]):shortEntryAnswer(entry,locale);setAnswer(reply);setMessage('');respond(reply);
+   const reply=entries?({ru:`Сохранено записей: ${entries.length}.`,en:`Saved ${entries.length} entries.`,ro:`Am salvat ${entries.length} înregistrări.`,zh:`已保存${entries.length}条记录。`}[locale]):shortEntryAnswer(entry,locale);setAnswer(entry.mutation?interactionCopy.amountUpdated:reply);setMessage('');setNextHelp({filtered:true,title:interactionCopy.next,phrases:interactionCopy.after});respond(entry.mutation?interactionCopy.amountUpdated:reply,()=>start(true));
   }catch(error){if(mounted.current){const count=saveProgress.current.entries?.filter(item=>item.done).length||0;const prefix=entries?({ru:`Сохранено ${count} из ${entries.length}. `,en:`Saved ${count} of ${entries.length}. `,ro:`Salvat ${count} din ${entries.length}. `,zh:`已保存${count}条，共${entries.length}条。`}[locale]):'';setSaveError(prefix+(error.message||text.error));setSaveLocked(voiceBatchHasProgress(saveProgress.current));}}
-  finally{saveBusy.current=false;if(mounted.current)setSaving(false);}
+  finally{saveBusy.current=false;if(mounted.current){setSaving(false);if(handlers.current.userId!==saveOwner){saveProgress.current={};cancelDraft();}}}
  }
- function handlePhrase(phrase){
-  if(saveBusy.current||saveLocked)return;
+ async function handlePhrase(phrase){
+  if(saveBusy.current||saveLocked||!phrase.trim())return;
+  setHeard(phrase);setCompact(false);setChoices([]);setAnswerAction(null);const request=++requestGeneration.current;
   // Only an explicit save command submits a reviewed draft.
   if(review&&/^(?:сохрани(?: все| всё)?|сохранить(?: все| всё)?|да сохрани|保存|确认保存|全部保存|save(?: it| all)?|salvează(?: tot)?|salveaza(?: tot)?)$/i.test(phrase.trim())){saveEntry();return;}
+  if(!entryDraft.current&&onConversation){
+   try{const reply=await handlers.current.onConversation(phrase,conversationContext.current);if(!mounted.current||request!==requestGeneration.current)return;if(reply){
+     if(reply.type==='conversation-entry'){const prepared=prepareConversationEntry(reply.phrase,{baseDate:reply.dateKey||handlers.current.selectedDate,context:conversationContext.current});phrase=prepared.phrase;conversationContext.current={period:'exact-day',dateKey:reply.dateKey||prepared.dateKey||localDateKey()};}
+     else {let result=reply.delegate?await handlers.current.onCommand(reply.delegate):reply;if(!mounted.current||request!==requestGeneration.current)return;if(result?.context)conversationContext.current=result.context;if(result?.contextLabel)setContextLabel(result.contextLabel);if(applyDialog(result))return;if(result!==undefined){receiveReply(result);return;}if(reply.delegate){setActive(false);return;}}
+   }}catch(error){setActive(true);setAnswer(error.message||text.error);return;}
+  }
+  const standalone=parseCalendarVoiceCommand(phrase);
+  const prepared=!entryDraft.current&&(!standalone||standalone.type==='entry')?prepareConversationEntry(phrase,{baseDate:handlers.current.selectedDate,context:conversationContext.current}):null;
+  if(prepared?.invalid){setAnswer('Не разобрал дату. Назовите один день.');return;}
+  if(prepared){phrase=prepared.phrase;if(prepared.dateKey)phrase+=` ${prepared.dateKey}`;}
   const multi=batchDraft.current?voiceEntryBatch(phrase,batchDraft.current,locale,categoryOptions,{defaultCurrency,walletAvailable}):!entryDraft.current&&voiceEntryBatch(phrase,null,locale,categoryOptions,{defaultCurrency,walletAvailable});
   if(applyDialog(multi))return;
   const dialog=voiceEntryReview(phrase,entryDraft.current,locale,categoryOptions,{defaultCurrency,askDestination,walletAvailable});
   if(applyDialog(dialog))return;
   if(entryDraft.current){setSaveError(text.invalid);setAudioError(text.invalid);return;}
   const command=parseCalendarVoiceCommand(phrase);
-  if(!command){notify(text.invalid);return;}
+  if(!command){setAnswer('');setNextHelp(null);notify(text.invalid);return;}
   setQuestionField(null);setMessage('');setAnswer('');setAudioError('');let reply;
-  try{reply=onCommand(command);}catch(error){console.error('DAYRIS voice action failed',error);setActive(true);notify(text.error);return;}
-  if(typeof reply==='string'&&reply){setAnswer(reply);releaseTimer.current=setTimeout(()=>respond(reply),180);}else setActive(false);
+  try{reply=await handlers.current.onCommand(command);}catch(error){console.error('DAYRIS voice action failed',error);setActive(true);notify(error.message||text.error);return;}
+  if(mounted.current&&request===requestGeneration.current)receiveReply(reply);
+
  }
- function submitReply(value){if(!value.trim())return;stop();stopSpeaking();setTranscript('');handlePhrase(value);}
+ function receiveReply(reply){
+  const value=typeof reply==='string'?reply:reply?.text;
+  if(!value){conversationContext.current=null;setContextLabel('');handlers.current.onResetConversation?.();setActive(false);return;}
+  if(Object.hasOwn(reply,'context'))conversationContext.current=reply.context;
+  if(Object.hasOwn(reply,'contextLabel'))setContextLabel(reply.contextLabel);
+  if(reply?.help)setNextHelp({filtered:true,title:locale==='ru'?'Можно сказать дальше':'Continue with',phrases:reply.help});else setNextHelp(null);
+  setChoices(reply?.choices||[]);setCompact(Boolean(reply?.compact));setActive(true);setAnswer(value);
+  if(typeof reply?.onAction==='function')setAnswerAction({label:reply.actionLabel,run:reply.onAction});
+  releaseTimer.current=setTimeout(()=>respond(value,()=>start(true)),120);
+ }
+ async function processPhrase(value){setPhase('processing');try{await handlePhrase(value);}finally{if(mounted.current&&!session.current)setPhase('idle');}}
+ function submitReply(value){if(!value.trim())return;stop();stopSpeaking();setTranscript('');processPhrase(value);}
  function start(automatic=false){
   if(saveBusy.current||saveLocked)return;
   if(session.current){finish();return;}
-  clearTimeout(releaseTimer.current);stopSpeaking();if(automatic!==true&&!entryDraft.current)setAnswer('');setAudioError('');setTranscript('');setActive(true);window.speechSynthesis?.getVoices();
-  if(automatic!==true){if(!cue.current)cue.current=prepareVoiceCue();else cue.current.resume().catch(()=>{});}
+  clearTimeout(releaseTimer.current);stopSpeaking();if(automatic!==true&&!entryDraft.current)setAnswer('');setAudioError('');setTranscript('');pendingPhrase.current='';setActive(true);window.speechSynthesis?.getVoices();
+  if(automatic!==true){setAnswerAction(null);if(!cue.current)cue.current=prepareVoiceCue();else cue.current.resume().catch(()=>{});}
   // Initialize Safari's speech channel inside the microphone tap, before the
   // asynchronous recognition result. Actual answers still wait for mic release.
   if(feedback&&/iPad|iPhone|iPod/.test(navigator.userAgent)&&window.speechSynthesis&&window.SpeechSynthesisUtterance){try{const warmup=new window.SpeechSynthesisUtterance('');warmup.lang={
@@ -138,34 +175,42 @@ export default function CalendarVoiceButton({onCreateCategory,onDeleteCategory,u
    finalText=finalResults.map(result=>result[0].transcript).join(' ').trim();
    // A single-result recognizer can offer a better alternative for the whole phrase.
    if(finalResults.length===1&&!entryDraft.current)finalText=Array.from(finalResults[0]).map(item=>item.transcript).find(value=>{const command=voiceEntryBatch(value,null,locale,categoryOptions,{walletAvailable})?.entry||voiceEntryReview(value,null,locale,categoryOptions,{walletAvailable})?.entry||parseCalendarVoiceCommand(value);return command&&command.type!=='category-prompt';})||finalText;
-   latestText=results.map(result=>result[0].transcript).join(' ').trim();setTranscript(latestText);
+   latestText=results.map(result=>result[0].transcript).join(' ').trim();setCompact(false);
    clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);
-   const interim=results.some(result=>!result.isFinal);if(!interim)latestText=finalText;setTalking(interim);
-   if(interim){speechPulseTimer.current=setTimeout(()=>setTalking(false),900);phraseTimer.current=setTimeout(()=>{if(session.current===recognition)finish();},2200);return;}
-   const command=voiceEntryBatch(finalText,batchDraft.current,locale,categoryOptions,{defaultCurrency,walletAvailable})?.entry||voiceEntryReview(finalText,entryDraft.current,locale,categoryOptions,{defaultCurrency,walletAvailable})?.entry||parseCalendarVoiceCommand(finalText);
+   const interim=results.some(result=>!result.isFinal);if(!interim)latestText=finalText;pendingPhrase.current=latestText;setTranscript(latestText);setTalking(interim);
+   if(interim){speechPulseTimer.current=setTimeout(()=>setTalking(false),900);phraseTimer.current=setTimeout(()=>{if(session.current===recognition)finish();},1600);return;}
+   const command=voiceEntryBatch(finalText,batchDraft.current,locale,categoryOptions,{defaultCurrency,walletAvailable})?.entry||voiceEntryReview(finalText,entryDraft.current,locale,categoryOptions,{defaultCurrency,walletAvailable})?.entry||parseCalendarVoiceCommand(finalText)||parseVoiceConversation(finalText,conversationContext.current)||(entryDraft.current&&/^(?:сохрани|сохранить|save|salveaz|salveáz|保存)/i.test(finalText)?{type:'save'}:null);
    // Keep a brief pause available for the category or remaining words.
-   phraseTimer.current=setTimeout(()=>{if(session.current===recognition)finish();},command&&command.type!=='category-prompt'?1400:2600);
+   phraseTimer.current=setTimeout(()=>{if(session.current===recognition)lifecycle.current.finish();},command&&command.type!=='category-prompt'?900:1900);
   };
   recognition.onerror=event=>{if(session.current!==recognition)return;stop();notify(event.error==='not-allowed'||event.error==='service-not-allowed'?text.permission:event.error==='language-not-supported'?({
   zh: "设备不支持此语言识别，请检查 Google 语音输入语言。",ru:'Распознавание русского языка недоступно на устройстве. Проверьте языки голосового ввода Google.',en:'English recognition is unavailable. Check Google voice input languages.',ro:'Recunoașterea limbii române nu este disponibilă. Verifică limbile introducerii vocale Google.'}[locale]):text.error);};
   recognition.onend=()=>{if(session.current!==recognition)return;stop();const phrase=latestText||finalText;if(!phrase&&entryDraft.current){setAudioError({
-  zh: "未听到回答，请点击麦克风继续。",ru:'Не услышал ответ. Нажмите микрофон, чтобы продолжить.',en:'No answer heard. Tap the microphone to continue.',ro:'Nu am auzit răspunsul. Apasă microfonul pentru a continua.'}[locale]);return;}handlePhrase(phrase);};
+  zh: "未听到回答，请点击麦克风继续。",ru:'Не услышал ответ. Нажмите микрофон, чтобы продолжить.',en:'No answer heard. Tap the microphone to continue.',ro:'Nu am auzit răspunsul. Apasă microfonul pentru a continua.'}[locale]);return;}lifecycle.current.handlePhrase(phrase);};
   try{recognition.start();timer.current=setTimeout(()=>{if(session.current===recognition)finish();},20000);}catch{stop();notify(text.error);}
  }
+ const idleStatus={ru:'Микрофон на паузе',en:'Microphone paused',ro:'Microfon pe pauză',zh:'麦克风已暂停'}[locale];
+ const speakingStatus={ru:'Отвечаю…',en:'Speaking…',ro:'Răspund…',zh:'正在回答…'}[locale];
  return <div className="calendar-voice-control" data-light={Boolean(isLight)} data-active={active} data-phase={speaking?'speaking':phase}>
   <button type="button" className="calendar-voice-button" disabled={phase==='processing'||saving||saveLocked} onClick={start} aria-pressed={listening} aria-label={listening?ui.done:text.start} title={text.start}><span className="calendar-voice-glyph" data-talking={talking&&phase==='listening'} aria-hidden="true"><span className="calendar-voice-equalizer"><i/><i/><i/></span>{phase==='processing'?<Square size={15}/>:<Mic size={18}/>}<span className="calendar-voice-equalizer"><i/><i/><i/></span></span> {active&&<span>{listening?(phase==='processing'?ui.processing:phase==='starting'?ui.opening:ui.done):speaking?({
   zh: "正在播放",ru:'Отвечаю',en:'Speaking',ro:'Răspund'}[locale]):text.start}</span>}</button>
-  {active&&<button type="button" className="calendar-voice-close" aria-label={ui.close} disabled={saving} onClick={cancelDraft}><X size={18}/></button>}
-  {review&&(batch?<VoiceBatchCard batch={batch} locale={locale} categories={categoryOptions} onCreateCategory={onCreateCategory} onDeleteCategory={onDeleteCategory} userId={userId} isLight={isLight} walletAvailable={walletAvailable} onSelect={selectBatch} onChange={changeReview} onRemove={removeBatchEntry} onSave={saveEntry} onCancel={cancelDraft} busy={saving} listening={listening} error={saveError} locked={saveLocked} progress={saveProgress.current}>{feedbackControl}{listening&&transcript&&<VoiceSuggestions help={compactHelp}/>}</VoiceBatchCard>:<VoiceEntryCard entry={review} locale={locale} categories={categoryOptions} onCreateCategory={onCreateCategory} onDeleteCategory={onDeleteCategory} userId={userId} isLight={isLight} walletAvailable={walletAvailable} onChange={changeReview} onSave={saveEntry} onCancel={cancelDraft} busy={saving} listening={listening} error={saveError} locked={saveLocked}>{feedbackControl}{listening&&transcript&&<VoiceSuggestions help={compactHelp}/>}</VoiceEntryCard>)}
+
+  {(active||review||answer||message)&&<VoiceWorkspace locale={locale} isLight={isLight} phrase={transcript||heard}
+   contextLabel={contextLabel} compact={compact} status={saving?interactionCopy.saving:phase==='starting'?ui.opening:phase==='processing'?ui.processing:listening?ui.listen:speaking?speakingStatus:message&&!['',ui.listen,ui.opening].includes(message)?message:idleStatus}
+   help={transcript?compactHelp:nextHelp||(review?{filtered:true,title:interactionCopy.correct,phrases:batch?interactionCopy.batch:review.mutation?interactionCopy.mutation:interactionCopy.entry}:compactHelp)}
+   onClose={cancelDraft} onExpand={()=>setCompact(false)} onListen={()=>start()} onSuggestion={submitReply} choices={choices} listening={listening} busy={saving||phase==='processing'} resultKey={review?(batch?'batch':'review'):answer||'idle'}
+   settings={<>{feedbackControl}{localeVoices.length>0?voicePicker:<p className="calendar-voice-help-note">{playbackLabels.missing}</p>}</>}
+  >  {review&&(batch?<VoiceBatchCard batch={batch} locale={locale} categories={categoryOptions} onCreateCategory={onCreateCategory} onDeleteCategory={onDeleteCategory} userId={userId} isLight={isLight} walletAvailable={walletAvailable} onSelect={selectBatch} onChange={changeReview} onManualEdit={()=>{stop();stopSpeaking();}} onRemove={removeBatchEntry} onSave={saveEntry} onCancel={cancelDraft} busy={saving} listening={listening} error={saveError} locked={saveLocked} progress={saveProgress.current}></VoiceBatchCard>:<VoiceEntryCard entry={review} locale={locale} categories={categoryOptions} onCreateCategory={onCreateCategory} onDeleteCategory={onDeleteCategory} userId={userId} isLight={isLight} walletAvailable={walletAvailable} onChange={changeReview} onManualEdit={()=>{stop();stopSpeaking();}} onSave={saveEntry} onCancel={cancelDraft} busy={saving} listening={listening} error={saveError} locked={saveLocked}></VoiceEntryCard>)}
   {review&&listening&&<div className="calendar-voice-live" role="status" aria-live="polite">{phase==='starting'?ui.opening:phase==='processing'?ui.processing:ui.listen}{transcript&&<span>«{transcript}»</span>}</div>}
   {answer&&!review&&<div className="calendar-voice-message calendar-voice-answer">
-   <p role="status" aria-live="polite">{answer}</p>{feedbackControl}
+   <p role="status" aria-live="polite">{answer}</p>
+   {answerAction&&<button type="button" className="calendar-voice-result-action" onClick={()=>{stop();stopSpeaking();answerAction.run();setCompact(true);releaseTimer.current=setTimeout(()=>start(true),220);}}>{answerAction.label}</button>}
    {listening&&entryDraft.current&&<p>{ui.listen}{transcript&&` · ${transcript}`}</p>}
    {audioError&&<p className="calendar-voice-audio-error" role="alert">{audioError}</p>}
-   {!questionField&&(localeVoices.length>0?voicePicker:voices.length>0&&<p className="calendar-voice-help-note">{playbackLabels.missing}</p>)}
+
    {questionField&&<VoiceReplyControls key={questionField+answer} field={questionField} locale={locale} userId={userId} isLight={isLight} defaultCurrency={defaultCurrency} walletAvailable={walletAvailable} categories={categoryOptions} item={entryDraft.current?.item} today={localDateKey()} onReply={submitReply} onVoice={()=>{stop();start(true);}} onCreateCategory={onCreateCategory} onDeleteCategory={onDeleteCategory} onPickerOpen={()=>{stop();stopSpeaking();}}/>}
-   {listening&&transcript&&<VoiceSuggestions help={compactHelp}/>}
+
 <div className="calendar-voice-answer-actions">{window.speechSynthesis&&window.SpeechSynthesisUtterance&&<button type="button" aria-label={speaking?audioText.stop:audioText.play} onClick={()=>speaking?stopSpeaking():speak(answer,entryDraft.current?()=>start(true):undefined)}>{speaking?<Square size={16}/>:<Volume2 size={18}/>}<span>{speaking?audioText.stop:audioText.play}</span></button>}<button type="button" aria-label={audioText.close} onClick={cancelDraft}><X size={18}/></button></div></div>}
-  {message&&!answer&&!review&&<div className="calendar-voice-message"><div className="calendar-assistant-heading"><Mic size={14}/><span>DAYRIS</span><small>{locale === 'zh' ? "助手" : (locale==='ru'?'Помощник':locale==='en'?'Assistant':'Asistent')}</small></div><p role="status" aria-live="polite">{message}</p>{feedbackControl}{listening&&<p>{ui.hint}</p>}{transcript&&<p className="calendar-voice-transcript">«{transcript}»</p>}{Speech&&<VoiceSuggestions help={compactHelp}/>}</div>}
+  {message&&!answer&&!review&&<div className="calendar-voice-message"><div className="calendar-assistant-heading"><Mic size={14}/><span>DAYRIS</span><small>{locale === 'zh' ? "助手" : (locale==='ru'?'Помощник':locale==='en'?'Assistant':'Asistent')}</small></div><p role="status" aria-live="polite">{message}</p>{listening&&<p>{ui.hint}</p>}{transcript&&<p className="calendar-voice-transcript">«{transcript}»</p>}</div>}</VoiceWorkspace>}
  </div>;
 }
