@@ -5,10 +5,12 @@ import VoiceSuggestions from './VoiceSuggestions.jsx';
 import SwipeDismissSheet from './SwipeDismissSheet.jsx';
 import useFloatingVoiceWindow from './useFloatingVoiceWindow.js';
 import useVoiceWidget from './useVoiceWidget.js';
+import useVoiceWindowMotion from './useVoiceWindowMotion.js';
 
 export default function VoiceWorkspace({locale,isLight,phrase,status,help,contextLabel,pendingPrompt,onWidgetChange,onClose,onDismissStart,onExpand,onCollapse,onListen,onSuggestion,listening,talking,phase,busy,settings,children,resultKey,choices=[],compact=false}) {
  const widget=useVoiceWidget(onWidgetChange);
  const floating=useFloatingVoiceWindow(widget.detached,{onDock:onCollapse,onDetach:widget.open});
+ useVoiceWindowMotion(floating.sheetRef,{compact,detached:widget.detached,moved:floating.moved,dragging:floating.dragging});
  useEffect(()=>{if(widget.failed)floating.reset();},[widget.failed]);
  const ru=locale==='ru',ro=locale==='ro',zh=locale==='zh';
  const copy=(r,e,m,z)=>ru?r:ro?m:zh?z:e;

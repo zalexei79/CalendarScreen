@@ -1,11 +1,11 @@
-import {useEffect,useLayoutEffect,useRef,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 
 const desktopQuery='(min-width: 768px) and (pointer: fine)';
 const storageKey='dayris_voice_window_position';
 
 export default function useFloatingVoiceWindow(detached=false,{onDock,onDetach}={}){
  const sheetRef=useRef(null),headerRef=useRef(null),positionRef=useRef(null),gesture=useRef(null);
- const actions=useRef({onDock,onDetach}),landing=useRef(null);actions.current={onDock,onDetach};
+ const actions=useRef({onDock,onDetach});actions.current={onDock,onDetach};
  const [desktop,setDesktop]=useState(false),[position,setPosition]=useState(null),[dragging,setDragging]=useState(false),[dockPreview,setDockPreview]=useState(false),[docked,setDocked]=useState(false);
  function place(next){
   const sheet=sheetRef.current;if(!sheet)return;
@@ -16,11 +16,6 @@ export default function useFloatingVoiceWindow(detached=false,{onDock,onDetach}=
  }
  function remember(){try{if(positionRef.current)sessionStorage.setItem(storageKey,JSON.stringify(positionRef.current));}catch{}}
  function reset(){gesture.current=null;positionRef.current=null;setPosition(null);setDragging(false);setDockPreview(false);setDocked(false);try{sessionStorage.removeItem(storageKey);}catch{}}
- useLayoutEffect(()=>{
-  if(!docked||!landing.current)return;const before=landing.current;landing.current=null;
-  const sheet=sheetRef.current,after=sheet.getBoundingClientRect();
-  if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches)sheet.animate([{transform:`translate(${before.left-after.left}px,${before.top-after.top}px)`},{transform:'none'}],{duration:280,easing:'cubic-bezier(.22,1,.36,1)'});
- },[docked]);
  useEffect(()=>{
   const media=window.matchMedia(desktopQuery),sheet=sheetRef.current,header=headerRef.current;
   const sync=()=>{setDesktop(media.matches&&!detached);if(!media.matches||detached){gesture.current=null;setDragging(false);}else if(positionRef.current)place(positionRef.current);};
@@ -40,7 +35,7 @@ export default function useFloatingVoiceWindow(detached=false,{onDock,onDetach}=
   }
   function end(event){const current=gesture.current;if(current?.id!==event.pointerId)return;gesture.current=null;setDragging(false);setDockPreview(false);
    if(event.type==='pointerup'&&current.detach){remember();actions.current.onDetach?.();return;}
-   if(event.type==='pointerup'&&current.dock){landing.current=sheet.getBoundingClientRect();positionRef.current=null;setPosition(null);setDocked(true);try{sessionStorage.removeItem(storageKey);}catch{}actions.current.onDock?.();return;}
+   if(event.type==='pointerup'&&current.dock){positionRef.current=null;setPosition(null);setDocked(true);try{sessionStorage.removeItem(storageKey);}catch{}actions.current.onDock?.();return;}
    remember();
   }
   function key(event){

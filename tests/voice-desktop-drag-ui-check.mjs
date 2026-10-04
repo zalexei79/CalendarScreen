@@ -35,10 +35,13 @@ try{
  await sheet.screenshot({path:'tests/voice-desktop-docked.png',animations:'disabled'});
  assert.ok(Math.abs(box.x+box.width/2-800)<1,'docked assistant is centered');
  await page.setViewportSize({width:900,height:900});await page.waitForTimeout(100);box=await sheet.boundingBox();assert.ok(Math.abs(box.x+box.width/2-450)<1,'dock stays centered after resizing');await page.setViewportSize({width:1600,height:900});await page.waitForTimeout(100);
- await page.getByRole('button',{name:'Развернуть помощника',exact:true}).click();await page.waitForTimeout(100);
+ await page.getByRole('button',{name:'Развернуть помощника',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelector('.voice-workspace').getAnimations().some(a=>a.playState==='running'&&a.effect.getKeyframes().some(k=>k.height)));
+ await page.waitForTimeout(450);assert.ok((await sheet.boundingBox()).height>box.height,'expansion settles at full height');
  await drag(100,-60);box=await sheet.boundingBox();await page.getByRole('button',{name:'Закрыть голосовой режим',exact:true}).click();await page.locator('.calendar-voice-button').click();await page.waitForTimeout(100);const reopened=await sheet.boundingBox();assert.equal(reopened.x,box.x);assert.equal(reopened.y,box.y);
  await page.getByRole('button',{name:'Вернуть окно на место',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('.voice-workspace').style.left);
  await page.setViewportSize({width:390,height:844});await page.waitForFunction(()=>document.querySelector('.voice-workspace').dataset.floating==='false');assert.equal(await brand.getAttribute('tabindex'),null);assert.equal(await sheet.evaluate(el=>el.style.left),'');
+ await page.emulateMedia({reducedMotion:'reduce'});await page.getByRole('button',{name:'Свернуть голосовой режим',exact:true}).click();assert.equal(await sheet.evaluate(el=>el.getAnimations().filter(a=>a.playState==='running').length),0,'reduced motion skips shell animation');
  assert.deepEqual(errors,[]);console.log('PASS: desktop drag, keyboard, reachable header, magnetic docking, position memory, reset and mobile layout without restarting microphone.');
 
 }finally{await browser.close();}
