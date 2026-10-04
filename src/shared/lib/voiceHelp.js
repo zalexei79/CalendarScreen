@@ -27,5 +27,5 @@ export function voiceHelp(locale,traderMode){
  }[locale];
  return {groups,title:{
   zh: "语音操作",ru:'Что можно голосом',en:'Voice actions',ro:'Acțiuni vocale'}[locale],note:{
-  zh: "打开分组，将[括号]替换为你的内容。",ru:'Порядок слов можно менять. В [скобках] — ваши данные. Запись сохраняется после проверки. «к» после суммы означает тысячи.',en:'Word order can vary. Replace [brackets] with your details. Review entries before saving.',ro:'Poți schimba ordinea cuvintelor. Înlocuiește [parantezele] cu datele tale. Verifică înainte de salvare.'}[locale]};
+  zh: "打开分组，将[括号]替换为你的内容。完整清晰的记录会自动保存，缺少信息时会询问。“完成”或“保存”可提交草稿。",ru:'Порядок слов можно менять. В [скобках] — ваши данные. Полная однозначная запись сохраняется сама. Если нужно уточнение — я спрошу. «Готово» и «сохрани» можно использовать для черновика. «к» после суммы означает тысячи.',en:'Word order can vary. Replace [brackets] with your details. Complete unambiguous entries save automatically. I ask when details are missing. Done or save can finish a draft.',ro:'Poți schimba ordinea cuvintelor. Înlocuiește [parantezele] cu datele tale. Înregistrările complete și clare se salvează automat. Întreb dacă lipsesc date. Gata sau salvează pot încheia lista.'}[locale]};
 }

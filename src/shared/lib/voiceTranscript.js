@@ -12,7 +12,8 @@ export function assembleVoiceTranscript(results) {
     while (chunks.length) {
       const previous = chunks.at(-1);
       const words = previous.text.match(/[\p{L}\p{N}]+/gu) || [];
-      const hypothesis = !previous.isFinal || previous.growthCount > 0 || words.length >= 2 || /^(я|i|eu|我)$/u.test(previous.key);
+      const firstWord = text.match(/[\p{L}\p{N}]+/u)?.[0]?.toLocaleLowerCase().replace(/ё/g, 'е');
+      const hypothesis = (words.length === 1 && firstWord === previous.key) || !previous.isFinal || previous.growthCount > 0 || words.length >= 2 || /^(я|i|eu|我)$/u.test(previous.key);
       const growing = hypothesis && key.length > previous.key.length && key.startsWith(previous.key);
       const repeated = key === previous.key && (!previous.isFinal || !result.isFinal || (words.length >= 2 && !/\p{N}/u.test(key)) || previous.growthCount >= 2);
       if (!growing && !repeated) break;

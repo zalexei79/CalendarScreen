@@ -75,7 +75,9 @@ export function voiceEntryReview(phrase,draft=null,locale='ru',categories=[],opt
  const category=next&&raw.match(/^(?:категория|в категорию|на|category|on|categoria|pe)\s+(.+)$/i);
  let result;
  const categoryCommand=next?.item&&parseCalendarVoiceCommand(raw)?.type==='category';
- const natural=locale==='zh'||categoryCommand?null:parseNaturalVoiceEntry(raw,{draft:next,categories,newEntry:options.newEntry});
+ let natural=locale==='zh'||categoryCommand?null:parseNaturalVoiceEntry(raw,{draft:next,categories,newEntry:options.newEntry});
+ // A bare category name answers the pending question, without repeating the amount.
+ if(next?.pendingFields?.includes('category')&&(!natural||natural.invalid)&&!parseCalendarVoiceCommand(raw)&&/^[\p{L}][\p{L}\s'-]{0,59}$/u.test(raw)&&!/(?:^|\s)(?:что|почему|сколько|когда|как|открой|покажи|вернись|сохрани|what|why|how|when|show|open|save|ce|cât|cat|cum|deschide|salvează|salveaza)(?:\s|$)/iu.test(raw))natural=parseNaturalVoiceEntry(`${locale==='en'?'on':locale==='ro'?'pe':'на'} ${raw}`,{draft:next,categories});
  if(natural?.invalid)return {invalid:true};
  if(natural){
   const prepared={...next,...natural.patch};
@@ -111,6 +113,7 @@ export function voiceEntryReview(phrase,draft=null,locale='ru',categories=[],opt
  if(!entry.pendingFields?.includes('destination'))entry.destination=entry.destination||'main';
  if(result.field)return {...result,draft:entry};
  if(next&&!natural&&!date.dateKey&&!category&&!destination&&['amount','currency','sign','category','destination'].every(key=>(next[key]||'main')===(entry[key]||'main'))&&!/^(?:это )?(?:支出|收入|расход|доход|expense|income|cheltuiala|cheltuială|venit)$|^(?:是|对|好的|да|yes|da)$/i.test(raw))return {invalid:true};
+ if(options.requireCategory&&!entry.category&&!entry.mutation){return {draft:{...entry,pendingFields:[...new Set([...(entry.pendingFields||[]),'category'])]},field:'category',prompt:{ru:entry.sign==='minus'?'На что потратили? Назовите категорию.':'Откуда доход? Назовите категорию.',en:entry.sign==='minus'?'What did you spend it on? Name a category.':'Where did the income come from? Name a category.',ro:entry.sign==='minus'?'Pe ce ai cheltuit? Spune categoria.':'De unde este venitul? Spune categoria.',zh:entry.sign==='minus'?'花在什么上？请说出类别。':'收入来自哪里？请说出类别。'}[locale]};}
  return {entry:{type:'entry',kind:'record',amount:entry.amount,currency:entry.currency,sign:entry.sign,dateKey:entry.dateKey,destination:entry.destination,...(entry.category?{category:entry.category}:{})}};
 }
 

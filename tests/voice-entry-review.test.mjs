@@ -4,6 +4,17 @@ import {voiceEntryReview as review,extractEntryDate,shortEntryAnswer} from '../s
 const options={todayKey:'2026-10-02',walletAvailable:true};
 const categories=[{value:'Продукты',label:'Продукты'}];
 const parse=(phrase,draft=null,locale='ru',config=options)=>review(phrase,draft,locale,categories,config);
+test('required category continues the same expense with a bare name and retained fields',()=>{
+ const config={...options,requireCategory:true};
+ let result=parse('Я потратил 50 лей вчера',null,'ru',config);
+ assert.equal(result.field,'category');assert.equal(result.draft.amount,'50');assert.equal(result.draft.currency,'MDL');
+ result=parse('сок',result.draft,'ru',config);
+ assert.equal(result.entry.category,'сок');assert.equal(result.entry.amount,'50');assert.equal(result.entry.currency,'MDL');assert.equal(result.entry.dateKey,'2026-10-01');
+ for(const [locale,initial,reply] of [['en','I spent 50 MDL','juice'],['ro','Am cheltuit 50 lei','suc']]){
+  const pending=parse(initial,null,locale,config);assert.equal(pending.field,'category');
+  const complete=parse(reply,pending.draft,locale,config);assert.equal(complete.entry.amount,'50');assert.equal(complete.entry.category,reply);
+ }
+});
 test('one phrase retains date, category and currency without a destination question',()=>{
  const result=parse('Потратил 250 леев на продукты вчера');
  assert.deepEqual(result.entry,{type:'entry',kind:'record',amount:'250',currency:'MDL',sign:'minus',dateKey:'2026-10-01',destination:'main',category:'Продукты'});

@@ -8,7 +8,7 @@ try{
  const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(()=>{
   window.SpeechRecognition=class{constructor(){window.voice=this;}start(){this.onstart?.();}abort(){this.aborted=true;}};
-  window.emit=text=>voice.onresult?.({results:[Object.assign([{transcript:text}],{isFinal:true})]});
+  window.emit=text=>voice.onresult?.({results:[Object.assign([{transcript:text,confidence:0.4}],{isFinal:true})]});
   window.SpeechSynthesisUtterance=class{constructor(text){this.text=text;}};
   Object.defineProperty(window,'speechSynthesis',{value:{getVoices:()=>[{voiceURI:'ru',name:'Russian',lang:'ru-RU',localService:true}],speak:u=>{window.spoken=u;u.onstart?.();},cancel:()=>{}}});
  });

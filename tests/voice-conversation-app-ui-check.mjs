@@ -27,7 +27,7 @@ try {
    '2026-09-15':[{id:'internet',instrument:'Интернет',pnl:-80,currency:'MDL',platform:'Manual',comment:'keep'}],
   }));
   window.SpeechRecognition=class{constructor(){window.voice=this;}start(){window.voiceActive=true;this.onstart?.();}stop(){}abort(){window.voiceActive=false;}};
-  window.emitPhrase=(phrase,interim=false)=>window.voice.onresult?.({results:[Object.assign([{transcript:phrase}],{isFinal:!interim})]});
+  window.emitPhrase=(phrase,interim=false)=>window.voice.onresult?.({results:[Object.assign([{transcript:phrase,confidence:0.4}],{isFinal:!interim})]});
  });
  const page=await context.newPage(),errors=[];page.setDefaultTimeout(30000);page.on('pageerror',error=>errors.push(error.message));page.on('console',message=>{if(message.type()==='error'&&message.text().includes('[DAYRIS]'))console.log(message.text());});
  await page.clock.setFixedTime(new Date('2026-10-03T09:00:00Z'));await page.goto(origin);
@@ -74,5 +74,13 @@ try {
   await surface.screenshot({path:`tests/voice-workspace-${width}-${light?'light':'dark'}.png`,animations:'disabled'});
  }
  await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await surface.evaluate(node=>getComputedStyle(node).animationName),'none');
+ // Finish the incomplete hint-test draft before starting a new purchase.
+ await say('Отмена');await page.waitForFunction(()=>!document.querySelector('.voice-workspace-pending-prompt'));
+ // A confident complete phrase uses the real ledger and remains undoable.
+ await page.getByRole('button',{name:'Закрыть голосовой режим',exact:true}).click();const beforeAuto=(await rows()).length;
+ await page.locator('.calendar-voice-button:visible,.day-voice-entry:visible').first().click();await page.waitForFunction(()=>window.voiceActive);
+ await page.evaluate(()=>voice.onresult({results:[Object.assign([{transcript:'Сегодня потратил 51 лей на сок',confidence:0.95}],{isFinal:true})]}));
+ await waitAnswer(/Записал расход 51/);assert.equal(await review.count(),0);assert.equal((await rows()).length,beforeAuto+1);assert.ok((await rows()).some(row=>row.pnl===-51&&row.currency==='MDL'&&row.dateKey==='2026-10-03'));
+ await say('Отмени это');await waitAnswer(/Отменено/);assert.equal((await rows()).length,beforeAuto);
  assert.deepEqual(errors,[]);console.log('PASS: voice-only batch/save/undo/restore, precise edits, ambiguity, repeat, day context, follow-ups, navigation, alias memory, partial query, approximate search, selected date, 30k, adaptive hints, mobile/desktop/light/reduced motion.');
 } finally {await browser.close();await new Promise(resolve=>server.close(resolve));}

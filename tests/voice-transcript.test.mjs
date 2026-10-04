@@ -8,6 +8,7 @@ test('Android growing final hypotheses form one phrase, including partial words 
  assert.equal(assembleVoiceTranscript([...phrases, phrases.at(-1)].map(p => result(p))), phrases.at(-1));
 });
 test('independent final chunks and repeated complete purchases remain intact', () => {
+ assert.equal(assembleVoiceTranscript(['Что', 'Что ты умеешь'].map(p => result(p))), 'Что ты умеешь');
  assert.equal(assembleVoiceTranscript(['запиши', 'потратил 80 лей', 'на пиво'].map(p => result(p))), 'запиши потратил 80 лей на пиво');
  assert.equal(assembleVoiceTranscript(['такси 80', 'такси 80'].map(p => result(p))), 'такси 80 такси 80');
  assert.equal(assembleVoiceTranscript(['на', 'напитки 50'].map(p => result(p))), 'на напитки 50');

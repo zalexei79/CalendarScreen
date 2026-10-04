@@ -270,3 +270,14 @@
 .voice-workspace-drag-handle > span { display:block; width:36px; height:3px; border-radius:3px; background:var(--voice-muted); opacity:.35; }
 .voice-workspace-drag-handle + .voice-workspace-header { padding-top:0; }
 @media(min-width:1280px) { .voice-workspace-drag-handle { display:none; } }
+
+/* Desktop floating assistant: movement follows the pointer without easing. */
+.voice-workspace[data-floating="true"] .voice-workspace-header { cursor:grab; touch-action:none; user-select:none; }
+.voice-workspace[data-floating="true"] .voice-workspace-drag-handle { display:none; }
+.voice-workspace[data-floating="true"] .voice-workspace-brand { cursor:grab; }
+.voice-workspace-grip { color:var(--voice-muted); opacity:.55; transition:color 100ms,opacity 100ms; flex-shrink:0; }
+.voice-workspace[data-floating="true"] .voice-workspace-header:hover .voice-workspace-grip { color:var(--voice-accent); opacity:1; }
+.voice-workspace-brand:focus-visible { outline:2px solid var(--voice-accent); outline-offset:5px; border-radius:4px; }
+.voice-workspace[data-window-dragging="true"] { border-color:var(--voice-accent); box-shadow:0 28px 90px #0007,inset 0 1px #ffffff08; }
+.voice-workspace[data-window-dragging="true"] .voice-workspace-header,.voice-workspace[data-window-dragging="true"] .voice-workspace-brand { cursor:grabbing; }
+.voice-workspace-header > .voice-workspace-reset { width:28px; height:28px; margin-left:auto; margin-right:6px; }

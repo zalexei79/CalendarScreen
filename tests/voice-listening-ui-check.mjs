@@ -14,7 +14,7 @@ try{
   window.AudioContext=class{constructor(){audioContexts++;}};
   window.SpeechSynthesisUtterance=class{constructor(text){this.text=text;}};
   Object.defineProperty(window,'speechSynthesis',{value:{getVoices:()=>[{voiceURI:'ru',name:'Russian',lang:'ru-RU'}],speak:()=>ttsCalls++,cancel:()=>{}}});
-  window.emit=(text,isFinal=false)=>voice.onresult({results:[Object.assign([{transcript:text}],{isFinal})]});
+  window.emit=(text,isFinal=false)=>voice.onresult({results:[Object.assign([{transcript:text,confidence:0.4}],{isFinal})]});
  });
  await page.route('http://listening.test/**',r=>r.fulfill({contentType:'text/html',body:`<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;background:#0d0e10;font-family:Arial}button{font:inherit;cursor:pointer} ${bundle.outputFiles.find(f=>f.path.endsWith('.css')).text}</style><div id="root"></div><script>${bundle.outputFiles.find(f=>f.path.endsWith('.js')).text}</script>`}));
  await page.goto('http://listening.test');const surface=page.locator('.voice-workspace'),mic=surface.locator('.voice-workspace-mic');
