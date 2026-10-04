@@ -21,6 +21,7 @@ const SwipeDismissSheet = React.forwardRef(function SwipeDismissSheet({
   className = '',
   style,
   onDismiss,
+  onDismissStart,
   disabled = false,
   isLight = false,
   handleClassName = '',
@@ -32,10 +33,10 @@ const SwipeDismissSheet = React.forwardRef(function SwipeDismissSheet({
   const offsetRef = useRef(0);
   const hasDragged = useRef(false);
   const dismissTimer = useRef(null);
-  const configRef = useRef({ disabled, onDismiss });
+  const configRef = useRef({ disabled, onDismiss, onDismissStart });
   const [offset, setOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
-  configRef.current = { disabled, onDismiss };
+  configRef.current = { disabled, onDismiss, onDismissStart };
 
   function setSheetNode(node) {
     sheetRef.current = node;
@@ -65,9 +66,10 @@ const SwipeDismissSheet = React.forwardRef(function SwipeDismissSheet({
       return;
     }
 
+    configRef.current.onDismissStart?.();
     updateOffset(Math.max(window.innerHeight, offsetRef.current + 240));
     window.clearTimeout(dismissTimer.current);
-    dismissTimer.current = window.setTimeout(() => configRef.current.onDismiss?.(), 210);
+    dismissTimer.current = window.setTimeout(() => configRef.current.onDismiss?.(), window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 210);
   }
 
   function cancelDrag() {
@@ -167,7 +169,7 @@ const SwipeDismissSheet = React.forwardRef(function SwipeDismissSheet({
   const swipeStyle = offset > 0 || dragging || hasDragged.current
     ? {
         transform: `translate3d(0, ${offset}px, 0)`,
-        transition: dragging ? 'none' : 'transform 210ms cubic-bezier(.22,1,.36,1)',
+        transition: dragging || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'none' : 'transform 210ms cubic-bezier(.22,1,.36,1)',
         willChange: 'transform',
       }
     : {};

@@ -1,7 +1,7 @@
 import {voiceHelp} from './voiceHelp.js';
 
 export function isVoiceHelpRequest(phrase){
- const text=String(phrase).toLowerCase().replace(/ё/g,'е').replace(/[!?.,«»"]/g,' ').replace(/\s+/g,' ').trim().replace(/^(?:пожалуйста |скажи |расскажи |а )+/,'').replace(/ пожалуйста$/,'');
+ const text=String(phrase).toLowerCase().replace(/ё/g,'е').replace(/[!?.,«»？！。，、：；"]/g,' ').replace(/\s+/g,' ').trim().replace(/^(?:пожалуйста |скажи |расскажи |а )+/,'').replace(/ пожалуйста$/,'');
  return /^(?:что (?:ты )?(?:умеешь|можешь)|что ты можешь делать|что можно (?:сказать|сделать голосом)|(?:какие|все) (?:у тебя )?(?:возможности|команды)|какие команды (?:ты )?знаешь|покажи (?:все )?(?:возможности|команды)|помоги|помощь|как (?:тобой пользоваться|пользоваться голосом))$/.test(text)
   ||/^(?:what can you do|what do you do|what can i say|help(?: me)?|show (?:all )?commands|ce (?:poți|poti) (?:face|să faci|sa faci)|ajutor|你会什么|你能做什么|有什么功能|帮助)$/.test(text);
 }

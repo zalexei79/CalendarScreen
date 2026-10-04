@@ -4254,11 +4254,12 @@ export default function CalendarScreen() {
     isTrading:item=>item.platform==='cTrader'||item.platform==='MT5'||item.traderMode===true||isTradingInstrumentName(item.instrument)||(!getMoneyCategoryMeta(item.instrument)&&isTradingHistoryRecord(item)),
     mutateRecord:mutateVoiceRecord,saveRecord:hookSaveTrade,deleteWallet:wallet.deleteTransaction,saveWallet:wallet.saveTransaction});
   function handleCalendarVoiceCommand(command) {
+    const voiceCopy=(ru,en,ro,zh)=>language==='ru'?ru:language==='en'?en:language.startsWith('zh')?zh:ro;
     if(command.type==='voice-confirm')return voiceConversation.confirm(command.entry);
-    if(command.type==='voice-calendar'){closeHistory();setSelectedKey(null);return {text:'Календарь открыт.',context:null,contextLabel:'',help:['Что записал вчера?','Добавь 200 на продукты']};}
+    if(command.type==='voice-calendar'){closeHistory();setSelectedKey(null);return {text:voiceCopy('Календарь открыт.','Calendar opened.','Calendarul este deschis.','已打开日历。'),context:null,contextLabel:'',help:voiceCopy(['Что записал вчера?','Добавь 200 на продукты'],['Add entry'],['Adaugă o înregistrare'],['添加记录'])};}
 
             if (command.type === 'category-prompt') return language === 'zh-CN' ? "请在命令中包含类别名称。" : (language === 'ru' ? 'Добавьте название после команды. Например: создай категорию Настольные игры.' : language === 'en' ? 'Include the category name in your command.' : 'Include numele categoriei în comandă.');
-            if (command.type === 'history') { openHistory(); return {text:'История открыта.',context:null,contextLabel:'',compact:true,help:['Вернись в календарь','Покажи расходы за прошлый месяц']}; }
+            if (command.type === 'history') { openHistory(); return {text:voiceCopy('История открыта.','History opened.','Istoricul este deschis.','已打开历史。'),context:null,contextLabel:'',compact:true,help:voiceCopy(['Вернись в календарь','Покажи расходы за прошлый месяц'],['Open calendar'],['Deschide calendarul'],['打开日历'])}; }
             if (command.type === 'settings') { openSettings(); return; }
             if (command.type === 'theme') { setTheme(command.theme); return; }
             if (command.type === 'trader') { setTraderMode(command.enabled); return; }
@@ -4298,7 +4299,7 @@ export default function CalendarScreen() {
               setSlideDirection(command.year * 12 + command.month >= year * 12 + month ? 'next' : 'prev');
               setAnimKey((value) => value + 1);
               jumpToTradeDate(command.dateKey);
-              voiceConversation.reset();return {text:`Открыт день ${formatDateLabel(command.dateKey)}. Можно добавить запись голосом.`,context:null,contextLabel:formatDateLabel(command.dateKey),compact:true,help:['Потратил 250 лей на продукты','Вернись в календарь']};
+              voiceConversation.reset();return {text:voiceCopy(`Открыт день ${formatDateLabel(command.dateKey)}. Можно добавить запись голосом.`,`Opened ${formatDateLabel(command.dateKey)}. You can add an entry by voice.`,`Deschis ${formatDateLabel(command.dateKey)}. Poți adăuga o înregistrare vocal.`,`已打开 ${formatDateLabel(command.dateKey)}。可以语音添加记录。`),context:null,contextLabel:formatDateLabel(command.dateKey),compact:true,help:voiceCopy(['Потратил 250 лей на продукты','Вернись в календарь'],['Spent 250 MDL on groceries','Open calendar'],['Cheltuit 250 lei pe alimente','Deschide calendarul'],['支出250列伊用于食品','打开日历'])};
             }
             openModal(null, todayKey);
             if (traderMode) {

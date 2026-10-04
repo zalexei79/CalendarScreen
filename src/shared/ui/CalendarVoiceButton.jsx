@@ -1,3 +1,4 @@
+import {assembleVoiceTranscript} from '../lib/voiceTranscript.js';
 import {spokenText} from '../lib/spokenText.js';
 import React,{useEffect,useRef,useState} from 'react';
 import {Mic,Square,Volume2,X} from 'lucide-react';
@@ -138,7 +139,7 @@ export default function CalendarVoiceButton({onResetConversation,onConversation,
   }
   const standalone=parseCalendarVoiceCommand(phrase);
   const prepared=!entryDraft.current&&(!standalone||standalone.type==='entry')?prepareConversationEntry(phrase,{baseDate:handlers.current.selectedDate,context:conversationContext.current}):null;
-  if(prepared?.invalid){setAnswer('Не разобрал дату. Назовите один день.');return;}
+  if(prepared?.invalid){setAnswer({ru:'Не разобрал дату. Назовите один день.',en:'Date unclear. Name one day.',ro:'Data nu este clară. Spune o singură zi.',zh:'日期不明确，请说出具体的一天。'}[locale]);return;}
   if(prepared){phrase=prepared.phrase;if(prepared.dateKey)phrase+=` ${prepared.dateKey}`;}
   const multi=batchDraft.current?voiceEntryBatch(phrase,batchDraft.current,locale,categoryOptions,{defaultCurrency,walletAvailable}):!entryDraft.current&&voiceEntryBatch(phrase,null,locale,categoryOptions,{defaultCurrency,walletAvailable});
   if(applyDialog(multi))return;
@@ -157,7 +158,7 @@ export default function CalendarVoiceButton({onResetConversation,onConversation,
   if(!value){conversationContext.current=null;setContextLabel('');handlers.current.onResetConversation?.();setActive(false);return;}
   if(Object.hasOwn(reply,'context'))conversationContext.current=reply.context;
   if(Object.hasOwn(reply,'contextLabel'))setContextLabel(reply.contextLabel);
-  if(reply?.help)setNextHelp({filtered:true,title:locale==='ru'?'Можно сказать дальше':'Continue with',phrases:reply.help});else setNextHelp(null);
+  if(reply?.help)setNextHelp({filtered:true,title:interactionCopy.next,phrases:reply.help});else setNextHelp(null);
   setChoices(reply?.choices||[]);setCompact(Boolean(reply?.compact));setActive(true);setAnswer(value);
   if(typeof reply?.onAction==='function')setAnswerAction({label:reply.actionLabel,run:reply.onAction});
   releaseTimer.current=setTimeout(()=>respond(value,()=>start(true)),120);
@@ -185,10 +186,10 @@ export default function CalendarVoiceButton({onResetConversation,onConversation,
    clearTimeout(silenceTimer.current);setRecognitionHint('');
    const results=Array.from(event.results);
    const finalResults=results.filter(result=>result.isFinal);
-   finalText=finalResults.map(result=>result[0].transcript).join(' ').trim();
+   finalText=assembleVoiceTranscript(finalResults);
    // A single-result recognizer can offer a better alternative for the whole phrase.
    if(finalResults.length===1&&!entryDraft.current)finalText=Array.from(finalResults[0]).map(item=>item.transcript).find(value=>{const command=voiceEntryBatch(value,null,locale,categoryOptions,{walletAvailable})?.entry||voiceEntryReview(value,null,locale,categoryOptions,{walletAvailable})?.entry||parseCalendarVoiceCommand(value);return command&&command.type!=='category-prompt';})||finalText;
-   latestText=results.map(result=>result[0].transcript).join(' ').trim();setCompact(false);
+   latestText=assembleVoiceTranscript(results);setCompact(false);
    clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);
    const interim=results.some(result=>!result.isFinal);if(!interim)latestText=finalText;pendingPhrase.current=latestText;setTranscript(latestText);setTalking(interim);
    if(interim){speechPulseTimer.current=setTimeout(()=>setTalking(false),900);phraseTimer.current=setTimeout(()=>{if(session.current===recognition)finish();},1600);return;}
@@ -210,7 +211,7 @@ export default function CalendarVoiceButton({onResetConversation,onConversation,
   {(active||review||answer||message)&&<VoiceWorkspace locale={locale} isLight={isLight} phrase={transcript||heard}
    contextLabel={contextLabel} compact={compact} phase={speaking?'speaking':phase} talking={talking} status={saving?interactionCopy.saving:phase==='starting'?ui.opening:phase==='processing'?ui.processing:listening?recognitionHint||ui.listen:speaking?speakingStatus:message&&!['',ui.listen,ui.opening].includes(message)?message:idleStatus}
    help={transcript?compactHelp:nextHelp||(review?{filtered:true,title:interactionCopy.correct,phrases:batch?interactionCopy.batch:review.mutation?interactionCopy.mutation:interactionCopy.entry}:compactHelp)}
-   onClose={cancelDraft} onExpand={()=>setCompact(false)} onCollapse={()=>setCompact(true)} onListen={()=>start()} onSuggestion={submitReply} choices={choices} listening={listening} busy={saving||phase==='processing'} resultKey={review?(batch?'batch':'review'):answer||'idle'}
+   onClose={cancelDraft} onDismissStart={()=>{requestGeneration.current++;stop();stopSpeaking();}} onExpand={()=>setCompact(false)} onCollapse={()=>setCompact(true)} onListen={()=>start()} onSuggestion={submitReply} choices={choices} listening={listening} busy={saving||phase==='processing'} resultKey={review?(batch?'batch':'review'):answer||'idle'}
    settings={<>{feedbackControl}{localeVoices.length>0?voicePicker:<p className="calendar-voice-help-note">{playbackLabels.missing}</p>}</>}
   >  {showCapabilities&&<VoiceCapabilities catalog={voiceCapabilities(locale,{walletAvailable,traderMode})}/>}
   {review&&(batch?<VoiceBatchCard batch={batch} locale={locale} categories={categoryOptions} onCreateCategory={onCreateCategory} onDeleteCategory={onDeleteCategory} userId={userId} isLight={isLight} walletAvailable={walletAvailable} onSelect={selectBatch} onChange={changeReview} onManualEdit={()=>{stop();stopSpeaking();}} onRemove={removeBatchEntry} onSave={saveEntry} onCancel={cancelDraft} busy={saving} listening={listening} error={saveError} locked={saveLocked} progress={saveProgress.current}></VoiceBatchCard>:<VoiceEntryCard entry={review} locale={locale} categories={categoryOptions} onCreateCategory={onCreateCategory} onDeleteCategory={onDeleteCategory} userId={userId} isLight={isLight} walletAvailable={walletAvailable} onChange={changeReview} onManualEdit={()=>{stop();stopSpeaking();}} onSave={saveEntry} onCancel={cancelDraft} busy={saving} listening={listening} error={saveError} locked={saveLocked}></VoiceEntryCard>)}

@@ -16,7 +16,7 @@ export default function VoiceReplyControls({field,locale,defaultCurrency,walletA
  return <div className="calendar-voice-replies">
   {field==='category'?<div className="calendar-voice-category-reply">
    <CategoryPicker ariaLabel={c.category} options={categories} onChange={reply} userId={userId} language={locale} isLight={isLight} onOpen={onPickerOpen} onCreate={onCreateCategory} onDelete={onDeleteCategory}/>
-   {item&&<button type="button" onClick={()=>reply((locale==='zh'?'创建类别':'создай категорию ')+item)}>{c.create} «{item}»</button>}
+   {item&&<button type="button" onClick={()=>reply(({ru:'создай категорию ',en:'create category ',ro:'creează categoria ',zh:'创建类别'}[locale])+item)}>{c.create} «{item}»</button>}
   </div>:field==='date'?<input aria-label={c.date} type="date" max={today} value={value} onChange={event=>{submitted.current=false;setValue(event.target.value);reply(event.target.value);}}/>:field==='amount'?<>
    <input aria-label={c.amount} inputMode="decimal" enterKeyHint="done" value={value} onChange={event=>{submitted.current=false;setValue(event.target.value);}} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();reply(event.currentTarget.value);}}} onBlur={event=>{if(!event.relatedTarget?.closest('button'))reply(event.currentTarget.value);}} placeholder="0"/>
    <p className="calendar-voice-help-note">{c.done}</p>

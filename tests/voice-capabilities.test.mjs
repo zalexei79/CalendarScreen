@@ -4,7 +4,7 @@ import {test} from 'node:test';
 // Browser source modules use extensionless imports; import the standalone helper directly.
 import {isVoiceHelpRequest,voiceCapabilities} from '../src/shared/lib/voiceCapabilities.js';
 test('capabilities questions accept natural variants and punctuation',()=>{
- for(const phrase of ['Что ты умеешь?','Что умеешь','Скажи, что ты можешь?','Какие команды ты знаешь?','Помоги','Что можно сказать?','Расскажи, пожалуйста, что ты умеешь','what can you do?','Ce poți face?','你能做什么？'.replace('？','?')])assert.equal(isVoiceHelpRequest(phrase),true,phrase);
+ for(const phrase of ['Что ты умеешь?','Что умеешь','Скажи, что ты можешь?','Какие команды ты знаешь?','Помоги','Что можно сказать?','Расскажи, пожалуйста, что ты умеешь','what can you do?','Ce poți face?','你能做什么？'])assert.equal(isVoiceHelpRequest(phrase),true,phrase);
 });
 test('help does not consume entries, corrections or unrelated questions',()=>{
  for(const phrase of ['Потратил 250 на помощь','Создай раздел Помощь','Что записал вчера?','Сколько потратил на продукты?','Что ты умеешь потратил 20'])assert.equal(isVoiceHelpRequest(phrase),false,phrase);

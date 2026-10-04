@@ -2,13 +2,14 @@ import React from 'react';
 import {createPortal} from 'react-dom';
 import {Mic,Square,Settings2,X,ChevronDown,ChevronUp} from 'lucide-react';
 import VoiceSuggestions from './VoiceSuggestions.jsx';
+import SwipeDismissSheet from './SwipeDismissSheet.jsx';
 
-export default function VoiceWorkspace({locale,isLight,phrase,status,help,contextLabel,onClose,onExpand,onCollapse,onListen,onSuggestion,listening,talking,phase,busy,settings,children,resultKey,choices=[],compact=false}) {
+export default function VoiceWorkspace({locale,isLight,phrase,status,help,contextLabel,onClose,onDismissStart,onExpand,onCollapse,onListen,onSuggestion,listening,talking,phase,busy,settings,children,resultKey,choices=[],compact=false}) {
  const ru=locale==='ru',ro=locale==='ro',zh=locale==='zh';
  const copy=(r,e,m,z)=>ru?r:ro?m:zh?z:e;
  const starting=phase==='starting',reviewing=resultKey==='review'||resultKey==='batch';
  const suggestions=!help.filtered?{filtered:true,title:copy('Например','For example','De exemplu','例如'),phrases:ru?['Потратил 250 лей на продукты','Что записал вчера?','Покажи расходы за прошлый месяц']:help.groups.flatMap(group=>group.phrases).slice(0,3)}:help;
- return createPortal(<section className="voice-workspace calendar-voice-control" data-light={Boolean(isLight)} data-compact={compact} data-reviewing={reviewing} data-listening={listening} data-talking={talking&&listening} data-phase={phase} role="region" aria-label={copy('Голосовой помощник','Voice assistant','Asistent vocal','语音助手')}>
+ return createPortal(<SwipeDismissSheet as="section" onDismiss={onClose} onDismissStart={onDismissStart} disabled={busy} isLight={isLight} handleClassName="voice-workspace-drag-handle" className="voice-workspace calendar-voice-control" data-light={Boolean(isLight)} data-compact={compact} data-reviewing={reviewing} data-listening={listening} data-talking={talking&&listening} data-phase={phase} role="region" aria-label={copy('Голосовой помощник','Voice assistant','Asistent vocal','语音助手')}>
   <header className="voice-workspace-header"><span className="voice-workspace-brand">DAYRIS <small>{copy('Голосовой ввод','Voice input','Introducere vocală','语音输入')}</small></span>{compact&&<button className="voice-workspace-expand" type="button" aria-label={copy('Развернуть помощника','Expand assistant','Extinde asistentul','展开助手')} onClick={onExpand}><ChevronUp size={18}/></button>}{!compact&&<button type="button" aria-label={copy('Свернуть голосовой режим','Minimize voice mode','Restrânge modul vocal','收起语音模式')} onClick={onCollapse}><ChevronDown size={18}/></button>}</header>
   <div className="voice-workspace-scroll">
    <div className="voice-workspace-hero">
@@ -29,5 +30,5 @@ export default function VoiceWorkspace({locale,isLight,phrase,status,help,contex
     <button className="voice-workspace-mic" type="button" disabled={busy||starting} onClick={onListen} aria-label={listening?copy('Готово — обработать фразу','Done — send phrase','Gata — trimite fraza','完成，发送语音'):copy('Продолжить голосом','Continue by voice','Continuă vocal','继续说话')} aria-pressed={listening}><Mic size={30}/><span className="voice-workspace-mic-stop"><Square size={12}/></span></button>
    <button className="voice-workspace-exit" type="button" aria-label={copy('Закрыть голосовой режим','Close voice mode','Închide modul vocal','关闭语音模式')} disabled={busy} onClick={onClose}><X size={18}/><span>{copy('Выйти','Exit','Ieși','退出')}</span></button>
   </footer>
- </section>,document.body);
+ </SwipeDismissSheet>,document.body);
 }
