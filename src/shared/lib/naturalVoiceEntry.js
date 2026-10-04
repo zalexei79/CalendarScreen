@@ -46,7 +46,7 @@ function naturalAmount(value){
 
 // Extract independent slots. Contiguous amounts are parsed by the same strict
 // amount parser as the keypad; multiple amounts remain ambiguous, not summed.
-export function parseNaturalVoiceEntry(value,{draft=null,categories=[]}={}){
+export function parseNaturalVoiceEntry(value,{draft=null,categories=[],newEntry=false}={}){
  const text=String(value).toLowerCase().replace(/ё/g,'е').trim();
  if(!text||/[\u3400-\u9fff]/u.test(text))return null;
  if(/(^|\s)(?:сколько|покажи|открой|удали|удалить|баланс|остаток|how|delete|open|cât|cat|deschide)(?=\s|$)/u.test(text))return null;
@@ -57,7 +57,7 @@ export function parseNaturalVoiceEntry(value,{draft=null,categories=[]}={}){
  const signs=new Set();let hasRequest=false,hasPurchase=false,hasTransfer=false;
  // Known categories (including numeric names) are removed before looking for
  // money so a shop named “Кафе 24/7” cannot supply an extra amount.
- const known=categories.flatMap(item=>[item.value,item.label].filter(Boolean).map(label=>({value:item.value,label,size:tokensOf(label).length})));
+ const known=categories.flatMap(item=>[item.value,item.label].filter(Boolean).map(label=>({value:item.value,label,type:item.type,size:tokensOf(label).length})));
  for(let start=0;start<tokens.length;start++){
   if(tokens[start].used)continue;
   for(let end=Math.min(tokens.length,start+12);end>start;end--){
@@ -124,6 +124,18 @@ export function parseNaturalVoiceEntry(value,{draft=null,categories=[]}={}){
  for(const token of tokens)if(filler.has(token.value)||request.test(token.value)||/^(?:нет|no|nu|да|yes|da|это|is|este|составило)$/.test(token.value))token.used=true;
  const leftover=tokens.filter(token=>!token.used);
  if(ambiguous.size)for(const token of leftover)if(/^(?:и|and|și|si)$/.test(token.value))token.used=true;
+ const shorthand=(!draft||newEntry)&&!hasRequest&&!hasPurchase&&!hasTransfer&&!signs.size&&amounts.length>0;
+ if(shorthand&&leftover.length&&!patch.category&&!ambiguous.has('category')&&leftover.every(token=>/^[\p{L}]+$/u.test(token.value)&&!['и','and','și','si'].includes(token.value))&&!/^(?:что|когда|как|где|почему|зачем|какой|какие)\s/u.test(text)){
+  const name=leftover.map(token=>token.value).join(' ');if(name.length>60)return {invalid:true};
+  patch.category=aliases[normalizeVoiceCategory(name)]||name;provided.add('category');for(const token of leftover)token.used=true;
+ }
+ if(shorthand&&patch.category&&!draft?.sign&&!patch.sign){
+  const name=normalizeVoiceCategory(patch.category),types=[...new Set(known.filter(item=>categoryMatches(item.value,patch.category)).map(item=>item.type).filter(Boolean))];
+  const commonExpense=/^(?:такси|taxi|кофе|coffee|кафе|продукты|еда|еду|бензин|транспорт|жилье|покупки|подписки|здоровье|образование|путешествия|развлечения|сигареты)$/u;
+  const commonIncome=/^(?:зарплата|salary|salariu|возврат)$/u;
+  const sign=types.length===1?types[0]:commonExpense.test(name)?'minus':commonIncome.test(name)?'plus':null;
+  if(sign){patch.sign=sign;provided.add('sign');}
+ }
  const recognized=provided.size>0||signs.size>0||hasRequest||hasTransfer;
  if(!recognized)return null;
  if(hasPurchase&&leftover.length){const item=leftover.map(token=>token.value).join(' ');if(item.length>60)return {invalid:true};patch.item=item;for(const token of leftover)token.used=true;}
@@ -131,5 +143,5 @@ export function parseNaturalVoiceEntry(value,{draft=null,categories=[]}={}){
  if(leftover.some(token=>!token.used)&&!hasTransfer)return {invalid:true};
  if(!draft&&!hasRequest&&!signs.size&&!hasTransfer&&!patch.category&&!patch.currency)return null;
  for(const field of ambiguous)delete patch[field];
- return {patch,provided:[...provided],ambiguous:[...ambiguous],amountRanges:amounts.map(({start,end,amount})=>({start:tokens[start].start,end:tokens[end-1].end,amount}))};
+ return {patch,provided:[...provided],ambiguous:[...ambiguous],shorthand,amountRanges:amounts.map(({start,end,amount})=>({start:tokens[start].start,end:tokens[end-1].end,amount}))};
 }
