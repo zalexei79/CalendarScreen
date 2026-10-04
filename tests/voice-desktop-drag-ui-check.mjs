@@ -29,9 +29,11 @@ try{
 
  await drag(-2000,-2000,true);box=await sheet.boundingBox();assert.equal(box.x,0);assert.equal(box.y,0,'header remains visible');
  await page.getByRole('button',{name:'Вернуть окно на место',exact:true}).click();await page.waitForTimeout(450);
- const h=await brand.boundingBox();await page.mouse.move(h.x+20,h.y+8);await page.mouse.down();await page.mouse.move(h.x+20,875,{steps:12});await page.locator('.voice-workspace-dock-target').waitFor();await page.mouse.up();
+ const h=await brand.boundingBox();await page.mouse.move(h.x+20,h.y+8);await page.mouse.down();await page.mouse.move(h.x+20,875,{steps:12});await page.locator('.voice-workspace-dock-target').waitFor();const target=await page.locator('.voice-workspace-dock-target').boundingBox();assert.ok(Math.abs(target.x+target.width/2-800)<1,'preview is centered');await page.mouse.up();
  await page.waitForFunction(()=>document.querySelector('.voice-workspace')?.dataset.docked==='true'&&document.querySelector('.voice-workspace')?.dataset.compact==='true');await page.waitForTimeout(350);box=await sheet.boundingBox();assert.ok(box.y+box.height<=900&&box.y>700,'compact dock sits along bottom');assert.equal(await page.evaluate(()=>voice.aborted),undefined);
  await sheet.screenshot({path:'tests/voice-desktop-docked.png',animations:'disabled'});
+ assert.ok(Math.abs(box.x+box.width/2-800)<1,'docked assistant is centered');
+ await page.setViewportSize({width:900,height:900});await page.waitForTimeout(100);box=await sheet.boundingBox();assert.ok(Math.abs(box.x+box.width/2-450)<1,'dock stays centered after resizing');await page.setViewportSize({width:1600,height:900});await page.waitForTimeout(100);
  await page.getByRole('button',{name:'Развернуть помощника',exact:true}).click();await page.waitForTimeout(100);
  await drag(100,-60);box=await sheet.boundingBox();await page.getByRole('button',{name:'Закрыть голосовой режим',exact:true}).click();await page.locator('.calendar-voice-button').click();await page.waitForTimeout(100);const reopened=await sheet.boundingBox();assert.equal(reopened.x,box.x);assert.equal(reopened.y,box.y);
  await page.getByRole('button',{name:'Вернуть окно на место',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('.voice-workspace').style.left);
