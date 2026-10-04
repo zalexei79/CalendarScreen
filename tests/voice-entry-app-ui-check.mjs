@@ -22,7 +22,7 @@ try{
  });
  const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
  await page.goto(origin);await page.locator('.calendar-days-grid').waitFor();await page.waitForFunction(()=>!document.getElementById('boot-screen'));
- const say=async phrase=>{if(await page.locator('.voice-workspace').count())await page.waitForFunction(()=>window.voiceActive,null,{timeout:1200}).catch(()=>{});if(!await page.evaluate(()=>window.voiceActive)){const footer=page.locator('.voice-workspace footer button');if(await footer.count())await footer.click();else await page.locator('.calendar-voice-button').click();}await page.waitForFunction(()=>window.voiceActive);await page.evaluate(phrase=>finishPhrase(phrase),phrase);};
+ const say=async phrase=>{if(await page.locator('.voice-workspace').count())await page.waitForFunction(()=>window.voiceActive,null,{timeout:1200}).catch(()=>{});if(!await page.evaluate(()=>window.voiceActive)){const footer=page.locator('.voice-workspace .voice-workspace-mic');if(await footer.count())await footer.click();else await page.locator('.calendar-voice-button').click();}await page.waitForFunction(()=>window.voiceActive);await page.evaluate(phrase=>finishPhrase(phrase),phrase);};
  const cache=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('money_calendar_guest_trades_cache')||'{}'));
  assert.equal(Object.values(await cache()).flat().length,0);
  await say('вчера на продукты 250 лей ушло');

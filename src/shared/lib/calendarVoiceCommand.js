@@ -2,6 +2,7 @@ import {parseVoiceNavigation} from './voiceNavigation.js';
 import {parseSpokenAmount} from './spokenAmount.js';
 import {parseLocalizedVoiceCommand} from './localizedVoiceCommand.js';
 import {parseFinancialVoiceQuery} from './financialVoiceQuery.js';
+import {isVoiceHelpRequest} from './voiceCapabilities.js';
 const months=[
  ['январь','января','january','ianuarie'],['февраль','февраля','february','februarie'],['март','марта','march','martie'],
  ['апрель','апреля','april','aprilie'],['май','мая','may','mai'],['июнь','июня','june','iunie'],
@@ -9,6 +10,7 @@ const months=[
  ['октябрь','октября','october','octombrie'],['ноябрь','ноября','november','noiembrie'],['декабрь','декабря','december','decembrie'],
 ];
 export function parseCalendarVoiceCommand(transcript){
+ if(isVoiceHelpRequest(transcript))return {type:'voice-help'};
  const text=String(transcript).toLowerCase().replace(/ё/g,'е').replace(/([\d])[,.](?=\d)/g,'$1DECIMAL').replace(/[,.!?]/g,' ').replace(/DECIMAL/g,',').replace(/\s+/g,' ').trim().replace(/^пожалуйста | пожалуйста$/g,'');
  const navigation=parseVoiceNavigation(text);if(navigation)return navigation;
  const financialQuery=parseFinancialVoiceQuery(transcript);if(financialQuery)return financialQuery;

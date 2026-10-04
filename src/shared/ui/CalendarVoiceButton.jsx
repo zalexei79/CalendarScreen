@@ -15,6 +15,8 @@ import {voicesForLocale,selectPlaybackVoice} from '../lib/voicePlayback.js';
 import './CalendarVoiceButton.css';
 import VoiceWorkspace from './VoiceWorkspace.jsx';
 import {prepareConversationEntry,parseVoiceConversation} from '../lib/voiceConversation.js';
+import {isVoiceHelpRequest,voiceCapabilities} from '../lib/voiceCapabilities.js';
+import VoiceCapabilities from './VoiceCapabilities.jsx';
 
 export default function CalendarVoiceButton({onResetConversation,onConversation,selectedDate,onCreateCategory,onDeleteCategory,userId,language='ru',isLight,traderMode=false,categoryOptions=[],defaultCurrency,askDestination=false,walletAvailable=false,onCommand,onSaveEntry}){
  const locale=String(language).startsWith('zh')?'zh':language==='en'?'en':language==='ro'||language==='md'?'ro':'ru';
@@ -24,7 +26,7 @@ export default function CalendarVoiceButton({onResetConversation,onConversation,
  const [listening,setListening]=useState(false),[message,setMessage]=useState('');
  const [answer,setAnswer]=useState(''),[speaking,setSpeaking]=useState(false);
  const [answerAction,setAnswerAction]=useState(null);
- const [heard,setHeard]=useState(''),[nextHelp,setNextHelp]=useState(null),[choices,setChoices]=useState([]),[contextLabel,setContextLabel]=useState(''),[compact,setCompact]=useState(false);
+ const [heard,setHeard]=useState(''),[nextHelp,setNextHelp]=useState(null),[choices,setChoices]=useState([]),[contextLabel,setContextLabel]=useState(''),[compact,setCompact]=useState(false),[showCapabilities,setShowCapabilities]=useState(false);
  const conversationContext=useRef(null),pendingPhrase=useRef(''),requestGeneration=useRef(0),handlers=useRef(null);
  handlers.current={onCommand,onConversation,onSaveEntry,onResetConversation,selectedDate,userId};
  const lifecycle=useRef(null);lifecycle.current={start,finish,handlePhrase:processPhrase,saveEntry};
@@ -38,7 +40,10 @@ export default function CalendarVoiceButton({onResetConversation,onConversation,
  const [active,setActive]=useState(false),[phase,setPhase]=useState('idle'),[transcript,setTranscript]=useState(''),[audioError,setAudioError]=useState('');
  const audioTimer=useRef(null),releaseTimer=useRef(null);
  const [talking,setTalking]=useState(false),[questionField,setQuestionField]=useState(null);
- const speechPulseTimer=useRef(null);
+ const speechPulseTimer=useRef(null),startupTimer=useRef(null),silenceTimer=useRef(null);
+ const [recognitionHint,setRecognitionHint]=useState('');
+ const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+ const noSpeech={ru:'Не услышал фразу. Нажмите микрофон и повторите.',en:'No words heard. Tap the microphone and try again.',ro:'Nu am auzit fraza. Apasă microfonul și repetă.',zh:'没有听到语音，请点击麦克风重试。'}[locale];
  const phraseTimer=useRef(null);
  const [voices,setVoices]=useState(()=>window.speechSynthesis?.getVoices()||[]);
  const [preferredVoice,setPreferredVoice]=useState(()=>{try{return localStorage.getItem(`dayris_voice:${locale}`)||'';}catch{return '';}});
@@ -71,19 +76,19 @@ export default function CalendarVoiceButton({onResetConversation,onConversation,
  const voicePicker=<label className="calendar-voice-picker"><span>{playbackLabels.voice}</span><select aria-label={playbackLabels.voice} value={localeVoices.some(voice=>voice.voiceURI===preferredVoice)?preferredVoice:''} onChange={event=>{stopSpeaking();setPreferredVoice(event.target.value);try{localStorage.setItem(`dayris_voice:${locale}`,event.target.value);}catch{/* Session preference still works. */}}}><option value="">{playbackLabels.auto}</option>{localeVoices.map(voice=><option key={voice.voiceURI} value={voice.voiceURI}>{voice.name}</option>)}</select></label>;
  const session=useRef(null),timer=useRef(null),messageTimer=useRef(null);
  const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
- function stop(){const current=session.current;session.current=null;clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);setTalking(false);clearTimeout(timer.current);clearTimeout(releaseTimer.current);if(current){current.onspeechstart=null;current.onspeechend=null;current.onstart=null;current.onresult=null;current.onerror=null;current.onend=null;current.abort();}setListening(false);setPhase('idle');}
- function finish(){if(!session.current||phase==='processing')return;const value=pendingPhrase.current;stop();if(value)lifecycle.current.handlePhrase(value);}
+ function stop(){const current=session.current;session.current=null;clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);clearTimeout(startupTimer.current);clearTimeout(silenceTimer.current);setRecognitionHint('');setTalking(false);clearTimeout(timer.current);clearTimeout(releaseTimer.current);if(current){current.onspeechstart=null;current.onspeechend=null;current.onsoundstart=null;current.onsoundend=null;current.onstart=null;current.onresult=null;current.onerror=null;current.onend=null;current.abort();}setListening(false);setPhase('idle');}
+ function finish(){if(!session.current||phase==='processing')return;const value=pendingPhrase.current;stop();if(value)lifecycle.current.handlePhrase(value);else notify(noSpeech);}
 
  function notify(value){if(review)setSaveError(value);else setAnswer('');setMessage(value);clearTimeout(messageTimer.current);messageTimer.current=setTimeout(()=>setMessage(''),6500);}
  useEffect(()=>{
   mounted.current=true;
   const cancel=()=>{if(document.hidden){stop();stopSpeaking();setMessage('');}};
   document.addEventListener('visibilitychange',cancel);
-  return ()=>{mounted.current=false;cue.current?.close().catch(()=>{});cue.current=null;document.removeEventListener('visibilitychange',cancel);clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);clearTimeout(audioTimer.current);clearTimeout(releaseTimer.current);if(utterance.current){utterance.current.onstart=null;utterance.current.onend=null;utterance.current.onerror=null;utterance.current=null;window.speechSynthesis?.cancel();}clearTimeout(timer.current);clearTimeout(messageTimer.current);const current=session.current;session.current=null;if(current){current.onspeechstart=null;current.onspeechend=null;current.onstart=null;current.onresult=null;current.onerror=null;current.onend=null;current.abort();}};
+  return ()=>{mounted.current=false;cue.current?.close().catch(()=>{});cue.current=null;document.removeEventListener('visibilitychange',cancel);clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);clearTimeout(startupTimer.current);clearTimeout(silenceTimer.current);clearTimeout(audioTimer.current);clearTimeout(releaseTimer.current);if(utterance.current){utterance.current.onstart=null;utterance.current.onend=null;utterance.current.onerror=null;utterance.current=null;window.speechSynthesis?.cancel();}clearTimeout(timer.current);clearTimeout(messageTimer.current);const current=session.current;session.current=null;if(current){current.onspeechstart=null;current.onspeechend=null;current.onsoundstart=null;current.onsoundend=null;current.onstart=null;current.onresult=null;current.onerror=null;current.onend=null;current.abort();}};
  },[]);
  useEffect(()=>{const begin=()=>lifecycle.current.start();window.addEventListener('dayris-start-voice',begin);return()=>window.removeEventListener('dayris-start-voice',begin);},[]);
- useEffect(()=>{requestGeneration.current++;conversationContext.current=null;setHeard('');setChoices([]);setNextHelp(null);setContextLabel('');if(saveBusy.current||voiceBatchHasProgress(saveProgress.current))return;entryDraft.current=null;batchDraft.current=null;setBatch(null);setReview(null);setQuestionField(null);stop();stopSpeaking();setActive(false);setMessage('');setAnswer('');setAnswerAction(null);clearTimeout(messageTimer.current);},[locale,userId]);
- function cancelDraft(){if(saveBusy.current)return;handlers.current.onResetConversation?.();requestGeneration.current++;conversationContext.current=null;setHeard('');setNextHelp(null);setChoices([]);setContextLabel('');setCompact(false);entryDraft.current=null;batchDraft.current=null;setBatch(null);setReview(null);setQuestionField(null);setSaveError('');setSaveLocked(false);saveProgress.current={};stop();stopSpeaking();setActive(false);setAnswer('');setAnswerAction(null);setMessage('');}
+ useEffect(()=>{requestGeneration.current++;conversationContext.current=null;setShowCapabilities(false);setHeard('');setChoices([]);setNextHelp(null);setContextLabel('');if(saveBusy.current||voiceBatchHasProgress(saveProgress.current))return;entryDraft.current=null;batchDraft.current=null;setBatch(null);setReview(null);setQuestionField(null);stop();stopSpeaking();setActive(false);setMessage('');setAnswer('');setAnswerAction(null);clearTimeout(messageTimer.current);},[locale,userId]);
+ function cancelDraft(){if(saveBusy.current)return;handlers.current.onResetConversation?.();requestGeneration.current++;conversationContext.current=null;setShowCapabilities(false);setHeard('');setNextHelp(null);setChoices([]);setContextLabel('');setCompact(false);entryDraft.current=null;batchDraft.current=null;setBatch(null);setReview(null);setQuestionField(null);setSaveError('');setSaveLocked(false);saveProgress.current={};stop();stopSpeaking();setActive(false);setAnswer('');setAnswerAction(null);setMessage('');}
  function changeReview(entry){if(saveBusy.current||saveLocked)return;if(batchDraft.current){const next={...batchDraft.current,states:batchDraft.current.states.map((state,index)=>index===batchDraft.current.activeIndex?{entry}:state)};batchDraft.current=next;setBatch(next);}entryDraft.current=entry;setReview(entry);setSaveError('');}
  function applyDialog(dialog){
   if(dialog?.entry&&entryDraft.current?.mutation)dialog={...dialog,entry:{...dialog.entry,mutation:true,beforeAmount:entryDraft.current.beforeAmount,mutationSnapshot:entryDraft.current.mutationSnapshot}};
@@ -114,6 +119,11 @@ export default function CalendarVoiceButton({onResetConversation,onConversation,
  }
  async function handlePhrase(phrase){
   if(saveBusy.current||saveLocked||!phrase.trim())return;
+  if(isVoiceHelpRequest(phrase)){
+   requestGeneration.current++;setHeard(phrase);setTranscript('');setCompact(false);setChoices([]);setAnswerAction(null);setMessage('');setAudioError('');setSaveError('');setShowCapabilities(true);setActive(true);
+   const catalog=voiceCapabilities(locale,{walletAvailable,traderMode});respond(catalog.summary,()=>start(true));return;
+  }
+  setShowCapabilities(false);
   setHeard(phrase);setCompact(false);setChoices([]);setAnswerAction(null);const request=++requestGeneration.current;
   // Only an explicit save command submits a reviewed draft.
   if(review&&/^(?:сохрани(?: все| всё)?|сохранить(?: все| всё)?|да сохрани|保存|确认保存|全部保存|save(?: it| all)?|salvează(?: tot)?|salveaza(?: tot)?)$/i.test(phrase.trim())){saveEntry();return;}
@@ -151,25 +161,25 @@ export default function CalendarVoiceButton({onResetConversation,onConversation,
  }
  async function processPhrase(value){setPhase('processing');try{await handlePhrase(value);}finally{if(mounted.current&&!session.current)setPhase('idle');}}
  function submitReply(value){if(!value.trim())return;stop();stopSpeaking();setTranscript('');processPhrase(value);}
- function start(automatic=false){
+ function start(automatic=false,retry=0){
   if(saveBusy.current||saveLocked)return;
   if(session.current){finish();return;}
-  clearTimeout(releaseTimer.current);stopSpeaking();if(automatic!==true&&!entryDraft.current)setAnswer('');setAudioError('');setTranscript('');pendingPhrase.current='';setActive(true);window.speechSynthesis?.getVoices();
-  if(automatic!==true){setAnswerAction(null);if(!cue.current)cue.current=prepareVoiceCue();else cue.current.resume().catch(()=>{});}
-  // Initialize Safari's speech channel inside the microphone tap, before the
-  // asynchronous recognition result. Actual answers still wait for mic release.
-  if(feedback&&/iPad|iPhone|iPod/.test(navigator.userAgent)&&window.speechSynthesis&&window.SpeechSynthesisUtterance){try{const warmup=new window.SpeechSynthesisUtterance('');warmup.lang={
-  zh: "zh-CN",ru:'ru-RU',en:'en-US',ro:'ro-RO'}[locale];warmup.volume=0;window.speechSynthesis.speak(warmup);}catch{/* The visible replay action can retry with a fresh user gesture. */}}
+  clearTimeout(releaseTimer.current);stopSpeaking();if(automatic!==true&&!entryDraft.current){setAnswer('');setHeard('');}setAudioError('');setRecognitionHint('');setTranscript('');pendingPhrase.current='';setActive(true);window.speechSynthesis?.getVoices();
+  // Keep iOS's recording channel free of cue playback and silent TTS warmups.
+  if(automatic!==true){setAnswerAction(null);if(!isIOS){if(!cue.current)cue.current=prepareVoiceCue();else cue.current.resume().catch(()=>{});}}
   if(!Speech){notify(text.unsupported);return;}
-  const recognition=new Speech();session.current=recognition;let finalText='',latestText='';
+  const recognition=new Speech();session.current=recognition;let finalText='',latestText='',startedAt=0;
   recognition.lang={
   zh: "zh-CN",ru:'ru-RU',en:'en-US',ro:'ro-RO'}[locale];recognition.continuous=true;recognition.interimResults=true;recognition.maxAlternatives=3;
-  clearTimeout(messageTimer.current);setListening(true);setPhase('starting');setMessage(ui.opening);
-  recognition.onstart=()=>{if(session.current===recognition){setPhase('listening');setMessage(ui.listen);playVoiceCue(cue.current);}};
-  recognition.onspeechstart=()=>{if(session.current===recognition){clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);setTalking(true);}};
+  clearTimeout(messageTimer.current);setListening(false);setPhase('starting');setMessage(ui.opening);
+  recognition.onstart=()=>{if(session.current===recognition){startedAt=Date.now();clearTimeout(startupTimer.current);setListening(true);setPhase('listening');setMessage(ui.listen);if(!isIOS)playVoiceCue(cue.current);silenceTimer.current=setTimeout(()=>{if(session.current===recognition&&!latestText)setRecognitionHint({ru:'Пока не слышу речи',en:'No speech detected yet',ro:'Încă nu aud vocea',zh:'暂未检测到语音'}[locale]);},8000);}};
+  recognition.onsoundstart=()=>{if(session.current===recognition){clearTimeout(silenceTimer.current);setTalking(true);setRecognitionHint({ru:'Слышу звук…',en:'Sound detected…',ro:'Aud sunet…',zh:'检测到声音…'}[locale]);}};
+  recognition.onsoundend=()=>{if(session.current===recognition)setTalking(false);};
+  recognition.onspeechstart=()=>{if(session.current===recognition){clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);clearTimeout(silenceTimer.current);setRecognitionHint('');setTalking(true);}};
   recognition.onspeechend=()=>{if(session.current===recognition){clearTimeout(speechPulseTimer.current);setTalking(false);}};
   recognition.onresult=event=>{
    if(session.current!==recognition)return;
+   clearTimeout(silenceTimer.current);setRecognitionHint('');
    const results=Array.from(event.results);
    const finalResults=results.filter(result=>result.isFinal);
    finalText=finalResults.map(result=>result[0].transcript).join(' ').trim();
@@ -183,11 +193,10 @@ export default function CalendarVoiceButton({onResetConversation,onConversation,
    // Keep a brief pause available for the category or remaining words.
    phraseTimer.current=setTimeout(()=>{if(session.current===recognition)lifecycle.current.finish();},command&&command.type!=='category-prompt'?900:1900);
   };
-  recognition.onerror=event=>{if(session.current!==recognition)return;stop();notify(event.error==='not-allowed'||event.error==='service-not-allowed'?text.permission:event.error==='language-not-supported'?({
+  recognition.onerror=event=>{if(session.current!==recognition)return;if(event.error==='no-speech'&&pendingPhrase.current){finish();return;}stop();notify(event.error==='no-speech'?noSpeech:event.error==='audio-capture'?({ru:'Микрофон недоступен. Проверьте доступ и повторите.',en:'Microphone unavailable. Check access and retry.',ro:'Microfon indisponibil. Verifică accesul și repetă.',zh:'麦克风不可用，请检查权限后重试。'}[locale]):event.error==='not-allowed'||event.error==='service-not-allowed'?text.permission:event.error==='language-not-supported'?({
   zh: "设备不支持此语言识别，请检查 Google 语音输入语言。",ru:'Распознавание русского языка недоступно на устройстве. Проверьте языки голосового ввода Google.',en:'English recognition is unavailable. Check Google voice input languages.',ro:'Recunoașterea limbii române nu este disponibilă. Verifică limbile introducerii vocale Google.'}[locale]):text.error);};
-  recognition.onend=()=>{if(session.current!==recognition)return;stop();const phrase=latestText||finalText;if(!phrase&&entryDraft.current){setAudioError({
-  zh: "未听到回答，请点击麦克风继续。",ru:'Не услышал ответ. Нажмите микрофон, чтобы продолжить.',en:'No answer heard. Tap the microphone to continue.',ro:'Nu am auzit răspunsul. Apasă microfonul pentru a continua.'}[locale]);return;}lifecycle.current.handlePhrase(phrase);};
-  try{recognition.start();timer.current=setTimeout(()=>{if(session.current===recognition)finish();},20000);}catch{stop();notify(text.error);}
+  recognition.onend=()=>{if(session.current!==recognition)return;const phrase=latestText||finalText;const early=startedAt&&Date.now()-startedAt<1200;stop();if(phrase){lifecycle.current.handlePhrase(phrase);return;}if(early&&retry===0&&!document.hidden){setPhase('starting');releaseTimer.current=setTimeout(()=>lifecycle.current.start(true,1),350);return;}notify(noSpeech);};
+  try{recognition.start();if(!startedAt)startupTimer.current=setTimeout(()=>{if(session.current===recognition&&!startedAt){stop();notify(text.error);}},8000);timer.current=setTimeout(()=>{if(session.current===recognition)finish();},20000);}catch{stop();notify(text.error);}
  }
  const idleStatus={ru:'Микрофон на паузе',en:'Microphone paused',ro:'Microfon pe pauză',zh:'麦克风已暂停'}[locale];
  const speakingStatus={ru:'Отвечаю…',en:'Speaking…',ro:'Răspund…',zh:'正在回答…'}[locale];
@@ -196,13 +205,14 @@ export default function CalendarVoiceButton({onResetConversation,onConversation,
   zh: "正在播放",ru:'Отвечаю',en:'Speaking',ro:'Răspund'}[locale]):text.start}</span>}</button>
 
   {(active||review||answer||message)&&<VoiceWorkspace locale={locale} isLight={isLight} phrase={transcript||heard}
-   contextLabel={contextLabel} compact={compact} status={saving?interactionCopy.saving:phase==='starting'?ui.opening:phase==='processing'?ui.processing:listening?ui.listen:speaking?speakingStatus:message&&!['',ui.listen,ui.opening].includes(message)?message:idleStatus}
+   contextLabel={contextLabel} compact={compact} phase={speaking?'speaking':phase} talking={talking} status={saving?interactionCopy.saving:phase==='starting'?ui.opening:phase==='processing'?ui.processing:listening?recognitionHint||ui.listen:speaking?speakingStatus:message&&!['',ui.listen,ui.opening].includes(message)?message:idleStatus}
    help={transcript?compactHelp:nextHelp||(review?{filtered:true,title:interactionCopy.correct,phrases:batch?interactionCopy.batch:review.mutation?interactionCopy.mutation:interactionCopy.entry}:compactHelp)}
-   onClose={cancelDraft} onExpand={()=>setCompact(false)} onListen={()=>start()} onSuggestion={submitReply} choices={choices} listening={listening} busy={saving||phase==='processing'} resultKey={review?(batch?'batch':'review'):answer||'idle'}
+   onClose={cancelDraft} onExpand={()=>setCompact(false)} onCollapse={()=>setCompact(true)} onListen={()=>start()} onSuggestion={submitReply} choices={choices} listening={listening} busy={saving||phase==='processing'} resultKey={review?(batch?'batch':'review'):answer||'idle'}
    settings={<>{feedbackControl}{localeVoices.length>0?voicePicker:<p className="calendar-voice-help-note">{playbackLabels.missing}</p>}</>}
-  >  {review&&(batch?<VoiceBatchCard batch={batch} locale={locale} categories={categoryOptions} onCreateCategory={onCreateCategory} onDeleteCategory={onDeleteCategory} userId={userId} isLight={isLight} walletAvailable={walletAvailable} onSelect={selectBatch} onChange={changeReview} onManualEdit={()=>{stop();stopSpeaking();}} onRemove={removeBatchEntry} onSave={saveEntry} onCancel={cancelDraft} busy={saving} listening={listening} error={saveError} locked={saveLocked} progress={saveProgress.current}></VoiceBatchCard>:<VoiceEntryCard entry={review} locale={locale} categories={categoryOptions} onCreateCategory={onCreateCategory} onDeleteCategory={onDeleteCategory} userId={userId} isLight={isLight} walletAvailable={walletAvailable} onChange={changeReview} onManualEdit={()=>{stop();stopSpeaking();}} onSave={saveEntry} onCancel={cancelDraft} busy={saving} listening={listening} error={saveError} locked={saveLocked}></VoiceEntryCard>)}
+  >  {showCapabilities&&<VoiceCapabilities catalog={voiceCapabilities(locale,{walletAvailable,traderMode})}/>}
+  {review&&(batch?<VoiceBatchCard batch={batch} locale={locale} categories={categoryOptions} onCreateCategory={onCreateCategory} onDeleteCategory={onDeleteCategory} userId={userId} isLight={isLight} walletAvailable={walletAvailable} onSelect={selectBatch} onChange={changeReview} onManualEdit={()=>{stop();stopSpeaking();}} onRemove={removeBatchEntry} onSave={saveEntry} onCancel={cancelDraft} busy={saving} listening={listening} error={saveError} locked={saveLocked} progress={saveProgress.current}></VoiceBatchCard>:<VoiceEntryCard entry={review} locale={locale} categories={categoryOptions} onCreateCategory={onCreateCategory} onDeleteCategory={onDeleteCategory} userId={userId} isLight={isLight} walletAvailable={walletAvailable} onChange={changeReview} onManualEdit={()=>{stop();stopSpeaking();}} onSave={saveEntry} onCancel={cancelDraft} busy={saving} listening={listening} error={saveError} locked={saveLocked}></VoiceEntryCard>)}
   {review&&listening&&<div className="calendar-voice-live" role="status" aria-live="polite">{phase==='starting'?ui.opening:phase==='processing'?ui.processing:ui.listen}{transcript&&<span>«{transcript}»</span>}</div>}
-  {answer&&!review&&<div className="calendar-voice-message calendar-voice-answer">
+  {answer&&!review&&!showCapabilities&&<div className="calendar-voice-message calendar-voice-answer">
    <p role="status" aria-live="polite">{answer}</p>
    {answerAction&&<button type="button" className="calendar-voice-result-action" onClick={()=>{stop();stopSpeaking();answerAction.run();setCompact(true);releaseTimer.current=setTimeout(()=>start(true),220);}}>{answerAction.label}</button>}
    {listening&&entryDraft.current&&<p>{ui.listen}{transcript&&` · ${transcript}`}</p>}

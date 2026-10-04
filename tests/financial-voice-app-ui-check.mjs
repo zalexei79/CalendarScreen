@@ -34,7 +34,7 @@ try{
  await page.goto(origin);await page.locator('.calendar-days-grid').waitFor().catch(async error=>{console.log('UI errors',errors);console.log((await page.locator('body').innerText()).slice(0,900));throw error;});await page.waitForFunction(()=>!document.getElementById('boot-screen'));
  const cache=()=>page.evaluate(()=>localStorage.getItem('money_calendar_guest_trades_cache'));
  const before=await cache();
- const say=async phrase=>{if(await page.locator('.voice-workspace').count())await page.waitForFunction(()=>window.voiceActive,null,{timeout:1200}).catch(()=>{});if(!await page.evaluate(()=>window.voiceActive)){const footer=page.locator('.voice-workspace footer button');if(await footer.count())await footer.click();else await page.locator('.calendar-voice-button').click();}await page.waitForFunction(()=>window.voiceActive);await page.evaluate(phrase=>finishPhrase(phrase),phrase);};
+ const say=async phrase=>{if(await page.locator('.voice-workspace').count())await page.waitForFunction(()=>window.voiceActive,null,{timeout:1200}).catch(()=>{});if(!await page.evaluate(()=>window.voiceActive)){const footer=page.locator('.voice-workspace .voice-workspace-mic');if(await footer.count())await footer.click();else await page.locator('.calendar-voice-button').click();}await page.waitForFunction(()=>window.voiceActive);await page.evaluate(phrase=>finishPhrase(phrase),phrase);};
  const closeHistory=()=>page.getByRole('button',{name:'Закрыть',exact:true}).click();
  await say('Сколько потратил на еду на этой неделе?');
  const answer=page.locator('.calendar-voice-answer');await answer.waitFor();assert.match(await answer.textContent(),/30.*ле/);assert.match(await answer.textContent(),/40.*евро/);assert.doesNotMatch(await answer.textContent(),/999|500|800/);
