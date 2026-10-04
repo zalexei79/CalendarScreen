@@ -33,7 +33,9 @@ try{
   await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});assert.equal(await page.evaluate(()=>voice.aborted),undefined,'widget keeps session when calendar loses visibility');
   await widget.locator('.voice-workspace-hints').evaluate(el=>el.open=true);
   await widget.screenshot({path:`tests/voice-widget-${mode}.png`,animations:'disabled'});
+  await page.evaluate(()=>{window.returnFrames=[];const start=performance.now();const sample=()=>{const el=document.querySelector('.voice-workspace');if(el){const b=el.getBoundingClientRect();returnFrames.push({x:b.x,width:b.width,floating:el.dataset.floating});}if(performance.now()-start<600)requestAnimationFrame(sample);};requestAnimationFrame(sample);});
   await widget.getByRole('button',{name:'Вернуть в календарь',exact:true}).click();await page.locator('.voice-workspace[data-widget="false"]').waitFor();assert.match(await page.locator('.voice-workspace-instruction').innerText(),/На что/);
+  await page.waitForTimeout(650);const frames=await page.evaluate(()=>returnFrames);assert.ok(frames.length>2);assert.ok(frames.every(f=>f.floating==='true'),'widget returns directly to desktop layout');assert.ok(Math.max(...frames.map(f=>f.x))-Math.min(...frames.map(f=>f.x))<1,'widget return has no sideways jump');
   await page.evaluate(()=>Object.defineProperty(document,'hidden',{configurable:true,value:false}));
   const nextPopup=page.waitForEvent('popup');await popout.click();const next=await nextPopup;await next.locator('.voice-workspace').waitFor();await next.close();await page.locator('.voice-workspace').waitFor();
   assert.match(await page.locator('.voice-workspace-instruction').innerText(),/На что/,'closing OS window returns unfinished context');

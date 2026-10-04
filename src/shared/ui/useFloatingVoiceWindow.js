@@ -1,12 +1,15 @@
-import {useEffect,useRef,useState} from 'react';
+import {useLayoutEffect,useRef,useState} from 'react';
 
 const desktopQuery='(min-width: 768px) and (pointer: fine)';
 const storageKey='dayris_voice_window_position';
+function savedPosition(){try{const saved=JSON.parse(sessionStorage.getItem(storageKey));if(saved&&Number.isFinite(saved.x)&&Number.isFinite(saved.y))return saved;}catch{}return null;}
 
 export default function useFloatingVoiceWindow(detached=false,{onDock,onDetach}={}){
- const sheetRef=useRef(null),headerRef=useRef(null),positionRef=useRef(null),gesture=useRef(null);
+ const [position,setPosition]=useState(savedPosition);
+ const sheetRef=useRef(null),headerRef=useRef(null),positionRef=useRef(position),gesture=useRef(null);
  const actions=useRef({onDock,onDetach});actions.current={onDock,onDetach};
- const [desktop,setDesktop]=useState(false),[position,setPosition]=useState(null),[dragging,setDragging]=useState(false),[dockPreview,setDockPreview]=useState(false),[docked,setDocked]=useState(false);
+ const [desktopAvailable,setDesktopAvailable]=useState(()=>window.matchMedia(desktopQuery).matches),[dragging,setDragging]=useState(false),[dockPreview,setDockPreview]=useState(false),[docked,setDocked]=useState(false);
+ const desktop=desktopAvailable&&!detached;
  function place(next){
   const sheet=sheetRef.current;if(!sheet)return;
   // Keep the entire header reachable. Moving to another monitor requires a
@@ -16,10 +19,9 @@ export default function useFloatingVoiceWindow(detached=false,{onDock,onDetach}=
  }
  function remember(){try{if(positionRef.current)sessionStorage.setItem(storageKey,JSON.stringify(positionRef.current));}catch{}}
  function reset(){gesture.current=null;positionRef.current=null;setPosition(null);setDragging(false);setDockPreview(false);setDocked(false);try{sessionStorage.removeItem(storageKey);}catch{}}
- useEffect(()=>{
+ useLayoutEffect(()=>{
   const media=window.matchMedia(desktopQuery),sheet=sheetRef.current,header=headerRef.current;
-  const sync=()=>{setDesktop(media.matches&&!detached);if(!media.matches||detached){gesture.current=null;setDragging(false);}else if(positionRef.current)place(positionRef.current);};
-  try{const saved=JSON.parse(sessionStorage.getItem(storageKey));if(saved&&Number.isFinite(saved.x)&&Number.isFinite(saved.y))positionRef.current=saved;}catch{}
+  const sync=()=>{setDesktopAvailable(media.matches);if(!media.matches||detached){gesture.current=null;setDragging(false);}else if(positionRef.current)place(positionRef.current);};
   sync();
   function down(event){
    if(detached||!media.matches||event.button!==0||event.target.closest('button,input,select,a'))return;
