@@ -25,15 +25,12 @@ try{
  await drag(-300,-200);let box=await sheet.boundingBox();assert.ok(Math.abs(box.x-(before.x-300))<2);assert.ok(Math.abs(box.y-(before.y-200))<2);
  assert.equal(await page.evaluate(()=>voice.aborted),undefined,'moving preserves recognition');
  await brand.focus();await page.keyboard.press('ArrowLeft');assert.equal(Math.round((await sheet.boundingBox()).x),Math.round(box.x)-10);
- await drag(-2000,-2000);box=await sheet.boundingBox();assert.equal(box.x,12);assert.equal(box.y,12);
- await drag(2000,2000);box=await sheet.boundingBox();assert.ok(box.x+box.width<=1588.5);assert.ok(box.y+box.height<=888.5);
- await page.getByRole('button',{name:'Свернуть голосовой режим',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.voice-workspace').dataset.compact==='true');
- await page.getByRole('button',{name:'Развернуть помощника',exact:true}).click();await page.waitForTimeout(100);box=await sheet.boundingBox();assert.ok(box.y+box.height<=888.5,'growth stays on screen');
- await page.setViewportSize({width:900,height:650});await page.waitForTimeout(100);box=await sheet.boundingBox();assert.ok(box.x+box.width<=888.5&&box.y+box.height<=638.5,'resize clamps position');
- await page.getByRole('button',{name:'Закрыть голосовой режим',exact:true}).click();await page.locator('.calendar-voice-button').click();await page.waitForTimeout(100);const reopened=await sheet.boundingBox();assert.equal(reopened.x,box.x);assert.ok(reopened.y<=box.y&&box.y-reopened.y<40,'remembered position adjusts when new microphone status makes the window taller');
- await sheet.screenshot({path:'tests/voice-desktop-floating.png',animations:'disabled'});
+
+ await drag(-2000,-2000);box=await sheet.boundingBox();assert.ok(box.x<0&&box.y<0,'window can move offscreen');
+ await page.getByRole('button',{name:'Вернуть помощника',exact:true}).click();await page.waitForTimeout(450);box=await sheet.boundingBox();assert.ok(box.x>=0&&box.y>=0,'recovery restores default position');
+ await drag(100,-60);box=await sheet.boundingBox();await page.getByRole('button',{name:'Закрыть голосовой режим',exact:true}).click();await page.locator('.calendar-voice-button').click();await page.waitForTimeout(100);const reopened=await sheet.boundingBox();assert.equal(reopened.x,box.x);assert.equal(reopened.y,box.y);
  await page.getByRole('button',{name:'Вернуть окно на место',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('.voice-workspace').style.left);
  await page.setViewportSize({width:390,height:844});await page.waitForFunction(()=>document.querySelector('.voice-workspace').dataset.floating==='false');assert.equal(await brand.getAttribute('tabindex'),null);assert.equal(await sheet.evaluate(el=>el.style.left),'');
- assert.deepEqual(errors,[]);console.log('PASS: desktop drag, keyboard, bounds, resize, expand, position memory, reset and mobile layout without restarting microphone.');
+ assert.deepEqual(errors,[]);console.log('PASS: desktop unrestricted drag, keyboard, offscreen recovery, position memory, reset and mobile layout without restarting microphone.');
 
 }finally{await browser.close();}

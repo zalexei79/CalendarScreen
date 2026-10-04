@@ -31,6 +31,7 @@ export default function CalendarVoiceButton({onResetConversation,onConversation,
  const [answer,setAnswer]=useState(''),[speaking,setSpeaking]=useState(false);
  const [answerAction,setAnswerAction]=useState(null);
  const [heard,setHeard]=useState(''),[nextHelp,setNextHelp]=useState(null),[choices,setChoices]=useState([]),[contextLabel,setContextLabel]=useState(''),[compact,setCompact]=useState(false),[showCapabilities,setShowCapabilities]=useState(false);
+ const widgetActive=useRef(false);
  const conversationContext=useRef(null),pendingPhrase=useRef(''),recognitionEvidence=useRef(null),requestGeneration=useRef(0),handlers=useRef(null);
  handlers.current={onCommand,onConversation,onSaveEntry,onResetConversation,selectedDate,userId};
  const lifecycle=useRef(null);lifecycle.current={start,finish,handlePhrase:processPhrase,saveEntry};
@@ -86,7 +87,7 @@ export default function CalendarVoiceButton({onResetConversation,onConversation,
  function notify(value){if(entryDraft.current&&!entryPrompt.current)setSaveError(value);else if(entryDraft.current){setAnswer(entryPrompt.current);setAudioError(value);}else setAnswer('');setMessage(value);clearTimeout(messageTimer.current);messageTimer.current=setTimeout(()=>setMessage(''),6500);}
  useEffect(()=>{
   mounted.current=true;
-  const cancel=()=>{if(document.hidden){stop();stopSpeaking();setMessage('');}};
+  const cancel=()=>{if(document.hidden&&!widgetActive.current){stop();stopSpeaking();setMessage('');}};
   document.addEventListener('visibilitychange',cancel);
   return ()=>{mounted.current=false;cue.current?.close().catch(()=>{});cue.current=null;document.removeEventListener('visibilitychange',cancel);clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);clearTimeout(startupTimer.current);clearTimeout(silenceTimer.current);clearTimeout(audioTimer.current);clearTimeout(releaseTimer.current);if(utterance.current){utterance.current.onstart=null;utterance.current.onend=null;utterance.current.onerror=null;utterance.current=null;window.speechSynthesis?.cancel();}clearTimeout(timer.current);clearTimeout(messageTimer.current);const current=session.current;session.current=null;if(current){current.onspeechstart=null;current.onspeechend=null;current.onsoundstart=null;current.onsoundend=null;current.onstart=null;current.onresult=null;current.onerror=null;current.onend=null;current.abort();}};
  },[]);
@@ -235,7 +236,7 @@ export default function CalendarVoiceButton({onResetConversation,onConversation,
   <button type="button" className="calendar-voice-button" disabled={phase==='processing'||saving||saveLocked} onClick={start} aria-pressed={listening} aria-label={listening?ui.done:text.start} title={text.start}><span className="calendar-voice-glyph" data-talking={talking&&phase==='listening'} aria-hidden="true"><span className="calendar-voice-equalizer"><i/><i/><i/></span>{phase==='processing'?<Square size={15}/>:<Mic size={18}/>}<span className="calendar-voice-equalizer"><i/><i/><i/></span></span> {active&&<span>{listening?(phase==='processing'?ui.processing:phase==='starting'?ui.opening:ui.done):speaking?({
   zh: "正在播放",ru:'Отвечаю',en:'Speaking',ro:'Răspund'}[locale]):text.start}</span>}</button>
 
-  {(active||review||answer||message)&&<VoiceWorkspace locale={locale} isLight={isLight} phrase={transcript||heard}
+  {(active||review||answer||message)&&<VoiceWorkspace onWidgetChange={value=>{widgetActive.current=value;}} locale={locale} isLight={isLight} phrase={transcript||heard}
    contextLabel={pendingSummary||contextLabel} pendingPrompt={entryDraft.current&&!review?entryPrompt.current:''} compact={compact} phase={speaking?'speaking':phase} talking={talking} status={saving?interactionCopy.saving:phase==='starting'?ui.opening:phase==='processing'?ui.processing:listening?recognitionHint||ui.listen:speaking?speakingStatus:message&&!['',ui.listen,ui.opening].includes(message)?message:idleStatus}
    help={transcript?compactHelp:nextHelp||(review?{filtered:true,title:interactionCopy.correct,phrases:batch?interactionCopy.batch:review.mutation?interactionCopy.mutation:interactionCopy.entry}:compactHelp)}
    onClose={cancelDraft} onDismissStart={()=>{requestGeneration.current++;stop();stopSpeaking();}} onExpand={()=>setCompact(false)} onCollapse={()=>setCompact(true)} onListen={()=>start()} onSuggestion={submitReply} choices={choices} listening={listening} busy={saving||phase==='processing'} resultKey={review?(batch?'batch':'review'):answer||'idle'}
