@@ -25,7 +25,9 @@ try{
   if(mode==='blocked'){
    await popout.click();await page.locator('.voice-workspace-widget-error').waitFor();assert.equal(await page.locator('.voice-workspace').count(),1);assert.equal(await page.evaluate(()=>starts),starts);await context.close();continue;
   }
-  const popupPromise=page.waitForEvent('popup');await popout.click();const widget=await popupPromise;widget.on('pageerror',e=>errors.push(e.message));
+  const popupPromise=page.waitForEvent('popup');
+  if(mode==='popup'){const header=await page.locator('.voice-workspace-brand').boundingBox();await page.mouse.move(header.x+20,header.y+8);await page.mouse.down();await page.mouse.move(1404,header.y+8,{steps:10});await page.mouse.up();}else await popout.click();
+  const widget=await popupPromise;widget.on('pageerror',e=>errors.push(e.message));
   await widget.locator('.voice-workspace[data-widget="true"]').waitFor();assert.equal(await page.locator('.voice-workspace').count(),0);
   assert.match(await widget.locator('.voice-workspace-instruction').innerText(),/На что/);assert.equal(await page.evaluate(()=>starts),starts,'popout keeps existing microphone');
   await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});assert.equal(await page.evaluate(()=>voice.aborted),undefined,'widget keeps session when calendar loses visibility');
@@ -38,5 +40,5 @@ try{
   const lastPopup=page.waitForEvent('popup');await popout.click();const last=await lastPopup;await last.getByRole('button',{name:'Закрыть голосовой режим',exact:true}).click();await page.waitForFunction(()=>voice.aborted);await page.locator('.voice-workspace').waitFor({state:'detached'});
   assert.deepEqual(errors,[]);await context.close();
  }
- console.log('PASS: PiP branch, popup fallback, blocked popup recovery, draft continuity, hidden-calendar microphone, return and OS close, explicit exit.');
+ console.log('PASS: PiP branch, edge drag detachment to popup, blocked popup recovery, draft continuity, hidden-calendar microphone, return and OS close, explicit exit.');
 }finally{await browser.close();}

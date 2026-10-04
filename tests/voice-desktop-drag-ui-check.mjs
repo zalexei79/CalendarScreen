@@ -21,16 +21,21 @@ try{
  await page.waitForTimeout(450);
  const header=sheet.locator('.voice-workspace-header'),brand=sheet.locator('.voice-workspace-brand');
  const before=await sheet.boundingBox();
- const drag=async(dx,dy)=>{const b=await brand.boundingBox();await page.mouse.move(b.x+20,b.y+8);await page.mouse.down();await page.mouse.move(b.x+20+dx,b.y+8+dy,{steps:12});await page.mouse.up();};
+ const drag=async(dx,dy,cancel=false)=>{const b=await brand.boundingBox();await page.mouse.move(b.x+20,b.y+8);await page.mouse.down();await page.mouse.move(b.x+20+dx,b.y+8+dy,{steps:12});if(cancel)await header.dispatchEvent('pointercancel',{pointerId:1});await page.mouse.up();};
  await drag(-300,-200);let box=await sheet.boundingBox();assert.ok(Math.abs(box.x-(before.x-300))<2);assert.ok(Math.abs(box.y-(before.y-200))<2);
  assert.equal(await page.evaluate(()=>voice.aborted),undefined,'moving preserves recognition');
  await brand.focus();await page.keyboard.press('ArrowLeft');assert.equal(Math.round((await sheet.boundingBox()).x),Math.round(box.x)-10);
 
- await drag(-2000,-2000);box=await sheet.boundingBox();assert.ok(box.x<0&&box.y<0,'window can move offscreen');
- await page.getByRole('button',{name:'Вернуть помощника',exact:true}).click();await page.waitForTimeout(450);box=await sheet.boundingBox();assert.ok(box.x>=0&&box.y>=0,'recovery restores default position');
+
+ await drag(-2000,-2000,true);box=await sheet.boundingBox();assert.equal(box.x,0);assert.equal(box.y,0,'header remains visible');
+ await page.getByRole('button',{name:'Вернуть окно на место',exact:true}).click();await page.waitForTimeout(450);
+ const h=await brand.boundingBox();await page.mouse.move(h.x+20,h.y+8);await page.mouse.down();await page.mouse.move(h.x+20,875,{steps:12});await page.locator('.voice-workspace-dock-target').waitFor();await page.mouse.up();
+ await page.waitForFunction(()=>document.querySelector('.voice-workspace')?.dataset.docked==='true'&&document.querySelector('.voice-workspace')?.dataset.compact==='true');await page.waitForTimeout(350);box=await sheet.boundingBox();assert.ok(box.y+box.height<=900&&box.y>700,'compact dock sits along bottom');assert.equal(await page.evaluate(()=>voice.aborted),undefined);
+ await sheet.screenshot({path:'tests/voice-desktop-docked.png',animations:'disabled'});
+ await page.getByRole('button',{name:'Развернуть помощника',exact:true}).click();await page.waitForTimeout(100);
  await drag(100,-60);box=await sheet.boundingBox();await page.getByRole('button',{name:'Закрыть голосовой режим',exact:true}).click();await page.locator('.calendar-voice-button').click();await page.waitForTimeout(100);const reopened=await sheet.boundingBox();assert.equal(reopened.x,box.x);assert.equal(reopened.y,box.y);
  await page.getByRole('button',{name:'Вернуть окно на место',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('.voice-workspace').style.left);
  await page.setViewportSize({width:390,height:844});await page.waitForFunction(()=>document.querySelector('.voice-workspace').dataset.floating==='false');assert.equal(await brand.getAttribute('tabindex'),null);assert.equal(await sheet.evaluate(el=>el.style.left),'');
- assert.deepEqual(errors,[]);console.log('PASS: desktop unrestricted drag, keyboard, offscreen recovery, position memory, reset and mobile layout without restarting microphone.');
+ assert.deepEqual(errors,[]);console.log('PASS: desktop drag, keyboard, reachable header, magnetic docking, position memory, reset and mobile layout without restarting microphone.');
 
 }finally{await browser.close();}
