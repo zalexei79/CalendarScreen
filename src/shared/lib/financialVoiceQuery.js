@@ -1,3 +1,4 @@
+import {normalizeVoicePhrase} from './voicePhrase.js';
 import {categoryMatches, normalizeVoiceCategory, resolveLocalizedCategory} from './voiceCategory.js';
 import {resolveVoiceAsset, assetMatchesInstrument} from './voiceAsset.js';
 
@@ -19,7 +20,7 @@ const periodPatterns = [
 // Read-only intents are recognized before purchase parsing. Periods can appear
 // before or after the category, so no date words become new category names.
 export function parseFinancialVoiceQuery(value) {
- let text=normalizeVoiceCategory(value).replace(/[.,!?]/g,' ').replace(/\s+/g,' ').trim().replace(/^(?:пожалуйста |можешь |скажи |расскажи |tell me |please )/,'').replace(/ пожалуйста$/,'');
+ let text=normalizeVoiceCategory(normalizeVoicePhrase(value)).replace(/[.,!?]/g,' ').replace(/\s+/g,' ').trim().replace(/^(?:пожалуйста |можешь |скажи |расскажи |tell me |please )/,'').replace(/ пожалуйста$/,'');
  const last=/^when did i last (?:pay|spend)(?: |$)/.test(text);
  const lastRu=/^когда (?:я )?(?:последний раз |в последний раз )?(?:платил|платила|оплатил|оплатила|потратил|потратила)(?: |$)/.test(text);
  const search=/^(?:покажи|найди|показать|найти|show|find)(?: |$)/.test(text)&&/(?:расход|трат|доход|запис|платеж|покуп|expense|spending|income|entries|payments)/.test(text);

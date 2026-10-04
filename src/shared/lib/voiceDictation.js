@@ -1,9 +1,10 @@
+import {normalizeVoicePhrase} from './voicePhrase.js';
 import {voiceEntryReview,extractEntryDate} from './voiceEntryReview.js';
 import {voiceEntryBatch} from './voiceEntryBatch.js';
 import {parseSpokenAmount} from './spokenAmount.js';
 import {categoryMatches} from './voiceCategory.js';
 
-export const isVoiceCommit=phrase=>/^(?:готово|все|всё|сохрани(?: все| всё)?|сохранить(?: все| всё)?|да сохрани|save(?: it| all)?|done|salvează(?: tot)?|salveaza(?: tot)?|gata|保存|确认保存|全部保存|完成)$/iu.test(String(phrase).trim().replace(/[.!?。！？]+$/u,''));
+export const isVoiceCommit=phrase=>/^(?:готово|все|всё|сохрани(?: все| всё)?|сохранить(?: все| всё)?|да сохрани|save(?: it| all)?|done|salvează(?: tot)?|salveaza(?: tot)?|gata|保存|确认保存|全部保存|完成)$/iu.test(normalizeVoicePhrase(phrase).trim().replace(/[.!?。！？]+$/u,''));
 const itemOf=state=>state.entry||state.draft;
 const nameOf=state=>itemOf(state)?.category;
 function resultFor(batch,commitRequested=false){
@@ -21,6 +22,8 @@ export function voiceDictation(phrase,batch=null,locale='ru',categories=[],optio
   .replace(/(на\s+[\p{L} -]+?\s+(?:потратил[аи]?\s+)?\d+(?:[.,]\d+)?(?:\s+(?:лей|леев|рублей|евро|долларов))?)\s+(?=на\s+[\p{L} -]+?\s+(?:потратил|потратила|\d))/giu,'$1; ');
  if(isVoiceCommit(text))return batch?resultFor(batch,true):null;
  if(locale!=='ru')return null;
+ // «Нет, не 50, а 70» corrects the active entry, not a category named «нет».
+ if(batch&&/^(?:нет[,\s]+)?не\s+/iu.test(text))return null;
  if(batch&&/^(?:нет[, ]+|во?\s+\S+\s+записи)/iu.test(text)&&!/(?:на\s+.+?\s+не\s+|не\s+\d.+?\s+а\s+)/iu.test(text))return null;
  let commitRequested=false;
  text=text.replace(/(?:[,;.!?]|\s)\s*(готово|сохрани(?: все)?|сохранить(?: все)?)\s*[.!?]*$/iu,()=>{commitRequested=true;return '';});

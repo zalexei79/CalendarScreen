@@ -1,3 +1,4 @@
+import {normalizeVoicePhrase} from './voicePhrase.js';
 import {parseCalendarVoiceCommand} from './calendarVoiceCommand.js';
 import {extractEntryDate,localDateKey} from './voiceEntryReview.js';
 import {parseSpokenAmount} from './spokenAmount.js';
@@ -14,7 +15,7 @@ export function conversationDate(phrase,today=localDateKey()) {
 }
 
 export function parseVoiceConversation(phrase,context=null,{todayKey=localDateKey()}={}) {
- const text=normalizeVoiceCategory(phrase).replace(/[?!]/g,'').replace(/[,.](?=\s|$)/g,' ').replace(/\s+/g,' ').trim();
+ const text=normalizeVoiceCategory(normalizeVoicePhrase(phrase)).replace(/[?!]/g,'').replace(/[,.](?=\s|$)/g,' ').replace(/\s+/g,' ').trim();
  if(/^(?:покажи (?:эти|найденные) записи|show (?:these )?entries)$/.test(text))return {type:'conversation-action',action:'show'};
  if(/^(?:открой (?:последнюю|последнюю запись)|open (?:the )?last entry)$/.test(text))return {type:'conversation-action',action:'last'};
  if(/^(?:вернись (?:в|к) календар[юь]|закрой историю|back to calendar)$/.test(text))return {type:'conversation-action',action:'calendar'};
@@ -55,7 +56,7 @@ export function parseVoiceConversation(phrase,context=null,{todayKey=localDateKe
 // Turn a spoken day list into the existing reviewed batch format. Currency and
 // date stay shared; existing recognition keeps handling ordinary money phrases.
 export function prepareConversationEntry(phrase,{todayKey=localDateKey(),baseDate=null,context=null}={}) {
- const date=conversationDate(normalizeVoiceCategory(phrase).replace(/:/g,' '),todayKey);
+ const date=conversationDate(normalizeVoiceCategory(normalizeVoicePhrase(phrase)).replace(/:/g,' '),todayKey);
  const common=date.text.match(/(?:[—-]\s*)?(?:все|всё) (?:в |все в )?(леях|леи|леях|евро|долларах|рублях)$/);
  const currency=common?({леях:'MDL',леи:'MDL',евро:'EUR',долларах:'USD',рублях:'RUB'}[common[1]]):null;
  const list=(common?date.text.slice(0,common.index):date.text).replace(/^[: ,]+/,'').split(/[,;]\s*/).filter(Boolean);

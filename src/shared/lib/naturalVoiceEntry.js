@@ -1,10 +1,11 @@
+import {normalizeVoicePhrase} from './voicePhrase.js';
 import {parseSpokenAmount} from './spokenAmount.js';
 import {categoryMatches,normalizeVoiceCategory} from './voiceCategory.js';
 
 // Resolve explicit replacements before extracting dates or other fields.
 // A negation without a replacement must never become a positive money action.
 export function resolveVoiceCorrections(value){
- let text=String(value).toLowerCase().replace(/ё/g,'е').replace(/[«»]/g,'"');
+ let text=normalizeVoicePhrase(value).toLowerCase().replace(/ё/g,'е').replace(/[«»]/g,'"');
  text=text.replace(/(^|\s)не забудь(?:те)?\s+(?:записать|добавить)/g,'$1запиши');
  text=text.replace(/(^|\s)не\s+(.+?)\s*[,;]?\s+(?:а|но)\s+/g,'$1')
   .replace(/(^|\s)not\s+(.+?)\s*[,;]?\s+but\s+/g,'$1')
@@ -13,7 +14,7 @@ export function resolveVoiceCorrections(value){
  return {text:text.replace(/\s+/g,' ').trim(),negated};
 }
 
-const expense=/^(?:потратил[аи]?|потрачено|потратить|расход[ы]?|заплатил[аи]?|оплатил[аи]?|платил[аи]?|плата|ушло|списали|списано|списалось|обошлось|обошелся|обошлась|израсходовал[аи]?|spent|spend|paid|expense|cheltuit|cheltuiala|cheltuială|platit|plătit)$/u;
+const expense=/^(?:потратил[аи]?|потрачено|потратить|расход[ы]?|заплатил[аи]?|оплатил[аи]?|платил[аи]?|плата|ушло|списали|списано|списалось|обошлось|обошелся|обошлась|израсходовал[аи]?|выложил[аи]?|потратилось|spent|spend|paid|expense|cheltuit|cheltuiala|cheltuială|platit|plătit)$/u;
 const income=/^(?:получил[аи]?|получено|получить|заработал[аи]?|заработано|доход[ы]?|пришло|поступило|поступили|зачислили|зачислено|вернули|вернулось|received|earned|income|primit|venit|castigat|câștigat)$/u;
 const purchase=/^(?:купил[аи]?|покупка|bought|cumparat|cumpărat)$/u;
 const transfer=/^(?:перевел[аи]?|перевод|отдал[аи]?|одолжил[аи]?|transferred|transfer)$/u;
@@ -47,7 +48,7 @@ function naturalAmount(value){
 // Extract independent slots. Contiguous amounts are parsed by the same strict
 // amount parser as the keypad; multiple amounts remain ambiguous, not summed.
 export function parseNaturalVoiceEntry(value,{draft=null,categories=[],newEntry=false}={}){
- const text=String(value).toLowerCase().replace(/ё/g,'е').trim();
+ const text=normalizeVoicePhrase(value).toLowerCase().replace(/ё/g,'е').trim();
  if(!text||/[\u3400-\u9fff]/u.test(text))return null;
  if(/(^|\s)(?:сколько|покажи|открой|удали|удалить|баланс|остаток|how|delete|open|cât|cat|deschide)(?=\s|$)/u.test(text))return null;
  const tokens=tokensOf(text);if(tokens.length>80||text.length>600)return {invalid:true};

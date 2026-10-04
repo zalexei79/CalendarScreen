@@ -1,3 +1,4 @@
+import {normalizeVoicePhrase} from './voicePhrase.js';
 import {parseVoiceNavigation} from './voiceNavigation.js';
 import {parseSpokenAmount} from './spokenAmount.js';
 import {parseLocalizedVoiceCommand} from './localizedVoiceCommand.js';
@@ -11,7 +12,7 @@ const months=[
 ];
 export function parseCalendarVoiceCommand(transcript){
  if(isVoiceHelpRequest(transcript))return {type:'voice-help'};
- const text=String(transcript).toLowerCase().replace(/ё/g,'е').replace(/([\d])[,.](?=\d)/g,'$1DECIMAL').replace(/[,.!?]/g,' ').replace(/DECIMAL/g,',').replace(/\s+/g,' ').trim().replace(/^пожалуйста | пожалуйста$/g,'');
+ const text=normalizeVoicePhrase(transcript).toLowerCase().replace(/ё/g,'е').replace(/([\d])[,.](?=\d)/g,'$1DECIMAL').replace(/[,.!?]/g,' ').replace(/DECIMAL/g,',').replace(/\s+/g,' ').trim().replace(/^пожалуйста | пожалуйста$/g,'');
  const navigation=parseVoiceNavigation(text);if(navigation)return navigation;
  const financialQuery=parseFinancialVoiceQuery(transcript);if(financialQuery)return financialQuery;
  const lifetime=text.match(/^сколько (?:я )?(?:всего )?(?:потратил|потратила)(?: за все время)? на (.+?)(?: за все время)?$/);if(lifetime&&text.includes('за все время'))return {type:'question',metric:'expense',period:'all-time',category:lifetime[1]};

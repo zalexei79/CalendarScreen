@@ -58,6 +58,7 @@ const ambiguityPrompts={ru:{sign:'Неясно: это расход или до�
 export function voiceEntryReview(phrase,draft=null,locale='ru',categories=[],options={}) {
  const today=options.todayKey||localDateKey(),labels=copy[locale]||copy.ru;
  const corrected=resolveVoiceCorrections(phrase);
+ if(draft&&['question','financial-search','voice-help'].includes(parseCalendarVoiceCommand(corrected.text)?.type))return null;
  if(/^(取消|停止|不用了|отмена|отмени|не надо|cancel|stop|anuleaza|anulează)$/i.test(corrected.text))return draft?{cancelled:true}:null;
  if(corrected.negated)return {invalid:true};
  if(!draft){const existing=parseCalendarVoiceCommand(corrected.text);if(existing&&existing.type!=='entry')return null;}

@@ -21,6 +21,7 @@ try{
  await page.waitForTimeout(450);
  const header=sheet.locator('.voice-workspace-header'),brand=sheet.locator('.voice-workspace-brand');
  const before=await sheet.boundingBox();
+ assert.ok(Math.abs(before.x+before.width/2-800)<1,'assistant opens centered on desktop before any dragging');
  const drag=async(dx,dy,cancel=false)=>{const b=await brand.boundingBox();await page.mouse.move(b.x+20,b.y+8);await page.mouse.down();await page.mouse.move(b.x+20+dx,b.y+8+dy,{steps:12});if(cancel)await header.dispatchEvent('pointercancel',{pointerId:1});await page.mouse.up();};
  await drag(-300,-200);let box=await sheet.boundingBox();assert.ok(Math.abs(box.x-(before.x-300))<2);assert.ok(Math.abs(box.y-(before.y-200))<2);
  assert.equal(await page.evaluate(()=>voice.aborted),undefined,'moving preserves recognition');
