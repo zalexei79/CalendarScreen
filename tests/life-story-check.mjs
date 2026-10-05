@@ -34,9 +34,9 @@ for (const currency of ['USD', 'EUR', 'MDL', 'RUB', 'CNY']) {
   const events = lifeMoneyEvents(rhythm, currency);
   assert.ok(events.every(event => event.currency === currency && event.amount > 0));
   const flow = lifeMoneyFlow(events, 1490);
-  assert.ok(flow.length >= 15 && flow.length <= 20 && new Set(flow.map(event => event.amount)).size === flow.length, '15–20 distinct amounts convey a lifetime of individual money events');
+  assert.ok(flow.length >= 24 && flow.length <= 26 && new Set(flow.map(event => event.amount)).size === flow.length, 'A faster stream of 24–26 distinct amounts conveys passing money');
   assert.ok(flow.some(event => event.tone === 'income') && flow.some(event => event.tone === 'expense'));
-  assert.ok(flow.every(event => event.currency === currency && event.start <= 5350 && event.duration > 0 && event.duration <= 120));
+  assert.ok(flow.every(event => event.currency === currency && event.start <= 5350 && event.duration > 0 && event.duration <= 85));
   assert.ok(flow.every((event, index) => !index || event.start - flow[index - 1].start >= event.duration), 'An amount completes its soft exchange before the next one arrives');
   for (const event of flow) {
     const t = event.start / 8000;
@@ -65,6 +65,7 @@ const incomeWeeks = adulthood.flatMap((event, index) => event.tone === 'income' 
 assert.ok(new Set(incomeWeeks.slice(1).map((week, index) => week - incomeWeeks[index])).size > 4, 'Income is not a fixed every-four-weeks stripe');
 for (let time = 0; time <= LIFE_MOTION_END; time += 16) {
   const frame = lifeCalendarMotion(time);
+  if (frame.topAperture > 0) assert.equal(frame.copyOpacity, 0, 'The lattice can expand through the copy area only after the heading has left');
   if (frame.lifeOpacity > .001) {
     assert.equal(frame.paperOpacity, 1, 'Keep the app covered while the dense life grid is visible');
     assert.equal(frame.skin, 0, 'Calendar labels cannot overlap the dense life grid');
@@ -72,6 +73,7 @@ for (let time = 0; time <= LIFE_MOTION_END; time += 16) {
   if (frame.handoff > 0) assert.equal(frame.month, 1, 'Swap to the live calendar only after the shared grid has landed');
   if (time >= 16) {
     const previous = lifeCalendarMotion(time - 16);
+    assert.ok(Math.abs(frame.copyOpacity - previous.copyOpacity) < .04, 'The story copy retires on the same smooth timeline as the camera');
     assert.ok(Math.abs(frame.paperOpacity - previous.paperOpacity) < .018, 'The application lighting changes by less than 1.8% per frame throughout the morph');
     assert.ok(Math.abs(frame.skin - previous.skin) < .014, 'Calendar paint never snaps onto neutral weeks');
   }

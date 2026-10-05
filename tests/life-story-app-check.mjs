@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import path from 'node:path';
-import { LIFE_MOTION_END } from '../src/features/onboarding/lifeCalendarMotion.js';
+import { LIFE_MOTION_END, lifeCalendarMotion } from '../src/features/onboarding/lifeCalendarMotion.js';
 const require = createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE || 'C:/Users/aveel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/package.json');
 const browser = await require('playwright').chromium.launch({ channel: 'msedge', headless: true });
 const desktop = process.argv.includes('--desktop');
@@ -69,10 +69,13 @@ try {
   const moneyLayout = await page.evaluate(() => {
     const region = document.querySelector('.life-money-area').getBoundingClientRect();
     const scene = document.querySelector('.life-story-scene').getBoundingClientRect();
+    const legend = document.querySelector('.life-story-legend').getBoundingClientRect();
     const tools = document.querySelector('.life-story-tools').getBoundingClientRect();
-    return { region: region.toJSON(), scene: scene.toJSON(), tools: tools.toJSON(), height: innerHeight };
+    const gridBottom = Number(document.querySelector('.life-story').dataset.gridBottom);
+    return { region: region.toJSON(), scene: scene.toJSON(), legend: legend.toJSON(), tools: tools.toJSON(), gridBottom, height: innerHeight };
   });
-  assert.ok(moneyLayout.region.top >= moneyLayout.scene.bottom && moneyLayout.region.bottom <= moneyLayout.tools.top && moneyLayout.tools.bottom <= moneyLayout.height, `Money has its own place below the grid, above navigation: ${JSON.stringify(moneyLayout)}`);
+  assert.ok(Math.abs(moneyLayout.region.top - moneyLayout.gridBottom - 10) < 1 && moneyLayout.region.bottom <= moneyLayout.legend.top && moneyLayout.legend.bottom <= moneyLayout.tools.top && moneyLayout.tools.bottom <= moneyLayout.height, `The large amount is directly below the lattice, ahead of its legend and navigation: ${JSON.stringify(moneyLayout)}`);
+  assert.ok(await money.evaluate(node => parseFloat(getComputedStyle(node).fontSize)) >= (desktop ? 42 : 34), 'The monetary stream uses larger, readable figures');
   const earlyColors = await page.locator('.life-story-grid').evaluate(canvas => {
     const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
     let colored = 0;
@@ -92,11 +95,11 @@ try {
     await page.clock.runFor(16);
     const opacity = await money.evaluateAll(nodes => nodes.map(node => ({ current: Number(node.querySelector('.life-money-current').style.opacity), previous: Number(node.querySelector('.life-money-previous').style.opacity), start: node.dataset.start, value: node.querySelector('.life-money-current').textContent, oldValue: node.querySelector('.life-money-previous').textContent })));
     assert.ok(opacity.every(({ current, previous }) => Math.abs(current + previous - 1) < .001), 'An exchange never blanks out both amounts');
-    if (previousOpacity) assert.ok(opacity.every((state, index) => state.start === previousOpacity[index].start ? Math.abs(state.current - previousOpacity[index].current) < .43 : state.oldValue === previousOpacity[index].value && state.previous > .97), 'The rapid exchange preserves the previous amount, without blank flashes');
+    if (previousOpacity) assert.ok(opacity.every((state, index) => state.start === previousOpacity[index].start ? Math.abs(state.current - previousOpacity[index].current) < .65 : state.oldValue === previousOpacity[index].value && state.previous > .94), 'The rapid exchange preserves the previous amount, without blank flashes');
     previousOpacity = opacity;
   }
   const beats = await page.evaluate(() => window.moneyBeats);
-  assert.ok(beats.length >= 6 && beats.length <= 10, 'The fixed window conveys many individual money events at a faster cadence');
+  assert.ok(beats.length >= 8 && beats.length <= 13, 'The fixed window conveys more individual money events at a faster cadence');
   assert.ok(beats.every(amount => amount.endsWith(currency)), 'Every transaction uses the selected currency');
   assert.deepEqual(await money.boundingBox(), moneyAnchor, 'The transaction window stays in exactly the same place as weeks advance');
   assert.equal(await page.locator('.life-money-amounts > .life-money-label').innerText(), 'Примеры отдельных сумм', 'The explanatory caption stays still while only amounts change');
@@ -144,6 +147,16 @@ try {
   assert.equal(await page.locator('.life-story').getAttribute('data-stage'), 'today');
   assert.equal(await money.count(), 0, 'Illustrative money leaves before arriving at today');
   const presentColors = await page.locator('.life-calendar-week').evaluateAll(cells => cells.map(cell => getComputedStyle(cell).backgroundColor));
+  await seek(9000);
+  const copyFrame = await page.evaluate(() => {
+    const story = document.querySelector('.life-story');
+    const heading = story.querySelector('.life-story-heading');
+    const grid = story.querySelector('.life-story-grid');
+    return { time: Number(story.dataset.time), opacity: Number(getComputedStyle(heading).opacity), headingBottom: heading.getBoundingClientRect().bottom, gridTop: Number(story.dataset.gridTop), mask: getComputedStyle(grid).maskImage, bridgeMask: getComputedStyle(story.querySelector('.life-calendar-bridge')).maskImage };
+  });
+  assert.ok(Math.abs(copyFrame.opacity - lifeCalendarMotion(copyFrame.time).copyOpacity) < .001 && copyFrame.opacity < .65, 'Copy opacity follows the camera directly, without a delayed CSS transition');
+  assert.ok(copyFrame.headingBottom < copyFrame.gridTop - 20 && copyFrame.mask.includes('linear-gradient') && copyFrame.bridgeMask === copyFrame.mask, 'The expanding cells remain feathered away from the heading area');
+  await page.screenshot({ path: screenshotPath('copy-exit'), animations: 'disabled' });
   await seek(9150);
   assert.deepEqual(await page.locator('.life-calendar-week').evaluateAll(cells => cells.map(cell => getComputedStyle(cell).backgroundColor)), presentColors, 'Arriving at today never repaints the selected month over the history');
   const todayOutline = await page.evaluate(() => {
@@ -157,6 +170,8 @@ try {
   assert.ok(todayOutline.stroke > 0 && todayOutline.stroke <= todayOutline.width * .08, 'Today keeps a thin proportional outline rather than a solid square over historical cells');
   await page.screenshot({ path: screenshotPath('today'), animations: 'disabled' });
   await seek(10250);
+  assert.equal(await page.locator('.life-story-heading').evaluate(element => Number(getComputedStyle(element).opacity)), 0, 'The heading is gone when the lattice occupies the viewport');
+  assert.equal(await page.locator('.life-calendar-bridge').evaluate(element => getComputedStyle(element).maskImage), 'none', 'The aperture fully opens before the native calendar reveal');
   const coherentCrop = await page.evaluate(() => {
     const cells = [...document.querySelectorAll('.life-calendar-cell')].map(cell => cell.getBoundingClientRect());
     return cells.every((cell, index) => index % 7 === 0 || Math.abs(cell.y - cells[index - 1].y) < .1 && cell.x > cells[index - 1].x);

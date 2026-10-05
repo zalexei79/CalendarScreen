@@ -11,8 +11,12 @@ export function lifeCalendarMotion(time) {
   return {
     zoom: progress(time, 8650, 1800),
     reframe: progress(time, 8650, 1400),
+    copyOpacity: 1 - progress(time, 8650, 800),
+    headerOpacity: 1 - progress(time, 8850, 650),
+    topAperture: progress(time, 9450, 550),
+    bottomAperture: progress(time, 9000, 550),
     month: progress(time, 9500, 3050),
-    lifeOpacity: 1 - progress(time, 9400, 850),
+    lifeOpacity: (1 - progress(time, 9400, 850)) * (1 - .22 * progress(time, 8650, 900)),
     skin: progress(time, 10250, 2300),
     // The month title and controls emerge before the days finish taking paint.
     paperOpacity: 1 - progress(time, 10250, 1800),

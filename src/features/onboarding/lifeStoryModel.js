@@ -97,7 +97,7 @@ export function lifeMoneyFlow(events, elapsedWeeks, duration = 8000) {
   const startTime = inverse * duration + 200;
   const endTime = Math.min(5350, duration - 200);
   if (startTime >= endTime) return [];
-  const count = Math.min(20, new Set(events.filter(event => event.week < elapsedWeeks).map(event => event.amount)).size);
+  const count = Math.min(26, new Set(events.filter(event => event.week < elapsedWeeks).map(event => event.amount)).size);
   const interval = (endTime - startTime) / Math.max(1, count - 1);
   const used = new Set();
   for (let beat = 0; beat < count; beat++) {
@@ -106,10 +106,11 @@ export function lifeMoneyFlow(events, elapsedWeeks, duration = 8000) {
     const filled = Math.floor(elapsedWeeks * (t < .5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2));
     const tone = beat % 3 === 0 ? 'income' : 'expense';
     const available = event => event.week < filled && !used.has(event.amount);
-    const event = events.findLast(event => available(event) && event.tone === tone) || events.findLast(available);
+    const largeExpense = beat % 7 === 6 ? events.filter(event => available(event) && event.tone === 'expense').reduce((largest, event) => !largest || event.amount > largest.amount ? event : largest, null) : null;
+    const event = largeExpense || events.findLast(event => available(event) && event.tone === tone) || events.findLast(available);
     if (event) {
       used.add(event.amount);
-      result.push({ ...event, start, duration: Math.min(120, interval * .85) });
+      result.push({ ...event, start, duration: Math.min(85, interval * .8) });
     }
   }
   return result;
