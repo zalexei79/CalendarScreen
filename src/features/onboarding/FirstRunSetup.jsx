@@ -94,9 +94,9 @@ export default function FirstRunSetup({ step, language, currency, theme, profile
   }, [step]);
 
   return (
-    <dialog ref={dialogRef} data-story={story || undefined} aria-labelledby="first-run-heading" onCancel={(event) => { event.preventDefault(); onSkip(); }}
+    <dialog ref={dialogRef} data-theme={theme} data-story={story || undefined} aria-labelledby="first-run-heading" onCancel={(event) => { event.preventDefault(); onSkip(); }}
       className={`first-run-dialog fixed inset-0 m-0 h-[100dvh] max-h-none w-full max-w-none overflow-y-auto border-0 bg-transparent p-0 backdrop:bg-black/75 backdrop:backdrop-blur-md ${light ? 'text-zinc-900' : 'text-zinc-100'}`}>
-      {story ? <LifeStory birthday={birthday} lang={lang} onStart={onStart} onArrive={onArrive} onSkip={onSkip} onBack={() => onStep('birthday')} /> : <div className="flex min-h-full items-center justify-center p-3 sm:p-6">
+      {story ? <LifeStory birthday={birthday} lang={lang} theme={theme} onStart={onStart} onArrive={onArrive} onSkip={onSkip} onBack={() => onStep('birthday')} /> : <div className="flex min-h-full items-center justify-center p-3 sm:p-6">
         <div className={`grid w-full max-w-[940px] overflow-hidden rounded-[28px] border shadow-2xl md:grid-cols-[0.85fr_1.15fr] ${light ? 'border-white bg-[#faf9f6]' : 'border-white/10 bg-[#111214]'}`}>
           <div className="relative hidden flex-col justify-between overflow-hidden border-r border-white/10 bg-[#171811] p-9 text-white md:flex">
             <div className="pointer-events-none absolute -left-24 -top-32 h-96 w-96 rounded-full bg-amber-400/10 blur-3xl" />
@@ -104,7 +104,7 @@ export default function FirstRunSetup({ step, language, currency, theme, profile
             <div className="relative py-12">
               <h2 className="whitespace-pre-line text-[38px] font-semibold leading-[1.12] tracking-[-0.045em]">{copy.tagline}</h2>
               <div className="mt-8 grid grid-cols-7 gap-1.5" aria-hidden="true">
-                {Array.from({ length: 28 }, (_, day) => <div key={day} className={`flex aspect-square items-center justify-center rounded-lg text-[10px] ${day === 19 ? 'bg-amber-300 font-bold text-zinc-950 shadow-[0_4px_25px_rgba(252,211,77,.18)]' : [3, 8, 13, 16, 24].includes(day) ? 'bg-emerald-400/15 text-emerald-300' : 'bg-white/[0.04] text-white/30'}`}>{day + 1}</div>)}
+                {Array.from({ length: 28 }, (_, day) => <div key={day} className={`flex aspect-square items-center justify-center rounded-lg text-[10px] ${day === 19 ? 'bg-amber-300 font-bold text-zinc-950 shadow-[0_4px_25px_rgba(252,211,77,.18)]' : day < 19 && [3, 8, 13, 16].includes(day) ? 'bg-emerald-400/15 text-emerald-300' : 'bg-white/[0.04] text-white/30'}`}>{day + 1}</div>)}
               </div>
             </div>
             <p className="relative max-w-[240px] text-xs leading-relaxed text-white/40">{copy.caption}</p>
@@ -124,8 +124,8 @@ export default function FirstRunSetup({ step, language, currency, theme, profile
 
               {index === 0 && <div className="mt-7 space-y-2.5" role="group" aria-label={copy.languageHint}>
                 {LANGUAGES.map((item) => {
-                  const active = lang === (item.code === 'md' ? 'ro' : item.code);
-                  return <button key={item.code} type="button" aria-pressed={active} onClick={() => onLanguage(item)} className={`flex w-full items-center gap-4 rounded-2xl border px-4 py-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${active ? selected : idle}`}>
+                  const active = lang === (item.code === 'md' ? 'ro' : item.code === 'zh-CN' ? 'zh' : item.code);
+                  return <button key={item.code} type="button" aria-pressed={active} onClick={() => { onLanguage(item); onStep('currency'); }} className={`flex w-full items-center gap-4 rounded-2xl border px-4 py-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${active ? selected : idle}`}>
                     <span className={`grid h-10 w-10 place-items-center rounded-xl text-xs font-semibold ${light ? 'bg-black/[0.04]' : 'bg-white/[0.05]'}`}>{item.code === 'md' ? 'RO' : item.code.toUpperCase()}</span>
                     <span className="flex-1"><span lang={item.code === 'md' ? 'ro' : item.code} className="block text-sm font-semibold">{item.name}</span><span className={`mt-0.5 block text-[11px] ${muted}`}>{item.hint}</span></span>
                     {active && <Check className="h-4 w-4 text-amber-500" aria-hidden="true" />}
@@ -134,22 +134,22 @@ export default function FirstRunSetup({ step, language, currency, theme, profile
               </div>}
 
               {index === 1 && <>
-                <div className="mt-6 grid grid-cols-2 gap-2.5" role="group" aria-label={copy.currencyHint}>
-                  {CURRENCIES.map((item, i) => <button key={item.code} type="button" aria-pressed={currency === item.code} onClick={() => onCurrency(item.code)} className={`relative rounded-2xl border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${currency === item.code ? selected : idle}`}>
-                    {currency === item.code && <Check className="absolute right-3 top-3 h-3.5 w-3.5 text-amber-500" aria-hidden="true" />}
-                    <span className="mb-3 block text-2xl font-medium">{item.symbol}</span><span className="block text-xs font-semibold">{item.code}</span><span className={`mt-1 block text-[10px] ${muted}`}>{copy.currencies[i]}</span>
-                  </button>)}
-                </div>
                 <div className="mt-6 flex items-center justify-between gap-3">
                   <span className={`text-xs ${muted}`}>{copy.appearance}</span>
                   <div className={`flex gap-1 rounded-xl p-1 ${light ? 'bg-zinc-200/60' : 'bg-black/25'}`}>
                     {[[true, Sun, copy.light], [false, Moon, copy.dark]].map(([value, Icon, label]) => <button key={label} type="button" aria-pressed={light === value} onClick={() => onTheme(value ? 'light' : 'dark')} className={`flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${light === value ? light ? 'bg-white text-zinc-900 shadow-sm' : 'bg-white/10 text-zinc-100' : muted}`}><Icon className="h-3.5 w-3.5" />{label}</button>)}
                   </div>
                 </div>
+                <div className="mt-6 grid grid-cols-2 gap-2.5" role="group" aria-label={copy.currencyHint}>
+                  {CURRENCIES.map((item, i) => <button key={item.code} type="button" aria-pressed={currency === item.code} onClick={() => { onCurrency(item.code); onStep('birthday'); }} className={`relative rounded-2xl border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${currency === item.code ? selected : idle}`}>
+                    {currency === item.code && <Check className="absolute right-3 top-3 h-3.5 w-3.5 text-amber-500" aria-hidden="true" />}
+                    <span className="mb-3 block text-2xl font-medium">{item.symbol}</span><span className="block text-xs font-semibold">{item.code}</span><span className={`mt-1 block text-[10px] ${muted}`}>{copy.currencies[i]}</span>
+                  </button>)}
+                </div>
                 <p className={`mt-4 text-[11px] leading-relaxed ${muted}`}>{copy.later}</p>
               </>}
 
-              {index === 2 && <form className="mt-8" onSubmit={event => { event.preventDefault(); startStory(); }}>
+              {index === 2 && <form className="life-birthday-card mt-8" onSubmit={event => { event.preventDefault(); startStory(); }}>
                 <label htmlFor="life-birthday" className={`text-xs ${muted}`}>{lifeCopy.birthdayLabel}</label>
                 <input id="life-birthday" className="life-birthday-field" type="date" max={localDateValue()} value={birthday} onChange={event => { setBirthday(event.target.value); setDateError(false); }} aria-invalid={dateError} aria-describedby={dateError ? 'life-birthday-error' : 'life-birthday-note'} />
                 <p id="life-birthday-note" className={`mt-3 text-[11px] ${muted}`}>{lifeCopy.birthdayNote}</p>
@@ -159,8 +159,8 @@ export default function FirstRunSetup({ step, language, currency, theme, profile
             </div>
             <div className="mt-8">
               <div className="flex gap-2">
-                {index > 0 && <button type="button" onClick={() => onStep(index === 1 ? 'language' : 'currency')} aria-label={copy.back} className={`grid w-12 shrink-0 place-items-center rounded-xl border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${idle}`}><ArrowLeft className="h-4 w-4" /></button>}
-                <button type="button" onClick={() => index === 2 ? startStory() : onStep(index === 0 ? 'currency' : 'birthday')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-amber-300 px-4 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2">{copy.next}<ArrowRight className="h-4 w-4" /></button>
+                {index > 0 && <button type="button" onClick={() => onStep(index === 1 ? 'language' : 'currency')} aria-label={copy.back} className={`grid min-h-12 w-12 shrink-0 place-items-center rounded-xl border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${idle}`}><ArrowLeft className="h-4 w-4" /></button>}
+                {index === 2 && <button type="button" onClick={() => startStory()} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-amber-300 px-4 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2">{lifeCopy.seeStory}<ArrowRight className="h-4 w-4" /></button>}
               </div>
               <button type="button" onClick={onSkip} className={`mt-3 min-h-10 w-full rounded-xl text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${muted} ${light ? 'hover:bg-zinc-100' : 'hover:bg-white/5'}`}>{copy.skip}</button>
             </div>

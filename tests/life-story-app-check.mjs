@@ -24,11 +24,19 @@ try {
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('http://calendar.test/');
   await page.clock.pauseAt(new Date('2026-10-05T13:00:00'));
-  const next = () => page.getByRole('button', { name: 'Продолжить', exact: true }).click();
-  await next(); await next();
+  const next = () => page.getByRole('button', { name: 'Увидеть мою историю', exact: true }).click();
+  const choose = async () => {
+    assert.equal(await page.getByRole('button', { name: 'Продолжить', exact: true }).count(), 0);
+    await page.getByRole('button', { name: /Русский/ }).click();
+    assert.equal(await page.getByRole('button', { name: 'Продолжить', exact: true }).count(), 0);
+    await page.getByRole('button', { name: /MDL/ }).click();
+  };
+  await choose();
   // A week at column 51 used to split the selected month across two grid rows.
   const edgeBirthday = new Date(Date.UTC(2026, 9, 5) - (28 * 52 + 51) * 7 * 86400000).toISOString().slice(0, 10);
   await page.getByLabel('Дата рождения', { exact: true }).fill(desktop ? edgeBirthday : '1998-03-14');
+  assert.equal(await page.locator('#life-birthday').evaluate(element => getComputedStyle(element).colorScheme), desktop ? 'dark' : 'light');
+  await page.screenshot({ path: screenshotPath('birthday') });
   await next();
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.calendarTarget === 'live');
   await page.mouse.move(0, 0);
@@ -36,6 +44,20 @@ try {
   await page.clock.fastForward(4700);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.stage === 'money');
   await page.waitForFunction(() => Number(document.querySelector('.life-story-counter strong')?.textContent.replace(/\D/g, '')) > 1200);
+  assert.equal(await page.locator('.life-story').getAttribute('data-theme'), desktop ? 'dark' : 'light');
+  assert.equal(await page.locator('.life-story-paper').evaluate(element => getComputedStyle(element).backgroundColor), desktop ? 'rgb(17, 23, 20)' : 'rgb(247, 244, 236)');
+  if (!desktop) await page.setViewportSize({ width: 320, height: 844 });
+  await page.clock.runFor(32);
+  const counterLayout = await page.evaluate(() => {
+    const counter = document.querySelector('.life-story-counter');
+    const number = counter.querySelector('strong').getBoundingClientRect();
+    const caption = counter.querySelector('span').getBoundingClientRect();
+    const gridTop = Number(document.querySelector('.life-story').dataset.gridTop);
+    return { number: number.toJSON(), caption: caption.toJSON(), gridTop, width: innerWidth };
+  });
+  const { number, caption, gridTop, width } = counterLayout;
+  assert.ok(number.bottom <= caption.top && caption.bottom + 12 < gridTop && caption.height <= 15 && number.left >= 0 && number.right <= width, `A four-digit counter and its caption fit above the grid, even at 320px: ${JSON.stringify(counterLayout)}`);
+  if (!desktop) await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: screenshotPath('weeks'), animations: 'disabled' });
   await page.clock.fastForward(2800);
   const coherentCrop = await page.evaluate(() => {
@@ -44,6 +66,7 @@ try {
   });
   assert.ok(coherentCrop, 'Every source row remains contiguous, including a current week at the 52-column edge');
   assert.equal(await page.locator('.life-story-paper').evaluate(element => element.style.opacity), '1', 'No app chrome behind the life-grid zoom');
+  assert.deepEqual(await page.locator('.life-calendar-week').evaluateAll(cells => [...new Set(cells.map(cell => getComputedStyle(cell).backgroundColor))]), [desktop ? 'rgb(91, 98, 94)' : 'rgb(191, 184, 167)'], 'The entire approaching month is neutral; historical illustration is never presented as existing entries');
   await page.screenshot({ path: screenshotPath('approach'), animations: 'disabled' });
   await page.clock.fastForward(2400);
   await page.waitForFunction(() => Number(document.querySelector('.life-story-paper')?.style.opacity || 1) < .97);
@@ -95,8 +118,10 @@ try {
   assert.ok(await page.locator('[data-today-cell="true"]').isVisible());
   await page.screenshot({ path: screenshotPath('calendar') });
   await first.click();
-  await page.screenshot({ path: screenshotPath('entry') });
   await page.getByRole('button', { name: 'Доходы', exact: true }).waitFor();
+  await page.getByText('Укажи сумму и сохрани — запись появится в сегодняшнем дне.', { exact: true }).waitFor();
+  await page.clock.runFor(750);
+  await page.screenshot({ path: screenshotPath('entry'), animations: 'disabled' });
   assert.equal(await page.getByText('Что уже произошло сегодня?', { exact: true }).count(), 0);
   assert.equal(await page.getByText('Выбери один вариант. Я подготовлю форму, а ты дополнишь её как хочешь.', { exact: true }).count(), 0);
   assert.deepEqual(errors, []);

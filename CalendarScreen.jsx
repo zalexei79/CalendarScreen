@@ -742,6 +742,7 @@ export default function CalendarScreen() {
       guideChooseType: "今天发生了什么？",
       guideChooseTypeHint: "选择一项，我会准备表单，你可以按需填写。",
       guideAmountHint: "现在只需输入金额。",
+      guideSaveHint: "输入金额并保存，让今天的记录出现在日历中。",
       guideNoteHint: "写下想记住的想法或事项。",
       guideSuccess: "完成了，日历会自动汇集你的日常记录。",
       guideMore: "如何编辑记录",
@@ -779,6 +780,7 @@ export default function CalendarScreen() {
       guideChooseType: 'Что уже произошло сегодня?',
       guideChooseTypeHint: 'Выбери один вариант. Я подготовлю форму, а ты дополнишь её как хочешь.',
       guideAmountHint: 'Отлично. Теперь просто укажи сумму.',
+      guideSaveHint: 'Укажи сумму и сохрани — запись появится в сегодняшнем дне.',
       guideNoteHint: 'Напиши мысль или событие, которое хочешь сохранить.',
       guideSuccess: 'Вот и всё. Теперь календарь сам собирает твою историю.',
       guideMore: 'Как изменить запись',
@@ -816,6 +818,7 @@ export default function CalendarScreen() {
       guideChooseType: 'What happened today?',
       guideChooseTypeHint: 'Pick one option. I’ll prepare the form and you can finish it your way.',
       guideAmountHint: 'Great. Now just enter the amount.',
+      guideSaveHint: 'Enter an amount and save it. Your entry will appear in today’s cell.',
       guideNoteHint: 'Write the thought or event you want to remember.',
       guideSuccess: 'That’s it. Your calendar now builds your story automatically.',
       guideMore: 'How to edit an entry',
@@ -853,6 +856,7 @@ export default function CalendarScreen() {
       guideChooseType: 'Ce s-a întâmplat azi?',
       guideChooseTypeHint: 'Alege o variantă. Eu pregătesc formularul, iar tu îl completezi cum vrei.',
       guideAmountHint: 'Perfect. Acum introdu doar suma.',
+      guideSaveHint: 'Introdu suma și salvează. Înregistrarea va apărea în ziua de azi.',
       guideNoteHint: 'Scrie gândul sau evenimentul pe care vrei să-l păstrezi.',
       guideSuccess: 'Gata. De acum calendarul îți adună singur povestea.',
       guideMore: 'Cum modific o înregistrare',
@@ -4573,6 +4577,7 @@ export default function CalendarScreen() {
             <Plus className="h-3.5 w-3.5" />
             {language === 'zh-CN' ? '添加第一条记录' : language === 'en' ? 'Add your first entry' : language === 'md' || language === 'ro' ? 'Adaugă prima înregistrare' : 'Добавить первую запись'}
           </button>
+          <p>{onboardingCopy.guideTapToday}</p>
         </div>
       )}
 
@@ -6378,6 +6383,7 @@ export default function CalendarScreen() {
 
             {traderMode ? (proEntryChoiceOpen ? renderProEntryChoice() : renderProTradeComposer()) : (
             <div className="mt-4 sm:min-h-0 sm:overflow-y-auto sm:overscroll-contain sm:pr-1">
+              {firstRunGuideStep === 2 && !editingTrade && <p className="first-entry-form-hint" data-light={isLight}>{onboardingCopy.guideSaveHint}</p>}
             {/* Income / expense: the first and fastest decision */}
               <div className={traderMode
                 ? `grid grid-cols-2 gap-1 rounded-2xl border p-1.5 ${isLight ? 'border-zinc-200 bg-zinc-100/80' : 'border-white/[0.08] bg-black/35 shadow-inner'}`

@@ -8,18 +8,22 @@ import './LifeStory.css';
 
 export const LIFE_COPY = {
   ru: {
+    seeStory: 'Увидеть мою историю',
     birthdayTitle: 'Когда началась\nтвоя история?', birthdayHint: 'Укажи дату рождения, чтобы увидеть время в масштабе.', birthdayLabel: 'Дата рождения', birthdayNote: 'Дата останется на этом устройстве.', noDate: 'Продолжить без даты', invalid: 'Укажи настоящую дату рождения, не позднее сегодняшнего дня.',
     life: 'Это время твоей жизни.', lifeHint: 'За каждой неделей — дни, решения и воспоминания.', money: 'Деньги тоже стали\nчастью этой истории.', moneyHint: 'Первые покупки. Первый заработок. Планы и спонтанные решения.', today: 'А это — сегодня.', todayHint: 'Один день. И место для нового начала.', ready: 'Начни с сегодняшнего дня.', readyHint: 'Пусть твоя финансовая история станет чуть яснее.', weeks: 'прожитых недель', generic: 'Каждая неделя — часть истории', legend: 'Одна точка — одна неделя', future: 'История продолжается', entry: 'Сделать первую запись', empty: 'Здесь появится твоя первая запись', replay: 'Посмотреть ещё раз', back: 'Изменить дату', skip: 'Перейти к календарю', continue: 'Продолжить', week: 'Эта неделя', todayLabel: 'Сегодня',
   },
   en: {
+    seeStory: 'See my story',
     birthdayTitle: 'When did your\nstory begin?', birthdayHint: 'Enter your birthday to see time in perspective.', birthdayLabel: 'Date of birth', birthdayNote: 'Your date stays on this device.', noDate: 'Continue without a date', invalid: 'Enter a valid birthday no later than today.',
     life: 'This is your time.', lifeHint: 'Behind every week are days, decisions and memories.', money: 'Money became\npart of that story, too.', moneyHint: 'First purchases. First earnings. Plans and spontaneous choices.', today: 'And this is today.', todayHint: 'One day. Room for a new beginning.', ready: 'Start with today.', readyHint: 'Bring a little clarity to your financial story.', weeks: 'weeks lived', generic: 'Every week is part of a story', legend: 'One dot is one week', future: 'Your story continues', entry: 'Create my first entry', empty: 'Your first entry will appear here', replay: 'Watch again', back: 'Change birthday', skip: 'Go to calendar', continue: 'Continue', week: 'This week', todayLabel: 'Today',
   },
   ro: {
+    seeStory: 'Descoperă povestea mea',
     birthdayTitle: 'Când a început\npovestea ta?', birthdayHint: 'Introdu data nașterii pentru a vedea timpul în perspectivă.', birthdayLabel: 'Data nașterii', birthdayNote: 'Data rămâne pe acest dispozitiv.', noDate: 'Continuă fără dată', invalid: 'Introdu o dată validă, nu mai târziu de azi.',
     life: 'Acesta este timpul tău.', lifeHint: 'În fiecare săptămână sunt zile, alegeri și amintiri.', money: 'Și banii au devenit\nparte din poveste.', moneyHint: 'Primele cumpărături. Primul venit. Planuri și alegeri spontane.', today: 'Iar aceasta este ziua de azi.', todayHint: 'O zi. Loc pentru un nou început.', ready: 'Începe cu ziua de azi.', readyHint: 'Adu puțină claritate în povestea ta financiară.', weeks: 'săptămâni trăite', generic: 'Fiecare săptămână face parte din poveste', legend: 'Un punct este o săptămână', future: 'Povestea continuă', entry: 'Prima mea înregistrare', empty: 'Prima ta înregistrare va apărea aici', replay: 'Privește din nou', back: 'Schimbă data', skip: 'Mergi la calendar', continue: 'Continuă', week: 'Săptămâna aceasta', todayLabel: 'Astăzi',
   },
   zh: {
+    seeStory: '看看我的故事',
     birthdayTitle: '你的故事\n从何时开始？', birthdayHint: '输入出生日期，换一个角度看时间。', birthdayLabel: '出生日期', birthdayNote: '日期仅保存在此设备。', noDate: '不填写日期，继续', invalid: '请输入不晚于今天的有效出生日期。',
     life: '这是你走过的时间。', lifeHint: '每一周，都有日常、选择与回忆。', money: '金钱也逐渐\n成为故事的一部分。', moneyHint: '第一次购物。第一份收入。计划与随心的选择。', today: '而这一格，是今天。', todayHint: '一天，一个新的开始。', ready: '从今天开始。', readyHint: '让你的财务故事更清晰一点。', weeks: '已走过的周数', generic: '每一周都是故事的一部分', legend: '一个点代表一周', future: '故事仍在继续', entry: '创建第一条记录', empty: '你的第一条记录将在这里出现', replay: '再看一次', back: '修改日期', skip: '前往日历', continue: '继续', week: '本周', todayLabel: '今天',
   },
@@ -36,17 +40,22 @@ const MONEY_LEGEND = {
 };
 const FIRST_ENTRY = { ru: 'Добавить первую запись', en: 'Add your first entry', ro: 'Adaugă prima înregistrare', zh: '添加第一条记录' };
 
-function weekColor(index, filled, financial, rhythm) {
-  if (index >= filled) return '#ded9ce';
+const PALETTES = {
+  light: { neutral: [191, 184, 167], future: [222, 217, 206], income: [113, 151, 128], expense: [198, 135, 120], today: 'rgba(77,119,100,.45)' },
+  dark: { neutral: [91, 98, 94], future: [47, 53, 50], income: [110, 153, 129], expense: [172, 112, 102], today: 'rgba(142,185,159,.55)' },
+};
+function weekColor(index, filled, financial, rhythm, palette, neutralize = 0) {
   const event = rhythm[index];
-  if (!financial || event.tone === 'neutral') return '#bfb8a7';
-  const color = event.tone === 'income' ? [113, 151, 128] : [198, 135, 120];
-  return `rgb(${color.map((value, channel) => Math.round(mix([191, 184, 167][channel], value, financial * event.strength))).join(',')})`;
+  const base = index >= filled ? palette.future : palette.neutral;
+  const tone = index >= filled || event.tone === 'neutral' ? base : palette[event.tone];
+  const color = base.map((value, channel) => mix(value, tone[channel], financial * event.strength));
+  return `rgb(${color.map((value, channel) => Math.round(mix(value, palette.neutral[channel], neutralize))).join(',')})`;
 }
 
 /** A single camera follows the current week, then morphs the cells into the live month. */
-export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, onBack }) {
+export default function LifeStory({ birthday, lang, theme = 'light', onStart, onArrive, onSkip, onBack }) {
   const copy = LIFE_COPY[lang];
+  const palette = PALETTES[theme === 'light' ? 'light' : 'dark'];
   const canvasRef = useRef(null);
   const counterRef = useRef(null);
   const sceneRef = useRef(null);
@@ -144,10 +153,13 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
     };
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
+    observer.observe(story.querySelector('.life-story-heading'));
     resize();
     if (calendarGrid) observer.observe(calendarGrid);
 
     function draw(ms) {
+      // Narrative copy can change height without resizing the viewport/canvas.
+      scene = sceneRef.current.getBoundingClientRect();
       const time = reduceMotion ? LIFE_MOTION_END : ms;
       const motion = lifeCalendarMotion(time);
       story.dataset.time = String(Math.round(time));
@@ -158,9 +170,13 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
       const filled = Math.floor(elapsedWeeks * ease(clamp(time / 5100)));
       if (counterRef.current) counterRef.current.textContent = stats ? filled.toLocaleString(locale) : '—';
 
-      const unit = Math.min((scene.width - 36) / 52, (scene.height - 100) / rows);
+      // Reserve a stable counter and legend area before fitting any weeks.
+      const gridTop = scene.top + 70;
+      const gridSpace = Math.max(1, scene.height - 125);
+      const unit = Math.min((scene.width - 36) / 52, gridSpace / rows);
       const gridWidth = unit * 52;
       const gridHeight = unit * rows;
+      story.dataset.gridTop = String(gridTop + (gridSpace - gridHeight) / 2);
       const dotX = (cropCol + 3.5) * unit - gridWidth / 2;
       const dotY = (cropRow + monthRows / 2) * unit - gridHeight / 2;
       // One camera frames a complete 7-column crop; one shared expansion lands it.
@@ -173,13 +189,14 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
       const handoff = hasCalendar ? motion.handoff : 0;
       const skin = motion.skin;
       const financial = ease(clamp((time - 2400) / 1200));
+      const neutralize = ease(clamp((time - 4800) / 1000));
       if (paperRef.current) paperRef.current.style.opacity = String(paper);
       story.style.setProperty('--life-paper-opacity', paper);
       if (calendarGrid) calendarGrid.style.opacity = String(handoff);
       if (motion.settled) story.dataset.settled = 'true';
       else delete story.dataset.settled;
       const centerX = scene.left + scene.width / 2;
-      const centerY = scene.top + scene.height / 2 + 8;
+      const centerY = mix(gridTop + gridSpace / 2, scene.top + scene.height / 2 + 8, focus);
       const originX = centerX - dotX * scale * focus - gridWidth * scale / 2;
       const originY = centerY - dotY * scale * focus - gridHeight * scale / 2;
       context.clearRect(0, 0, width, height);
@@ -193,7 +210,7 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
         if (selected.has(i)) continue;
         const x = (i % 52) * unit + (unit - size) / 2;
         const y = Math.floor(i / 52) * unit + (unit - size) / 2;
-        context.fillStyle = weekColor(i, filled, financial, rhythm);
+        context.fillStyle = weekColor(i, filled, financial, rhythm, palette, i >= cropRow * 52 ? neutralize : 0);
         context.fillRect(x, y, size, size);
       }
       context.restore();
@@ -204,7 +221,7 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
         const y = mix(originY + (Math.floor(source / 52) * unit + (unit - size) / 2) * scale, target.y, morph);
         const w = mix(size * scale, target.width, morph);
         const h = mix(size * scale, target.height, morph);
-        const color = isToday && time > 5100 ? '#4d7764' : weekColor(source, filled, financial, rhythm);
+        const color = weekColor(source, filled, financial, rhythm, palette, neutralize);
         if (target.bridge) {
           const { wrapper, face, week, opacity } = target.bridge;
           wrapper.style.transform = `translate3d(${x}px,${y}px,0)`;
@@ -216,6 +233,7 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
           week.style.backgroundColor = color;
           week.style.borderRadius = `${target.radius * morph}px`;
           week.style.opacity = String(1 - skin);
+          week.style.boxShadow = isToday ? `inset 0 0 0 ${mix(0, 1.5, ease(clamp((time - 5350) / 700)))}px ${palette.today}` : 'none';
           return;
         }
         context.save();
@@ -261,14 +279,14 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
     media.addEventListener('change', onMotionChange);
     frame = requestAnimationFrame(tick);
     return () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); media.removeEventListener('change', onMotionChange); if (calendarGrid) calendarGrid.style.opacity = originalGridOpacity; layer.replaceChildren(); root.removeAttribute('data-life-motion'); };
-  }, [birthday, elapsedWeeks, lang, run]);
+  }, [birthday, elapsedWeeks, lang, theme, run]);
 
   const ready = stage === 'ready';
   const zoom = stage === 'zoom' || ready;
   const title = ready ? monthLabel : stage === 'life' ? copy.life : stage === 'money' ? copy.money : copy.today;
   const hint = ready ? copy.todayHint : stage === 'life' ? copy.lifeHint : stage === 'money' ? copy.moneyHint : copy.todayHint;
 
-  return <div className={`life-story ${reduced ? 'life-story--reduced' : ''}`} data-stage={stage}>
+  return <div className={`life-story ${reduced ? 'life-story--reduced' : ''}`} data-theme={theme} data-stage={stage}>
     <div ref={paperRef} className="life-story-paper" aria-hidden="true" />
     <header className="life-story-top"><span className="life-story-brand"><BrandIcon className="h-7 w-7" /> DAYRIS</span><button type="button" onClick={onSkip}>{copy.skip}<ArrowRight size={14} /></button></header>
     <div className="life-story-heading" aria-live="polite" aria-atomic="true">
@@ -281,7 +299,7 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
       <div className="life-story-counter" aria-hidden="true"><strong ref={counterRef}>0</strong><span>{stats ? copy.weeks : copy.generic}</span></div>
       <canvas ref={canvasRef} className="life-story-grid" aria-label={stats ? `${elapsedWeeks.toLocaleString(locale)} ${copy.weeks}. ${copy.legend}` : copy.generic} role="img" />
       <div ref={cellsRef} className="life-calendar-bridge" aria-hidden="true" inert="" />
-      <div className="life-story-legend"><p>{copy.legend}</p>{stage === 'money' || stage === 'today' || zoom ? <><div className="life-story-color-key">{MONEY_LEGEND[lang].slice(0, 3).map((label, index) => <span key={label}><i style={{ background: ['#bbb8ad', '#719780', '#c68778'][index] }} />{label}</span>)}</div><span>{MONEY_LEGEND[lang][3]}</span></> : <span>{copy.future}</span>}</div>
+      <div className="life-story-legend"><p>{copy.legend}</p>{stage === 'money' || stage === 'today' || zoom ? <><div className="life-story-color-key">{MONEY_LEGEND[lang].slice(0, 3).map((label, index) => <span key={label}><i style={{ background: `rgb(${[palette.neutral, palette.income, palette.expense][index].join(',')})` }} />{label}</span>)}</div><span>{MONEY_LEGEND[lang][3]}</span></> : <span>{copy.future}</span>}</div>
     </div>
     <footer className={`life-story-footer ${ready ? 'is-ready' : ''}`}>
       <button type="button" className="life-story-primary" onClick={onStart} disabled={!ready}>{FIRST_ENTRY[lang]}<ArrowRight size={14} /></button>

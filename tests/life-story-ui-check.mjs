@@ -35,8 +35,20 @@ try {
 
   await page.goto('http://life.test/story');
   await page.clock.pauseAt(new Date('2026-10-05T13:00:00'));
-  const next = () => page.getByRole('button', { name: 'Продолжить', exact: true }).click();
-  await next(); await next();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const preview = page.locator('[aria-hidden="true"].grid.grid-cols-7 > div');
+  assert.match(await preview.nth(19).getAttribute('class'), /bg-amber-300/);
+  for (let index = 20; index < 28; index++) assert.doesNotMatch(await preview.nth(index).getAttribute('class'), /emerald/);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const next = () => page.getByRole('button', { name: 'Увидеть мою историю', exact: true }).click();
+  const choose = async () => {
+    assert.equal(await page.getByRole('button', { name: 'Продолжить', exact: true }).count(), 0);
+    await page.getByRole('button', { name: /Русский/ }).click();
+    assert.equal(await page.getByRole('button', { name: 'Продолжить', exact: true }).count(), 0);
+    await page.getByRole('button', { name: 'Тёмное', exact: true }).click();
+    await page.getByRole('button', { name: /MDL/ }).click();
+  };
+  await choose();
   await next();
   await page.getByRole('alert').waitFor();
   await page.getByLabel('Дата рождения', { exact: true }).fill('1998-03-14');
@@ -63,7 +75,7 @@ try {
   await first.click();
   assert.equal(await page.locator('[data-destination]').getAttribute('data-destination'), 'first-entry');
   await page.getByRole('button', { name: 'Повторить первый запуск' }).click();
-  await next(); await next();
+  await choose();
   assert.equal(await page.getByLabel('Дата рождения', { exact: true }).inputValue(), '1998-03-14');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await next();
@@ -71,7 +83,7 @@ try {
   await first.click();
   assert.equal(await page.locator('[data-destination]').getAttribute('data-destination'), 'first-entry');
   await page.getByRole('button', { name: 'Повторить первый запуск' }).click();
-  await next(); await next();
+  await choose();
   await page.getByRole('button', { name: 'Продолжить без даты' }).click();
   await page.clock.runFor(32);
   await first.waitFor();
