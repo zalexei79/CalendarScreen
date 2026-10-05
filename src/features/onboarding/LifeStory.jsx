@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
 import { lifeWeeks, lifeWeekRhythm, lifeMoneyEvents, calendarMoneyEvents } from './lifeStoryModel';
 import { createCalendarBridge } from './lifeCalendarBridge';
 import { lifeCalendarMotion, LIFE_MOTION_END } from './lifeCalendarMotion';
+import { createMoneyReadout } from './lifeMoneyReadout';
 import BrandIcon from '../../shared/ui/BrandIcon.jsx';
 import './LifeStory.css';
 
@@ -10,28 +11,29 @@ export const LIFE_COPY = {
   ru: {
     seeStory: 'Увидеть мою историю',
     birthdayTitle: 'Когда началась\nтвоя история?', birthdayHint: 'Укажи дату рождения, чтобы увидеть время в масштабе.', birthdayLabel: 'Дата рождения', birthdayNote: 'Дата останется на этом устройстве.', noDate: 'Продолжить без даты', invalid: 'Укажи настоящую дату рождения, не позднее сегодняшнего дня.',
-    life: 'Это время твоей жизни.', lifeHint: 'За каждой неделей — дни, решения и воспоминания.', money: 'Деньги тоже стали\nчастью этой истории.', moneyHint: 'Первые покупки. Первый заработок. Планы и спонтанные решения.', today: 'А это — сегодня.', todayHint: 'Один день. И место для нового начала.', ready: 'Начни с сегодняшнего дня.', readyHint: 'Пусть твоя финансовая история станет чуть яснее.', weeks: 'прожитых недель', generic: 'Каждая неделя — часть истории', legend: 'Одна точка — одна неделя', future: 'История продолжается', entry: 'Сделать первую запись', empty: 'Здесь появится твоя первая запись', replay: 'Посмотреть ещё раз', back: 'Изменить дату', skip: 'Перейти к календарю', continue: 'Продолжить', week: 'Эта неделя', todayLabel: 'Сегодня',
+    life: 'Это время твоей жизни.', lifeHint: 'Доходы и расходы — часть каждого дня.\nЗаписывай их в календарь — день за днём.', money: 'Деньги — часть этой истории.', moneyHint: 'Каждая запись окрашивает день.\nА календарь показывает всю картину.', today: 'А это — сегодня.', todayHint: 'Один день. И место для нового начала.', ready: 'Начни с сегодняшнего дня.', readyHint: 'Пусть твоя финансовая история станет чуть яснее.', weeks: 'прожитых недель', generic: 'Каждая неделя — часть истории', legend: 'Одна точка — одна неделя', future: 'История продолжается', entry: 'Сделать первую запись', empty: 'Здесь появится твоя первая запись', replay: 'Посмотреть ещё раз', back: 'Изменить дату', skip: 'Перейти к календарю', continue: 'Продолжить', week: 'Эта неделя', todayLabel: 'Сегодня',
   },
   en: {
     seeStory: 'See my story',
     birthdayTitle: 'When did your\nstory begin?', birthdayHint: 'Enter your birthday to see time in perspective.', birthdayLabel: 'Date of birth', birthdayNote: 'Your date stays on this device.', noDate: 'Continue without a date', invalid: 'Enter a valid birthday no later than today.',
-    life: 'This is your time.', lifeHint: 'Behind every week are days, decisions and memories.', money: 'Money became\npart of that story, too.', moneyHint: 'First purchases. First earnings. Plans and spontaneous choices.', today: 'And this is today.', todayHint: 'One day. Room for a new beginning.', ready: 'Start with today.', readyHint: 'Bring a little clarity to your financial story.', weeks: 'weeks lived', generic: 'Every week is part of a story', legend: 'One dot is one week', future: 'Your story continues', entry: 'Create my first entry', empty: 'Your first entry will appear here', replay: 'Watch again', back: 'Change birthday', skip: 'Go to calendar', continue: 'Continue', week: 'This week', todayLabel: 'Today',
+    life: 'This is your time.', lifeHint: 'Income and expenses are part of every day.\nTrack them in your calendar, day by day.', money: 'Money is part of that story.', moneyHint: 'Every entry gives a day its color.\nYour calendar brings the picture together.', today: 'And this is today.', todayHint: 'One day. Room for a new beginning.', ready: 'Start with today.', readyHint: 'Bring a little clarity to your financial story.', weeks: 'weeks lived', generic: 'Every week is part of a story', legend: 'One dot is one week', future: 'Your story continues', entry: 'Create my first entry', empty: 'Your first entry will appear here', replay: 'Watch again', back: 'Change birthday', skip: 'Go to calendar', continue: 'Continue', week: 'This week', todayLabel: 'Today',
   },
   ro: {
     seeStory: 'Descoperă povestea mea',
     birthdayTitle: 'Când a început\npovestea ta?', birthdayHint: 'Introdu data nașterii pentru a vedea timpul în perspectivă.', birthdayLabel: 'Data nașterii', birthdayNote: 'Data rămâne pe acest dispozitiv.', noDate: 'Continuă fără dată', invalid: 'Introdu o dată validă, nu mai târziu de azi.',
-    life: 'Acesta este timpul tău.', lifeHint: 'În fiecare săptămână sunt zile, alegeri și amintiri.', money: 'Și banii au devenit\nparte din poveste.', moneyHint: 'Primele cumpărături. Primul venit. Planuri și alegeri spontane.', today: 'Iar aceasta este ziua de azi.', todayHint: 'O zi. Loc pentru un nou început.', ready: 'Începe cu ziua de azi.', readyHint: 'Adu puțină claritate în povestea ta financiară.', weeks: 'săptămâni trăite', generic: 'Fiecare săptămână face parte din poveste', legend: 'Un punct este o săptămână', future: 'Povestea continuă', entry: 'Prima mea înregistrare', empty: 'Prima ta înregistrare va apărea aici', replay: 'Privește din nou', back: 'Schimbă data', skip: 'Mergi la calendar', continue: 'Continuă', week: 'Săptămâna aceasta', todayLabel: 'Astăzi',
+    life: 'Acesta este timpul tău.', lifeHint: 'Veniturile și cheltuielile fac parte din fiecare zi.\nNotează-le în calendar, zi de zi.', money: 'Și banii fac parte din poveste.', moneyHint: 'Fiecare înregistrare colorează o zi.\nCalendarul arată imaginea de ansamblu.', today: 'Iar aceasta este ziua de azi.', todayHint: 'O zi. Loc pentru un nou început.', ready: 'Începe cu ziua de azi.', readyHint: 'Adu puțină claritate în povestea ta financiară.', weeks: 'săptămâni trăite', generic: 'Fiecare săptămână face parte din poveste', legend: 'Un punct este o săptămână', future: 'Povestea continuă', entry: 'Prima mea înregistrare', empty: 'Prima ta înregistrare va apărea aici', replay: 'Privește din nou', back: 'Schimbă data', skip: 'Mergi la calendar', continue: 'Continuă', week: 'Săptămâna aceasta', todayLabel: 'Astăzi',
   },
   zh: {
     seeStory: '看看我的故事',
     birthdayTitle: '你的故事\n从何时开始？', birthdayHint: '输入出生日期，换一个角度看时间。', birthdayLabel: '出生日期', birthdayNote: '日期仅保存在此设备。', noDate: '不填写日期，继续', invalid: '请输入不晚于今天的有效出生日期。',
-    life: '这是你走过的时间。', lifeHint: '每一周，都有日常、选择与回忆。', money: '金钱也逐渐\n成为故事的一部分。', moneyHint: '第一次购物。第一份收入。计划与随心的选择。', today: '而这一格，是今天。', todayHint: '一天，一个新的开始。', ready: '从今天开始。', readyHint: '让你的财务故事更清晰一点。', weeks: '已走过的周数', generic: '每一周都是故事的一部分', legend: '一个点代表一周', future: '故事仍在继续', entry: '创建第一条记录', empty: '你的第一条记录将在这里出现', replay: '再看一次', back: '修改日期', skip: '前往日历', continue: '继续', week: '本周', todayLabel: '今天',
+    life: '这是你走过的时间。', lifeHint: '收入和支出伴随每一天。\n逐日记录，在日历中看见全貌。', money: '金钱，也是故事的一部分。', moneyHint: '每条记录都为一天添上颜色。\n日历将它们汇成清晰的全貌。', today: '而这一格，是今天。', todayHint: '一天，一个新的开始。', ready: '从今天开始。', readyHint: '让你的财务故事更清晰一点。', weeks: '已走过的周数', generic: '每一周都是故事的一部分', legend: '一个点代表一周', future: '故事仍在继续', entry: '创建第一条记录', empty: '你的第一条记录将在这里出现', replay: '再看一次', back: '修改日期', skip: '前往日历', continue: '继续', week: '本周', todayLabel: '今天',
   },
 };
 
 const clamp = (value) => Math.max(0, Math.min(1, value));
 const ease = (value) => value < .5 ? 4 * value ** 3 : 1 - (-2 * value + 2) ** 3 / 2;
 const mix = (a, b, t) => a + (b - a) * t;
+const inverseEase = value => value < .5 ? Math.cbrt(value / 4) : 1 - Math.cbrt((1 - value) / 4);
 const MONEY_LEGEND = {
   ru: ['Нейтрально', 'Доходы', 'Расходы', 'Образ финансового ритма'],
   en: ['Neutral', 'Income', 'Expenses', 'An illustration of financial rhythm'],
@@ -46,9 +48,9 @@ const PALETTES = {
   light: { neutral: [191, 184, 167], future: [222, 217, 206], income: [113, 151, 128], expense: [198, 135, 120], today: 'rgba(77,119,100,.45)' },
   dark: { neutral: [91, 98, 94], future: [47, 53, 50], income: [110, 153, 129], expense: [172, 112, 102], today: 'rgba(142,185,159,.55)' },
 };
-function weekColor(index, filled, financial, rhythm, palette, neutralize = 0) {
+function weekColor(index, filled, financial, rhythm, palette, neutralize = 0, arrival = 1) {
   const event = rhythm[index];
-  const base = index >= filled ? palette.future : palette.neutral;
+  const base = index >= filled ? palette.future : palette.future.map((value, channel) => mix(value, palette.neutral[channel], arrival));
   const tone = index >= filled || event.tone === 'neutral' ? base : palette[event.tone];
   const color = base.map((value, channel) => mix(value, tone[channel], financial * event.strength));
   return `rgb(${color.map((value, channel) => Math.round(mix(value, palette.neutral[channel], neutralize))).join(',')})`;
@@ -112,10 +114,14 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     // Real records can color their known weeks; illustrated history remains labelled.
     for (const event of recorded) if (event.currency === currency && rhythm[event.week]) rhythm[event.week] = { tone: event.tone, strength: 1 };
     const moneyEvents = lifeMoneyEvents(rhythm, currency);
+    const weekTimes = Array.from({ length: total }, (_, week) => week < elapsedWeeks ? inverseEase((week + 1) / elapsedWeeks) * 5100 : Infinity);
     if (moneyRef.current) { delete moneyRef.current.dataset.tone; delete moneyRef.current.dataset.source; delete moneyRef.current.dataset.week; }
-    if (moneyAmountRef.current) moneyAmountRef.current.textContent = '—';
-    let moneyAnimation;
+    const readout = createMoneyReadout(moneyAmountRef.current);
+    readout.update({ amount: 0, tone: 'neutral', currency }, locale, true);
+    moneyLabelRef.current.textContent = `${MONEY_LEGEND[lang][1]} / ${MONEY_LEGEND[lang][2]}`;
+    moneySourceRef.current.textContent = MONEY_LEGEND[lang][3];
     let previousEventKey;
+    let shownEvent;
     const current = Math.min(elapsedWeeks, total - 1);
     const col = current % 52;
     const row = Math.floor(current / 52);
@@ -193,6 +199,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       const gridWidth = unit * 52;
       const gridHeight = unit * rows;
       story.dataset.gridTop = String(gridTop + (gridSpace - gridHeight) / 2);
+      story.dataset.gridWidth = String(gridWidth);
       // Arrive at today's week first, then gently frame its surrounding month.
       // A crop's geometric center can otherwise lie years into the empty future.
       const todaySource = sourceIndices[todayIndex];
@@ -207,19 +214,20 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       const paper = hasCalendar ? motion.paperOpacity : 1;
       const handoff = hasCalendar ? motion.handoff : 0;
       const skin = motion.skin;
-      const financial = ease(clamp((time - 2400) / 1200));
-      const financialWeek = Math.floor(elapsedWeeks * ease(clamp((time - 2400) / 2700)));
       const neutralize = ease(clamp((time - 5350) / 850));
       let activeEvent;
-      if (time >= 2400 && time < 5850) {
+      if (time < 5850) {
         if (time >= 5100 && recorded.length) {
           const recent = recorded.slice(-3);
           activeEvent = recent[Math.min(recent.length - 1, Math.floor((time - 5100) / 250))];
         } else {
           // Sample at readable beats, rather than changing the number every frame.
-          const beatWeek = Math.floor(elapsedWeeks * ease(clamp((Math.floor((time - 2400) / 150) * 150) / 2700)));
-          activeEvent = moneyEvents.findLast(event => event.week <= Math.min(beatWeek, filled));
+          const beatWeek = Math.floor(elapsedWeeks * ease(clamp(Math.floor(time / 320) * 320 / 5100)));
+          activeEvent = moneyEvents.findLast(event => event.week < Math.min(beatWeek, filled));
+          if (!shownEvent && moneyEvents[0]?.week < filled) activeEvent = moneyEvents[0];
         }
+        activeEvent ||= shownEvent;
+        shownEvent = activeEvent;
       }
       if (activeEvent && moneyRef.current) {
         const key = `${activeEvent.source}:${activeEvent.week}:${activeEvent.id || ''}:${activeEvent.tone}:${activeEvent.amount}:${activeEvent.currency}`;
@@ -228,11 +236,9 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         moneyRef.current.dataset.week = String(activeEvent.week);
         moneyLabelRef.current.textContent = MONEY_LEGEND[lang][activeEvent.tone === 'income' ? 1 : 2];
         moneySourceRef.current.textContent = activeEvent.source === 'calendar' ? RECORDED[lang] : MONEY_LEGEND[lang][3];
-        moneyAmountRef.current.textContent = `${activeEvent.tone === 'income' ? '+' : '−'}${activeEvent.amount.toLocaleString(locale, { maximumFractionDigits: 2 })} ${activeEvent.currency}`;
         if (key !== previousEventKey) {
           previousEventKey = key;
-          moneyAnimation?.cancel();
-          if (!reduceMotion) moneyAnimation = moneyAmountRef.current.animate([{ opacity: .35, transform: 'translateY(5px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 140, easing: 'cubic-bezier(.22,1,.36,1)' });
+          readout.update(activeEvent, locale, reduceMotion);
         }
       }
       if (paperRef.current) paperRef.current.style.opacity = String(paper);
@@ -250,13 +256,14 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       context.scale(scale, scale);
       context.translate(-gridWidth / 2, -gridHeight / 2);
       context.globalAlpha = fade;
-      const size = unit * .65;
+      const size = unit * (width >= 760 ? .74 : .65);
       for (let i = 0; i < total; i++) {
         if (selected.has(i)) continue;
         const x = (i % 52) * unit + (unit - size) / 2;
         const y = Math.floor(i / 52) * unit + (unit - size) / 2;
-        const reveal = financial * ease(clamp((financialWeek - i) / 8));
-        context.fillStyle = weekColor(i, filled, reveal, rhythm, palette, i >= current - 2 && i <= current ? neutralize : 0);
+        const age = time - weekTimes[i];
+        const reveal = ease(clamp(age / 450));
+        context.fillStyle = weekColor(i, filled, reveal, rhythm, palette, i >= current - 2 && i <= current ? neutralize : 0, ease(clamp(age / 180)));
         context.fillRect(x, y, size, size);
         if (activeEvent?.week === i) {
           context.strokeStyle = `rgb(${palette[activeEvent.tone].join(',')})`;
@@ -272,7 +279,8 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         const y = mix(originY + (Math.floor(source / 52) * unit + (unit - size) / 2) * scale, target.y, morph);
         const w = mix(size * scale, target.width, morph);
         const h = mix(size * scale, target.height, morph);
-        const color = weekColor(source, filled, financial * ease(clamp((financialWeek - source) / 8)), rhythm, palette, neutralize);
+        const age = time - weekTimes[source];
+        const color = weekColor(source, filled, ease(clamp(age / 450)), rhythm, palette, neutralize, ease(clamp(age / 180)));
         if (target.bridge) {
           const { wrapper, face, week, opacity } = target.bridge;
           wrapper.style.transform = `translate3d(${x}px,${y}px,0)`;
@@ -329,7 +337,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     const onMotionChange = () => { reduceMotion = media.matches; setReduced(reduceMotion); cancelAnimationFrame(frame); frame = requestAnimationFrame(tick); };
     media.addEventListener('change', onMotionChange);
     frame = requestAnimationFrame(tick);
-    return () => { disposed = true; moneyAnimation?.cancel(); cancelAnimationFrame(frame); observer.disconnect(); media.removeEventListener('change', onMotionChange); if (calendarGrid) calendarGrid.style.opacity = originalGridOpacity; layer.replaceChildren(); root.removeAttribute('data-life-motion'); };
+    return () => { disposed = true; readout.destroy(); cancelAnimationFrame(frame); observer.disconnect(); media.removeEventListener('change', onMotionChange); if (calendarGrid) calendarGrid.style.opacity = originalGridOpacity; layer.replaceChildren(); root.removeAttribute('data-life-motion'); };
   }, [birthday, elapsedWeeks, lang, theme, currency, calendarRecords, run]);
 
   const ready = stage === 'ready';
@@ -350,7 +358,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       <div className="life-story-counter" aria-hidden="true"><strong ref={counterRef}>0</strong><span>{stats ? copy.weeks : copy.generic}</span></div>
       <canvas ref={canvasRef} className="life-story-grid" aria-label={stats ? `${elapsedWeeks.toLocaleString(locale)} ${copy.weeks}. ${copy.legend}` : copy.generic} role="img" />
       <div ref={cellsRef} className="life-calendar-bridge" aria-hidden="true" inert="" />
-      <div className="life-story-legend"><p>{copy.legend}</p>{stage === 'money' || stage === 'today' || zoom ? <div className="life-story-color-key">{MONEY_LEGEND[lang].slice(0, 3).map((label, index) => <span key={label}><i style={{ background: `rgb(${[palette.neutral, palette.income, palette.expense][index].join(',')})` }} />{label}</span>)}</div> : <span>{copy.future}</span>}</div>
+      <div className="life-story-legend"><p>{copy.legend}</p><div className="life-story-color-key">{MONEY_LEGEND[lang].slice(0, 3).map((label, index) => <span key={label}><i style={{ background: `rgb(${[palette.neutral, palette.income, palette.expense][index].join(',')})` }} />{label}</span>)}</div></div>
     </div>
     <div ref={moneyRef} className="life-story-money" aria-hidden="true">
       <div><span className="life-money-arrow"><ArrowRight size={13} /></span><span ref={moneyLabelRef}>{MONEY_LEGEND[lang][1]}</span><strong ref={moneyAmountRef}>—</strong></div>

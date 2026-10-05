@@ -43,11 +43,11 @@ try {
   await page.clock.fastForward(480);
   const money = page.locator('.life-story-money');
   assert.equal(await money.getAttribute('data-source'), 'calendar');
-  assert.equal(await money.locator('strong').innerText(), '−37,5 EUR');
+  assert.equal(await money.locator('strong').getAttribute('aria-label'), '−37,5 EUR');
   await page.clock.fastForward(300);
-  assert.equal(await money.locator('strong').innerText(), '+250 MDL');
+  assert.equal(await money.locator('strong').getAttribute('aria-label'), '+250 MDL');
   await page.clock.fastForward(250);
-  assert.equal(await money.locator('strong').innerText(), '−80 MDL');
+  assert.equal(await money.locator('strong').getAttribute('aria-label'), '−80 MDL');
   await page.screenshot({ path: 'tests/life-story-replay-money.png', animations: 'disabled' });
   await page.clock.fastForward(6500);
   await page.waitForFunction(() => !document.querySelector('.life-story'));

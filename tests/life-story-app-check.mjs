@@ -5,10 +5,11 @@ import path from 'node:path';
 const require = createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE || 'C:/Users/aveel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/package.json');
 const browser = await require('playwright').chromium.launch({ channel: 'msedge', headless: true });
 const desktop = process.argv.includes('--desktop');
-const suffix = desktop ? '-desktop' : '';
+const reference = process.argv.includes('--reference');
+const suffix = desktop ? reference ? '-desktop-reference' : '-desktop' : '';
 const screenshotPath = stage => `tests/life-story-app${suffix}-${stage}.png`;
 try {
-  const context = await browser.newContext({ viewport: desktop ? { width: 1440, height: 1000 } : { width: 390, height: 844 }, serviceWorkers: 'block' });
+  const context = await browser.newContext({ viewport: desktop ? reference ? { width: 1145, height: 976 } : { width: 1440, height: 1000 } : { width: 390, height: 844 }, serviceWorkers: 'block' });
   await context.addInitScript(desktop => { localStorage.setItem('atj_language', 'ru'); localStorage.setItem('atj_theme', desktop ? 'dark' : 'light'); localStorage.setItem('calendar_guide_completed', '1'); localStorage.setItem('dayris_voice_feedback', 'off'); }, desktop);
   await context.route('**/*', route => {
     const url = new URL(route.request().url());
@@ -41,17 +42,30 @@ try {
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.calendarTarget === 'live');
   await page.mouse.move(0, 0);
   await page.clock.runFor(32);
-  await page.clock.fastForward(4700);
+  await page.clock.fastForward(2200);
+  assert.equal(await page.locator('.life-story').getAttribute('data-stage'), 'life');
+  assert.equal(await page.locator('.life-story-money').getAttribute('data-source'), 'illustration', 'Money appears with childhood events, before the later narrative title');
+  const earlyColors = await page.locator('.life-story-grid').evaluate(canvas => {
+    const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+    let colored = 0;
+    for (let i = 0; i < pixels.length; i += 4) if (pixels[i + 3] > 100 && (pixels[i + 1] - pixels[i] > 12 || pixels[i] - pixels[i + 1] > 18)) colored++;
+    return colored;
+  });
+  assert.ok(earlyColors > 50, 'Income and spending already color the counted weeks during the first scene');
+  await page.screenshot({ path: screenshotPath('early'), animations: 'disabled' });
+  await page.clock.fastForward(2500);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.stage === 'money');
   await page.waitForFunction(() => Number(document.querySelector('.life-story-counter strong')?.textContent.replace(/\D/g, '')) > 1200);
   const money = page.locator('.life-story-money');
   assert.equal(await money.getAttribute('data-source'), 'illustration');
-  assert.match(await money.locator('strong').innerText(), /^[+−].*MDL$/);
+  assert.match(await money.locator('strong').getAttribute('aria-label'), /^[+−].*MDL$/);
   assert.ok(Number(await money.getAttribute('data-week')) <= Number(await page.locator('.life-story-counter strong').innerText().then(text => text.replace(/\D/g, ''))));
   const focusDistance = await page.locator('.life-story').evaluate(element => Math.abs(Number(element.dataset.focusWeek) - Number(element.dataset.currentWeek)));
   assert.ok(focusDistance <= 6, 'The focused week remains adjacent to the chronological present, including row edges');
   assert.equal(await page.locator('.life-story').getAttribute('data-theme'), desktop ? 'dark' : 'light');
   assert.equal(await page.locator('.life-story-paper').evaluate(element => getComputedStyle(element).backgroundColor), desktop ? 'rgb(17, 23, 20)' : 'rgb(247, 244, 236)');
+  if (desktop) assert.ok(Number(await page.locator('.life-story').getAttribute('data-grid-width')) > (reference ? 540 : 570), 'The desktop life panel uses the available screen height to make the weeks legible');
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.querySelector('.life-story-money').getBoundingClientRect().bottom < innerHeight), 'The enlarged grid and monetary panel fit in the viewport');
   if (!desktop) await page.setViewportSize({ width: 320, height: 844 });
   await page.clock.runFor(32);
   const counterLayout = await page.evaluate(() => {
@@ -93,6 +107,7 @@ try {
   assert.ok(geometry, 'The moving cells settle onto the real calendar with its exact paint and geometry');
   await page.clock.fastForward(600);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.settled === 'true');
+  assert.equal(await page.locator('.life-story-money').evaluate(element => getComputedStyle(element).opacity), '0', 'The monetary panel leaves before the calendar becomes interactive');
   const before = await page.screenshot({ path: screenshotPath('settled'), animations: 'disabled' });
   const todayRect = await page.locator('.calendar-days-grid [data-today-cell="true"]').boundingBox();
   await page.clock.fastForward(800);
@@ -117,7 +132,7 @@ try {
     }
     return total / count;
   }, { before: before.toString('base64'), after: after.toString('base64'), todayRect, hintRect });
-  assert.ok(difference < .5, `Closing the scene must not change the interface paint (mean channel difference: ${difference})`);
+  assert.ok(difference < .05, `Closing the scene must not change the interface paint (mean channel difference: ${difference})`);
   const first = page.getByRole('button', { name: 'Добавить первую запись', exact: true });
   await first.waitFor();
   await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.first-entry-whisper')).opacity) > .98);
