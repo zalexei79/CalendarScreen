@@ -1,0 +1,19 @@
+.first-run-product-type { margin: 4px 0 0; font-size: 9px; font-weight: 400; letter-spacing: .09em; color: #899d8e; }
+.first-run-product-heading { font-family: Georgia,'Times New Roman',serif; font-weight: 400; font-size: 36px; letter-spacing: -.045em; }
+.first-run-money-preview { --preview-ink: #bdc8bf; --preview-muted: #87988b; --preview-green: #a3c5ae; --preview-red: #d1a092; --preview-green-fill: #71978024; --preview-red-fill: #c6877820; --preview-today: #8db79b60; margin-left: 0; margin-right: 0; padding: 15px; border: 1px solid #81948622; border-radius: 18px; background: #81948607; color: var(--preview-ink); }
+.first-run-money-preview figcaption { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; color: var(--preview-muted); font-size: 10px; line-height: 16px; }
+.first-run-money-preview time { font-size: 11px; color: var(--preview-ink); }
+.first-run-preview-week { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 5px; margin-top: 12px; }
+.first-run-preview-week > span { display: grid; place-items: center; height: 30px; border: 1px solid #81948614; border-radius: 7px; background: #81948606; font-size: 10px; color: var(--preview-muted); }
+.first-run-preview-week [data-tone="income"] { background: var(--preview-green-fill); color: var(--preview-green); }
+.first-run-preview-week [data-tone="expense"] { background: var(--preview-red-fill); color: var(--preview-red); }
+.first-run-preview-week [data-today] { border-color: var(--preview-today); color: var(--preview-ink); }
+.first-run-preview-week [data-future] { opacity: .45; }
+.first-run-preview-entries { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 14px; }
+.first-run-preview-entries > div > span { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--preview-muted); }
+.first-run-preview-entries i { width: 4px; height: 4px; border-radius: 50%; background: #8db79b; }
+.first-run-preview-entries [data-tone="expense"] i { background: #c68778; }
+.first-run-preview-entries strong { display: block; margin-top: 5px; font-size: 16px; font-weight: 400; line-height: 20px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--preview-green); }
+.first-run-preview-entries [data-tone="expense"] strong { color: var(--preview-red); }
+.first-run-dialog[data-theme="light"] .first-run-money-preview:not(.first-run-preview-dark) { --preview-ink: #4e6154; --preview-muted: #7a877e; --preview-green: #51745d; --preview-red: #a06d5f; --preview-green-fill: #71978016; --preview-red-fill: #c6877816; --preview-today: #71978050; border-color: #64776920; background: #64776905; }
+@media (min-width: 640px) { .first-run-product-heading { font-size: 42px; } }

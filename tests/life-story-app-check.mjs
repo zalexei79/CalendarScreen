@@ -26,6 +26,12 @@ try {
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('http://calendar.test/');
   await page.clock.pauseAt(new Date('2026-10-05T13:00:00'));
+  await page.screenshot({ path: screenshotPath('language') });
+  if (!desktop) {
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.screenshot({ path: screenshotPath('language-narrow') });
+    await page.setViewportSize({ width: 390, height: 844 });
+  }
   const next = () => page.getByRole('button', { name: 'Увидеть мою историю', exact: true }).click();
   const choose = async () => {
     assert.equal(await page.getByRole('button', { name: 'Продолжить', exact: true }).count(), 0);
