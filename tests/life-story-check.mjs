@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { lifeWeeks, localDateValue, birthdayStorageKey, isOnboardingPreviewUser, lifeWeekRhythm, lifeMoneyEvents, lifeMoneyBeat, calendarMoneyEvents } from '../src/features/onboarding/lifeStoryModel.js';
+import { lifeWeeks, localDateValue, birthdayStorageKey, isOnboardingPreviewUser, lifeWeekRhythm, lifeMoneyEvents, reserveLifePresent, calendarMoneyEvents } from '../src/features/onboarding/lifeStoryModel.js';
 import { lifeCalendarMotion, LIFE_MOTION_END } from '../src/features/onboarding/lifeCalendarMotion.js';
 
 const today = new Date(2026, 9, 4);
@@ -31,13 +31,14 @@ const events = lifeMoneyEvents(rhythm, 'MDL');
 assert.ok(events.every(event => event.tone === rhythm[event.week].tone && event.amount > 0 && event.currency === 'MDL'));
 assert.ok(events.some(event => event.tone === 'income') && events.some(event => event.tone === 'expense'));
 for (const currency of ['USD', 'EUR', 'MDL', 'RUB', 'CNY']) {
-  const stream = Array.from({ length: 13 }, (_, beat) => lifeMoneyBeat(lifeMoneyEvents(rhythm, currency), 1200, beat + 30));
-  assert.ok(stream.every(event => event.currency === currency && event.week < 1200));
-  assert.ok(new Set(stream.map(event => event.amount)).size >= 10, 'A fast stream has varied amounts rather than a repeated number');
-  assert.equal(new Set(stream.map(event => event.tone)).size, 2);
-  assert.ok(Math.max(...stream.map(event => event.amount)) > Math.min(...stream.map(event => event.amount)) * 50, 'Small and large transactions share the same stream');
+  assert.ok(lifeMoneyEvents(rhythm, currency).every(event => event.currency === currency && event.amount > 0));
 }
-assert.equal(lifeMoneyBeat(events, 4 * 52, 3), null, 'The money stream waits for the first financial week');
+const sources = [1144, 1145, 1196, 1197, 1248, 1249];
+const reserved = reserveLifePresent(rhythm, sources, 1250);
+assert.ok(sources.every(week => reserved[week].tone === 'neutral'), 'The approaching days are empty from the beginning, not painted over at today');
+assert.ok(reserved.slice(1248, 1251).every(event => event.tone === 'neutral'));
+assert.ok(reserved.every((event, week) => sources.includes(week) || week >= 1248 && week <= 1250 || event === rhythm[week]), 'All surrounding historical financial weeks remain untouched');
+assert.deepEqual(rhythm, lifeWeekRhythm(rhythm.length, '1998-03-14'), 'Reserving the present never mutates the underlying history');
 const realEvents = calendarMoneyEvents([
   { id: 'expense', dateKey: '2026-10-03', pnl: -37.5, currency: 'EUR' },
   { id: 'income', dateKey: '2026-10-04', pnl: 280, currency: 'MDL' },
@@ -64,6 +65,6 @@ for (let time = 0; time <= LIFE_MOTION_END; time += 16) {
     assert.ok(Math.abs(frame.skin - previous.skin) < .01, 'Calendar paint never snaps onto neutral weeks');
   }
 }
-const overlappingMotion = lifeCalendarMotion(8450);
+const overlappingMotion = lifeCalendarMotion(12100);
 assert.ok(overlappingMotion.zoom > 0 && overlappingMotion.zoom < 1 && overlappingMotion.month > 0, 'The camera keeps moving as the calendar starts opening; there is no stop between phases');
 console.log('Life story: dates, leap years, DST, account isolation and preview account passed.');

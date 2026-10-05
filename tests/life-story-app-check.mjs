@@ -49,9 +49,17 @@ try {
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.calendarTarget === 'live');
   await page.mouse.move(0, 0);
   await page.clock.runFor(32);
-  await page.clock.fastForward(2200);
+  const seek = async time => {
+    const current = Number(await page.locator('.life-story').getAttribute('data-time'));
+    await page.clock.fastForward(Math.max(0, time - current));
+    await page.clock.runFor(32);
+  };
+  await seek(3500);
   assert.equal(await page.locator('.life-story').getAttribute('data-stage'), 'life');
-  assert.equal(await page.locator('.life-story-money').getAttribute('data-source'), 'illustration', 'Money appears with childhood events, before the later narrative title');
+  const money = page.locator('.life-story-money-note');
+  assert.equal(await money.getAttribute('data-source'), 'illustration', 'Money appears alongside the first childhood events');
+  assert.equal(await page.locator('.life-story-money').count(), 0, 'There is no separate monetary card competing with the weeks');
+  assert.equal(await page.locator('.life-story-scene .life-story-money-note').count(), 1);
   const earlyColors = await page.locator('.life-story-grid').evaluate(canvas => {
     const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
     let colored = 0;
@@ -60,31 +68,25 @@ try {
   });
   assert.ok(earlyColors > 50, 'Income and spending already color the counted weeks during the first scene');
   await page.screenshot({ path: screenshotPath('early'), animations: 'disabled' });
-  await page.evaluate(() => {
-    window.moneyBeats = [];
-    window.moneyDrums = [...document.querySelectorAll('.life-money-track')];
-    window.moneyCurrencyX = document.querySelector('.life-money-unit').getBoundingClientRect().x;
-    new MutationObserver(changes => { for (const change of changes) if (change.attributeName === 'aria-label') window.moneyBeats.push(change.target.getAttribute('aria-label')); }).observe(document.querySelector('.life-story-money strong'), { attributes: true });
-  });
-  await page.clock.runFor(800);
-  const beats = await page.evaluate(() => [...new Set(window.moneyBeats)]);
-  assert.ok(beats.length >= 1 && beats.length <= 3, 'Financial events have room to settle instead of flashing every 80ms');
-  assert.ok(beats.every(value => value.endsWith(currency)), 'Every illustrative amount uses the explicitly selected currency');
-  assert.ok(await page.evaluate(() => window.moneyDrums.every(node => node.isConnected) && Math.abs(document.querySelector('.life-money-unit').getBoundingClientRect().x - window.moneyCurrencyX) < .1), 'The same drums retain their momentum and the amount keeps its width across events');
+  const firstAmount = await money.locator('strong').getAttribute('aria-label');
+  const firstHeading = await page.locator('.life-story-heading h1').innerText();
+  assert.match(firstAmount, new RegExp(`^\\+.*${currency}$`));
+  await page.clock.runFor(1000);
+  assert.equal(await money.locator('strong').getAttribute('aria-label'), firstAmount, 'An amount stays still long enough to read');
+  assert.equal(await page.locator('.life-story-heading h1').innerText(), firstHeading, 'Counting and financial examples share one stable narrative');
   if (desktop) assert.equal(await page.locator('.life-story').evaluate(element => getComputedStyle(element, '::before').display), 'none', 'Dark mode has no grain texture');
-  await page.clock.fastForward(1700);
-  await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.stage === 'money');
+  await seek(6500);
+  assert.equal(await page.locator('.life-story').getAttribute('data-stage'), 'life');
   await page.waitForFunction(() => Number(document.querySelector('.life-story-counter strong')?.textContent.replace(/\D/g, '')) > 1200);
-  const money = page.locator('.life-story-money');
   assert.equal(await money.getAttribute('data-source'), 'illustration');
-  assert.match(await money.locator('strong').getAttribute('aria-label'), new RegExp(`^[+−].*${currency}$`));
+  assert.match(await money.locator('strong').getAttribute('aria-label'), new RegExp(`^−.*${currency}$`));
   assert.ok(Number(await money.getAttribute('data-week')) <= Number(await page.locator('.life-story-counter strong').innerText().then(text => text.replace(/\D/g, ''))));
   const focusDistance = await page.locator('.life-story').evaluate(element => Math.abs(Number(element.dataset.focusWeek) - Number(element.dataset.currentWeek)));
   assert.ok(focusDistance <= 6, 'The focused week remains adjacent to the chronological present, including row edges');
   assert.equal(await page.locator('.life-story').getAttribute('data-theme'), desktop ? 'dark' : 'light');
   assert.equal(await page.locator('.life-story-paper').evaluate(element => getComputedStyle(element).backgroundColor), desktop ? 'rgb(17, 23, 20)' : 'rgb(247, 244, 236)');
   if (desktop) assert.ok(Number(await page.locator('.life-story').getAttribute('data-grid-width')) > (reference ? 540 : 570), 'The desktop life panel uses the available screen height to make the weeks legible');
-  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.querySelector('.life-story-money').getBoundingClientRect().bottom < innerHeight), 'The enlarged grid and monetary panel fit in the viewport');
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.querySelector('.life-story-money-note').getBoundingClientRect().bottom < innerHeight), 'The grid and its integrated financial note fit in the viewport');
   if (!desktop) await page.setViewportSize({ width: 320, height: 844 });
   await page.clock.runFor(32);
   const counterLayout = await page.evaluate(() => {
@@ -98,20 +100,37 @@ try {
   assert.ok(number.bottom <= caption.top && caption.bottom + 12 < gridTop && caption.height <= 15 && number.left >= 0 && number.right <= width, `A four-digit counter and its caption fit above the grid, even at 320px: ${JSON.stringify(counterLayout)}`);
   if (!desktop) await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: screenshotPath('weeks'), animations: 'disabled' });
-  await page.clock.fastForward(2800);
+  await seek(8500);
+  assert.equal(await page.locator('.life-story').getAttribute('data-stage'), 'today');
+  assert.equal(await money.evaluate(element => getComputedStyle(element).opacity), '0', 'Illustrative money leaves before arriving at today');
+  const presentColors = await page.locator('.life-calendar-week').evaluateAll(cells => cells.map(cell => getComputedStyle(cell).backgroundColor));
+  await seek(9600);
+  assert.deepEqual(await page.locator('.life-calendar-week').evaluateAll(cells => cells.map(cell => getComputedStyle(cell).backgroundColor)), presentColors, 'Arriving at today never repaints the selected month over the history');
+  const todayOutline = await page.evaluate(() => {
+    const live = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')];
+    const index = live.findIndex(cell => cell.dataset.todayCell === 'true');
+    const element = document.querySelectorAll('.life-calendar-week')[index];
+    const shadow = getComputedStyle(element).boxShadow;
+    return { width: element.getBoundingClientRect().width, stroke: Number(shadow.match(/([\d.]+)px [\d.]+px [\d.]+px ([\d.]+)px/)?.[2] || 0) };
+  });
+  assert.ok(todayOutline.stroke > 0 && todayOutline.stroke <= todayOutline.width * .08, 'Today keeps a thin proportional outline rather than a solid square over historical cells');
+  await page.screenshot({ path: screenshotPath('today'), animations: 'disabled' });
+  await seek(11300);
   const coherentCrop = await page.evaluate(() => {
     const cells = [...document.querySelectorAll('.life-calendar-cell')].map(cell => cell.getBoundingClientRect());
     return cells.every((cell, index) => index % 7 === 0 || Math.abs(cell.y - cells[index - 1].y) < .1 && cell.x > cells[index - 1].x);
   });
   assert.ok(coherentCrop, 'Every source row remains contiguous, including a current week at the 52-column edge');
   assert.equal(await page.locator('.life-story-paper').evaluate(element => element.style.opacity), '1', 'No app chrome behind the life-grid zoom');
-  assert.deepEqual(await page.locator('.life-calendar-week').evaluateAll(cells => [...new Set(cells.map(cell => getComputedStyle(cell).backgroundColor))]), [desktop ? 'rgb(91, 98, 94)' : 'rgb(191, 184, 167)'], 'The entire approaching month is neutral; historical illustration is never presented as existing entries');
+  const approachingColors = await page.locator('.life-calendar-week').evaluateAll(cells => [...new Set(cells.map(cell => getComputedStyle(cell).backgroundColor))]);
+  const neutralColors = desktop ? ['rgb(91, 98, 94)', 'rgb(47, 53, 50)'] : ['rgb(191, 184, 167)', 'rgb(222, 217, 206)'];
+  assert.ok(approachingColors.every(color => neutralColors.includes(color)), 'The approaching month already contains only neutral past/future cells');
   await page.screenshot({ path: screenshotPath('approach'), animations: 'disabled' });
-  await page.clock.fastForward(2400);
+  await seek(14300);
   await page.waitForFunction(() => Number(document.querySelector('.life-story-paper')?.style.opacity || 1) < .97);
   assert.equal(await page.locator('.life-story').getAttribute('data-life-opacity'), '0');
   await page.screenshot({ path: screenshotPath('morph'), animations: 'disabled' });
-  await page.clock.fastForward(3000);
+  await seek(16800);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.stage === 'ready');
   const geometry = await page.evaluate(() => {
     const live = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')];
@@ -124,9 +143,9 @@ try {
     });
   });
   assert.ok(geometry, 'The moving cells settle onto the real calendar with its exact paint and geometry');
-  await page.clock.fastForward(900);
+  await seek(17900);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.settled === 'true');
-  assert.equal(await page.locator('.life-story-money').evaluate(element => getComputedStyle(element).opacity), '0', 'The monetary panel leaves before the calendar becomes interactive');
+  assert.equal(await money.evaluate(element => getComputedStyle(element).opacity), '0', 'The financial note leaves before the calendar becomes interactive');
   const before = await page.screenshot({ path: screenshotPath('settled'), animations: 'disabled' });
   const todayRect = await page.locator('.calendar-days-grid [data-today-cell="true"]').boundingBox();
   await page.clock.fastForward(800);
