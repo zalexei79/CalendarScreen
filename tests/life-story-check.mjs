@@ -34,10 +34,10 @@ for (const currency of ['USD', 'EUR', 'MDL', 'RUB', 'CNY']) {
   const events = lifeMoneyEvents(rhythm, currency);
   assert.ok(events.every(event => event.currency === currency && event.amount > 0));
   const flow = lifeMoneyFlow(events, 1490);
-  assert.ok(flow.length >= 7 && new Set(flow.map(event => event.amount)).size >= 6, 'A stream of varied individual transactions conveys passing money');
+  assert.ok(flow.length >= 15 && flow.length <= 20 && new Set(flow.map(event => event.amount)).size === flow.length, '15–20 distinct amounts convey a lifetime of individual money events');
   assert.ok(flow.some(event => event.tone === 'income') && flow.some(event => event.tone === 'expense'));
-  assert.ok(flow.every(event => event.currency === currency && event.start < 5500 && event.duration === 300));
-  assert.ok(flow.every((event, index) => !index || Math.abs(event.start - flow[index - 1].start - 400) < .01), 'The fixed window has a regular cadence, with a soft exchange and a brief hold');
+  assert.ok(flow.every(event => event.currency === currency && event.start <= 5350 && event.duration > 0 && event.duration <= 120));
+  assert.ok(flow.every((event, index) => !index || event.start - flow[index - 1].start >= event.duration), 'An amount completes its soft exchange before the next one arrives');
   for (const event of flow) {
     const t = event.start / 8000;
     const filled = Math.floor(1490 * (t < .5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2));
@@ -72,26 +72,27 @@ for (let time = 0; time <= LIFE_MOTION_END; time += 16) {
   if (frame.handoff > 0) assert.equal(frame.month, 1, 'Swap to the live calendar only after the shared grid has landed');
   if (time >= 16) {
     const previous = lifeCalendarMotion(time - 16);
-    assert.ok(Math.abs(frame.paperOpacity - previous.paperOpacity) < .013, 'The application lighting changes gradually throughout the morph');
-    assert.ok(Math.abs(frame.skin - previous.skin) < .013, 'Calendar paint never snaps onto neutral weeks');
+    assert.ok(Math.abs(frame.paperOpacity - previous.paperOpacity) < .018, 'The application lighting changes by less than 1.8% per frame throughout the morph');
+    assert.ok(Math.abs(frame.skin - previous.skin) < .014, 'Calendar paint never snaps onto neutral weeks');
   }
 }
-const overlappingMotion = lifeCalendarMotion(10900);
+const overlappingMotion = lifeCalendarMotion(10000);
 assert.ok(overlappingMotion.zoom > 0 && overlappingMotion.zoom < 1 && overlappingMotion.month > 0, 'The camera keeps moving as the calendar starts opening; there is no stop between phases');
-for (const width of [320, 390, 1440]) for (const cropCol of [0, 45]) {
+for (const width of [320, 390, 1440]) for (const cropCol of [0, 45]) for (const compactAspect of [1, 1.8]) {
   const unit = Math.min((width - 84) / 52, 12);
   const gridLeft = (width - unit * 52) / 2;
   const compactPitch = (Math.min(width - 48, 820) * .9) / 7;
   for (let time = 8650; time <= 11250; time += 16) {
     const motion = lifeCalendarMotion(time);
-    const frame = lifeCameraFrame({ gridLeft, gridTop: 310, unit, cropCol, cropRow: 27, monthRows: 5, focusX: width / 2, focusY: 430, compactPitch }, motion);
+    const frame = lifeCameraFrame({ gridLeft, gridTop: 310, unit, cropCol, cropRow: 27, monthRows: 5, focusX: width / 2, focusY: 430, compactPitch, compactAspect }, motion);
     const left = frame.originX + cropCol * unit * frame.scale;
     const right = left + unit * 7 * frame.scale;
     assert.ok(left >= 12 && right <= width - 12, 'The camera keeps the month inside the viewport even when the present begins at either edge');
     if (motion.lifeOpacity < .01) {
       assert.ok(right - left >= Math.min(width - 48, 820) * .7, 'The life grid only leaves once the calendar has enough presence to fill the scene');
-      const center = frame.originY + (27 + 2.5) * unit * frame.scale;
+      const center = frame.originY + (27 + 2.5) * unit * frame.scaleY;
       assert.ok(Math.abs(center - 430) < 1, 'The month is already centered when its surroundings disappear');
+      if (compactAspect > 1) assert.ok(frame.scaleY / frame.scale > 1.7, 'The crop already has the taller proportions of calendar days as the life grid leaves');
     }
   }
 }

@@ -6,28 +6,30 @@ const mix = (from, to, value) => from + (to - from) * value;
 // Center and expand a contiguous crop in one movement, then reveal its UI.
 // The dense life grid and the app never occupy the same visible frame.
 export const LIFE_COUNT_END = 8000;
-export const LIFE_MOTION_END = 13800;
+export const LIFE_MOTION_END = 13250;
 export function lifeCalendarMotion(time) {
   return {
-    zoom: progress(time, 8900, 2350),
-    reframe: progress(time, 8650, 1700),
-    month: progress(time, 9700, 3400),
-    lifeOpacity: 1 - progress(time, 9450, 1200),
-    skin: progress(time, 10650, 2450),
-    paperOpacity: 1 - progress(time, 10650, 2450),
-    handoff: progress(time, 13100, 500),
-    ready: time >= 13100,
-    settled: time >= 13600,
+    zoom: progress(time, 8650, 1800),
+    reframe: progress(time, 8650, 1400),
+    month: progress(time, 9500, 3050),
+    lifeOpacity: 1 - progress(time, 9400, 850),
+    skin: progress(time, 10250, 2300),
+    // The month title and controls emerge before the days finish taking paint.
+    paperOpacity: 1 - progress(time, 10250, 1800),
+    handoff: progress(time, 12550, 500),
+    ready: time >= 12550,
+    settled: time >= 13050,
   };
 }
 
 // Move the crop's screen position, rather than scaling its distance from the
 // camera. Its center stays on this path even when it starts at a grid edge.
-export function lifeCameraFrame({ gridLeft, gridTop, unit, cropCol, cropRow, monthRows, focusX, focusY, compactPitch }, motion) {
+export function lifeCameraFrame({ gridLeft, gridTop, unit, cropCol, cropRow, monthRows, focusX, focusY, compactPitch, compactAspect = 1 }, motion) {
   const cropX = (cropCol + 3.5) * unit;
   const cropY = (cropRow + monthRows / 2) * unit;
   const scale = mix(1, compactPitch / unit, motion.zoom);
+  const scaleY = scale * mix(1, compactAspect, motion.zoom);
   const centerX = mix(gridLeft + cropX, focusX, motion.reframe);
   const centerY = mix(gridTop + cropY, focusY, motion.reframe);
-  return { originX: centerX - cropX * scale, originY: centerY - cropY * scale, scale };
+  return { originX: centerX - cropX * scale, originY: centerY - cropY * scaleY, scale, scaleY };
 }

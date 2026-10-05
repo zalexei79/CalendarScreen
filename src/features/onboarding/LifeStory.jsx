@@ -41,6 +41,7 @@ const MONEY_LEGEND = {
 };
 const FIRST_ENTRY = { ru: 'Добавить первую запись', en: 'Add your first entry', ro: 'Adaugă prima înregistrare', zh: '添加第一条记录' };
 const RECORDED = { ru: 'Из твоего календаря', en: 'From your calendar', ro: 'Din calendarul tău', zh: '来自你的日历' };
+const MONEY_EXAMPLES = { ru: 'Примеры отдельных сумм', en: 'Examples of individual amounts', ro: 'Exemple de sume individuale', zh: '单笔收支示例' };
 const MONEY_QUESTION = {
   ru: ['А ты знаешь, где эти деньги сейчас?', 'Сделай свою первую запись.', 'Сделай свою первую запись.\nНачни видеть, куда уходят деньги.', 'Деньги приходили. Деньги уходили.'],
   en: ['Do you know where that money is now?', 'Create your first entry.', 'Create your first entry.\nStart seeing where your money goes.', 'Money came in. Money went out.'],
@@ -138,7 +139,8 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     const moneyNode = moneyArea.querySelector('.life-money-value');
     const currentValue = moneyNode.querySelector('.life-money-current');
     const oldValue = moneyNode.querySelector('.life-money-previous');
-    const transactionLabel = event => `${MONEY_LEGEND[lang][event.tone === 'income' ? 1 : 2]}${event.source === 'illustration' ? ` · ${MONEY_LEGEND[lang][3].toLowerCase()}` : ''}`;
+    const moneyLabel = moneyArea.querySelector('.life-money-label');
+    moneyLabel.textContent = recorded.length ? RECORDED[lang] : MONEY_EXAMPLES[lang];
     const formatAmount = event => `${event.tone === 'income' ? '+' : '−'}${event.amount.toLocaleString(locale, { maximumFractionDigits: 2 })}`;
     story.dataset.currentWeek = String(current);
     story.dataset.focusWeek = String(sourceIndices[todayIndex]);
@@ -223,7 +225,8 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       story.dataset.gridTop = String(gridTop + (gridSpace - gridHeight) / 2);
       story.dataset.gridWidth = String(gridWidth);
       // The hero fills the middle of the phone before the surrounding grid leaves.
-      const compactPitch = Math.min(scene.width * .9 / 7, height * .44 / monthRows);
+      const compactAspect = hasCalendar ? Math.max(1, Math.min(2, targets[todayIndex].height / targets[todayIndex].width)) : 1.7;
+      const compactPitch = Math.min(scene.width * .98 / 7, height * .62 / monthRows / compactAspect);
       const morph = motion.month;
       const fade = motion.lifeOpacity;
       const paper = hasCalendar ? motion.paperOpacity : 1;
@@ -239,11 +242,11 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       if (motion.settled) story.dataset.settled = 'true';
       else delete story.dataset.settled;
       const centerX = scene.left + scene.width / 2;
-      const { originX, originY, scale } = lifeCameraFrame({
+      const { originX, originY, scale, scaleY: cameraScaleY } = lifeCameraFrame({
         gridLeft: centerX - gridWidth / 2,
         gridTop: gridTop + (gridSpace - gridHeight) / 2,
-        unit, cropCol, cropRow, monthRows, compactPitch,
-        focusX: centerX, focusY: height * .51,
+        unit, cropCol, cropRow, monthRows, compactPitch, compactAspect,
+        focusX: centerX, focusY: hasCalendar ? (targets[0].y + targets.at(-1).y + targets.at(-1).height) / 2 : height * .54,
       }, motion);
       const moneyExit = 1 - ease(clamp((time - 8200) / 450));
       const questionProgress = ease(clamp((time - 5500) / 700));
@@ -260,11 +263,9 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         if (moneyNode.dataset.start !== String(event.start)) {
           currentValue.querySelector('.life-money-number').textContent = formatAmount(event);
           currentValue.querySelector('small').textContent = event.currency;
-          currentValue.querySelector('.life-money-label').textContent = transactionLabel(event);
           currentValue.dataset.tone = event.tone;
           oldValue.querySelector('.life-money-number').textContent = previous ? formatAmount(previous) : '—';
           oldValue.querySelector('small').textContent = previous?.currency || '';
-          oldValue.querySelector('.life-money-label').textContent = previous ? transactionLabel(previous) : '';
           oldValue.dataset.tone = previous?.tone || 'neutral';
           moneyNode.dataset.start = String(event.start);
           moneyNode.dataset.source = event.source;
@@ -275,22 +276,23 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         if (questionProgress < 1 && moneyExit > 0) moneyNode.dataset.active = 'true';
         else delete moneyNode.dataset.active;
         currentValue.style.opacity = String(progress);
-        currentValue.style.transform = `translateY(${2 * (1 - progress)}px)`;
+        currentValue.style.transform = `translateY(${1 * (1 - progress)}px)`;
         oldValue.style.opacity = String(1 - progress);
-        oldValue.style.transform = `translateY(${-2 * progress}px)`;
+        oldValue.style.transform = `translateY(${-1 * progress}px)`;
       } else delete moneyNode.dataset.active;
       context.clearRect(0, 0, width, height);
       const size = unit * (width >= 760 ? .74 : .65);
       if (fade > .001) {
         context.save();
         context.translate(originX, originY);
-        context.scale(scale, scale);
+        context.scale(scale, cameraScaleY);
         context.globalAlpha = fade;
         const pitch = unit * scale;
+        const pitchY = unit * cameraScaleY;
         const left = Math.max(0, Math.floor(-originX / pitch));
         const right = Math.min(52, Math.ceil((width - originX) / pitch));
-        const top = Math.max(0, Math.floor(-originY / pitch));
-        const bottom = Math.min(rows, Math.ceil((height - originY) / pitch));
+        const top = Math.max(0, Math.floor(-originY / pitchY));
+        const bottom = Math.min(rows, Math.ceil((height - originY) / pitchY));
         for (let row = top; row < bottom; row++) for (let col = left; col < right; col++) {
           const i = row * 52 + col;
           if (selected.has(i)) continue;
@@ -303,13 +305,14 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         }
         context.restore();
       }
+      const daySize = unit * mix(width >= 760 ? .74 : .65, .91, motion.zoom);
       targets.forEach((target, index) => {
         const source = sourceIndices[index];
         const isToday = index === todayIndex;
-        const x = mix(originX + (source % 52 * unit + (unit - size) / 2) * scale, target.x, morph);
-        const y = mix(originY + (Math.floor(source / 52) * unit + (unit - size) / 2) * scale, target.y, morph);
-        const w = mix(size * scale, target.width, morph);
-        const h = mix(size * scale, target.height, morph);
+        const x = mix(originX + (source % 52 * unit + (unit - daySize) / 2) * scale, target.x, morph);
+        const y = mix(originY + (Math.floor(source / 52) * unit + (unit - daySize) / 2) * cameraScaleY, target.y, morph);
+        const w = mix(daySize * scale, target.width, morph);
+        const h = mix(daySize * cameraScaleY, target.height, morph);
         const age = time - weekTimes[source];
         const color = weekColor(source, filled, ease(clamp(age / 450)), rhythm, palette, ease(clamp(age / 180)));
         if (target.bridge) {
@@ -396,9 +399,10 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       <div className="life-money-amounts" aria-hidden="true">
         <p className="life-money-caption">{question[3]}</p>
         <div className="life-money-value">
-          <div className="life-money-previous"><span className="life-money-number">—</span><small /><span className="life-money-label" /></div>
-          <div className="life-money-current"><span className="life-money-number">—</span><small /><span className="life-money-label" /></div>
+          <div className="life-money-previous"><span className="life-money-number">—</span><small /></div>
+          <div className="life-money-current"><span className="life-money-number">—</span><small /></div>
         </div>
+        <span className="life-money-label">{MONEY_EXAMPLES[lang]}</span>
       </div>
       <div className="life-money-question" aria-hidden={stage !== 'question'}><p>{question[0]}</p><span>{question[1]}</span></div>
     </div>

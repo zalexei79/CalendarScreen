@@ -6,7 +6,7 @@
 .life-money-area { position: relative; z-index: 2; flex: none; width: min(100%,440px); height: 72px; margin: 8px auto 0; pointer-events: none; }
 .life-money-amounts { position: absolute; inset: 0; text-align: center; }
 .life-money-caption { color: var(--muted); font-size: 10px; line-height: 16px; }
-.life-money-value { position: relative; height: 46px; margin-top: 7px; font-size: 23px; line-height: 29px; font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: -.035em; }
+.life-money-value { position: relative; height: 29px; margin-top: 7px; font-size: 23px; line-height: 29px; font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: -.035em; }
 .life-money-value > div { position: absolute; inset: 0; color: var(--muted); white-space: nowrap; will-change: transform, opacity; }
 .life-money-value [data-tone="income"] { color: var(--green); }
 .life-money-value [data-tone="expense"] { color: #a56553; }
