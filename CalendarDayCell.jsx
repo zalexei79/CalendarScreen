@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Clock3 } from 'lucide-react';
+import { Clock3, Plus } from 'lucide-react';
 import './CalendarDayCell.css';
 
 export default function CalendarDayCell({
@@ -7,6 +7,8 @@ export default function CalendarDayCell({
   proView = false,
   hasNote = false,
   noteLabel,
+  firstEntryLabel,
+  firstEntryDayLabel,
   planLabel = 'Планы',
   cell,
   cellIndex,
@@ -95,6 +97,9 @@ export default function CalendarDayCell({
     <>
       <button
         data-today-cell={cell.isToday ? 'true' : undefined}
+        data-first-entry={cell.isToday && firstEntryLabel ? 'true' : undefined}
+        aria-label={cell.isToday && firstEntryLabel ? firstEntryLabel : undefined}
+        aria-describedby={cell.isToday && firstEntryLabel ? 'first-calendar-entry-hint' : undefined}
         onClick={onSelect}
         style={{ ...heatmapStyle, ...proStyle }}
         className={[
@@ -191,6 +196,7 @@ export default function CalendarDayCell({
           )}
           </div>
         )}
+        {cell.isToday && firstEntryLabel && !hasTrades && <span className="first-calendar-entry-target" aria-hidden="true"><Plus size={18} /><small>{firstEntryDayLabel}</small></span>}
       </button>
     </>
   );

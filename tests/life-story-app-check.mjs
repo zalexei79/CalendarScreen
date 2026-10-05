@@ -57,10 +57,11 @@ try {
   };
   await seek(3500);
   assert.equal(await page.locator('.life-story').getAttribute('data-stage'), 'life');
-  const money = page.locator('.life-story-money-note');
-  assert.equal(await money.getAttribute('data-source'), 'illustration', 'Money appears alongside the first childhood events');
+  const money = page.locator('.life-money-flow-event[data-active="true"]');
+  assert.ok(await money.count() >= 1 && await money.count() <= 3, 'A limited flow appears alongside the first childhood events');
+  assert.ok((await money.evaluateAll(nodes => nodes.map(node => node.dataset.source))).every(source => source === 'illustration'));
   assert.equal(await page.locator('.life-story-money').count(), 0, 'There is no separate monetary card competing with the weeks');
-  assert.equal(await page.locator('.life-story-scene .life-story-money-note').count(), 1);
+  assert.equal(await page.locator('.life-story-money-note').count(), 0, 'Money no longer sits in a separate footer counter');
   const earlyColors = await page.locator('.life-story-grid').evaluate(canvas => {
     const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
     let colored = 0;
@@ -69,25 +70,31 @@ try {
   });
   assert.ok(earlyColors > 50, 'Income and spending already color the counted weeks during the first scene');
   await page.screenshot({ path: screenshotPath('early'), animations: 'disabled' });
-  const firstAmount = await money.locator('strong').getAttribute('aria-label');
   const firstHeading = await page.locator('.life-story-heading h1').innerText();
-  assert.match(firstAmount, new RegExp(`^\\+.*${currency}$`));
+  await page.evaluate(() => {
+    window.moneyBeats = [];
+    window.moneyNodes = [...document.querySelectorAll('.life-money-flow-event')];
+    new MutationObserver(changes => { for (const change of changes) if (change.attributeName === 'aria-label') window.moneyBeats.push(change.target.textContent); }).observe(document.querySelector('.life-money-flow'), { attributes: true, subtree: true });
+  });
   await page.clock.runFor(1000);
-  assert.equal(await money.locator('strong').getAttribute('aria-label'), firstAmount, 'An amount stays still long enough to read');
+  const beats = await page.evaluate(() => window.moneyBeats);
+  assert.ok(beats.length >= 6 && beats.length <= 8, 'Several transactions flow each second without replacing a single flashing number');
+  assert.ok(beats.every(amount => amount.endsWith(currency)), 'Every transaction uses the selected currency');
+  assert.ok(await page.evaluate(() => window.moneyNodes.every(node => node.isConnected)), 'A fixed pool of labels avoids mounting new UI each frame');
   assert.equal(await page.locator('.life-story-heading h1').innerText(), firstHeading, 'Counting and financial examples share one stable narrative');
   if (dark) assert.equal(await page.locator('.life-story').evaluate(element => getComputedStyle(element, '::before').display), 'none', 'Dark mode has no grain texture');
   await seek(6500);
-  assert.equal(await page.locator('.life-story').getAttribute('data-stage'), 'life');
+  assert.equal(await page.locator('.life-story').getAttribute('data-stage'), 'question');
+  assert.equal(await page.locator('.life-story-heading h1').innerText(), 'А ты знаешь, куда ушли эти деньги?');
   await page.waitForFunction(() => Number(document.querySelector('.life-story-counter strong')?.textContent.replace(/\D/g, '')) > 1200);
-  assert.equal(await money.getAttribute('data-source'), 'illustration');
-  assert.match(await money.locator('strong').getAttribute('aria-label'), new RegExp(`^−.*${currency}$`));
-  assert.ok(Number(await money.getAttribute('data-week')) <= Number(await page.locator('.life-story-counter strong').innerText().then(text => text.replace(/\D/g, ''))));
+  const filled = Number(await page.locator('.life-story-counter strong').innerText().then(text => text.replace(/\D/g, '')));
+  assert.ok((await money.evaluateAll(nodes => nodes.map(node => Number(node.dataset.week)))).every(week => week <= filled));
   const focusDistance = await page.locator('.life-story').evaluate(element => Math.abs(Number(element.dataset.focusWeek) - Number(element.dataset.currentWeek)));
   assert.ok(focusDistance <= 6, 'The focused week remains adjacent to the chronological present, including row edges');
   assert.equal(await page.locator('.life-story').getAttribute('data-theme'), dark ? 'dark' : 'light');
   assert.equal(await page.locator('.life-story-paper').evaluate(element => getComputedStyle(element).backgroundColor), dark ? 'rgb(17, 23, 20)' : 'rgb(247, 244, 236)');
   if (desktop) assert.ok(Number(await page.locator('.life-story').getAttribute('data-grid-width')) > (reference ? 540 : 570), 'The desktop life panel uses the available screen height to make the weeks legible');
-  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.querySelector('.life-story-money-note').getBoundingClientRect().bottom < innerHeight), 'The grid and its integrated financial note fit in the viewport');
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && [...document.querySelectorAll('.life-money-flow-event[data-active="true"]')].every(node => { const r = node.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.top >= Number(document.querySelector('.life-story').dataset.gridTop) && r.bottom < innerHeight; })), 'The flowing transactions stay inside the calendar scene');
   if (!desktop) await page.setViewportSize({ width: 320, height: 844 });
   await page.clock.runFor(32);
   const counterLayout = await page.evaluate(() => {
@@ -100,10 +107,11 @@ try {
   const { number, caption, gridTop, width } = counterLayout;
   assert.ok(number.bottom <= caption.top && caption.bottom + 12 < gridTop && caption.height <= 15 && number.left >= 0 && number.right <= width, `A four-digit counter and its caption fit above the grid, even at 320px: ${JSON.stringify(counterLayout)}`);
   if (!desktop) await page.setViewportSize({ width: 390, height: 844 });
+  await page.clock.runFor(700);
   await page.screenshot({ path: screenshotPath('weeks'), animations: 'disabled' });
   await seek(8500);
   assert.equal(await page.locator('.life-story').getAttribute('data-stage'), 'today');
-  assert.equal(await money.evaluate(element => getComputedStyle(element).opacity), '0', 'Illustrative money leaves before arriving at today');
+  assert.equal(await money.count(), 0, 'Illustrative money leaves before arriving at today');
   const presentColors = await page.locator('.life-calendar-week').evaluateAll(cells => cells.map(cell => getComputedStyle(cell).backgroundColor));
   await seek(9150);
   assert.deepEqual(await page.locator('.life-calendar-week').evaluateAll(cells => cells.map(cell => getComputedStyle(cell).backgroundColor)), presentColors, 'Arriving at today never repaints the selected month over the history');
@@ -122,7 +130,7 @@ try {
     const cells = [...document.querySelectorAll('.life-calendar-cell')].map(cell => cell.getBoundingClientRect());
     return cells.every((cell, index) => index % 7 === 0 || Math.abs(cell.y - cells[index - 1].y) < .1 && cell.x > cells[index - 1].x);
   });
-  assert.ok(coherentCrop, 'Every source row remains contiguous, including a current week at the 52-column edge');
+  assert.ok(coherentCrop, `Every source row remains contiguous, including a current week at the 52-column edge: ${JSON.stringify(await page.locator('.life-calendar-cell').evaluateAll(cells => cells.map(cell => { const r = cell.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; })))}`);
   assert.equal(await page.locator('.life-story-paper').evaluate(element => element.style.opacity), '1', 'No app chrome behind the life-grid zoom');
   const approachingColors = await page.locator('.life-calendar-week').evaluateAll(cells => [...new Set(cells.map(cell => getComputedStyle(cell).backgroundColor))]);
   const neutralColors = dark ? ['rgb(91, 98, 94)', 'rgb(47, 53, 50)'] : ['rgb(191, 184, 167)', 'rgb(222, 217, 206)'];
@@ -154,13 +162,13 @@ try {
   assert.ok(geometry, 'The moving cells settle onto the real calendar with its exact paint and geometry');
   await seek(13650);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.settled === 'true');
-  assert.equal(await money.evaluate(element => getComputedStyle(element).opacity), '0', 'The financial note leaves before the calendar becomes interactive');
+  assert.equal(await money.count(), 0, 'The financial flow leaves before the calendar becomes interactive');
   const before = await page.screenshot({ path: screenshotPath('settled'), animations: 'disabled' });
   const todayRect = await page.locator('.calendar-days-grid [data-today-cell="true"]').boundingBox();
   await page.clock.fastForward(800);
   await page.waitForFunction(() => !document.querySelector('.life-story'));
-  const after = await page.screenshot({ animations: 'disabled' });
-  const hintRect = await page.locator('.first-entry-whisper').boundingBox();
+  const after = await page.screenshot({ path: screenshotPath('after'), animations: 'disabled' });
+  const hintRect = await page.locator('.first-calendar-entry-hint').boundingBox();
   const difference = await page.evaluate(async ({ before, after, todayRect, hintRect }) => {
     const pixels = async data => {
       const img = new Image(); img.src = `data:image/png;base64,${data}`; await img.decode();
@@ -169,32 +177,39 @@ try {
       return { data: context.getImageData(0, 0, img.width, img.height).data, width: img.width, height: img.height };
     };
     const a = await pixels(before), b = await pixels(after);
-    let total = 0, count = 0;
+    let total = 0, count = 0, max = 0;
     for (let y = 0; y < a.height; y++) for (let x = 0; x < a.width; x++) {
       // Today begins a requested gentle pulse; the entry hint also appears later.
       if (x > todayRect.x - 24 && x < todayRect.x + todayRect.width + 24 && y > todayRect.y - 24 && y < todayRect.y + todayRect.height + 24) continue;
       // Include the guide's soft shadow; its entrance is intentional after handoff.
       if (hintRect && x > hintRect.x - 24 && x < hintRect.x + hintRect.width + 24 && y > hintRect.y - 24 && y < hintRect.y + hintRect.height + 24) continue;
       const index = (y * a.width + x) * 4;
-      for (let channel = 0; channel < 3; channel++) { total += Math.abs(a.data[index + channel] - b.data[index + channel]); count++; }
+      for (let channel = 0; channel < 3; channel++) { const delta = Math.abs(a.data[index + channel] - b.data[index + channel]); total += delta; max = Math.max(max, delta); count++; }
     }
-    return total / count;
+    return { mean: total / count, max };
   }, { before: before.toString('base64'), after: after.toString('base64'), todayRect, hintRect });
-  assert.ok(difference < .05, `Closing the scene must not change the interface paint (mean channel difference: ${difference})`);
-  const first = page.getByRole('button', { name: 'Добавить первую запись', exact: true });
+  // Removing a compositing layer rounds some gradients by 1–3 RGB levels.
+  // Any content movement or changed paint produces much larger differences.
+  assert.ok(difference.mean < .2 && difference.max <= 3, `Closing the scene must preserve interface paint and geometry: ${JSON.stringify(difference)}`);
+  const first = page.locator('.calendar-section [data-today-cell="true"]');
   await first.waitFor();
-  await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.first-entry-whisper')).opacity) > .98);
+  assert.equal(await page.locator('.first-entry-whisper').count(), 0, 'No floating guidance can hide behind the navigation dock');
   assert.ok(await page.locator('[data-today-cell="true"]').isVisible());
   await page.screenshot({ path: screenshotPath('calendar') });
-  await page.getByText('Твой денежный календарь', { exact: true }).waitFor();
+  await page.getByText('Запиши первую трату.', { exact: true }).waitFor();
+  const hint = await page.locator('.first-calendar-entry-hint').boundingBox();
+  const dock = await page.locator('.history-fab').boundingBox();
+  assert.ok(hint.y + hint.height < dock.y, 'The guide lives above the calendar, safely away from the dock');
+  assert.ok(await first.locator('.first-calendar-entry-target').isVisible(), 'Today itself offers the native plus action');
   assert.ok(await page.getByRole('button', { name: 'Осмотрюсь сам', exact: true }).isVisible(), 'The guide leaves an explicit way to explore freely');
   await first.click();
   await page.getByRole('button', { name: 'Доходы', exact: true }).waitFor();
+  assert.match(await page.getByRole('button', { name: 'Расходы', exact: true }).getAttribute('class'), /bg-red/, 'The first-expense invitation opens the expense form, while income remains available');
   await page.getByText('Укажи сумму и сохрани — запись появится в сегодняшнем дне.', { exact: true }).waitFor();
   await page.clock.runFor(750);
   await page.screenshot({ path: screenshotPath('entry'), animations: 'disabled' });
   assert.equal(await page.getByText('Что уже произошло сегодня?', { exact: true }).count(), 0);
   assert.equal(await page.getByText('Выбери один вариант. Я подготовлю форму, а ты дополнишь её как хочешь.', { exact: true }).count(), 0);
   assert.deepEqual(errors, []);
-  console.log(`Production app (${desktop ? 'desktop' : 'mobile'} ${dark ? 'dark' : 'light'}): centered crop, stable cell layout, exact calendar geometry, invisible removal (pixel difference ${difference.toFixed(3)}), current-day highlight and ordinary entry form passed.`);
+  console.log(`Production app (${desktop ? 'desktop' : 'mobile'} ${dark ? 'dark' : 'light'}): money flow in the chosen currency, native today action, stable cell layout, exact calendar geometry and removal (mean RGB difference ${difference.mean.toFixed(3)}, max ${difference.max}) passed.`);
 } finally { await browser.close(); }

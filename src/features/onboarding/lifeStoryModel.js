@@ -72,14 +72,37 @@ export function lifeWeekRhythm(count, seed = '') {
 
 // These are illustrative amounts, tied to the very same weeks as the colors.
 export function lifeMoneyEvents(rhythm, currency = 'USD') {
-  const [small, earning] = ({ USD: [12, 240], EUR: [10, 210], MDL: [80, 3200], RUB: [400, 18000], CNY: [30, 1800] })[currency] || [12, 240];
+  const [small, earning] = ({ USD: [36, 1800], EUR: [30, 1600], MDL: [550, 18000], RUB: [1800, 85000], CNY: [250, 12000] })[currency] || [36, 1800];
   return rhythm.flatMap((event, week) => {
     if (event.tone === 'neutral') return [];
     const maturity = Math.min(1, Math.max(.08, week / 52 / 22));
     const variation = .4 + ((week * 17) % 31) / 20;
-    const amount = Math.max(1, Math.round((event.tone === 'income' ? earning * maturity : small * variation * (.5 + maturity)) * event.strength));
+    const childhood = week < 16 * 52;
+    const income = childhood ? small * (1 + variation * 3) : earning * maturity * variation;
+    const purchase = !childhood && week % 13 === 0 ? 8 + week % 29 : 1;
+    const amount = Math.max(1, Math.round((event.tone === 'income' ? income : small * variation * (.5 + maturity) * purchase) * event.strength));
     return [{ week, tone: event.tone, amount, currency, source: 'illustration' }];
   });
+}
+
+// A limited stream follows weeks already counted. Each amount belongs to its
+// colored week; it is an example transaction, never a lifetime balance.
+export function lifeMoneyFlow(events, elapsedWeeks, duration = 8000) {
+  if (!events.length || !elapsedWeeks) return [];
+  const first = events.find(event => event.week < elapsedWeeks);
+  if (!first) return [];
+  const ratio = (first.week + 1) / elapsedWeeks;
+  const inverse = ratio < .5 ? Math.cbrt(ratio / 4) : 1 - Math.cbrt((1 - ratio) / 4);
+  const result = [];
+  let index = 0;
+  for (let start = inverse * duration + 200; start <= duration - 450; start += 150) {
+    const t = Math.min(1, start / duration);
+    const filled = Math.floor(elapsedWeeks * (t < .5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2));
+    while (index + 1 < events.length && events[index + 1].week < filled) index++;
+    if (events[index].week >= filled) continue;
+    result.push({ ...events[index], start, duration: 450, lane: result.length % 3 });
+  }
+  return result;
 }
 
 // The empty month is already part of the original lattice. Never repaint

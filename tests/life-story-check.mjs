@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { lifeWeeks, localDateValue, birthdayStorageKey, isOnboardingPreviewUser, lifeWeekRhythm, lifeMoneyEvents, reserveLifePresent, calendarMoneyEvents } from '../src/features/onboarding/lifeStoryModel.js';
+import { lifeWeeks, localDateValue, birthdayStorageKey, isOnboardingPreviewUser, lifeWeekRhythm, lifeMoneyEvents, lifeMoneyFlow, reserveLifePresent, calendarMoneyEvents } from '../src/features/onboarding/lifeStoryModel.js';
 import { lifeCalendarMotion, lifeCameraFrame, LIFE_MOTION_END } from '../src/features/onboarding/lifeCalendarMotion.js';
 
 const today = new Date(2026, 9, 4);
@@ -31,7 +31,17 @@ const events = lifeMoneyEvents(rhythm, 'MDL');
 assert.ok(events.every(event => event.tone === rhythm[event.week].tone && event.amount > 0 && event.currency === 'MDL'));
 assert.ok(events.some(event => event.tone === 'income') && events.some(event => event.tone === 'expense'));
 for (const currency of ['USD', 'EUR', 'MDL', 'RUB', 'CNY']) {
-  assert.ok(lifeMoneyEvents(rhythm, currency).every(event => event.currency === currency && event.amount > 0));
+  const events = lifeMoneyEvents(rhythm, currency);
+  assert.ok(events.every(event => event.currency === currency && event.amount > 0));
+  const flow = lifeMoneyFlow(events, 1490);
+  assert.ok(flow.length > 25 && new Set(flow.map(event => event.amount)).size > 20, 'Many distinct small and large transactions pass through the story');
+  assert.ok(flow.every(event => event.currency === currency && event.start + event.duration <= 8000));
+  for (const event of flow) {
+    const t = event.start / 8000;
+    const filled = Math.floor(1490 * (t < .5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2));
+    assert.ok(event.week < filled, 'A financial pulse never belongs to a future week');
+    assert.equal(event.tone, rhythm[event.week].tone);
+  }
 }
 const sources = [1144, 1145, 1196, 1197, 1248, 1249];
 const reserved = reserveLifePresent(rhythm, sources, 1250);

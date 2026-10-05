@@ -26,6 +26,9 @@ export default function CalendarGrid({
   notes = {},
   noteLabel,
   language = 'ru',
+  firstEntryLabel,
+  firstEntryDayLabel,
+  lifeArrival = false,
   cells,
   selectedKey,
   isLight,
@@ -45,6 +48,8 @@ export default function CalendarGrid({
 }) {
   const drag = useRef(null);
   const suppressClick = useRef(false);
+  const arrivedFromLife = useRef(false);
+  if (lifeArrival) arrivedFromLife.current = true;
   // A workspace return reveals the complete month, without replaying 35 cells.
   const animateCells = useRef(!slideDirection && (typeof document === 'undefined' || !document.documentElement.hasAttribute('data-workspace-transition')));
   const { surfaceRef, drag: touchDrag } = useWalletExitGesture({
@@ -74,6 +79,7 @@ export default function CalendarGrid({
       data-dragging={Boolean(touchDrag.axis) && !touchDrag.settling}
       data-settling={Boolean(touchDrag.settling)}
       data-calendar-fit="true"
+      data-life-arrival={arrivedFromLife.current || undefined}
       data-cells-enter={animateCells.current}
       className={`calendar-section wallet-gesture-content flex-1 flex flex-col px-1.5 sm:px-8 pt-2.5 sm:pt-6 border-b relative transition-colors duration-200 ${animClass} ${isLight ? 'border-slate-200/90 bg-slate-50/40' : 'border-zinc-800'}`}
       onClick={(e) => { if (e.target === e.currentTarget) onEmptyClick(); }}
@@ -116,7 +122,7 @@ export default function CalendarGrid({
           const hasTrades = tradesForDayFiltered(cell.key).length > 0;
           const plans = plansForDay?.(cell.key) || [];
           const pnl = totalPnlForDay(cell.key);
-          return <CalendarDayCell key={cell.key} planLabel={language === 'en' ? 'Plans' : language === 'ro' || language === 'md' ? 'Planuri' : 'Планы'} hasNote={!!notes[cell.key]} noteLabel={noteLabel} traderMode={traderMode} proView={proView} cell={cell} cellIndex={cellIndex} isSelected={isSelected} hasTrades={hasTrades} plans={plans} formatPlanAmount={formatPlanAmount} pnl={pnl} monthMaxAbsPnl={monthMaxAbsPnl} isLight={isLight} formatPnlDisplay={formatPnlDisplay} onSelect={() => onSelectDay(isSelected ? null : cell.key)} />;
+          return <CalendarDayCell key={cell.key} firstEntryLabel={firstEntryLabel} firstEntryDayLabel={firstEntryDayLabel} planLabel={language === 'en' ? 'Plans' : language === 'ro' || language === 'md' ? 'Planuri' : 'Планы'} hasNote={!!notes[cell.key]} noteLabel={noteLabel} traderMode={traderMode} proView={proView} cell={cell} cellIndex={cellIndex} isSelected={isSelected} hasTrades={hasTrades} plans={plans} formatPlanAmount={formatPlanAmount} pnl={pnl} monthMaxAbsPnl={monthMaxAbsPnl} isLight={isLight} formatPnlDisplay={formatPnlDisplay} onSelect={() => onSelectDay(isSelected ? null : cell.key)} />;
         })}
       </div>
       {touchDrag.axis === 'x' && adjacentMonths.map(preview => <CalendarMonthPreview key={preview.direction} preview={preview} isLight={isLight} language={language} traderMode={traderMode} proView={proView} selectedKey={selectedKey} notes={notes} noteLabel={noteLabel} tradesForDayFiltered={tradesForDayFiltered} plansForDay={plansForDay} formatPlanAmount={formatPlanAmount} totalPnlForDay={totalPnlForDay} monthMaxAbsPnl={monthMaxAbsPnl} formatPnlDisplay={formatPnlDisplay} />)}
