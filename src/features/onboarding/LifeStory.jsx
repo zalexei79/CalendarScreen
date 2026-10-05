@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
-import { lifeWeeks } from './lifeStoryModel';
+import { lifeWeeks, lifeWeekRhythm } from './lifeStoryModel';
+import { createCalendarBridge } from './lifeCalendarBridge';
 import BrandIcon from '../../shared/ui/BrandIcon.jsx';
 import './LifeStory.css';
 
@@ -26,6 +27,7 @@ export const LIFE_COPY = {
 const clamp = (value) => Math.max(0, Math.min(1, value));
 const ease = (value) => value < .5 ? 4 * value ** 3 : 1 - (-2 * value + 2) ** 3 / 2;
 const mix = (a, b, t) => a + (b - a) * t;
+const settle = (value) => value ** 3 * (10 - 15 * value + 6 * value ** 2);
 const MONEY_LEGEND = {
   ru: ['Нейтрально', 'Доходы', 'Расходы', 'Образ финансового ритма'],
   en: ['Neutral', 'Income', 'Expenses', 'An illustration of financial rhythm'],
@@ -34,13 +36,12 @@ const MONEY_LEGEND = {
 };
 const FIRST_ENTRY = { ru: 'Добавить первую запись', en: 'Add your first entry', ro: 'Adaugă prima înregistrare', zh: '添加第一条记录' };
 
-function weekColor(index, filled, financial) {
+function weekColor(index, filled, financial, rhythm) {
   if (index >= filled) return '#ded9ce';
-  // Childhood is neutral. Adult weeks suggest one income beat per four weeks.
-  if (index < 18 * 52 || !financial) return '#bfb8a7';
-  const adultWeek = index - 18 * 52;
-  const color = adultWeek % 4 === 0 ? [113, 151, 128] : adultWeek % 13 === 6 ? [187, 184, 173] : [198, 135, 120];
-  return `rgb(${color.map((value, index) => Math.round(mix([191, 184, 167][index], value, financial))).join(',')})`;
+  const event = rhythm[index];
+  if (!financial || event.tone === 'neutral') return '#bfb8a7';
+  const color = event.tone === 'income' ? [113, 151, 128] : [198, 135, 120];
+  return `rgb(${color.map((value, channel) => Math.round(mix([191, 184, 167][channel], value, financial * event.strength))).join(',')})`;
 }
 
 /** A single camera follows the current week, then morphs the cells into the live month. */
@@ -50,6 +51,7 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
   const counterRef = useRef(null);
   const sceneRef = useRef(null);
   const paperRef = useRef(null);
+  const cellsRef = useRef(null);
   const arriveRef = useRef(onArrive);
   arriveRef.current = onArrive;
   const [run, setRun] = useState(0);
@@ -64,7 +66,10 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
   useEffect(() => {
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
-    const dialog = canvas.closest('dialog');
+    const story = canvas.closest('.life-story');
+    const layer = cellsRef.current;
+    const root = document.documentElement;
+    root.setAttribute('data-life-motion', 'true');
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     let reduceMotion = media.matches;
     setReduced(reduceMotion);
@@ -76,13 +81,18 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
     let scene;
     let targets = [];
     let hasCalendar = false;
-    let finished = false;
+    let snapshotWidth;
+    let disposed = false;
+    let calendarGrid;
+    let originalGridOpacity = '';
+    let originals = [];
     const offset = (new Date(today.getFullYear(), today.getMonth(), 1).getDay() + 6) % 7;
     const count = Math.ceil((offset + new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()) / 7) * 7;
     const todayIndex = offset + today.getDate() - 1;
     // This is a time canvas, not a prediction of life expectancy.
     const rows = Math.max(32, Math.ceil((elapsedWeeks + 520) / 52));
     const total = rows * 52;
+    const rhythm = lifeWeekRhythm(total, birthday || 'dayris');
     const current = Math.min(elapsedWeeks, total - 1);
     const col = current % 52;
     const row = Math.floor(current / 52);
@@ -90,7 +100,7 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
     const selected = new Set(sourceIndices);
     let lastTime = 0;
     const resize = () => {
-      if (!sceneRef.current || !canvas.isConnected) return;
+      if (disposed || !sceneRef.current || !canvas.isConnected) return;
       const bounds = canvas.getBoundingClientRect();
       width = bounds.width;
       height = bounds.height;
@@ -101,7 +111,20 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
       scene = sceneRef.current.getBoundingClientRect();
       const buttons = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')];
       hasCalendar = buttons.length === count && buttons.some(button => button.dataset.todayCell === 'true');
-      canvas.closest('.life-story').dataset.calendarTarget = hasCalendar ? 'live' : 'preview';
+      story.dataset.calendarTarget = hasCalendar ? 'live' : 'preview';
+      const newGrid = hasCalendar ? buttons[0].parentElement : null;
+      if (newGrid !== calendarGrid) {
+        if (calendarGrid) calendarGrid.style.opacity = originalGridOpacity;
+        calendarGrid = newGrid;
+        originalGridOpacity = calendarGrid?.style.opacity || '';
+      }
+      // Rebuild only when the real month changes, not on every viewport update.
+      if (width !== snapshotWidth || buttons.length !== originals.length || buttons.some((button, index) => button !== originals[index])) {
+        layer.replaceChildren();
+        originals = buttons;
+        layer.classList.toggle('theme-light', Boolean(buttons[0]?.closest('.theme-light')));
+        snapshotWidth = width;
+      }
       targets = Array.from({ length: count }, (_, index) => {
         const day = new Date(today.getFullYear(), today.getMonth(), 1 - offset + index);
         const cell = hasCalendar ? buttons[index] : null;
@@ -111,19 +134,19 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
         const fallbackWidth = Math.min(600, scene.width);
         const cellWidth = (fallbackWidth - gap * 6) / 7;
         const cellHeight = Math.min(64, (scene.height - gap * (count / 7 - 1)) / (count / 7));
-        return { x: bounds?.left ?? (width - fallbackWidth) / 2 + index % 7 * (cellWidth + gap), y: bounds?.top ?? scene.top + Math.floor(index / 7) * (cellHeight + gap), width: bounds?.width ?? cellWidth, height: bounds?.height ?? cellHeight, day: day.getDate(), inMonth: day.getMonth() === today.getMonth(), background: style?.backgroundColor || '#f1f0e9', color: style?.color || '#343e36', radius: parseFloat(style?.borderRadius) || 14 };
+        return { x: bounds?.left ?? (width - fallbackWidth) / 2 + index % 7 * (cellWidth + gap), y: bounds?.top ?? scene.top + Math.floor(index / 7) * (cellHeight + gap), width: bounds?.width ?? cellWidth, height: bounds?.height ?? cellHeight, day: day.getDate(), inMonth: day.getMonth() === today.getMonth(), background: style?.backgroundColor || '#f1f0e9', color: style?.color || '#343e36', radius: parseFloat(style?.borderRadius) || 14, bridge: cell ? targets[index]?.bridge?.wrapper.isConnected ? targets[index].bridge : createCalendarBridge(cell, layer) : null };
       });
-      if (finished) draw(lastTime);
+      draw(lastTime);
     };
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
-    const calendarGrid = document.querySelector('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid');
-    if (calendarGrid) observer.observe(calendarGrid);
     resize();
+    if (calendarGrid) observer.observe(calendarGrid);
 
     function draw(ms) {
-      const time = reduceMotion ? 10200 : ms;
-      const nextStage = time < 2400 ? 'life' : time < 5200 ? 'money' : time < 6200 ? 'today' : time < 9500 ? 'zoom' : 'ready';
+      const time = reduceMotion ? 11000 : ms;
+      story.dataset.time = String(Math.round(time));
+      const nextStage = time < 2400 ? 'life' : time < 5200 ? 'money' : time < 6200 ? 'today' : time < 9800 ? 'zoom' : 'ready';
       if (nextStage !== previousStage) { previousStage = nextStage; setStage(nextStage); }
       const filled = Math.floor(elapsedWeeks * ease(clamp(time / 5100)));
       if (counterRef.current) counterRef.current.textContent = stats ? filled.toLocaleString(locale) : '—';
@@ -134,15 +157,20 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
       const dotX = (col + .5) * unit - gridWidth / 2;
       const dotY = (row + .5) * unit - gridHeight / 2;
       // One continuous camera move, then the same rectangles become calendar days.
-      const approach = ease(clamp((time - 5900) / 1300));
-      const morph = ease(clamp((time - 6600) / 2900));
-      const pullback = Math.sin(clamp((time - 5900) / 300) * Math.PI) * .04;
-      const scale = mix(1 - pullback, 2.2, approach);
+      const approach = settle(clamp((time - 5850) / 2100));
+      const morph = settle(clamp((time - 6200) / 3600));
+      const scale = mix(1, 3.2, approach);
       const focus = approach;
-      const fade = 1 - ease(clamp((time - 6500) / 2000));
-      const handoff = hasCalendar ? ease(clamp((time - 9000) / 1200)) : 0;
-      if (paperRef.current) paperRef.current.style.opacity = String(1 - handoff);
-      if (hasCalendar && time >= 8000) dialog?.setAttribute('data-life-handoff', 'true');
+      const fade = 1 - settle(clamp((time - 6300) / 2200));
+      const paper = hasCalendar ? 1 - settle(clamp((time - 6100) / 2900)) : 1;
+      const handoff = hasCalendar ? settle(clamp((time - 9800) / 400)) : 0;
+      const skin = settle(clamp((time - 6750) / 2450));
+      const financial = ease(clamp((time - 2400) / 1200));
+      if (paperRef.current) paperRef.current.style.opacity = String(paper);
+      story.style.setProperty('--life-paper-opacity', paper);
+      if (calendarGrid) calendarGrid.style.opacity = String(handoff);
+      if (time >= 10200) story.dataset.settled = 'true';
+      else delete story.dataset.settled;
       const centerX = scene.left + scene.width / 2;
       const centerY = scene.top + scene.height / 2 + 8;
       const originX = centerX - dotX * scale * focus - gridWidth * scale / 2;
@@ -158,7 +186,7 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
         if (selected.has(i)) continue;
         const x = (i % 52) * unit + (unit - size) / 2;
         const y = Math.floor(i / 52) * unit + (unit - size) / 2;
-        context.fillStyle = weekColor(i, filled, ease(clamp((time - 2400) / 1200)));
+        context.fillStyle = weekColor(i, filled, financial, rhythm);
         context.fillRect(x, y, size, size);
       }
       context.restore();
@@ -169,11 +197,25 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
         const y = mix(originY + (Math.floor(source / 52) * unit + (unit - size) / 2) * scale, target.y, morph);
         const w = mix(size * scale, target.width, morph);
         const h = mix(size * scale, target.height, morph);
+        const color = isToday && time > 5100 ? '#4d7764' : weekColor(source, filled, financial, rhythm);
+        if (target.bridge) {
+          const { wrapper, face, week, opacity } = target.bridge;
+          wrapper.style.transform = `translate3d(${x}px,${y}px,0)`;
+          wrapper.style.width = `${w}px`;
+          wrapper.style.height = `${h}px`;
+          wrapper.style.opacity = String(1 - handoff);
+          face.style.borderRadius = `${target.radius * morph}px`;
+          face.style.setProperty('opacity', String(skin * opacity), 'important');
+          week.style.backgroundColor = color;
+          week.style.borderRadius = `${target.radius * morph}px`;
+          week.style.opacity = String(1 - skin);
+          return;
+        }
         context.save();
         context.globalAlpha = 1 - handoff;
         context.beginPath();
         context.roundRect(x, y, w, h, target.radius * morph);
-        context.fillStyle = isToday && time > 5100 ? '#4d7764' : weekColor(source, filled, ease(clamp((time - 2400) / 1200)));
+        context.fillStyle = color;
         context.globalAlpha *= 1 - morph;
         context.fill();
         context.globalAlpha = morph * (1 - handoff);
@@ -199,19 +241,19 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
       });
     }
     function tick(timestamp) {
+      if (disposed) return;
       if (started === undefined) started = timestamp;
       lastTime = timestamp - started;
       draw(lastTime);
-      if (!reduceMotion && lastTime < 10200) frame = requestAnimationFrame(tick);
+      if (!reduceMotion && lastTime < 11000) frame = requestAnimationFrame(tick);
       else {
-        finished = true;
         if (hasCalendar) arriveRef.current?.();
       }
     }
     const onMotionChange = () => { reduceMotion = media.matches; setReduced(reduceMotion); cancelAnimationFrame(frame); frame = requestAnimationFrame(tick); };
     media.addEventListener('change', onMotionChange);
     frame = requestAnimationFrame(tick);
-    return () => { cancelAnimationFrame(frame); observer.disconnect(); media.removeEventListener('change', onMotionChange); dialog?.removeAttribute('data-life-handoff'); };
+    return () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); media.removeEventListener('change', onMotionChange); if (calendarGrid) calendarGrid.style.opacity = originalGridOpacity; layer.replaceChildren(); root.removeAttribute('data-life-motion'); };
   }, [birthday, elapsedWeeks, lang, run]);
 
   const ready = stage === 'ready';
@@ -231,6 +273,7 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
       <div className="life-story-halo" aria-hidden="true" />
       <div className="life-story-counter" aria-hidden="true"><strong ref={counterRef}>0</strong><span>{stats ? copy.weeks : copy.generic}</span></div>
       <canvas ref={canvasRef} className="life-story-grid" aria-label={stats ? `${elapsedWeeks.toLocaleString(locale)} ${copy.weeks}. ${copy.legend}` : copy.generic} role="img" />
+      <div ref={cellsRef} className="life-calendar-bridge" aria-hidden="true" inert="" />
       <div className="life-story-legend"><p>{copy.legend}</p>{stage === 'money' || stage === 'today' || zoom ? <><div className="life-story-color-key">{MONEY_LEGEND[lang].slice(0, 3).map((label, index) => <span key={label}><i style={{ background: ['#bbb8ad', '#719780', '#c68778'][index] }} />{label}</span>)}</div><span>{MONEY_LEGEND[lang][3]}</span></> : <span>{copy.future}</span>}</div>
     </div>
     <footer className={`life-story-footer ${ready ? 'is-ready' : ''}`}>

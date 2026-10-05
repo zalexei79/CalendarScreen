@@ -94,7 +94,7 @@ export default function FirstRunSetup({ step, language, currency, theme, profile
   }, [step]);
 
   return (
-    <dialog ref={dialogRef} aria-labelledby="first-run-heading" onCancel={(event) => { event.preventDefault(); onSkip(); }}
+    <dialog ref={dialogRef} data-story={story || undefined} aria-labelledby="first-run-heading" onCancel={(event) => { event.preventDefault(); onSkip(); }}
       className={`first-run-dialog fixed inset-0 m-0 h-[100dvh] max-h-none w-full max-w-none overflow-y-auto border-0 bg-transparent p-0 backdrop:bg-black/75 backdrop:backdrop-blur-md ${light ? 'text-zinc-900' : 'text-zinc-100'}`}>
       {story ? <LifeStory birthday={birthday} lang={lang} onStart={onStart} onArrive={onArrive} onSkip={onSkip} onBack={() => onStep('birthday')} /> : <div className="flex min-h-full items-center justify-center p-3 sm:p-6">
         <div className={`grid w-full max-w-[940px] overflow-hidden rounded-[28px] border shadow-2xl md:grid-cols-[0.85fr_1.15fr] ${light ? 'border-white bg-[#faf9f6]' : 'border-white/10 bg-[#111214]'}`}>

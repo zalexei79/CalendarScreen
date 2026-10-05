@@ -4883,7 +4883,7 @@ export default function CalendarScreen() {
         accountMode !== 'main' ||
         selectedKey || planComposerOpen || planConfirm || planDeleteConfirm ||
         historyOpen || modalOpen || settingsOpen || connectOpen || metaTraderOpen ||
-        analysisOpen || exportOpen || installInfoOpen || nicknameModalOpen || setupStep ||
+        analysisOpen || exportOpen || installInfoOpen || nicknameModalOpen || (setupStep && setupStep !== 'intro') ||
         proAccessPromptOpen || referralShareOpen || historyShareOpen
       )}>
         <div className={`pointer-events-auto flex items-center gap-1.5 sm:gap-2.5 rounded-full border p-1.5 sm:p-2 backdrop-blur-2xl transition-all duration-300 ${

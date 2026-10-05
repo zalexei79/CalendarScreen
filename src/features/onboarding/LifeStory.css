@@ -42,8 +42,13 @@
 .life-story-paper { position: absolute; inset: 0; z-index: -2; background: #f7f4ec; pointer-events: none; }
 .life-story-grid { position: fixed; inset: 0; width: 100vw; height: 100dvh; pointer-events: none; }
 .life-story-top, .life-story-heading, .life-story-footer { position: relative; z-index: 2; }
-.first-run-dialog::backdrop { transition: background-color 1800ms cubic-bezier(.4,0,.2,1), backdrop-filter 1800ms cubic-bezier(.4,0,.2,1); }
-.first-run-dialog[data-life-handoff="true"]::backdrop { background-color: transparent; backdrop-filter: blur(0); }
+.first-run-dialog[data-story="true"]::backdrop { background: transparent; backdrop-filter: none; }
+.life-story::before { opacity: calc(.22 * var(--life-paper-opacity, 1)); }
+.is-zooming .life-story-halo { opacity: var(--life-paper-opacity, 1); transition: transform 2000ms var(--ease); }
+.life-calendar-bridge { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
+.life-calendar-cell { position: absolute; left: 0; top: 0; pointer-events: none; will-change: transform; }
+.life-calendar-week { position: absolute; inset: 0; pointer-events: none; }
+html[data-life-motion] .today-calendar-cell::after { animation: none !important; opacity: .35; }
 .life-story[data-stage="zoom"] .life-story-heading,
 .life-story[data-calendar-target="live"][data-stage="ready"] .life-story-heading { opacity: 0; transform: translateY(-44px); transition: opacity 1400ms var(--ease), transform 1800ms var(--ease); }
 .life-story[data-stage="zoom"] .life-story-top,

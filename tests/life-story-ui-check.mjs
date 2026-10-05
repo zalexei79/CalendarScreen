@@ -15,6 +15,7 @@ try {
     return route.fulfill({ contentType: 'text/html', body: fs.readFileSync(pathname === '/auth' ? 'dist/onboarding-auth-check.html' : 'tests/.life-story-preview.html', 'utf8') });
   });
   const page = await context.newPage();
+  await page.clock.install({ time: new Date('2026-10-05T12:00:00') });
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('http://life.test/auth');
   await page.getByText('Setup: language', { exact: true }).waitFor();
@@ -33,19 +34,24 @@ try {
   assert.equal(await page.locator('output').innerText(), 'Setup: closed', 'Existing regular users keep their completion');
 
   await page.goto('http://life.test/story');
+  await page.clock.pauseAt(new Date('2026-10-05T13:00:00'));
   const next = () => page.getByRole('button', { name: 'Продолжить', exact: true }).click();
   await next(); await next();
   await next();
   await page.getByRole('alert').waitFor();
   await page.getByLabel('Дата рождения', { exact: true }).fill('1998-03-14');
   await next();
+  await page.clock.runFor(32);
+  await page.clock.fastForward(4700);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.stage === 'money');
   assert.match(await page.locator('#first-run-heading').innerText(), /Деньги/);
   await page.waitForFunction(() => Number(document.querySelector('.life-story-counter strong')?.textContent.replace(/\D/g, '')) > 1200);
-  await page.screenshot({ path: 'tests/life-story-weeks.png' });
+  await page.screenshot({ path: 'tests/life-story-weeks.png', animations: 'disabled' });
+  await page.clock.fastForward(3600);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.stage === 'zoom');
   await page.waitForFunction(() => Number(document.querySelector('.life-story-paper')?.style.opacity || 1) < .97);
-  await page.screenshot({ path: 'tests/life-story-zoom.png' });
+  await page.screenshot({ path: 'tests/life-story-zoom.png', animations: 'disabled' });
+  await page.clock.fastForward(3000);
   await page.waitForFunction(() => !document.querySelector('.life-story'));
   const first = page.getByRole('button', { name: 'Добавить первую запись', exact: true });
   await first.waitFor();
@@ -61,11 +67,13 @@ try {
   assert.equal(await page.getByLabel('Дата рождения', { exact: true }).inputValue(), '1998-03-14');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await next();
+  await page.clock.runFor(32);
   await first.click();
   assert.equal(await page.locator('[data-destination]').getAttribute('data-destination'), 'first-entry');
   await page.getByRole('button', { name: 'Повторить первый запуск' }).click();
   await next(); await next();
   await page.getByRole('button', { name: 'Продолжить без даты' }).click();
+  await page.clock.runFor(32);
   await first.waitFor();
   assert.equal(await page.locator('[data-destination]').getAttribute('data-destination'), 'calendar');
   assert.deepEqual(errors, []);
