@@ -222,8 +222,8 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
           const recent = recorded.slice(-3);
           activeEvent = recent[Math.min(recent.length - 1, Math.floor((time - 5100) / 250))];
         } else {
-          const beat = Math.floor(time / 80);
-          const beatWeek = Math.floor(elapsedWeeks * ease(clamp(beat * 80 / 5100)));
+          const beat = Math.floor(time / 480);
+          const beatWeek = Math.floor(elapsedWeeks * ease(clamp(beat * 480 / 5100)));
           activeEvent = lifeMoneyBeat(moneyEvents, Math.min(beatWeek, filled), beat);
           if (!shownEvent && moneyEvents[0]?.week < filled) activeEvent = moneyEvents[0];
         }
@@ -239,7 +239,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         moneySourceRef.current.textContent = activeEvent.source === 'calendar' ? RECORDED[lang] : MONEY_LEGEND[lang][3];
         if (key !== previousEventKey) {
           previousEventKey = key;
-          readout.update(activeEvent, locale, reduceMotion, activeEvent.source === 'illustration' ? 65 : 200);
+          readout.update(activeEvent, locale, reduceMotion);
         }
       }
       if (paperRef.current) paperRef.current.style.opacity = String(paper);

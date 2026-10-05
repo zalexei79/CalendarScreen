@@ -64,4 +64,6 @@ for (let time = 0; time <= LIFE_MOTION_END; time += 16) {
     assert.ok(Math.abs(frame.skin - previous.skin) < .01, 'Calendar paint never snaps onto neutral weeks');
   }
 }
+const overlappingMotion = lifeCalendarMotion(8450);
+assert.ok(overlappingMotion.zoom > 0 && overlappingMotion.zoom < 1 && overlappingMotion.month > 0, 'The camera keeps moving as the calendar starts opening; there is no stop between phases');
 console.log('Life story: dates, leap years, DST, account isolation and preview account passed.');

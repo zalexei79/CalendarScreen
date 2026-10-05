@@ -49,7 +49,7 @@ try {
   await page.clock.fastForward(250);
   assert.equal(await money.locator('strong').getAttribute('aria-label'), '−80 MDL');
   await page.screenshot({ path: 'tests/life-story-replay-money.png', animations: 'disabled' });
-  await page.clock.fastForward(7500);
+  await page.clock.fastForward(9000);
   await page.waitForFunction(() => !document.querySelector('.life-story'));
   assert.equal(await page.locator('.first-entry-whisper').count(), 0, 'Replaying an existing history never asks for a first entry');
   assert.ok(await page.locator('[data-today-cell="true"]').isVisible());

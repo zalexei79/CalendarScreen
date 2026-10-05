@@ -4,17 +4,17 @@ const progress = (time, start, duration) => smooth(clamp((time - start) / durati
 
 // Focus the contiguous crop first. Expand it as one lattice, then reveal its UI.
 // The dense life grid and the app never occupy the same visible frame.
-export const LIFE_MOTION_END = 13000;
+export const LIFE_MOTION_END = 14500;
 export function lifeCalendarMotion(time) {
   return {
-    zoom: progress(time, 5850, 2250),
-    reframe: progress(time, 6850, 1250),
-    month: progress(time, 8100, 3400),
-    lifeOpacity: 1 - progress(time, 6350, 1200),
-    skin: progress(time, 8100, 3300),
-    paperOpacity: 1 - progress(time, 8100, 3400),
-    handoff: progress(time, 11600, 600),
-    ready: time >= 11500,
-    settled: time >= 12200,
+    zoom: progress(time, 5850, 3050),
+    reframe: progress(time, 6250, 2300),
+    month: progress(time, 8000, 4600),
+    lifeOpacity: 1 - progress(time, 6350, 1300),
+    skin: progress(time, 8150, 4450),
+    paperOpacity: 1 - progress(time, 8000, 4600),
+    handoff: progress(time, 12800, 900),
+    ready: time >= 12600,
+    settled: time >= 13700,
   };
 }

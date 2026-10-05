@@ -2,26 +2,28 @@
 .life-story[data-theme="dark"] { --paper: #111714; --ink: #e1e6df; --muted: #99a69c; --green: #8db79b; --count: #c7a184; color-scheme: dark; }
 .life-story-money { --money-accent: #719780; width: min(100%, 430px); min-height: 82px; margin: 18px auto 0; text-align: center; opacity: 1; transform: translateY(0); transition: opacity 550ms var(--ease), transform 650ms var(--ease); animation: life-copy-in 900ms var(--ease) backwards; }
 .life-story-money[data-tone="expense"] { --money-accent: #c68778; }
-.life-story-money > div { display: grid; grid-template-columns: 32px auto 1fr; align-items: center; column-gap: 10px; min-height: 64px; padding: 12px 16px; border: 1px solid #71978021; border-radius: 20px; background: linear-gradient(120deg,#7197800c,transparent 70%); color: var(--money-accent); transition: color 400ms var(--ease), border-color 400ms var(--ease), background 400ms var(--ease); }
-.life-story-money[data-tone="expense"] > div { border-color: #c6877826; background: linear-gradient(120deg,#c6877810,transparent 70%); }
+.life-story-money > div { display: grid; grid-template-columns: 32px auto 1fr; align-items: center; column-gap: 10px; min-height: 64px; padding: 12px 16px; border: 1px solid #7197801a; border-radius: 20px; background: #7e827608; color: var(--money-accent); transition: color 700ms var(--ease), border-color 700ms var(--ease); }
+.life-story-money[data-tone="expense"] > div { border-color: #c687781a; }
 .life-story-money > div > span:not(.life-money-arrow) { max-width: 100px; text-align: left; font-size: 10px; line-height: 1.5; }
 .life-story-money strong { display: inline-flex; align-items: baseline; justify-content: flex-end; gap: 4px; min-width: 0; font-family: system-ui,sans-serif; font-weight: 350; font-size: 34px; line-height: 1.15; letter-spacing: -.035em; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.life-money-sign { font-size: .65em; font-weight: 300; }
+.life-money-sign { display: inline-grid; width: .7em; flex: none; font-size: .65em; font-weight: 300; }
+.life-money-sign > span { grid-area: 1 / 1; opacity: 0; transform: translateY(-3px); transition: opacity 350ms var(--ease), transform 450ms var(--ease); }
+.life-money-sign > span[data-active="true"] { opacity: 1; transform: translateY(0); }
 .life-money-digits { display: inline-flex; }
-.life-money-digit, .life-money-punctuation { position: relative; display: inline-block; overflow: hidden; height: 1.15em; }
-.life-money-digit { width: .62em; text-align: center; }
-.life-money-digit > span { display: block; height: 100%; }
-.life-money-digit .life-money-outgoing { position: absolute; inset: 0; }
+.life-money-digit { position: relative; display: inline-block; flex: none; overflow: hidden; width: .58em; height: 1.15em; text-align: center; mask-image: linear-gradient(transparent,black 18%,black 82%,transparent); }
+.life-money-track { position: absolute; top: 0; left: 0; width: 100%; will-change: transform; }
+.life-money-track > span { display: block; height: 1.15em; line-height: 1.15em; }
+.life-money-punctuation { position: absolute; inset: 0; line-height: 1.15em; }
 .life-money-unit { margin-left: 4px; font-size: 10px; letter-spacing: .04em; color: var(--muted); }
 .life-story-money small { display: block; margin-top: 8px; color: var(--muted); font-size: 9px; letter-spacing: .04em; }
-.life-money-arrow { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 11px; background: #71978016; transition: background 400ms var(--ease); }
-.life-money-arrow svg { transform: rotate(-45deg); transition: transform 400ms var(--ease); }
+.life-money-arrow { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 11px; background: #71978012; transition: background-color 700ms var(--ease); }
+.life-money-arrow svg { transform: rotate(-45deg); transition: transform 700ms var(--ease); }
 .life-story-money[data-tone="expense"] .life-money-arrow { background: #c6877816; }
 .life-story-money[data-tone="expense"] .life-money-arrow svg { transform: rotate(45deg); }
 .life-story[data-theme="dark"] .life-story-money { --money-accent: #8db79b; }
 .life-story[data-theme="dark"] .life-story-money[data-tone="expense"] { --money-accent: #d29689; }
 .life-story .life-story-money:not([data-tone]) { --money-accent: var(--muted); }
-.life-story-money:not([data-tone]) > div { border-color: #7e82761c; background: linear-gradient(120deg,#7e827608,transparent 70%); }
+.life-story-money:not([data-tone]) > div { border-color: #7e82761c; }
 .life-story-money:not([data-tone]) .life-money-arrow svg { transform: rotate(0deg); }
 .life-story[data-stage="zoom"] .life-story-money, .life-story[data-stage="ready"] .life-story-money { opacity: 0; transform: translateY(-12px); }
 .life-story::before { content: ''; pointer-events: none; position: absolute; inset: 0; z-index: -1; opacity: .22; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%238c826a' opacity='.2' filter='url(%23n)' d='M0 0h180v180H0z'/%3E%3C/svg%3E"); }

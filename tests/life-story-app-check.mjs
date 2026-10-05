@@ -56,13 +56,15 @@ try {
   await page.screenshot({ path: screenshotPath('early'), animations: 'disabled' });
   await page.evaluate(() => {
     window.moneyBeats = [];
+    window.moneyDrums = [...document.querySelectorAll('.life-money-track')];
+    window.moneyCurrencyX = document.querySelector('.life-money-unit').getBoundingClientRect().x;
     new MutationObserver(changes => { for (const change of changes) if (change.attributeName === 'aria-label') window.moneyBeats.push(change.target.getAttribute('aria-label')); }).observe(document.querySelector('.life-story-money strong'), { attributes: true });
   });
   await page.clock.runFor(800);
   const beats = await page.evaluate(() => [...new Set(window.moneyBeats)]);
-  assert.ok(beats.length >= 8, 'The monetary stream changes at least ten times per second');
+  assert.ok(beats.length >= 1 && beats.length <= 3, 'Financial events have room to settle instead of flashing every 80ms');
   assert.ok(beats.every(value => value.endsWith(currency)), 'Every illustrative amount uses the explicitly selected currency');
-  assert.ok(beats.some(value => value.startsWith('+')) && beats.some(value => value.startsWith('−')));
+  assert.ok(await page.evaluate(() => window.moneyDrums.every(node => node.isConnected) && Math.abs(document.querySelector('.life-money-unit').getBoundingClientRect().x - window.moneyCurrencyX) < .1), 'The same drums retain their momentum and the amount keeps its width across events');
   if (desktop) assert.equal(await page.locator('.life-story').evaluate(element => getComputedStyle(element, '::before').display), 'none', 'Dark mode has no grain texture');
   await page.clock.fastForward(1700);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.stage === 'money');
@@ -103,7 +105,7 @@ try {
   await page.waitForFunction(() => Number(document.querySelector('.life-story-paper')?.style.opacity || 1) < .97);
   assert.equal(await page.locator('.life-story').getAttribute('data-life-opacity'), '0');
   await page.screenshot({ path: screenshotPath('morph'), animations: 'disabled' });
-  await page.clock.fastForward(1700);
+  await page.clock.fastForward(3000);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.stage === 'ready');
   const geometry = await page.evaluate(() => {
     const live = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')];
@@ -116,7 +118,7 @@ try {
     });
   });
   assert.ok(geometry, 'The moving cells settle onto the real calendar with its exact paint and geometry');
-  await page.clock.fastForward(700);
+  await page.clock.fastForward(900);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.settled === 'true');
   assert.equal(await page.locator('.life-story-money').evaluate(element => getComputedStyle(element).opacity), '0', 'The monetary panel leaves before the calendar becomes interactive');
   const before = await page.screenshot({ path: screenshotPath('settled'), animations: 'disabled' });
