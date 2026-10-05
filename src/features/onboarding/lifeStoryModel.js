@@ -69,3 +69,32 @@ export function lifeWeekRhythm(count, seed = '') {
     return { tone, strength: tone === 'neutral' ? 0 : .48 + random() * .52 };
   });
 }
+
+// These are illustrative amounts, tied to the very same weeks as the colors.
+export function lifeMoneyEvents(rhythm, currency = 'USD') {
+  const [small, earning] = ({ USD: [12, 240], EUR: [10, 210], MDL: [80, 3200], RUB: [400, 18000], CNY: [30, 1800] })[currency] || [12, 240];
+  return rhythm.flatMap((event, week) => {
+    if (event.tone === 'neutral') return [];
+    const maturity = Math.min(1, Math.max(.08, week / 52 / 22));
+    const variation = .4 + ((week * 17) % 31) / 20;
+    const amount = Math.max(1, Math.round((event.tone === 'income' ? earning * maturity : small * variation * (.5 + maturity)) * event.strength));
+    return [{ week, tone: event.tone, amount, currency, source: 'illustration' }];
+  });
+}
+
+export function calendarMoneyEvents(records, birthday, today = new Date()) {
+  const now = localDateValue(today);
+  const elapsed = lifeWeeks(birthday, today)?.weeks ?? 0;
+  return records.flatMap(record => {
+    const date = record.dateKey;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '') || date > now) return [];
+    const [year, month, day] = date.split('-').map(Number);
+    const checked = new Date(year, month - 1, day);
+    if (localDateValue(checked) !== date) return [];
+    const signed = Number(record.pnl);
+    if (!Number.isFinite(signed) || signed === 0) return [];
+    const week = lifeWeeks(birthday, checked)?.weeks;
+    if (birthday && week == null) return [];
+    return [{ week: Math.min(week ?? elapsed, elapsed), tone: signed > 0 ? 'income' : 'expense', amount: Math.abs(signed), currency: record.currency || 'USD', source: 'calendar', date, time: record.time || '', id: record.id }];
+  }).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+}

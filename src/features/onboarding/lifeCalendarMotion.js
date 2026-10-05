@@ -8,6 +8,7 @@ export const LIFE_MOTION_END = 12200;
 export function lifeCalendarMotion(time) {
   return {
     zoom: progress(time, 5850, 1950),
+    reframe: progress(time, 6800, 1000),
     month: progress(time, 7800, 3100),
     lifeOpacity: 1 - progress(time, 6350, 1200),
     skin: progress(time, 9000, 1700),

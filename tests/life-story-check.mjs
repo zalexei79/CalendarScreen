@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { lifeWeeks, localDateValue, birthdayStorageKey, isOnboardingPreviewUser, lifeWeekRhythm } from '../src/features/onboarding/lifeStoryModel.js';
+import { lifeWeeks, localDateValue, birthdayStorageKey, isOnboardingPreviewUser, lifeWeekRhythm, lifeMoneyEvents, calendarMoneyEvents } from '../src/features/onboarding/lifeStoryModel.js';
 import { lifeCalendarMotion, LIFE_MOTION_END } from '../src/features/onboarding/lifeCalendarMotion.js';
 
 const today = new Date(2026, 9, 4);
@@ -27,6 +27,18 @@ assert.ok(childhood.some(event => event.tone === 'income'));
 assert.ok(childhood.some((event, index) => event.tone === 'income' && childhood.slice(index + 1, index + 5).some(next => next.tone === 'expense')), 'A childhood gift can fund several following weeks');
 assert.ok(childhood.filter(event => event.tone === 'neutral').length > childhood.length * .65);
 const adulthood = rhythm.slice(22 * 52);
+const events = lifeMoneyEvents(rhythm, 'MDL');
+assert.ok(events.every(event => event.tone === rhythm[event.week].tone && event.amount > 0 && event.currency === 'MDL'));
+assert.ok(events.some(event => event.tone === 'income') && events.some(event => event.tone === 'expense'));
+const realEvents = calendarMoneyEvents([
+  { id: 'expense', dateKey: '2026-10-03', pnl: -37.5, currency: 'EUR' },
+  { id: 'income', dateKey: '2026-10-04', pnl: 280, currency: 'MDL' },
+  { dateKey: '2026-10-05', pnl: 800, currency: 'USD' },
+  { dateKey: '2026-02-30', pnl: 50 },
+  { dateKey: '1900-01-01', pnl: 99 },
+  { dateKey: '2026-10-04', pnl: 'not money' },
+], '1998-03-14', today);
+assert.deepEqual(realEvents.map(event => [event.id, event.tone, event.amount, event.currency]), [['expense', 'expense', 37.5, 'EUR'], ['income', 'income', 280, 'MDL']], 'Use exact existing amounts and currencies; exclude future/invalid/pre-birthday dates');
 assert.ok(adulthood.filter(event => event.tone === 'expense').length > adulthood.length * .4);
 const incomeWeeks = adulthood.flatMap((event, index) => event.tone === 'income' ? [index] : []);
 assert.ok(new Set(incomeWeeks.slice(1).map((week, index) => week - incomeWeeks[index])).size > 4, 'Income is not a fixed every-four-weeks stripe');

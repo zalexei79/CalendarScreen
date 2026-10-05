@@ -48,15 +48,18 @@ const COPY = {
     currencies: ['Dolar american', 'Euro', 'Leu moldovenesc', 'Rublă rusească', 'Yuan chinezesc'], finish: 'Ultimul pas: prima ta înregistrare.',
   },
 };
+const EMPTY_RECORDS = [];
 const LANGUAGES = [{ code: 'ru', name: 'Русский', hint: 'Russian' }, { code: 'en', name: 'English', hint: 'English' }, { code: 'md', name: 'Română', hint: 'Romanian' }, { code: 'zh-CN', name: '简体中文', hint: 'Simplified Chinese' }];
 
-export default function FirstRunSetup({ step, language, currency, theme, profileKey = 'guest', onLanguage, onCurrency, onTheme, onStep, onStart, onArrive, onSkip }) {
+export default function FirstRunSetup({ step, language, currency, theme, calendarRecords = EMPTY_RECORDS, profileKey = 'guest', onLanguage, onCurrency, onTheme, onStep, onStart, onArrive, onSkip }) {
   const dialogRef = useRef(null);
   const headingRef = useRef(null);
   const lang = language === 'zh-CN' ? 'zh' : language === 'md' || language === 'ro' ? 'ro' : language === 'en' ? 'en' : 'ru';
   const copy = COPY[lang];
   const lifeCopy = LIFE_COPY[lang];
-  const [birthday, setBirthday] = useState('');
+  const [birthday, setBirthday] = useState(() => { try { return localStorage.getItem(birthdayStorageKey(profileKey)) || ''; } catch { return ''; } });
+  const [selectedLanguage, setSelectedLanguage] = useState(null);
+  const [selectedCurrency, setSelectedCurrency] = useState(null);
   const [dateError, setDateError] = useState(false);
   const story = step === 'intro';
   const light = theme === 'light';
@@ -66,6 +69,8 @@ export default function FirstRunSetup({ step, language, currency, theme, profile
   const idle = light ? 'border-zinc-200 bg-white hover:border-zinc-400' : 'border-white/10 bg-white/[0.025] hover:border-white/25';
 
   useEffect(() => {
+    setSelectedLanguage(null);
+    setSelectedCurrency(null);
     try { setBirthday(window.localStorage.getItem(birthdayStorageKey(profileKey)) || ''); }
     catch { setBirthday(''); }
   }, [profileKey]);
@@ -96,7 +101,7 @@ export default function FirstRunSetup({ step, language, currency, theme, profile
   return (
     <dialog ref={dialogRef} data-theme={theme} data-story={story || undefined} aria-labelledby="first-run-heading" onCancel={(event) => { event.preventDefault(); onSkip(); }}
       className={`first-run-dialog fixed inset-0 m-0 h-[100dvh] max-h-none w-full max-w-none overflow-y-auto border-0 bg-transparent p-0 backdrop:bg-black/75 backdrop:backdrop-blur-md ${light ? 'text-zinc-900' : 'text-zinc-100'}`}>
-      {story ? <LifeStory birthday={birthday} lang={lang} theme={theme} onStart={onStart} onArrive={onArrive} onSkip={onSkip} onBack={() => onStep('birthday')} /> : <div className="flex min-h-full items-center justify-center p-3 sm:p-6">
+      {story ? <LifeStory birthday={birthday} lang={lang} theme={theme} currency={currency} calendarRecords={calendarRecords} onStart={onStart} onArrive={onArrive} onSkip={onSkip} onBack={() => onStep('birthday')} /> : <div className="flex min-h-full items-center justify-center p-3 sm:p-6">
         <div className={`grid w-full max-w-[940px] overflow-hidden rounded-[28px] border shadow-2xl md:grid-cols-[0.85fr_1.15fr] ${light ? 'border-white bg-[#faf9f6]' : 'border-white/10 bg-[#111214]'}`}>
           <div className="relative hidden flex-col justify-between overflow-hidden border-r border-white/10 bg-[#171811] p-9 text-white md:flex">
             <div className="pointer-events-none absolute -left-24 -top-32 h-96 w-96 rounded-full bg-amber-400/10 blur-3xl" />
@@ -124,8 +129,8 @@ export default function FirstRunSetup({ step, language, currency, theme, profile
 
               {index === 0 && <div className="mt-7 space-y-2.5" role="group" aria-label={copy.languageHint}>
                 {LANGUAGES.map((item) => {
-                  const active = lang === (item.code === 'md' ? 'ro' : item.code === 'zh-CN' ? 'zh' : item.code);
-                  return <button key={item.code} type="button" aria-pressed={active} onClick={() => { onLanguage(item); onStep('currency'); }} className={`flex w-full items-center gap-4 rounded-2xl border px-4 py-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${active ? selected : idle}`}>
+                  const active = selectedLanguage === item.code;
+                  return <button key={item.code} type="button" aria-pressed={active} onClick={() => { setSelectedLanguage(item.code); onLanguage(item); onStep('currency'); }} className={`flex w-full items-center gap-4 rounded-2xl border px-4 py-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${active ? selected : idle}`}>
                     <span className={`grid h-10 w-10 place-items-center rounded-xl text-xs font-semibold ${light ? 'bg-black/[0.04]' : 'bg-white/[0.05]'}`}>{item.code === 'md' ? 'RO' : item.code.toUpperCase()}</span>
                     <span className="flex-1"><span lang={item.code === 'md' ? 'ro' : item.code} className="block text-sm font-semibold">{item.name}</span><span className={`mt-0.5 block text-[11px] ${muted}`}>{item.hint}</span></span>
                     {active && <Check className="h-4 w-4 text-amber-500" aria-hidden="true" />}
@@ -141,8 +146,8 @@ export default function FirstRunSetup({ step, language, currency, theme, profile
                   </div>
                 </div>
                 <div className="mt-6 grid grid-cols-2 gap-2.5" role="group" aria-label={copy.currencyHint}>
-                  {CURRENCIES.map((item, i) => <button key={item.code} type="button" aria-pressed={currency === item.code} onClick={() => { onCurrency(item.code); onStep('birthday'); }} className={`relative rounded-2xl border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${currency === item.code ? selected : idle}`}>
-                    {currency === item.code && <Check className="absolute right-3 top-3 h-3.5 w-3.5 text-amber-500" aria-hidden="true" />}
+                  {CURRENCIES.map((item, i) => <button key={item.code} type="button" aria-pressed={selectedCurrency === item.code} onClick={() => { setSelectedCurrency(item.code); onCurrency(item.code); onStep('birthday'); }} className={`relative rounded-2xl border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${selectedCurrency === item.code ? selected : idle}`}>
+                    {selectedCurrency === item.code && <Check className="absolute right-3 top-3 h-3.5 w-3.5 text-amber-500" aria-hidden="true" />}
                     <span className="mb-3 block text-2xl font-medium">{item.symbol}</span><span className="block text-xs font-semibold">{item.code}</span><span className={`mt-1 block text-[10px] ${muted}`}>{copy.currencies[i]}</span>
                   </button>)}
                 </div>

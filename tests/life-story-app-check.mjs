@@ -44,6 +44,12 @@ try {
   await page.clock.fastForward(4700);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.stage === 'money');
   await page.waitForFunction(() => Number(document.querySelector('.life-story-counter strong')?.textContent.replace(/\D/g, '')) > 1200);
+  const money = page.locator('.life-story-money');
+  assert.equal(await money.getAttribute('data-source'), 'illustration');
+  assert.match(await money.locator('strong').innerText(), /^[+−].*MDL$/);
+  assert.ok(Number(await money.getAttribute('data-week')) <= Number(await page.locator('.life-story-counter strong').innerText().then(text => text.replace(/\D/g, ''))));
+  const focusDistance = await page.locator('.life-story').evaluate(element => Math.abs(Number(element.dataset.focusWeek) - Number(element.dataset.currentWeek)));
+  assert.ok(focusDistance <= 6, 'The focused week remains adjacent to the chronological present, including row edges');
   assert.equal(await page.locator('.life-story').getAttribute('data-theme'), desktop ? 'dark' : 'light');
   assert.equal(await page.locator('.life-story-paper').evaluate(element => getComputedStyle(element).backgroundColor), desktop ? 'rgb(17, 23, 20)' : 'rgb(247, 244, 236)');
   if (!desktop) await page.setViewportSize({ width: 320, height: 844 });

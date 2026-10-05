@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
-import { lifeWeeks, lifeWeekRhythm } from './lifeStoryModel';
+import { lifeWeeks, lifeWeekRhythm, lifeMoneyEvents, calendarMoneyEvents } from './lifeStoryModel';
 import { createCalendarBridge } from './lifeCalendarBridge';
 import { lifeCalendarMotion, LIFE_MOTION_END } from './lifeCalendarMotion';
 import BrandIcon from '../../shared/ui/BrandIcon.jsx';
@@ -39,6 +39,8 @@ const MONEY_LEGEND = {
   zh: ['平常', '收入', '支出', '财务节奏示意'],
 };
 const FIRST_ENTRY = { ru: 'Добавить первую запись', en: 'Add your first entry', ro: 'Adaugă prima înregistrare', zh: '添加第一条记录' };
+const RECORDED = { ru: 'Из твоего календаря', en: 'From your calendar', ro: 'Din calendarul tău', zh: '来自你的日历' };
+const EMPTY_RECORDS = [];
 
 const PALETTES = {
   light: { neutral: [191, 184, 167], future: [222, 217, 206], income: [113, 151, 128], expense: [198, 135, 120], today: 'rgba(77,119,100,.45)' },
@@ -53,7 +55,7 @@ function weekColor(index, filled, financial, rhythm, palette, neutralize = 0) {
 }
 
 /** A single camera follows the current week, then morphs the cells into the live month. */
-export default function LifeStory({ birthday, lang, theme = 'light', onStart, onArrive, onSkip, onBack }) {
+export default function LifeStory({ birthday, lang, theme = 'light', currency = 'USD', calendarRecords = EMPTY_RECORDS, onStart, onArrive, onSkip, onBack }) {
   const copy = LIFE_COPY[lang];
   const palette = PALETTES[theme === 'light' ? 'light' : 'dark'];
   const canvasRef = useRef(null);
@@ -61,6 +63,10 @@ export default function LifeStory({ birthday, lang, theme = 'light', onStart, on
   const sceneRef = useRef(null);
   const paperRef = useRef(null);
   const cellsRef = useRef(null);
+  const moneyRef = useRef(null);
+  const moneyAmountRef = useRef(null);
+  const moneyLabelRef = useRef(null);
+  const moneySourceRef = useRef(null);
   const arriveRef = useRef(onArrive);
   arriveRef.current = onArrive;
   const [run, setRun] = useState(0);
@@ -102,6 +108,14 @@ export default function LifeStory({ birthday, lang, theme = 'light', onStart, on
     const rows = Math.max(32, Math.ceil((elapsedWeeks + 520) / 52));
     const total = rows * 52;
     const rhythm = lifeWeekRhythm(total, birthday || 'dayris');
+    const recorded = calendarMoneyEvents(calendarRecords, birthday, today);
+    // Real records can color their known weeks; illustrated history remains labelled.
+    for (const event of recorded) if (event.currency === currency && rhythm[event.week]) rhythm[event.week] = { tone: event.tone, strength: 1 };
+    const moneyEvents = lifeMoneyEvents(rhythm, currency);
+    if (moneyRef.current) { delete moneyRef.current.dataset.tone; delete moneyRef.current.dataset.source; delete moneyRef.current.dataset.week; }
+    if (moneyAmountRef.current) moneyAmountRef.current.textContent = '—';
+    let moneyAnimation;
+    let previousEventKey;
     const current = Math.min(elapsedWeeks, total - 1);
     const col = current % 52;
     const row = Math.floor(current / 52);
@@ -111,6 +125,8 @@ export default function LifeStory({ birthday, lang, theme = 'light', onStart, on
     const cropRow = Math.max(0, Math.min(rows - monthRows, row - Math.floor(todayIndex / 7)));
     const sourceIndices = Array.from({ length: count }, (_, index) => (cropRow + Math.floor(index / 7)) * 52 + cropCol + index % 7);
     const selected = new Set(sourceIndices);
+    story.dataset.currentWeek = String(current);
+    story.dataset.focusWeek = String(sourceIndices[todayIndex]);
     let lastTime = 0;
     const resize = () => {
       if (disposed || !sceneRef.current || !canvas.isConnected) return;
@@ -177,8 +193,11 @@ export default function LifeStory({ birthday, lang, theme = 'light', onStart, on
       const gridWidth = unit * 52;
       const gridHeight = unit * rows;
       story.dataset.gridTop = String(gridTop + (gridSpace - gridHeight) / 2);
-      const dotX = (cropCol + 3.5) * unit - gridWidth / 2;
-      const dotY = (cropRow + monthRows / 2) * unit - gridHeight / 2;
+      // Arrive at today's week first, then gently frame its surrounding month.
+      // A crop's geometric center can otherwise lie years into the empty future.
+      const todaySource = sourceIndices[todayIndex];
+      const dotX = mix((todaySource % 52 + .5) * unit - gridWidth / 2, (cropCol + 3.5) * unit - gridWidth / 2, motion.reframe);
+      const dotY = mix((Math.floor(todaySource / 52) + .5) * unit - gridHeight / 2, (cropRow + monthRows / 2) * unit - gridHeight / 2, motion.reframe);
       // One camera frames a complete 7-column crop; one shared expansion lands it.
       const compactPitch = Math.min(scene.width * .62 / 7, scene.height * .65 / monthRows);
       const morph = motion.month;
@@ -189,7 +208,33 @@ export default function LifeStory({ birthday, lang, theme = 'light', onStart, on
       const handoff = hasCalendar ? motion.handoff : 0;
       const skin = motion.skin;
       const financial = ease(clamp((time - 2400) / 1200));
-      const neutralize = ease(clamp((time - 4800) / 1000));
+      const financialWeek = Math.floor(elapsedWeeks * ease(clamp((time - 2400) / 2700)));
+      const neutralize = ease(clamp((time - 5350) / 850));
+      let activeEvent;
+      if (time >= 2400 && time < 5850) {
+        if (time >= 5100 && recorded.length) {
+          const recent = recorded.slice(-3);
+          activeEvent = recent[Math.min(recent.length - 1, Math.floor((time - 5100) / 250))];
+        } else {
+          // Sample at readable beats, rather than changing the number every frame.
+          const beatWeek = Math.floor(elapsedWeeks * ease(clamp((Math.floor((time - 2400) / 150) * 150) / 2700)));
+          activeEvent = moneyEvents.findLast(event => event.week <= Math.min(beatWeek, filled));
+        }
+      }
+      if (activeEvent && moneyRef.current) {
+        const key = `${activeEvent.source}:${activeEvent.week}:${activeEvent.id || ''}:${activeEvent.tone}:${activeEvent.amount}:${activeEvent.currency}`;
+        moneyRef.current.dataset.tone = activeEvent.tone;
+        moneyRef.current.dataset.source = activeEvent.source;
+        moneyRef.current.dataset.week = String(activeEvent.week);
+        moneyLabelRef.current.textContent = MONEY_LEGEND[lang][activeEvent.tone === 'income' ? 1 : 2];
+        moneySourceRef.current.textContent = activeEvent.source === 'calendar' ? RECORDED[lang] : MONEY_LEGEND[lang][3];
+        moneyAmountRef.current.textContent = `${activeEvent.tone === 'income' ? '+' : '−'}${activeEvent.amount.toLocaleString(locale, { maximumFractionDigits: 2 })} ${activeEvent.currency}`;
+        if (key !== previousEventKey) {
+          previousEventKey = key;
+          moneyAnimation?.cancel();
+          if (!reduceMotion) moneyAnimation = moneyAmountRef.current.animate([{ opacity: .35, transform: 'translateY(5px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 140, easing: 'cubic-bezier(.22,1,.36,1)' });
+        }
+      }
       if (paperRef.current) paperRef.current.style.opacity = String(paper);
       story.style.setProperty('--life-paper-opacity', paper);
       if (calendarGrid) calendarGrid.style.opacity = String(handoff);
@@ -210,8 +255,14 @@ export default function LifeStory({ birthday, lang, theme = 'light', onStart, on
         if (selected.has(i)) continue;
         const x = (i % 52) * unit + (unit - size) / 2;
         const y = Math.floor(i / 52) * unit + (unit - size) / 2;
-        context.fillStyle = weekColor(i, filled, financial, rhythm, palette, i >= cropRow * 52 ? neutralize : 0);
+        const reveal = financial * ease(clamp((financialWeek - i) / 8));
+        context.fillStyle = weekColor(i, filled, reveal, rhythm, palette, i >= current - 2 && i <= current ? neutralize : 0);
         context.fillRect(x, y, size, size);
+        if (activeEvent?.week === i) {
+          context.strokeStyle = `rgb(${palette[activeEvent.tone].join(',')})`;
+          context.lineWidth = unit * .18;
+          context.strokeRect(x - unit * .12, y - unit * .12, size + unit * .24, size + unit * .24);
+        }
       }
       context.restore();
       targets.forEach((target, index) => {
@@ -221,7 +272,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', onStart, on
         const y = mix(originY + (Math.floor(source / 52) * unit + (unit - size) / 2) * scale, target.y, morph);
         const w = mix(size * scale, target.width, morph);
         const h = mix(size * scale, target.height, morph);
-        const color = weekColor(source, filled, financial, rhythm, palette, neutralize);
+        const color = weekColor(source, filled, financial * ease(clamp((financialWeek - source) / 8)), rhythm, palette, neutralize);
         if (target.bridge) {
           const { wrapper, face, week, opacity } = target.bridge;
           wrapper.style.transform = `translate3d(${x}px,${y}px,0)`;
@@ -278,8 +329,8 @@ export default function LifeStory({ birthday, lang, theme = 'light', onStart, on
     const onMotionChange = () => { reduceMotion = media.matches; setReduced(reduceMotion); cancelAnimationFrame(frame); frame = requestAnimationFrame(tick); };
     media.addEventListener('change', onMotionChange);
     frame = requestAnimationFrame(tick);
-    return () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); media.removeEventListener('change', onMotionChange); if (calendarGrid) calendarGrid.style.opacity = originalGridOpacity; layer.replaceChildren(); root.removeAttribute('data-life-motion'); };
-  }, [birthday, elapsedWeeks, lang, theme, run]);
+    return () => { disposed = true; moneyAnimation?.cancel(); cancelAnimationFrame(frame); observer.disconnect(); media.removeEventListener('change', onMotionChange); if (calendarGrid) calendarGrid.style.opacity = originalGridOpacity; layer.replaceChildren(); root.removeAttribute('data-life-motion'); };
+  }, [birthday, elapsedWeeks, lang, theme, currency, calendarRecords, run]);
 
   const ready = stage === 'ready';
   const zoom = stage === 'zoom' || ready;
@@ -299,7 +350,11 @@ export default function LifeStory({ birthday, lang, theme = 'light', onStart, on
       <div className="life-story-counter" aria-hidden="true"><strong ref={counterRef}>0</strong><span>{stats ? copy.weeks : copy.generic}</span></div>
       <canvas ref={canvasRef} className="life-story-grid" aria-label={stats ? `${elapsedWeeks.toLocaleString(locale)} ${copy.weeks}. ${copy.legend}` : copy.generic} role="img" />
       <div ref={cellsRef} className="life-calendar-bridge" aria-hidden="true" inert="" />
-      <div className="life-story-legend"><p>{copy.legend}</p>{stage === 'money' || stage === 'today' || zoom ? <><div className="life-story-color-key">{MONEY_LEGEND[lang].slice(0, 3).map((label, index) => <span key={label}><i style={{ background: `rgb(${[palette.neutral, palette.income, palette.expense][index].join(',')})` }} />{label}</span>)}</div><span>{MONEY_LEGEND[lang][3]}</span></> : <span>{copy.future}</span>}</div>
+      <div className="life-story-legend"><p>{copy.legend}</p>{stage === 'money' || stage === 'today' || zoom ? <div className="life-story-color-key">{MONEY_LEGEND[lang].slice(0, 3).map((label, index) => <span key={label}><i style={{ background: `rgb(${[palette.neutral, palette.income, palette.expense][index].join(',')})` }} />{label}</span>)}</div> : <span>{copy.future}</span>}</div>
+    </div>
+    <div ref={moneyRef} className="life-story-money" aria-hidden="true">
+      <div><span className="life-money-arrow"><ArrowRight size={13} /></span><span ref={moneyLabelRef}>{MONEY_LEGEND[lang][1]}</span><strong ref={moneyAmountRef}>—</strong></div>
+      <small ref={moneySourceRef}>{MONEY_LEGEND[lang][3]}</small>
     </div>
     <footer className={`life-story-footer ${ready ? 'is-ready' : ''}`}>
       <button type="button" className="life-story-primary" onClick={onStart} disabled={!ready}>{FIRST_ENTRY[lang]}<ArrowRight size={14} /></button>

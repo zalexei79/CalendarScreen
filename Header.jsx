@@ -3,7 +3,7 @@ import { transitionView } from './src/shared/ui/transitionView';
 import './src/shared/ui/GlassSystem.css';
 import {
   ChevronLeft, ChevronRight, Link2, LogIn, LogOut, Download, Smartphone, Monitor, Wifi, Cloud,
-  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw,
+  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw, Play,
 } from 'lucide-react';
 import { LANGUAGES, CURRENCIES } from './src/shared/config/constants';
 import VoiceSettings from './src/shared/ui/VoiceSettings.jsx';
@@ -44,6 +44,7 @@ export default function Header({
   proView = false, setProView = () => {},
   openReferralHub = () => {}, openProPresentation = () => {}, invitedCount = 0, referralLabel = 'Invites',
   accountMode = 'main', setAccountMode = () => {},
+  onReplayLifeStory,
 }) {
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
   const [syncIssueOpen, setSyncIssueOpen] = useState(false);
@@ -376,6 +377,10 @@ export default function Header({
                   </div>
                 </div>
 
+                {onReplayLifeStory && <button type="button" onClick={onReplayLifeStory} className={`mb-3 flex min-h-11 w-full items-center gap-3 rounded-xl border px-3 py-3 text-left text-xs transition-colors ${isLight ? 'border-zinc-200 text-zinc-600 hover:bg-zinc-50' : 'border-zinc-800 text-zinc-300 hover:bg-white/5'}`}>
+                  <Play className="h-4 w-4 shrink-0 text-emerald-500" />
+                  {language === 'zh-CN' ? '再看我的故事' : language === 'en' ? 'Watch my story again' : language === 'md' || language === 'ro' ? 'Privește din nou povestea mea' : 'Посмотреть мою историю'}
+                </button>}
                 <a
                   href={language === 'zh-CN' ? '/privacy-zh.html' : '/privacy.html'}
                   target="_blank"

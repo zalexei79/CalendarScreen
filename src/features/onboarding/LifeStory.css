@@ -1,5 +1,18 @@
 .life-story { --paper: #f7f4ec; --ink: #343e36; --muted: #7e8276; --green: #4d7764; --count: #b67b57; --ease: cubic-bezier(.4,0,.2,1); position: relative; isolation: isolate; display: flex; flex-direction: column; width: 100%; min-height: 100dvh; padding: max(22px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)); box-sizing: border-box; background: var(--paper); color: var(--ink); overflow: hidden; }
 .life-story[data-theme="dark"] { --paper: #111714; --ink: #e1e6df; --muted: #99a69c; --green: #8db79b; --count: #c7a184; color-scheme: dark; }
+.life-story-money { width: min(100%, 340px); min-height: 54px; margin: 30px auto 0; text-align: center; opacity: 0; transform: translateY(8px); transition: opacity 450ms var(--ease), transform 650ms var(--ease); }
+.life-story[data-stage="money"] .life-story-money[data-tone], .life-story[data-stage="today"] .life-story-money[data-tone] { opacity: 1; transform: translateY(0); }
+.life-story-money > div { display: flex; align-items: center; justify-content: center; gap: 10px; color: #719780; }
+.life-story-money[data-tone="expense"] > div { color: #c68778; }
+.life-story-money span { font-size: 10px; }
+.life-story-money strong { min-width: 105px; text-align: left; font-weight: 400; font-size: 23px; line-height: 30px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.life-story-money small { display: block; margin-top: 5px; color: var(--muted); font-size: 9px; letter-spacing: .02em; }
+.life-money-arrow { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #71978012; }
+.life-money-arrow svg { transform: rotate(-45deg); transition: transform 160ms var(--ease); }
+.life-story-money[data-tone="expense"] .life-money-arrow { background: #c6877812; }
+.life-story-money[data-tone="expense"] .life-money-arrow svg { transform: rotate(45deg); }
+.life-story[data-theme="dark"] .life-story-money > div { color: #8db79b; }
+.life-story[data-theme="dark"] .life-story-money[data-tone="expense"] > div { color: #d29689; }
 .life-story::before { content: ''; pointer-events: none; position: absolute; inset: 0; z-index: -1; opacity: .22; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%238c826a' opacity='.2' filter='url(%23n)' d='M0 0h180v180H0z'/%3E%3C/svg%3E"); }
 .life-story button { font: inherit; cursor: pointer; }
 .life-story button:focus-visible { outline: 2px solid var(--green); outline-offset: 5px; }
@@ -39,7 +52,7 @@
 .life-birthday-field[aria-invalid="true"] { border-color: #c68778; }
 @keyframes life-copy-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @media (min-width: 760px) { .life-story-heading { min-height: 210px; } .life-story-scene { height: clamp(340px, 43dvh, 470px); } .life-story { padding-bottom: 26px; } }
-@media (max-height: 730px) { .life-story-heading { margin-top: 12px; min-height: 137px; } .life-story-scene { height: 280px; } .life-story-footer { padding-top: 7px; } .life-story { padding-top: 10px; } }
+@media (max-height: 730px) { .life-story-heading { margin-top: 12px; min-height: 137px; } .life-story-scene { height: 280px; } .life-story-money { margin-top: 22px; min-height: 44px; } .life-story-footer { padding-top: 7px; } .life-story { padding-top: 10px; } }
 @media (prefers-reduced-motion: reduce) { .life-story *, .life-story *::before { animation: none !important; transition: none !important; } }
 
 /* The final rectangles land on the existing calendar, under this dialog. */

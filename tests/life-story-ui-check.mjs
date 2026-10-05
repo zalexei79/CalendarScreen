@@ -43,8 +43,10 @@ try {
   const next = () => page.getByRole('button', { name: 'Увидеть мою историю', exact: true }).click();
   const choose = async () => {
     assert.equal(await page.getByRole('button', { name: 'Продолжить', exact: true }).count(), 0);
+    assert.equal(await page.locator('[role="group"] button[aria-pressed="true"]').count(), 0, 'Languages do not begin preselected');
     await page.getByRole('button', { name: /Русский/ }).click();
     assert.equal(await page.getByRole('button', { name: 'Продолжить', exact: true }).count(), 0);
+    assert.equal(await page.locator('[role="group"] button[aria-pressed="true"]').count(), 0, 'Currency awaits an explicit choice');
     await page.getByRole('button', { name: 'Тёмное', exact: true }).click();
     await page.getByRole('button', { name: /MDL/ }).click();
   };

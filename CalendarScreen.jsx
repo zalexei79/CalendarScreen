@@ -100,6 +100,7 @@ import { useReferral } from './src/features/referrals/useReferral.js';
 import { useProAccess } from './src/features/pro/useProAccess.js';
 import { loadBrandIcon, drawBrandIcon } from './src/shared/lib/brandIcon.js';
 import FirstRunSetup from './src/features/onboarding/FirstRunSetup.jsx';
+import { birthdayStorageKey, lifeWeeks } from './src/features/onboarding/lifeStoryModel';
 import { enablePush } from './src/features/reminders/pushClient';
 import { planDateKey, planTime, useFinancePlans } from './src/features/reminders/useFinancePlans';
 import FinancePlanComposer from './src/features/reminders/FinancePlanComposer.jsx';
@@ -629,6 +630,7 @@ export default function CalendarScreen() {
     }
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [storyReplay, setStoryReplay] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const settingsRef = useRef(null);
 
@@ -639,6 +641,22 @@ export default function CalendarScreen() {
   function closeSettings() {
     setSettingsVisible(false);
     setTimeout(() => setSettingsOpen(false), 160);
+  }
+
+  function replayLifeStory() {
+    setSettingsOpen(false);
+    setSettingsVisible(false);
+    setStoryReplay(true);
+    setFirstRunGuideStep(0);
+    setTraderMode(false);
+    setAccountMode('main');
+    setViewYear(today.getFullYear());
+    setViewMonth(today.getMonth());
+    setSelectedKey(null);
+    setSlideDirection(null);
+    let birthday = '';
+    try { birthday = localStorage.getItem(birthdayStorageKey(user?.id || 'guest')) || ''; } catch { /* The date is optional. */ }
+    setSetupStep(lifeWeeks(birthday, today) ? 'intro' : 'birthday');
   }
 
   useEffect(() => {
@@ -2822,6 +2840,11 @@ export default function CalendarScreen() {
       || !getMoneyCategoryMeta(name);
   }
 
+  const storyCalendarRecords = useMemo(() => Object.entries(manualTrades || {})
+    .flatMap(([dateKey, items]) => (Array.isArray(items) ? items : []).map(item => ({ ...item, dateKey })))
+    .filter(item => item.dateKey <= todayKey && !isTradingHistoryRecord(item)), [manualTrades, voiceCategories.categories, todayKey]);
+  const hasCalendarHistory = Object.values(manualTrades || {}).some(items => Array.isArray(items) && items.length > 0);
+
   const historyFilteredTrades = useMemo(() => {
     return Object.entries(manualTrades || {})
       .flatMap(([dateKey, arr]) => (Array.isArray(arr) ? arr : []).map((t) => ({ ...t, dateKey })))
@@ -4510,6 +4533,7 @@ export default function CalendarScreen() {
         isLight={isLight} traderMode={traderMode} t={t} theme={theme} setTheme={setTheme}
         settingsRef={settingsRef} settingsOpen={settingsOpen} closeSettings={closeSettings}
         openSettings={openSettings} settingsVisible={settingsVisible} language={language}
+        onReplayLifeStory={replayLifeStory}
         setLanguage={setLanguage} currency={currency} setCurrency={setCurrency} user={user}
         handleGoogleLogout={handleGoogleLogout} handleGoogleLogin={handleGoogleLogin}
         goToPrevMonth={goToPrevMonth} goToNextMonth={goToNextMonth}
@@ -7001,6 +7025,7 @@ export default function CalendarScreen() {
           language={language}
           currency={currency}
           theme={theme}
+          calendarRecords={storyCalendarRecords}
           profileKey={user?.id || 'guest'}
           onLanguage={handleOnboardingLanguageSelect}
           onCurrency={setCurrency}
@@ -7019,19 +7044,22 @@ export default function CalendarScreen() {
           onArrive={() => {
             markOnboardingComplete();
             setSetupStep(null);
-            setFirstRunGuideStep(1);
+            setFirstRunGuideStep(storyReplay || hasCalendarHistory ? 0 : 1);
+            setStoryReplay(false);
           }}
           onStart={() => {
             markOnboardingComplete();
             setTraderMode(false);
             setSetupStep(null);
-            setFirstRunGuideStep(2);
+            setFirstRunGuideStep(storyReplay || hasCalendarHistory ? 0 : 2);
+            setStoryReplay(false);
             openModal(null, todayKey);
           }}
           onSkip={() => {
             markOnboardingComplete();
             setSetupStep(null);
-            markFirstRunGuideComplete();
+            if (!storyReplay) markFirstRunGuideComplete();
+            setStoryReplay(false);
           }}
         />
       )}
