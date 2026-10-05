@@ -130,15 +130,16 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     rhythm = reserveLifePresent(rhythm, sourceIndices, current);
     const moneyEvents = lifeMoneyEvents(rhythm, currency);
     const weekTimes = Array.from({ length: total }, (_, week) => week < elapsedWeeks ? inverseEase((week + 1) / elapsedWeeks) * LIFE_COUNT_END : Infinity);
-    const lastRecord = recorded.at(-1);
-    const flow = lifeMoneyFlow(moneyEvents, elapsedWeeks, LIFE_COUNT_END);
-    if (lastRecord) flow.push({ ...lastRecord, start: LIFE_COUNT_END, duration: 1500, lane: 1 });
-    const moneyNodes = Array.from({ length: 3 }, () => {
-      const node = document.createElement('span');
-      node.className = 'life-money-flow-event';
-      moneyFlowRef.current.appendChild(node);
-      return node;
-    });
+    const flow = recorded.length ? ['income', 'expense'].flatMap((tone, lane) => {
+      const event = recorded.findLast(event => event.tone === tone);
+      return event ? [{ ...event, start: 2000, duration: 700, lane }] : [];
+    }) : lifeMoneyFlow(moneyEvents, elapsedWeeks, LIFE_COUNT_END);
+    const moneyArea = moneyFlowRef.current;
+    moneyArea.querySelector('.life-money-caption').textContent = recorded.length ? RECORDED[lang] : MONEY_QUESTION[lang][3];
+    const moneyAmounts = moneyArea.querySelector('.life-money-amounts');
+    const moneyQuestion = moneyArea.querySelector('.life-money-question');
+    const moneyNodes = [...moneyArea.querySelectorAll('.life-money-value')].map(node => ({ node, currentValue: node.querySelector('.life-money-current'), oldValue: node.querySelector('.life-money-previous') }));
+    const formatAmount = event => `${event.tone === 'income' ? '+' : '−'}${event.amount.toLocaleString(locale, { maximumFractionDigits: 2 })}`;
     story.dataset.currentWeek = String(current);
     story.dataset.focusWeek = String(sourceIndices[todayIndex]);
     let lastTime = 0;
@@ -215,7 +216,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
 
       // Reserve a stable counter and legend area before fitting any weeks.
       const gridTop = scene.top + 70;
-      const gridSpace = Math.max(1, scene.height - 155);
+      const gridSpace = Math.max(1, scene.height - 135);
       const unit = Math.min((scene.width - 36) / 52, gridSpace / rows);
       const gridWidth = unit * 52;
       const gridHeight = unit * rows;
@@ -244,26 +245,35 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         unit, cropCol, cropRow, monthRows, compactPitch,
         focusX: centerX, focusY: height * .51,
       }, motion);
-      const activeFlow = flow.filter(event => time >= event.start && time < event.start + event.duration);
-      moneyNodes.forEach((node, lane) => {
-        const event = activeFlow.find(event => event.lane === lane);
-        if (!event) { node.style.opacity = '0'; delete node.dataset.active; return; }
-        const age = time - event.start;
-        const alpha = ease(clamp(age / 80)) * ease(clamp((event.duration - age) / 220));
-        const amount = `${event.tone === 'income' ? '+' : '−'}${event.amount.toLocaleString(locale, { maximumFractionDigits: 2 })} ${event.currency}`;
+      const moneyExit = 1 - ease(clamp((time - 8200) / 450));
+      const questionProgress = ease(clamp((time - 5500) / 700));
+      moneyArea.style.opacity = String(moneyExit);
+      moneyArea.style.transform = `translateY(${-4 * (1 - moneyExit)}px)`;
+      moneyAmounts.style.opacity = String(1 - questionProgress);
+      moneyQuestion.style.opacity = String(questionProgress);
+      moneyQuestion.style.transform = `translateY(${6 * (1 - questionProgress)}px)`;
+      moneyNodes.forEach(({ node, currentValue, oldValue }, lane) => {
+        const events = flow.filter(event => event.lane === lane && event.start <= time);
+        const event = events.at(-1);
+        if (!event) { delete node.dataset.active; return; }
+        const previous = events.at(-2);
+        const progress = ease(clamp((time - event.start) / event.duration));
         if (node.dataset.start !== String(event.start)) {
-          node.textContent = amount;
+          currentValue.querySelector('span').textContent = formatAmount(event);
+          currentValue.querySelector('small').textContent = event.currency;
+          oldValue.querySelector('span').textContent = previous ? formatAmount(previous) : '—';
+          oldValue.querySelector('small').textContent = previous?.currency || '';
           node.dataset.start = String(event.start);
           node.dataset.source = event.source;
           node.dataset.week = String(event.week);
-          node.dataset.tone = event.tone;
-          node.setAttribute('aria-label', event.source === 'calendar' ? `${amount}. ${RECORDED[lang]}` : amount);
+          node.setAttribute('aria-label', `${formatAmount(event)} ${event.currency}${event.source === 'calendar' ? `. ${RECORDED[lang]}` : ''}`);
         }
-        const x = originX + gridWidth * scale * (lane + .5) / 3;
-        const y = Math.max(gridTop + 18, originY + (Math.floor(event.week / 52) + .5) * unit * scale - 14) - age / event.duration * 12;
-        node.dataset.active = 'true';
-        node.style.opacity = String(alpha * (1 - motion.zoom));
-        node.style.transform = `translate3d(${x}px,${y}px,0) translate(-50%,-50%)`;
+        if (questionProgress < 1 && moneyExit > 0) node.dataset.active = 'true';
+        else delete node.dataset.active;
+        currentValue.style.opacity = String(progress);
+        currentValue.style.transform = `translateY(${4 * (1 - progress)}px)`;
+        oldValue.style.opacity = String(1 - progress);
+        oldValue.style.transform = `translateY(${-4 * progress}px)`;
       });
       context.clearRect(0, 0, width, height);
       const size = unit * (width >= 760 ? .74 : .65);
@@ -354,14 +364,14 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     const onMotionChange = () => { reduceMotion = media.matches; setReduced(reduceMotion); cancelAnimationFrame(frame); frame = requestAnimationFrame(tick); };
     media.addEventListener('change', onMotionChange);
     frame = requestAnimationFrame(tick);
-    return () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); media.removeEventListener('change', onMotionChange); if (calendarGrid) calendarGrid.style.opacity = originalGridOpacity; layer.replaceChildren(); moneyFlowRef.current?.replaceChildren(); root.removeAttribute('data-life-motion'); };
+    return () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); media.removeEventListener('change', onMotionChange); if (calendarGrid) calendarGrid.style.opacity = originalGridOpacity; layer.replaceChildren(); root.removeAttribute('data-life-motion'); };
   }, [birthday, elapsedWeeks, lang, theme, currency, calendarRecords, run]);
 
   const ready = stage === 'ready';
   const zoom = stage === 'zoom' || ready;
   const question = MONEY_QUESTION[lang];
-  const title = ready ? monthLabel : stage === 'life' ? copy.life : stage === 'question' ? question[0] : copy.today;
-  const hint = ready ? question[2] : stage === 'life' ? copy.lifeHint : stage === 'question' ? question[1] : question[2];
+  const title = ready ? monthLabel : stage === 'life' || stage === 'question' ? copy.life : copy.today;
+  const hint = stage === 'life' || stage === 'question' ? copy.lifeHint : question[2];
 
   return <div className={`life-story ${reduced ? 'life-story--reduced' : ''}`} data-theme={theme} data-stage={stage}>
     <div ref={paperRef} className="life-story-paper" aria-hidden="true" />
@@ -376,8 +386,20 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       <div className="life-story-counter" aria-hidden="true"><strong ref={counterRef}>0</strong><span>{stats ? copy.weeks : copy.generic}</span></div>
       <canvas ref={canvasRef} className="life-story-grid" aria-label={stats ? `${elapsedWeeks.toLocaleString(locale)} ${copy.weeks}. ${copy.legend}` : copy.generic} role="img" />
       <div ref={cellsRef} className="life-calendar-bridge" aria-hidden="true" inert="" />
-      <div ref={moneyFlowRef} className="life-money-flow" aria-hidden="true" />
-      <div className="life-story-legend"><p>{copy.legend}</p><div className="life-story-color-key">{MONEY_LEGEND[lang].slice(0, 3).map((label, index) => <span key={label}><i style={{ background: `rgb(${[palette.neutral, palette.income, palette.expense][index].join(',')})` }} />{label}</span>)}</div><span>{question[3]}</span></div>
+      <div className="life-story-legend"><p>{copy.legend}</p><div className="life-story-color-key">{MONEY_LEGEND[lang].slice(0, 3).map((label, index) => <span key={label}><i style={{ background: `rgb(${[palette.neutral, palette.income, palette.expense][index].join(',')})` }} />{label}</span>)}</div></div>
+    </div>
+    <div ref={moneyFlowRef} className="life-money-area" key={`money-${run}`}>
+      <div className="life-money-amounts" aria-hidden="true">
+        <p className="life-money-caption">{question[3]}</p>
+        <div className="life-money-columns">{['income', 'expense'].map((tone, index) => <div className="life-money-column" key={tone} data-tone={tone}>
+          <div className="life-money-value" data-tone={tone}>
+            <span className="life-money-previous"><span>—</span><small /></span>
+            <span className="life-money-current"><span>—</span><small /></span>
+          </div>
+          <span className="life-money-label">{MONEY_LEGEND[lang][index + 1]}</span>
+        </div>)}</div>
+      </div>
+      <div className="life-money-question" aria-hidden={stage !== 'question'}><p>{question[0]}</p><span>{question[1]}</span></div>
     </div>
     <footer className={`life-story-footer ${ready ? 'is-ready' : ''}`}>
       <button type="button" className="life-story-primary" onClick={onStart} disabled={!ready}>{FIRST_ENTRY[lang]}<ArrowRight size={14} /></button>

@@ -85,8 +85,8 @@ export function lifeMoneyEvents(rhythm, currency = 'USD') {
   });
 }
 
-// A limited stream follows weeks already counted. Each amount belongs to its
-// colored week; it is an example transaction, never a lifetime balance.
+// Two stable amounts follow weeks already counted. Keep each example readable
+// before a gentle exchange; these are transactions, never a lifetime balance.
 export function lifeMoneyFlow(events, elapsedWeeks, duration = 8000) {
   if (!events.length || !elapsedWeeks) return [];
   const first = events.find(event => event.week < elapsedWeeks);
@@ -94,13 +94,16 @@ export function lifeMoneyFlow(events, elapsedWeeks, duration = 8000) {
   const ratio = (first.week + 1) / elapsedWeeks;
   const inverse = ratio < .5 ? Math.cbrt(ratio / 4) : 1 - Math.cbrt((1 - ratio) / 4);
   const result = [];
-  let index = 0;
-  for (let start = inverse * duration + 200; start <= duration - 450; start += 150) {
+  const previous = new Map();
+  for (let start = inverse * duration + 200; start < Math.min(5500, duration - 700); start += 1400) {
     const t = Math.min(1, start / duration);
     const filled = Math.floor(elapsedWeeks * (t < .5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2));
-    while (index + 1 < events.length && events[index + 1].week < filled) index++;
-    if (events[index].week >= filled) continue;
-    result.push({ ...events[index], start, duration: 450, lane: result.length % 3 });
+    for (const [lane, tone] of ['income', 'expense'].entries()) {
+      const event = events.findLast(event => event.week < filled && event.tone === tone);
+      if (!event || previous.get(tone) === event.week) continue;
+      previous.set(tone, event.week);
+      result.push({ ...event, start, duration: 700, lane });
+    }
   }
   return result;
 }

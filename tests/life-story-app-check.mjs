@@ -7,11 +7,13 @@ const browser = await require('playwright').chromium.launch({ channel: 'msedge',
 const desktop = process.argv.includes('--desktop');
 const dark = desktop || process.argv.includes('--dark');
 const reference = process.argv.includes('--reference');
+const compact = process.argv.includes('--compact');
+const phoneHeight = compact ? 760 : 844;
 const currency = desktop ? 'RUB' : 'MDL';
-const suffix = desktop ? reference ? '-desktop-reference' : '-desktop' : dark ? '-dark' : '';
+const suffix = desktop ? reference ? '-desktop-reference' : '-desktop' : compact ? '-compact' : dark ? '-dark' : '';
 const screenshotPath = stage => `tests/life-story-app${suffix}-${stage}.png`;
 try {
-  const context = await browser.newContext({ viewport: desktop ? reference ? { width: 1145, height: 976 } : { width: 1440, height: 1000 } : { width: 390, height: 844 }, serviceWorkers: 'block' });
+  const context = await browser.newContext({ viewport: desktop ? reference ? { width: 1145, height: 976 } : { width: 1440, height: 1000 } : { width: 390, height: phoneHeight }, serviceWorkers: 'block' });
   await context.addInitScript(dark => { localStorage.setItem('atj_language', 'ru'); localStorage.setItem('atj_theme', dark ? 'dark' : 'light'); localStorage.setItem('calendar_guide_completed', '1'); localStorage.setItem('dayris_voice_feedback', 'off'); }, dark);
   await context.route('**/*', route => {
     const url = new URL(route.request().url());
@@ -29,9 +31,9 @@ try {
   await page.clock.pauseAt(new Date('2026-10-05T13:00:00'));
   await page.screenshot({ path: screenshotPath('language') });
   if (!desktop) {
-    await page.setViewportSize({ width: 320, height: 844 });
+    await page.setViewportSize({ width: 320, height: phoneHeight });
     await page.screenshot({ path: screenshotPath('language-narrow') });
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ width: 390, height: phoneHeight });
   }
   const next = () => page.getByRole('button', { name: 'Увидеть мою историю', exact: true }).click();
   const choose = async () => {
@@ -57,11 +59,17 @@ try {
   };
   await seek(3500);
   assert.equal(await page.locator('.life-story').getAttribute('data-stage'), 'life');
-  const money = page.locator('.life-money-flow-event[data-active="true"]');
-  assert.ok(await money.count() >= 1 && await money.count() <= 3, 'A limited flow appears alongside the first childhood events');
+  const money = page.locator('.life-money-value[data-active="true"]');
+  assert.ok(await money.count() >= 1 && await money.count() <= 2, 'Two steady columns accompany the childhood events');
   assert.ok((await money.evaluateAll(nodes => nodes.map(node => node.dataset.source))).every(source => source === 'illustration'));
-  assert.equal(await page.locator('.life-story-money').count(), 0, 'There is no separate monetary card competing with the weeks');
-  assert.equal(await page.locator('.life-story-money-note').count(), 0, 'Money no longer sits in a separate footer counter');
+  assert.equal(await page.locator('.life-money-flow-event').count(), 0, 'No amounts flash over the colored cells');
+  const moneyLayout = await page.evaluate(() => {
+    const region = document.querySelector('.life-money-area').getBoundingClientRect();
+    const scene = document.querySelector('.life-story-scene').getBoundingClientRect();
+    const tools = document.querySelector('.life-story-tools').getBoundingClientRect();
+    return { region: region.toJSON(), scene: scene.toJSON(), tools: tools.toJSON(), height: innerHeight };
+  });
+  assert.ok(moneyLayout.region.top >= moneyLayout.scene.bottom && moneyLayout.region.bottom <= moneyLayout.tools.top && moneyLayout.tools.bottom <= moneyLayout.height, `Money has its own place below the grid, above navigation: ${JSON.stringify(moneyLayout)}`);
   const earlyColors = await page.locator('.life-story-grid').evaluate(canvas => {
     const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
     let colored = 0;
@@ -73,19 +81,29 @@ try {
   const firstHeading = await page.locator('.life-story-heading h1').innerText();
   await page.evaluate(() => {
     window.moneyBeats = [];
-    window.moneyNodes = [...document.querySelectorAll('.life-money-flow-event')];
-    new MutationObserver(changes => { for (const change of changes) if (change.attributeName === 'aria-label') window.moneyBeats.push(change.target.textContent); }).observe(document.querySelector('.life-money-flow'), { attributes: true, subtree: true });
+    window.moneyNodes = [...document.querySelectorAll('.life-money-value')];
+    new MutationObserver(changes => { for (const change of changes) if (change.attributeName === 'aria-label') window.moneyBeats.push(change.target.getAttribute('aria-label')); }).observe(document.querySelector('.life-money-area'), { attributes: true, subtree: true });
   });
-  await page.clock.runFor(1000);
+  let previousOpacity;
+  for (let frame = 0; frame < 63; frame++) {
+    await page.clock.runFor(16);
+    const opacity = await money.evaluateAll(nodes => nodes.map(node => ({ current: Number(node.querySelector('.life-money-current').style.opacity), previous: Number(node.querySelector('.life-money-previous').style.opacity), start: node.dataset.start, value: node.querySelector('.life-money-current').textContent, oldValue: node.querySelector('.life-money-previous').textContent })));
+    assert.ok(opacity.every(({ current, previous }) => Math.abs(current + previous - 1) < .001), 'An exchange never blanks out both amounts');
+    if (previousOpacity) assert.ok(opacity.every((state, index) => state.start === previousOpacity[index].start ? Math.abs(state.current - previousOpacity[index].current) < .08 : state.oldValue === previousOpacity[index].value && state.previous > .99), 'The exchange preserves the visible amount and changes opacity gradually, without flashes');
+    previousOpacity = opacity;
+  }
   const beats = await page.evaluate(() => window.moneyBeats);
-  assert.ok(beats.length >= 6 && beats.length <= 8, 'Several transactions flow each second without replacing a single flashing number');
+  assert.ok(beats.length <= 2, 'Each column changes at most once in a second, with time to read');
   assert.ok(beats.every(amount => amount.endsWith(currency)), 'Every transaction uses the selected currency');
   assert.ok(await page.evaluate(() => window.moneyNodes.every(node => node.isConnected)), 'A fixed pool of labels avoids mounting new UI each frame');
   assert.equal(await page.locator('.life-story-heading h1').innerText(), firstHeading, 'Counting and financial examples share one stable narrative');
   if (dark) assert.equal(await page.locator('.life-story').evaluate(element => getComputedStyle(element, '::before').display), 'none', 'Dark mode has no grain texture');
   await seek(6500);
   assert.equal(await page.locator('.life-story').getAttribute('data-stage'), 'question');
-  assert.equal(await page.locator('.life-story-heading h1').innerText(), 'А ты знаешь, куда ушли эти деньги?');
+  assert.equal(await page.locator('.life-story-heading h1').innerText(), firstHeading, 'The grid keeps a stable heading as the financial area poses its question');
+  assert.equal(await page.locator('.life-money-question p').innerText(), 'А ты знаешь, куда ушли эти деньги?');
+  assert.equal(await page.locator('.life-money-question').evaluate(node => Number(getComputedStyle(node).opacity)), 1);
+  assert.equal(await page.locator('.life-money-amounts').evaluate(node => Number(getComputedStyle(node).opacity)), 0, 'Amounts leave the same area before the question, rather than competing with it');
   await page.waitForFunction(() => Number(document.querySelector('.life-story-counter strong')?.textContent.replace(/\D/g, '')) > 1200);
   const filled = Number(await page.locator('.life-story-counter strong').innerText().then(text => text.replace(/\D/g, '')));
   assert.ok((await money.evaluateAll(nodes => nodes.map(node => Number(node.dataset.week)))).every(week => week <= filled));
@@ -94,8 +112,8 @@ try {
   assert.equal(await page.locator('.life-story').getAttribute('data-theme'), dark ? 'dark' : 'light');
   assert.equal(await page.locator('.life-story-paper').evaluate(element => getComputedStyle(element).backgroundColor), dark ? 'rgb(17, 23, 20)' : 'rgb(247, 244, 236)');
   if (desktop) assert.ok(Number(await page.locator('.life-story').getAttribute('data-grid-width')) > (reference ? 540 : 570), 'The desktop life panel uses the available screen height to make the weeks legible');
-  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && [...document.querySelectorAll('.life-money-flow-event[data-active="true"]')].every(node => { const r = node.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.top >= Number(document.querySelector('.life-story').dataset.gridTop) && r.bottom < innerHeight; })), 'The flowing transactions stay inside the calendar scene');
-  if (!desktop) await page.setViewportSize({ width: 320, height: 844 });
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'The financial area never adds horizontal scrolling');
+  if (!desktop) await page.setViewportSize({ width: 320, height: phoneHeight });
   await page.clock.runFor(32);
   const counterLayout = await page.evaluate(() => {
     const counter = document.querySelector('.life-story-counter');
@@ -106,7 +124,14 @@ try {
   });
   const { number, caption, gridTop, width } = counterLayout;
   assert.ok(number.bottom <= caption.top && caption.bottom + 12 < gridTop && caption.height <= 15 && number.left >= 0 && number.right <= width, `A four-digit counter and its caption fit above the grid, even at 320px: ${JSON.stringify(counterLayout)}`);
-  if (!desktop) await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(await page.evaluate(() => {
+    const region = document.querySelector('.life-money-area').getBoundingClientRect();
+    const question = document.querySelector('.life-money-question p').getBoundingClientRect();
+    const tools = document.querySelector('.life-story-tools').getBoundingClientRect();
+    const dialog = document.querySelector('.first-run-dialog');
+    return question.left >= 0 && question.right <= innerWidth && region.bottom <= tools.top && tools.bottom <= innerHeight && dialog.scrollHeight <= dialog.clientHeight + 1;
+  }), 'The question and navigation fit without scrolling, including a narrow phone');
+  if (!desktop) await page.setViewportSize({ width: 390, height: phoneHeight });
   await page.clock.runFor(700);
   await page.screenshot({ path: screenshotPath('weeks'), animations: 'disabled' });
   await seek(8500);
