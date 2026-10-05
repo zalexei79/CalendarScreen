@@ -43,13 +43,13 @@ try {
   await page.clock.fastForward(480);
   const money = page.locator('.life-story-money');
   assert.equal(await money.getAttribute('data-source'), 'calendar');
-  assert.equal(await money.locator('strong').getAttribute('aria-label'), '−37,5 EUR');
+  assert.equal(await money.locator('strong').getAttribute('aria-label'), '+250 MDL', 'The story stays in the selected currency without relabelling EUR records');
   await page.clock.fastForward(300);
-  assert.equal(await money.locator('strong').getAttribute('aria-label'), '+250 MDL');
+  assert.equal(await money.locator('strong').getAttribute('aria-label'), '−80 MDL');
   await page.clock.fastForward(250);
   assert.equal(await money.locator('strong').getAttribute('aria-label'), '−80 MDL');
   await page.screenshot({ path: 'tests/life-story-replay-money.png', animations: 'disabled' });
-  await page.clock.fastForward(6500);
+  await page.clock.fastForward(7500);
   await page.waitForFunction(() => !document.querySelector('.life-story'));
   assert.equal(await page.locator('.first-entry-whisper').count(), 0, 'Replaying an existing history never asks for a first entry');
   assert.ok(await page.locator('[data-today-cell="true"]').isVisible());
@@ -63,5 +63,5 @@ try {
   await page.waitForFunction(() => !document.querySelector('.life-story'));
   assert.equal(await page.locator('.first-entry-whisper').count(), 0);
   assert.deepEqual(errors, []);
-  console.log('Settings replay: direct start with saved birthday, exact signed amounts with separate currencies, untouched saved records, existing calendar arrival, no first-entry prompt and reduced motion passed.');
+  console.log('Settings replay: direct start with saved birthday, exact signed amounts in the selected currency, untouched records in all currencies, existing calendar arrival, no first-entry prompt and reduced motion passed.');
 } finally { await browser.close(); }

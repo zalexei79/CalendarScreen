@@ -82,6 +82,20 @@ export function lifeMoneyEvents(rhythm, currency = 'USD') {
   });
 }
 
+// A fast illustrative stream samples only weeks already visited by the camera.
+// It never invents saved records or converts an existing record's currency.
+export function lifeMoneyBeat(events, filled, beat) {
+  const end = events.findLastIndex(event => event.week < filled);
+  if (end < 0) return null;
+  const recent = events.slice(Math.max(0, end - 15), end + 1);
+  const hash = (Math.imul(beat + 1, 1597334677) ^ Math.imul(end + 1, 3812015801)) >>> 0;
+  const tone = hash % 7 < 3 ? 'income' : 'expense';
+  const event = recent.findLast(event => event.tone === tone) || recent.at(-1);
+  const sizes = event.tone === 'income' ? [.12, .4, .8, 1.2, 2.5, 6] : [.12, .35, .8, 1.5, 8, 64];
+  const amount = Math.max(1, Math.round(event.amount * sizes[(hash >>> 5) % sizes.length] * (.8 + (hash >>> 12) % 9 / 10)));
+  return { ...event, amount, id: `illustration-${beat}` };
+}
+
 export function calendarMoneyEvents(records, birthday, today = new Date()) {
   const now = localDateValue(today);
   const elapsed = lifeWeeks(birthday, today)?.weeks ?? 0;

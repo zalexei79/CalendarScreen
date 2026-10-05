@@ -6,6 +6,7 @@ const require = createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE || 'C:/Users
 const browser = await require('playwright').chromium.launch({ channel: 'msedge', headless: true });
 const desktop = process.argv.includes('--desktop');
 const reference = process.argv.includes('--reference');
+const currency = desktop ? 'RUB' : 'MDL';
 const suffix = desktop ? reference ? '-desktop-reference' : '-desktop' : '';
 const screenshotPath = stage => `tests/life-story-app${suffix}-${stage}.png`;
 try {
@@ -30,7 +31,7 @@ try {
     assert.equal(await page.getByRole('button', { name: 'Продолжить', exact: true }).count(), 0);
     await page.getByRole('button', { name: /Русский/ }).click();
     assert.equal(await page.getByRole('button', { name: 'Продолжить', exact: true }).count(), 0);
-    await page.getByRole('button', { name: /MDL/ }).click();
+    await page.getByRole('button', { name: new RegExp(currency) }).click();
   };
   await choose();
   // A week at column 51 used to split the selected month across two grid rows.
@@ -53,12 +54,22 @@ try {
   });
   assert.ok(earlyColors > 50, 'Income and spending already color the counted weeks during the first scene');
   await page.screenshot({ path: screenshotPath('early'), animations: 'disabled' });
-  await page.clock.fastForward(2500);
+  await page.evaluate(() => {
+    window.moneyBeats = [];
+    new MutationObserver(changes => { for (const change of changes) if (change.attributeName === 'aria-label') window.moneyBeats.push(change.target.getAttribute('aria-label')); }).observe(document.querySelector('.life-story-money strong'), { attributes: true });
+  });
+  await page.clock.runFor(800);
+  const beats = await page.evaluate(() => [...new Set(window.moneyBeats)]);
+  assert.ok(beats.length >= 8, 'The monetary stream changes at least ten times per second');
+  assert.ok(beats.every(value => value.endsWith(currency)), 'Every illustrative amount uses the explicitly selected currency');
+  assert.ok(beats.some(value => value.startsWith('+')) && beats.some(value => value.startsWith('−')));
+  if (desktop) assert.equal(await page.locator('.life-story').evaluate(element => getComputedStyle(element, '::before').display), 'none', 'Dark mode has no grain texture');
+  await page.clock.fastForward(1700);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.stage === 'money');
   await page.waitForFunction(() => Number(document.querySelector('.life-story-counter strong')?.textContent.replace(/\D/g, '')) > 1200);
   const money = page.locator('.life-story-money');
   assert.equal(await money.getAttribute('data-source'), 'illustration');
-  assert.match(await money.locator('strong').getAttribute('aria-label'), /^[+−].*MDL$/);
+  assert.match(await money.locator('strong').getAttribute('aria-label'), new RegExp(`^[+−].*${currency}$`));
   assert.ok(Number(await money.getAttribute('data-week')) <= Number(await page.locator('.life-story-counter strong').innerText().then(text => text.replace(/\D/g, ''))));
   const focusDistance = await page.locator('.life-story').evaluate(element => Math.abs(Number(element.dataset.focusWeek) - Number(element.dataset.currentWeek)));
   assert.ok(focusDistance <= 6, 'The focused week remains adjacent to the chronological present, including row edges');
@@ -92,7 +103,7 @@ try {
   await page.waitForFunction(() => Number(document.querySelector('.life-story-paper')?.style.opacity || 1) < .97);
   assert.equal(await page.locator('.life-story').getAttribute('data-life-opacity'), '0');
   await page.screenshot({ path: screenshotPath('morph'), animations: 'disabled' });
-  await page.clock.fastForward(1000);
+  await page.clock.fastForward(1700);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.stage === 'ready');
   const geometry = await page.evaluate(() => {
     const live = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')];
@@ -105,7 +116,7 @@ try {
     });
   });
   assert.ok(geometry, 'The moving cells settle onto the real calendar with its exact paint and geometry');
-  await page.clock.fastForward(600);
+  await page.clock.fastForward(700);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.settled === 'true');
   assert.equal(await page.locator('.life-story-money').evaluate(element => getComputedStyle(element).opacity), '0', 'The monetary panel leaves before the calendar becomes interactive');
   const before = await page.screenshot({ path: screenshotPath('settled'), animations: 'disabled' });
@@ -126,7 +137,8 @@ try {
     for (let y = 0; y < a.height; y++) for (let x = 0; x < a.width; x++) {
       // Today begins a requested gentle pulse; the entry hint also appears later.
       if (x > todayRect.x - 24 && x < todayRect.x + todayRect.width + 24 && y > todayRect.y - 24 && y < todayRect.y + todayRect.height + 24) continue;
-      if (hintRect && x > hintRect.x - 8 && x < hintRect.x + hintRect.width + 8 && y > hintRect.y - 8 && y < hintRect.y + hintRect.height + 8) continue;
+      // Include the guide's soft shadow; its entrance is intentional after handoff.
+      if (hintRect && x > hintRect.x - 24 && x < hintRect.x + hintRect.width + 24 && y > hintRect.y - 24 && y < hintRect.y + hintRect.height + 24) continue;
       const index = (y * a.width + x) * 4;
       for (let channel = 0; channel < 3; channel++) { total += Math.abs(a.data[index + channel] - b.data[index + channel]); count++; }
     }
@@ -138,6 +150,8 @@ try {
   await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.first-entry-whisper')).opacity) > .98);
   assert.ok(await page.locator('[data-today-cell="true"]').isVisible());
   await page.screenshot({ path: screenshotPath('calendar') });
+  await page.getByText('Твой денежный календарь', { exact: true }).waitFor();
+  assert.ok(await page.getByRole('button', { name: 'Осмотрюсь сам', exact: true }).isVisible(), 'The guide leaves an explicit way to explore freely');
   await first.click();
   await page.getByRole('button', { name: 'Доходы', exact: true }).waitFor();
   await page.getByText('Укажи сумму и сохрани — запись появится в сегодняшнем дне.', { exact: true }).waitFor();

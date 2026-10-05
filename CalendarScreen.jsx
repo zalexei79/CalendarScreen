@@ -753,6 +753,7 @@ export default function CalendarScreen() {
       create: "创建第一条记录 →",
       skip: "跳过",
       guideTapToday: "从今天开始",
+      calendarIntro: '你的财务日历', guideCalendarHint: '记录收入或支出，从任意一天开始。', guideExplore: '自由探索',
       guideTapTodayHint: "点击高亮日期，创建第一条真实记录。",
       guideExpense: "支出",
       guideIncome: "收入",
@@ -791,6 +792,7 @@ export default function CalendarScreen() {
       create: 'Создать первую запись →',
       skip: 'Пропустить',
       guideTapToday: 'Начнём с сегодняшнего дня',
+      calendarIntro: 'Твой денежный календарь', guideCalendarHint: 'Запиши доход или расход — начни с любого дня.', guideExplore: 'Осмотрюсь сам',
       guideTapTodayHint: 'Нажми на подсвеченный день — добавим первую настоящую запись.',
       guideExpense: 'Потратил',
       guideIncome: 'Получил',
@@ -829,6 +831,7 @@ export default function CalendarScreen() {
       create: 'Create first entry →',
       skip: 'Skip',
       guideTapToday: 'Start with today',
+      calendarIntro: 'Your money calendar', guideCalendarHint: 'Record an income or expense. Start with any day.', guideExplore: 'Explore on my own',
       guideTapTodayHint: 'Tap the highlighted day and create your first real entry.',
       guideExpense: 'Spent',
       guideIncome: 'Received',
@@ -867,6 +870,7 @@ export default function CalendarScreen() {
       create: 'Creează prima înregistrare →',
       skip: 'Omite',
       guideTapToday: 'Începem cu ziua de azi',
+      calendarIntro: 'Calendarul tău financiar', guideCalendarHint: 'Notează un venit sau o cheltuială. Începe cu orice zi.', guideExplore: 'Explorez singur',
       guideTapTodayHint: 'Apasă pe ziua evidențiată și creează prima înregistrare reală.',
       guideExpense: 'Am cheltuit',
       guideIncome: 'Am primit',
@@ -4597,11 +4601,15 @@ export default function CalendarScreen() {
 
       {firstRunGuideStep === 1 && !traderMode && !setupStep && (
         <div className="first-entry-whisper" data-light={isLight}>
+          <strong>{onboardingCopy.calendarIntro}</strong>
+          <p>{onboardingCopy.guideCalendarHint}</p>
+          <div className="first-entry-actions">
           <button type="button" onClick={() => { setFirstRunGuideStep(2); openModal(null, todayKey); }}>
             <Plus className="h-3.5 w-3.5" />
             {language === 'zh-CN' ? '添加第一条记录' : language === 'en' ? 'Add your first entry' : language === 'md' || language === 'ro' ? 'Adaugă prima înregistrare' : 'Добавить первую запись'}
           </button>
-          <p>{onboardingCopy.guideTapToday}</p>
+          <button type="button" className="first-entry-explore" onClick={markFirstRunGuideComplete}>{onboardingCopy.guideExplore}</button>
+          </div>
         </div>
       )}
 

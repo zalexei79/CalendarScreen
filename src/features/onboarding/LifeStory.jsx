@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
-import { lifeWeeks, lifeWeekRhythm, lifeMoneyEvents, calendarMoneyEvents } from './lifeStoryModel';
+import { lifeWeeks, lifeWeekRhythm, lifeMoneyEvents, lifeMoneyBeat, calendarMoneyEvents } from './lifeStoryModel';
 import { createCalendarBridge } from './lifeCalendarBridge';
 import { lifeCalendarMotion, LIFE_MOTION_END } from './lifeCalendarMotion';
 import { createMoneyReadout } from './lifeMoneyReadout';
@@ -110,7 +110,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     const rows = Math.max(32, Math.ceil((elapsedWeeks + 520) / 52));
     const total = rows * 52;
     const rhythm = lifeWeekRhythm(total, birthday || 'dayris');
-    const recorded = calendarMoneyEvents(calendarRecords, birthday, today);
+    const recorded = calendarMoneyEvents(calendarRecords, birthday, today).filter(event => event.currency === currency);
     // Real records can color their known weeks; illustrated history remains labelled.
     for (const event of recorded) if (event.currency === currency && rhythm[event.week]) rhythm[event.week] = { tone: event.tone, strength: 1 };
     const moneyEvents = lifeMoneyEvents(rhythm, currency);
@@ -185,7 +185,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       const time = reduceMotion ? LIFE_MOTION_END : ms;
       const motion = lifeCalendarMotion(time);
       story.dataset.time = String(Math.round(time));
-      story.dataset.phase = time < 5850 ? 'life' : time < 7800 ? 'focus' : time < 10900 ? 'month' : 'settle';
+      story.dataset.phase = time < 5850 ? 'life' : !motion.month ? 'focus' : !motion.ready ? 'month' : 'settle';
       story.dataset.lifeOpacity = String(motion.lifeOpacity);
       const nextStage = time < 2400 ? 'life' : time < 5200 ? 'money' : time < 6200 ? 'today' : !motion.ready ? 'zoom' : 'ready';
       if (nextStage !== previousStage) { previousStage = nextStage; setStage(nextStage); }
@@ -208,7 +208,8 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       // One camera frames a complete 7-column crop; one shared expansion lands it.
       const compactPitch = Math.min(scene.width * .62 / 7, scene.height * .65 / monthRows);
       const morph = motion.month;
-      const scale = mix(1, compactPitch / unit, motion.zoom);
+      // A logarithmic camera scale gives each part of the zoom the same weight.
+      const scale = Math.exp(mix(0, Math.log(compactPitch / unit), motion.zoom));
       const focus = motion.zoom;
       const fade = motion.lifeOpacity;
       const paper = hasCalendar ? motion.paperOpacity : 1;
@@ -221,9 +222,9 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
           const recent = recorded.slice(-3);
           activeEvent = recent[Math.min(recent.length - 1, Math.floor((time - 5100) / 250))];
         } else {
-          // Sample at readable beats, rather than changing the number every frame.
-          const beatWeek = Math.floor(elapsedWeeks * ease(clamp(Math.floor(time / 320) * 320 / 5100)));
-          activeEvent = moneyEvents.findLast(event => event.week < Math.min(beatWeek, filled));
+          const beat = Math.floor(time / 80);
+          const beatWeek = Math.floor(elapsedWeeks * ease(clamp(beat * 80 / 5100)));
+          activeEvent = lifeMoneyBeat(moneyEvents, Math.min(beatWeek, filled), beat);
           if (!shownEvent && moneyEvents[0]?.week < filled) activeEvent = moneyEvents[0];
         }
         activeEvent ||= shownEvent;
@@ -234,11 +235,11 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         moneyRef.current.dataset.tone = activeEvent.tone;
         moneyRef.current.dataset.source = activeEvent.source;
         moneyRef.current.dataset.week = String(activeEvent.week);
-        moneyLabelRef.current.textContent = MONEY_LEGEND[lang][activeEvent.tone === 'income' ? 1 : 2];
+        moneyLabelRef.current.textContent = activeEvent.source === 'illustration' ? `${MONEY_LEGEND[lang][1]} / ${MONEY_LEGEND[lang][2]}` : MONEY_LEGEND[lang][activeEvent.tone === 'income' ? 1 : 2];
         moneySourceRef.current.textContent = activeEvent.source === 'calendar' ? RECORDED[lang] : MONEY_LEGEND[lang][3];
         if (key !== previousEventKey) {
           previousEventKey = key;
-          readout.update(activeEvent, locale, reduceMotion);
+          readout.update(activeEvent, locale, reduceMotion, activeEvent.source === 'illustration' ? 65 : 200);
         }
       }
       if (paperRef.current) paperRef.current.style.opacity = String(paper);

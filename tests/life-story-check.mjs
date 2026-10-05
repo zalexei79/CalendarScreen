@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { lifeWeeks, localDateValue, birthdayStorageKey, isOnboardingPreviewUser, lifeWeekRhythm, lifeMoneyEvents, calendarMoneyEvents } from '../src/features/onboarding/lifeStoryModel.js';
+import { lifeWeeks, localDateValue, birthdayStorageKey, isOnboardingPreviewUser, lifeWeekRhythm, lifeMoneyEvents, lifeMoneyBeat, calendarMoneyEvents } from '../src/features/onboarding/lifeStoryModel.js';
 import { lifeCalendarMotion, LIFE_MOTION_END } from '../src/features/onboarding/lifeCalendarMotion.js';
 
 const today = new Date(2026, 9, 4);
@@ -30,6 +30,14 @@ const adulthood = rhythm.slice(22 * 52);
 const events = lifeMoneyEvents(rhythm, 'MDL');
 assert.ok(events.every(event => event.tone === rhythm[event.week].tone && event.amount > 0 && event.currency === 'MDL'));
 assert.ok(events.some(event => event.tone === 'income') && events.some(event => event.tone === 'expense'));
+for (const currency of ['USD', 'EUR', 'MDL', 'RUB', 'CNY']) {
+  const stream = Array.from({ length: 13 }, (_, beat) => lifeMoneyBeat(lifeMoneyEvents(rhythm, currency), 1200, beat + 30));
+  assert.ok(stream.every(event => event.currency === currency && event.week < 1200));
+  assert.ok(new Set(stream.map(event => event.amount)).size >= 10, 'A fast stream has varied amounts rather than a repeated number');
+  assert.equal(new Set(stream.map(event => event.tone)).size, 2);
+  assert.ok(Math.max(...stream.map(event => event.amount)) > Math.min(...stream.map(event => event.amount)) * 50, 'Small and large transactions share the same stream');
+}
+assert.equal(lifeMoneyBeat(events, 4 * 52, 3), null, 'The money stream waits for the first financial week');
 const realEvents = calendarMoneyEvents([
   { id: 'expense', dateKey: '2026-10-03', pnl: -37.5, currency: 'EUR' },
   { id: 'income', dateKey: '2026-10-04', pnl: 280, currency: 'MDL' },
@@ -50,5 +58,10 @@ for (let time = 0; time <= LIFE_MOTION_END; time += 16) {
     assert.equal(frame.month, 0, 'Focus the complete crop before spreading calendar days');
   }
   if (frame.handoff > 0) assert.equal(frame.month, 1, 'Swap to the live calendar only after the shared grid has landed');
+  if (time >= 16) {
+    const previous = lifeCalendarMotion(time - 16);
+    assert.ok(Math.abs(frame.paperOpacity - previous.paperOpacity) < .01, 'The application lighting changes gradually throughout the morph');
+    assert.ok(Math.abs(frame.skin - previous.skin) < .01, 'Calendar paint never snaps onto neutral weeks');
+  }
 }
 console.log('Life story: dates, leap years, DST, account isolation and preview account passed.');
