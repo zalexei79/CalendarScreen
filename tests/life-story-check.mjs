@@ -34,12 +34,10 @@ for (const currency of ['USD', 'EUR', 'MDL', 'RUB', 'CNY']) {
   const events = lifeMoneyEvents(rhythm, currency);
   assert.ok(events.every(event => event.currency === currency && event.amount > 0));
   const flow = lifeMoneyFlow(events, 1490);
-  assert.ok(flow.length >= 4 && flow.length <= 8 && new Set(flow.map(event => event.amount)).size >= 4, 'A few varied examples remain readable rather than flashing through the story');
-  assert.ok(flow.every(event => event.currency === currency && event.start < 5500 && event.duration === 700));
-  for (const tone of ['income', 'expense']) {
-    const changes = flow.filter(event => event.tone === tone);
-    assert.ok(changes.every((event, index) => !index || event.start - changes[index - 1].start >= 1399.99), 'Each fixed column has a reading pause between soft exchanges');
-  }
+  assert.ok(flow.length >= 7 && new Set(flow.map(event => event.amount)).size >= 6, 'A stream of varied individual transactions conveys passing money');
+  assert.ok(flow.some(event => event.tone === 'income') && flow.some(event => event.tone === 'expense'));
+  assert.ok(flow.every(event => event.currency === currency && event.start < 5500 && event.duration === 300));
+  assert.ok(flow.every((event, index) => !index || Math.abs(event.start - flow[index - 1].start - 400) < .01), 'The fixed window has a regular cadence, with a soft exchange and a brief hold');
   for (const event of flow) {
     const t = event.start / 8000;
     const filled = Math.floor(1490 * (t < .5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2));

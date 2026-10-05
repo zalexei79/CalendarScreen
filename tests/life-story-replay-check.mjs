@@ -41,10 +41,10 @@ try {
   await page.clock.fastForward(3500);
   const money = page.locator('.life-money-value[data-active="true"][data-source="calendar"][data-tone="expense"] .life-money-current');
   assert.equal(await page.locator('.life-money-value[data-active="true"][data-source="illustration"]').count(), 0, 'Saved history uses real entries in the separate financial area');
-  assert.equal(await money.locator('span').innerText(), '−80', 'The latest real entry keeps its exact amount');
+  assert.equal(await money.locator('.life-money-number').innerText(), '−80', 'The latest real entry keeps its exact amount');
   assert.equal(await money.locator('small').innerText(), 'MDL', 'EUR records are never relabelled to the selected currency');
   await page.clock.runFor(1400);
-  assert.equal(await money.locator('span').innerText(), '−80', 'Real amounts remain still long enough to read');
+  assert.equal(await money.locator('.life-money-number').innerText(), '−80', 'Real amounts remain still long enough to read');
   await page.screenshot({ path: 'tests/life-story-replay-money.png', animations: 'disabled' });
   await page.clock.fastForward(11000);
   await page.waitForFunction(() => !document.querySelector('.life-story'));

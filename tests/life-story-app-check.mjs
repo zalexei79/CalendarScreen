@@ -60,7 +60,9 @@ try {
   await seek(3500);
   assert.equal(await page.locator('.life-story').getAttribute('data-stage'), 'life');
   const money = page.locator('.life-money-value[data-active="true"]');
-  assert.ok(await money.count() >= 1 && await money.count() <= 2, 'Two steady columns accompany the childhood events');
+  assert.equal(await money.count(), 1, 'Individual amounts pass through one fixed window');
+  assert.equal(await page.locator('.life-money-columns').count(), 0, 'There are no columns that could be mistaken for lifetime totals');
+  const moneyAnchor = await money.boundingBox();
   assert.ok((await money.evaluateAll(nodes => nodes.map(node => node.dataset.source))).every(source => source === 'illustration'));
   assert.equal(await page.locator('.life-money-flow-event').count(), 0, 'No amounts flash over the colored cells');
   const moneyLayout = await page.evaluate(() => {
@@ -89,19 +91,22 @@ try {
     await page.clock.runFor(16);
     const opacity = await money.evaluateAll(nodes => nodes.map(node => ({ current: Number(node.querySelector('.life-money-current').style.opacity), previous: Number(node.querySelector('.life-money-previous').style.opacity), start: node.dataset.start, value: node.querySelector('.life-money-current').textContent, oldValue: node.querySelector('.life-money-previous').textContent })));
     assert.ok(opacity.every(({ current, previous }) => Math.abs(current + previous - 1) < .001), 'An exchange never blanks out both amounts');
-    if (previousOpacity) assert.ok(opacity.every((state, index) => state.start === previousOpacity[index].start ? Math.abs(state.current - previousOpacity[index].current) < .08 : state.oldValue === previousOpacity[index].value && state.previous > .99), 'The exchange preserves the visible amount and changes opacity gradually, without flashes');
+    if (previousOpacity) assert.ok(opacity.every((state, index) => state.start === previousOpacity[index].start ? Math.abs(state.current - previousOpacity[index].current) < .18 : state.oldValue === previousOpacity[index].value && state.previous > .99), 'The exchange preserves the visible amount and changes opacity gradually, without blank flashes');
     previousOpacity = opacity;
   }
   const beats = await page.evaluate(() => window.moneyBeats);
-  assert.ok(beats.length <= 2, 'Each column changes at most once in a second, with time to read');
+  assert.ok(beats.length >= 2 && beats.length <= 3, 'Several separate transactions pass each second at a controlled cadence');
   assert.ok(beats.every(amount => amount.endsWith(currency)), 'Every transaction uses the selected currency');
+  assert.deepEqual(await money.boundingBox(), moneyAnchor, 'The transaction window stays in exactly the same place as weeks advance');
+  assert.match(await money.locator('.life-money-current .life-money-label').innerText(), /^(Доход|Расход) · пример$/, 'The active amount is labelled as an individual example');
   assert.ok(await page.evaluate(() => window.moneyNodes.every(node => node.isConnected)), 'A fixed pool of labels avoids mounting new UI each frame');
   assert.equal(await page.locator('.life-story-heading h1').innerText(), firstHeading, 'Counting and financial examples share one stable narrative');
   if (dark) assert.equal(await page.locator('.life-story').evaluate(element => getComputedStyle(element, '::before').display), 'none', 'Dark mode has no grain texture');
   await seek(6500);
   assert.equal(await page.locator('.life-story').getAttribute('data-stage'), 'question');
   assert.equal(await page.locator('.life-story-heading h1').innerText(), firstHeading, 'The grid keeps a stable heading as the financial area poses its question');
-  assert.equal(await page.locator('.life-money-question p').innerText(), 'А ты знаешь, куда ушли эти деньги?');
+  assert.equal(await page.locator('.life-money-question p').innerText(), 'А ты знаешь, где эти деньги сейчас?');
+  assert.equal(await page.locator('.life-money-question > span').innerText(), 'Сделай свою первую запись.');
   assert.equal(await page.locator('.life-money-question').evaluate(node => Number(getComputedStyle(node).opacity)), 1);
   assert.equal(await page.locator('.life-money-amounts').evaluate(node => Number(getComputedStyle(node).opacity)), 0, 'Amounts leave the same area before the question, rather than competing with it');
   await page.waitForFunction(() => Number(document.querySelector('.life-story-counter strong')?.textContent.replace(/\D/g, '')) > 1200);

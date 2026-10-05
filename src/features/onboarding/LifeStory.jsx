@@ -42,10 +42,10 @@ const MONEY_LEGEND = {
 const FIRST_ENTRY = { ru: 'Добавить первую запись', en: 'Add your first entry', ro: 'Adaugă prima înregistrare', zh: '添加第一条记录' };
 const RECORDED = { ru: 'Из твоего календаря', en: 'From your calendar', ro: 'Din calendarul tău', zh: '来自你的日历' };
 const MONEY_QUESTION = {
-  ru: ['А ты знаешь, куда ушли эти деньги?', 'Записывай, чтобы знать.', 'Запиши первую трату —\nначни видеть, куда уходят деньги.', 'Примеры доходов и расходов'],
-  en: ['Do you know where that money went?', 'Record it. See where it goes.', 'Record your first expense.\nStart seeing where your money goes.', 'Example income and expenses'],
-  ro: ['Știi unde s-au dus acești bani?', 'Notează, ca să știi.', 'Notează prima cheltuială.\nVezi unde se duc banii tăi.', 'Exemple de venituri și cheltuieli'],
-  zh: ['你知道这些钱花到哪里了吗？', '记下来，就能看清。', '记录第一笔支出，\n开始看清钱的去向。', '收入和支出示例'],
+  ru: ['А ты знаешь, где эти деньги сейчас?', 'Сделай свою первую запись.', 'Сделай свою первую запись.\nНачни видеть, куда уходят деньги.', 'Деньги приходили. Деньги уходили.'],
+  en: ['Do you know where that money is now?', 'Create your first entry.', 'Create your first entry.\nStart seeing where your money goes.', 'Money came in. Money went out.'],
+  ro: ['Știi unde sunt acești bani acum?', 'Fă prima ta înregistrare.', 'Fă prima ta înregistrare.\nVezi unde se duc banii tăi.', 'Banii veneau. Banii plecau.'],
+  zh: ['你知道这些钱现在在哪里吗？', '记下你的第一笔收支。', '记下你的第一笔收支，\n开始看清钱的去向。', '钱进来了，钱又花出去了。'],
 };
 const EMPTY_RECORDS = [];
 
@@ -130,15 +130,15 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     rhythm = reserveLifePresent(rhythm, sourceIndices, current);
     const moneyEvents = lifeMoneyEvents(rhythm, currency);
     const weekTimes = Array.from({ length: total }, (_, week) => week < elapsedWeeks ? inverseEase((week + 1) / elapsedWeeks) * LIFE_COUNT_END : Infinity);
-    const flow = recorded.length ? ['income', 'expense'].flatMap((tone, lane) => {
-      const event = recorded.findLast(event => event.tone === tone);
-      return event ? [{ ...event, start: 2000, duration: 700, lane }] : [];
-    }) : lifeMoneyFlow(moneyEvents, elapsedWeeks, LIFE_COUNT_END);
+    const flow = recorded.length ? recorded.slice(-3).map((event, index) => ({ ...event, start: 2000 + index * 900, duration: 300 })) : lifeMoneyFlow(moneyEvents, elapsedWeeks, LIFE_COUNT_END);
     const moneyArea = moneyFlowRef.current;
     moneyArea.querySelector('.life-money-caption').textContent = recorded.length ? RECORDED[lang] : MONEY_QUESTION[lang][3];
     const moneyAmounts = moneyArea.querySelector('.life-money-amounts');
     const moneyQuestion = moneyArea.querySelector('.life-money-question');
-    const moneyNodes = [...moneyArea.querySelectorAll('.life-money-value')].map(node => ({ node, currentValue: node.querySelector('.life-money-current'), oldValue: node.querySelector('.life-money-previous') }));
+    const moneyNode = moneyArea.querySelector('.life-money-value');
+    const currentValue = moneyNode.querySelector('.life-money-current');
+    const oldValue = moneyNode.querySelector('.life-money-previous');
+    const transactionLabel = event => `${MONEY_LEGEND[lang][event.tone === 'income' ? 1 : 2]}${event.source === 'illustration' ? ` · ${MONEY_LEGEND[lang][3].toLowerCase()}` : ''}`;
     const formatAmount = event => `${event.tone === 'income' ? '+' : '−'}${event.amount.toLocaleString(locale, { maximumFractionDigits: 2 })}`;
     story.dataset.currentWeek = String(current);
     story.dataset.focusWeek = String(sourceIndices[todayIndex]);
@@ -252,29 +252,33 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       moneyAmounts.style.opacity = String(1 - questionProgress);
       moneyQuestion.style.opacity = String(questionProgress);
       moneyQuestion.style.transform = `translateY(${6 * (1 - questionProgress)}px)`;
-      moneyNodes.forEach(({ node, currentValue, oldValue }, lane) => {
-        const events = flow.filter(event => event.lane === lane && event.start <= time);
-        const event = events.at(-1);
-        if (!event) { delete node.dataset.active; return; }
+      const events = flow.filter(event => event.start <= time);
+      const event = events.at(-1);
+      if (event) {
         const previous = events.at(-2);
         const progress = ease(clamp((time - event.start) / event.duration));
-        if (node.dataset.start !== String(event.start)) {
-          currentValue.querySelector('span').textContent = formatAmount(event);
+        if (moneyNode.dataset.start !== String(event.start)) {
+          currentValue.querySelector('.life-money-number').textContent = formatAmount(event);
           currentValue.querySelector('small').textContent = event.currency;
-          oldValue.querySelector('span').textContent = previous ? formatAmount(previous) : '—';
+          currentValue.querySelector('.life-money-label').textContent = transactionLabel(event);
+          currentValue.dataset.tone = event.tone;
+          oldValue.querySelector('.life-money-number').textContent = previous ? formatAmount(previous) : '—';
           oldValue.querySelector('small').textContent = previous?.currency || '';
-          node.dataset.start = String(event.start);
-          node.dataset.source = event.source;
-          node.dataset.week = String(event.week);
-          node.setAttribute('aria-label', `${formatAmount(event)} ${event.currency}${event.source === 'calendar' ? `. ${RECORDED[lang]}` : ''}`);
+          oldValue.querySelector('.life-money-label').textContent = previous ? transactionLabel(previous) : '';
+          oldValue.dataset.tone = previous?.tone || 'neutral';
+          moneyNode.dataset.start = String(event.start);
+          moneyNode.dataset.source = event.source;
+          moneyNode.dataset.week = String(event.week);
+          moneyNode.dataset.tone = event.tone;
+          moneyNode.setAttribute('aria-label', `${formatAmount(event)} ${event.currency}${event.source === 'calendar' ? `. ${RECORDED[lang]}` : ''}`);
         }
-        if (questionProgress < 1 && moneyExit > 0) node.dataset.active = 'true';
-        else delete node.dataset.active;
+        if (questionProgress < 1 && moneyExit > 0) moneyNode.dataset.active = 'true';
+        else delete moneyNode.dataset.active;
         currentValue.style.opacity = String(progress);
-        currentValue.style.transform = `translateY(${4 * (1 - progress)}px)`;
+        currentValue.style.transform = `translateY(${2 * (1 - progress)}px)`;
         oldValue.style.opacity = String(1 - progress);
-        oldValue.style.transform = `translateY(${-4 * progress}px)`;
-      });
+        oldValue.style.transform = `translateY(${-2 * progress}px)`;
+      } else delete moneyNode.dataset.active;
       context.clearRect(0, 0, width, height);
       const size = unit * (width >= 760 ? .74 : .65);
       if (fade > .001) {
@@ -391,13 +395,10 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     <div ref={moneyFlowRef} className="life-money-area" key={`money-${run}`}>
       <div className="life-money-amounts" aria-hidden="true">
         <p className="life-money-caption">{question[3]}</p>
-        <div className="life-money-columns">{['income', 'expense'].map((tone, index) => <div className="life-money-column" key={tone} data-tone={tone}>
-          <div className="life-money-value" data-tone={tone}>
-            <span className="life-money-previous"><span>—</span><small /></span>
-            <span className="life-money-current"><span>—</span><small /></span>
-          </div>
-          <span className="life-money-label">{MONEY_LEGEND[lang][index + 1]}</span>
-        </div>)}</div>
+        <div className="life-money-value">
+          <div className="life-money-previous"><span className="life-money-number">—</span><small /><span className="life-money-label" /></div>
+          <div className="life-money-current"><span className="life-money-number">—</span><small /><span className="life-money-label" /></div>
+        </div>
       </div>
       <div className="life-money-question" aria-hidden={stage !== 'question'}><p>{question[0]}</p><span>{question[1]}</span></div>
     </div>
