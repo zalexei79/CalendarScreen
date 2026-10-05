@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
 import { lifeWeeks, lifeWeekRhythm, lifeMoneyEvents, reserveLifePresent, calendarMoneyEvents } from './lifeStoryModel';
 import { createCalendarBridge } from './lifeCalendarBridge';
-import { lifeCalendarMotion, LIFE_COUNT_END, LIFE_MOTION_END } from './lifeCalendarMotion';
+import { lifeCalendarMotion, lifeCameraFrame, LIFE_COUNT_END, LIFE_MOTION_END } from './lifeCalendarMotion';
 import BrandIcon from '../../shared/ui/BrandIcon.jsx';
 import './LifeStory.css';
 
@@ -96,6 +96,8 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     let height = 1;
     let scene;
     let targets = [];
+    let noteTop = 0;
+    let previousFilled;
     let hasCalendar = false;
     let snapshotWidth;
     let disposed = false;
@@ -144,6 +146,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       canvas.height = Math.round(height * dpr);
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
       scene = sceneRef.current.getBoundingClientRect();
+      noteTop = moneyRef.current.getBoundingClientRect().top;
       const buttons = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')];
       hasCalendar = buttons.length === count && buttons.some(button => button.dataset.todayCell === 'true');
       story.dataset.calendarTarget = hasCalendar ? 'live' : 'preview';
@@ -169,7 +172,17 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         const fallbackWidth = Math.min(600, scene.width);
         const cellWidth = (fallbackWidth - gap * 6) / 7;
         const cellHeight = Math.min(64, (scene.height - gap * (count / 7 - 1)) / (count / 7));
-        return { x: bounds?.left ?? (width - fallbackWidth) / 2 + index % 7 * (cellWidth + gap), y: bounds?.top ?? scene.top + Math.floor(index / 7) * (cellHeight + gap), width: bounds?.width ?? cellWidth, height: bounds?.height ?? cellHeight, day: day.getDate(), inMonth: day.getMonth() === today.getMonth(), background: style?.backgroundColor || '#f1f0e9', color: style?.color || '#343e36', radius: parseFloat(style?.borderRadius) || 14, bridge: cell ? targets[index]?.bridge?.wrapper.isConnected ? targets[index].bridge : createCalendarBridge(cell, layer) : null };
+        const bridge = cell ? targets[index]?.bridge?.wrapper.isConnected ? targets[index].bridge : createCalendarBridge(cell, layer) : null;
+        const targetWidth = bounds?.width ?? cellWidth;
+        const targetHeight = bounds?.height ?? cellHeight;
+        if (bridge) {
+          bridge.wrapper.style.width = `${targetWidth}px`;
+          bridge.wrapper.style.height = `${targetHeight}px`;
+          bridge.wrapper.style.transformOrigin = '0 0';
+          bridge.week.style.borderStyle = 'solid';
+          bridge.week.style.borderColor = index === todayIndex ? palette.today : 'transparent';
+        }
+        return { x: bounds?.left ?? (width - fallbackWidth) / 2 + index % 7 * (cellWidth + gap), y: bounds?.top ?? scene.top + Math.floor(index / 7) * (cellHeight + gap), width: targetWidth, height: targetHeight, day: day.getDate(), inMonth: day.getMonth() === today.getMonth(), background: style?.backgroundColor || '#f1f0e9', color: style?.color || '#343e36', radius: parseFloat(style?.borderRadius) || 14, bridge };
       });
       draw(lastTime);
     };
@@ -185,12 +198,15 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       const time = reduceMotion ? LIFE_MOTION_END : ms;
       const motion = lifeCalendarMotion(time);
       story.dataset.time = String(Math.round(time));
-      story.dataset.phase = time < 9600 ? 'life' : !motion.month ? 'focus' : !motion.ready ? 'month' : 'settle';
+      story.dataset.phase = time < 8650 ? 'life' : !motion.month ? 'focus' : !motion.ready ? 'month' : 'settle';
       story.dataset.lifeOpacity = String(motion.lifeOpacity);
-      const nextStage = time < 8200 ? 'life' : time < 10400 ? 'today' : !motion.ready ? 'zoom' : 'ready';
+      const nextStage = time < 8200 ? 'life' : time < 9200 ? 'today' : !motion.ready ? 'zoom' : 'ready';
       if (nextStage !== previousStage) { previousStage = nextStage; setStage(nextStage); }
       const filled = Math.floor(elapsedWeeks * ease(clamp(time / LIFE_COUNT_END)));
-      if (counterRef.current) counterRef.current.textContent = stats ? filled.toLocaleString(locale) : '—';
+      if (counterRef.current && filled !== previousFilled) {
+        counterRef.current.textContent = stats ? filled.toLocaleString(locale) : '—';
+        previousFilled = filled;
+      }
 
       // Reserve a stable counter and legend area before fitting any weeks.
       const gridTop = scene.top + 70;
@@ -200,17 +216,9 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       const gridHeight = unit * rows;
       story.dataset.gridTop = String(gridTop + (gridSpace - gridHeight) / 2);
       story.dataset.gridWidth = String(gridWidth);
-      // Arrive at today's week first, then gently frame its surrounding month.
-      // A crop's geometric center can otherwise lie years into the empty future.
-      const todaySource = sourceIndices[todayIndex];
-      const dotX = mix((todaySource % 52 + .5) * unit - gridWidth / 2, (cropCol + 3.5) * unit - gridWidth / 2, motion.reframe);
-      const dotY = mix((Math.floor(todaySource / 52) + .5) * unit - gridHeight / 2, (cropRow + monthRows / 2) * unit - gridHeight / 2, motion.reframe);
-      // One camera frames a complete 7-column crop; one shared expansion lands it.
-      const compactPitch = Math.min(scene.width * .62 / 7, scene.height * .65 / monthRows);
+      // The hero fills the middle of the phone before the surrounding grid leaves.
+      const compactPitch = Math.min(scene.width * .9 / 7, height * .44 / monthRows);
       const morph = motion.month;
-      // A logarithmic camera scale gives each part of the zoom the same weight.
-      const scale = Math.exp(mix(0, Math.log(compactPitch / unit), motion.zoom));
-      const focus = motion.zoom;
       const fade = motion.lifeOpacity;
       const paper = hasCalendar ? motion.paperOpacity : 1;
       const handoff = hasCalendar ? motion.handoff : 0;
@@ -243,38 +251,47 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       if (motion.settled) story.dataset.settled = 'true';
       else delete story.dataset.settled;
       const centerX = scene.left + scene.width / 2;
-      const centerY = mix(gridTop + gridSpace / 2, scene.top + scene.height / 2 + 8, focus);
-      const originX = centerX - dotX * scale * focus - gridWidth * scale / 2;
-      const originY = centerY - dotY * scale * focus - gridHeight * scale / 2;
+      const { originX, originY, scale } = lifeCameraFrame({
+        gridLeft: centerX - gridWidth / 2,
+        gridTop: gridTop + (gridSpace - gridHeight) / 2,
+        unit, cropCol, cropRow, monthRows, compactPitch,
+        focusX: centerX, focusY: height * .51,
+      }, motion);
       context.clearRect(0, 0, width, height);
-      context.save();
-      context.translate(centerX - dotX * scale * focus, centerY - dotY * scale * focus);
-      context.scale(scale, scale);
-      context.translate(-gridWidth / 2, -gridHeight / 2);
-      context.globalAlpha = fade;
       const size = unit * (width >= 760 ? .74 : .65);
-      for (let i = 0; i < total; i++) {
-        if (selected.has(i)) continue;
-        const x = (i % 52) * unit + (unit - size) / 2;
-        const y = Math.floor(i / 52) * unit + (unit - size) / 2;
-        const age = time - weekTimes[i];
-        const reveal = ease(clamp(age / 450));
-        context.fillStyle = weekColor(i, filled, reveal, rhythm, palette, ease(clamp(age / 180)));
-        context.fillRect(x, y, size, size);
+      if (fade > .001) {
+        context.save();
+        context.translate(originX, originY);
+        context.scale(scale, scale);
+        context.globalAlpha = fade;
+        const pitch = unit * scale;
+        const left = Math.max(0, Math.floor(-originX / pitch));
+        const right = Math.min(52, Math.ceil((width - originX) / pitch));
+        const top = Math.max(0, Math.floor(-originY / pitch));
+        const bottom = Math.min(rows, Math.ceil((height - originY) / pitch));
+        for (let row = top; row < bottom; row++) for (let col = left; col < right; col++) {
+          const i = row * 52 + col;
+          if (selected.has(i)) continue;
+          const x = col * unit + (unit - size) / 2;
+          const y = row * unit + (unit - size) / 2;
+          const age = time - weekTimes[i];
+          const reveal = ease(clamp(age / 450));
+          context.fillStyle = weekColor(i, filled, reveal, rhythm, palette, ease(clamp(age / 180)));
+          context.fillRect(x, y, size, size);
+        }
+        context.restore();
       }
-      context.restore();
       if (activeEvent && eventOpacity > 0 && !motion.month) {
         const week = Math.min(activeEvent.week, current);
         const x = originX + (week % 52 + .5) * unit * scale;
         const y = originY + (Math.floor(week / 52) + .5) * unit * scale;
-        const note = moneyRef.current.getBoundingClientRect();
         context.save();
         context.globalAlpha = eventOpacity * (1 - motion.zoom);
         context.strokeStyle = `rgba(${palette[activeEvent.tone].join(',')},.25)`;
         context.lineWidth = .7;
         context.beginPath();
         context.moveTo(x, y);
-        context.bezierCurveTo(x, y + unit * 3, centerX, note.top - 20, centerX, note.top - 6);
+        context.bezierCurveTo(x, y + unit * 3, centerX, noteTop - 20, centerX, noteTop - 6);
         context.stroke();
         context.beginPath();
         context.arc(x, y, unit * scale * .65, 0, Math.PI * 2);
@@ -292,17 +309,16 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         const color = weekColor(source, filled, ease(clamp(age / 450)), rhythm, palette, ease(clamp(age / 180)));
         if (target.bridge) {
           const { wrapper, face, week, opacity } = target.bridge;
-          wrapper.style.transform = `translate3d(${x}px,${y}px,0)`;
-          wrapper.style.width = `${w}px`;
-          wrapper.style.height = `${h}px`;
+          const scaleX = w / target.width, scaleY = h / target.height;
+          wrapper.style.transform = `translate3d(${x}px,${y}px,0) scale(${scaleX},${scaleY})`;
           wrapper.style.opacity = String(1 - handoff);
-          face.style.borderRadius = `${target.radius * morph}px`;
+          face.style.borderRadius = `${target.radius}px`;
           face.style.setProperty('opacity', String(skin * opacity), 'important');
           week.style.backgroundColor = color;
-          week.style.borderRadius = `${target.radius * morph}px`;
+          week.style.borderRadius = `${target.radius * morph / scaleX}px / ${target.radius * morph / scaleY}px`;
           week.style.opacity = String(1 - skin);
-          const todayStroke = Math.min(w * .07, .8) * ease(clamp((time - 8500) / 1600));
-          week.style.boxShadow = isToday ? `inset 0 0 0 ${todayStroke}px ${palette.today}` : 'none';
+          const todayStroke = Math.min(w * .07, .8) * ease(clamp((time - 8000) / 1200));
+          week.style.borderWidth = isToday ? `${todayStroke / scaleY}px ${todayStroke / scaleX}px` : '0';
           return;
         }
         context.save();

@@ -5,13 +5,14 @@ import path from 'node:path';
 const require = createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE || 'C:/Users/aveel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/package.json');
 const browser = await require('playwright').chromium.launch({ channel: 'msedge', headless: true });
 const desktop = process.argv.includes('--desktop');
+const dark = desktop || process.argv.includes('--dark');
 const reference = process.argv.includes('--reference');
 const currency = desktop ? 'RUB' : 'MDL';
-const suffix = desktop ? reference ? '-desktop-reference' : '-desktop' : '';
+const suffix = desktop ? reference ? '-desktop-reference' : '-desktop' : dark ? '-dark' : '';
 const screenshotPath = stage => `tests/life-story-app${suffix}-${stage}.png`;
 try {
   const context = await browser.newContext({ viewport: desktop ? reference ? { width: 1145, height: 976 } : { width: 1440, height: 1000 } : { width: 390, height: 844 }, serviceWorkers: 'block' });
-  await context.addInitScript(desktop => { localStorage.setItem('atj_language', 'ru'); localStorage.setItem('atj_theme', desktop ? 'dark' : 'light'); localStorage.setItem('calendar_guide_completed', '1'); localStorage.setItem('dayris_voice_feedback', 'off'); }, desktop);
+  await context.addInitScript(dark => { localStorage.setItem('atj_language', 'ru'); localStorage.setItem('atj_theme', dark ? 'dark' : 'light'); localStorage.setItem('calendar_guide_completed', '1'); localStorage.setItem('dayris_voice_feedback', 'off'); }, dark);
   await context.route('**/*', route => {
     const url = new URL(route.request().url());
     if (url.origin !== 'http://calendar.test') return route.abort();
@@ -43,7 +44,7 @@ try {
   // A week at column 51 used to split the selected month across two grid rows.
   const edgeBirthday = new Date(Date.UTC(2026, 9, 5) - (28 * 52 + 51) * 7 * 86400000).toISOString().slice(0, 10);
   await page.getByLabel('Дата рождения', { exact: true }).fill(desktop ? edgeBirthday : '1998-03-14');
-  assert.equal(await page.locator('#life-birthday').evaluate(element => getComputedStyle(element).colorScheme), desktop ? 'dark' : 'light');
+  assert.equal(await page.locator('#life-birthday').evaluate(element => getComputedStyle(element).colorScheme), dark ? 'dark' : 'light');
   await page.screenshot({ path: screenshotPath('birthday') });
   await next();
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.calendarTarget === 'live');
@@ -74,7 +75,7 @@ try {
   await page.clock.runFor(1000);
   assert.equal(await money.locator('strong').getAttribute('aria-label'), firstAmount, 'An amount stays still long enough to read');
   assert.equal(await page.locator('.life-story-heading h1').innerText(), firstHeading, 'Counting and financial examples share one stable narrative');
-  if (desktop) assert.equal(await page.locator('.life-story').evaluate(element => getComputedStyle(element, '::before').display), 'none', 'Dark mode has no grain texture');
+  if (dark) assert.equal(await page.locator('.life-story').evaluate(element => getComputedStyle(element, '::before').display), 'none', 'Dark mode has no grain texture');
   await seek(6500);
   assert.equal(await page.locator('.life-story').getAttribute('data-stage'), 'life');
   await page.waitForFunction(() => Number(document.querySelector('.life-story-counter strong')?.textContent.replace(/\D/g, '')) > 1200);
@@ -83,8 +84,8 @@ try {
   assert.ok(Number(await money.getAttribute('data-week')) <= Number(await page.locator('.life-story-counter strong').innerText().then(text => text.replace(/\D/g, ''))));
   const focusDistance = await page.locator('.life-story').evaluate(element => Math.abs(Number(element.dataset.focusWeek) - Number(element.dataset.currentWeek)));
   assert.ok(focusDistance <= 6, 'The focused week remains adjacent to the chronological present, including row edges');
-  assert.equal(await page.locator('.life-story').getAttribute('data-theme'), desktop ? 'dark' : 'light');
-  assert.equal(await page.locator('.life-story-paper').evaluate(element => getComputedStyle(element).backgroundColor), desktop ? 'rgb(17, 23, 20)' : 'rgb(247, 244, 236)');
+  assert.equal(await page.locator('.life-story').getAttribute('data-theme'), dark ? 'dark' : 'light');
+  assert.equal(await page.locator('.life-story-paper').evaluate(element => getComputedStyle(element).backgroundColor), dark ? 'rgb(17, 23, 20)' : 'rgb(247, 244, 236)');
   if (desktop) assert.ok(Number(await page.locator('.life-story').getAttribute('data-grid-width')) > (reference ? 540 : 570), 'The desktop life panel uses the available screen height to make the weeks legible');
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.querySelector('.life-story-money-note').getBoundingClientRect().bottom < innerHeight), 'The grid and its integrated financial note fit in the viewport');
   if (!desktop) await page.setViewportSize({ width: 320, height: 844 });
@@ -104,18 +105,19 @@ try {
   assert.equal(await page.locator('.life-story').getAttribute('data-stage'), 'today');
   assert.equal(await money.evaluate(element => getComputedStyle(element).opacity), '0', 'Illustrative money leaves before arriving at today');
   const presentColors = await page.locator('.life-calendar-week').evaluateAll(cells => cells.map(cell => getComputedStyle(cell).backgroundColor));
-  await seek(9600);
+  await seek(9150);
   assert.deepEqual(await page.locator('.life-calendar-week').evaluateAll(cells => cells.map(cell => getComputedStyle(cell).backgroundColor)), presentColors, 'Arriving at today never repaints the selected month over the history');
   const todayOutline = await page.evaluate(() => {
     const live = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')];
     const index = live.findIndex(cell => cell.dataset.todayCell === 'true');
     const element = document.querySelectorAll('.life-calendar-week')[index];
-    const shadow = getComputedStyle(element).boxShadow;
-    return { width: element.getBoundingClientRect().width, stroke: Number(shadow.match(/([\d.]+)px [\d.]+px [\d.]+px ([\d.]+)px/)?.[2] || 0) };
+    const rect = element.getBoundingClientRect();
+    const scale = rect.width / parseFloat(element.parentElement.style.width);
+    return { width: rect.width, stroke: parseFloat(getComputedStyle(element).borderLeftWidth) * scale };
   });
   assert.ok(todayOutline.stroke > 0 && todayOutline.stroke <= todayOutline.width * .08, 'Today keeps a thin proportional outline rather than a solid square over historical cells');
   await page.screenshot({ path: screenshotPath('today'), animations: 'disabled' });
-  await seek(11300);
+  await seek(10600);
   const coherentCrop = await page.evaluate(() => {
     const cells = [...document.querySelectorAll('.life-calendar-cell')].map(cell => cell.getBoundingClientRect());
     return cells.every((cell, index) => index % 7 === 0 || Math.abs(cell.y - cells[index - 1].y) < .1 && cell.x > cells[index - 1].x);
@@ -123,14 +125,21 @@ try {
   assert.ok(coherentCrop, 'Every source row remains contiguous, including a current week at the 52-column edge');
   assert.equal(await page.locator('.life-story-paper').evaluate(element => element.style.opacity), '1', 'No app chrome behind the life-grid zoom');
   const approachingColors = await page.locator('.life-calendar-week').evaluateAll(cells => [...new Set(cells.map(cell => getComputedStyle(cell).backgroundColor))]);
-  const neutralColors = desktop ? ['rgb(91, 98, 94)', 'rgb(47, 53, 50)'] : ['rgb(191, 184, 167)', 'rgb(222, 217, 206)'];
+  const neutralColors = dark ? ['rgb(91, 98, 94)', 'rgb(47, 53, 50)'] : ['rgb(191, 184, 167)', 'rgb(222, 217, 206)'];
   assert.ok(approachingColors.every(color => neutralColors.includes(color)), 'The approaching month already contains only neutral past/future cells');
   await page.screenshot({ path: screenshotPath('approach'), animations: 'disabled' });
-  await seek(14300);
+  const layoutSizes = await page.locator('.life-calendar-cell').evaluateAll(cells => cells.map(cell => [cell.style.width, cell.style.height]));
+  const framing = await page.locator('.life-calendar-cell').evaluateAll(cells => {
+    const rects = cells.map(cell => cell.getBoundingClientRect());
+    return { left: Math.min(...rects.map(r => r.left)), right: Math.max(...rects.map(r => r.right)), top: Math.min(...rects.map(r => r.top)), bottom: Math.max(...rects.map(r => r.bottom)), width: innerWidth, height: innerHeight };
+  });
+  assert.ok(framing.right - framing.left > Math.min(framing.width - 48, 820) * (desktop ? .6 : .65) && framing.left >= 12 && framing.right <= framing.width - 12 && Math.abs((framing.top + framing.bottom) / 2 - framing.height * .51) < framing.height * .1, `The calendar already fills the center when the dense grid disappears: ${JSON.stringify(framing)}`);
+  await seek(12000);
+  assert.deepEqual(await page.locator('.life-calendar-cell').evaluateAll(cells => cells.map(cell => [cell.style.width, cell.style.height])), layoutSizes, 'Revealing days scales ready cells without resizing their layout every frame');
   await page.waitForFunction(() => Number(document.querySelector('.life-story-paper')?.style.opacity || 1) < .97);
   assert.equal(await page.locator('.life-story').getAttribute('data-life-opacity'), '0');
   await page.screenshot({ path: screenshotPath('morph'), animations: 'disabled' });
-  await seek(16800);
+  await seek(13200);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.stage === 'ready');
   const geometry = await page.evaluate(() => {
     const live = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')];
@@ -143,7 +152,7 @@ try {
     });
   });
   assert.ok(geometry, 'The moving cells settle onto the real calendar with its exact paint and geometry');
-  await seek(17900);
+  await seek(13650);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.settled === 'true');
   assert.equal(await money.evaluate(element => getComputedStyle(element).opacity), '0', 'The financial note leaves before the calendar becomes interactive');
   const before = await page.screenshot({ path: screenshotPath('settled'), animations: 'disabled' });
@@ -187,5 +196,5 @@ try {
   assert.equal(await page.getByText('Что уже произошло сегодня?', { exact: true }).count(), 0);
   assert.equal(await page.getByText('Выбери один вариант. Я подготовлю форму, а ты дополнишь её как хочешь.', { exact: true }).count(), 0);
   assert.deepEqual(errors, []);
-  console.log(`Production app (${desktop ? 'desktop dark' : 'mobile light'}): contiguous crop, no overlapping life grid/app, exact calendar geometry, invisible removal (pixel difference ${difference.toFixed(3)}), current-day highlight and ordinary entry form passed.`);
+  console.log(`Production app (${desktop ? 'desktop' : 'mobile'} ${dark ? 'dark' : 'light'}): centered crop, stable cell layout, exact calendar geometry, invisible removal (pixel difference ${difference.toFixed(3)}), current-day highlight and ordinary entry form passed.`);
 } finally { await browser.close(); }

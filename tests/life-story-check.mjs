@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { lifeWeeks, localDateValue, birthdayStorageKey, isOnboardingPreviewUser, lifeWeekRhythm, lifeMoneyEvents, reserveLifePresent, calendarMoneyEvents } from '../src/features/onboarding/lifeStoryModel.js';
-import { lifeCalendarMotion, LIFE_MOTION_END } from '../src/features/onboarding/lifeCalendarMotion.js';
+import { lifeCalendarMotion, lifeCameraFrame, LIFE_MOTION_END } from '../src/features/onboarding/lifeCalendarMotion.js';
 
 const today = new Date(2026, 9, 4);
 assert.equal(lifeWeeks('2026-10-04', today).weeks, 0);
@@ -56,15 +56,31 @@ for (let time = 0; time <= LIFE_MOTION_END; time += 16) {
   if (frame.lifeOpacity > .001) {
     assert.equal(frame.paperOpacity, 1, 'Keep the app covered while the dense life grid is visible');
     assert.equal(frame.skin, 0, 'Calendar labels cannot overlap the dense life grid');
-    assert.equal(frame.month, 0, 'Focus the complete crop before spreading calendar days');
   }
   if (frame.handoff > 0) assert.equal(frame.month, 1, 'Swap to the live calendar only after the shared grid has landed');
   if (time >= 16) {
     const previous = lifeCalendarMotion(time - 16);
-    assert.ok(Math.abs(frame.paperOpacity - previous.paperOpacity) < .01, 'The application lighting changes gradually throughout the morph');
-    assert.ok(Math.abs(frame.skin - previous.skin) < .01, 'Calendar paint never snaps onto neutral weeks');
+    assert.ok(Math.abs(frame.paperOpacity - previous.paperOpacity) < .013, 'The application lighting changes gradually throughout the morph');
+    assert.ok(Math.abs(frame.skin - previous.skin) < .013, 'Calendar paint never snaps onto neutral weeks');
   }
 }
-const overlappingMotion = lifeCalendarMotion(12100);
+const overlappingMotion = lifeCalendarMotion(10900);
 assert.ok(overlappingMotion.zoom > 0 && overlappingMotion.zoom < 1 && overlappingMotion.month > 0, 'The camera keeps moving as the calendar starts opening; there is no stop between phases');
+for (const width of [320, 390, 1440]) for (const cropCol of [0, 45]) {
+  const unit = Math.min((width - 84) / 52, 12);
+  const gridLeft = (width - unit * 52) / 2;
+  const compactPitch = (Math.min(width - 48, 820) * .9) / 7;
+  for (let time = 8650; time <= 11250; time += 16) {
+    const motion = lifeCalendarMotion(time);
+    const frame = lifeCameraFrame({ gridLeft, gridTop: 310, unit, cropCol, cropRow: 27, monthRows: 5, focusX: width / 2, focusY: 430, compactPitch }, motion);
+    const left = frame.originX + cropCol * unit * frame.scale;
+    const right = left + unit * 7 * frame.scale;
+    assert.ok(left >= 12 && right <= width - 12, 'The camera keeps the month inside the viewport even when the present begins at either edge');
+    if (motion.lifeOpacity < .01) {
+      assert.ok(right - left >= Math.min(width - 48, 820) * .7, 'The life grid only leaves once the calendar has enough presence to fill the scene');
+      const center = frame.originY + (27 + 2.5) * unit * frame.scale;
+      assert.ok(Math.abs(center - 430) < 1, 'The month is already centered when its surroundings disappear');
+    }
+  }
+}
 console.log('Life story: dates, leap years, DST, account isolation and preview account passed.');
