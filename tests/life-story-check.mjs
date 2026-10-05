@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { lifeWeeks, localDateValue, birthdayStorageKey, isOnboardingPreviewUser, lifeWeekRhythm } from '../src/features/onboarding/lifeStoryModel.js';
+import { lifeCalendarMotion, LIFE_MOTION_END } from '../src/features/onboarding/lifeCalendarMotion.js';
 
 const today = new Date(2026, 9, 4);
 assert.equal(lifeWeeks('2026-10-04', today).weeks, 0);
@@ -29,4 +30,13 @@ const adulthood = rhythm.slice(22 * 52);
 assert.ok(adulthood.filter(event => event.tone === 'expense').length > adulthood.length * .4);
 const incomeWeeks = adulthood.flatMap((event, index) => event.tone === 'income' ? [index] : []);
 assert.ok(new Set(incomeWeeks.slice(1).map((week, index) => week - incomeWeeks[index])).size > 4, 'Income is not a fixed every-four-weeks stripe');
+for (let time = 0; time <= LIFE_MOTION_END; time += 16) {
+  const frame = lifeCalendarMotion(time);
+  if (frame.lifeOpacity > .001) {
+    assert.equal(frame.paperOpacity, 1, 'Keep the app covered while the dense life grid is visible');
+    assert.equal(frame.skin, 0, 'Calendar labels cannot overlap the dense life grid');
+    assert.equal(frame.month, 0, 'Focus the complete crop before spreading calendar days');
+  }
+  if (frame.handoff > 0) assert.equal(frame.month, 1, 'Swap to the live calendar only after the shared grid has landed');
+}
 console.log('Life story: dates, leap years, DST, account isolation and preview account passed.');

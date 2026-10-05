@@ -4,9 +4,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 const require = createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE || 'C:/Users/aveel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/package.json');
 const browser = await require('playwright').chromium.launch({ channel: 'msedge', headless: true });
+const desktop = process.argv.includes('--desktop');
+const suffix = desktop ? '-desktop' : '';
+const screenshotPath = stage => `tests/life-story-app${suffix}-${stage}.png`;
 try {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
-  await context.addInitScript(() => { localStorage.setItem('atj_language', 'ru'); localStorage.setItem('atj_theme', 'light'); localStorage.setItem('calendar_guide_completed', '1'); localStorage.setItem('dayris_voice_feedback', 'off'); });
+  const context = await browser.newContext({ viewport: desktop ? { width: 1440, height: 1000 } : { width: 390, height: 844 }, serviceWorkers: 'block' });
+  await context.addInitScript(desktop => { localStorage.setItem('atj_language', 'ru'); localStorage.setItem('atj_theme', desktop ? 'dark' : 'light'); localStorage.setItem('calendar_guide_completed', '1'); localStorage.setItem('dayris_voice_feedback', 'off'); }, desktop);
   await context.route('**/*', route => {
     const url = new URL(route.request().url());
     if (url.origin !== 'http://calendar.test') return route.abort();
@@ -23,7 +26,9 @@ try {
   await page.clock.pauseAt(new Date('2026-10-05T13:00:00'));
   const next = () => page.getByRole('button', { name: 'Продолжить', exact: true }).click();
   await next(); await next();
-  await page.getByLabel('Дата рождения', { exact: true }).fill('1998-03-14');
+  // A week at column 51 used to split the selected month across two grid rows.
+  const edgeBirthday = new Date(Date.UTC(2026, 9, 5) - (28 * 52 + 51) * 7 * 86400000).toISOString().slice(0, 10);
+  await page.getByLabel('Дата рождения', { exact: true }).fill(desktop ? edgeBirthday : '1998-03-14');
   await next();
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.calendarTarget === 'live');
   await page.mouse.move(0, 0);
@@ -31,15 +36,20 @@ try {
   await page.clock.fastForward(4700);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.stage === 'money');
   await page.waitForFunction(() => Number(document.querySelector('.life-story-counter strong')?.textContent.replace(/\D/g, '')) > 1200);
-  await page.screenshot({ path: 'tests/life-story-app-weeks.png', animations: 'disabled' });
+  await page.screenshot({ path: screenshotPath('weeks'), animations: 'disabled' });
+  await page.clock.fastForward(2800);
+  const coherentCrop = await page.evaluate(() => {
+    const cells = [...document.querySelectorAll('.life-calendar-cell')].map(cell => cell.getBoundingClientRect());
+    return cells.every((cell, index) => index % 7 === 0 || Math.abs(cell.y - cells[index - 1].y) < .1 && cell.x > cells[index - 1].x);
+  });
+  assert.ok(coherentCrop, 'Every source row remains contiguous, including a current week at the 52-column edge');
+  assert.equal(await page.locator('.life-story-paper').evaluate(element => element.style.opacity), '1', 'No app chrome behind the life-grid zoom');
+  await page.screenshot({ path: screenshotPath('approach'), animations: 'disabled' });
   await page.clock.fastForward(2400);
   await page.waitForFunction(() => Number(document.querySelector('.life-story-paper')?.style.opacity || 1) < .97);
-  await page.waitForFunction(() => Number(document.querySelector('.life-story')?.dataset.time) > 7100);
-  await page.screenshot({ path: 'tests/life-story-app-approach.png', animations: 'disabled' });
-  await page.clock.fastForward(1200);
-  await page.waitForFunction(() => Number(document.querySelector('.life-story')?.dataset.time) > 8300);
-  await page.screenshot({ path: 'tests/life-story-app-morph.png', animations: 'disabled' });
-  await page.clock.fastForward(1600);
+  assert.equal(await page.locator('.life-story').getAttribute('data-life-opacity'), '0');
+  await page.screenshot({ path: screenshotPath('morph'), animations: 'disabled' });
+  await page.clock.fastForward(1000);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.stage === 'ready');
   const geometry = await page.evaluate(() => {
     const live = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')];
@@ -52,9 +62,9 @@ try {
     });
   });
   assert.ok(geometry, 'The moving cells settle onto the real calendar with its exact paint and geometry');
-  await page.clock.fastForward(500);
+  await page.clock.fastForward(600);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.settled === 'true');
-  const before = await page.screenshot({ path: 'tests/life-story-app-settled.png', animations: 'disabled' });
+  const before = await page.screenshot({ path: screenshotPath('settled'), animations: 'disabled' });
   const todayRect = await page.locator('.calendar-days-grid [data-today-cell="true"]').boundingBox();
   await page.clock.fastForward(800);
   await page.waitForFunction(() => !document.querySelector('.life-story'));
@@ -83,12 +93,12 @@ try {
   await first.waitFor();
   await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.first-entry-whisper')).opacity) > .98);
   assert.ok(await page.locator('[data-today-cell="true"]').isVisible());
-  await page.screenshot({ path: 'tests/life-story-app-calendar.png' });
+  await page.screenshot({ path: screenshotPath('calendar') });
   await first.click();
-  await page.screenshot({ path: 'tests/life-story-app-entry.png' });
+  await page.screenshot({ path: screenshotPath('entry') });
   await page.getByRole('button', { name: 'Доходы', exact: true }).waitFor();
   assert.equal(await page.getByText('Что уже произошло сегодня?', { exact: true }).count(), 0);
   assert.equal(await page.getByText('Выбери один вариант. Я подготовлю форму, а ты дополнишь её как хочешь.', { exact: true }).count(), 0);
   assert.deepEqual(errors, []);
-  console.log(`Production app: exact calendar geometry, invisible dialog removal (pixel difference ${difference.toFixed(3)}), financial colors, current-day highlight and ordinary entry form passed.`);
+  console.log(`Production app (${desktop ? 'desktop dark' : 'mobile light'}): contiguous crop, no overlapping life grid/app, exact calendar geometry, invisible removal (pixel difference ${difference.toFixed(3)}), current-day highlight and ordinary entry form passed.`);
 } finally { await browser.close(); }

@@ -47,11 +47,11 @@ try {
   assert.match(await page.locator('#first-run-heading').innerText(), /Деньги/);
   await page.waitForFunction(() => Number(document.querySelector('.life-story-counter strong')?.textContent.replace(/\D/g, '')) > 1200);
   await page.screenshot({ path: 'tests/life-story-weeks.png', animations: 'disabled' });
-  await page.clock.fastForward(3600);
+  await page.clock.fastForward(5200);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.stage === 'zoom');
   await page.waitForFunction(() => Number(document.querySelector('.life-story-paper')?.style.opacity || 1) < .97);
   await page.screenshot({ path: 'tests/life-story-zoom.png', animations: 'disabled' });
-  await page.clock.fastForward(3000);
+  await page.clock.fastForward(2600);
   await page.waitForFunction(() => !document.querySelector('.life-story'));
   const first = page.getByRole('button', { name: 'Добавить первую запись', exact: true });
   await first.waitFor();

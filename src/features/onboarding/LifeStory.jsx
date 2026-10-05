@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
 import { lifeWeeks, lifeWeekRhythm } from './lifeStoryModel';
 import { createCalendarBridge } from './lifeCalendarBridge';
+import { lifeCalendarMotion, LIFE_MOTION_END } from './lifeCalendarMotion';
 import BrandIcon from '../../shared/ui/BrandIcon.jsx';
 import './LifeStory.css';
 
@@ -27,7 +28,6 @@ export const LIFE_COPY = {
 const clamp = (value) => Math.max(0, Math.min(1, value));
 const ease = (value) => value < .5 ? 4 * value ** 3 : 1 - (-2 * value + 2) ** 3 / 2;
 const mix = (a, b, t) => a + (b - a) * t;
-const settle = (value) => value ** 3 * (10 - 15 * value + 6 * value ** 2);
 const MONEY_LEGEND = {
   ru: ['Нейтрально', 'Доходы', 'Расходы', 'Образ финансового ритма'],
   en: ['Neutral', 'Income', 'Expenses', 'An illustration of financial rhythm'],
@@ -96,7 +96,11 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
     const current = Math.min(elapsedWeeks, total - 1);
     const col = current % 52;
     const row = Math.floor(current / 52);
-    const sourceIndices = Array.from({ length: count }, (_, index) => Math.max(0, Math.min(total - 1, current + index % 7 - todayIndex % 7 + (Math.floor(index / 7) - Math.floor(todayIndex / 7)) * 52)));
+    const monthRows = count / 7;
+    // Never wrap the crop across the 52-column edge: that splits the month apart.
+    const cropCol = Math.max(0, Math.min(45, col - todayIndex % 7));
+    const cropRow = Math.max(0, Math.min(rows - monthRows, row - Math.floor(todayIndex / 7)));
+    const sourceIndices = Array.from({ length: count }, (_, index) => (cropRow + Math.floor(index / 7)) * 52 + cropCol + index % 7);
     const selected = new Set(sourceIndices);
     let lastTime = 0;
     const resize = () => {
@@ -144,9 +148,12 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
     if (calendarGrid) observer.observe(calendarGrid);
 
     function draw(ms) {
-      const time = reduceMotion ? 11000 : ms;
+      const time = reduceMotion ? LIFE_MOTION_END : ms;
+      const motion = lifeCalendarMotion(time);
       story.dataset.time = String(Math.round(time));
-      const nextStage = time < 2400 ? 'life' : time < 5200 ? 'money' : time < 6200 ? 'today' : time < 9800 ? 'zoom' : 'ready';
+      story.dataset.phase = time < 5850 ? 'life' : time < 7800 ? 'focus' : time < 10900 ? 'month' : 'settle';
+      story.dataset.lifeOpacity = String(motion.lifeOpacity);
+      const nextStage = time < 2400 ? 'life' : time < 5200 ? 'money' : time < 6200 ? 'today' : !motion.ready ? 'zoom' : 'ready';
       if (nextStage !== previousStage) { previousStage = nextStage; setStage(nextStage); }
       const filled = Math.floor(elapsedWeeks * ease(clamp(time / 5100)));
       if (counterRef.current) counterRef.current.textContent = stats ? filled.toLocaleString(locale) : '—';
@@ -154,22 +161,22 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
       const unit = Math.min((scene.width - 36) / 52, (scene.height - 100) / rows);
       const gridWidth = unit * 52;
       const gridHeight = unit * rows;
-      const dotX = (col + .5) * unit - gridWidth / 2;
-      const dotY = (row + .5) * unit - gridHeight / 2;
-      // One continuous camera move, then the same rectangles become calendar days.
-      const approach = settle(clamp((time - 5850) / 2100));
-      const morph = settle(clamp((time - 6200) / 3600));
-      const scale = mix(1, 3.2, approach);
-      const focus = approach;
-      const fade = 1 - settle(clamp((time - 6300) / 2200));
-      const paper = hasCalendar ? 1 - settle(clamp((time - 6100) / 2900)) : 1;
-      const handoff = hasCalendar ? settle(clamp((time - 9800) / 400)) : 0;
-      const skin = settle(clamp((time - 6750) / 2450));
+      const dotX = (cropCol + 3.5) * unit - gridWidth / 2;
+      const dotY = (cropRow + monthRows / 2) * unit - gridHeight / 2;
+      // One camera frames a complete 7-column crop; one shared expansion lands it.
+      const compactPitch = Math.min(scene.width * .62 / 7, scene.height * .65 / monthRows);
+      const morph = motion.month;
+      const scale = mix(1, compactPitch / unit, motion.zoom);
+      const focus = motion.zoom;
+      const fade = motion.lifeOpacity;
+      const paper = hasCalendar ? motion.paperOpacity : 1;
+      const handoff = hasCalendar ? motion.handoff : 0;
+      const skin = motion.skin;
       const financial = ease(clamp((time - 2400) / 1200));
       if (paperRef.current) paperRef.current.style.opacity = String(paper);
       story.style.setProperty('--life-paper-opacity', paper);
       if (calendarGrid) calendarGrid.style.opacity = String(handoff);
-      if (time >= 10200) story.dataset.settled = 'true';
+      if (motion.settled) story.dataset.settled = 'true';
       else delete story.dataset.settled;
       const centerX = scene.left + scene.width / 2;
       const centerY = scene.top + scene.height / 2 + 8;
@@ -245,7 +252,7 @@ export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, o
       if (started === undefined) started = timestamp;
       lastTime = timestamp - started;
       draw(lastTime);
-      if (!reduceMotion && lastTime < 11000) frame = requestAnimationFrame(tick);
+      if (!reduceMotion && lastTime < LIFE_MOTION_END) frame = requestAnimationFrame(tick);
       else {
         if (hasCalendar) arriveRef.current?.();
       }
