@@ -1,0 +1,241 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
+import { lifeWeeks } from './lifeStoryModel';
+import BrandIcon from '../../shared/ui/BrandIcon.jsx';
+import './LifeStory.css';
+
+export const LIFE_COPY = {
+  ru: {
+    birthdayTitle: 'Когда началась\nтвоя история?', birthdayHint: 'Укажи дату рождения, чтобы увидеть время в масштабе.', birthdayLabel: 'Дата рождения', birthdayNote: 'Дата останется на этом устройстве.', noDate: 'Продолжить без даты', invalid: 'Укажи настоящую дату рождения, не позднее сегодняшнего дня.',
+    life: 'Это время твоей жизни.', lifeHint: 'За каждой неделей — дни, решения и воспоминания.', money: 'Деньги тоже стали\nчастью этой истории.', moneyHint: 'Первые покупки. Первый заработок. Планы и спонтанные решения.', today: 'А это — сегодня.', todayHint: 'Один день. И место для нового начала.', ready: 'Начни с сегодняшнего дня.', readyHint: 'Пусть твоя финансовая история станет чуть яснее.', weeks: 'прожитых недель', generic: 'Каждая неделя — часть истории', legend: 'Одна точка — одна неделя', future: 'История продолжается', entry: 'Сделать первую запись', empty: 'Здесь появится твоя первая запись', replay: 'Посмотреть ещё раз', back: 'Изменить дату', skip: 'Перейти к календарю', continue: 'Продолжить', week: 'Эта неделя', todayLabel: 'Сегодня',
+  },
+  en: {
+    birthdayTitle: 'When did your\nstory begin?', birthdayHint: 'Enter your birthday to see time in perspective.', birthdayLabel: 'Date of birth', birthdayNote: 'Your date stays on this device.', noDate: 'Continue without a date', invalid: 'Enter a valid birthday no later than today.',
+    life: 'This is your time.', lifeHint: 'Behind every week are days, decisions and memories.', money: 'Money became\npart of that story, too.', moneyHint: 'First purchases. First earnings. Plans and spontaneous choices.', today: 'And this is today.', todayHint: 'One day. Room for a new beginning.', ready: 'Start with today.', readyHint: 'Bring a little clarity to your financial story.', weeks: 'weeks lived', generic: 'Every week is part of a story', legend: 'One dot is one week', future: 'Your story continues', entry: 'Create my first entry', empty: 'Your first entry will appear here', replay: 'Watch again', back: 'Change birthday', skip: 'Go to calendar', continue: 'Continue', week: 'This week', todayLabel: 'Today',
+  },
+  ro: {
+    birthdayTitle: 'Când a început\npovestea ta?', birthdayHint: 'Introdu data nașterii pentru a vedea timpul în perspectivă.', birthdayLabel: 'Data nașterii', birthdayNote: 'Data rămâne pe acest dispozitiv.', noDate: 'Continuă fără dată', invalid: 'Introdu o dată validă, nu mai târziu de azi.',
+    life: 'Acesta este timpul tău.', lifeHint: 'În fiecare săptămână sunt zile, alegeri și amintiri.', money: 'Și banii au devenit\nparte din poveste.', moneyHint: 'Primele cumpărături. Primul venit. Planuri și alegeri spontane.', today: 'Iar aceasta este ziua de azi.', todayHint: 'O zi. Loc pentru un nou început.', ready: 'Începe cu ziua de azi.', readyHint: 'Adu puțină claritate în povestea ta financiară.', weeks: 'săptămâni trăite', generic: 'Fiecare săptămână face parte din poveste', legend: 'Un punct este o săptămână', future: 'Povestea continuă', entry: 'Prima mea înregistrare', empty: 'Prima ta înregistrare va apărea aici', replay: 'Privește din nou', back: 'Schimbă data', skip: 'Mergi la calendar', continue: 'Continuă', week: 'Săptămâna aceasta', todayLabel: 'Astăzi',
+  },
+  zh: {
+    birthdayTitle: '你的故事\n从何时开始？', birthdayHint: '输入出生日期，换一个角度看时间。', birthdayLabel: '出生日期', birthdayNote: '日期仅保存在此设备。', noDate: '不填写日期，继续', invalid: '请输入不晚于今天的有效出生日期。',
+    life: '这是你走过的时间。', lifeHint: '每一周，都有日常、选择与回忆。', money: '金钱也逐渐\n成为故事的一部分。', moneyHint: '第一次购物。第一份收入。计划与随心的选择。', today: '而这一格，是今天。', todayHint: '一天，一个新的开始。', ready: '从今天开始。', readyHint: '让你的财务故事更清晰一点。', weeks: '已走过的周数', generic: '每一周都是故事的一部分', legend: '一个点代表一周', future: '故事仍在继续', entry: '创建第一条记录', empty: '你的第一条记录将在这里出现', replay: '再看一次', back: '修改日期', skip: '前往日历', continue: '继续', week: '本周', todayLabel: '今天',
+  },
+};
+
+const clamp = (value) => Math.max(0, Math.min(1, value));
+const ease = (value) => value < .5 ? 4 * value ** 3 : 1 - (-2 * value + 2) ** 3 / 2;
+const mix = (a, b, t) => a + (b - a) * t;
+const MONEY_LEGEND = {
+  ru: ['Нейтрально', 'Доходы', 'Расходы', 'Образ финансового ритма'],
+  en: ['Neutral', 'Income', 'Expenses', 'An illustration of financial rhythm'],
+  ro: ['Neutru', 'Venituri', 'Cheltuieli', 'O imagine a ritmului financiar'],
+  zh: ['平常', '收入', '支出', '财务节奏示意'],
+};
+const FIRST_ENTRY = { ru: 'Добавить первую запись', en: 'Add your first entry', ro: 'Adaugă prima înregistrare', zh: '添加第一条记录' };
+
+function weekColor(index, filled, financial) {
+  if (index >= filled) return '#ded9ce';
+  // Childhood is neutral. Adult weeks suggest one income beat per four weeks.
+  if (index < 18 * 52 || !financial) return '#bfb8a7';
+  const adultWeek = index - 18 * 52;
+  const color = adultWeek % 4 === 0 ? [113, 151, 128] : adultWeek % 13 === 6 ? [187, 184, 173] : [198, 135, 120];
+  return `rgb(${color.map((value, index) => Math.round(mix([191, 184, 167][index], value, financial))).join(',')})`;
+}
+
+/** A single camera follows the current week, then morphs the cells into the live month. */
+export default function LifeStory({ birthday, lang, onStart, onArrive, onSkip, onBack }) {
+  const copy = LIFE_COPY[lang];
+  const canvasRef = useRef(null);
+  const counterRef = useRef(null);
+  const sceneRef = useRef(null);
+  const paperRef = useRef(null);
+  const arriveRef = useRef(onArrive);
+  arriveRef.current = onArrive;
+  const [run, setRun] = useState(0);
+  const [stage, setStage] = useState('life');
+  const [reduced, setReduced] = useState(false);
+  const today = new Date();
+  const locale = lang === 'zh' ? 'zh-CN' : lang === 'ro' ? 'ro-RO' : lang === 'en' ? 'en-US' : 'ru-RU';
+  const monthLabel = today.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
+  const stats = lifeWeeks(birthday);
+  const elapsedWeeks = stats?.weeks ?? 0;
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+    const dialog = canvas.closest('dialog');
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let reduceMotion = media.matches;
+    setReduced(reduceMotion);
+    let frame;
+    let started;
+    let previousStage;
+    let width = 1;
+    let height = 1;
+    let scene;
+    let targets = [];
+    let hasCalendar = false;
+    let finished = false;
+    const offset = (new Date(today.getFullYear(), today.getMonth(), 1).getDay() + 6) % 7;
+    const count = Math.ceil((offset + new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()) / 7) * 7;
+    const todayIndex = offset + today.getDate() - 1;
+    // This is a time canvas, not a prediction of life expectancy.
+    const rows = Math.max(32, Math.ceil((elapsedWeeks + 520) / 52));
+    const total = rows * 52;
+    const current = Math.min(elapsedWeeks, total - 1);
+    const col = current % 52;
+    const row = Math.floor(current / 52);
+    const sourceIndices = Array.from({ length: count }, (_, index) => Math.max(0, Math.min(total - 1, current + index % 7 - todayIndex % 7 + (Math.floor(index / 7) - Math.floor(todayIndex / 7)) * 52)));
+    const selected = new Set(sourceIndices);
+    let lastTime = 0;
+    const resize = () => {
+      if (!sceneRef.current || !canvas.isConnected) return;
+      const bounds = canvas.getBoundingClientRect();
+      width = bounds.width;
+      height = bounds.height;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+      scene = sceneRef.current.getBoundingClientRect();
+      const buttons = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')];
+      hasCalendar = buttons.length === count && buttons.some(button => button.dataset.todayCell === 'true');
+      canvas.closest('.life-story').dataset.calendarTarget = hasCalendar ? 'live' : 'preview';
+      targets = Array.from({ length: count }, (_, index) => {
+        const day = new Date(today.getFullYear(), today.getMonth(), 1 - offset + index);
+        const cell = hasCalendar ? buttons[index] : null;
+        const bounds = cell?.getBoundingClientRect();
+        const style = cell ? getComputedStyle(cell) : null;
+        const gap = width < 640 ? 4 : 8;
+        const fallbackWidth = Math.min(600, scene.width);
+        const cellWidth = (fallbackWidth - gap * 6) / 7;
+        const cellHeight = Math.min(64, (scene.height - gap * (count / 7 - 1)) / (count / 7));
+        return { x: bounds?.left ?? (width - fallbackWidth) / 2 + index % 7 * (cellWidth + gap), y: bounds?.top ?? scene.top + Math.floor(index / 7) * (cellHeight + gap), width: bounds?.width ?? cellWidth, height: bounds?.height ?? cellHeight, day: day.getDate(), inMonth: day.getMonth() === today.getMonth(), background: style?.backgroundColor || '#f1f0e9', color: style?.color || '#343e36', radius: parseFloat(style?.borderRadius) || 14 };
+      });
+      if (finished) draw(lastTime);
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(canvas);
+    const calendarGrid = document.querySelector('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid');
+    if (calendarGrid) observer.observe(calendarGrid);
+    resize();
+
+    function draw(ms) {
+      const time = reduceMotion ? 10200 : ms;
+      const nextStage = time < 2400 ? 'life' : time < 5200 ? 'money' : time < 6200 ? 'today' : time < 9500 ? 'zoom' : 'ready';
+      if (nextStage !== previousStage) { previousStage = nextStage; setStage(nextStage); }
+      const filled = Math.floor(elapsedWeeks * ease(clamp(time / 5100)));
+      if (counterRef.current) counterRef.current.textContent = stats ? filled.toLocaleString(locale) : '—';
+
+      const unit = Math.min((scene.width - 36) / 52, (scene.height - 100) / rows);
+      const gridWidth = unit * 52;
+      const gridHeight = unit * rows;
+      const dotX = (col + .5) * unit - gridWidth / 2;
+      const dotY = (row + .5) * unit - gridHeight / 2;
+      // One continuous camera move, then the same rectangles become calendar days.
+      const approach = ease(clamp((time - 5900) / 1300));
+      const morph = ease(clamp((time - 6600) / 2900));
+      const pullback = Math.sin(clamp((time - 5900) / 300) * Math.PI) * .04;
+      const scale = mix(1 - pullback, 2.2, approach);
+      const focus = approach;
+      const fade = 1 - ease(clamp((time - 6500) / 2000));
+      const handoff = hasCalendar ? ease(clamp((time - 9000) / 1200)) : 0;
+      if (paperRef.current) paperRef.current.style.opacity = String(1 - handoff);
+      if (hasCalendar && time >= 8000) dialog?.setAttribute('data-life-handoff', 'true');
+      const centerX = scene.left + scene.width / 2;
+      const centerY = scene.top + scene.height / 2 + 8;
+      const originX = centerX - dotX * scale * focus - gridWidth * scale / 2;
+      const originY = centerY - dotY * scale * focus - gridHeight * scale / 2;
+      context.clearRect(0, 0, width, height);
+      context.save();
+      context.translate(centerX - dotX * scale * focus, centerY - dotY * scale * focus);
+      context.scale(scale, scale);
+      context.translate(-gridWidth / 2, -gridHeight / 2);
+      context.globalAlpha = fade;
+      const size = unit * .65;
+      for (let i = 0; i < total; i++) {
+        if (selected.has(i)) continue;
+        const x = (i % 52) * unit + (unit - size) / 2;
+        const y = Math.floor(i / 52) * unit + (unit - size) / 2;
+        context.fillStyle = weekColor(i, filled, ease(clamp((time - 2400) / 1200)));
+        context.fillRect(x, y, size, size);
+      }
+      context.restore();
+      targets.forEach((target, index) => {
+        const source = sourceIndices[index];
+        const isToday = index === todayIndex;
+        const x = mix(originX + (source % 52 * unit + (unit - size) / 2) * scale, target.x, morph);
+        const y = mix(originY + (Math.floor(source / 52) * unit + (unit - size) / 2) * scale, target.y, morph);
+        const w = mix(size * scale, target.width, morph);
+        const h = mix(size * scale, target.height, morph);
+        context.save();
+        context.globalAlpha = 1 - handoff;
+        context.beginPath();
+        context.roundRect(x, y, w, h, target.radius * morph);
+        context.fillStyle = isToday && time > 5100 ? '#4d7764' : weekColor(source, filled, ease(clamp((time - 2400) / 1200)));
+        context.globalAlpha *= 1 - morph;
+        context.fill();
+        context.globalAlpha = morph * (1 - handoff);
+        context.fillStyle = target.background;
+        context.fill();
+        context.strokeStyle = isToday ? 'rgba(77,119,100,.55)' : 'rgba(148,163,184,.17)';
+        context.lineWidth = 1;
+        context.stroke();
+        if (morph > .3) {
+          context.globalAlpha = ease(clamp((morph - .3) / .7)) * (1 - handoff) * (target.inMonth ? 1 : .4);
+          context.font = `500 ${width < 640 ? 11 : 14}px system-ui, sans-serif`;
+          context.fillStyle = target.color;
+          context.fillText(String(target.day), x + 10, y + 20);
+        }
+        if (isToday && morph > .9) {
+          context.globalAlpha = (1 - handoff) * clamp((morph - .9) / .1);
+          context.shadowColor = 'rgba(77,119,100,.18)';
+          context.shadowBlur = 18;
+          context.strokeStyle = 'rgba(77,119,100,.4)';
+          context.stroke();
+        }
+        context.restore();
+      });
+    }
+    function tick(timestamp) {
+      if (started === undefined) started = timestamp;
+      lastTime = timestamp - started;
+      draw(lastTime);
+      if (!reduceMotion && lastTime < 10200) frame = requestAnimationFrame(tick);
+      else {
+        finished = true;
+        if (hasCalendar) arriveRef.current?.();
+      }
+    }
+    const onMotionChange = () => { reduceMotion = media.matches; setReduced(reduceMotion); cancelAnimationFrame(frame); frame = requestAnimationFrame(tick); };
+    media.addEventListener('change', onMotionChange);
+    frame = requestAnimationFrame(tick);
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); media.removeEventListener('change', onMotionChange); dialog?.removeAttribute('data-life-handoff'); };
+  }, [birthday, elapsedWeeks, lang, run]);
+
+  const ready = stage === 'ready';
+  const zoom = stage === 'zoom' || ready;
+  const title = ready ? monthLabel : stage === 'life' ? copy.life : stage === 'money' ? copy.money : copy.today;
+  const hint = ready ? copy.todayHint : stage === 'life' ? copy.lifeHint : stage === 'money' ? copy.moneyHint : copy.todayHint;
+
+  return <div className={`life-story ${reduced ? 'life-story--reduced' : ''}`} data-stage={stage}>
+    <div ref={paperRef} className="life-story-paper" aria-hidden="true" />
+    <header className="life-story-top"><span className="life-story-brand"><BrandIcon className="h-7 w-7" /> DAYRIS</span><button type="button" onClick={onSkip}>{copy.skip}<ArrowRight size={14} /></button></header>
+    <div className="life-story-heading" aria-live="polite" aria-atomic="true">
+      <p className="life-story-eyebrow">{ready || zoom ? copy.todayLabel : copy.future}</p>
+      <h1 key={title} id="first-run-heading" tabIndex={-1}>{title}</h1>
+      <p key={hint} className="life-story-hint">{hint}</p>
+    </div>
+    <div ref={sceneRef} className={`life-story-scene ${zoom ? 'is-zooming' : ''} ${ready ? 'is-ready' : ''}`} key={run}>
+      <div className="life-story-halo" aria-hidden="true" />
+      <div className="life-story-counter" aria-hidden="true"><strong ref={counterRef}>0</strong><span>{stats ? copy.weeks : copy.generic}</span></div>
+      <canvas ref={canvasRef} className="life-story-grid" aria-label={stats ? `${elapsedWeeks.toLocaleString(locale)} ${copy.weeks}. ${copy.legend}` : copy.generic} role="img" />
+      <div className="life-story-legend"><p>{copy.legend}</p>{stage === 'money' || stage === 'today' || zoom ? <><div className="life-story-color-key">{MONEY_LEGEND[lang].slice(0, 3).map((label, index) => <span key={label}><i style={{ background: ['#bbb8ad', '#719780', '#c68778'][index] }} />{label}</span>)}</div><span>{MONEY_LEGEND[lang][3]}</span></> : <span>{copy.future}</span>}</div>
+    </div>
+    <footer className={`life-story-footer ${ready ? 'is-ready' : ''}`}>
+      <button type="button" className="life-story-primary" onClick={onStart} disabled={!ready}>{FIRST_ENTRY[lang]}<ArrowRight size={14} /></button>
+      <div className="life-story-tools"><button type="button" onClick={onBack}><ArrowLeft size={14} />{copy.back}</button><button type="button" onClick={() => { setStage('life'); setRun(value => value + 1); }}><RotateCcw size={14} />{copy.replay}</button></div>
+    </footer>
+  </div>;
+}

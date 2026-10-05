@@ -418,7 +418,6 @@ export default function CalendarScreen() {
 
   const [selectedKey, setSelectedKey] = useState(null);
   const [firstRunGuideStep, setFirstRunGuideStep] = useState(0); // 0 off, 1 today, 2 form, 3 success, 4 day view tip
-  const [firstRunGuideChoice, setFirstRunGuideChoice] = useState(null);
   const guideAmountRef = useRef(null);
   const guideCommentRef = useRef(null);
 
@@ -1676,29 +1675,11 @@ export default function CalendarScreen() {
 
   function markFirstRunGuideComplete() {
     try { window.localStorage.setItem('calendar_guide_completed', '1'); } catch { /* ignore */ }
-    setFirstRunGuideChoice(null);
     setFirstRunGuideStep(0);
   }
 
   function markOnboardingComplete() {
     try { window.localStorage.setItem(ONBOARDING_V2_COMPLETED_STORAGE_KEY, '1'); } catch { /* ignore */ }
-  }
-
-  function chooseFirstRunGuideType(type) {
-    setFirstRunGuideChoice(type);
-    if (type === 'expense') {
-      setForm((f) => ({ ...f, sign: 'minus', instrument: 'Продукты', pnl: '' }));
-      requestAnimationFrame(() => guideAmountRef.current?.focus());
-      return;
-    }
-    if (type === 'income') {
-      setForm((f) => ({ ...f, sign: 'plus', instrument: 'Зарплата', pnl: '' }));
-      requestAnimationFrame(() => guideAmountRef.current?.focus());
-      return;
-    }
-    setForm((f) => ({ ...f, sign: 'plus', instrument: 'Заметка', pnl: '0' }));
-    setDetailsOpen(true);
-    requestAnimationFrame(() => guideCommentRef.current?.focus());
   }
 
   useEffect(() => {
@@ -4586,48 +4567,13 @@ export default function CalendarScreen() {
         gesturesDisabled={Boolean(modalOpen || historyOpen || settingsOpen || connectOpen || metaTraderOpen || proAccessPromptOpen)}
       />
 
-      {firstRunGuideStep === 1 && !traderMode && (
-        <>
-          <style>{`
-            [data-today-cell="true"] {
-              position: relative !important;
-              border-color: rgba(251,191,36,.98) !important;
-              box-shadow: 0 0 0 3px rgba(251,191,36,.24), 0 0 38px rgba(245,158,11,.42) !important;
-              animation: firstRunGuidePulse 1.35s ease-in-out infinite !important;
-              z-index: 31 !important;
-            }
-            @keyframes firstRunGuidePulse {
-              0%,100% { transform: scale(1); }
-              50% { transform: scale(1.045); }
-            }
-            @media (prefers-reduced-motion: reduce) {
-              [data-today-cell="true"] { animation: none !important; }
-            }
-          `}</style>
-          <div className="pointer-events-none fixed inset-0 z-[24] bg-black/30 backdrop-blur-[1px]" />
-          <div className="pointer-events-none fixed inset-x-0 bottom-5 z-[70] flex justify-center px-4 sm:bottom-8">
-            <div className={`pointer-events-auto w-full max-w-sm rounded-2xl border p-4 shadow-2xl backdrop-blur-xl ${
-              isLight ? 'border-amber-200 bg-white/95 text-zinc-900' : 'border-amber-400/25 bg-zinc-950/95 text-zinc-100'
-            }`}>
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-400 text-zinc-950">
-                  <Calendar className="h-4 w-4" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold">{onboardingCopy.guideTapToday}</p>
-                  <p className={`mt-1 text-xs leading-relaxed ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>{onboardingCopy.guideTapTodayHint}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={markFirstRunGuideComplete}
-                className={`mt-3 w-full rounded-xl px-3 py-2 text-xs transition-colors ${isLight ? 'text-zinc-500 hover:bg-zinc-100' : 'text-zinc-500 hover:bg-zinc-900'}`}
-              >
-                {onboardingCopy.guideSkip}
-              </button>
-            </div>
-          </div>
-        </>
+      {firstRunGuideStep === 1 && !traderMode && !setupStep && (
+        <div className="first-entry-whisper" data-light={isLight}>
+          <button type="button" onClick={() => { setFirstRunGuideStep(2); openModal(null, todayKey); }}>
+            <Plus className="h-3.5 w-3.5" />
+            {language === 'zh-CN' ? '添加第一条记录' : language === 'en' ? 'Add your first entry' : language === 'md' || language === 'ro' ? 'Adaugă prima înregistrare' : 'Добавить первую запись'}
+          </button>
+        </div>
       )}
 
       {firstRunGuideStep === 3 && (
@@ -6432,46 +6378,6 @@ export default function CalendarScreen() {
 
             {traderMode ? (proEntryChoiceOpen ? renderProEntryChoice() : renderProTradeComposer()) : (
             <div className="mt-4 sm:min-h-0 sm:overflow-y-auto sm:overscroll-contain sm:pr-1">
-              {firstRunGuideStep === 2 && !editingTrade && !traderMode && (
-                <div className={`mb-4 rounded-2xl border p-3 sm:p-4 ${
-                  isLight ? 'border-amber-200 bg-amber-50/70' : 'border-amber-400/20 bg-amber-400/[0.06]'
-                }`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className={`text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{onboardingCopy.guideChooseType}</p>
-                      <p className={`mt-1 text-xs leading-relaxed ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>{onboardingCopy.guideChooseTypeHint}</p>
-                    </div>
-                    <button type="button" onClick={markFirstRunGuideComplete} className="shrink-0 text-[11px] text-zinc-500 hover:text-zinc-300">{onboardingCopy.guideSkip}</button>
-                  </div>
-                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    {[
-                      ['expense', '🛒', onboardingCopy.guideExpense],
-                      ['income', '💰', onboardingCopy.guideIncome],
-                      ['note', '💭', onboardingCopy.guideNote],
-                    ].map(([type, icon, label]) => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => chooseFirstRunGuideType(type)}
-                        className={`flex min-h-14 items-center gap-2 rounded-xl border px-3 py-2.5 text-left transition-all sm:min-h-16 sm:justify-center sm:px-4 ${
-                          firstRunGuideChoice === type
-                            ? 'border-amber-400 bg-amber-400/10 ring-1 ring-amber-400/20'
-                            : isLight ? 'border-zinc-200 bg-white hover:border-amber-300' : 'border-zinc-800 bg-zinc-950 hover:border-amber-500/40'
-                        }`}
-                      >
-                        <span className="text-lg">{icon}</span>
-                        <span className={`text-xs font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{label}</span>
-                      </button>
-                    ))}
-                  </div>
-                  {firstRunGuideChoice && (
-                    <p className={`mt-3 rounded-xl px-3 py-2 text-xs ${isLight ? 'bg-white text-zinc-600' : 'bg-zinc-950 text-zinc-400'}`}>
-                      {firstRunGuideChoice === 'note' ? onboardingCopy.guideNoteHint : onboardingCopy.guideAmountHint}
-                    </p>
-                  )}
-                </div>
-              )}
-
             {/* Income / expense: the first and fastest decision */}
               <div className={traderMode
                 ? `grid grid-cols-2 gap-1 rounded-2xl border p-1.5 ${isLight ? 'border-zinc-200 bg-zinc-100/80' : 'border-white/[0.08] bg-black/35 shadow-inner'}`
@@ -7089,15 +6995,30 @@ export default function CalendarScreen() {
           language={language}
           currency={currency}
           theme={theme}
+          profileKey={user?.id || 'guest'}
           onLanguage={handleOnboardingLanguageSelect}
           onCurrency={setCurrency}
           onTheme={setTheme}
-          onStep={setSetupStep}
+          onStep={(nextStep) => {
+            if (nextStep === 'intro') {
+              setTraderMode(false);
+              setAccountMode('main');
+              setViewYear(today.getFullYear());
+              setViewMonth(today.getMonth());
+              setSelectedKey(null);
+              setSlideDirection(null);
+            }
+            setSetupStep(nextStep);
+          }}
+          onArrive={() => {
+            markOnboardingComplete();
+            setSetupStep(null);
+            setFirstRunGuideStep(1);
+          }}
           onStart={() => {
             markOnboardingComplete();
             setTraderMode(false);
             setSetupStep(null);
-            setFirstRunGuideChoice(null);
             setFirstRunGuideStep(2);
             openModal(null, todayKey);
           }}

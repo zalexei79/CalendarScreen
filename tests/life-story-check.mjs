@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import { lifeWeeks, localDateValue, birthdayStorageKey, isOnboardingPreviewUser } from '../src/features/onboarding/lifeStoryModel.js';
+
+const today = new Date(2026, 9, 4);
+assert.equal(lifeWeeks('2026-10-04', today).weeks, 0);
+assert.equal(lifeWeeks('2026-09-27', today).weeks, 1);
+assert.equal(lifeWeeks('2026-10-05', today), null);
+assert.equal(lifeWeeks('2026-02-30', today), null);
+assert.equal(lifeWeeks('2025-02-29', today), null);
+assert.equal(lifeWeeks('not-a-date', today), null);
+assert.equal(lifeWeeks('', today), null);
+assert.equal(lifeWeeks('2024-02-29', new Date(2024, 2, 7)).weeks, 1);
+assert.equal(lifeWeeks('2026-03-27', new Date(2026, 3, 3)).weeks, 1, 'DST does not change calendar-week arithmetic');
+assert.equal(lifeWeeks('1800-01-01', today), null);
+assert.equal(localDateValue(today), '2026-10-04');
+assert.notEqual(birthdayStorageKey('account-a'), birthdayStorageKey('account-b'));
+assert.equal(isOnboardingPreviewUser({ email: ' AVEEL2000@gmail.com ' }), true);
+assert.equal(isOnboardingPreviewUser({ email: 'another@gmail.com' }), false);
+assert.equal(isOnboardingPreviewUser(null), false);
+console.log('Life story: dates, leap years, DST, account isolation and preview account passed.');

@@ -5,6 +5,7 @@ import { LANGUAGE_STORAGE_KEY, ONBOARDING_V2_COMPLETED_STORAGE_KEY } from '../..
 import { translate } from '../../../shared/i18n';
 import { disablePush } from '../../reminders/pushClient';
 import { restoreUser } from '../sessionRecovery';
+import { isOnboardingPreviewUser } from '../../onboarding/lifeStoryModel';
 
 /**
  * useAuth: manages Supabase authentication, session detection, and user profile state.
@@ -12,6 +13,7 @@ import { restoreUser } from '../sessionRecovery';
 export function useAuth() {
   const [user, setUser] = useState(null);
   const nicknamePrompted = useRef(false);
+  const previewShownFor = useRef(null);
 
   // Nickname modal state
   const [nicknameModalOpen, setNicknameModalOpen] = useState(false);
@@ -50,6 +52,16 @@ export function useAuth() {
       listener.subscription.unsubscribe();
     };
   }, []);
+
+  // Replay once per app opening/account switch, never on token refresh or completion.
+  useEffect(() => {
+    if (!user) { previewShownFor.current = null; return; }
+    if (previewShownFor.current === user.id) return;
+    previewShownFor.current = user.id;
+    if (isOnboardingPreviewUser(user)) {
+      setSetupStep('language');
+    }
+  }, [user]);
 
   // Prompt nickname modal once after fresh login if not set yet
   useEffect(() => {
