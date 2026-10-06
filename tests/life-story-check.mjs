@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { lifeWeeks, localDateValue, birthdayStorageKey, isOnboardingPreviewUser, lifeWeekRhythm, lifeMoneyEvents, lifeMoneyFlow, reserveLifePresent, calendarMoneyEvents } from '../src/features/onboarding/lifeStoryModel.js';
-import { lifeCalendarMotion, lifeCameraFrame, lifeLatticeFrame, LIFE_MOTION_END } from '../src/features/onboarding/lifeCalendarMotion.js';
+import { lifeCalendarMotion, lifeCameraFrame, lifeLatticeFrame, lifeCellMaterialization, LIFE_MOTION_END } from '../src/features/onboarding/lifeCalendarMotion.js';
 
 const today = new Date(2026, 9, 4);
 assert.equal(lifeWeeks('2026-10-04', today).weeks, 0);
@@ -82,6 +82,17 @@ for (let time = 0; time <= LIFE_MOTION_END; time += 16) {
   }
 }
 const overlappingMotion = lifeCalendarMotion(10000);
+for (let time = 8200; time <= LIFE_MOTION_END; time += 16) {
+  const frame = lifeCalendarMotion(time);
+  const previous = lifeCalendarMotion(time - 16);
+  assert.ok(frame.planeTilt >= 0 && frame.planeTilt <= 7 && Math.abs(frame.planeTilt - previous.planeTilt) < .16, 'The intact plane tilts continuously and never flips or shakes');
+  if (time >= 12300) assert.ok(frame.planeTilt === 0 && frame.signalOpacity === 0 && frame.focus === 0 && frame.headerArrival === 1 && frame.dockArrival === 1, 'Every optical effect ends before the exact native handoff');
+  for (const todayIndex of [0, 7, 34, 41]) for (let index = 0; index < 42; index++) {
+    const content = lifeCellMaterialization(time, index, todayIndex);
+    assert.ok(content >= lifeCellMaterialization(time - 16, index, todayIndex) && content >= 0 && content <= 1, 'Date contents materialize once without blinking or reversing');
+    if (time >= 11600) assert.equal(content, 1, 'The whole month is readable before the camera has landed');
+  }
+}
 const departingCopy = lifeCalendarMotion(9000);
 assert.ok(departingCopy.reframe > .7 && departingCopy.zoom > .1 && departingCopy.bottomAperture > .2, 'The camera and both sides of the scene keep advancing while the copy leaves');
 assert.ok(overlappingMotion.zoom > 0 && overlappingMotion.zoom < 1 && overlappingMotion.month > 0, 'The camera keeps moving as the calendar starts opening; there is no stop between phases');

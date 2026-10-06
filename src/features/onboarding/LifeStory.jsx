@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
 import { lifeWeeks, lifeWeekRhythm, lifeMoneyEvents, lifeMoneyFlow, reserveLifePresent, calendarMoneyEvents } from './lifeStoryModel';
 import { createCalendarBridge } from './lifeCalendarBridge';
-import { lifeCalendarMotion, lifeCameraFrame, lifeLatticeFrame, LIFE_COUNT_END, LIFE_MOTION_END } from './lifeCalendarMotion';
+import { lifeCalendarMotion, lifeCameraFrame, lifeLatticeFrame, lifeCellMaterialization, LIFE_COUNT_END, LIFE_MOTION_END } from './lifeCalendarMotion';
 import BrandIcon from '../../shared/ui/BrandIcon.jsx';
 import './LifeStory.css';
 
@@ -70,6 +70,8 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
   const sceneRef = useRef(null);
   const paperRef = useRef(null);
   const cellsRef = useRef(null);
+  const projectionRef = useRef(null);
+  const signalRef = useRef(null);
   const moneyFlowRef = useRef(null);
   const arriveRef = useRef(onArrive);
   arriveRef.current = onArrive;
@@ -87,6 +89,9 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     const context = canvas.getContext('2d');
     const story = canvas.closest('.life-story');
     const layer = cellsRef.current;
+    const projection = projectionRef.current;
+    const signalCanvas = signalRef.current;
+    const signalContext = signalCanvas.getContext('2d');
     const counter = counterRef.current.parentElement;
     const legend = sceneRef.current.querySelector('.life-story-legend');
     const heading = story.querySelector('.life-story-heading');
@@ -94,6 +99,8 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     const footer = story.querySelector('.life-story-footer');
     const appShell = document.querySelector('.premium-shell');
     const originalShellTransform = appShell?.style.transform || '';
+    const interfaceParts = [document.querySelector('.dayris-header'), document.querySelector('.history-fab')].filter(Boolean).map(node => ({ node, transform: node.style.transform, transition: node.style.transition }));
+    interfaceParts.forEach(({ node }) => { node.style.transition = 'none'; });
     const root = document.documentElement;
     root.setAttribute('data-life-motion', 'true');
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -154,13 +161,16 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     let lastTime = 0;
     const resize = () => {
       if (disposed || !sceneRef.current || !canvas.isConnected) return;
-      const bounds = canvas.getBoundingClientRect();
-      width = bounds.width;
-      height = bounds.height;
+      // Measure the surface before projection, including a resize mid-flight.
+      width = canvas.clientWidth;
+      height = canvas.clientHeight;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
+      signalCanvas.width = canvas.width;
+      signalCanvas.height = canvas.height;
+      signalContext.setTransform(dpr, 0, 0, dpr, 0, 0);
       scene = sceneRef.current.getBoundingClientRect();
       if (appShell) appShell.style.transform = originalShellTransform;
       const buttons = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')];
@@ -277,6 +287,11 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       }
       if (paperRef.current) paperRef.current.style.opacity = String(paper);
       if (appShell) appShell.style.transform = `translate3d(0,${16 * paper}px,0)`;
+      interfaceParts.forEach(({ node, transform }) => {
+        const isHeader = node.classList.contains('dayris-header');
+        const shift = (isHeader ? -10 : 12) * (1 - (isHeader ? motion.headerArrival : motion.dockArrival));
+        node.style.transform = shift ? `${transform && transform !== 'none' ? transform : ''} translate3d(0,${shift}px,0)` : transform;
+      });
       story.style.setProperty('--life-paper-opacity', paper);
       if (calendarGrid) calendarGrid.style.opacity = String(handoff);
       if (motion.settled) story.dataset.settled = 'true';
@@ -289,8 +304,15 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         focusX: centerX, focusY: hasCalendar ? (targets[0].y + targets.at(-1).y + targets.at(-1).height) / 2 : height * .54,
       }, motion);
       const lattice = lifeLatticeFrame({ camera, unit, cropCol, cropRow, targets, initialFill: width >= 760 ? .74 : .65 }, motion);
+      projection.style.transformOrigin = `${lattice.x + (6 * lattice.pitchX + lattice.width) / 2}px ${lattice.y + ((monthRows - 1) * lattice.pitchY + lattice.height) / 2}px`;
+      projection.style.transform = motion.planeTilt ? `perspective(1400px) rotateX(${motion.planeTilt}deg)` : 'none';
+      story.dataset.planeTilt = String(motion.planeTilt);
       const nativeLeft = targets[0].x;
       const nativeTop = targets[0].y;
+      const nativeBottom = targets.at(-1).y + targets.at(-1).height;
+      // Depth falloff only in the history behind emerging controls. The month
+      // is never clipped, and the entire lattice continues its camera flight.
+      const contextVisibility = y => mix(1, Math.min(ease(clamp((y - nativeTop + 24) / 80)), 1 - ease(clamp((y - nativeBottom) / 64))), motion.chromeClear);
       story.dataset.contextExit = String(motion.contextExit);
       story.dataset.latticeWidth = String(lattice.width);
       story.dataset.latticeHeight = String(lattice.height);
@@ -329,7 +351,6 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       context.clearRect(0, 0, width, height);
       if (motion.contextExit < 1) {
         context.save();
-        context.globalAlpha = 1 - motion.contextExit;
         const left = Math.max(0, cropCol + Math.floor(-lattice.x / lattice.pitchX));
         const right = Math.min(52, cropCol + Math.ceil((width - lattice.x) / lattice.pitchX));
         const top = Math.max(0, cropRow + Math.floor(-lattice.y / lattice.pitchY));
@@ -339,6 +360,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
           if (selected.has(i)) continue;
           const x = lattice.x + (col - cropCol) * lattice.pitchX;
           const y = lattice.y + (row - cropRow) * lattice.pitchY;
+          context.globalAlpha = (1 - motion.contextExit) * contextVisibility(y + lattice.height / 2);
           const age = time - weekTimes[i];
           const reveal = ease(clamp(age / 450));
           context.fillStyle = weekColor(i, filled, reveal, rhythm, palette, ease(clamp(age / 180)));
@@ -362,12 +384,17 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         const age = time - weekTimes[source];
         const color = weekColor(source, filled, ease(clamp(age / 450)), rhythm, palette, ease(clamp(age / 180)));
         if (target.bridge) {
-          const { wrapper, face, week, opacity } = target.bridge;
+          const { wrapper, face, week, content, opacity } = target.bridge;
           const scaleX = w / target.width, scaleY = h / target.height;
           wrapper.style.transform = `translate3d(${x}px,${y}px,0) scale(${scaleX},${scaleY})`;
           wrapper.style.opacity = String(1 - handoff);
           face.style.borderRadius = `${target.radius}px`;
           face.style.setProperty('opacity', String(skin * opacity), 'important');
+          const materialization = lifeCellMaterialization(time, index, todayIndex);
+          content.forEach(({ node, transform, opacity }) => {
+            node.style.transform = materialization < 1 ? `${transform} translate3d(0,${6 * (1 - materialization)}px,0)` : transform || 'none';
+            node.style.setProperty('opacity', String(opacity * materialization), 'important');
+          });
           week.style.backgroundColor = color;
           week.style.borderRadius = `${target.radius * morph / scaleX}px / ${target.radius * morph / scaleY}px`;
           week.style.opacity = String(1 - skin);
@@ -403,6 +430,45 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         }
         context.restore();
       });
+      // One coherent light front connects the optical zoom to the live dates.
+      // It traces edges, never fills a day or obscures financial history.
+      signalContext.clearRect(0, 0, width, height);
+      const signalColor = theme === 'light' ? '73,128,113' : '153,212,185';
+      if (motion.signalOpacity > 0) {
+        const front = motion.signal * 10;
+        const firstCol = Math.max(-cropCol, Math.floor(-lattice.x / lattice.pitchX) - 1);
+        const lastCol = Math.min(52 - cropCol, Math.ceil((width - lattice.x) / lattice.pitchX) + 1);
+        const firstRow = Math.max(-cropRow, Math.floor(-lattice.y / lattice.pitchY) - 1);
+        const lastRow = Math.min(rows - cropRow, Math.ceil((height - lattice.y) / lattice.pitchY) + 1);
+        for (let row = firstRow; row < lastRow; row++) for (let col = firstCol; col < lastCol; col++) {
+          const distance = Math.hypot(col - todayIndex % 7, row - Math.floor(todayIndex / 7));
+          const pulse = Math.exp(-(((distance - front) / .85) ** 2)) * motion.signalOpacity;
+          if (pulse < .025) continue;
+          const inMonth = col >= 0 && col < 7 && row >= 0 && row < monthRows;
+          const x = lattice.x + col * lattice.pitchX, y = lattice.y + row * lattice.pitchY;
+          const intensity = pulse * (inMonth ? .42 : .18 * (1 - motion.contextExit) * contextVisibility(y + lattice.height / 2));
+          signalContext.strokeStyle = `rgba(${signalColor},${intensity})`;
+          signalContext.lineWidth = .75;
+          signalContext.beginPath();
+          signalContext.roundRect(x - 1, y - 1, lattice.width + 2, lattice.height + 2, targets[0].radius * morph + 1);
+          signalContext.stroke();
+        }
+      }
+      if (motion.focus > 0) {
+        const x = lattice.x + todayIndex % 7 * lattice.pitchX;
+        const y = lattice.y + Math.floor(todayIndex / 7) * lattice.pitchY;
+        const inset = 2 + 2 * motion.month;
+        const length = Math.min(10, lattice.width * .24) * motion.focus;
+        signalContext.strokeStyle = `rgba(${signalColor},${.48 * motion.focus})`;
+        signalContext.lineWidth = .8;
+        signalContext.beginPath();
+        [[x - inset, y - inset, 1, 1], [x + lattice.width + inset, y - inset, -1, 1], [x - inset, y + lattice.height + inset, 1, -1], [x + lattice.width + inset, y + lattice.height + inset, -1, -1]].forEach(([cx, cy, dx, dy]) => {
+          signalContext.moveTo(cx + dx * length, cy);
+          signalContext.lineTo(cx, cy);
+          signalContext.lineTo(cx, cy + dy * length);
+        });
+        signalContext.stroke();
+      }
     }
     function tick(timestamp) {
       if (disposed) return;
@@ -417,7 +483,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     const onMotionChange = () => { reduceMotion = media.matches; setReduced(reduceMotion); cancelAnimationFrame(frame); frame = requestAnimationFrame(tick); };
     media.addEventListener('change', onMotionChange);
     frame = requestAnimationFrame(tick);
-    return () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); media.removeEventListener('change', onMotionChange); if (calendarGrid) calendarGrid.style.opacity = originalGridOpacity; if (appShell) appShell.style.transform = originalShellTransform; layer.replaceChildren(); root.removeAttribute('data-life-motion'); };
+    return () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); media.removeEventListener('change', onMotionChange); if (calendarGrid) calendarGrid.style.opacity = originalGridOpacity; if (appShell) appShell.style.transform = originalShellTransform; interfaceParts.forEach(({ node, transform, transition }) => { node.style.transform = transform; node.style.transition = transition; }); layer.replaceChildren(); root.removeAttribute('data-life-motion'); };
   }, [birthday, elapsedWeeks, lang, theme, currency, calendarRecords, run]);
 
   const ready = stage === 'ready';
@@ -437,8 +503,11 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     <div ref={sceneRef} className={`life-story-scene ${zoom ? 'is-zooming' : ''} ${ready ? 'is-ready' : ''}`} key={run}>
       <div className="life-story-halo" aria-hidden="true" />
       <div className="life-story-counter" aria-hidden="true"><strong ref={counterRef}>0</strong><span>{stats ? copy.weeks : copy.generic}</span></div>
-      <canvas ref={canvasRef} className="life-story-grid" aria-label={stats ? `${elapsedWeeks.toLocaleString(locale)} ${copy.weeks}. ${copy.legend}` : copy.generic} role="img" />
-      <div ref={cellsRef} className="life-calendar-bridge" aria-hidden="true" inert="" />
+      <div ref={projectionRef} className="life-story-projection">
+        <canvas ref={canvasRef} className="life-story-grid" aria-label={stats ? `${elapsedWeeks.toLocaleString(locale)} ${copy.weeks}. ${copy.legend}` : copy.generic} role="img" />
+        <div ref={cellsRef} className="life-calendar-bridge" aria-hidden="true" inert="" />
+        <canvas ref={signalRef} className="life-story-signal" aria-hidden="true" />
+      </div>
       <div ref={moneyFlowRef} className="life-money-area" key={`money-${run}`}>
         <div className="life-money-amounts" aria-hidden="true">
           <div className="life-money-value">

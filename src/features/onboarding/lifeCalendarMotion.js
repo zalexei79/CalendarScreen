@@ -24,12 +24,27 @@ export function lifeCalendarMotion(time) {
     month: progress(time, 9500, 3050),
     contextExit: progress(time, 10000, 2300),
     skin: progress(time, 9500, 3050),
+    // A single optical plane tilts into view, then lands flat before handoff.
+    // All historical weeks and live days inherit this same projection.
+    planeTilt: 7 * progress(time, 8400, 1400) * (1 - progress(time, 10100, 2100)),
+    focus: progress(time, 8500, 650) * (1 - progress(time, 11050, 800)),
+    signal: progress(time, 10000, 1400),
+    signalOpacity: progress(time, 9900, 400) * (1 - progress(time, 11400, 450)),
+    headerArrival: progress(time, 10500, 1600),
+    dockArrival: progress(time, 10900, 1400),
+    chromeClear: progress(time, 10100, 1000),
     // Labels lead; chrome emerges during the same continuous camera move.
     paperOpacity: 1 - progress(time, 10500, 2050),
     handoff: progress(time, 12550, 500),
     ready: time >= 12550,
     settled: time >= 13050,
   };
+}
+
+// Only content follows the light front; cell geometry never staggers or splits.
+export function lifeCellMaterialization(time, index, todayIndex) {
+  const distance = Math.hypot(index % 7 - todayIndex % 7, Math.floor(index / 7) - Math.floor(todayIndex / 7));
+  return progress(time, 10400 + Math.min(180, distance * 26), 950);
 }
 
 

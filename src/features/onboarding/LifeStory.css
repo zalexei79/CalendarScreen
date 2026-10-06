@@ -73,6 +73,9 @@
 .life-calendar-bridge { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
 .life-calendar-cell { position: absolute; left: 0; top: 0; pointer-events: none; will-change: transform; }
 .life-calendar-week { position: absolute; inset: 0; pointer-events: none; }
+.life-story-projection { position: fixed; inset: 0; pointer-events: none; will-change: transform; }
+.life-story-projection .life-story-grid, .life-story-projection .life-calendar-bridge, .life-story-signal { position: absolute; inset: 0; width: 100%; height: 100%; }
+.life-story-signal { z-index: 2; pointer-events: none; }
 html[data-life-motion] .today-calendar-cell::after { animation: none !important; opacity: .35; }
 .calendar-section[data-life-arrival] > .calendar-days-grid > button { animation: none !important; }
 .life-story-primary { min-height: 44px; background: transparent; color: var(--green); font-size: 12px !important; font-weight: 400; }

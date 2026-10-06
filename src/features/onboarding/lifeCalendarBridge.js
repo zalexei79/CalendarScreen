@@ -20,9 +20,12 @@ export function createCalendarBridge(cell, layer) {
     copy.style.visibility = 'visible';
   });
   Object.assign(face.style, { position: 'absolute', inset: '0', margin: '0', width: '100%', height: '100%', minWidth: '0', minHeight: '0', maxWidth: 'none', maxHeight: 'none', transform: 'none', transformOrigin: '0 0', pointerEvents: 'none' });
+  // Preserve the native child layout and paint. Only these existing nodes move
+  // within their card, so revealing dates never changes the calendar geometry.
+  const content = [...face.children].map(node => ({ node, transform: node.style.transform === 'none' ? '' : node.style.transform, opacity: Number(node.style.opacity || 1) }));
   const week = document.createElement('div');
   week.className = 'life-calendar-week';
   wrapper.append(face, week);
   layer.appendChild(wrapper);
-  return { wrapper, face, week, opacity: Number(getComputedStyle(cell).opacity) || 1 };
+  return { wrapper, face, week, content, opacity: Number(getComputedStyle(cell).opacity) || 1 };
 }
