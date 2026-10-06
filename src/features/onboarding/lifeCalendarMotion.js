@@ -4,7 +4,7 @@ const progress = (time, start, duration) => smooth(clamp((time - start) / durati
 const mix = (from, to, value) => from + (to - from) * value;
 
 // Center and expand a contiguous crop in one movement, then reveal its UI.
-// The dense life grid and the app never occupy the same visible frame.
+// The full lattice keeps its paint while the calendar frame takes over its edges.
 export const LIFE_COUNT_END = 8000;
 export const LIFE_MOTION_END = 13250;
 export function lifeCalendarMotion(time) {
@@ -22,13 +22,31 @@ export function lifeCalendarMotion(time) {
     topAperture: progress(time, 9450, 550),
     bottomAperture: progress(time, 8650, 900),
     month: progress(time, 9500, 3050),
-    lifeOpacity: (1 - progress(time, 9400, 850)) * (1 - .22 * progress(time, 8650, 900)),
-    skin: progress(time, 10250, 2300),
-    // The month title and controls emerge before the days finish taking paint.
-    paperOpacity: 1 - progress(time, 10250, 1800),
+    contextFocus: progress(time, 9500, 2100),
+    skin: progress(time, 9500, 3050),
+    // Labels lead; chrome follows once the old rows have passed its space.
+    paperOpacity: 1 - progress(time, 10800, 1750),
     handoff: progress(time, 12550, 500),
     ready: time >= 12550,
     settled: time >= 13050,
+  };
+}
+
+// One projection for every week, including the cells becoming calendar days.
+// The two renderers share pitch, fill and origin throughout the entire move.
+export function lifeLatticeFrame({ camera, unit, cropCol, cropRow, targets, initialFill }, motion) {
+  const first = targets[0];
+  const finalPitchX = targets[1].x - first.x;
+  const finalPitchY = targets[7].y - first.y;
+  const size = unit * mix(initialFill, .91, motion.zoom);
+  return {
+    x: mix(camera.originX + (cropCol * unit + (unit - size) / 2) * camera.scale, first.x, motion.month),
+    y: mix(camera.originY + (cropRow * unit + (unit - size) / 2) * camera.scaleY, first.y, motion.month),
+    pitchX: mix(unit * camera.scale, finalPitchX, motion.month),
+    pitchY: mix(unit * camera.scaleY, finalPitchY, motion.month),
+    width: mix(size * camera.scale, first.width, motion.month),
+    height: mix(size * camera.scaleY, first.height, motion.month),
+    finalPitchX, finalPitchY,
   };
 }
 

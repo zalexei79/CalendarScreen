@@ -173,6 +173,18 @@ try {
   });
   assert.ok(todayOutline.stroke > 0 && todayOutline.stroke <= todayOutline.width * .08, 'Today keeps a thin proportional outline rather than a solid square over historical cells');
   await page.screenshot({ path: screenshotPath('today'), animations: 'disabled' });
+  await seek(9900);
+  const sharedGrid = await page.evaluate(() => {
+    const story = document.querySelector('.life-story');
+    const cells = [...document.querySelectorAll('.life-calendar-cell')].map(cell => cell.getBoundingClientRect());
+    const canvas = story.querySelector('canvas');
+    const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+    let paintAlpha = 0;
+    for (let index = 3; index < pixels.length; index += 4) paintAlpha = Math.max(paintAlpha, pixels[index]);
+    return { backgroundWidth: Number(story.dataset.latticeWidth), backgroundHeight: Number(story.dataset.latticeHeight), firstWidth: cells[0].width, firstHeight: cells[0].height, context: Number(story.dataset.contextFocus), canvasOpacity: Number(getComputedStyle(canvas).opacity), paintAlpha };
+  });
+  assert.ok(Math.abs(sharedGrid.backgroundWidth - sharedGrid.firstWidth) < .1 && Math.abs(sharedGrid.backgroundHeight - sharedGrid.firstHeight) < .1 && sharedGrid.context > 0 && sharedGrid.context < 1 && sharedGrid.canvasOpacity === 1 && sharedGrid.paintAlpha === 255, 'Past weeks and selected days share the same size while the surrounding history exits through the frame, without a layer fade');
+  await page.screenshot({ path: screenshotPath('shared-lattice'), animations: 'disabled' });
   await seek(10250);
   assert.equal(await page.locator('.life-story-heading').evaluate(element => Number(getComputedStyle(element).opacity)), 0, 'The heading is gone when the lattice occupies the viewport');
   assert.equal(await page.locator('.life-calendar-bridge').evaluate(element => getComputedStyle(element).maskImage), 'none', 'The aperture fully opens before the native calendar reveal');
@@ -181,7 +193,8 @@ try {
     return cells.every((cell, index) => index % 7 === 0 || Math.abs(cell.y - cells[index - 1].y) < .1 && cell.x > cells[index - 1].x);
   });
   assert.ok(coherentCrop, `Every source row remains contiguous, including a current week at the 52-column edge: ${JSON.stringify(await page.locator('.life-calendar-cell').evaluateAll(cells => cells.map(cell => { const r = cell.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; })))}`);
-  assert.equal(await page.locator('.life-story-paper').evaluate(element => Number(element.style.opacity) > .999), true, 'The app only starts appearing once the dense grid has left');
+  assert.ok(lifeCalendarMotion(Number(await page.locator('.life-story').getAttribute('data-time'))).skin > .09, 'Dates and cell paint arrive before the surrounding history leaves');
+  assert.equal(await page.locator('.first-calendar-entry-hint').evaluate(element => Number(getComputedStyle(element).opacity)), 0, 'Guidance waits for arrival instead of overlapping departing history');
   const approachingColors = await page.locator('.life-calendar-week').evaluateAll(cells => [...new Set(cells.map(cell => getComputedStyle(cell).backgroundColor))]);
   const neutralColors = dark ? ['rgb(91, 98, 94)', 'rgb(47, 53, 50)'] : ['rgb(191, 184, 167)', 'rgb(222, 217, 206)'];
   assert.ok(approachingColors.every(color => neutralColors.includes(color)), 'The approaching month already contains only neutral past/future cells');
@@ -193,8 +206,8 @@ try {
     return { left: Math.min(...rects.map(r => r.left)), right: Math.max(...rects.map(r => r.right)), top: Math.min(...rects.map(r => r.top)), bottom: Math.max(...rects.map(r => r.bottom)), nativeCenter: (Math.min(...native.map(r => r.top)) + Math.max(...native.map(r => r.bottom))) / 2, width: innerWidth, height: innerHeight };
   });
   assert.ok(framing.right - framing.left > Math.min(framing.width - 48, 820) * .8 && framing.bottom - framing.top > framing.height * .42 && framing.left >= 12 && framing.right <= framing.width - 12 && Math.abs((framing.top + framing.bottom) / 2 - framing.nativeCenter) < 2, `Tall, tightly spaced days already fill the calendar's actual area when the dense grid disappears: ${JSON.stringify(framing)}`);
-  await seek(10700);
-  assert.ok(await page.locator('.life-story-paper').evaluate(element => Number(element.style.opacity) < .95), 'The calendar begins revealing immediately, with no isolated empty-grid pause');
+  await seek(11200);
+  assert.ok(await page.locator('.life-story-paper').evaluate(element => Number(element.style.opacity) < .95), 'Calendar chrome follows the visible dates as the past rows clear its space');
   await page.screenshot({ path: screenshotPath('reveal'), animations: 'disabled' });
   await seek(12000);
   assert.deepEqual(await page.locator('.life-calendar-cell').evaluateAll(cells => cells.map(cell => [cell.style.width, cell.style.height])), layoutSizes, 'Revealing days scales ready cells without resizing their layout every frame');

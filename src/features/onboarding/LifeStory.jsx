@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
 import { lifeWeeks, lifeWeekRhythm, lifeMoneyEvents, lifeMoneyFlow, reserveLifePresent, calendarMoneyEvents } from './lifeStoryModel';
 import { createCalendarBridge } from './lifeCalendarBridge';
-import { lifeCalendarMotion, lifeCameraFrame, LIFE_COUNT_END, LIFE_MOTION_END } from './lifeCalendarMotion';
+import { lifeCalendarMotion, lifeCameraFrame, lifeLatticeFrame, LIFE_COUNT_END, LIFE_MOTION_END } from './lifeCalendarMotion';
 import BrandIcon from '../../shared/ui/BrandIcon.jsx';
 import './LifeStory.css';
 
@@ -107,6 +107,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     let previousFilled;
     let previousGridBottom;
     let previousMask;
+    let previousContextMask;
     let hasCalendar = false;
     let snapshotWidth;
     let disposed = false;
@@ -212,7 +213,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       const motion = lifeCalendarMotion(time);
       story.dataset.time = String(Math.round(time));
       story.dataset.phase = time < 8200 ? 'life' : !motion.month ? 'focus' : !motion.ready ? 'month' : 'settle';
-      story.dataset.lifeOpacity = String(motion.lifeOpacity);
+      story.dataset.lifeOpacity = motion.contextFocus < 1 ? '1' : '0';
       const nextStage = time < 5500 ? 'life' : time < 8200 ? 'question' : time < 9200 ? 'today' : !motion.ready ? 'zoom' : 'ready';
       if (nextStage !== previousStage) { previousStage = nextStage; setStage(nextStage); }
       const filled = Math.floor(elapsedWeeks * ease(clamp(time / LIFE_COUNT_END)));
@@ -241,7 +242,6 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       const compactAspect = hasCalendar ? Math.max(1, Math.min(2, targets[todayIndex].height / targets[todayIndex].width)) : 1.7;
       const compactPitch = Math.min(scene.width * .98 / 7, height * .62 / monthRows / compactAspect);
       const morph = motion.month;
-      const fade = motion.lifeOpacity;
       const paper = hasCalendar ? motion.paperOpacity : 1;
       const handoff = hasCalendar ? motion.handoff : 0;
       const skin = motion.skin;
@@ -267,8 +267,6 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       story.dataset.apertureTop = String(maskTop);
       const mask = motion.topAperture === 1 && motion.bottomAperture === 1 ? 'none' : `linear-gradient(to bottom, transparent ${maskTop - 28}px, #000 ${maskTop + 20}px, #000 ${maskBottom - 20}px, transparent ${maskBottom + 28}px)`;
       if (previousMask !== mask) {
-        canvas.style.maskImage = mask;
-        canvas.style.webkitMaskImage = mask;
         layer.style.maskImage = mask;
         layer.style.webkitMaskImage = mask;
         previousMask = mask;
@@ -279,12 +277,32 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       if (motion.settled) story.dataset.settled = 'true';
       else delete story.dataset.settled;
       const centerX = scene.left + scene.width / 2;
-      const { originX, originY, scale, scaleY: cameraScaleY } = lifeCameraFrame({
+      const camera = lifeCameraFrame({
         gridLeft: centerX - gridWidth / 2,
         gridTop: gridTop + (gridSpace - gridHeight) / 2,
         unit, cropCol, cropRow, monthRows, compactPitch, compactAspect,
         focusX: centerX, focusY: hasCalendar ? (targets[0].y + targets.at(-1).y + targets.at(-1).height) / 2 : height * .54,
       }, motion);
+      const lattice = lifeLatticeFrame({ camera, unit, cropCol, cropRow, targets, initialFill: width >= 760 ? .74 : .65 }, motion);
+      const nativeLeft = targets[0].x;
+      const nativeTop = targets[0].y;
+      const gapX = lattice.pitchX - lattice.width;
+      const gapY = lattice.pitchY - lattice.height;
+      const frameTop = lattice.y - gapY / 2;
+      const frameBottom = lattice.y + (monthRows - 1) * lattice.pitchY + lattice.height + gapY / 2;
+      // Past weeks leave through the same viewport that becomes the app's
+      // calendar frame. Their colors never fade away as a separate layer.
+      const contextTop = Math.max(maskTop - 28, mix(-48, frameTop, motion.contextFocus));
+      const contextBottom = Math.min(maskBottom + 28, mix(height + 48, frameBottom, motion.contextFocus));
+      const contextMask = `linear-gradient(to bottom, transparent ${contextTop}px, #000 ${Math.max(maskTop + 20, contextTop + 32)}px, #000 ${Math.min(maskBottom - 20, contextBottom - 32)}px, transparent ${contextBottom}px)`;
+      if (previousContextMask !== contextMask) {
+        canvas.style.maskImage = contextMask;
+        canvas.style.webkitMaskImage = contextMask;
+        previousContextMask = contextMask;
+      }
+      story.dataset.contextFocus = String(motion.contextFocus);
+      story.dataset.latticeWidth = String(lattice.width);
+      story.dataset.latticeHeight = String(lattice.height);
       const moneyExit = motion.moneyOpacity;
       moneyArea.style.opacity = String(moneyExit);
       moneyArea.style.transform = `translateY(${-4 * (1 - moneyExit)}px) scale(${1 - .025 * (1 - moneyExit)})`;
@@ -318,38 +336,43 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         oldValue.style.transform = `translateY(${-1 * progress}px)`;
       } else delete moneyNode.dataset.active;
       context.clearRect(0, 0, width, height);
-      const size = unit * (width >= 760 ? .74 : .65);
-      if (fade > .001) {
+      if (motion.contextFocus < 1) {
         context.save();
-        context.translate(originX, originY);
-        context.scale(scale, cameraScaleY);
-        context.globalAlpha = fade;
-        const pitch = unit * scale;
-        const pitchY = unit * cameraScaleY;
-        const left = Math.max(0, Math.floor(-originX / pitch));
-        const right = Math.min(52, Math.ceil((width - originX) / pitch));
-        const top = Math.max(0, Math.floor(-originY / pitchY));
-        const bottom = Math.min(rows, Math.ceil((height - originY) / pitchY));
+        context.beginPath();
+        const frameLeft = mix(0, lattice.x - gapX / 2, motion.contextFocus);
+        const frameRight = mix(width, lattice.x + 6 * lattice.pitchX + lattice.width + gapX / 2, motion.contextFocus);
+        context.rect(frameLeft, 0, Math.max(0, frameRight - frameLeft), height);
+        context.clip();
+        context.globalAlpha = 1;
+        const left = Math.max(0, cropCol + Math.floor(-lattice.x / lattice.pitchX));
+        const right = Math.min(52, cropCol + Math.ceil((width - lattice.x) / lattice.pitchX));
+        const top = Math.max(0, cropRow + Math.floor(-lattice.y / lattice.pitchY));
+        const bottom = Math.min(rows, cropRow + Math.ceil((height - lattice.y) / lattice.pitchY));
         for (let row = top; row < bottom; row++) for (let col = left; col < right; col++) {
           const i = row * 52 + col;
           if (selected.has(i)) continue;
-          const x = col * unit + (unit - size) / 2;
-          const y = row * unit + (unit - size) / 2;
+          const x = lattice.x + (col - cropCol) * lattice.pitchX;
+          const y = lattice.y + (row - cropRow) * lattice.pitchY;
           const age = time - weekTimes[i];
           const reveal = ease(clamp(age / 450));
           context.fillStyle = weekColor(i, filled, reveal, rhythm, palette, ease(clamp(age / 180)));
-          context.fillRect(x, y, size, size);
+          if (morph < .01) context.fillRect(x, y, lattice.width, lattice.height);
+          else {
+            context.beginPath();
+            context.roundRect(x, y, lattice.width, lattice.height, targets[0].radius * morph);
+            context.fill();
+          }
         }
         context.restore();
       }
-      const daySize = unit * mix(width >= 760 ? .74 : .65, .91, motion.zoom);
       targets.forEach((target, index) => {
         const source = sourceIndices[index];
         const isToday = index === todayIndex;
-        const x = mix(originX + (source % 52 * unit + (unit - daySize) / 2) * scale, target.x, morph);
-        const y = mix(originY + (Math.floor(source / 52) * unit + (unit - daySize) / 2) * cameraScaleY, target.y, morph);
-        const w = mix(daySize * scale, target.width, morph);
-        const h = mix(daySize * cameraScaleY, target.height, morph);
+        const col = index % 7, row = Math.floor(index / 7);
+        const x = lattice.x + col * lattice.pitchX + (target.x - nativeLeft - col * lattice.finalPitchX) * morph;
+        const y = lattice.y + row * lattice.pitchY + (target.y - nativeTop - row * lattice.finalPitchY) * morph;
+        const w = lattice.width + (target.width - targets[0].width) * morph;
+        const h = lattice.height + (target.height - targets[0].height) * morph;
         const age = time - weekTimes[source];
         const color = weekColor(source, filled, ease(clamp(age / 450)), rhythm, palette, ease(clamp(age / 180)));
         if (target.bridge) {

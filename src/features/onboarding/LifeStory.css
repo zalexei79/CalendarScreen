@@ -93,6 +93,8 @@ html[data-life-motion] .today-calendar-cell::after { animation: none !important;
 .first-calendar-entry-target small { font-size: 9px; line-height: 12px; letter-spacing: 0; }
 .theme-light .first-calendar-entry-target { color: #42674e; }
 html[data-life-motion] .first-calendar-entry-target { opacity: 0; }
+html[data-life-motion] .first-calendar-entry-hint { opacity: 0; }
+html:not([data-life-motion]) .first-calendar-entry-hint { animation: life-copy-in 650ms cubic-bezier(.22,1,.36,1) both; }
 html:not([data-life-motion]) .calendar-section[data-life-arrival] > .calendar-days-grid > button[data-first-entry="true"] { animation: first-entry-today-light 2300ms ease-in-out 2 !important; }
 html:not([data-life-motion]) .first-calendar-entry-target { animation: life-copy-in 650ms cubic-bezier(.22,1,.36,1) both; }
 @media (min-width: 640px) { .first-calendar-entry-target small { font-size: 12px; line-height: 16px; } .first-calendar-entry-target svg { width: 23px; height: 23px; } }
