@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
 import { lifeWeeks, lifeWeekRhythm, lifeMoneyEvents, lifeMoneyFlow, reserveLifePresent, calendarMoneyEvents } from './lifeStoryModel';
 import { createCalendarBridge } from './lifeCalendarBridge';
-import { lifeCalendarMotion, lifeCameraFrame, lifeLatticeFrame, LIFE_COUNT_END, LIFE_MOTION_END } from './lifeCalendarMotion';
+import { lifeCalendarMotion, lifeCameraFrame, lifeLatticeFrame, lifeContextTravel, LIFE_COUNT_END, LIFE_MOTION_END } from './lifeCalendarMotion';
 import BrandIcon from '../../shared/ui/BrandIcon.jsx';
 import './LifeStory.css';
 
@@ -107,7 +107,6 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     let previousFilled;
     let previousGridBottom;
     let previousMask;
-    let previousContextMask;
     let hasCalendar = false;
     let snapshotWidth;
     let disposed = false;
@@ -213,7 +212,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       const motion = lifeCalendarMotion(time);
       story.dataset.time = String(Math.round(time));
       story.dataset.phase = time < 8200 ? 'life' : !motion.month ? 'focus' : !motion.ready ? 'month' : 'settle';
-      story.dataset.lifeOpacity = motion.contextFocus < 1 ? '1' : '0';
+      story.dataset.lifeOpacity = motion.contextExit < 1 ? '1' : '0';
       const nextStage = time < 5500 ? 'life' : time < 8200 ? 'question' : time < 9200 ? 'today' : !motion.ready ? 'zoom' : 'ready';
       if (nextStage !== previousStage) { previousStage = nextStage; setStage(nextStage); }
       const filled = Math.floor(elapsedWeeks * ease(clamp(time / LIFE_COUNT_END)));
@@ -267,6 +266,8 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       story.dataset.apertureTop = String(maskTop);
       const mask = motion.topAperture === 1 && motion.bottomAperture === 1 ? 'none' : `linear-gradient(to bottom, transparent ${maskTop - 28}px, #000 ${maskTop + 20}px, #000 ${maskBottom - 20}px, transparent ${maskBottom + 28}px)`;
       if (previousMask !== mask) {
+        canvas.style.maskImage = mask;
+        canvas.style.webkitMaskImage = mask;
         layer.style.maskImage = mask;
         layer.style.webkitMaskImage = mask;
         previousMask = mask;
@@ -286,21 +287,8 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       const lattice = lifeLatticeFrame({ camera, unit, cropCol, cropRow, targets, initialFill: width >= 760 ? .74 : .65 }, motion);
       const nativeLeft = targets[0].x;
       const nativeTop = targets[0].y;
-      const gapX = lattice.pitchX - lattice.width;
-      const gapY = lattice.pitchY - lattice.height;
-      const frameTop = lattice.y - gapY / 2;
-      const frameBottom = lattice.y + (monthRows - 1) * lattice.pitchY + lattice.height + gapY / 2;
-      // Past weeks leave through the same viewport that becomes the app's
-      // calendar frame. Their colors never fade away as a separate layer.
-      const contextTop = Math.max(maskTop - 28, mix(-48, frameTop, motion.contextFocus));
-      const contextBottom = Math.min(maskBottom + 28, mix(height + 48, frameBottom, motion.contextFocus));
-      const contextMask = `linear-gradient(to bottom, transparent ${contextTop}px, #000 ${Math.max(maskTop + 20, contextTop + 32)}px, #000 ${Math.min(maskBottom - 20, contextBottom - 32)}px, transparent ${contextBottom}px)`;
-      if (previousContextMask !== contextMask) {
-        canvas.style.maskImage = contextMask;
-        canvas.style.webkitMaskImage = contextMask;
-        previousContextMask = contextMask;
-      }
-      story.dataset.contextFocus = String(motion.contextFocus);
+      const travel = lifeContextTravel(lattice, { width, height, monthRows }, motion.contextExit);
+      story.dataset.contextExit = String(motion.contextExit);
       story.dataset.latticeWidth = String(lattice.width);
       story.dataset.latticeHeight = String(lattice.height);
       const moneyExit = motion.moneyOpacity;
@@ -336,13 +324,8 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         oldValue.style.transform = `translateY(${-1 * progress}px)`;
       } else delete moneyNode.dataset.active;
       context.clearRect(0, 0, width, height);
-      if (motion.contextFocus < 1) {
+      if (motion.contextExit < 1) {
         context.save();
-        context.beginPath();
-        const frameLeft = mix(0, lattice.x - gapX / 2, motion.contextFocus);
-        const frameRight = mix(width, lattice.x + 6 * lattice.pitchX + lattice.width + gapX / 2, motion.contextFocus);
-        context.rect(frameLeft, 0, Math.max(0, frameRight - frameLeft), height);
-        context.clip();
         context.globalAlpha = 1;
         const left = Math.max(0, cropCol + Math.floor(-lattice.x / lattice.pitchX));
         const right = Math.min(52, cropCol + Math.ceil((width - lattice.x) / lattice.pitchX));
@@ -351,8 +334,8 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         for (let row = top; row < bottom; row++) for (let col = left; col < right; col++) {
           const i = row * 52 + col;
           if (selected.has(i)) continue;
-          const x = lattice.x + (col - cropCol) * lattice.pitchX;
-          const y = lattice.y + (row - cropRow) * lattice.pitchY;
+          const x = lattice.x + (col - cropCol) * lattice.pitchX + (col < cropCol ? travel.left : col >= cropCol + 7 ? travel.right : 0);
+          const y = lattice.y + (row - cropRow) * lattice.pitchY + (row < cropRow ? travel.up : row >= cropRow + monthRows ? travel.down : 0);
           const age = time - weekTimes[i];
           const reveal = ease(clamp(age / 450));
           context.fillStyle = weekColor(i, filled, reveal, rhythm, palette, ease(clamp(age / 180)));

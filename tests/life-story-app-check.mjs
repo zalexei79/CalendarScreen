@@ -181,13 +181,14 @@ try {
     const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
     let paintAlpha = 0;
     for (let index = 3; index < pixels.length; index += 4) paintAlpha = Math.max(paintAlpha, pixels[index]);
-    return { backgroundWidth: Number(story.dataset.latticeWidth), backgroundHeight: Number(story.dataset.latticeHeight), firstWidth: cells[0].width, firstHeight: cells[0].height, context: Number(story.dataset.contextFocus), canvasOpacity: Number(getComputedStyle(canvas).opacity), paintAlpha };
+    return { backgroundWidth: Number(story.dataset.latticeWidth), backgroundHeight: Number(story.dataset.latticeHeight), firstWidth: cells[0].width, firstHeight: cells[0].height, context: Number(story.dataset.contextExit), canvasOpacity: Number(getComputedStyle(canvas).opacity), paintAlpha };
   });
-  assert.ok(Math.abs(sharedGrid.backgroundWidth - sharedGrid.firstWidth) < .1 && Math.abs(sharedGrid.backgroundHeight - sharedGrid.firstHeight) < .1 && sharedGrid.context > 0 && sharedGrid.context < 1 && sharedGrid.canvasOpacity === 1 && sharedGrid.paintAlpha === 255, 'Past weeks and selected days share the same size while the surrounding history exits through the frame, without a layer fade');
+  assert.ok(Math.abs(sharedGrid.backgroundWidth - sharedGrid.firstWidth) < .1 && Math.abs(sharedGrid.backgroundHeight - sharedGrid.firstHeight) < .1 && sharedGrid.context > 0 && sharedGrid.context < 1 && sharedGrid.canvasOpacity === 1 && sharedGrid.paintAlpha === 255, 'Past weeks and selected days share the same size while the surrounding history travels outward without fading');
   await page.screenshot({ path: screenshotPath('shared-lattice'), animations: 'disabled' });
   await seek(10250);
   assert.equal(await page.locator('.life-story-heading').evaluate(element => Number(getComputedStyle(element).opacity)), 0, 'The heading is gone when the lattice occupies the viewport');
   assert.equal(await page.locator('.life-calendar-bridge').evaluate(element => getComputedStyle(element).maskImage), 'none', 'The aperture fully opens before the native calendar reveal');
+  assert.equal(await page.locator('.life-story-grid').evaluate(element => getComputedStyle(element).maskImage), 'none', 'The life grid stays unmasked during the final zoom; there is no closing window');
   const coherentCrop = await page.evaluate(() => {
     const cells = [...document.querySelectorAll('.life-calendar-cell')].map(cell => cell.getBoundingClientRect());
     return cells.every((cell, index) => index % 7 === 0 || Math.abs(cell.y - cells[index - 1].y) < .1 && cell.x > cells[index - 1].x);

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { lifeWeeks, localDateValue, birthdayStorageKey, isOnboardingPreviewUser, lifeWeekRhythm, lifeMoneyEvents, lifeMoneyFlow, reserveLifePresent, calendarMoneyEvents } from '../src/features/onboarding/lifeStoryModel.js';
-import { lifeCalendarMotion, lifeCameraFrame, lifeLatticeFrame, LIFE_MOTION_END } from '../src/features/onboarding/lifeCalendarMotion.js';
+import { lifeCalendarMotion, lifeCameraFrame, lifeLatticeFrame, lifeContextTravel, LIFE_MOTION_END } from '../src/features/onboarding/lifeCalendarMotion.js';
 
 const today = new Date(2026, 9, 4);
 assert.equal(lifeWeeks('2026-10-04', today).weeks, 0);
@@ -69,7 +69,7 @@ for (let time = 0; time <= LIFE_MOTION_END; time += 16) {
   if (time >= 6200) assert.equal(frame.amountsOpacity, 0, 'Amounts stay hidden through the rest of the story');
   if (frame.topAperture > 0) assert.equal(frame.copyOpacity, 0, 'The lattice can expand through the copy area only after the heading has left');
   if (frame.bottomAperture > 0) assert.equal(frame.moneyOpacity, 0, 'The bottom fills as soon as the money question has cleared');
-  if (frame.contextFocus === 0) assert.equal(frame.skin, 0, 'Calendar paint starts only as its frame begins taking over the edges');
+  if (frame.month === 0) assert.equal(frame.skin, 0, 'Calendar paint starts as the shared lattice approaches its final layout');
   if (frame.handoff > 0) assert.equal(frame.month, 1, 'Swap to the live calendar only after the shared grid has landed');
   if (time >= 16) {
     const previous = lifeCalendarMotion(time - 16);
@@ -93,7 +93,7 @@ for (const width of [320, 390, 1440]) for (const cropCol of [0, 45]) for (const 
     const left = frame.originX + cropCol * unit * frame.scale;
     const right = left + unit * 7 * frame.scale;
     assert.ok(left >= 12 && right <= width - 12, 'The camera keeps the month inside the viewport even when the present begins at either edge');
-    if (motion.contextFocus > .99) {
+    if (motion.contextExit > .99) {
       assert.ok(right - left >= Math.min(width - 48, 820) * .7, 'The life grid only leaves once the calendar has enough presence to fill the scene');
       const center = frame.originY + (27 + 2.5) * unit * frame.scaleY;
       assert.ok(Math.abs(center - 430) < 1, 'The month is already centered when its surroundings disappear');
@@ -107,16 +107,15 @@ for (let time = 8200; time <= 12550; time += 16) {
   const camera = lifeCameraFrame({ gridLeft: 24, gridTop: 330, unit: 6, cropCol: 25, cropRow: 20, monthRows: 5, focusX: 195, focusY: 487, compactPitch: 48, compactAspect: 1.8 }, motion);
   const lattice = lifeLatticeFrame({ camera, unit: 6, cropCol: 25, cropRow: 20, targets: targetCells, initialFill: .65 }, motion);
   assert.ok(lattice.width < lattice.pitchX && lattice.height < lattice.pitchY, 'All weeks and days retain the same non-overlapping lattice spacing');
-  const previousRowBottom = lattice.y - lattice.pitchY + lattice.height;
-  const frameTop = lattice.y - (lattice.pitchY - lattice.height) / 2;
-  const previousColRight = lattice.x - lattice.pitchX + lattice.width;
-  const frameLeft = lattice.x - (lattice.pitchX - lattice.width) / 2;
-  assert.ok(previousRowBottom < frameTop && previousColRight < frameLeft, 'The final frame has already excluded every past neighbor before its renderer is removed');
+  const exit = lifeContextTravel(lattice, { width: 390, height: 844, monthRows: 5 }, 1);
+  assert.ok(lattice.y - lattice.pitchY + lattice.height + exit.up <= -48 + 1e-7 && lattice.x - lattice.pitchX + lattice.width + exit.left <= -48 + 1e-7, 'Previous weeks travel beyond the top and left edges before removal');
+  assert.ok(lattice.y + 5 * lattice.pitchY + exit.down >= 892 - 1e-7 && lattice.x + 7 * lattice.pitchX + exit.right >= 438 - 1e-7, 'Future weeks travel beyond the bottom and right edges before removal');
   if (time > 8200) {
     const previousMotion = lifeCalendarMotion(time - 16);
     const previousCamera = lifeCameraFrame({ gridLeft: 24, gridTop: 330, unit: 6, cropCol: 25, cropRow: 20, monthRows: 5, focusX: 195, focusY: 487, compactPitch: 48, compactAspect: 1.8 }, previousMotion);
     const previous = lifeLatticeFrame({ camera: previousCamera, unit: 6, cropCol: 25, cropRow: 20, targets: targetCells, initialFill: .65 }, previousMotion);
     assert.ok(Math.abs(lattice.x - previous.x) < 4 && Math.abs(lattice.y - previous.y) < 4 && Math.abs(lattice.width - previous.width) < 1 && Math.abs(lattice.height - previous.height) < 2, 'The complete lattice follows one continuous camera without a replacement crop');
+    assert.ok(lattice.width >= previous.width && lattice.height >= previous.height, 'The calendar cells only grow throughout the approach; there is no shrinking interval');
   }
 }
 console.log('Life story: dates, leap years, DST, account isolation and preview account passed.');

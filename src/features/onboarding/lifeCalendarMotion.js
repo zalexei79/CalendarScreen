@@ -4,7 +4,7 @@ const progress = (time, start, duration) => smooth(clamp((time - start) / durati
 const mix = (from, to, value) => from + (to - from) * value;
 
 // Center and expand a contiguous crop in one movement, then reveal its UI.
-// The full lattice keeps its paint while the calendar frame takes over its edges.
+// The full lattice keeps its paint; the surrounding history travels outward.
 export const LIFE_COUNT_END = 8000;
 export const LIFE_MOTION_END = 13250;
 export function lifeCalendarMotion(time) {
@@ -22,13 +22,26 @@ export function lifeCalendarMotion(time) {
     topAperture: progress(time, 9450, 550),
     bottomAperture: progress(time, 8650, 900),
     month: progress(time, 9500, 3050),
-    contextFocus: progress(time, 9500, 2100),
+    contextExit: progress(time, 9600, 1800),
     skin: progress(time, 9500, 3050),
     // Labels lead; chrome follows once the old rows have passed its space.
-    paperOpacity: 1 - progress(time, 10800, 1750),
+    paperOpacity: 1 - progress(time, 10500, 2050),
     handoff: progress(time, 12550, 500),
     ready: time >= 12550,
     settled: time >= 13050,
+  };
+}
+
+// Continue the surrounding history outward, rather than closing a mask on it.
+// At the end even the nearest neighbor is beyond the viewport, still opaque.
+export function lifeContextTravel(lattice, { width, height, monthRows }, exit) {
+  const gapX = lattice.pitchX - lattice.width;
+  const gapY = lattice.pitchY - lattice.height;
+  return {
+    left: -Math.max(0, lattice.x - gapX + 48) * exit,
+    right: Math.max(0, width + 48 - (lattice.x + 7 * lattice.pitchX)) * exit,
+    up: -Math.max(0, lattice.y - gapY + 48) * exit,
+    down: Math.max(0, height + 48 - (lattice.y + monthRows * lattice.pitchY)) * exit,
   };
 }
 
