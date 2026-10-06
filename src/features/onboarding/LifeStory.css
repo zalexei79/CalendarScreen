@@ -25,6 +25,7 @@
 .life-story-brand > span { font-size: 27px; color: var(--green); }
 .life-story-top button, .life-story-tools button { display: inline-flex; justify-content: center; align-items: center; gap: 7px; min-height: 44px; border: 0; background: transparent; color: var(--muted); font-size: 11px; }
 .life-story-heading { text-align: center; width: 100%; max-width: 650px; margin: clamp(22px, 5vh, 54px) auto 0; min-height: 155px; }
+.life-story-heading { transform-origin: 50% 100%; will-change: transform, opacity; }
 .life-story-eyebrow { text-transform: uppercase; letter-spacing: .2em; font-size: 9px; color: var(--muted); margin-bottom: 16px; }
 .life-story-heading h1 { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; letter-spacing: -.045em; font-size: clamp(32px, 4.8vw, 51px); line-height: 1.09; white-space: pre-line; outline: none; animation: life-copy-in 650ms var(--ease) both; }
 .life-story-hint { max-width: 420px; margin: 18px auto 0; min-height: 40px; font-size: 12px; line-height: 1.7; white-space: pre-line; color: var(--muted); animation: life-copy-in 750ms var(--ease) both; }

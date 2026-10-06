@@ -40,7 +40,6 @@ const MONEY_LEGEND = {
   zh: ['平常', '收入', '支出', '示例'],
 };
 const FIRST_ENTRY = { ru: 'Добавить первую запись', en: 'Add your first entry', ro: 'Adaugă prima înregistrare', zh: '添加第一条记录' };
-const RECORDED = { ru: 'Из твоего календаря', en: 'From your calendar', ro: 'Din calendarul tău', zh: '来自你的日历' };
 const MONEY_EXAMPLES = { ru: 'Примеры отдельных сумм', en: 'Examples of individual amounts', ro: 'Exemple de sume individuale', zh: '单笔收支示例' };
 const MONEY_QUESTION = {
   ru: ['А ты знаешь, где эти деньги сейчас?', 'Сделай свою первую запись.', 'Сделай свою первую запись.\nНачни видеть, куда уходят деньги.', 'Деньги приходили. Деньги уходили.'],
@@ -136,9 +135,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     rhythm = reserveLifePresent(rhythm, sourceIndices, current);
     const moneyEvents = lifeMoneyEvents(rhythm, currency);
     const weekTimes = Array.from({ length: total }, (_, week) => week < elapsedWeeks ? inverseEase((week + 1) / elapsedWeeks) * LIFE_COUNT_END : Infinity);
-    const lastRecord = recorded.at(-1);
     const flow = lifeMoneyFlow(moneyEvents, elapsedWeeks, LIFE_COUNT_END);
-    if (lastRecord) flow.push({ ...lastRecord, start: LIFE_COUNT_END, duration: 250 });
     const moneyArea = moneyFlowRef.current;
     const moneyCaption = moneyArea.querySelector('.life-money-caption');
     moneyCaption.textContent = MONEY_QUESTION[lang][3];
@@ -254,7 +251,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       legend.style.opacity = String(chrome);
       if (hasCalendar) {
         heading.style.opacity = String(motion.copyOpacity);
-        heading.style.transform = `translateY(${-16 * (1 - motion.copyOpacity)}px)`;
+        heading.style.transform = `translate3d(0,${-28 * motion.copyRetreat}px,0) scale(${1 - .09 * motion.copyRetreat})`;
         header.style.opacity = String(motion.headerOpacity);
         header.style.transform = `translateY(${-8 * (1 - motion.headerOpacity)}px)`;
         footer.style.opacity = String(chrome);
@@ -285,21 +282,19 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         unit, cropCol, cropRow, monthRows, compactPitch, compactAspect,
         focusX: centerX, focusY: hasCalendar ? (targets[0].y + targets.at(-1).y + targets.at(-1).height) / 2 : height * .54,
       }, motion);
-      const moneyExit = 1 - ease(clamp((time - (lastRecord ? 8500 : 8200)) / 450));
-      const questionProgress = lastRecord && time >= LIFE_COUNT_END ? 1 - ease(clamp((time - LIFE_COUNT_END) / 250)) : ease(clamp((time - 5500) / 700));
+      const moneyExit = motion.moneyOpacity;
       moneyArea.style.opacity = String(moneyExit);
-      moneyArea.style.transform = `translateY(${-4 * (1 - moneyExit)}px)`;
-      moneyAmounts.style.opacity = String(1 - questionProgress);
-      moneyQuestion.style.opacity = String(questionProgress);
-      moneyQuestion.style.transform = `translateY(${6 * (1 - questionProgress)}px)`;
+      moneyArea.style.transform = `translateY(${-4 * (1 - moneyExit)}px) scale(${1 - .025 * (1 - moneyExit)})`;
+      moneyAmounts.style.opacity = String(motion.amountsOpacity);
+      moneyAmounts.style.transform = `translateY(${-3 * (1 - motion.amountsOpacity)}px)`;
+      moneyQuestion.style.opacity = String(motion.questionOpacity);
+      moneyQuestion.style.transform = `translateY(${6 * (1 - motion.questionOpacity)}px)`;
       const events = flow.filter(event => event.start <= time);
       const event = events.at(-1);
       if (event) {
         const previous = events.at(-2);
         const progress = ease(clamp((time - event.start) / event.duration));
         if (moneyNode.dataset.start !== String(event.start)) {
-          moneyCaption.textContent = event.source === 'calendar' ? RECORDED[lang] : MONEY_QUESTION[lang][3];
-          moneyLabel.textContent = event.source === 'calendar' ? MONEY_LEGEND[lang][event.tone === 'income' ? 1 : 2] : MONEY_EXAMPLES[lang];
           currentValue.querySelector('.life-money-number').textContent = formatAmount(event);
           currentValue.querySelector('small').textContent = event.currency;
           currentValue.dataset.tone = event.tone;
@@ -310,9 +305,9 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
           moneyNode.dataset.source = event.source;
           moneyNode.dataset.week = String(event.week);
           moneyNode.dataset.tone = event.tone;
-          moneyNode.setAttribute('aria-label', `${formatAmount(event)} ${event.currency}${event.source === 'calendar' ? `. ${RECORDED[lang]}` : ''}`);
+          moneyNode.setAttribute('aria-label', `${formatAmount(event)} ${event.currency}`);
         }
-        if (questionProgress < 1 && moneyExit > 0) moneyNode.dataset.active = 'true';
+        if (motion.amountsOpacity > 0 && moneyExit > 0) moneyNode.dataset.active = 'true';
         else delete moneyNode.dataset.active;
         currentValue.style.opacity = String(progress);
         currentValue.style.transform = `translateY(${1 * (1 - progress)}px)`;

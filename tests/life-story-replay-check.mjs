@@ -2,23 +2,24 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import path from 'node:path';
+import { installStoryAccount, storyUserId } from './life-story-auth-fixture.mjs';
 const require = createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE || 'C:/Users/aveel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/package.json');
 const browser = await require('playwright').chromium.launch({ channel: 'msedge', headless: true });
 const records = {
   '2026-10-03': [{ id: 'guest-expense-eur', time: '12:00', pnl: -37.5, currency: 'EUR', instrument: 'Продукты', platform: 'Manual', traderMode: false }],
   '2026-10-05': [
-    { id: 'guest-income', time: '09:00', pnl: 250, currency: 'MDL', instrument: 'Зарплата', platform: 'Manual', traderMode: false },
-    { id: 'guest-expense', time: '10:00', pnl: -80, currency: 'MDL', instrument: 'Продукты', platform: 'Manual', traderMode: false },
+    { id: 'guest-expense', time: '09:00', pnl: -80, currency: 'USD', instrument: 'Продукты', platform: 'Manual', traderMode: false },
+    { id: 'guest-income', time: '10:00', pnl: 55, currency: 'USD', instrument: 'Подарок', platform: 'Manual', traderMode: false },
   ],
 };
 try {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
-  await context.addInitScript(records => {
-    localStorage.setItem('atj_language', 'ru'); localStorage.setItem('atj_currency', 'MDL'); localStorage.setItem('atj_theme', 'dark');
+  await context.addInitScript(({ records, id }) => {
+    localStorage.setItem('atj_language', 'ru'); localStorage.setItem('atj_currency', 'USD'); localStorage.setItem('atj_theme', 'dark');
     localStorage.setItem('dayris_onboarding_v2_completed', '1'); localStorage.setItem('calendar_guide_completed', '1');
-    localStorage.setItem('dayris_birthday_v1_guest', '1998-03-14');
-    localStorage.setItem('money_calendar_guest_trades_cache', JSON.stringify(records));
-  }, records);
+    localStorage.setItem(`dayris_birthday_v1_${id}`, '1998-03-14');
+    localStorage.setItem(`money_calendar_trades_${id}`, JSON.stringify(records));
+  }, { records, id: storyUserId });
   await context.route('**/*', route => {
     const url = new URL(route.request().url());
     if (url.origin !== 'http://calendar.test') return route.abort();
@@ -27,6 +28,7 @@ try {
     return route.fulfill({ contentType: name.endsWith('.js') ? 'text/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.png') ? 'image/png' : 'text/html', body: fs.readFileSync(name) });
   });
   const page = await context.newPage();
+  await installStoryAccount(context);
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.clock.install({ time: new Date('2026-10-05T12:00:00') });
   await page.goto('http://calendar.test/');
@@ -39,20 +41,29 @@ try {
   assert.equal(await page.getByLabel('Дата рождения', { exact: true }).count(), 0, 'Saved birthday starts replay directly');
   await page.clock.runFor(32);
   await page.clock.fastForward(3500);
-  const money = page.locator('.life-money-value[data-active="true"][data-source="calendar"][data-tone="expense"] .life-money-current');
   assert.equal(await page.locator('.life-money-value[data-active="true"][data-source="illustration"]').count(), 1, 'An existing account retains the fast life-history stream');
-  await page.clock.fastForward(5000);
-  assert.equal(await money.locator('.life-money-number').innerText(), '−80', 'The latest real entry keeps its exact amount');
-  assert.equal(await money.locator('small').innerText(), 'MDL', 'EUR records are never relabelled to the selected currency');
-  await page.screenshot({ path: 'tests/life-story-replay-money.png', animations: 'disabled' });
-  await page.clock.runFor(200);
-  assert.equal(await money.locator('.life-money-number').innerText(), '−80', 'Real amounts remain still long enough to read');
+  assert.equal(await page.locator('.life-money-current small').innerText(), 'USD');
+  await page.clock.fastForward(2700);
+  // A saved +55 used to come back at 8s and cover the question in this window.
+  for (let time = 6200; time <= 9000; time += 100) {
+    const layers = await page.evaluate(() => ({
+      amounts: Number(getComputedStyle(document.querySelector('.life-money-amounts')).opacity),
+      question: Number(getComputedStyle(document.querySelector('.life-money-question')).opacity),
+      active: document.querySelectorAll('.life-money-value[data-active="true"]').length,
+    }));
+    assert.equal(layers.amounts, 0, 'Saved amounts never return after the money question');
+    assert.equal(layers.question, 1, 'The question keeps its own window through the camera approach');
+    assert.equal(layers.active, 0);
+    if (time === 7200) await page.screenshot({ path: 'tests/life-story-replay-money.png', animations: 'disabled' });
+    await page.clock.runFor(100);
+  }
   await page.clock.fastForward(6000);
   await page.waitForFunction(() => !document.querySelector('.life-story'));
   assert.equal(await page.locator('.first-entry-whisper').count(), 0, 'Replaying an existing history never asks for a first entry');
   assert.equal(await page.locator('.first-calendar-entry-hint').count(), 0);
   assert.ok(await page.locator('[data-today-cell="true"]').isVisible());
-  assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('money_calendar_guest_trades_cache'))), records, 'Watching the story never changes saved records');
+  assert.match(await page.locator('[data-today-cell="true"]').innerText(), /25/, 'The real +55 and −80 still contribute to the native calendar day');
+  assert.deepEqual(await page.evaluate(id => JSON.parse(localStorage.getItem(`money_calendar_trades_${id}`)), storyUserId), records, 'Watching the story never changes saved records');
   await page.screenshot({ path: 'tests/life-story-replay-calendar.png', animations: 'disabled' });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.getByRole('button', { name: 'Настройки', exact: true }).click();
@@ -62,5 +73,5 @@ try {
   await page.waitForFunction(() => !document.querySelector('.life-story'));
   assert.equal(await page.locator('.first-entry-whisper').count(), 0);
   assert.deepEqual(errors, []);
-  console.log('Settings replay: direct start with saved birthday, exact signed amounts in the selected currency, untouched records in all currencies, existing calendar arrival, no first-entry prompt and reduced motion passed.');
+  console.log('Settings replay: selected-currency stream, no saved +55 returning over the question, untouched records in all currencies, existing calendar arrival and reduced motion passed.');
 } finally { await browser.close(); }

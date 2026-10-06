@@ -65,6 +65,8 @@ const incomeWeeks = adulthood.flatMap((event, index) => event.tone === 'income' 
 assert.ok(new Set(incomeWeeks.slice(1).map((week, index) => week - incomeWeeks[index])).size > 4, 'Income is not a fixed every-four-weeks stripe');
 for (let time = 0; time <= LIFE_MOTION_END; time += 16) {
   const frame = lifeCalendarMotion(time);
+  assert.ok(frame.amountsOpacity === 0 || frame.questionOpacity === 0, 'The money stream and question never share a visible frame');
+  if (time >= 6200) assert.equal(frame.amountsOpacity, 0, 'Amounts stay hidden through the rest of the story');
   if (frame.topAperture > 0) assert.equal(frame.copyOpacity, 0, 'The lattice can expand through the copy area only after the heading has left');
   if (frame.lifeOpacity > .001) {
     assert.equal(frame.paperOpacity, 1, 'Keep the app covered while the dense life grid is visible');
@@ -73,6 +75,7 @@ for (let time = 0; time <= LIFE_MOTION_END; time += 16) {
   if (frame.handoff > 0) assert.equal(frame.month, 1, 'Swap to the live calendar only after the shared grid has landed');
   if (time >= 16) {
     const previous = lifeCalendarMotion(time - 16);
+    assert.ok(frame.copyRetreat >= previous.copyRetreat && frame.copyRetreat - previous.copyRetreat < .03, 'The text recedes continuously as the calendar approaches');
     assert.ok(Math.abs(frame.copyOpacity - previous.copyOpacity) < .04, 'The story copy retires on the same smooth timeline as the camera');
     assert.ok(Math.abs(frame.paperOpacity - previous.paperOpacity) < .018, 'The application lighting changes by less than 1.8% per frame throughout the morph');
     assert.ok(Math.abs(frame.skin - previous.skin) < .014, 'Calendar paint never snaps onto neutral weeks');
