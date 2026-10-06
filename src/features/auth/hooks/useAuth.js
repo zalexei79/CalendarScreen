@@ -6,12 +6,17 @@ import { translate } from '../../../shared/i18n';
 import { disablePush } from '../../reminders/pushClient';
 import { restoreUser } from '../sessionRecovery';
 import { isOnboardingPreviewUser } from '../../onboarding/lifeStoryModel';
+import { startOAuthLogin, TELEGRAM_PROVIDER } from '../oauthLogin';
 
 /**
  * useAuth: manages Supabase authentication, session detection, and user profile state.
  */
 export function useAuth() {
   const [user, setUser] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [loginPending, setLoginPending] = useState(null);
+  const [loginError, setLoginError] = useState('');
+  const loginInProgress = useRef(false);
   const nicknamePrompted = useRef(false);
   const previewShownFor = useRef(null);
 
@@ -30,6 +35,12 @@ export function useAuth() {
   }, []);
 
   useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    if (query.has('error') || hash.has('error')) setLoginError(authCopy('authLoginFailed'));
+  }, [authCopy]);
+
+  useEffect(() => {
     let mounted = true;
     let revision = 0;
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
@@ -38,6 +49,7 @@ export function useAuth() {
       const activeUser = session?.user ?? null;
       const normalizedUser = getValidUserId(activeUser) ? activeUser : null;
       setUser(normalizedUser);
+      setAuthReady(true);
     });
 
     const initialRevision = revision;
@@ -45,7 +57,8 @@ export function useAuth() {
       if (mounted && revision === initialRevision) {
         setUser(getValidUserId(activeUser) ? activeUser : null);
       }
-    }).catch(() => { /* Keep the SDK's current state during a temporary failure. */ });
+    }).catch(() => { /* Keep the SDK's current state during a temporary failure. */ })
+      .finally(() => { if (mounted) setAuthReady(true); });
 
     return () => {
       mounted = false;
@@ -67,7 +80,7 @@ export function useAuth() {
   useEffect(() => {
     if (!user || user.user_metadata?.nickname || nicknamePrompted.current) return;
     nicknamePrompted.current = true;
-    setNicknameInput(user.user_metadata?.full_name || '');
+    setNicknameInput(user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.preferred_username || '');
     setNicknameModalOpen(true);
     requestAnimationFrame(() => setNicknameModalVisible(true));
   }, [user]);
@@ -78,8 +91,8 @@ export function useAuth() {
   }, []);
 
   const handleSaveNickname = useCallback(() => {
-    const googleName = user?.user_metadata?.full_name || user?.email || '';
-    const nickname = (nicknameInput == null ? '' : String(nicknameInput)).trim() || googleName;
+    const accountName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.user_metadata?.preferred_username || user?.email || '';
+    const nickname = (nicknameInput == null ? '' : String(nicknameInput)).trim() || accountName;
     supabase.auth.updateUser({ data: { nickname } });
     closeNicknameModal();
     // Completing the welcome/name step starts setup even when this browser
@@ -90,21 +103,32 @@ export function useAuth() {
     setSetupStep('language');
   }, [user, nicknameInput, closeNicknameModal]);
 
-  const handleGoogleLogin = useCallback(async () => {
-    // Account selection must not leave the old account's push endpoint active.
-    try { await disablePush(); }
-    catch { window.alert(authCopy('pushDisableBeforeLogin')); return; }
-    console.log('[auth] кнопка "Войти через Google" нажата');
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        queryParams: { prompt: 'select_account' },
-        redirectTo: window.location.origin,
-      },
-    });
-    if (error) console.error('[auth] ошибка от Supabase:', error);
-    else console.log('[auth] signInWithOAuth вызван, редирект-URL:', data?.url);
+  const handleOAuthLogin = useCallback(async (provider) => {
+    if (loginInProgress.current) return;
+    loginInProgress.current = true;
+    setLoginPending(provider);
+    setLoginError('');
+    try {
+      await startOAuthLogin({
+        auth: supabase.auth,
+        disablePush: async () => {
+          try { await disablePush(); }
+          catch { throw new Error(authCopy('pushDisableBeforeLogin')); }
+        },
+        provider,
+        origin: window.location.origin,
+      });
+    } catch (error) {
+      setLoginError(error?.message === authCopy('pushDisableBeforeLogin')
+        ? authCopy('pushDisableBeforeLogin') : authCopy('authLoginFailed'));
+    } finally {
+      loginInProgress.current = false;
+      setLoginPending(null);
+    }
   }, [authCopy]);
+
+  const handleGoogleLogin = useCallback(() => handleOAuthLogin('google'), [handleOAuthLogin]);
+  const handleTelegramLogin = useCallback(() => handleOAuthLogin(TELEGRAM_PROVIDER), [handleOAuthLogin]);
 
   const handleGoogleLogout = useCallback(async () => {
     try { await disablePush(); }
@@ -117,9 +141,13 @@ export function useAuth() {
 
   return {
     user,
+    authReady,
     validUserId,
     isGuest: !validUserId,
     handleGoogleLogin,
+    handleTelegramLogin,
+    loginPending,
+    loginError,
     handleGoogleLogout,
     // Nickname onboarding modal state & handlers
     nicknameModalOpen,

@@ -9,6 +9,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: createPersistentAuthStorage(),
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true, // SDK processes the Google callback once, including StrictMode startup.
+    detectSessionInUrl: true, // SDK processes OAuth callbacks, including StrictMode startup.
   },
 })

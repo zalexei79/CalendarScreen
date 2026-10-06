@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { transitionView } from './src/shared/ui/transitionView';
 import './src/shared/ui/GlassSystem.css';
 import {
-  ChevronLeft, ChevronRight, Link2, LogIn, LogOut, Download, Smartphone, Monitor, Wifi, Cloud,
+  ChevronLeft, ChevronRight, Link2, LogOut, Download, Smartphone, Monitor, Wifi, Cloud,
   Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw, Play,
 } from 'lucide-react';
 import { LANGUAGES, CURRENCIES } from './src/shared/config/constants';
@@ -11,6 +11,7 @@ import { monthsFor } from './src/shared/i18n';
 import BrandIcon from './src/shared/ui/BrandIcon.jsx';
 import AnimatedMonthLabel from './src/shared/ui/AnimatedMonthLabel.jsx';
 import WorkspaceModePanel from './src/features/pro/WorkspaceModePanel.jsx';
+import LoginButtons from './src/features/auth/LoginButtons.jsx';
 
 function pendingSyncText(count, traderMode, language) {
   if (String(language).startsWith('zh')) return `${count} ${traderMode ? '笔交易' : '条记录'}等待同步。`;
@@ -31,6 +32,7 @@ export default function Header({
   isLight, traderMode, t, theme, setTheme, settingsRef, settingsOpen,
   closeSettings, openSettings, settingsVisible, language, setLanguage,
   currency, setCurrency, user, handleGoogleLogout, handleGoogleLogin,
+  handleTelegramLogin, loginPending, loginError,
   goToPrevMonth, goToNextMonth, monthMenuRef, monthMenuOpen, setMonthMenuOpen,
   yearMenuRef, yearMenuOpen, setYearMenuOpen, month, year, today,
   setViewMonth, setViewYear, setSelectedKey, setTraderMode, setPlatformFilter,
@@ -292,7 +294,7 @@ export default function Header({
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <p className={`truncate text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>
-                          {user.user_metadata?.nickname || user.user_metadata?.full_name || user.email}
+                          {user.user_metadata?.nickname || user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.preferred_username || user.email}
                         </p>
                         {user.user_metadata?.nickname && user.email && (
                           <p className={`truncate text-[11px] mt-0.5 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{user.email}</p>
@@ -312,13 +314,7 @@ export default function Header({
                       </button>
                     </div>
                   ) : (
-                    <button
-                      onClick={handleGoogleLogin}
-                      className="w-full flex items-center justify-center gap-2 rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-500 hover:bg-amber-400/20 transition-colors"
-                    >
-                      <LogIn className="h-3.5 w-3.5" />
-                      {t('signIn')}
-                    </button>
+                    <LoginButtons t={t} handleGoogleLogin={handleGoogleLogin} handleTelegramLogin={handleTelegramLogin} loginPending={loginPending} loginError={loginError} />
                   )}
                 </div>
 
@@ -515,7 +511,7 @@ export default function Header({
             {user ? (
               <div className="flex items-center gap-1 pl-2.5 pr-1 py-1">
                 <span className={`max-w-[90px] truncate ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>
-                  {user.user_metadata?.nickname || user.user_metadata?.full_name || user.email}
+                  {user.user_metadata?.nickname || user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.preferred_username || user.email}
                 </span>
                 <button
                   onClick={handleGoogleLogout}
@@ -526,13 +522,7 @@ export default function Header({
                 </button>
               </div>
             ) : (
-              <button
-                onClick={handleGoogleLogin}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 transition-colors ${isLight ? 'text-zinc-600 hover:text-amber-600' : 'text-zinc-400 hover:text-amber-400'}`}
-              >
-                <LogIn className="h-3.5 w-3.5" />
-                {t('signIn')}
-              </button>
+              <LoginButtons t={t} handleGoogleLogin={handleGoogleLogin} handleTelegramLogin={handleTelegramLogin} loginPending={loginPending} loginError={loginError} />
             )}
           </div>
 

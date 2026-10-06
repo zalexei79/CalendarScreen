@@ -34,7 +34,7 @@ function groupRows(rows) {
  * records are preserved locally during a refresh. This prevents stale caches on
  * another device from resurrecting edited/deleted cloud records.
  */
-export function useTrades({ user }) {
+export function useTrades({ user, readOnly = false }) {
   const [manualTrades, setManualTrades] = useState({});
   const manualTradesRef = useRef({});
   const tradesCacheOwnerRef = useRef('__loading__');
@@ -54,8 +54,9 @@ export function useTrades({ user }) {
   }, []);
 
   const cacheTradesLocally = useCallback((trades, userId) => {
+    if (readOnly) return;
     try { window.localStorage.setItem(getTradesCacheKey(userId), JSON.stringify(trades)); } catch { /* ignore */ }
-  }, []);
+  }, [readOnly]);
 
   const handleSyncedInsert = useCallback((dateKey, tempId, realId) => {
     setManualTrades((prev) => {
@@ -346,8 +347,12 @@ export function useTrades({ user }) {
   }, [cloudUserId, cacheTradesLocally]);
 
   return {
-    manualTrades, setManualTrades, manualTradesRef, cacheTradesLocally,
+    manualTrades, setManualTrades: readOnly ? () => {} : setManualTrades, manualTradesRef, cacheTradesLocally,
     pendingSyncCount, failedSyncCount, retryFailedSync,
-    saveTrade, deleteTrade, mutateVoiceRecord, detachMoneyCategory, clearAllTrades, refreshFromCloud,
+    saveTrade: readOnly ? async () => { throw new Error('Sign in to save records.'); } : saveTrade,
+    deleteTrade: readOnly ? async () => {} : deleteTrade,
+    mutateVoiceRecord: readOnly ? async () => { throw new Error('Sign in to edit records.'); } : mutateVoiceRecord,
+    detachMoneyCategory: readOnly ? async () => {} : detachMoneyCategory,
+    clearAllTrades: readOnly ? async () => {} : clearAllTrades, refreshFromCloud,
   };
 }

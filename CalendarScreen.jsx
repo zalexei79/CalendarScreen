@@ -28,10 +28,8 @@ import { supabase } from './src/supabaseClient';
  *      type Trade = { id: string; time: string; instrument: string; direction: 'LONG' | 'SHORT'; pnl: number; comment: string; platform: string };
  *      type ManualTrades = Record<string, Trade[]>;
  *
- * All trade data is user-entered (`manualTrades`) — there is no mock/demo
- * generator. "Platform" connections (API keys / CSV import) are UI-complete
- * stubs: wire handleSaveApiKeys / handleImportCsv to your backend to actually
- * persist credentials or parse & ingest a broker export.
+ * Guest previews use display-only examples. Signed-in records come from
+ * the account store and never include demo rows.
  */
 
 import {
@@ -100,6 +98,9 @@ import { useReferral } from './src/features/referrals/useReferral.js';
 import { useProAccess } from './src/features/pro/useProAccess.js';
 import { loadBrandIcon, drawBrandIcon } from './src/shared/lib/brandIcon.js';
 import FirstRunSetup from './src/features/onboarding/FirstRunSetup.jsx';
+import WelcomeScreen from './src/features/auth/WelcomeScreen.jsx';
+import { getEntryCopy } from './src/features/auth/entryCopy.js';
+import { createDemoCalendar, DEMO_SESSION_KEY, ENTRY_INTENT_KEY, readEntryIntent } from './src/features/auth/demoCalendar.js';
 import { birthdayStorageKey, lifeWeeks } from './src/features/onboarding/lifeStoryModel';
 import { enablePush } from './src/features/reminders/pushClient';
 import { planDateKey, planTime, useFinancePlans } from './src/features/reminders/useFinancePlans';
@@ -133,8 +134,12 @@ export default function CalendarScreen() {
   // Auth via useAuth hook
   const {
     user,
+    authReady,
     validUserId,
     handleGoogleLogin,
+    handleTelegramLogin,
+    loginPending,
+    loginError,
     handleGoogleLogout,
     nicknameModalOpen,
     nicknameModalVisible,
@@ -144,6 +149,25 @@ export default function CalendarScreen() {
     setupStep,
     setSetupStep,
   } = useAuth();
+
+  const [demoChosen, setDemoChosen] = useState(() => {
+    try { return sessionStorage.getItem(DEMO_SESSION_KEY) === '1'; } catch { return false; }
+  });
+  const [loginPrompt, setLoginPrompt] = useState(false);
+  const demoMode = !validUserId && demoChosen;
+  function requestLogin(dateKey = null) {
+    try {
+      if (dateKey) sessionStorage.setItem(ENTRY_INTENT_KEY, JSON.stringify({ dateKey }));
+      else sessionStorage.removeItem(ENTRY_INTENT_KEY);
+    } catch { /* Login also works without browser storage. */ }
+    setLoginPrompt(true);
+  }
+  useEffect(() => {
+    if (!validUserId) return;
+    setDemoChosen(false);
+    setLoginPrompt(false);
+    try { sessionStorage.removeItem(DEMO_SESSION_KEY); } catch { /* optional */ }
+  }, [validUserId]);
 
   // Referral code belongs to the signed-in account. The hook also claims any
   // referral that was saved before/through Google OAuth.
@@ -273,7 +297,7 @@ export default function CalendarScreen() {
 
   function handleConnectCtrader() {
     if (!validUserId) {
-      handleGoogleLogin();
+      requestLogin();
       return;
     }
     const clientId = import.meta.env.VITE_CTRADER_CLIENT_ID;
@@ -525,7 +549,7 @@ export default function CalendarScreen() {
 
     if (!user) {
       setProAccessPromptOpen(false);
-      await handleGoogleLogin();
+      await requestLogin();
       return;
     }
 
@@ -1765,7 +1789,7 @@ export default function CalendarScreen() {
 
   // Trades data management via useTrades hook
   const {
-    manualTrades,
+    manualTrades: storedManualTrades,
     setManualTrades,
     manualTradesRef,
     cacheTradesLocally,
@@ -1778,7 +1802,9 @@ export default function CalendarScreen() {
     mutateVoiceRecord,
     clearAllTrades: hookClearAllTrades,
     refreshFromCloud,
-  } = useTrades({ user });
+  } = useTrades({ user, readOnly: !validUserId });
+  const demoTrades = useMemo(() => createDemoCalendar({ today, currency, language }), [today, currency, language]);
+  const manualTrades = demoMode ? demoTrades : storedManualTrades;
   const wallet = useWalletTransactions({ user });
   const voiceCategories = useVoiceCategories(user?.id);
 
@@ -1891,7 +1917,7 @@ export default function CalendarScreen() {
 
   function openPlanComposer() {
     if (!validUserId) {
-      handleGoogleLogin();
+      requestLogin();
       return;
     }
     setPlanError('');
@@ -1901,7 +1927,7 @@ export default function CalendarScreen() {
 
   function openPlanEditor(plan) {
     if (!validUserId) {
-      handleGoogleLogin();
+      requestLogin();
       return;
     }
     setPlanError('');
@@ -2405,6 +2431,7 @@ export default function CalendarScreen() {
   const voiceSaveProgress = useRef({});
 
   function openModal(tradeToEdit, dateKeyOverride = null) {
+    if (!validUserId) { requestLogin(tradeToEdit ? null : dateKeyOverride || targetDateKey); return; }
     voiceSaveProgress.current = {};
     if (tradeToEdit) {
       setEditingTrade({ id: tradeToEdit.id, dateKey: tradeToEdit.dateKey || modalDateKey || targetDateKey });
@@ -2608,6 +2635,7 @@ export default function CalendarScreen() {
   }
 
   async function handleSaveTrade() {
+    if (!validUserId) { requestLogin(modalDateKey || todayKey); return; }
     if (saveInFlightRef.current) return;
     saveInFlightRef.current = true;
     setIsSaving(true);
@@ -2750,6 +2778,7 @@ export default function CalendarScreen() {
   }
 
   async function handleDeleteTrade(dateKey, tradeId) {
+    if (!validUserId) return;
     await hookDeleteTrade(dateKey, tradeId);
   }
 
@@ -3190,7 +3219,7 @@ export default function CalendarScreen() {
 
   async function openReferralShare() {
     if (!user) {
-      handleGoogleLogin();
+      requestLogin();
       return;
     }
     const activeReferralCode = referralCode || await ensureReferralCode();
@@ -3748,6 +3777,7 @@ export default function CalendarScreen() {
   );
 
   function openHistory() {
+    if (demoMode) setHistoryCurrency(currency);
     setVoiceHistoryKeys(null);
     setHistoryOpen(true);
     setHistoryVisible(true);
@@ -3772,6 +3802,12 @@ export default function CalendarScreen() {
   }
 
   function editTradeFromHistory(trade) {
+    if (demoMode) {
+      closeHistory();
+      jumpToTradeDate(trade.dateKey);
+      setSelectedKey(trade.dateKey);
+      return;
+    }
     setHistoryVisible(false);
     setHistoryOpen(false);
     setHistoryFiltersOpen(false);
@@ -3779,6 +3815,7 @@ export default function CalendarScreen() {
   }
 
   async function handleClearHistory() {
+    if (!validUserId) { requestLogin(); return; }
     if (!confirmingClear) {
       setConfirmingClear(true);
       return;
@@ -4264,10 +4301,19 @@ export default function CalendarScreen() {
   };
 
 
+  useEffect(() => {
+    if (!authReady || !validUserId || setupStep || nicknameModalOpen || !user?.user_metadata?.nickname) return;
+    const dateKey = readEntryIntent(sessionStorage);
+    if (!dateKey) return;
+    try { sessionStorage.removeItem(ENTRY_INTENT_KEY); } catch { /* optional */ }
+    openModal(null, dateKey > todayKey ? todayKey : dateKey);
+  }, [authReady, validUserId, setupStep, nicknameModalOpen, user?.user_metadata?.nickname, todayKey]);
+
   const voiceConversation = useVoiceConversation({userId:user?.id,recordsRef:manualTradesRef,categories:moneyCategoryNames,todayKey,
     isTrading:item=>item.platform==='cTrader'||item.platform==='MT5'||item.traderMode===true||isTradingInstrumentName(item.instrument)||(!getMoneyCategoryMeta(item.instrument)&&isTradingHistoryRecord(item)),
     mutateRecord:mutateVoiceRecord,saveRecord:hookSaveTrade,deleteWallet:wallet.deleteTransaction,saveWallet:wallet.saveTransaction});
   function handleCalendarVoiceCommand(command) {
+    if (!validUserId) { requestLogin(todayKey); return getEntryCopy(language).addHint; }
     const voiceCopy=(ru,en,ro,zh)=>language==='ru'?ru:language==='en'?en:language.startsWith('zh')?zh:ro;
     if(command.type==='voice-confirm')return voiceConversation.confirm(command.entry);
     if(command.type==='voice-calendar'){closeHistory();setSelectedKey(null);return {text:voiceCopy('Календарь открыт.','Calendar opened.','Calendarul este deschis.','已打开日历。'),context:null,contextLabel:'',help:voiceCopy(['Что записал вчера?','Добавь 200 на продукты'],['Add entry'],['Adaugă o înregistrare'],['添加记录'])};}
@@ -4329,7 +4375,14 @@ export default function CalendarScreen() {
   }
 
   return (
-    <div className={`premium-shell min-h-screen w-full flex flex-col transition-colors duration-500 ${proView ? 'pro-active-shell' : ''} ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
+    !authReady ? <main className="entry-welcome" data-theme={theme} aria-busy="true">{getEntryCopy(language).loading}</main> : !validUserId && !demoChosen ? <WelcomeScreen language={language} currency={currency} theme={theme} handleGoogleLogin={handleGoogleLogin} handleTelegramLogin={handleTelegramLogin} loginPending={loginPending} loginError={loginError} onExplore={() => {
+      try { sessionStorage.setItem(DEMO_SESSION_KEY, '1'); } catch { /* optional */ }
+      setDemoChosen(true);
+      setTraderMode(false);
+      setAccountMode('main');
+      setViewMonth(today.getMonth());
+      setViewYear(today.getFullYear());
+    }} /> : <div className={`premium-shell min-h-screen w-full flex flex-col transition-colors duration-500 ${proView ? 'pro-active-shell' : ''} ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
       <ProGrantNotice userId={validUserId} active={proAccessActive} until={proAccessUntil} language={language} isLight={isLight} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
@@ -4542,6 +4595,7 @@ export default function CalendarScreen() {
         onReplayLifeStory={replayLifeStory}
         setLanguage={setLanguage} currency={currency} setCurrency={setCurrency} user={user}
         handleGoogleLogout={handleGoogleLogout} handleGoogleLogin={handleGoogleLogin}
+        handleTelegramLogin={handleTelegramLogin} loginPending={loginPending} loginError={loginError}
         goToPrevMonth={goToPrevMonth} goToNextMonth={goToNextMonth}
         monthMenuRef={monthMenuRef} monthMenuOpen={monthMenuOpen} setMonthMenuOpen={setMonthMenuOpen}
         yearMenuRef={yearMenuRef} yearMenuOpen={yearMenuOpen} setYearMenuOpen={setYearMenuOpen}
@@ -4560,6 +4614,14 @@ export default function CalendarScreen() {
       />
 
       <ConnectionStatus language={language} isLight={isLight} />
+      {demoMode && <aside className="demo-calendar-banner" data-theme={theme}>
+        <div><strong>{getEntryCopy(language).demo}</strong><p>{getEntryCopy(language).demoHint}</p></div>
+        <button type="button" onClick={() => requestLogin()}>{getEntryCopy(language).start}</button>
+      </aside>}
+      {loginPrompt && !validUserId && <WelcomeScreen compact language={language} currency={currency} theme={theme} handleGoogleLogin={handleGoogleLogin} handleTelegramLogin={handleTelegramLogin} loginPending={loginPending} loginError={loginError} onClose={() => {
+        setLoginPrompt(false);
+        try { sessionStorage.removeItem(ENTRY_INTENT_KEY); } catch { /* optional */ }
+      }} />}
 
       {accountMode === 'wallet' ? <WalletPanel language={language} isLight={isLight} currency={currency} {...wallet} onSave={wallet.saveTransaction} onDelete={wallet.deleteTransaction} onClearHistory={wallet.clearHistory} onBackToCalendar={() => transitionView(() => setAccountMode('main'))} /> : null}
       {accountMode === 'main' && <>
@@ -4836,7 +4898,7 @@ export default function CalendarScreen() {
                       <span className={`font-data text-sm font-medium whitespace-nowrap tabular-nums ${trade.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                         {formatAmountInCurrency(trade.pnl, trade.currency || 'USD')}
                       </span>
-                      <button
+                      {!demoMode && <><button
                         onClick={() => openModal(trade)}
                         className={`grid h-10 w-10 sm:h-8 sm:w-8 place-items-center rounded-xl transition-colors sm:opacity-0 sm:group-hover:opacity-100 ${
                           isLight ? 'bg-zinc-100 text-zinc-500 hover:text-amber-600' : 'bg-white/[0.05] text-zinc-500 hover:text-amber-400'
@@ -4855,7 +4917,7 @@ export default function CalendarScreen() {
                         title={traderMode ? t('deleteTrade') : t('deleteRecord')}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      </button></>}
                     </div>
                   </div>
                   {trade.comment && <p className={`text-xs mt-1.5 pl-16 leading-relaxed ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{trade.comment}</p>}
@@ -5524,7 +5586,7 @@ export default function CalendarScreen() {
                           {isFinancialPro && (index === 0 || historyTrades[index - 1].dateKey !== entry.dateKey) && <h4 className="financial-record-date">{formatDateLabel(entry.dateKey)}</h4>}
                           <button
                             onClick={() => editTradeFromHistory(entry)}
-                            aria-label={t('editRecord')}
+                            aria-label={demoMode ? `${entry.instrument} · ${entry.comment}` : t('editRecord')}
                             className={`${isFinancialPro ? 'financial-record-row' : ''} group w-full min-h-[64px] px-3.5 py-3 flex items-center gap-3 text-left border-b last:border-b-0 transition-colors ${
                               isLight
                                 ? 'border-zinc-200 hover:bg-zinc-50 active:bg-zinc-100 text-zinc-800'
@@ -5549,7 +5611,7 @@ export default function CalendarScreen() {
                               <span className={`grid h-10 w-10 place-items-center rounded-xl transition-colors ${
                                 isLight ? 'bg-zinc-100 text-zinc-500 group-hover:text-amber-600' : 'bg-white/[0.05] text-zinc-500 group-hover:text-amber-400'
                               }`}>
-                                <Pencil className="h-4 w-4" />
+                                {demoMode ? <ArrowRight className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
                               </span>
                             </span>
                           </button>
@@ -7092,7 +7154,7 @@ export default function CalendarScreen() {
               value={nicknameInput}
               onChange={(e) => setNicknameInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSaveNickname()}
-              placeholder={user?.user_metadata?.full_name || user?.email || t('nicknamePlaceholder')}
+              placeholder={user?.user_metadata?.full_name || user?.user_metadata?.name || user?.user_metadata?.preferred_username || user?.email || t('nicknamePlaceholder')}
               autoFocus
               className={`w-full rounded-md border px-3 py-2 text-sm font-data mb-4 focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/40 ${
                 isLight

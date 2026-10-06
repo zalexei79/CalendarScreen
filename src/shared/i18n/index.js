@@ -854,3 +854,11 @@ const extraCopy = {
   'zh-CN': { privacyPolicy:'隐私政策', deleteAccountData:'删除账户和数据', entryDestination:'将记录保存到哪里？', mainAccount:'主账户', longDirection:'做多', shortDirection:'做空', takeProfit:'止盈', stopLoss:'止损', journalLabel:'日志', tradingScorecard:'PRO 交易评分', scoreLabel:'评分', profitFactor:'盈利因子', payoff:'盈亏比', disconnectLabel:'断开连接' },
 };
 for (const [locale, copy] of Object.entries(extraCopy)) Object.assign(TRANSLATIONS[locale], copy);
+
+const authCopy = {
+  ru: { signInTelegram: 'Войти через Telegram', authConnecting: 'Подключение…', authLoginFailed: 'Не удалось войти. Попробуй ещё раз или выбери другой способ входа.' },
+  en: { signInTelegram: 'Sign in with Telegram', authConnecting: 'Connecting…', authLoginFailed: 'Unable to sign in. Try again or choose another sign-in method.' },
+  md: { signInTelegram: 'Autentificare cu Telegram', authConnecting: 'Se conectează…', authLoginFailed: 'Autentificarea nu a reușit. Încearcă din nou sau alege altă metodă.' },
+  'zh-CN': { signInTelegram: '使用 Telegram 登录', authConnecting: '正在连接…', authLoginFailed: '无法登录。请重试或选择其他登录方式。' },
+};
+for (const [locale, copy] of Object.entries(authCopy)) Object.assign(TRANSLATIONS[locale], copy);
