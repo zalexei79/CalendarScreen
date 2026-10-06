@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { lifeWeeks, localDateValue, birthdayStorageKey, isOnboardingPreviewUser, lifeWeekRhythm, lifeMoneyEvents, lifeMoneyFlow, reserveLifePresent, calendarMoneyEvents } from '../src/features/onboarding/lifeStoryModel.js';
-import { lifeCalendarMotion, lifeCameraFrame, lifeLatticeFrame, lifeContextTravel, LIFE_MOTION_END } from '../src/features/onboarding/lifeCalendarMotion.js';
+import { lifeCalendarMotion, lifeCameraFrame, lifeLatticeFrame, LIFE_MOTION_END } from '../src/features/onboarding/lifeCalendarMotion.js';
 
 const today = new Date(2026, 9, 4);
 assert.equal(lifeWeeks('2026-10-04', today).weeks, 0);
@@ -70,9 +70,11 @@ for (let time = 0; time <= LIFE_MOTION_END; time += 16) {
   if (frame.topAperture > 0) assert.equal(frame.copyOpacity, 0, 'The lattice can expand through the copy area only after the heading has left');
   if (frame.bottomAperture > 0) assert.equal(frame.moneyOpacity, 0, 'The bottom fills as soon as the money question has cleared');
   if (frame.month === 0) assert.equal(frame.skin, 0, 'Calendar paint starts as the shared lattice approaches its final layout');
+  if (frame.contextExit > 0) assert.ok(frame.skin > 0, 'Dates are present before the surrounding history begins dissolving');
   if (frame.handoff > 0) assert.equal(frame.month, 1, 'Swap to the live calendar only after the shared grid has landed');
   if (time >= 16) {
     const previous = lifeCalendarMotion(time - 16);
+    assert.ok(frame.contextExit - previous.contextExit < .014, 'The surrounding plane dissolves gradually, without a disappearing frame');
     assert.ok(frame.copyRetreat >= previous.copyRetreat && frame.copyRetreat - previous.copyRetreat < .03, 'The text recedes continuously as the calendar approaches');
     assert.ok(Math.abs(frame.copyOpacity - previous.copyOpacity) < .04, 'The story copy retires on the same smooth timeline as the camera');
     assert.ok(Math.abs(frame.paperOpacity - previous.paperOpacity) < .018, 'The application lighting changes by less than 1.8% per frame throughout the morph');
@@ -107,9 +109,6 @@ for (let time = 8200; time <= 12550; time += 16) {
   const camera = lifeCameraFrame({ gridLeft: 24, gridTop: 330, unit: 6, cropCol: 25, cropRow: 20, monthRows: 5, focusX: 195, focusY: 487, compactPitch: 48, compactAspect: 1.8 }, motion);
   const lattice = lifeLatticeFrame({ camera, unit: 6, cropCol: 25, cropRow: 20, targets: targetCells, initialFill: .65 }, motion);
   assert.ok(lattice.width < lattice.pitchX && lattice.height < lattice.pitchY, 'All weeks and days retain the same non-overlapping lattice spacing');
-  const exit = lifeContextTravel(lattice, { width: 390, height: 844, monthRows: 5 }, 1);
-  assert.ok(lattice.y - lattice.pitchY + lattice.height + exit.up <= -48 + 1e-7 && lattice.x - lattice.pitchX + lattice.width + exit.left <= -48 + 1e-7, 'Previous weeks travel beyond the top and left edges before removal');
-  assert.ok(lattice.y + 5 * lattice.pitchY + exit.down >= 892 - 1e-7 && lattice.x + 7 * lattice.pitchX + exit.right >= 438 - 1e-7, 'Future weeks travel beyond the bottom and right edges before removal');
   if (time > 8200) {
     const previousMotion = lifeCalendarMotion(time - 16);
     const previousCamera = lifeCameraFrame({ gridLeft: 24, gridTop: 330, unit: 6, cropCol: 25, cropRow: 20, monthRows: 5, focusX: 195, focusY: 487, compactPitch: 48, compactAspect: 1.8 }, previousMotion);

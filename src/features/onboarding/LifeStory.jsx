@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
 import { lifeWeeks, lifeWeekRhythm, lifeMoneyEvents, lifeMoneyFlow, reserveLifePresent, calendarMoneyEvents } from './lifeStoryModel';
 import { createCalendarBridge } from './lifeCalendarBridge';
-import { lifeCalendarMotion, lifeCameraFrame, lifeLatticeFrame, lifeContextTravel, LIFE_COUNT_END, LIFE_MOTION_END } from './lifeCalendarMotion';
+import { lifeCalendarMotion, lifeCameraFrame, lifeLatticeFrame, LIFE_COUNT_END, LIFE_MOTION_END } from './lifeCalendarMotion';
 import BrandIcon from '../../shared/ui/BrandIcon.jsx';
 import './LifeStory.css';
 
@@ -287,7 +287,6 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       const lattice = lifeLatticeFrame({ camera, unit, cropCol, cropRow, targets, initialFill: width >= 760 ? .74 : .65 }, motion);
       const nativeLeft = targets[0].x;
       const nativeTop = targets[0].y;
-      const travel = lifeContextTravel(lattice, { width, height, monthRows }, motion.contextExit);
       story.dataset.contextExit = String(motion.contextExit);
       story.dataset.latticeWidth = String(lattice.width);
       story.dataset.latticeHeight = String(lattice.height);
@@ -326,7 +325,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       context.clearRect(0, 0, width, height);
       if (motion.contextExit < 1) {
         context.save();
-        context.globalAlpha = 1;
+        context.globalAlpha = 1 - motion.contextExit;
         const left = Math.max(0, cropCol + Math.floor(-lattice.x / lattice.pitchX));
         const right = Math.min(52, cropCol + Math.ceil((width - lattice.x) / lattice.pitchX));
         const top = Math.max(0, cropRow + Math.floor(-lattice.y / lattice.pitchY));
@@ -334,8 +333,8 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         for (let row = top; row < bottom; row++) for (let col = left; col < right; col++) {
           const i = row * 52 + col;
           if (selected.has(i)) continue;
-          const x = lattice.x + (col - cropCol) * lattice.pitchX + (col < cropCol ? travel.left : col >= cropCol + 7 ? travel.right : 0);
-          const y = lattice.y + (row - cropRow) * lattice.pitchY + (row < cropRow ? travel.up : row >= cropRow + monthRows ? travel.down : 0);
+          const x = lattice.x + (col - cropCol) * lattice.pitchX;
+          const y = lattice.y + (row - cropRow) * lattice.pitchY;
           const age = time - weekTimes[i];
           const reveal = ease(clamp(age / 450));
           context.fillStyle = weekColor(i, filled, reveal, rhythm, palette, ease(clamp(age / 180)));

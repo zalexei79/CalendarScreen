@@ -183,7 +183,7 @@ try {
     for (let index = 3; index < pixels.length; index += 4) paintAlpha = Math.max(paintAlpha, pixels[index]);
     return { backgroundWidth: Number(story.dataset.latticeWidth), backgroundHeight: Number(story.dataset.latticeHeight), firstWidth: cells[0].width, firstHeight: cells[0].height, context: Number(story.dataset.contextExit), canvasOpacity: Number(getComputedStyle(canvas).opacity), paintAlpha };
   });
-  assert.ok(Math.abs(sharedGrid.backgroundWidth - sharedGrid.firstWidth) < .1 && Math.abs(sharedGrid.backgroundHeight - sharedGrid.firstHeight) < .1 && sharedGrid.context > 0 && sharedGrid.context < 1 && sharedGrid.canvasOpacity === 1 && sharedGrid.paintAlpha === 255, 'Past weeks and selected days share the same size while the surrounding history travels outward without fading');
+  assert.ok(Math.abs(sharedGrid.backgroundWidth - sharedGrid.firstWidth) < .1 && Math.abs(sharedGrid.backgroundHeight - sharedGrid.firstHeight) < .1 && sharedGrid.context === 0 && sharedGrid.canvasOpacity === 1 && sharedGrid.paintAlpha === 255, 'The intact lattice shares one size and retains its paint before dissolving into the calendar');
   await page.screenshot({ path: screenshotPath('shared-lattice'), animations: 'disabled' });
   await seek(10250);
   assert.equal(await page.locator('.life-story-heading').evaluate(element => Number(getComputedStyle(element).opacity)), 0, 'The heading is gone when the lattice occupies the viewport');
@@ -210,7 +210,7 @@ try {
   await seek(11200);
   assert.ok(await page.locator('.life-story-paper').evaluate(element => Number(element.style.opacity) < .95), 'Calendar chrome follows the visible dates as the past rows clear its space');
   await page.screenshot({ path: screenshotPath('reveal'), animations: 'disabled' });
-  await seek(12000);
+  await seek(12350);
   assert.deepEqual(await page.locator('.life-calendar-cell').evaluateAll(cells => cells.map(cell => [cell.style.width, cell.style.height])), layoutSizes, 'Revealing days scales ready cells without resizing their layout every frame');
   await page.waitForFunction(() => Number(document.querySelector('.life-story-paper')?.style.opacity || 1) < .97);
   assert.equal(await page.locator('.life-story').getAttribute('data-life-opacity'), '0');
