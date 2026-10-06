@@ -1,3 +1,4 @@
+import React from 'react'
 import { useAuth } from './features/auth/hooks/useAuth'
 import LoginButtons from './features/auth/LoginButtons'
 import { translate } from './shared/i18n'

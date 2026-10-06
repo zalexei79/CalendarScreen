@@ -1,3 +1,4 @@
+import React from 'react';
 import { LogIn, Send } from 'lucide-react';
 
 export default function LoginButtons({ t, handleGoogleLogin, handleTelegramLogin, loginPending, loginError }) {
