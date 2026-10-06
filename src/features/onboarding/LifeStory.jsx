@@ -92,6 +92,8 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     const heading = story.querySelector('.life-story-heading');
     const header = story.querySelector('.life-story-top');
     const footer = story.querySelector('.life-story-footer');
+    const appShell = document.querySelector('.premium-shell');
+    const originalShellTransform = appShell?.style.transform || '';
     const root = document.documentElement;
     root.setAttribute('data-life-motion', 'true');
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -160,6 +162,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       canvas.height = Math.round(height * dpr);
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
       scene = sceneRef.current.getBoundingClientRect();
+      if (appShell) appShell.style.transform = originalShellTransform;
       const buttons = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')];
       hasCalendar = buttons.length === count && buttons.some(button => button.dataset.todayCell === 'true');
       story.dataset.calendarTarget = hasCalendar ? 'live' : 'preview';
@@ -273,6 +276,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         previousMask = mask;
       }
       if (paperRef.current) paperRef.current.style.opacity = String(paper);
+      if (appShell) appShell.style.transform = `translate3d(0,${16 * paper}px,0)`;
       story.style.setProperty('--life-paper-opacity', paper);
       if (calendarGrid) calendarGrid.style.opacity = String(handoff);
       if (motion.settled) story.dataset.settled = 'true';
@@ -413,7 +417,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     const onMotionChange = () => { reduceMotion = media.matches; setReduced(reduceMotion); cancelAnimationFrame(frame); frame = requestAnimationFrame(tick); };
     media.addEventListener('change', onMotionChange);
     frame = requestAnimationFrame(tick);
-    return () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); media.removeEventListener('change', onMotionChange); if (calendarGrid) calendarGrid.style.opacity = originalGridOpacity; layer.replaceChildren(); root.removeAttribute('data-life-motion'); };
+    return () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); media.removeEventListener('change', onMotionChange); if (calendarGrid) calendarGrid.style.opacity = originalGridOpacity; if (appShell) appShell.style.transform = originalShellTransform; layer.replaceChildren(); root.removeAttribute('data-life-motion'); };
   }, [birthday, elapsedWeeks, lang, theme, currency, calendarRecords, run]);
 
   const ready = stage === 'ready';

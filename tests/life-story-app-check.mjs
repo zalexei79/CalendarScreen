@@ -201,13 +201,16 @@ try {
   assert.ok(approachingColors.every(color => neutralColors.includes(color)), 'The approaching month already contains only neutral past/future cells');
   await page.screenshot({ path: screenshotPath('approach'), animations: 'disabled' });
   const layoutSizes = await page.locator('.life-calendar-cell').evaluateAll(cells => cells.map(cell => [cell.style.width, cell.style.height]));
+  const movingDay = await page.locator('.life-calendar-cell').first().boundingBox();
   const framing = await page.locator('.life-calendar-cell').evaluateAll(cells => {
     const rects = cells.map(cell => cell.getBoundingClientRect());
     const native = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')].map(cell => cell.getBoundingClientRect());
-    return { left: Math.min(...rects.map(r => r.left)), right: Math.max(...rects.map(r => r.right)), top: Math.min(...rects.map(r => r.top)), bottom: Math.max(...rects.map(r => r.bottom)), nativeCenter: (Math.min(...native.map(r => r.top)) + Math.max(...native.map(r => r.bottom))) / 2, width: innerWidth, height: innerHeight };
+    return { left: Math.min(...rects.map(r => r.left)), right: Math.max(...rects.map(r => r.right)), top: Math.min(...rects.map(r => r.top)), bottom: Math.max(...rects.map(r => r.bottom)), nativeCenter: (Math.min(...native.map(r => r.top)) + Math.max(...native.map(r => r.bottom))) / 2 - new DOMMatrixReadOnly(getComputedStyle(document.querySelector('.premium-shell')).transform).m42, width: innerWidth, height: innerHeight };
   });
-  assert.ok(framing.right - framing.left > Math.min(framing.width - 48, 820) * .8 && framing.bottom - framing.top > framing.height * .42 && framing.left >= 12 && framing.right <= framing.width - 12 && Math.abs((framing.top + framing.bottom) / 2 - framing.nativeCenter) < 2, `Tall, tightly spaced days already fill the calendar's actual area when the dense grid disappears: ${JSON.stringify(framing)}`);
+  assert.ok(framing.right - framing.left > Math.min(framing.width - 48, 820) * .65 && framing.bottom - framing.top > framing.height * .25 && framing.left >= 12 && framing.right <= framing.width - 12 && Math.abs((framing.top + framing.bottom) / 2 - framing.nativeCenter) < 17, `The growing month remains in its calendar area throughout the curved camera move: ${JSON.stringify(framing)}`);
   await seek(11200);
+  const unfoldingDay = await page.locator('.life-calendar-cell').first().boundingBox();
+  assert.ok(unfoldingDay.width > movingDay.width + 2 && unfoldingDay.height > movingDay.height + 8 && Math.abs(unfoldingDay.y - movingDay.y) > 1, 'Calendar arrival changes real position and shape during the reveal, rather than only opacity');
   assert.ok(await page.locator('.life-story-paper').evaluate(element => Number(element.style.opacity) < .95), 'Calendar chrome follows the visible dates as the past rows clear its space');
   await page.screenshot({ path: screenshotPath('reveal'), animations: 'disabled' });
   await seek(12350);

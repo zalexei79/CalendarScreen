@@ -85,6 +85,7 @@ const overlappingMotion = lifeCalendarMotion(10000);
 const departingCopy = lifeCalendarMotion(9000);
 assert.ok(departingCopy.reframe > .7 && departingCopy.zoom > .1 && departingCopy.bottomAperture > .2, 'The camera and both sides of the scene keep advancing while the copy leaves');
 assert.ok(overlappingMotion.zoom > 0 && overlappingMotion.zoom < 1 && overlappingMotion.month > 0, 'The camera keeps moving as the calendar starts opening; there is no stop between phases');
+assert.ok(lifeCalendarMotion(11000).zoom < lifeCalendarMotion(12000).zoom && lifeCalendarMotion(12000).zoom < 1, 'The camera keeps approaching throughout the interface reveal');
 for (const width of [320, 390, 1440]) for (const cropCol of [0, 45]) for (const compactAspect of [1, 1.8]) {
   const unit = Math.min((width - 84) / 52, 12);
   const gridLeft = (width - unit * 52) / 2;
@@ -98,7 +99,7 @@ for (const width of [320, 390, 1440]) for (const cropCol of [0, 45]) for (const 
     if (motion.contextExit > .99) {
       assert.ok(right - left >= Math.min(width - 48, 820) * .7, 'The life grid only leaves once the calendar has enough presence to fill the scene');
       const center = frame.originY + (27 + 2.5) * unit * frame.scaleY;
-      assert.ok(Math.abs(center - 430) < 1, 'The month is already centered when its surroundings disappear');
+      assert.ok(Math.abs(center - (430 - 16 * Math.sin(Math.PI * motion.month))) < 1, 'The month stays on its continuous camera arc as its surroundings disappear');
       if (compactAspect > 1) assert.ok(frame.scaleY / frame.scale > 1.7, 'The crop already has the taller proportions of calendar days as the life grid leaves');
     }
   }

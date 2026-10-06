@@ -11,7 +11,7 @@ export function lifeCalendarMotion(time) {
   return {
     // Lead with the camera position, then build magnification on the same path.
     // This keeps the grid advancing while the surrounding copy retires.
-    zoom: progress(time, 8350, 2100),
+    zoom: .78 * progress(time, 8350, 1900) + .22 * progress(time, 9700, 2850),
     reframe: progress(time, 8200, 1300),
     copyOpacity: 1 - progress(time, 8650, 800),
     copyRetreat: progress(time, 8350, 1100),
@@ -57,8 +57,8 @@ export function lifeCameraFrame({ gridLeft, gridTop, unit, cropCol, cropRow, mon
   const cropX = (cropCol + 3.5) * unit;
   const cropY = (cropRow + monthRows / 2) * unit;
   const scale = mix(1, compactPitch / unit, motion.zoom);
-  const scaleY = scale * mix(1, compactAspect, motion.zoom);
+  const scaleY = scale * mix(1, compactAspect, motion.month);
   const centerX = mix(gridLeft + cropX, focusX, motion.reframe);
-  const centerY = mix(gridTop + cropY, focusY, motion.reframe);
+  const centerY = mix(gridTop + cropY, focusY, motion.reframe) - 16 * Math.sin(Math.PI * motion.month);
   return { originX: centerX - cropX * scale, originY: centerY - cropY * scaleY, scale, scaleY };
 }
