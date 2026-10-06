@@ -4783,17 +4783,24 @@ export default function CalendarScreen() {
             </div>
           </div>
 
-          <button type="button" className="day-voice-entry" aria-label={language==='ru'?'Голосовая запись за выбранный день':'Voice entry for selected day'} onClick={()=>window.dispatchEvent(new CustomEvent('dayris-start-voice'))}><Mic size={16}/>{language==='ru'?'Добавить голосом':'Add by voice'}</button>
-          <div className="flex items-center self-start">
+          <div className="day-entry-actions" data-light={isLight}>
             <button
+              type="button"
               onClick={() => isFutureSelected ? openPlanComposer() : openModal()}
               title={isFutureSelected ? t('scheduleDay') : undefined}
-              className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 px-4 py-2.5 text-xs sm:text-sm font-bold text-zinc-950 shadow-md shadow-amber-500/25 hover:shadow-lg hover:shadow-amber-500/35 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="day-entry-primary"
             >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-black/10 transition-transform duration-200 group-hover:rotate-90">
-                <Plus className="h-3.5 w-3.5 stroke-[3] text-zinc-950" />
-              </span>
-              <span>{isFutureSelected ? t('schedule') : t('addAction')}</span>
+              <span className="day-entry-primary-icon" aria-hidden="true"><Plus size={20} strokeWidth={2.5}/></span>
+              <span>{isFutureSelected ? t('schedule') : proEntryCopy.newEntry}</span>
+            </button>
+            <button
+              type="button"
+              className="day-voice-entry"
+              aria-label={language==='ru'?'Голосовая запись за выбранный день':language==='ro'?'Înregistrare vocală pentru ziua selectată':language==='zh'?'为所选日期添加语音记录':'Voice entry for selected day'}
+              title={language==='ru'?'Добавить голосом':language==='ro'?'Adaugă vocal':language==='zh'?'语音添加':'Add by voice'}
+              onClick={()=>window.dispatchEvent(new CustomEvent('dayris-start-voice'))}
+            >
+              <Mic size={18}/><span>{language==='ru'?'Голосом':language==='ro'?'Vocal':language==='zh'?'语音':'Voice'}</span>
             </button>
           </div>
 
