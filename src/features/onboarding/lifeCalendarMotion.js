@@ -9,8 +9,10 @@ export const LIFE_COUNT_END = 8000;
 export const LIFE_MOTION_END = 13250;
 export function lifeCalendarMotion(time) {
   return {
-    zoom: progress(time, 8650, 1800),
-    reframe: progress(time, 8650, 1400),
+    // Lead with the camera position, then build magnification on the same path.
+    // This keeps the grid advancing while the surrounding copy retires.
+    zoom: progress(time, 8350, 2100),
+    reframe: progress(time, 8200, 1300),
     copyOpacity: 1 - progress(time, 8650, 800),
     copyRetreat: progress(time, 8350, 1100),
     amountsOpacity: 1 - progress(time, 5500, 300),
@@ -18,7 +20,7 @@ export function lifeCalendarMotion(time) {
     moneyOpacity: 1 - progress(time, 8200, 450),
     headerOpacity: 1 - progress(time, 8850, 650),
     topAperture: progress(time, 9450, 550),
-    bottomAperture: progress(time, 9000, 550),
+    bottomAperture: progress(time, 8650, 900),
     month: progress(time, 9500, 3050),
     lifeOpacity: (1 - progress(time, 9400, 850)) * (1 - .22 * progress(time, 8650, 900)),
     skin: progress(time, 10250, 2300),

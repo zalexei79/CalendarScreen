@@ -211,7 +211,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       const time = reduceMotion ? LIFE_MOTION_END : ms;
       const motion = lifeCalendarMotion(time);
       story.dataset.time = String(Math.round(time));
-      story.dataset.phase = time < 8650 ? 'life' : !motion.month ? 'focus' : !motion.ready ? 'month' : 'settle';
+      story.dataset.phase = time < 8200 ? 'life' : !motion.month ? 'focus' : !motion.ready ? 'month' : 'settle';
       story.dataset.lifeOpacity = String(motion.lifeOpacity);
       const nextStage = time < 5500 ? 'life' : time < 8200 ? 'question' : time < 9200 ? 'today' : !motion.ready ? 'zoom' : 'ready';
       if (nextStage !== previousStage) { previousStage = nextStage; setStage(nextStage); }
@@ -258,11 +258,14 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         if (header.inert !== (motion.headerOpacity === 0)) header.inert = motion.headerOpacity === 0;
         if (footer.inert !== (chrome === 0)) footer.inert = chrome === 0;
       }
-      // Screen-space feathering keeps the enlarging lattice out of the copy.
-      // Open each edge only after the corresponding text has retired.
-      const maskTop = mix(lifeTop, -48, motion.topAperture);
+      // Follow the retreating text instead of pinning the camera's window to
+      // the old grid position. The crop fills the space as the copy leaves.
+      const copyEdge = scene.top - 5 - 28 * motion.copyRetreat + 34;
+      const movingTop = mix(lifeTop, copyEdge, motion.reframe);
+      const maskTop = mix(movingTop, -48, motion.topAperture);
       const maskBottom = mix(lifeBottom, height + 48, motion.bottomAperture);
-      const mask = motion.topAperture === 1 && motion.bottomAperture === 1 ? 'none' : `linear-gradient(to bottom, transparent ${maskTop - 20}px, #000 ${maskTop + 12}px, #000 ${maskBottom - 12}px, transparent ${maskBottom + 20}px)`;
+      story.dataset.apertureTop = String(maskTop);
+      const mask = motion.topAperture === 1 && motion.bottomAperture === 1 ? 'none' : `linear-gradient(to bottom, transparent ${maskTop - 28}px, #000 ${maskTop + 20}px, #000 ${maskBottom - 20}px, transparent ${maskBottom + 28}px)`;
       if (previousMask !== mask) {
         canvas.style.maskImage = mask;
         canvas.style.webkitMaskImage = mask;

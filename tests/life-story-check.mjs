@@ -68,6 +68,7 @@ for (let time = 0; time <= LIFE_MOTION_END; time += 16) {
   assert.ok(frame.amountsOpacity === 0 || frame.questionOpacity === 0, 'The money stream and question never share a visible frame');
   if (time >= 6200) assert.equal(frame.amountsOpacity, 0, 'Amounts stay hidden through the rest of the story');
   if (frame.topAperture > 0) assert.equal(frame.copyOpacity, 0, 'The lattice can expand through the copy area only after the heading has left');
+  if (frame.bottomAperture > 0) assert.equal(frame.moneyOpacity, 0, 'The bottom fills as soon as the money question has cleared');
   if (frame.lifeOpacity > .001) {
     assert.equal(frame.paperOpacity, 1, 'Keep the app covered while the dense life grid is visible');
     assert.equal(frame.skin, 0, 'Calendar labels cannot overlap the dense life grid');
@@ -82,6 +83,8 @@ for (let time = 0; time <= LIFE_MOTION_END; time += 16) {
   }
 }
 const overlappingMotion = lifeCalendarMotion(10000);
+const departingCopy = lifeCalendarMotion(9000);
+assert.ok(departingCopy.reframe > .7 && departingCopy.zoom > .1 && departingCopy.bottomAperture > .2, 'The camera and both sides of the scene keep advancing while the copy leaves');
 assert.ok(overlappingMotion.zoom > 0 && overlappingMotion.zoom < 1 && overlappingMotion.month > 0, 'The camera keeps moving as the calendar starts opening; there is no stop between phases');
 for (const width of [320, 390, 1440]) for (const cropCol of [0, 45]) for (const compactAspect of [1, 1.8]) {
   const unit = Math.min((width - 84) / 52, 12);

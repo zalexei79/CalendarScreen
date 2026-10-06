@@ -154,11 +154,12 @@ try {
     const story = document.querySelector('.life-story');
     const heading = story.querySelector('.life-story-heading');
     const grid = story.querySelector('.life-story-grid');
-    return { time: Number(story.dataset.time), scale: new DOMMatrixReadOnly(getComputedStyle(heading).transform).a, opacity: Number(getComputedStyle(heading).opacity), headingBottom: heading.getBoundingClientRect().bottom, gridTop: Number(story.dataset.gridTop), mask: getComputedStyle(grid).maskImage, bridgeMask: getComputedStyle(story.querySelector('.life-calendar-bridge')).maskImage };
+    return { time: Number(story.dataset.time), scale: new DOMMatrixReadOnly(getComputedStyle(heading).transform).a, opacity: Number(getComputedStyle(heading).opacity), headingBottom: heading.getBoundingClientRect().bottom, apertureTop: Number(story.dataset.apertureTop), gridTop: Number(story.dataset.gridTop), mask: getComputedStyle(grid).maskImage, bridgeMask: getComputedStyle(story.querySelector('.life-calendar-bridge')).maskImage };
   });
   assert.ok(Math.abs(copyFrame.opacity - lifeCalendarMotion(copyFrame.time).copyOpacity) < .001 && copyFrame.opacity < .65, 'Copy opacity follows the camera directly, without a delayed CSS transition');
   assert.ok(copyFrame.scale < .97 && Math.abs(copyFrame.scale - (1 - .09 * lifeCalendarMotion(copyFrame.time).copyRetreat)) < .001, 'The text recedes in depth while the calendar grows forward');
   assert.ok(copyFrame.headingBottom < copyFrame.gridTop - 20 && copyFrame.mask.includes('linear-gradient') && copyFrame.bridgeMask === copyFrame.mask, 'The expanding cells remain feathered away from the heading area');
+  assert.ok(copyFrame.apertureTop < copyFrame.gridTop - 25 && copyFrame.apertureTop - copyFrame.headingBottom < 80 && copyFrame.apertureTop - 28 > copyFrame.headingBottom, 'The feathered window moves up into the retiring copy space, without covering its text or leaving a large blank gap');
   await page.screenshot({ path: screenshotPath('copy-exit'), animations: 'disabled' });
   await seek(9150);
   assert.deepEqual(await page.locator('.life-calendar-week').evaluateAll(cells => cells.map(cell => getComputedStyle(cell).backgroundColor)), presentColors, 'Arriving at today never repaints the selected month over the history');
