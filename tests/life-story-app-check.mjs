@@ -145,9 +145,20 @@ try {
   if (!desktop) await page.setViewportSize({ width: 390, height: phoneHeight });
   await page.clock.runFor(700);
   await page.screenshot({ path: screenshotPath('weeks'), animations: 'disabled' });
+  await seek(8200);
+  assert.ok(await page.locator('.life-story').evaluate(story => {
+    const cells = [...story.querySelectorAll('.life-calendar-cell')];
+    const sources = cells.map(cell => Number(cell.dataset.sourceWeek));
+    const first = sources[0];
+    const firstDay = cells[0], lastDay = cells[6];
+    const a = new DOMMatrixReadOnly(firstDay.style.transform), b = new DOMMatrixReadOnly(lastDay.style.transform);
+    const width = parseFloat(firstDay.style.width) * a.a;
+    return sources.every((week, index) => week === first + Math.floor(index / 7)) && new Set(sources).size === cells.length / 7 && story.dataset.currentWeek === story.dataset.focusWeek && Number(story.dataset.weekDivision) === 0 && Math.abs(b.m41 + width - a.m41 - Number(story.dataset.weekWidth)) < .1;
+  }), 'Seven adjacent days initially occupy one real weekly parent; only five/six consecutive weeks become the month');
   await seek(8500);
   assert.equal(await page.locator('.life-story').getAttribute('data-stage'), 'today');
   assert.equal(await money.count(), 0, 'Illustrative money leaves before arriving at today');
+  assert.ok(await page.locator('.life-calendar-week').evaluateAll(cells => cells.every(cell => Number(getComputedStyle(cell).opacity) === 1)), 'Subdividing a week preserves its brightness rather than crossfading two partially transparent copies');
   const presentColors = await page.locator('.life-calendar-week').evaluateAll(cells => cells.map(cell => getComputedStyle(cell).backgroundColor));
   await seek(9000);
   const copyFrame = await page.evaluate(() => {
@@ -196,7 +207,7 @@ try {
     for (let index = 3; index < pixels.length; index += 4) paintAlpha = Math.max(paintAlpha, pixels[index]);
     return { backgroundWidth: Number(story.dataset.latticeWidth), backgroundHeight: Number(story.dataset.latticeHeight), firstWidth: parseFloat(cell.style.width) * matrix.a, firstHeight: parseFloat(cell.style.height) * matrix.d, context: Number(story.dataset.contextExit), canvasOpacity: Number(getComputedStyle(canvas).opacity), paintAlpha, sharedPlane: canvas.parentElement === cell.closest('.life-story-projection'), tilt: Number(story.dataset.planeTilt) };
   });
-  assert.ok(Math.abs(sharedGrid.backgroundWidth - sharedGrid.firstWidth) < .1 && Math.abs(sharedGrid.backgroundHeight - sharedGrid.firstHeight) < .1 && sharedGrid.context === 0 && sharedGrid.canvasOpacity === 1 && sharedGrid.paintAlpha === 255, 'The intact lattice shares one size and retains its paint before dissolving into the calendar');
+  assert.ok(Math.abs(sharedGrid.backgroundWidth - sharedGrid.firstWidth) < .1 && Math.abs(sharedGrid.backgroundHeight - sharedGrid.firstHeight) < .1 && sharedGrid.context === 0 && sharedGrid.canvasOpacity === 1 && sharedGrid.paintAlpha === 255, 'Every weekly parent shares the same refined day size and retains its paint before the calendar reveal');
   assert.ok(sharedGrid.sharedPlane && sharedGrid.tilt > 6, 'All past weeks and unfolding days travel on one optical plane, without independent panels');
   await page.screenshot({ path: screenshotPath('shared-lattice'), animations: 'disabled' });
   await seek(10250);

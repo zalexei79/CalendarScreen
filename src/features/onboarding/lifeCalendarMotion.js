@@ -13,6 +13,8 @@ export function lifeCalendarMotion(time) {
     // This keeps the grid advancing while the surrounding copy retires.
     zoom: .78 * progress(time, 8350, 1900) + .22 * progress(time, 9700, 2850),
     reframe: progress(time, 8200, 1300),
+    division: progress(time, 8450, 1400),
+    scaleCue: progress(time, 8250, 350) * (1 - progress(time, 9700, 550)),
     copyOpacity: 1 - progress(time, 8650, 800),
     copyRetreat: progress(time, 8350, 1100),
     amountsOpacity: 1 - progress(time, 5500, 300),
@@ -48,32 +50,38 @@ export function lifeCellMaterialization(time, index, todayIndex) {
 }
 
 
-// One projection for every week, including the cells becoming calendar days.
-// The two renderers share pitch, fill and origin throughout the entire move.
+// One projection for weekly parents. Each parent refines into seven children;
+// the five/six consecutive parents become the rows of the live month.
 export function lifeLatticeFrame({ camera, unit, cropCol, cropRow, targets, initialFill }, motion) {
   const first = targets[0];
   const finalPitchX = targets[1].x - first.x;
   const finalPitchY = targets[7].y - first.y;
+  const finalWidth = targets[6].x + targets[6].width - first.x;
+  const finalGap = finalPitchX - first.width;
   const size = unit * mix(initialFill, .91, motion.zoom);
+  const weekWidth = mix(size * camera.scaleX, finalWidth, motion.month);
+  const gap = Math.min(Math.max(0, finalGap), weekWidth / 28) * motion.division;
+  const dayWidth = (weekWidth - gap * 6) / 7;
   return {
-    x: mix(camera.originX + (cropCol * unit + (unit - size) / 2) * camera.scale, first.x, motion.month),
+    x: mix(camera.originX + (cropCol * unit + (unit - size) / 2) * camera.scaleX, first.x, motion.month),
     y: mix(camera.originY + (cropRow * unit + (unit - size) / 2) * camera.scaleY, first.y, motion.month),
-    pitchX: mix(unit * camera.scale, finalPitchX, motion.month),
+    pitchX: weekWidth + mix(mix((unit - size) * camera.scaleX, gap, motion.division), finalGap, motion.month),
     pitchY: mix(unit * camera.scaleY, finalPitchY, motion.month),
-    width: mix(size * camera.scale, first.width, motion.month),
+    width: weekWidth,
     height: mix(size * camera.scaleY, first.height, motion.month),
-    finalPitchX, finalPitchY,
+    dayWidth, dayPitch: dayWidth + gap, gap, finalPitchX, finalPitchY,
   };
 }
 
 // Move the crop's screen position, rather than scaling its distance from the
 // camera. Its center stays on this path even when it starts at a grid edge.
 export function lifeCameraFrame({ gridLeft, gridTop, unit, cropCol, cropRow, monthRows, focusX, focusY, compactPitch, compactAspect = 1 }, motion) {
-  const cropX = (cropCol + 3.5) * unit;
+  const cropX = (cropCol + .5) * unit;
   const cropY = (cropRow + monthRows / 2) * unit;
   const scale = mix(1, compactPitch / unit, motion.zoom);
+  const scaleX = scale * mix(1, 7, motion.division);
   const scaleY = scale * mix(1, compactAspect, motion.month);
   const centerX = mix(gridLeft + cropX, focusX, motion.reframe);
   const centerY = mix(gridTop + cropY, focusY, motion.reframe) - 16 * Math.sin(Math.PI * motion.month);
-  return { originX: centerX - cropX * scale, originY: centerY - cropY * scaleY, scale, scaleY };
+  return { originX: centerX - cropX * scaleX, originY: centerY - cropY * scaleY, scale, scaleX, scaleY };
 }
