@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
-import { lifeWeeks, lifeWeekRhythm, lifeMoneyEvents, lifeMoneyFlow, reserveLifePresent, calendarMoneyEvents } from './lifeStoryModel';
+import { lifeWeeks, lifeWeekRhythm, lifeMoneyEvents, lifeMoneyFlow, reserveLifePresent, calendarMoneyEvents, calendarStoryFlow } from './lifeStoryModel';
 import { createCalendarBridge } from './lifeCalendarBridge';
 import { lifeWeekHierarchy, calendarWeekOffset } from './lifeWeekHierarchy';
 import { lifeCalendarMotion, lifeCameraFrame, lifeLatticeFrame, lifeCellMaterialization, lifeRowArrival, LIFE_COUNT_END, LIFE_MOTION_END } from './lifeCalendarMotion';
@@ -164,14 +164,11 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     if (!personalStory) rhythm = reserveLifePresent(rhythm, sourceIndices, current);
     const moneyEvents = personalStory ? recorded : lifeMoneyEvents(rhythm, currency);
     const weekTimes = Array.from({ length: total }, (_, week) => week < elapsedWeeks ? inverseEase((week + 1) / elapsedWeeks) * LIFE_COUNT_END : Infinity);
-    // Recent saved entries must appear even when their weeks are at the very
-    // end of the lifetime counter, including when no birthday was supplied.
-    const personalInterval = Math.max(220, 4500 / Math.max(1, recorded.length));
-    const extraTime = personalStory ? Math.max(0, 700 + recorded.length * personalInterval - 5500) : 0;
-    const flow = personalStory ? recorded.map((event, index) => ({ ...event, start: 700 + index * personalInterval, duration: 180 })) : lifeMoneyFlow(moneyEvents, elapsedWeeks, LIFE_COUNT_END);
+    // Replay real records within a fixed overview window.
+    const flow = personalStory ? calendarStoryFlow(recorded) : lifeMoneyFlow(moneyEvents, elapsedWeeks, LIFE_COUNT_END);
     const moneyArea = moneyFlowRef.current;
     const moneyCaption = moneyArea.querySelector('.life-money-caption');
-    moneyCaption.textContent = personalStory ? PERSONAL_COPY[lang][1] : MONEY_QUESTION[lang][3];
+    moneyCaption.textContent = personalStory ? ({ ru:'Краткий обзор ваших записей', en:'A quick overview of your records', ro:'O privire rapidă asupra înregistrărilor tale', zh:'你的记录概览' }[lang]) : MONEY_QUESTION[lang][3];
     const moneyAmounts = moneyArea.querySelector('.life-money-amounts');
     const moneyQuestion = moneyArea.querySelector('.life-money-question');
     const moneyNode = moneyArea.querySelector('.life-money-value');
@@ -245,7 +242,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     function draw(ms) {
       // Narrative copy can change height without resizing the viewport/canvas.
       scene = sceneRef.current.getBoundingClientRect();
-      const time = reduceMotion ? LIFE_MOTION_END : ms <= 5500 ? ms : Math.max(5500, ms - extraTime);
+      const time = reduceMotion ? LIFE_MOTION_END : ms;
       const motion = lifeCalendarMotion(time);
       story.dataset.time = String(Math.round(time));
       story.dataset.phase = time < 8000 ? 'life' : !motion.division ? 'focus' : !motion.neighbors ? 'week' : !motion.ready ? 'month' : 'settle';
@@ -488,7 +485,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       if (started === undefined) started = timestamp;
       lastTime = timestamp - started;
       draw(lastTime);
-      if (!reduceMotion && lastTime < LIFE_MOTION_END + extraTime) frame = requestAnimationFrame(tick);
+      if (!reduceMotion && lastTime < LIFE_MOTION_END) frame = requestAnimationFrame(tick);
       else {
         if (hasCalendar) arriveRef.current?.();
       }

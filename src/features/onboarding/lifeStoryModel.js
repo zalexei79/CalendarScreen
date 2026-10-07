@@ -139,3 +139,15 @@ export function calendarMoneyEvents(records, birthday, today = new Date(), inclu
     return [{ week: Math.min(week ?? elapsed, elapsed), tone: signed > 0 ? 'income' : signed < 0 ? 'expense' : 'neutral', amount: Math.abs(signed), currency: record.currency || 'USD', source: 'calendar', date, time: record.time || '', id: record.id }];
   }).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
 }
+
+// A replay is a short overview: retain all records in the week history, but
+// bound readable amount highlights independently of the account's size.
+export function calendarStoryFlow(events) {
+  const count = Math.min(events.length, 18);
+  if (!count) return [];
+  const interval = 4500 / count;
+  return Array.from({ length: count }, (_, index) => {
+    const sourceIndex = count === 1 ? 0 : Math.round(index * (events.length - 1) / (count - 1));
+    return { ...events[sourceIndex], start: 700 + index * interval, duration: 180 };
+  });
+}

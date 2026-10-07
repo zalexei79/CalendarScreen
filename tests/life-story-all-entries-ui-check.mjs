@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import path from 'node:path';
+import { calendarStoryFlow } from '../src/features/onboarding/lifeStoryModel.js';
 import { installStoryAccount, storyUserId } from './life-story-auth-fixture.mjs';
 const require = createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE || 'C:/Users/aveel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/package.json');
 const browser = await require('playwright').chromium.launch({ channel: 'msedge', headless: true });
@@ -43,10 +44,10 @@ try {
       seen.add(event.id);
     }
   }
-  assert.deepEqual([...seen], entries.map(entry => entry.id), 'Every saved entry appears in chronological order, including zero amounts, trades and all currencies');
-  await page.clock.runFor(8000);
+  assert.deepEqual([...seen], calendarStoryFlow(entries).map(entry => entry.id), 'A bounded chronological overview uses real records, including first and latest');
+  await page.clock.runFor(5900);
   assert.equal(await page.locator('.life-story').count(), 0, 'Long stories still arrive in the calendar');
   assert.equal(await page.locator('html').getAttribute('data-dayris-theme'), 'purple');
   assert.deepEqual(errors, []);
-  console.log('PASS: all 32 entries, five currencies, zero amount, trades, no birthday, adaptive story duration and purple calendar.');
+  console.log('PASS: bounded replay overview, real records, zero amount, trades, no birthday and purple calendar.');
 } finally { await browser.close(); }

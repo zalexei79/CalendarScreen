@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { lifeWeeks, localDateValue, birthdayStorageKey, isOnboardingPreviewUser, lifeWeekRhythm, lifeMoneyEvents, lifeMoneyFlow, reserveLifePresent, calendarMoneyEvents } from '../src/features/onboarding/lifeStoryModel.js';
+import { lifeWeeks, localDateValue, birthdayStorageKey, isOnboardingPreviewUser, lifeWeekRhythm, lifeMoneyEvents, lifeMoneyFlow, reserveLifePresent, calendarMoneyEvents, calendarStoryFlow } from '../src/features/onboarding/lifeStoryModel.js';
 import { lifeCalendarMotion, lifeCameraFrame, lifeLatticeFrame, lifeCellMaterialization, lifeRowArrival, LIFE_MOTION_END } from '../src/features/onboarding/lifeCalendarMotion.js';
 import { lifeWeekHierarchy } from '../src/features/onboarding/lifeWeekHierarchy.js';
 
@@ -92,3 +92,12 @@ for(const width of [320,390,1145,1440]) for(const rows of [4,5,6]) for(const tod
  targets.forEach((t,i)=>assert.equal(lifeRowArrival(11300,i,todayIndex),Math.floor(i/7)===Math.floor(todayIndex/7)?1:0));
 }
 console.log('PASS: one week opens into seven days; today stays anchored; month rows arrive later; exact handoff on mobile and desktop.');
+
+for(const count of [0,1,18,32,1000,5000]) {
+ const events=Array.from({length:count},(_,id)=>({id,amount:id,currency:'USD'}));
+ const flow=calendarStoryFlow(events);
+ assert.equal(flow.length,Math.min(18,count));
+ assert.ok(flow.every((e,i)=>e.start+e.duration<=5500 && (i===0 || e.id>flow[i-1].id)));
+ if(count){assert.equal(flow[0].id,0);assert.equal(flow.at(-1).id,count-1);}
+}
+console.log('PASS: replay highlights stay bounded even with 5000 saved records.');
