@@ -5,6 +5,7 @@ export function createCalendarBridge(cell, layer) {
   wrapper.className = 'life-calendar-cell';
   const face = document.createElement('div');
   face.className = `${cell.className} life-calendar-face`;
+  for (const key of ['pnlTone', 'inMonth']) if (cell.dataset[key]) face.dataset[key] = cell.dataset[key];
   for (const child of cell.childNodes) face.appendChild(child.cloneNode(true));
   const originals = [cell, ...cell.querySelectorAll('*')];
   const copies = [face, ...face.querySelectorAll('*')];

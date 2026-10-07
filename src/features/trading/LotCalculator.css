@@ -2,8 +2,6 @@
 .lot-calculator[open] { animation:lot-enter 280ms cubic-bezier(.22,1,.36,1) both; }
 .lot-calculator::backdrop { background:#0008; backdrop-filter:blur(6px); }
 .lot-calculator[data-light="true"] { --lot-bg:#fafaf7; --lot-surface:#edf2ed; --lot-text:#24382b; --lot-muted:#5e7365; --lot-accent:#386c4c; }
-html[data-dayris-theme="purple"] .lot-calculator { --lot-bg:#100b1c; --lot-surface:#1d142c; --lot-text:#f0eaf9; --lot-muted:#b1a2c4; --lot-accent:#b8a0f4; }
-html[data-dayris-theme="emerald"] .lot-calculator { --lot-bg:#091b14; --lot-surface:#102a20; --lot-text:#e5f5ed; --lot-muted:#9ab9ab; --lot-accent:#79d5b3; }
 .lot-calculator header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .lot-calculator header button { display:grid; place-items:center; flex-shrink:0; width:44px; height:44px; border:0; border-radius:50%; color:var(--lot-muted); background:var(--lot-surface); cursor:pointer; }
 .lot-eyebrow { font-size:10px; letter-spacing:.12em; color:var(--lot-accent); }

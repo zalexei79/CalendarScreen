@@ -96,6 +96,8 @@ export default function CalendarDayCell({
   return (
     <>
       <button
+        data-pnl-tone={hasTrades ? pnlTone : 'neutral'}
+        data-in-month={String(cell.inMonth)}
         data-today-cell={cell.isToday ? 'true' : undefined}
         data-first-entry={cell.isToday && firstEntryLabel ? 'true' : undefined}
         aria-label={cell.isToday && firstEntryLabel ? firstEntryLabel : undefined}

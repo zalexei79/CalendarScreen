@@ -1,84 +1,98 @@
-/* A dark violet palette; income and expense colors retain their meaning. */
+/* DAYRIS palettes: colored depth, neutral typography, champagne membership. */
 html[data-dayris-theme="purple"] {
-  --dayris-purple-accent:#b8a0f4;
-  --glass-surface:rgba(29,20,44,.88); --glass-control:rgba(55,37,77,.6);
-  --glass-line:rgba(194,168,250,.16); --glass-highlight:rgba(194,168,250,.09);
+  --dayris-canvas:#111015; --dayris-surface:#1a1820; --dayris-raised:#24212c;
+  --dayris-text:#e8e5ec; --dayris-muted:#a29baa; --dayris-accent:#b3a4ce;
+  --dayris-tint:155,134,189; --dayris-line:#aaa1bc24;
 }
-html[data-dayris-theme="purple"] .dayris-swipe-sheet[data-glass-theme="dark"] {
-  --glass-surface:rgba(29,20,44,.88); --glass-line:rgba(194,168,250,.16); --glass-highlight:rgba(194,168,250,.09);
-}
-html[data-dayris-theme="purple"] .premium-shell {
-  background-color:#100b1c;
-  background-image:radial-gradient(ellipse at 12% 0%,#7d4dc529,transparent 42%),radial-gradient(ellipse at 90% 12%,#6549aa1c,transparent 35%);
-  color:#f0eaf9;
-}
-html[data-dayris-theme="purple"] :is(.bg-zinc-950,.bg-zinc-950\/95,.bg-zinc-950\/90) { background-color:#100b1c; }
-html[data-dayris-theme="purple"] :is(.bg-zinc-900,.bg-zinc-900\/95,.bg-zinc-900\/90,.bg-zinc-900\/80) { background-color:#1d142c; }
-html[data-dayris-theme="purple"] :is(.bg-zinc-800,.bg-zinc-800\/80,.bg-zinc-800\/60) { background-color:#2b1e3e; }
-html[data-dayris-theme="purple"] :is(.border-zinc-800,.border-zinc-700) { border-color:#b49aca29; }
-html[data-dayris-theme="purple"] :is(.text-zinc-400,.text-zinc-500) { color:#b1a2c4; }
-html[data-dayris-theme="purple"] :is(.workspace-mode-group,.pro-actions-reveal,.pro-dialog) {
-  --pro-bg:#100b1c; --pro-surface:#251a35; --pro-text:#f0eaf9; --pro-muted:#b1a2c4; --pro-line:#b49aca29; --pro-gold:#c2a8fa;
-}
-html[data-dayris-theme="purple"] .settings-surface.dayris-settings-panel.dayris-swipe-sheet {
-  --settings-bg:#1d142c; --settings-text:#f0eaf9; --settings-muted:#b1a2c4; --settings-line:#b49aca20; --settings-hover:#c2a8fa0d;
-}
-html[data-dayris-theme="purple"] .settings-choice.is-selected { background:#ad83ef18; border-color:#b8a0f466; }
-html[data-dayris-theme="purple"] :is(.dayris-settings-panel,.workspace-mode-panel) button:focus-visible { outline-color:#c2a8fa; }
-.life-story[data-theme="purple"] { --paper:#100b1c; --ink:#f0eaf9; --muted:#b1a2c4; --green:#b8a0f4; --count:#ccb1ef; color-scheme:dark; }
-.life-story[data-theme="purple"]::before { display:none; }
-.first-run-dialog[data-theme="purple"] :is(.life-birthday-card,.first-run-product-panel) { background:#1d142c; border-color:#b49aca29; }
-.first-run-dialog[data-theme="purple"]:not([data-story="true"]) > div > div { background-color:#1d142c; }
-.first-run-dialog[data-theme="purple"] .life-birthday-field { color-scheme:dark; background:#100b1c; border-color:#71538e; color:#f0eaf9; }
-html[data-dayris-theme="purple"] .entry-welcome { background:#100b1c; color:#f0eaf9; }
-
-/* A deep emerald palette; income and expense colors retain their meaning. */
 html[data-dayris-theme="emerald"] {
-  --dayris-emerald-accent:#79d5b3;
-  --glass-surface:rgba(15,38,30,.88); --glass-control:rgba(26,66,51,.6);
-  --glass-line:rgba(121,213,179,.16); --glass-highlight:rgba(121,213,179,.09);
+  --dayris-canvas:#101512; --dayris-surface:#19211d; --dayris-raised:#222e28;
+  --dayris-text:#e5ebe7; --dayris-muted:#99aaa0; --dayris-accent:#9abdaa;
+  --dayris-tint:106,150,124; --dayris-line:#a2baa924;
 }
-html[data-dayris-theme="emerald"] .dayris-swipe-sheet[data-glass-theme="dark"] {
-  --glass-surface:rgba(15,38,30,.88); --glass-line:rgba(121,213,179,.16); --glass-highlight:rgba(121,213,179,.09);
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) {
+  --dayris-champagne:#c9b58e; --dayris-profit:#91c5ac; --dayris-loss:#d3a0a7;
+  --dayris-ease:cubic-bezier(.4,0,.2,1);
+  --glass-surface:var(--dayris-surface); --glass-control:var(--dayris-raised);
+  --glass-line:var(--dayris-line); --glass-highlight:rgba(255,255,255,.035);
 }
-html[data-dayris-theme="emerald"] .premium-shell {
-  background-color:#091b14;
-  background-image:radial-gradient(ellipse at 12% 0%,#2f9f7029,transparent 42%),radial-gradient(ellipse at 90% 12%,#24745e1c,transparent 35%);
-  color:#e5f5ed;
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .premium-shell {
+  background-color:var(--dayris-canvas);
+  background-image:radial-gradient(ellipse 80% 420px at 25% -140px,rgba(var(--dayris-tint),.07),transparent 85%);
+  color:var(--dayris-text);
 }
-html[data-dayris-theme="emerald"] :is(.bg-zinc-950,.bg-zinc-950\/95,.bg-zinc-950\/90) { background-color:#091b14; }
-html[data-dayris-theme="emerald"] :is(.bg-zinc-900,.bg-zinc-900\/95,.bg-zinc-900\/90,.bg-zinc-900\/80) { background-color:#102a20; }
-html[data-dayris-theme="emerald"] :is(.bg-zinc-800,.bg-zinc-800\/80,.bg-zinc-800\/60) { background-color:#1b3d30; }
-html[data-dayris-theme="emerald"] :is(.border-zinc-800,.border-zinc-700) { border-color:#79bda529; }
-html[data-dayris-theme="emerald"] :is(.text-zinc-400,.text-zinc-500) { color:#9ab9ab; }
-html[data-dayris-theme="emerald"] :is(.workspace-mode-group,.pro-actions-reveal,.pro-dialog) {
-  --pro-bg:#091b14; --pro-surface:#19392c; --pro-text:#e5f5ed; --pro-muted:#9ab9ab; --pro-line:#79bda529; --pro-gold:#79d5b3;
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) :is(.bg-zinc-950,.bg-zinc-950\/95,.bg-zinc-950\/90) { background-color:var(--dayris-canvas); }
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) :is(.bg-zinc-900,.bg-zinc-900\/95,.bg-zinc-900\/90,.bg-zinc-900\/80,.bg-zinc-900\/70,.bg-zinc-900\/60,.bg-zinc-900\/40) { background-color:var(--dayris-surface); }
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) :is(.bg-zinc-800,.bg-zinc-800\/80,.bg-zinc-800\/60) { background-color:var(--dayris-raised); }
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) :is(.border-zinc-800,.border-zinc-700) { border-color:var(--dayris-line); }
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) :is(.text-zinc-400,.text-zinc-500) { color:var(--dayris-muted); }
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) :is(.text-amber-400,.text-amber-500) { color:var(--dayris-champagne); }
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .dayris-header {
+  background:rgba(var(--dayris-tint),.015); border-color:#ffffff08;
 }
-html[data-dayris-theme="emerald"] .settings-surface.dayris-settings-panel.dayris-swipe-sheet {
-  --settings-bg:#102a20; --settings-text:#e5f5ed; --settings-muted:#9ab9ab; --settings-line:#79bda520; --settings-hover:#79d5b30d;
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) :is(.workspace-mode-group,.pro-actions-reveal,.pro-dialog) {
+  --pro-bg:var(--dayris-canvas); --pro-surface:var(--dayris-surface); --pro-text:var(--dayris-text);
+  --pro-muted:var(--dayris-muted); --pro-line:var(--dayris-line); --pro-gold:var(--dayris-champagne);
 }
-html[data-dayris-theme="emerald"] .settings-choice.is-selected { background:#79d5b318; border-color:#79d5b366; }
-html[data-dayris-theme="emerald"] :is(.dayris-settings-panel,.workspace-mode-panel) button:focus-visible { outline-color:#79d5b3; }
-.life-story[data-theme="emerald"] { --paper:#091b14; --ink:#e5f5ed; --muted:#9ab9ab; --green:#79d5b3; --count:#b7e6ce; color-scheme:dark; }
-.life-story[data-theme="emerald"]::before { display:none; }
-.first-run-dialog[data-theme="emerald"] :is(.life-birthday-card,.first-run-product-panel) { background:#102a20; border-color:#79bda529; }
-.first-run-dialog[data-theme="emerald"]:not([data-story="true"]) > div > div { background-color:#102a20; }
-.first-run-dialog[data-theme="emerald"] .life-birthday-field { color-scheme:dark; background:#091b14; border-color:#3d8e70; color:#e5f5ed; }
-html[data-dayris-theme="emerald"] .entry-welcome { background:#091b14; color:#e5f5ed; }
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .dayris-swipe-sheet[data-glass-theme="dark"] {
+  --glass-surface:var(--dayris-surface); --glass-line:var(--dayris-line); --glass-highlight:#ffffff07;
+}
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .settings-surface.dayris-settings-panel.dayris-swipe-sheet {
+  --settings-bg:var(--dayris-surface); --settings-text:var(--dayris-text); --settings-muted:var(--dayris-muted);
+  --settings-line:#ffffff09; --settings-hover:rgba(var(--dayris-tint),.06);
+  border-color:var(--dayris-line); box-shadow:0 28px 90px #0008,inset 0 1px #ffffff05;
+}
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .settings-choice.is-selected { background:rgba(var(--dayris-tint),.09); box-shadow:inset 2px 0 var(--dayris-accent); }
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .settings-choice.is-selected > svg { color:var(--dayris-accent); }
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) :is(.dayris-settings-panel,.workspace-mode-panel) button:focus-visible { outline-color:var(--dayris-accent); }
 
-/* Theme changes interpolate the actual surfaces and text in both directions. */
-html, body, .premium-shell, .life-story-paper {
-  transition:background-color 520ms cubic-bezier(.4,0,.2,1),color 420ms ease;
+/* The calendar is one material; profit/loss sit gently inside it. */
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .calendar-day-surface {
+  background-color:var(--dayris-surface)!important; background-image:none!important;
+  border-color:#ffffff09!important; box-shadow:inset 0 1px #ffffff04!important;
+  transition:background-color 560ms var(--dayris-ease),border-color 420ms var(--dayris-ease),box-shadow 350ms var(--dayris-ease),transform 220ms var(--dayris-ease),color 420ms ease;
 }
-.premium-shell .dayris-header {
-  transition:background-color 520ms cubic-bezier(.4,0,.2,1),border-color 420ms ease,color 420ms ease;
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .calendar-day-surface::before {
+  background:linear-gradient(145deg,#ffffff05,transparent 55%); box-shadow:none; opacity:.4;
+  transition:opacity 350ms var(--dayris-ease);
 }
-.settings-surface.dayris-settings-panel.dayris-swipe-sheet {
-  transition:transform 240ms cubic-bezier(.2,0,0,1),background-color 520ms cubic-bezier(.4,0,.2,1),color 420ms ease,border-color 420ms ease;
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .calendar-day-surface[data-in-month="false"] { background-color:var(--dayris-canvas)!important; border-color:#ffffff06!important; }
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .calendar-day-surface[data-pnl-tone="profit"] { border-color:#91c5ac26!important; box-shadow:inset 0 -18px 30px -28px #91c5ac55!important; }
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .calendar-day-surface[data-pnl-tone="loss"] { border-color:#d3a0a726!important; box-shadow:inset 0 -18px 30px -28px #d3a0a755!important; }
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .calendar-day-surface[data-pnl-tone="profit"] .day-amount { color:var(--dayris-profit); }
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .calendar-day-surface[data-pnl-tone="loss"] .day-amount { color:var(--dayris-loss); }
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .today-calendar-cell {
+  border-color:#c9b58e70!important; box-shadow:inset 0 1px #c9b58e12,0 0 0 1px #c9b58e0a!important;
 }
-.settings-choice, .settings-row, .calendar-days-grid > button {
-  transition:background-color 520ms cubic-bezier(.4,0,.2,1),border-color 420ms ease,color 420ms ease;
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .today-calendar-cell::after { background:radial-gradient(ellipse at 50% 0%,#c9b58e08,transparent 65%); animation:none; }
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .today-calendar-cell > .bg-amber-400 { background-color:var(--dayris-champagne); box-shadow:none; }
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .selected-calendar-cell { border-color:var(--dayris-accent)!important; box-shadow:inset 0 0 0 1px rgba(var(--dayris-tint),.1)!important; }
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .calendar-action-dock > .calendar-dock-morph {
+  background:var(--dayris-surface); border-color:#c9b58e25; background-image:none;
+  box-shadow:0 14px 38px #0005,inset 0 1px #ffffff06;
+}
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .lot-calculator {
+  --lot-bg:var(--dayris-canvas); --lot-surface:var(--dayris-surface); --lot-text:var(--dayris-text); --lot-muted:var(--dayris-muted); --lot-accent:var(--dayris-accent);
+}
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .entry-welcome { background:var(--dayris-canvas); color:var(--dayris-text); }
+.life-story[data-theme="purple"] { --paper:#111015; --ink:#e8e5ec; --muted:#a29baa; --green:#b3a4ce; --count:#c9b58e; color-scheme:dark; }
+.life-story[data-theme="emerald"] { --paper:#101512; --ink:#e5ebe7; --muted:#99aaa0; --green:#9abdaa; --count:#c9b58e; color-scheme:dark; }
+.life-story:is([data-theme="purple"],[data-theme="emerald"])::before { display:none; }
+.first-run-dialog:is([data-theme="purple"],[data-theme="emerald"]) :is(.life-birthday-card,.first-run-product-panel) { background:var(--dayris-surface); border-color:var(--dayris-line); }
+.first-run-dialog:is([data-theme="purple"],[data-theme="emerald"]):not([data-story="true"]) > div > div { background-color:var(--dayris-surface); }
+.first-run-dialog:is([data-theme="purple"],[data-theme="emerald"]) .life-birthday-field { color-scheme:dark; background:var(--dayris-canvas); border-color:var(--dayris-line); color:var(--dayris-text); }
+
+/* Calm feedback: no overshoot, no perpetual screen-wide movement. */
+html,body,.premium-shell,.life-story-paper { transition:background-color 560ms cubic-bezier(.4,0,.2,1),color 420ms ease; }
+.premium-shell .dayris-header { transition:background-color 560ms cubic-bezier(.4,0,.2,1),border-color 420ms ease,color 420ms ease; }
+.settings-surface.dayris-settings-panel.dayris-swipe-sheet { transition:transform 350ms cubic-bezier(.4,0,.2,1),background-color 560ms cubic-bezier(.4,0,.2,1),color 420ms ease,border-color 420ms ease; }
+.settings-choice,.settings-row,.calendar-days-grid > button { transition:background-color 560ms cubic-bezier(.4,0,.2,1),border-color 420ms ease,color 420ms ease; }
+html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) :is(.dayris-date-menu,.dayris-status-menu) { animation:dayris-material-enter 350ms cubic-bezier(.4,0,.2,1) both; transform-origin:top; }
+@keyframes dayris-material-enter { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+@media(hover:hover) and (pointer:fine) {
+  html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .calendar-days-grid > .calendar-day-surface:hover:not(.selected-calendar-cell) { transform:translateY(-1px); border-color:rgba(var(--dayris-tint),.28)!important; }
+  html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .calendar-day-surface:hover::before { opacity:1; }
+  html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .dayris-header button:hover { box-shadow:inset 0 0 0 1px rgba(var(--dayris-tint),.08); }
 }
 @media(prefers-reduced-motion:reduce) {
-  html,body,.premium-shell,.premium-shell .dayris-header,.life-story-paper,.settings-surface.dayris-settings-panel.dayris-swipe-sheet,.settings-choice,.settings-row,.calendar-days-grid > button { transition:none; }
+  html,body,.premium-shell,.premium-shell .dayris-header,.life-story-paper,.settings-surface.dayris-settings-panel.dayris-swipe-sheet,.settings-choice,.settings-row,.calendar-day-surface,.calendar-day-surface::before,.dayris-date-menu,.dayris-status-menu { transition:none!important; animation:none!important; }
 }

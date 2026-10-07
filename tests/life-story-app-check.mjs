@@ -122,7 +122,7 @@ try {
   const focusDistance = await page.locator('.life-story').evaluate(element => Math.abs(Number(element.dataset.focusWeek) - Number(element.dataset.currentWeek)));
   assert.ok(focusDistance <= 6, 'The focused week remains adjacent to the chronological present, including row edges');
   assert.equal(await page.locator('.life-story').getAttribute('data-theme'), purple ? 'purple' : dark ? 'dark' : 'light');
-  assert.equal(await page.locator('.life-story-paper').evaluate(element => getComputedStyle(element).backgroundColor), purple ? 'rgb(16, 11, 28)' : dark ? 'rgb(17, 23, 20)' : 'rgb(247, 244, 236)');
+  assert.equal(await page.locator('.life-story-paper').evaluate(element => getComputedStyle(element).backgroundColor), purple ? 'rgb(17, 16, 21)' : dark ? 'rgb(17, 23, 20)' : 'rgb(247, 244, 236)');
   if (desktop) assert.ok(Number(await page.locator('.life-story').getAttribute('data-grid-width')) > (reference ? 540 : 570), 'The desktop life panel uses the available screen height to make the weeks legible');
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'The financial area never adds horizontal scrolling');
   if (!desktop) await page.setViewportSize({ width: 320, height: phoneHeight });

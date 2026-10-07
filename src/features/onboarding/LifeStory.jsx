@@ -64,8 +64,8 @@ const SCALE_COPY = {
 const PALETTES = {
   light: { neutral: [191, 184, 167], future: [222, 217, 206], income: [113, 151, 128], expense: [198, 135, 120], today: 'rgba(77,119,100,.45)' },
   dark: { neutral: [91, 98, 94], future: [47, 53, 50], income: [110, 153, 129], expense: [172, 112, 102], today: 'rgba(142,185,159,.55)' },
-  purple: { neutral: [99, 85, 117], future: [46, 34, 61], income: [110, 153, 129], expense: [172, 112, 102], today: 'rgba(184,160,244,.55)' },
-  emerald: { neutral: [77, 105, 91], future: [27, 51, 39], income: [110, 170, 137], expense: [172, 112, 102], today: 'rgba(121,213,179,.55)' },
+  purple: { neutral: [95, 89, 104], future: [38, 35, 43], income: [132, 161, 144], expense: [167, 128, 135], today: 'rgba(179,164,206,.45)' },
+  emerald: { neutral: [84, 101, 92], future: [33, 43, 37], income: [132, 161, 144], expense: [167, 128, 135], today: 'rgba(154,189,170,.45)' },
 };
 function weekColor(index, filled, financial, rhythm, palette, arrival = 1) {
   const event = rhythm[index] || { tone: 'neutral', strength: 0 };

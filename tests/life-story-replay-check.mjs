@@ -78,8 +78,8 @@ try {
   await page.getByRole('button', { name: 'Фиолетовое', exact: true }).click();
   await page.clock.runFor(600);
   assert.equal(await page.evaluate(() => localStorage.getItem('atj_theme')), 'purple');
-  await page.waitForFunction(() => getComputedStyle(document.querySelector('.premium-shell')).backgroundColor === 'rgb(16, 11, 28)');
-  assert.equal(await page.locator('.premium-shell').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(16, 11, 28)');
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('.premium-shell')).backgroundColor === 'rgb(17, 16, 21)');
+  assert.equal(await page.locator('.premium-shell').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(17, 16, 21)');
   await page.getByRole('button', { name: 'Закрыть настройки', exact: true }).click();
   await page.clock.runFor(400);
   await page.reload();
@@ -92,7 +92,8 @@ try {
   await page.getByRole('button', { name: 'Изумрудное', exact: true }).click();
   await page.clock.runFor(700);
   assert.equal(await page.evaluate(() => localStorage.getItem('atj_theme')), 'emerald');
-  assert.equal(await page.locator('.premium-shell').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(9, 27, 20)');
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('.premium-shell')).backgroundColor === 'rgb(16, 21, 18)');
+  assert.equal(await page.locator('.premium-shell').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(16, 21, 18)');
   assert.match(await page.locator('.premium-shell').evaluate(el => getComputedStyle(el).transitionProperty), /background-color/);
   await page.getByRole('button', { name: 'Закрыть настройки', exact: true }).click();
   await page.clock.runFor(400);
