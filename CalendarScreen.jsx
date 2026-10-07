@@ -645,14 +645,23 @@ export default function CalendarScreen() {
       return 'USD';
     }
   });
-  const [theme, setTheme] = useState(() => {
+  const [themePreference, setThemePreference] = useState(() => {
     try {
       const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-      return stored === 'light' ? 'light' : 'dark';
+      return ['light', 'dark', 'system'].includes(stored) ? stored : 'dark';
     } catch {
       return 'dark';
     }
   });
+  const [systemTheme, setSystemTheme] = useState(() => window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  const theme = themePreference === 'system' ? systemTheme : themePreference;
+  function setTheme(value) { setThemePreference(typeof value === 'function' ? value(theme) : value); }
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-color-scheme: light)');
+    const update = () => setSystemTheme(query.matches ? 'light' : 'dark');
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [storyReplay, setStoryReplay] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -683,6 +692,11 @@ export default function CalendarScreen() {
     setSetupStep(lifeWeeks(birthday, today) ? 'intro' : 'birthday');
   }
 
+  function restartOnboarding() {
+    replayLifeStory();
+    setSetupStep('language');
+  }
+
   useEffect(() => {
     try { window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language); } catch { /* ignore */ }
   }, [language]);
@@ -692,7 +706,7 @@ export default function CalendarScreen() {
   }, [currency]);
 
   useEffect(() => {
-    try { window.localStorage.setItem(THEME_STORAGE_KEY, theme); } catch { /* ignore */ }
+    try { window.localStorage.setItem(THEME_STORAGE_KEY, themePreference); } catch { /* ignore */ }
     // Keep browser chrome and the area behind Android gesture controls in
     // the same theme as the calendar, including after returning to the PWA.
     const syncBrowserTheme = () => {
@@ -710,11 +724,12 @@ export default function CalendarScreen() {
       window.removeEventListener('pageshow', syncBrowserTheme);
       document.removeEventListener('visibilitychange', syncBrowserTheme);
     };
-  }, [theme]);
+  }, [theme, themePreference]);
 
   useEffect(() => {
     if (!settingsOpen) return;
     function onDocClick(e) {
+      if (e.target instanceof Element && e.target.closest('[data-dayris-settings]')) return;
       if (settingsRef.current && !settingsRef.current.contains(e.target)) closeSettings();
     }
     document.addEventListener('mousedown', onDocClick);
@@ -4592,7 +4607,7 @@ export default function CalendarScreen() {
         isLight={isLight} traderMode={traderMode} t={t} theme={theme} setTheme={setTheme}
         settingsRef={settingsRef} settingsOpen={settingsOpen} closeSettings={closeSettings}
         openSettings={openSettings} settingsVisible={settingsVisible} language={language}
-        onReplayLifeStory={replayLifeStory}
+        onReplayLifeStory={replayLifeStory} onRestartOnboarding={restartOnboarding} themePreference={themePreference}
         setLanguage={setLanguage} currency={currency} setCurrency={setCurrency} user={user}
         handleGoogleLogout={handleGoogleLogout} handleGoogleLogin={handleGoogleLogin}
         handleTelegramLogin={handleTelegramLogin} loginPending={loginPending} loginError={loginError}

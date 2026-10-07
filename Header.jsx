@@ -3,10 +3,10 @@ import { transitionView } from './src/shared/ui/transitionView';
 import './src/shared/ui/GlassSystem.css';
 import {
   ChevronLeft, ChevronRight, Link2, LogOut, Download, Smartphone, Monitor, Wifi, Cloud,
-  Settings, Sun, Moon, Languages, CircleDollarSign, User, SlidersHorizontal, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw, Play,
+  Settings, Sun, Moon, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw,
 } from 'lucide-react';
-import { LANGUAGES, CURRENCIES } from './src/shared/config/constants';
-import VoiceSettings from './src/shared/ui/VoiceSettings.jsx';
+
+import SettingsPanel from './src/shared/ui/SettingsPanel.jsx';
 import { monthsFor } from './src/shared/i18n';
 import BrandIcon from './src/shared/ui/BrandIcon.jsx';
 import AnimatedMonthLabel from './src/shared/ui/AnimatedMonthLabel.jsx';
@@ -26,10 +26,11 @@ function pendingSyncText(count, traderMode, language) {
     return many;
   };
   return `${count} ${traderMode ? form('сделка', 'сделки', 'сделок') : form('запись', 'записи', 'записей')} ждут синхронизации.`;
+
 }
 
 export default function Header({
-  isLight, traderMode, t, theme, setTheme, settingsRef, settingsOpen,
+  isLight, traderMode, t, theme, themePreference = theme, setTheme, settingsRef, settingsOpen,
   closeSettings, openSettings, settingsVisible, language, setLanguage,
   currency, setCurrency, user, handleGoogleLogout, handleGoogleLogin,
   handleTelegramLogin, loginPending, loginError,
@@ -46,7 +47,7 @@ export default function Header({
   proView = false, setProView = () => {},
   openReferralHub = () => {}, openProPresentation = () => {}, invitedCount = 0, referralLabel = 'Invites',
   accountMode = 'main', setAccountMode = () => {},
-  onReplayLifeStory,
+  onReplayLifeStory, onRestartOnboarding,
 }) {
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
   const [syncIssueOpen, setSyncIssueOpen] = useState(false);
@@ -266,143 +267,15 @@ export default function Header({
               />
             </button>
 
-            {settingsOpen && (
-              <div
-                className={[
-                  'dayris-settings-panel absolute right-0 top-full mt-3 z-50 rounded-3xl border shadow-2xl p-4 origin-top-right backdrop-blur-xl',
-                  'w-[min(320px,calc(100vw-32px))] sm:w-[310px] max-h-[calc(100dvh-160px)] overflow-y-auto',
-                  'transition-all duration-200 ease-out',
-                  settingsVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-1.5 scale-95',
-                  isLight ? 'border-zinc-200 bg-white shadow-[0_20px_60px_rgba(0,0,0,.14)]' : 'border-zinc-800 bg-zinc-900',
-                ].join(' ')}
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between pb-3 border-b border-zinc-500/10 mb-3">
-                  <p className={`font-data text-[11px] tracking-[0.2em] uppercase font-semibold ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>
-                    {t('settings')} · {t('profile')}
-                  </p>
-                  <span className="text-amber-400 text-xs">✦</span>
-                </div>
-
-                {/* 1. Account Section */}
-                <div className={`mb-3 rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50/80' : 'border-zinc-800 bg-zinc-950/70'}`}>
-                  <p className={`flex items-center gap-1.5 font-data text-[10px] uppercase tracking-wide mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>
-                    <User className="h-3.5 w-3.5 text-amber-500" />
-                    {t('account')}
-                  </p>
-                  {user ? (
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <p className={`truncate text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>
-                          {user.user_metadata?.nickname || user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.preferred_username || user.email}
-                        </p>
-                        {user.user_metadata?.nickname && user.email && (
-                          <p className={`truncate text-[11px] mt-0.5 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{user.email}</p>
-                        )}
-                      </div>
-                      <button
-                        onClick={handleGoogleLogout}
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors ${
-                          isLight
-                            ? 'border-zinc-300 text-zinc-500 hover:border-red-400 hover:bg-red-50 hover:text-red-500'
-                            : 'border-zinc-700 text-zinc-400 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400'
-                        }`}
-                        title={t('signOut')}
-                        aria-label={t('signOut')}
-                      >
-                        <LogOut className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ) : (
-                    <LoginButtons t={t} handleGoogleLogin={handleGoogleLogin} handleTelegramLogin={handleTelegramLogin} loginPending={loginPending} loginError={loginError} />
-                  )}
-                </div>
-
-                {/* 2. Appearance Section */}
-                <div className={`mb-3 rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50/80' : 'border-zinc-800 bg-zinc-950/70'}`}>
-                  <p className={`flex items-center gap-1.5 font-data text-[10px] uppercase tracking-wide mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>
-                    <SlidersHorizontal className="h-3.5 w-3.5 text-amber-500" />
-                    {t('appearance')}
-                  </p>
-
-                  {/* Language */}
-                  <div className="mb-3">
-                    <p className={`text-[11px] mb-1.5 ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>{t('language')}</p>
-                    <div className="flex gap-1.5">
-                      {LANGUAGES.map((l) => (
-                        <button
-                          key={l.code}
-                          onClick={() => setLanguage(l.code)}
-                          className={[
-                            'flex-1 rounded-xl border px-2 py-2 text-xs font-data transition-all hover:-translate-y-px',
-                            language === l.code
-                              ? 'border-amber-400/70 bg-amber-400/15 text-amber-500 font-semibold shadow-sm'
-                              : isLight
-                              ? 'border-zinc-300 text-zinc-600 hover:border-zinc-400 bg-white'
-                              : 'border-zinc-700 text-zinc-400 hover:border-zinc-600 bg-zinc-900',
-                          ].join(' ')}
-                        >
-                          {l.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <VoiceSettings language={language} isLight={isLight} />
-                  {/* Currency */}
-                  <div>
-                    <p className={`text-[11px] mb-1.5 ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>{t('currency')}</p>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {CURRENCIES.map((c) => (
-                        <button
-                          key={c.code}
-                          onClick={() => setCurrency(c.code)}
-                          className={[
-                            'rounded-xl border px-2 py-2 text-xs font-data transition-all hover:-translate-y-px',
-                            currency === c.code
-                              ? 'border-amber-400/70 bg-amber-400/15 text-amber-500 font-semibold shadow-sm'
-                              : isLight
-                              ? 'border-zinc-300 text-zinc-600 hover:border-zinc-400 bg-white'
-                              : 'border-zinc-700 text-zinc-400 hover:border-zinc-600 bg-zinc-900',
-                          ].join(' ')}
-                        >
-                          {c.symbol} {c.code}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {onReplayLifeStory && <button type="button" onClick={onReplayLifeStory} className={`mb-3 flex min-h-11 w-full items-center gap-3 rounded-xl border px-3 py-3 text-left text-xs transition-colors ${isLight ? 'border-zinc-200 text-zinc-600 hover:bg-zinc-50' : 'border-zinc-800 text-zinc-300 hover:bg-white/5'}`}>
-                  <Play className="h-4 w-4 shrink-0 text-emerald-500" />
-                  {language === 'zh-CN' ? '再看我的故事' : language === 'en' ? 'Watch my story again' : language === 'md' || language === 'ro' ? 'Privește din nou povestea mea' : 'Посмотреть мою историю'}
-                </button>}
-                <a
-                  href={language === 'zh-CN' ? '/privacy-zh.html' : '/privacy.html'}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`block rounded-xl border px-3 py-2.5 text-xs transition-colors ${
-                    isLight
-                      ? 'border-zinc-200 text-zinc-600 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700'
-                      : 'border-zinc-800 text-zinc-400 hover:border-amber-400/30 hover:bg-amber-400/5 hover:text-amber-300'
-                  }`}
-                >
-                  {t('privacyPolicy')}
-                </a>
-                <a
-                  href={language === 'zh-CN' ? '/delete-account-zh.html' : '/delete-account.html'}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`mt-2 block rounded-xl border px-3 py-2.5 text-xs transition-colors ${
-                    isLight
-                      ? 'border-zinc-200 text-zinc-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700'
-                      : 'border-zinc-800 text-zinc-400 hover:border-red-400/30 hover:bg-red-400/5 hover:text-red-300'
-                  }`}
-                >
-                  {t('deleteAccountData')}
-                </a>
-              </div>
-            )}
+            {settingsOpen && <SettingsPanel
+              t={t} language={language} setLanguage={setLanguage} currency={currency} setCurrency={setCurrency}
+              theme={theme} themePreference={themePreference} setTheme={setTheme} isLight={isLight}
+              user={user} handleGoogleLogin={handleGoogleLogin} handleTelegramLogin={handleTelegramLogin}
+              handleGoogleLogout={handleGoogleLogout} loginPending={loginPending} loginError={loginError}
+              proAccessActive={proAccessActive} proAccessLoading={proAccessLoading}
+              onPro={openProPresentation} onStory={onReplayLifeStory} onRestart={onRestartOnboarding}
+              onClose={closeSettings} visible={settingsVisible} anchorRef={settingsRef}
+            />}
           </div>
         </div>
       </div>
