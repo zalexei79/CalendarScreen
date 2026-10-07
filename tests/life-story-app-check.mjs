@@ -147,7 +147,7 @@ try {
   await page.clock.runFor(700);
   await page.screenshot({ path: screenshotPath('weeks'), animations: 'disabled' });
   let previousWidth = 0;
-  for (const time of [8000, 8500, 9000, 9500, 10000, 10500, 11080]) {
+  for (const time of [8000, 8500, 9000, 9500, 10000, 11000, 11300, 12000, 12800, 13680]) {
     await seek(time);
     const state = await page.evaluate(() => {
       const story = document.querySelector('.life-story');
@@ -174,12 +174,12 @@ try {
       assert.ok(Math.abs(state.weekWidth-state.cellHeight)<.1 && state.cellHeight>30, 'The first camera zoom enlarges square weekly cells');
       assert.equal(state.division,0, 'The first zoom has not yet turned weeks into days');
       assert.ok(state.intactWeeks, 'Whole weeks are painted as single squares, without premature day seams');
-      assert.equal(state.contextExit,0, 'All neighboring weeks remain part of the same zoom');
+      assert.equal(state.contextExit,1, 'Only the selected current week remains in focus');
       assert.equal(state.headingOpacity, 0, 'Departing copy has cleared the calendar');
       assert.equal(await page.locator('.life-story-scale-cue').count(), 0, 'No floating scale label covers the cells');
     }
-    if (time === 10000) assert.match(await page.locator('.life-story-orientation').innerText(), /Дни текущего месяца.*октябрь/s);
-    if (time === 10500) assert.ok(state.datesVisible, 'Date content arrives while the calendar is still moving');
+    if (time === 12000) assert.match(await page.locator('.life-story-orientation').innerText(), /Дни текущего месяца.*октябрь/s);
+    if (time === 11300) assert.ok(state.datesVisible, 'Date content arrives while the calendar is still moving');
     previousWidth = state.width;
     await page.screenshot({ path: screenshotPath('transition-' + time), animations: 'disabled' });
   }

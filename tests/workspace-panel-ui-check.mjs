@@ -28,6 +28,7 @@ try {
     assert.ok(free.height<=70,`FREE should be compact at ${width}`);
     assert.equal(await page.locator('.pro-actions-reveal').count(),0);
     assert.equal(await page.locator('.wallet-entry').count(),1);
+      const freeWallet=await page.locator('.wallet-entry').boundingBox();
     await page.locator('#idle').click();
     const idle=await page.locator('.workspace-mode-panel').boundingBox();
     assert.equal(await page.locator('.pro-control-platform:disabled').count(),3);
@@ -49,7 +50,9 @@ try {
     assert.equal(foreground, light ? 'rgb(34, 35, 37)' : 'rgb(243, 240, 233)', 'platform text must match the theme');
     assert.ok(active.height<=140,'PRO panel is compact');
     const wallet=await page.locator('.wallet-entry').boundingBox();
-    assert.ok(wallet.height>=44 && wallet.x>=0 && wallet.x+wallet.width<=width,'wallet remains readable and tappable inside viewport');
+    assert.ok(Math.abs(wallet.x-freeWallet.x)<.1 && Math.abs(wallet.y-freeWallet.y)<.1,'Wallet position stays fixed from FREE to PRO trader');
+      assert.notEqual(await page.locator('.wallet-entry-heading').evaluate(el=>getComputedStyle(el).display),'none','Wallet label stays visible');
+      assert.ok(wallet.height>=44 && wallet.x>=0 && wallet.x+wallet.width<=width,'wallet remains readable and tappable inside viewport');
     for(const button of await page.locator('.workspace-mode-panel button').all()) {
      const box=await button.boundingBox();
      const minimumHeight = await button.evaluate(el => el.classList.contains('workspace-mode-toggle') ? 30 : 44);

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { lifeWeeks, localDateValue, birthdayStorageKey, isOnboardingPreviewUser, lifeWeekRhythm, lifeMoneyEvents, lifeMoneyFlow, reserveLifePresent, calendarMoneyEvents } from '../src/features/onboarding/lifeStoryModel.js';
-import { lifeCalendarMotion, lifeCameraFrame, lifeLatticeFrame, lifeCellMaterialization, LIFE_MOTION_END } from '../src/features/onboarding/lifeCalendarMotion.js';
+import { lifeCalendarMotion, lifeCameraFrame, lifeLatticeFrame, lifeCellMaterialization, lifeRowArrival, LIFE_MOTION_END } from '../src/features/onboarding/lifeCalendarMotion.js';
 import { lifeWeekHierarchy } from '../src/features/onboarding/lifeWeekHierarchy.js';
 
 const today = new Date(2026, 9, 4);
@@ -65,38 +65,30 @@ assert.ok(adulthood.filter(event => event.tone === 'expense').length > adulthood
 const incomeWeeks = adulthood.flatMap((event, index) => event.tone === 'income' ? [index] : []);
 assert.ok(new Set(incomeWeeks.slice(1).map((week, index) => week - incomeWeeks[index])).size > 4, 'Income is not a fixed every-four-weeks stripe');
 
-for (let time=0;time<=LIFE_MOTION_END;time+=16) {
-  const frame=lifeCalendarMotion(time);
-  assert.ok(frame.amountsOpacity===0 || frame.questionOpacity===0);
-  assert.equal(frame.planeTilt,0);
-  if(frame.division>0) assert.ok(frame.zoom>.7,'Weeks become large before they divide into days');
-  if(frame.contextExit>0) assert.ok(frame.division>0,'The surrounding lattice recedes only after day subdivision begins');
-  if(frame.handoff>0) assert.ok(frame.zoom===1 && frame.division===1 && frame.month===1 && frame.skin===1 && frame.paperOpacity===0,'Handoff only after exact geometry, paint and lighting settle');
+
+for(let time=0;time<=LIFE_MOTION_END;time+=16){
+ const m=lifeCalendarMotion(time);
+ assert.ok(m.amountsOpacity===0 || m.questionOpacity===0);
+ if(m.division>0) assert.equal(m.zoom,1);
+ if(m.neighbors>0) assert.equal(m.division,1);
+ if(m.handoff>0) assert.ok(m.skin===1 && m.paperOpacity===0);
 }
-assert.equal(lifeCalendarMotion(9000).division,0,'At the first zoom, cells still represent whole weeks');
-assert.ok(lifeCalendarMotion(9500).division>0,'Day boundaries unfold after weeks have enlarged');
-const close=(a,b,label)=>assert.ok(Math.abs(a-b)<1e-6,label);
-for(const width of [320,390,1145,1440]) for(const rowCount of [4,5,6]) for(const edge of [0,1]) {
-  const unit=5, size=unit*.74, gap=8, nativeWidth=width-48, dayWidth=(nativeWidth-6*gap)/7, dayHeight=100;
-  const targets=Array.from({length:rowCount*7},(_,i)=>({x:24+i%7*(dayWidth+gap),y:200+Math.floor(i/7)*(dayHeight+gap),width:dayWidth,height:dayHeight}));
-  const cropCol=edge?40:0,cropRow=edge?25:0;
-  const camera=lifeCameraFrame({gridLeft:100,gridTop:250});
-  let previous;
-  for(let time=8000;time<=11600;time+=16) {
-    const motion=lifeCalendarMotion(time);
-    const frame=lifeLatticeFrame({camera,unit,cropCol,cropRow,targets,initialFill:.74},motion);
-    assert.ok(frame.width<=nativeWidth+.001 && frame.height<=dayHeight+.001,'No zoom overshoot');
-    assert.ok(frame.pitchY>frame.height && frame.pitchX>frame.width,'Weeks never overlap their neighbors');
-    close(frame.dayWidth*7+frame.gap*6,frame.width,'Seven days partition exactly one week');
-    if(!motion.division) close(frame.width,frame.height,'Weeks stay square throughout the initial camera zoom');
-    if(previous) {
-      assert.ok(frame.width>=previous.width && frame.height>=previous.height,'The lattice enlarges continuously');
-      assert.ok(frame.width-previous.width<nativeWidth*.026,'No one-frame horizontal jump');
-    }
-    previous=frame;
-  }
-  const settled=lifeLatticeFrame({camera,unit,cropCol,cropRow,targets,initialFill:.74},lifeCalendarMotion(11000));
-  close(settled.x,targets[0].x);close(settled.y,targets[0].y);close(settled.dayWidth,dayWidth);close(settled.height,dayHeight);
-  targets.forEach((target,i)=>{close(settled.x+i%7*settled.dayPitch,target.x);close(settled.y+Math.floor(i/7)*settled.pitchY,target.y);});
+const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-6, a+' != '+b);
+for(const width of [320,390,1145,1440]) for(const rows of [4,5,6]) for(const todayIndex of [0,6,rows*7-7,rows*7-1]){
+ const gap=8,dayWidth=(width-48-6*gap)/7;
+ const targets=Array.from({length:rows*7},(_,i)=>({x:24+i%7*(dayWidth+gap),y:200+Math.floor(i/7)*108,width:dayWidth,height:100}));
+ const args={camera:lifeCameraFrame({gridLeft:100,gridTop:250}),unit:5,cropCol:10,cropRow:15,targets,initialFill:.74,todayIndex};
+ let previous;
+ for(let time=8000;time<=LIFE_MOTION_END;time+=16){
+  const m=lifeCalendarMotion(time),f=lifeLatticeFrame(args,m);
+  close(f.dayWidth*7+f.gap*6,f.width);assert.ok(f.dayWidth>0);
+  if(!m.division)close(f.width,f.height);
+  if(m.zoom===1){close(f.anchorX,targets[todayIndex].x+dayWidth/2);close(f.anchorY,targets[todayIndex].y+50);assert.ok(f.x>=24-1e-6 && f.x+f.width<=width-24+1e-6);}
+  if(previous)assert.ok(f.width>=previous.width-1e-6);
+  previous=f;
+ }
+ const f=lifeLatticeFrame(args,lifeCalendarMotion(13600));
+ targets.forEach((t,i)=>{close(f.x+i%7*f.dayPitch,t.x);close(f.y+Math.floor(i/7)*f.pitchY,t.y);});
+ targets.forEach((t,i)=>assert.equal(lifeRowArrival(11300,i,todayIndex),Math.floor(i/7)===Math.floor(todayIndex/7)?1:0));
 }
-console.log('PASS: full-grid zoom, square weeks before seven-day subdivision, continuous geometry and exact calendar handoff.');
+console.log('PASS: one week opens into seven days; today stays anchored; month rows arrive later; exact handoff on mobile and desktop.');

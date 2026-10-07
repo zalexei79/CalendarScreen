@@ -129,8 +129,8 @@
 @media(min-width:960px) {
   .dayris-command-row { grid-template-columns:auto minmax(0,1fr); gap:clamp(28px,5vw,96px); padding-top:8px; }
   .dayris-date-navigation { gap:8px; }
-  .workspace-mode-panel.is-pro { grid-template-columns:44px minmax(0,360px) 90px 86px; column-gap:10px; justify-content:end; }
-  .workspace-mode-panel.is-pro .wallet-entry-heading, .workspace-mode-panel.is-pro .wallet-entry-caption { display:none; }
+  .workspace-mode-panel { grid-template-columns:minmax(120px,1fr) minmax(0,360px) 90px 88px; column-gap:10px; }
+  .workspace-mode-panel .workspace-selector { grid-column:4; }
   .workspace-mode-panel.is-pro .pro-control-trader { grid-column:3; }
   .workspace-mode-panel.is-pro .workspace-selector { grid-column:4; }
   .workspace-mode-panel.is-pro .pro-platform-reveal {
