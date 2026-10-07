@@ -1,3 +1,4 @@
+import { selectBirthday } from './birthday-test-helper.mjs';
 // Deterministic production preview: synthetic account, local assets, no network.
 // Build first, then: node tests/life-story-motion-preview.mjs [directory] [--desktop] [--light]
 import assert from 'node:assert/strict';
@@ -40,7 +41,7 @@ try {
   await page.clock.pauseAt(new Date('2026-10-05T13:00:00'));
   await page.getByRole('button', { name: /Русский/ }).click();
   await page.getByRole('button', { name: /USD/ }).click();
-  await page.getByLabel('Дата рождения', { exact: true }).fill('1998-03-14');
+  await selectBirthday(page, '1998-03-14');
   await page.getByRole('button', { name: 'Увидеть мою историю', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.calendarTarget === 'live');
   await page.mouse.move(0, 0);

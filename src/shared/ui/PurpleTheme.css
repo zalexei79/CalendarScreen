@@ -1,8 +1,8 @@
 /* DAYRIS palettes: colored depth, neutral typography, champagne membership. */
 html[data-dayris-theme="purple"] {
-  --dayris-canvas:#111015; --dayris-surface:#1a1820; --dayris-raised:#24212c;
-  --dayris-text:#e8e5ec; --dayris-muted:#a29baa; --dayris-accent:#b3a4ce;
-  --dayris-tint:155,134,189; --dayris-line:#aaa1bc24;
+  --dayris-canvas:#160f24; --dayris-surface:#241b33; --dayris-raised:#352543;
+  --dayris-text:#ede7f4; --dayris-muted:#b5a5c5; --dayris-accent:#c2a1e8;
+  --dayris-tint:160,110,202; --dayris-line:#ac87d934;
 }
 html[data-dayris-theme="emerald"] {
   --dayris-canvas:#071c16; --dayris-surface:#102e24; --dayris-raised:#1a4333;
@@ -74,7 +74,7 @@ html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .lot-calcula
   --lot-bg:var(--dayris-canvas); --lot-surface:var(--dayris-surface); --lot-text:var(--dayris-text); --lot-muted:var(--dayris-muted); --lot-accent:var(--dayris-accent);
 }
 html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .entry-welcome { background:var(--dayris-canvas); color:var(--dayris-text); }
-.life-story[data-theme="purple"] { --paper:#111015; --ink:#e8e5ec; --muted:#a29baa; --green:#b3a4ce; --count:#c9b58e; color-scheme:dark; }
+.life-story[data-theme="purple"] { --paper:#160f24; --ink:#ede7f4; --muted:#b5a5c5; --green:#c2a1e8; --count:#c9b58e; color-scheme:dark; }
 .life-story[data-theme="emerald"] { --paper:#071c16; --ink:#e3eee7; --muted:#9fb8aa; --green:#83c9a6; --count:#c9b58e; color-scheme:dark; }
 .life-story:is([data-theme="purple"],[data-theme="emerald"])::before { display:none; }
 .first-run-dialog:is([data-theme="purple"],[data-theme="emerald"]) :is(.life-birthday-card,.first-run-product-panel) { background:var(--dayris-surface); border-color:var(--dayris-line); }
@@ -102,3 +102,24 @@ html[data-dayris-theme="emerald"] .premium-shell { background-image:radial-gradi
 html[data-dayris-theme="emerald"] .calendar-day-surface::before { background:linear-gradient(145deg,#9ad5b409,transparent 58%); opacity:.6; }
 html[data-dayris-theme="emerald"] .dayris-header { background:linear-gradient(120deg,#193c2b26,#0820190a); border-color:#b9d9c00b; }
 html[data-dayris-theme="emerald"] .calendar-action-dock > .calendar-dock-morph { background:linear-gradient(125deg,#183528,#10271f 65%); border-color:#c9b58e35; }
+
+/* Amethyst: visible plum depth, a restrained lavender highlight. */
+html[data-dayris-theme="purple"] .premium-shell { background-image:radial-gradient(ellipse 75% 520px at 70% -160px,#985cc928,transparent 80%),radial-gradient(ellipse 45% 460px at 0% 50%,#58316d14,transparent 85%); }
+html[data-dayris-theme="purple"] .dayris-header { background:linear-gradient(120deg,#50336922,#21152f10); border-color:#c7a4e318; }
+html[data-dayris-theme="purple"] .calendar-day-surface::before { background:linear-gradient(145deg,#ceaae40c,transparent 60%); opacity:.6; }
+
+[data-theme-option="purple"] { --theme-label:#c0a2e4; --theme-rgb:159,110,202; }
+[data-theme-option="emerald"] { --theme-label:#8acbaa; --theme-rgb:72,155,111; }
+.first-run-dialog[data-theme="light"] [data-theme-option="purple"],.settings-surface[data-glass-theme="light"] [data-theme-option="purple"] { --theme-label:#79509e; }
+.first-run-dialog[data-theme="light"] [data-theme-option="emerald"],.settings-surface[data-glass-theme="light"] [data-theme-option="emerald"] { --theme-label:#2c6f50; }
+[data-theme-option] .theme-option-label,.settings-theme-tile[data-theme-option]>span:last-child { position:relative; color:var(--theme-label,inherit); }
+.first-run-dialog [data-theme-option] { min-height:44px; font-size:12px; font-weight:500; transition:background-color 300ms cubic-bezier(.4,0,.2,1),color 300ms ease; }
+.settings-theme-tile { font-size:10px; }
+.first-run-dialog [data-theme-option][aria-pressed="true"] { background-color:rgba(var(--theme-rgb,150,145,135),.14); }
+.theme-option-label::after { content:''; position:absolute; height:1px; background:currentColor; left:0; right:0; bottom:-4px; opacity:.7; transform:scaleX(0); transition:transform 300ms cubic-bezier(.4,0,.2,1); }
+[data-theme-option][aria-pressed="true"] .theme-option-label::after { transform:scaleX(1); }
+.settings-theme-tile[data-theme-option]>span:last-child { text-decoration-color:currentColor; text-underline-offset:4px; }
+.settings-theme-tile[data-theme-option][aria-pressed="true"]>span:last-child { text-decoration-line:underline; }
+.settings-theme-sample[data-theme="purple"] { background:#160f24; }.settings-theme-sample[data-theme="purple"] i { background:#674880; }
+.settings-theme-tile[data-theme-option="purple"].is-selected .settings-theme-sample,.settings-theme-tile[data-theme-option="emerald"].is-selected .settings-theme-sample { border-color:var(--theme-label); box-shadow:0 0 0 2px var(--settings-bg),0 0 0 3px var(--theme-label); }
+@media(prefers-reduced-motion:reduce) { .theme-option-label::after,.first-run-dialog [data-theme-option] { transition:none; } }

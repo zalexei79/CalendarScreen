@@ -720,7 +720,7 @@ export default function CalendarScreen() {
     // Keep browser chrome and the area behind Android gesture controls in
     // the same theme as the calendar, including after returning to the PWA.
     const syncBrowserTheme = () => {
-      const color = theme === 'light' ? '#fafafa' : theme === 'purple' ? '#111015' : theme === 'emerald' ? '#071c16' : '#09090b';
+      const color = theme === 'light' ? '#fafafa' : theme === 'purple' ? '#160f24' : theme === 'emerald' ? '#071c16' : '#09090b';
       const colorScheme = theme === 'light' ? 'light' : 'dark';
       document.documentElement.dataset.dayrisTheme = theme;
       document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);

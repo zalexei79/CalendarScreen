@@ -26,12 +26,12 @@
 .settings-account-card>div:nth-child(2) { flex:1; min-width:0; }.settings-account-card>svg { color:var(--settings-muted); flex-shrink:0; }.settings-account-card p { margin-top:2px; }
 .settings-membership { display:block; margin-top:5px; color:var(--dayris-accent,#b59d70); font-size:9px; letter-spacing:.08em; }
 .settings-theme-gallery { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:7px; padding:8px 0 4px; }
-.settings-theme-tile { min-width:0; padding:0; border:0; background:none; color:var(--settings-muted); font:500 9px system-ui,sans-serif; cursor:pointer; }
+.settings-theme-tile { min-width:0; padding:0; border:0; background:none; color:var(--settings-muted); font:500 10px system-ui,sans-serif; cursor:pointer; }
 .settings-theme-tile>span:last-child { display:block; padding:7px 0; overflow:hidden; text-overflow:ellipsis; }
 .settings-theme-sample { position:relative; display:grid; grid-template-columns:1fr 1fr; gap:3px; padding:8px; height:48px; border:1px solid #ffffff18; border-radius:11px; background:#101113; transition:transform 250ms cubic-bezier(.4,0,.2,1),border-color 250ms,box-shadow 250ms; }
 .settings-theme-sample i { border-radius:3px; background:#26282a; }.settings-theme-sample[data-theme=light] { background:#f7f6f2; border-color:#dedbd4; }.settings-theme-sample[data-theme=light] i { background:#dedbd4; }
 .settings-theme-sample[data-theme=system] { background:linear-gradient(135deg,#f7f6f2 49%,#101113 51%); }.settings-theme-sample[data-theme=system] i { background:#92949c55; }
-.settings-theme-sample[data-theme=purple] { background:#111015; }.settings-theme-sample[data-theme=purple] i { background:#54475e; }
+.settings-theme-sample[data-theme=purple] { background:#160f24; }.settings-theme-sample[data-theme=purple] i { background:#674880; }
 .settings-theme-sample[data-theme=emerald] { background:#071c16; }.settings-theme-sample[data-theme=emerald] i { background:#285c45; }
 .settings-theme-sample>svg { position:absolute; bottom:3px; right:3px; padding:2px; width:16px; height:16px; border-radius:50%; color:#111; background:#d5bc83; }
 .settings-theme-tile.is-selected { color:var(--settings-text); }.settings-theme-tile.is-selected .settings-theme-sample { border-color:var(--dayris-accent,#d5bc83); box-shadow:0 0 0 2px var(--settings-bg),0 0 0 3px var(--dayris-accent,#d5bc83); }.settings-theme-tile:hover .settings-theme-sample { transform:translateY(-2px); }

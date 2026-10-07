@@ -74,12 +74,11 @@ try {
   await page.screenshot({ path: 'tests/life-story-replay-calendar.png', animations: 'disabled' });
   await page.getByRole('button', { name: 'Настройки', exact: true }).click();
   await page.clock.runFor(400);
-  await page.getByRole('button', { name: /Оформление/ }).click();
-  await page.getByRole('button', { name: 'Фиолетовое', exact: true }).click();
+  await page.getByRole('button', { name: 'Аметист', exact: true }).click();
   await page.clock.runFor(600);
   assert.equal(await page.evaluate(() => localStorage.getItem('atj_theme')), 'purple');
-  await page.waitForFunction(() => getComputedStyle(document.querySelector('.premium-shell')).backgroundColor === 'rgb(17, 16, 21)');
-  assert.equal(await page.locator('.premium-shell').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(17, 16, 21)');
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('.premium-shell')).backgroundColor === 'rgb(22, 15, 36)');
+  assert.equal(await page.locator('.premium-shell').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(22, 15, 36)');
   await page.getByRole('button', { name: 'Закрыть настройки', exact: true }).click();
   await page.clock.runFor(400);
   await page.reload();
@@ -88,7 +87,6 @@ try {
   await page.screenshot({ path: 'tests/life-story-purple-calendar.png', animations: 'disabled' });
   await page.getByRole('button', { name: 'Настройки', exact: true }).click();
   await page.clock.runFor(400);
-  await page.getByRole('button', { name: /Оформление/ }).click();
   await page.getByRole('button', { name: 'Изумрудное', exact: true }).click();
   await page.clock.runFor(700);
   assert.equal(await page.evaluate(() => localStorage.getItem('atj_theme')), 'emerald');

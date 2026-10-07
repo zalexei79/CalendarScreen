@@ -1,3 +1,4 @@
+import { selectBirthday } from './birthday-test-helper.mjs';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
@@ -53,7 +54,7 @@ try {
   await choose();
   await next();
   await page.getByRole('alert').waitFor();
-  await page.getByLabel('Дата рождения', { exact: true }).fill('1998-03-14');
+  await selectBirthday(page, '1998-03-14');
   await next();
   await page.clock.runFor(32);
   await page.clock.fastForward(4700);
@@ -78,7 +79,7 @@ try {
   assert.equal(await page.locator('[data-destination]').getAttribute('data-destination'), 'first-entry');
   await page.getByRole('button', { name: 'Повторить первый запуск' }).click();
   await choose();
-  assert.equal(await page.getByLabel('Дата рождения', { exact: true }).inputValue(), '1998-03-14');
+  assert.equal(await page.locator('#life-birthday select').evaluateAll(nodes => [nodes[2].value,nodes[1].value,nodes[0].value].join('-')), '1998-03-14');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await next();
   await page.clock.runFor(32);
