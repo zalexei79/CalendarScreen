@@ -92,8 +92,8 @@ try {
   await page.getByRole('button', { name: 'Изумрудное', exact: true }).click();
   await page.clock.runFor(700);
   assert.equal(await page.evaluate(() => localStorage.getItem('atj_theme')), 'emerald');
-  await page.waitForFunction(() => getComputedStyle(document.querySelector('.premium-shell')).backgroundColor === 'rgb(16, 21, 18)');
-  assert.equal(await page.locator('.premium-shell').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(16, 21, 18)');
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('.premium-shell')).backgroundColor === 'rgb(7, 28, 22)');
+  assert.equal(await page.locator('.premium-shell').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(7, 28, 22)');
   assert.match(await page.locator('.premium-shell').evaluate(el => getComputedStyle(el).transitionProperty), /background-color/);
   await page.getByRole('button', { name: 'Закрыть настройки', exact: true }).click();
   await page.clock.runFor(400);

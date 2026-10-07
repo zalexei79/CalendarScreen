@@ -38,6 +38,8 @@ try {
     if(width<960) assert.ok(active.height>idle.height+40,'Mobile trader expands a dedicated platform row');
     else {
      assert.equal(active.height,idle.height,'Desktop trader keeps the header height stable');
+     assert.ok((await page.locator('.pro-platform-reveal').boundingBox()).width<=360,'Trading tools stay in one compact group');
+     if(width===1280 && language==='ru' && !light) await page.locator('#stage').screenshot({path:'tests/trader-compact-desktop.png'});
      const platforms=await page.locator('.pro-platform-reveal').boundingBox();
      const toggle=await page.locator('.pro-control-trader').boundingBox();
      assert.ok(platforms.x+platforms.width<=toggle.x && Math.abs(platforms.y-toggle.y)<1,'Desktop platforms appear to the left of the trader toggle');

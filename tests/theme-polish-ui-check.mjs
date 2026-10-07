@@ -26,7 +26,7 @@ try {
   const page=await context.newPage(),errors=[]; page.on('pageerror',e=>errors.push(e.message));
   await page.clock.install({time:new Date('2026-10-07T12:00:00')});
   await page.goto('http://calendar.test/'); await page.clock.pauseAt(new Date('2026-10-07T13:00:00'));
-  for(const [theme,label,bg] of [['purple','Фиолетовое','rgb(17, 16, 21)'],['emerald','Изумрудное','rgb(16, 21, 18)']]) {
+  for(const [theme,label,bg] of [['purple','Фиолетовое','rgb(17, 16, 21)'],['emerald','Изумрудное','rgb(7, 28, 22)']]) {
     await page.getByRole('button',{name:'Настройки',exact:true}).click(); await page.clock.runFor(500);
     await page.getByRole('button',{name:/Оформление/}).click();
     await page.getByRole('button',{name:label,exact:true}).click(); await page.clock.runFor(800);

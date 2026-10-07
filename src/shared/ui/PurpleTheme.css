@@ -5,9 +5,9 @@ html[data-dayris-theme="purple"] {
   --dayris-tint:155,134,189; --dayris-line:#aaa1bc24;
 }
 html[data-dayris-theme="emerald"] {
-  --dayris-canvas:#101512; --dayris-surface:#19211d; --dayris-raised:#222e28;
-  --dayris-text:#e5ebe7; --dayris-muted:#99aaa0; --dayris-accent:#9abdaa;
-  --dayris-tint:106,150,124; --dayris-line:#a2baa924;
+  --dayris-canvas:#071c16; --dayris-surface:#102e24; --dayris-raised:#1a4333;
+  --dayris-text:#e3eee7; --dayris-muted:#9fb8aa; --dayris-accent:#83c9a6;
+  --dayris-tint:72,155,111; --dayris-line:#9fc7ae2b;
 }
 html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) {
   --dayris-champagne:#c9b58e; --dayris-profit:#91c5ac; --dayris-loss:#d3a0a7;
@@ -75,7 +75,7 @@ html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .lot-calcula
 }
 html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) .entry-welcome { background:var(--dayris-canvas); color:var(--dayris-text); }
 .life-story[data-theme="purple"] { --paper:#111015; --ink:#e8e5ec; --muted:#a29baa; --green:#b3a4ce; --count:#c9b58e; color-scheme:dark; }
-.life-story[data-theme="emerald"] { --paper:#101512; --ink:#e5ebe7; --muted:#99aaa0; --green:#9abdaa; --count:#c9b58e; color-scheme:dark; }
+.life-story[data-theme="emerald"] { --paper:#071c16; --ink:#e3eee7; --muted:#9fb8aa; --green:#83c9a6; --count:#c9b58e; color-scheme:dark; }
 .life-story:is([data-theme="purple"],[data-theme="emerald"])::before { display:none; }
 .first-run-dialog:is([data-theme="purple"],[data-theme="emerald"]) :is(.life-birthday-card,.first-run-product-panel) { background:var(--dayris-surface); border-color:var(--dayris-line); }
 .first-run-dialog:is([data-theme="purple"],[data-theme="emerald"]):not([data-story="true"]) > div > div { background-color:var(--dayris-surface); }
@@ -96,3 +96,9 @@ html:is([data-dayris-theme="purple"],[data-dayris-theme="emerald"]) :is(.dayris-
 @media(prefers-reduced-motion:reduce) {
   html,body,.premium-shell,.premium-shell .dayris-header,.life-story-paper,.settings-surface.dayris-settings-panel.dayris-swipe-sheet,.settings-choice,.settings-row,.calendar-day-surface,.calendar-day-surface::before,.dayris-date-menu,.dayris-status-menu { transition:none!important; animation:none!important; }
 }
+
+/* Emerald has its own depth: malachite glass under a quiet golden edge. */
+html[data-dayris-theme="emerald"] .premium-shell { background-image:radial-gradient(ellipse 65% 500px at 75% -160px,#47996c22,transparent 80%),radial-gradient(ellipse 40% 440px at 0% 40%,#226b4b0b,transparent 85%); }
+html[data-dayris-theme="emerald"] .calendar-day-surface::before { background:linear-gradient(145deg,#9ad5b409,transparent 58%); opacity:.6; }
+html[data-dayris-theme="emerald"] .dayris-header { background:linear-gradient(120deg,#193c2b26,#0820190a); border-color:#b9d9c00b; }
+html[data-dayris-theme="emerald"] .calendar-action-dock > .calendar-dock-morph { background:linear-gradient(125deg,#183528,#10271f 65%); border-color:#c9b58e35; }
