@@ -17,7 +17,8 @@ export function lifeCalendarMotion(time) {
     contextExit:progress(time,8100,1000), skin:progress(time,10400,650),
     planeTilt:0, focus:progress(time,7600,400)*(1-division),
     signal:0, signalOpacity:0,
-    headerArrival:progress(time,12100,1100), dockArrival:progress(time,12300,900),
+    titleDock:progress(time,10800,1400), titleReleased:time>=13500,
+    headerArrival:progress(time,12250,1050), dockArrival:progress(time,12400,900),
     chromeClear:progress(time,8650,800), paperOpacity:1-progress(time,12500,1000),
     handoff:progress(time,13600,400), ready:time>=13600, settled:time>=14000,
   };

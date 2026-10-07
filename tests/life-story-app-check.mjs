@@ -168,7 +168,7 @@ try {
     assert.ok(!state.overlaps && state.left >= 0 && state.right <= page.viewportSize().width, 'The growing month remains within the viewport, without overlapping days');
     if (time === 9000) {
       assert.equal(await page.locator('.life-story-scene').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)', 'No colored rectangle behind the projection');
-      assert.match(await page.locator('.life-story-orientation').innerText(), /Недели текущего месяца/);
+      assert.match(await page.locator('.life-story-orientation').innerText(), /Октябрь.*2026/s);
       assert.equal(await page.locator('.life-story-grid').evaluate(canvas => {
         const ctx=canvas.getContext('2d'); return ctx.getImageData(4,4,1,1).data[3];
       }), 0, 'The enlarged lattice never fills the viewport corners');
@@ -179,7 +179,24 @@ try {
       assert.equal(state.headingOpacity, 0, 'Departing copy has cleared the calendar');
       assert.equal(await page.locator('.life-story-scale-cue').count(), 0, 'No floating scale label covers the cells');
     }
-    if (time === 12000) assert.match(await page.locator('.life-story-orientation').innerText(), /Дни текущего месяца.*октябрь/s);
+    if (time === 12000) assert.match(await page.locator('.life-story-orientation').innerText(), /Октябрь.*2026/s);
+    if (time === 12800 || time === 13680) {
+      const title = await page.evaluate(() => {
+        const story = document.querySelector('.life-story');
+        const moving = document.querySelector('.life-story-orientation');
+        const native = document.querySelector('.dayris-month-title');
+        const goal = document.querySelector('.monthly-goal-bar').getBoundingClientRect();
+        const copies = [...moving.children].map(node => node.getBoundingClientRect());
+        const originals = [...native.children].map(node => node.querySelector('button')).filter(Boolean).slice(0,2).map(node => node.getBoundingClientRect());
+        return { dock:Number(story.dataset.titleDock), moving:Number(getComputedStyle(moving).opacity), native:Number(getComputedStyle(native).opacity), bottom:moving.getBoundingClientRect().bottom, goalTop:goal.top,
+          exact:copies.every((rect,index)=>['x','y','width','height'].every(key=>Math.abs(rect[key]-originals[index][key])<.1)) };
+      });
+      assert.equal(title.dock,1,'The month heading reaches its header position before surrounding controls appear');
+      assert.ok(title.bottom < title.goalTop,'The heading clears the monthly goal instead of floating over it');
+      assert.equal(title.moving,time===12800?1:0);
+      assert.equal(title.native,time===12800?0:1,'Exactly one month heading owns the transition');
+      if(time===13680) assert.ok(title.exact,'The moving month and year match the native typography and geometry at handoff');
+    }
     if (time === 12000) assert.ok(state.datesVisible, 'Date content arrives while the calendar is still moving');
     if(time===12000){
       const visible=await page.locator('.life-calendar-cell').evaluateAll(cells=>cells.filter(c=>Number(getComputedStyle(c).opacity)>.9).map(c=>c.dataset.sourceWeek));

@@ -55,12 +55,6 @@ const PERSONAL_COPY = {
   ro: ['Povestea ta din calendar.', 'Veniturile și cheltuielile tale, zi de zi.', 'Înregistrări din calendar', 'Povestea continuă.', 'Fiecare înregistrare face parte din poveste.', 'Nu există încă înregistrări'],
   zh: ['你的日历故事。', '逐日查看你的收入和支出。', '日历记录', '你的故事仍在继续。', '每条记录都是故事的一部分。', '暂无记录'],
 };
-const SCALE_COPY = {
-  ru: ['Эта неделя → 7 дней', 'Дни текущего месяца', 'Семь дней этой недели'],
-  en: ['This week → 7 days', 'Days of the current month', 'Seven days of this week'],
-  ro: ['Această săptămână → 7 zile', 'Zilele lunii curente', 'Cele șapte zile ale săptămânii'],
-  zh: ['本周 → 7天', '本月的每一天', '本周的七天'],
-};
 const PALETTES = {
   light: { neutral: [191, 184, 167], future: [222, 217, 206], income: [113, 151, 128], expense: [198, 135, 120], today: 'rgba(77,119,100,.45)' },
   dark: { neutral: [91, 98, 94], future: [47, 53, 50], income: [110, 153, 129], expense: [172, 112, 102], today: 'rgba(142,185,159,.55)' },
@@ -118,6 +112,9 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     const originalShellTransform = appShell?.style.transform || '';
     const interfaceParts = [document.querySelector('.dayris-header'), document.querySelector('.history-fab')].filter(Boolean).map(node => ({ node, transform: node.style.transform, transition: node.style.transition }));
     interfaceParts.forEach(({ node }) => { node.style.transition = 'none'; });
+    const monthTitle = document.querySelector('.dayris-month-title');
+    const originalTitleOpacity = monthTitle?.style.opacity || '';
+    let titleTarget;
     const root = document.documentElement;
     root.setAttribute('data-life-motion', 'true');
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -227,6 +224,25 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         }
         return { x: bounds?.left ?? (width - fallbackWidth) / 2 + index % 7 * (cellWidth + gap), y: bounds?.top ?? scene.top + Math.floor(index / 7) * (cellHeight + gap), width: targetWidth, height: targetHeight, day: day.getDate(), inMonth: day.getMonth() === today.getMonth(), background: style?.backgroundColor || '#f1f0e9', color: style?.color || '#343e36', radius: parseFloat(style?.borderRadius) || 14, bridge };
       });
+      if (monthTitle) {
+        const headerPart = interfaceParts.find(part => part.node.classList.contains('dayris-header'));
+        const shellTransform = appShell?.style.transform;
+        const headerTransform = headerPart?.node.style.transform;
+        if (appShell) appShell.style.transform = originalShellTransform;
+        if (headerPart) headerPart.node.style.transform = headerPart.transform;
+        const bounds = monthTitle.getBoundingClientRect();
+        const nodes = [...monthTitle.children].map(child => child.querySelector('button')).filter(Boolean).slice(0,2);
+        const copies = [...orientationRef.current.children];
+        titleTarget = { x:bounds.x, y:bounds.y, width:bounds.width, height:bounds.height, fontSize:parseFloat(getComputedStyle(nodes[0]).fontSize) };
+        nodes.forEach((node,index) => {
+          const style = getComputedStyle(node), rect = node.getBoundingClientRect(), copy = copies[index];
+          copy.textContent = index===0 ? node.querySelector('.dayris-month-label > span:not([aria-hidden])')?.textContent || node.textContent : node.textContent;
+          for(const property of ['fontFamily','fontSize','fontWeight','fontStyle','lineHeight','letterSpacing','color','padding','boxSizing','textAlign']) copy.style[property]=style[property];
+          Object.assign(copy.style,{position:'absolute',left:(rect.x-bounds.x)+'px',top:(rect.y-bounds.y)+'px',width:rect.width+'px',height:rect.height+'px'});
+        });
+        if (appShell) appShell.style.transform = shellTransform;
+        if (headerPart) headerPart.node.style.transform = headerTransform;
+      }
       draw(lastTime);
     };
     const observer = new ResizeObserver(resize);
@@ -234,6 +250,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     observer.observe(story.querySelector('.life-story-heading'));
     resize();
     if (calendarGrid) observer.observe(calendarGrid);
+    if (monthTitle) observer.observe(monthTitle);
 
     function draw(ms) {
       // Narrative copy can change height without resizing the viewport/canvas.
@@ -329,15 +346,26 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       story.dataset.anchorX = String(lattice.anchorX); story.dataset.anchorY = String(lattice.anchorY);
       story.dataset.currentRow = String(Math.floor(todayIndex / 7));
       const orientation = orientationRef.current;
-      const scalePhase = motion.division > .35 ? 'month' : 'weeks';
-      if (orientation.dataset.scale !== scalePhase) {
-        orientation.dataset.scale = scalePhase;
-        orientation.querySelector('strong').textContent = scalePhase === 'month' ? SCALE_COPY[lang][1] : ({ru:'Недели текущего месяца',en:'Weeks of this month',ro:'Săptămânile lunii curente',zh:'本月的每一周'}[lang]);
-        orientation.querySelector('span').textContent = monthLabel;
+      if (titleTarget) {
+        // One title travels into the real header. Ownership changes only once
+        // paper and header transforms have settled, avoiding duplicate labels.
+        const dock = motion.titleDock;
+        const source = lifeLatticeFrame({camera,unit,cropCol,cropRow,targets,initialFill:width>=760?.74:.65,todayIndex},lifeCalendarMotion(Math.min(time,10800)));
+        const scale = mix(18/titleTarget.fontSize,1,dock);
+        const x = mix(source.anchorX-titleTarget.width*(18/titleTarget.fontSize)/2,titleTarget.x,dock);
+        const y = mix(Math.max(80,source.y-52),titleTarget.y,dock);
+        orientation.style.width = titleTarget.width+'px'; orientation.style.height = titleTarget.height+'px';
+        orientation.style.transform = 'translate3d('+x+'px,'+y+'px,0) scale('+scale+')';
+        orientation.style.opacity = String(motion.titleReleased?0:ease(clamp((time-8250)/450)));
+        monthTitle.style.opacity = motion.titleReleased?originalTitleOpacity:'0';
+        story.dataset.titleDock=String(dock); story.dataset.titleReleased=String(motion.titleReleased);
+      } else {
+        orientation.querySelector('strong').textContent=monthLabel;
+        orientation.querySelector('span').textContent='';
+        orientation.style.width='auto'; orientation.style.left='24px'; orientation.style.right='24px';
+        orientation.style.top=Math.max(80,lattice.y-52)+'px';
+        orientation.style.opacity=String(ease(clamp((time-8250)/450))*(1-ease(clamp((time-12000)/650))));
       }
-      orientation.style.top = `${Math.max(80, lattice.y - 64)}px`;
-      orientation.style.opacity = String(ease(clamp((time - 8250) / 450)) * (1 - ease(clamp((time - 12700) / 700))));
-      orientation.style.transform = `translateY(${8 * (1 - motion.zoom)}px)`;
       const moneyExit = motion.moneyOpacity;
       moneyArea.style.opacity = String(moneyExit);
       moneyArea.style.transform = `translateY(${-4 * (1 - moneyExit)}px) scale(${1 - .025 * (1 - moneyExit)})`;
@@ -493,7 +521,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     const onMotionChange = () => { reduceMotion = media.matches; setReduced(reduceMotion); cancelAnimationFrame(frame); frame = requestAnimationFrame(tick); };
     media.addEventListener('change', onMotionChange);
     frame = requestAnimationFrame(tick);
-    return () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); media.removeEventListener('change', onMotionChange); if (calendarGrid) calendarGrid.style.opacity = originalGridOpacity; if (appShell) appShell.style.transform = originalShellTransform; interfaceParts.forEach(({ node, transform, transition }) => { node.style.transform = transform; node.style.transition = transition; }); layer.replaceChildren(); root.removeAttribute('data-life-motion'); };
+    return () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); media.removeEventListener('change', onMotionChange); if (calendarGrid) calendarGrid.style.opacity = originalGridOpacity; if (appShell) appShell.style.transform = originalShellTransform; if (monthTitle) monthTitle.style.opacity = originalTitleOpacity; interfaceParts.forEach(({ node, transform, transition }) => { node.style.transform = transform; node.style.transition = transition; }); layer.replaceChildren(); root.removeAttribute('data-life-motion'); };
   }, [birthday, elapsedWeeks, lang, theme, currency, calendarRecords, personalStory, run]);
 
   const ready = stage === 'ready';
@@ -517,7 +545,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         <canvas ref={canvasRef} className="life-story-grid" aria-label={stats ? `${elapsedWeeks.toLocaleString(locale)} ${copy.weeks}. ${copy.legend}` : copy.generic} role="img" />
         <div ref={cellsRef} className="life-calendar-bridge" aria-hidden="true" inert="" />
         <canvas ref={signalRef} className="life-story-signal" aria-hidden="true" />
-        <div ref={orientationRef} className="life-story-orientation"><strong /><span /></div>
+        <div ref={orientationRef} className="life-story-orientation" aria-hidden="true"><strong /><span /></div>
       </div>
       <div ref={moneyFlowRef} className="life-money-area" key={`money-${run}`}>
         <div className="life-money-amounts" aria-hidden="true">

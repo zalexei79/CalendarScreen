@@ -115,6 +115,6 @@ html:not([data-life-motion]) .first-calendar-entry-target { animation: life-copy
 @keyframes first-entry-today-light { 0%,100% { box-shadow: 0 0 0 1px #71978012; } 45% { box-shadow: 0 0 0 2px #71978032, 0 0 24px #7197801a; } }
 @media (prefers-reduced-motion: reduce) { html:not([data-life-motion]) .calendar-section[data-life-arrival] > .calendar-days-grid > button[data-first-entry="true"], .first-calendar-entry-target { animation: none !important; } .first-run-dialog::backdrop { transition: none; } }
 
-.life-story-orientation { position: absolute; left: 24px; right: 24px; z-index: 3; text-align: center; opacity: 0; color: var(--ink); pointer-events: none; }
+.life-story-orientation { position: fixed; left:0; top:0; z-index:3; opacity:0; color:var(--ink); pointer-events:none; transform-origin:0 0; white-space:nowrap; will-change:transform; }
 .life-story-orientation strong { display: block; font-size: 17px; font-weight: 500; line-height: 24px; }
-.life-story-orientation span { display: block; margin-top: 4px; font-size: 12px; line-height: 18px; color: var(--muted); }
+.life-story-orientation span { display:block; margin:0; font-size:12px; line-height:18px; color:var(--muted); }

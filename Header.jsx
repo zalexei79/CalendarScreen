@@ -294,7 +294,7 @@ export default function Header({
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <div className="flex items-baseline gap-1.5 sm:gap-2 min-w-0 sm:min-w-[190px]">
+          <div className="dayris-month-title flex items-baseline gap-1.5 sm:gap-2 min-w-0 sm:min-w-[190px]">
             <div className="relative" ref={monthMenuRef}>
               <button
                 onClick={() => { setMonthMenuOpen((v) => !v); setYearMenuOpen(false); }}
