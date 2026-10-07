@@ -22,7 +22,7 @@ try {
     await page.goto('http://dayris.test/');
     await page.locator('.calendar-days-grid').waitFor();
     for (const trader of [false, true]) {
-      if (trader) await page.getByRole('switch').click();
+      if (trader) await page.getByRole('switch',{name:'Режим трейдера',exact:true}).click();
       for (const month of [9, 2]) {
         await page.evaluate(month => window.testMonth(month), month);
         await page.waitForTimeout(650);
@@ -55,7 +55,7 @@ try {
   // Header disclosure and a changing viewport both recompute the rows.
   await page.setViewportSize({ width: 412, height: 915 });
   await page.goto('http://dayris.test/');
-  await page.getByRole('switch').click();
+  await page.getByRole('switch',{name:'Режим трейдера',exact:true}).click();
   await page.waitForTimeout(650);
   await page.setViewportSize({ width: 412, height: 800 });
   await page.waitForFunction(() => {

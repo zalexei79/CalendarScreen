@@ -645,6 +645,17 @@ export default function CalendarScreen() {
       return 'USD';
     }
   });
+  const currencyArrival = useRef(false);
+  useEffect(() => {
+    if (!currencyArrival.current) { currencyArrival.current = true; return; }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const animation = document.querySelector('.calendar-section')?.animate?.([{ opacity: .78, translate: '0 2px' }, { opacity: 1, translate: '0 0' }], { duration: 280, easing: 'cubic-bezier(.2,0,0,1)' });
+    return () => animation?.cancel();
+  }, [currency]);
+  const [defaultEntryCurrency, setDefaultEntryCurrency] = useState(() => {
+    try { const saved = localStorage.getItem('atj_entry_currency'); return CURRENCIES.some(item => item.code === saved) ? saved : currency; } catch { return currency; }
+  });
+  useEffect(() => { try { localStorage.setItem('atj_entry_currency', defaultEntryCurrency); } catch { /* Session preference remains usable. */ } }, [defaultEntryCurrency]);
   const [themePreference, setThemePreference] = useState(() => {
     try {
       const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -2486,7 +2497,7 @@ export default function CalendarScreen() {
         time: currentTimeHHMM(),
         comment: '',
         platform: 'Manual',
-        currency,
+        currency: defaultEntryCurrency,
         takeProfit: '',
         stopLoss: '',
       });
@@ -4151,6 +4162,8 @@ export default function CalendarScreen() {
                 type="button"
                 onClick={() => setForm((current) => ({ ...current, currency: item.code }))}
                 title={item.code}
+                aria-label={item.code}
+                aria-pressed={form.currency === item.code}
                 className={`flex h-7 min-w-9 items-center justify-center rounded-xl px-2 font-data text-[11px] transition-all ${
                   form.currency === item.code
                     ? isFinanceEntry
@@ -4609,7 +4622,7 @@ export default function CalendarScreen() {
         settingsRef={settingsRef} settingsOpen={settingsOpen} closeSettings={closeSettings}
         openSettings={openSettings} settingsVisible={settingsVisible} language={language}
         onReplayLifeStory={replayLifeStory} onRestartOnboarding={restartOnboarding} themePreference={themePreference}
-        setLanguage={setLanguage} currency={currency} setCurrency={setCurrency} user={user}
+        setLanguage={setLanguage} currency={currency} setCurrency={setCurrency} defaultEntryCurrency={defaultEntryCurrency} setDefaultEntryCurrency={setDefaultEntryCurrency} usedCurrencies={storyCalendarRecords.map(record => record.currency || 'USD')} user={user}
         handleGoogleLogout={handleGoogleLogout} handleGoogleLogin={handleGoogleLogin}
         handleTelegramLogin={handleTelegramLogin} loginPending={loginPending} loginError={loginError}
         goToPrevMonth={goToPrevMonth} goToNextMonth={goToNextMonth}
@@ -6579,6 +6592,7 @@ export default function CalendarScreen() {
                           onClick={() => setForm((f) => ({ ...f, currency: c.code }))}
                           title={c.code}
                           aria-label={`${t('currency')} ${c.code}`}
+                      aria-pressed={form.currency === c.code}
                           className={[
                             'flex h-8 min-w-8 items-center justify-center rounded-lg px-2 font-data text-xs transition-all duration-200',
                             form.currency === c.code
@@ -6603,6 +6617,7 @@ export default function CalendarScreen() {
                       onClick={() => setForm((f) => ({ ...f, currency: c.code }))}
                       title={c.code}
                       aria-label={`${t('currency')} ${c.code}`}
+                          aria-pressed={form.currency === c.code}
                       className={[
                         'min-w-10 rounded-lg border px-3 py-1.5 font-data text-xs transition-all duration-200',
                         form.currency === c.code
@@ -7117,7 +7132,7 @@ export default function CalendarScreen() {
           personalStory={storyReplay}
           profileKey={user?.id || 'guest'}
           onLanguage={handleOnboardingLanguageSelect}
-          onCurrency={setCurrency}
+          onCurrency={code => { setCurrency(code); setDefaultEntryCurrency(code); }}
           onTheme={setTheme}
           onStep={(nextStep) => {
             if (nextStep === 'intro') {

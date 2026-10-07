@@ -6,6 +6,7 @@ import {
   Settings, Sun, Moon, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw,
 } from 'lucide-react';
 
+import CalendarCurrencyPicker from './src/shared/ui/CalendarCurrencyPicker.jsx';
 import SettingsPanel from './src/shared/ui/SettingsPanel.jsx';
 import { monthsFor } from './src/shared/i18n';
 import BrandIcon from './src/shared/ui/BrandIcon.jsx';
@@ -32,7 +33,7 @@ function pendingSyncText(count, traderMode, language) {
 export default function Header({
   isLight, traderMode, t, theme, themePreference = theme, setTheme, settingsRef, settingsOpen,
   closeSettings, openSettings, settingsVisible, language, setLanguage,
-  currency, setCurrency, user, handleGoogleLogout, handleGoogleLogin,
+  currency, setCurrency, defaultEntryCurrency = currency, setDefaultEntryCurrency = setCurrency, usedCurrencies = [], user, handleGoogleLogout, handleGoogleLogin,
   handleTelegramLogin, loginPending, loginError,
   goToPrevMonth, goToNextMonth, monthMenuRef, monthMenuOpen, setMonthMenuOpen,
   yearMenuRef, yearMenuOpen, setYearMenuOpen, month, year, today,
@@ -268,7 +269,7 @@ export default function Header({
             </button>
 
             {settingsOpen && <SettingsPanel
-              t={t} language={language} setLanguage={setLanguage} currency={currency} setCurrency={setCurrency}
+              t={t} language={language} setLanguage={setLanguage} currency={defaultEntryCurrency} setCurrency={setDefaultEntryCurrency}
               theme={theme} themePreference={themePreference} setTheme={setTheme} isLight={isLight}
               user={user} handleGoogleLogin={handleGoogleLogin} handleTelegramLogin={handleTelegramLogin}
               handleGoogleLogout={handleGoogleLogout} loginPending={loginPending} loginError={loginError}
@@ -356,6 +357,8 @@ export default function Header({
           >
             <ChevronRight className="h-4 w-4" />
           </button>
+
+          <CalendarCurrencyPicker currency={currency} onChange={setCurrency} usedCurrencies={usedCurrencies} language={language} isLight={isLight} onOpen={() => { setMonthMenuOpen(false); setYearMenuOpen(false); }}/>
 
           {(month !== today.getMonth() || year !== today.getFullYear()) && (
             <button

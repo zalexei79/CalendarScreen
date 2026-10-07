@@ -1,0 +1,16 @@
+.calendar-currency { position:relative; flex:0 0 auto; margin-left:2px; }
+.calendar-currency[data-light=true] { --dayris-surface:#fcfcfd; --dayris-text:#222329; --dayris-muted:#777a84; --dayris-line:#14182114; --dayris-hover:#14182105; --dayris-tint-soft:#14182108; --dayris-accent:#886224; }
+.calendar-currency-trigger { display:flex; align-items:center; gap:4px; min-height:44px; padding:0 5px; border:0; border-radius:8px; background:transparent; color:var(--dayris-muted,#92949c); font:500 11px system-ui,sans-serif; cursor:pointer; transition:color 180ms,background 180ms; }
+.calendar-currency-trigger:hover,.calendar-currency-trigger[aria-expanded=true] { color:var(--dayris-text,#d5bc83); background:var(--dayris-hover,#ffffff06); }
+.calendar-currency-trigger svg { transition:transform 220ms cubic-bezier(.4,0,.2,1); }.calendar-currency-trigger[aria-expanded=true] svg { transform:rotate(180deg); }
+.calendar-currency-menu { position:absolute; top:calc(100% + 6px); right:0; width:180px; z-index:90; padding:8px; border:1px solid var(--dayris-line,#ffffff14); border-radius:16px; background:var(--dayris-surface,#18191c); color:var(--dayris-text,#f2f2f4); box-shadow:0 16px 44px #0004; transform-origin:top right; animation:currency-open 240ms cubic-bezier(.2,0,0,1) both; }
+.calendar-currency-menu p { margin:7px 8px 4px; color:var(--dayris-muted,#92949c); font:500 10px system-ui,sans-serif; }
+.calendar-currency-option { display:flex; align-items:center; gap:10px; min-height:44px; width:100%; padding:8px; border:0; border-radius:9px; background:transparent; color:inherit; font:500 12px system-ui,sans-serif; cursor:pointer; }
+.calendar-currency-option>span:nth-child(2) { flex:1; text-align:left; }.calendar-currency-symbol { width:22px; color:var(--dayris-muted,#92949c); text-align:center; }
+.calendar-currency-option:hover,.calendar-currency-option[aria-pressed=true] { background:var(--dayris-tint-soft,#ffffff08); }.calendar-currency-option svg { color:var(--dayris-accent,#d5bc83); }
+.calendar-currency-trigger:focus-visible,.calendar-currency-option:focus-visible { outline:2px solid var(--dayris-accent,#d5bc83); outline-offset:2px; }
+.calendar-currency-menu.is-closing { pointer-events:none; animation:currency-close 150ms ease-in both; }
+@keyframes currency-open { from { opacity:0; transform:translateY(-6px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+@keyframes currency-close { to { opacity:0; transform:translateY(-4px) scale(.98); } }
+@media(max-width:639px) { .dayris-date-navigation { gap:3px; flex-wrap:wrap; }.calendar-currency-trigger { padding:0 3px; } }
+@media(prefers-reduced-motion:reduce) { .calendar-currency-menu { animation:none; }.calendar-currency-trigger,.calendar-currency-trigger svg { transition:none; } }
