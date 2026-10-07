@@ -68,7 +68,7 @@ function weekColor(index, filled, financial, rhythm, palette, arrival = 1) {
   return `rgb(${color.map(Math.round).join(',')})`;
 }
 
-/** Selected weeks grow into the live month while the surrounding history recedes. */
+/** Zoom the whole week lattice, open seven days per week, then reveal the UI. */
 export default function LifeStory({ birthday, lang, theme = 'light', currency = 'USD', calendarRecords = EMPTY_RECORDS, personalStory = false, onStart, onArrive, onSkip, onBack }) {
   const copy = LIFE_COPY[lang];
   const palette = PALETTES[theme] || PALETTES.dark;
@@ -358,18 +358,24 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       context.clearRect(0, 0, width, height);
       if (motion.contextExit < 1) {
         context.save();
-        const size = unit * (width >= 760 ? .74 : .65);
         for (let row = 0; row < rows; row++) for (let col = 0; col < hierarchy.columns; col++) {
           const i = hierarchy.weekAt(col, row);
-          // Those parents are already drawn by the moving shared elements.
-          if (selected.has(i)) continue;
-          const x = camera.originX + col * unit + (unit - size) / 2;
-          const y = camera.originY + row * unit + (unit - size) / 2;
+          // Draw an intact week until subdivision starts, avoiding seams
+          // from seven subpixel bridge slices during the square-cell zoom.
+          if (selected.has(i) && motion.division > 0) continue;
+          const x = lattice.x + (col - cropCol) * lattice.pitchX;
+          const y = lattice.y + (row - cropRow) * lattice.pitchY;
+          if (x + lattice.width < 0 || x > width || y + lattice.height < 0 || y > height) continue;
           context.globalAlpha = 1 - motion.contextExit;
           const age = time - (weekTimes[i] ?? Infinity);
           const reveal = ease(clamp(age / 450));
           context.fillStyle = weekColor(i, filled, reveal, rhythm, palette, ease(clamp(age / 180)));
-          context.fillRect(x, y, size, size);
+          if (!motion.division) context.fillRect(x, y, lattice.width, lattice.height);
+          else for (let day = 0; day < 7; day++) {
+            context.beginPath();
+            context.roundRect(x + day * lattice.dayPitch, y, lattice.dayWidth, lattice.height, targets[0].radius * morph);
+            context.fill();
+          }
         }
         context.restore();
       }
@@ -387,7 +393,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
           const { wrapper, face, week, content, opacity } = target.bridge;
           const scaleX = w / target.width, scaleY = h / target.height;
           wrapper.style.transform = `translate3d(${x}px,${y}px,0) scale(${scaleX},${scaleY})`;
-          wrapper.style.opacity = String(1 - handoff);
+          wrapper.style.opacity = String(motion.division > 0 ? 1 - handoff : 0);
           wrapper.dataset.sourceWeek = String(source);
           face.style.borderRadius = `${target.radius}px`;
           face.style.setProperty('opacity', String(skin * opacity), 'important');
@@ -403,6 +409,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
           week.style.borderWidth = isToday ? `${todayStroke / scaleY}px ${todayStroke / scaleX}px` : '0';
           return;
         }
+        if (!motion.division) return;
         context.save();
         context.globalAlpha = 1 - handoff;
         context.beginPath();

@@ -146,7 +146,7 @@ try {
   await page.clock.runFor(700);
   await page.screenshot({ path: screenshotPath('weeks'), animations: 'disabled' });
   let previousWidth = 0;
-  for (const time of [8000, 8350, 8700, 9000, 9400, 9850, 10280]) {
+  for (const time of [8000, 8500, 9000, 9500, 10000, 10500, 11080]) {
     await seek(time);
     const state = await page.evaluate(() => {
       const story = document.querySelector('.life-story');
@@ -154,9 +154,10 @@ try {
       const live = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')].map(cell => cell.getBoundingClientRect());
       const left = Math.min(...cells.map(cell => cell.left)), right = Math.max(...cells.map(cell => cell.right));
       return {
-        width: right - left, nativeWidth: live[6].right - live[0].left, left, right,
+        weekWidth: Number(story.dataset.weekWidth), cellHeight: Number(story.dataset.latticeHeight), division: Number(story.dataset.weekDivision), width: right - left, nativeWidth: live[6].right - live[0].left, left, right,
         contextExit: Number(story.dataset.contextExit), paper: Number(story.style.getPropertyValue('--life-paper-opacity')),
         headingOpacity: Number(getComputedStyle(story.querySelector('.life-story-heading')).opacity),
+        intactWeeks: [...story.querySelectorAll('.life-calendar-cell')].every(cell => Number(getComputedStyle(cell).opacity) === 0),
         overlaps: cells.some((cell,index) => index % 7 !== 0 && cell.left < cells[index-1].right - .1),
         datesVisible: [...story.querySelectorAll('.life-calendar-face > *')].some(node => Number(getComputedStyle(node).opacity) > .5),
       };
@@ -164,12 +165,14 @@ try {
     assert.ok(state.width >= previousWidth, 'The selected month grows continuously without a shrinking interlude');
     assert.ok(!state.overlaps && state.left >= 0 && state.right <= page.viewportSize().width, 'The growing month remains within the viewport, without overlapping days');
     if (time === 9000) {
-      assert.ok(state.width >= state.nativeWidth * .55, 'The former tiny-grid frame already fills most of the calendar width');
-      assert.ok(state.contextExit < 1 && state.paper < 1, 'History and interface overlap during the movement, leaving no empty scene');
+      assert.ok(Math.abs(state.weekWidth-state.cellHeight)<.1 && state.cellHeight>30, 'The first camera zoom enlarges square weekly cells');
+      assert.equal(state.division,0, 'The first zoom has not yet turned weeks into days');
+      assert.ok(state.intactWeeks, 'Whole weeks are painted as single squares, without premature day seams');
+      assert.equal(state.contextExit,0, 'All neighboring weeks remain part of the same zoom');
       assert.equal(state.headingOpacity, 0, 'Departing copy has cleared the calendar');
       assert.equal(await page.locator('.life-story-scale-cue').count(), 0, 'No floating scale label covers the cells');
     }
-    if (time === 9400) assert.ok(state.datesVisible, 'Date content arrives while the calendar is still moving');
+    if (time === 10500) assert.ok(state.datesVisible, 'Date content arrives while the calendar is still moving');
     previousWidth = state.width;
     await page.screenshot({ path: screenshotPath('transition-' + time), animations: 'disabled' });
   }

@@ -6,13 +6,14 @@ const mix = (from, to, value) => from + (to - from) * value;
 const expand = value => 1 - (1 - value) ** 3 * (1 + 3 * value);
 
 export const LIFE_COUNT_END = 8000;
-export const LIFE_MOTION_END = 10800;
+export const LIFE_MOTION_END = 11600;
 export function lifeCalendarMotion(time) {
-  const month = expand(clamp((time - LIFE_COUNT_END) / 2200));
+  const zoom = expand(clamp((time - LIFE_COUNT_END) / 2000));
+  const month = progress(time, 9350, 1600);
   return {
-    zoom: month,
-    reframe: month,
-    division: progress(time, 8150, 1000),
+    zoom,
+    reframe: zoom,
+    division: progress(time, 9150, 1500),
     copyOpacity: 1 - progress(time, 8000, 400),
     copyRetreat: progress(time, 8000, 650),
     amountsOpacity: 1 - progress(time, 5500, 300),
@@ -22,30 +23,30 @@ export function lifeCalendarMotion(time) {
     topAperture: progress(time, 8400, 350),
     bottomAperture: progress(time, 8300, 400),
     month,
-    // The unscaled history stays behind the growing month until it is large.
-    contextExit: progress(time, 8400, 800),
-    skin: progress(time, 8500, 1350),
+    // All weeks share the same camera and subdivide before context recedes.
+    contextExit: progress(time, 9800, 1050),
+    skin: progress(time, 9750, 1250),
     planeTilt: 0,
-    focus: progress(time, 8050, 500) * (1 - progress(time, 9500, 700)),
-    signal: progress(time, 8850, 1100),
-    signalOpacity: progress(time, 8800, 350) * (1 - progress(time, 9650, 500)),
-    headerArrival: progress(time, 8650, 1000),
-    dockArrival: progress(time, 9000, 1000),
+    focus: progress(time, 8050, 500) * (1 - progress(time, 10300, 700)),
+    signal: progress(time, 9850, 1100),
+    signalOpacity: progress(time, 9800, 350) * (1 - progress(time, 10500, 500)),
+    headerArrival: progress(time, 9700, 1000),
+    dockArrival: progress(time, 9900, 1000),
     chromeClear: progress(time, 8650, 800),
-    paperOpacity: 1 - progress(time, 8650, 1550),
-    handoff: progress(time, 10200, 400),
-    ready: time >= 10200,
-    settled: time >= 10600,
+    paperOpacity: 1 - progress(time, 9700, 1300),
+    handoff: progress(time, 11000, 400),
+    ready: time >= 11000,
+    settled: time >= 11400,
   };
 }
 
 export function lifeCellMaterialization(time, index, todayIndex) {
   const distance = Math.hypot(index % 7 - todayIndex % 7, Math.floor(index / 7) - Math.floor(todayIndex / 7));
-  return progress(time, 8850 + Math.min(180, distance * 26), 700);
+  return progress(time, 9850 + Math.min(180, distance * 26), 700);
 }
 
-// The history stays in place. Only its selected weekly parents become the
-// mounted calendar, following one uninterrupted source-to-destination path.
+// One continuous lattice: first enlarge square weeks, then open seven days
+// inside each parent. Background and calendar use exactly the same geometry.
 export function lifeLatticeFrame({ camera, unit, cropCol, cropRow, targets, initialFill }, motion) {
   const first = targets[0];
   const finalPitchX = targets[1].x - first.x;
@@ -53,16 +54,18 @@ export function lifeLatticeFrame({ camera, unit, cropCol, cropRow, targets, init
   const finalWidth = targets[6].x + targets[6].width - first.x;
   const finalGap = finalPitchX - first.width;
   const size = unit * initialFill;
-  const weekWidth = mix(size, finalWidth, motion.month);
+  const height = mix(size, first.height, motion.zoom);
+  const weekWidth = mix(height, finalWidth, motion.division);
   const gap = Math.min(Math.max(0, finalGap), weekWidth / 28) * motion.division;
   const dayWidth = (weekWidth - gap * 6) / 7;
+  const sourceCenterX = camera.originX + (cropCol + .5) * unit;
+  const centerX = mix(sourceCenterX, first.x + finalWidth / 2, motion.zoom);
   return {
-    x: mix(camera.originX + cropCol * unit + (unit - size) / 2, first.x, motion.month),
-    y: mix(camera.originY + cropRow * unit + (unit - size) / 2, first.y, motion.month),
-    pitchX: weekWidth + mix(unit - size, finalGap, motion.month),
-    pitchY: mix(unit, finalPitchY, motion.month),
-    width: weekWidth,
-    height: mix(size, first.height, motion.month),
+    x: centerX - weekWidth / 2,
+    y: mix(camera.originY + cropRow * unit + (unit - size) / 2, first.y, motion.zoom),
+    pitchX: weekWidth + mix(unit - size, finalGap, motion.zoom),
+    pitchY: mix(unit, finalPitchY, motion.zoom),
+    width: weekWidth, height,
     dayWidth, dayPitch: dayWidth + gap, gap, finalPitchX, finalPitchY,
   };
 }
