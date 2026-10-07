@@ -95,7 +95,7 @@
 .pro-platform-reveal.is-open { grid-template-rows:1fr; opacity:1; }
 .pro-platform-clip { min-height:0; overflow:hidden; }
 .pro-platform-row {
-  display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px;
+  display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px;
   margin-top:4px; padding:5px 0 2px; border-top:1px solid var(--pro-line);
   transform:translateX(12px);
   transition:transform .36s cubic-bezier(.22,1,.36,1);

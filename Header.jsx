@@ -403,7 +403,7 @@ export default function Header({
           <div className="dayris-workspace-slot">
             <WorkspaceModePanel
               proView={proView} onModeChange={() => setProView((value) => !value)} isLight={isLight}
-              language={language} t={t} traderMode={traderMode}
+              language={language} currency={currency} t={t} traderMode={traderMode}
               onTraderChange={() => setTraderMode((value) => {
                 const next = !value;
                 if (!next) setPlatformFilter('ALL');

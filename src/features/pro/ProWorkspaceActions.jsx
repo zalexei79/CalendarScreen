@@ -1,10 +1,11 @@
 import React, { useId } from 'react';
 import { Link2, Monitor, Sparkles, Wallet } from 'lucide-react';
 import { platformText } from '../platforms/PlatformConnections';
+import LotCalculator from '../trading/LotCalculator';
 import './ProPresentation.css';
 import './WorkspaceModePanel.css';
 
-export default function ProWorkspaceActions({ visible, inPanel = false, isLight, language, t, traderMode, onTraderChange, onWallet, onConnect, connected, metatrader = {}, reconnect, onOffer }) {
+export default function ProWorkspaceActions({ visible, inPanel = false, isLight, language, currency, t, traderMode, onTraderChange, onWallet, onConnect, connected, metatrader = {}, reconnect, onOffer }) {
   const text = (r,e,m,z) => platformText(language,r,e,m,z);
   const platformsId = useId();
   // Do not retain a hidden, zero-width flexbox: it can wrap into a tall column.
@@ -20,6 +21,7 @@ export default function ProWorkspaceActions({ visible, inPanel = false, isLight,
           const status = id === 'mt5' ? ready ? text('Подключён на ПК','Connected on PC','Conectat pe PC', "已在电脑上连接") : text('Нет связи на этом устройстве','No connection on this device','Fără conexiune pe acest dispozitiv', "此设备未连接") : id==='ctrader' && reconnect ? text('Нужен вход','Reconnect required','Reconectare necesară', "需要重新连接") : ready ? text('Подключён','Connected','Conectat', "已连接") : text('Не подключён','Not connected','Neconectat', "未连接");
           return <button key={id} type="button" disabled={!traderMode} className="pro-control pro-control-connect pro-control-platform" title={`${name} · ${status}`} aria-label={`${name} · ${status} · ${text('открыть меню','open menu','deschide meniul', "打开菜单")}`} onClick={()=>onConnect(id)}><Icon aria-hidden="true"/><span className="pro-platform-label"><strong>{name}</strong><small>{status}</small></span><i data-connected={Boolean(ready && traderMode)} aria-hidden="true"/></button>;
         })}
+        <LotCalculator enabled={traderMode} language={language} isLight={isLight} currency={currency}/>
         </div></div>
       </div>
     </div>

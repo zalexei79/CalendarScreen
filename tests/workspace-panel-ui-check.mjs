@@ -30,7 +30,7 @@ try {
     assert.equal(await page.locator('.wallet-entry').count(),1);
     await page.locator('#idle').click();
     const idle=await page.locator('.workspace-mode-panel').boundingBox();
-    assert.equal(await page.locator('.pro-control-platform:disabled').count(),2);
+    assert.equal(await page.locator('.pro-control-platform:disabled').count(),3);
     if(width<960) assert.ok((await page.locator('.pro-platform-reveal').boundingBox()).height<1,'closed mobile platforms must occupy no height');
     await page.locator('#trader').click();
     await page.waitForTimeout(550); // Measure final layout, not entrance/rail transforms.
