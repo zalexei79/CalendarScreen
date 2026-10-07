@@ -66,40 +66,54 @@ const incomeWeeks = adulthood.flatMap((event, index) => event.tone === 'income' 
 assert.ok(new Set(incomeWeeks.slice(1).map((week, index) => week - incomeWeeks[index])).size > 4, 'Income is not a fixed every-four-weeks stripe');
 for (let time = 0; time <= LIFE_MOTION_END; time += 16) {
   const frame = lifeCalendarMotion(time);
+  for (const [name, value] of Object.entries(frame)) {
+    if (typeof value === 'number') assert.ok(Number.isFinite(value) && value >= 0 && value <= 1, `${name} stays finite and within its visual range`);
+  }
   assert.ok(frame.amountsOpacity === 0 || frame.questionOpacity === 0, 'The money stream and question never share a visible frame');
   if (time >= 6200) assert.equal(frame.amountsOpacity, 0, 'Amounts stay hidden through the rest of the story');
-  if (frame.topAperture > 0) assert.equal(frame.copyOpacity, 0, 'The lattice can expand through the copy area only after the heading has left');
-  if (frame.bottomAperture > 0) assert.equal(frame.moneyOpacity, 0, 'The bottom fills as soon as the money question has cleared');
-  if (frame.month === 0) assert.equal(frame.skin, 0, 'Calendar paint starts as the shared lattice approaches its final layout');
-  if (time >= 9000) assert.equal(frame.contextExit, 1, 'Surrounding history leaves before the calendar expands across the interface');
-  if (frame.handoff > 0) assert.equal(frame.month, 1, 'Swap to the live calendar only after the shared grid has landed');
+  if (frame.topAperture > 0) assert.equal(frame.copyOpacity, 0, 'The calendar enters the heading area only after its copy has retired');
+  if (frame.bottomAperture > 0) assert.equal(frame.moneyOpacity, 0, 'The money question clears before the calendar expands into its space');
+  if (frame.month === 0) assert.equal(frame.skin, 0, 'Calendar paint never appears on the untouched life grid');
+  if (frame.contextExit === 1) {
+    assert.ok(frame.month > .65 && frame.skin > .25 && frame.paperOpacity < 1, 'History only disappears after a substantial, painted calendar and its interface are already emerging');
+  }
+  if (frame.handoff > 0) {
+    assert.equal(frame.month, 1, 'The live calendar takes over only after the moving cells reach its geometry');
+    assert.equal(frame.skin, 1, 'The live calendar takes over only after the moving cells reach its paint');
+    assert.equal(frame.paperOpacity, 0, 'There is no overlay lighting change during the live handoff');
+  }
+  assert.equal(frame.planeTilt, 0, 'The calendar stays legible on a flat plane');
+  if (time >= 10200) {
+    assert.ok(frame.signalOpacity === 0 && frame.focus === 0 && frame.headerArrival === 1 && frame.dockArrival === 1, 'Decorative motion and interface arrival finish before the live handoff');
+  }
   if (time >= 16) {
     const previous = lifeCalendarMotion(time - 16);
-    assert.ok(frame.contextExit - previous.contextExit < .041, 'The surrounding plane dissolves gradually, without a disappearing frame');
-    assert.ok(frame.copyRetreat >= previous.copyRetreat && frame.copyRetreat - previous.copyRetreat < .03, 'The text recedes continuously as the calendar approaches');
-    assert.ok(Math.abs(frame.copyOpacity - previous.copyOpacity) < .04, 'The story copy retires on the same smooth timeline as the camera');
-    assert.ok(Math.abs(frame.paperOpacity - previous.paperOpacity) < .018, 'The application lighting changes by less than 1.8% per frame throughout the morph');
-    assert.ok(Math.abs(frame.skin - previous.skin) < .014, 'Calendar paint never snaps onto neutral weeks');
+    for (const name of ['month', 'contextExit', 'skin', 'headerArrival', 'dockArrival', 'handoff']) {
+      assert.ok(frame[name] >= previous[name], `${name} never reverses or blinks`);
+    }
+    assert.ok(frame.contextExit - previous.contextExit < .04, 'History fades by less than 4% per frame while the calendar grows');
+    assert.ok(frame.copyRetreat >= previous.copyRetreat && frame.copyRetreat - previous.copyRetreat < .05, 'The text retreats without a positional jump');
+    assert.ok(Math.abs(frame.copyOpacity - previous.copyOpacity) < .08, 'The heading retires smoothly before the expanding calendar reaches it');
+    assert.ok(Math.abs(frame.paperOpacity - previous.paperOpacity) < .02, 'The application lighting changes by less than 2% per frame');
+    assert.ok(Math.abs(frame.skin - previous.skin) < .023, 'Calendar paint never snaps onto the weekly cells');
   }
 }
-const overlappingMotion = lifeCalendarMotion(10000);
-for (let time = 8200; time <= LIFE_MOTION_END; time += 16) {
-  const frame = lifeCalendarMotion(time);
-  const previous = lifeCalendarMotion(time - 16);
-  assert.ok(frame.planeTilt >= 0 && frame.planeTilt <= 7 && Math.abs(frame.planeTilt - previous.planeTilt) < .16, 'The intact plane tilts continuously and never flips or shakes');
-  if (time >= 12300) assert.ok(frame.planeTilt === 0 && frame.signalOpacity === 0 && frame.focus === 0 && frame.headerArrival === 1 && frame.dockArrival === 1, 'Every optical effect ends before the exact native handoff');
+const midTransition = lifeCalendarMotion(9000);
+assert.ok(midTransition.month >= .6 && midTransition.month < 1, 'At the reported failure moment, the calendar has grown beyond 60% of its final extent');
+assert.ok(midTransition.contextExit > 0 && midTransition.contextExit < 1, 'The source context still accompanies the expanding calendar at the reported failure moment');
+assert.ok(midTransition.skin > 0 && midTransition.paperOpacity < 1 && midTransition.headerArrival > 0, 'Dates, calendar paint and surrounding interface emerge during the same movement');
+assert.ok(lifeCalendarMotion(9600).month < lifeCalendarMotion(10000).month && lifeCalendarMotion(10000).month < 1, 'The final approach keeps moving and settles gradually');
+assert.equal(lifeCalendarMotion(10600).settled, true, 'The live interface is settled when the handoff completes');
+assert.ok(LIFE_MOTION_END > 10600 && LIFE_MOTION_END <= 11000, 'There is a brief stable landing before the story overlay unmounts');
+for (let time = 8000; time <= 10200; time += 16) {
   for (const todayIndex of [0, 7, 34, 41]) for (let index = 0; index < 42; index++) {
     const content = lifeCellMaterialization(time, index, todayIndex);
     assert.ok(content >= lifeCellMaterialization(time - 16, index, todayIndex) && content >= 0 && content <= 1, 'Date contents materialize once without blinking or reversing');
-    if (time >= 11600) assert.equal(content, 1, 'The whole month is readable before the camera has landed');
+    if (time >= 9800) assert.equal(content, 1, 'The full month is readable before its geometry lands');
   }
 }
-const departingCopy = lifeCalendarMotion(9000);
-assert.ok(departingCopy.reframe > .7 && departingCopy.zoom > .1 && departingCopy.bottomAperture > .2, 'The camera and both sides of the scene keep advancing while the copy leaves');
-assert.ok(overlappingMotion.zoom > 0 && overlappingMotion.zoom < 1 && overlappingMotion.month > 0, 'The camera keeps moving as the calendar starts opening; there is no stop between phases');
-assert.ok(lifeCalendarMotion(11000).zoom < lifeCalendarMotion(12000).zoom && lifeCalendarMotion(12000).zoom < 1, 'The camera keeps approaching throughout the interface reveal');
-// The crop is now one column of consecutive weekly parents. Every parent owns
-// the seven days in its row; it is no longer a crop of seven unrelated weeks.
+// Every group of seven days comes from its real weekly parent. Exercise small
+// and wide screens, every month height, and current weeks at either grid edge.
 const close = (actual, expected, message) => assert.ok(Math.abs(actual - expected) < 1e-7, message);
 for (const width of [320, 390, 1440]) for (const monthRows of [4, 5, 6]) for (const edge of ['first', 'last']) for (const compactAspect of [1, 1.8]) {
   const rows = 32;
@@ -110,73 +124,79 @@ for (const width of [320, 390, 1440]) for (const monthRows of [4, 5, 6]) for (co
   const hierarchy = lifeWeekHierarchy({ currentWeek, totalWeeks, rows, todayIndex, dayCount });
   const { col: cropCol, row: cropRow } = hierarchy.position(hierarchy.startWeek);
   assert.ok(cropRow >= 0 && cropRow + monthRows <= rows, 'Consecutive month parents never wrap into another column');
-  assert.equal(hierarchy.selectedWeeks.size, monthRows, 'A month refines four, five or six weekly parents, not 28–42 weeks');
+  assert.equal(hierarchy.selectedWeeks.size, monthRows, 'A month refines four, five or six weekly parents, not 28-42 weeks');
   assert.equal(hierarchy.sourceWeeks[todayIndex], currentWeek, 'Today remains a child of the current weekly parent');
   for (let index = 0; index < dayCount; index++) {
     const sourceWeek = hierarchy.sourceWeeks[index];
     assert.equal(sourceWeek, hierarchy.startWeek + Math.floor(index / 7), 'Every group of seven days shares one consecutive source week');
-    assert.deepEqual(hierarchy.position(sourceWeek), { col: cropCol, row: cropRow + Math.floor(index / 7) }, 'The parents form one contiguous vertical lane even at the life-grid edges');
+    assert.deepEqual(hierarchy.position(sourceWeek), { col: cropCol, row: cropRow + Math.floor(index / 7) }, 'The source parents stay contiguous even at the life-grid edges');
     assert.equal(hierarchy.weekAt(cropCol, cropRow + Math.floor(index / 7)), sourceWeek, 'The spatial parent mapping preserves its temporal identity');
   }
 
   const unit = Math.min((width - 84) / hierarchy.columns, 12);
   const gridLeft = (width - unit * hierarchy.columns) / 2;
+  const gridTop = 310;
   const nativeWidth = Math.min(width - 48, 820);
   const nativeGap = width < 760 ? 4 : 8;
   const nativeDayWidth = (nativeWidth - nativeGap * 6) / 7;
   const nativeDayHeight = nativeDayWidth * compactAspect;
+  const initialFill = width >= 760 ? .74 : .65;
+  const sourceSize = unit * initialFill;
+  const sourceX = gridLeft + cropCol * unit + (unit - sourceSize) / 2;
+  const sourceY = gridTop + cropRow * unit + (unit - sourceSize) / 2;
   const targets = Array.from({ length: dayCount }, (_, index) => ({
     x: (width - nativeWidth) / 2 + index % 7 * (nativeDayWidth + nativeGap),
     y: 240 + Math.floor(index / 7) * (nativeDayHeight + nativeGap),
     width: nativeDayWidth,
     height: nativeDayHeight,
   }));
-  const focusY = (targets[0].y + targets.at(-1).y + nativeDayHeight) / 2;
-  const cameraConfig = { gridLeft, gridTop: 310, unit, cropCol, cropRow, monthRows, focusX: width / 2, focusY, compactPitch: nativeWidth * .9 / 7, compactAspect };
   const frameAt = time => {
     const motion = lifeCalendarMotion(time);
-    const camera = lifeCameraFrame(cameraConfig, motion);
-    return { motion, camera, lattice: lifeLatticeFrame({ camera, unit, cropCol, cropRow, targets, initialFill: width >= 760 ? .74 : .65 }, motion) };
+    const camera = lifeCameraFrame({ gridLeft, gridTop }, motion);
+    return { motion, camera, lattice: lifeLatticeFrame({ camera, unit, cropCol, cropRow, targets, initialFill }, motion) };
   };
+  const source = frameAt(8000).lattice;
+  close(source.x, sourceX, 'The moving month starts at the exact source weekly parent');
+  close(source.y, sourceY, 'The moving month starts at the exact source row');
+  close(source.width, sourceSize, 'Seven children initially fill one original weekly square');
+  close(source.height, sourceSize, 'The source parent retains its original height');
+  close(source.pitchY, unit, 'The source weeks retain their original vertical spacing');
+  assert.equal(source.gap, 0, 'A weekly parent has no premature internal gaps');
+
   let previous;
-  for (let time = 8200; time <= 12550; time += 16) {
+  for (let time = 8000; time <= LIFE_MOTION_END; time += 16) {
     const { motion, camera, lattice } = frameAt(time);
-    const left = camera.originX + cropCol * unit * camera.scaleX;
-    const right = left + unit * camera.scaleX;
-    assert.ok(left >= 12 && right <= width - 12, 'The camera keeps the single expanding weekly parent inside the viewport at either edge');
-    assert.ok(lattice.width < lattice.pitchX && lattice.height < lattice.pitchY, 'Weekly parents remain separated from adjacent parents throughout the refinement');
+    assert.deepEqual(camera, { originX: gridLeft, originY: gridTop }, 'Surrounding history stays in place instead of magnifying into a wall of cells');
+    assert.ok(lattice.x >= 12 && lattice.x + lattice.width <= width - 12, 'The growing month remains inside the viewport even when its source is at a grid edge');
+    assert.ok(lattice.x >= Math.min(sourceX, targets[0].x) - 1e-7 && lattice.x <= Math.max(sourceX, targets[0].x) + 1e-7, 'The month follows a bounded horizontal path without overshoot');
+    assert.ok(lattice.y >= Math.min(sourceY, targets[0].y) - 1e-7 && lattice.y <= Math.max(sourceY, targets[0].y) + 1e-7, 'The month follows a bounded vertical path without overshoot');
+    assert.ok(lattice.width < lattice.pitchX && lattice.height < lattice.pitchY, 'Weekly rows remain separated throughout the expansion');
     assert.ok(lattice.gap >= 0 && lattice.dayWidth > 0 && lattice.dayWidth <= lattice.dayPitch, 'Daily children never overlap or acquire a negative gap');
-    close(7 * lattice.dayWidth + 6 * lattice.gap, lattice.width, 'All seven daily children and their gaps exactly partition their weekly parent');
-    close(6 * lattice.dayPitch + lattice.dayWidth, lattice.width, 'The last child ends on its parent boundary instead of drifting into the next week');
-    if (motion.division === 1) close(lattice.pitchX - lattice.width, lattice.gap, 'Refined weeks share the ordinary daily gutter instead of separating into towers');
-    if (motion.month > .8) {
-      assert.ok(right - left >= nativeWidth * .7, 'The life grid only leaves once the refined month has enough presence to fill the scene');
-      close(camera.originX + (cropCol + .5) * unit * camera.scaleX, width / 2, 'The parent lane stays centered while becoming seven days wide');
-      close(camera.originY + (cropRow + monthRows / 2) * unit * camera.scaleY, focusY - 16 * Math.sin(Math.PI * motion.month), 'The month follows the same continuous camera arc as its surroundings disappear');
-      if (compactAspect > 1 && motion.month > .9) assert.ok(camera.scaleY / camera.scale > 1.7, 'Daily children settle into the taller calendar proportions');
-    }
+    close(7 * lattice.dayWidth + 6 * lattice.gap, lattice.width, 'The seven daily children exactly partition their weekly parent');
+    close(6 * lattice.dayPitch + lattice.dayWidth, lattice.width, 'The last child ends on its parent boundary');
+    if (motion.contextExit === 1) assert.ok(lattice.width > nativeWidth * .65, 'History cannot leave a miniature calendar isolated on an empty screen');
     if (previous) {
-      // Bounds scale with the native row/card size so phone and desktop retain
-      // the same strict visual speed budget: below 1.5% of their final extent.
-      assert.ok(Math.abs(lattice.x - previous.x) < nativeWidth * .015 && Math.abs(lattice.y - previous.y) < nativeWidth * .015 && Math.abs(lattice.width - previous.width) < nativeWidth * .015, 'The parent lane follows a continuous camera without a replacement crop or a one-frame extent jump');
-      assert.ok(Math.abs(lattice.dayWidth - previous.dayWidth) < nativeDayWidth * .015 && Math.abs(lattice.height - previous.height) < nativeDayHeight * .015, 'Daily children change size smoothly on every 16 ms frame');
-      assert.ok(lattice.dayWidth >= previous.dayWidth && lattice.height >= previous.height, 'Daily children only grow; refining their weekly parent never creates a shrinking interval');
+      assert.ok(Math.abs(lattice.x - previous.x) < nativeWidth * .015 && Math.abs(lattice.y - previous.y) < nativeWidth * .015 && Math.abs(lattice.width - previous.width) < nativeWidth * .015, 'The month moves and expands by less than 1.5% of its final extent per frame');
+      assert.ok(Math.abs(lattice.dayWidth - previous.dayWidth) < nativeDayWidth * .015 && Math.abs(lattice.height - previous.height) < nativeDayHeight * .015, 'Individual day dimensions change smoothly on every 16 ms frame');
+      assert.ok(lattice.dayWidth >= previous.dayWidth && lattice.height >= previous.height, 'Daily cells grow continuously with no shrinking interval');
     }
     previous = lattice;
   }
-  // Sample the exact end as well: a 16 ms traversal does not land on 12550 ms.
-  for (const time of [12550, 12800, LIFE_MOTION_END]) {
+  assert.ok(frameAt(9000).lattice.width >= nativeWidth * .6, 'The screenshot regression moment contains a substantial calendar on every screen size');
+  assert.ok(frameAt(8016).lattice.width - source.width < nativeWidth * .001, 'The source cells begin expanding with gentle acceleration');
+  assert.ok(nativeWidth - frameAt(10184).lattice.width < nativeWidth * .0001, 'The month decelerates into its native geometry before handoff');
+  for (const time of [10200, 10400, 10600, LIFE_MOTION_END]) {
     const { lattice } = frameAt(time);
-    close(lattice.x, targets[0].x, 'The parent lane lands on the native calendar origin exactly');
-    close(lattice.y, targets[0].y, 'The first weekly row lands on the native calendar origin exactly');
-    close(lattice.width, nativeWidth, 'The final weekly parent equals the complete native seven-day row');
-    close(lattice.dayWidth, nativeDayWidth, 'Refined daily children end at their native width');
-    close(lattice.height, nativeDayHeight, 'Refined daily children end at their native height');
-    close(lattice.gap, nativeGap, 'The partition ends with the native calendar gutter');
+    close(lattice.x, targets[0].x, 'The month lands on the native calendar origin exactly');
+    close(lattice.y, targets[0].y, 'The first row lands on the native calendar origin exactly');
+    close(lattice.width, nativeWidth, 'The final weekly parent equals the native seven-day row');
+    close(lattice.dayWidth, nativeDayWidth, 'Every day ends at its native width');
+    close(lattice.height, nativeDayHeight, 'Every day ends at its native height');
+    close(lattice.gap, nativeGap, 'The final partition uses the native calendar gutter');
     targets.forEach((target, index) => {
       close(lattice.x + index % 7 * lattice.dayPitch, target.x, 'Every child lands on its native horizontal position');
       close(lattice.y + Math.floor(index / 7) * lattice.pitchY, target.y, 'Every child lands on its native vertical position');
     });
   }
 }
-console.log('Life story: dates, leap years, DST, account isolation and preview account passed.');
+console.log('Life story: dates, history, source continuity, no miniature-grid gap and exact calendar handoff passed.');

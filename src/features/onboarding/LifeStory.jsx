@@ -55,13 +55,6 @@ const PERSONAL_COPY = {
   ro: ['Povestea ta din calendar.', 'Veniturile și cheltuielile tale, zi de zi.', 'Înregistrări din calendar', 'Povestea continuă.', 'Fiecare înregistrare face parte din poveste.', 'Nu există încă înregistrări'],
   zh: ['你的日历故事。', '逐日查看你的收入和支出。', '日历记录', '你的故事仍在继续。', '每条记录都是故事的一部分。', '暂无记录'],
 };
-const WEEK_SCALE = {
-  ru: ['Одна неделя.', 'В каждой неделе — семь дней.\nНачнём с сегодняшнего.', 'Эта неделя', 'Семь дней. Один из них — сегодня.'],
-  en: ['One week.', 'Every week holds seven days.\nLet’s start with today.', 'This week', 'Seven days. One of them is today.'],
-  ro: ['O săptămână.', 'Fiecare săptămână are șapte zile.\nÎncepem cu ziua de azi.', 'Această săptămână', 'Șapte zile. Una dintre ele este azi.'],
-  zh: ['一周。', '每一周，都有七天。\n从今天开始。', '这一周', '七天，其中一天是今天。'],
-};
-
 const PALETTES = {
   light: { neutral: [191, 184, 167], future: [222, 217, 206], income: [113, 151, 128], expense: [198, 135, 120], today: 'rgba(77,119,100,.45)' },
   dark: { neutral: [91, 98, 94], future: [47, 53, 50], income: [110, 153, 129], expense: [172, 112, 102], today: 'rgba(142,185,159,.55)' },
@@ -75,7 +68,7 @@ function weekColor(index, filled, financial, rhythm, palette, arrival = 1) {
   return `rgb(${color.map(Math.round).join(',')})`;
 }
 
-/** A single camera follows the current week, then morphs the cells into the live month. */
+/** Selected weeks grow into the live month while the surrounding history recedes. */
 export default function LifeStory({ birthday, lang, theme = 'light', currency = 'USD', calendarRecords = EMPTY_RECORDS, personalStory = false, onStart, onArrive, onSkip, onBack }) {
   const copy = LIFE_COPY[lang];
   const palette = PALETTES[theme] || PALETTES.dark;
@@ -86,7 +79,6 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
   const cellsRef = useRef(null);
   const projectionRef = useRef(null);
   const signalRef = useRef(null);
-  const scaleCueRef = useRef(null);
   const moneyFlowRef = useRef(null);
   const arriveRef = useRef(onArrive);
   arriveRef.current = onArrive;
@@ -109,9 +101,6 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     const projection = projectionRef.current;
     const signalCanvas = signalRef.current;
     const signalContext = signalCanvas.getContext('2d');
-    const scaleCue = scaleCueRef.current;
-    const weekCue = scaleCue.querySelector('[data-unit="week"]');
-    const dayCue = scaleCue.querySelector('[data-unit="day"]');
     const counter = counterRef.current.parentElement;
     const legend = sceneRef.current.querySelector('.life-story-legend');
     const heading = story.querySelector('.life-story-heading');
@@ -274,14 +263,11 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         sceneRef.current.style.setProperty('--life-grid-bottom', `${relativeGridBottom}px`);
         previousGridBottom = relativeGridBottom;
       }
-      // The hero fills the middle of the phone before the surrounding grid leaves.
-      const compactAspect = hasCalendar ? Math.max(1, Math.min(2, targets[todayIndex].height / targets[todayIndex].width)) : 1.7;
-      const compactPitch = Math.min(scene.width * .98 / 7, height * .62 / monthRows / compactAspect);
       const morph = motion.month;
       const paper = hasCalendar ? motion.paperOpacity : 1;
       const handoff = hasCalendar ? motion.handoff : 0;
       const skin = motion.skin;
-      const chrome = 1 - ease(clamp((time - 8400) / 450));
+      const chrome = 1 - ease(clamp((time - 8000) / 400));
       counter.style.opacity = String(chrome);
       counter.style.transform = `translateY(${-12 * (1 - chrome)}px)`;
       legend.style.opacity = String(chrome);
@@ -324,29 +310,18 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       const camera = lifeCameraFrame({
         gridLeft: centerX - gridWidth / 2,
         gridTop: gridTop + (gridSpace - gridHeight) / 2,
-        unit, cropCol, cropRow, monthRows, compactPitch, compactAspect,
-        focusX: centerX, focusY: hasCalendar ? (targets[0].y + targets.at(-1).y + targets.at(-1).height) / 2 : height * .54,
-      }, motion);
+      });
       const lattice = lifeLatticeFrame({ camera, unit, cropCol, cropRow, targets, initialFill: width >= 760 ? .74 : .65 }, motion);
       projection.style.transformOrigin = `${lattice.x + lattice.width / 2}px ${lattice.y + ((monthRows - 1) * lattice.pitchY + lattice.height) / 2}px`;
       projection.style.transform = motion.planeTilt ? `perspective(1400px) rotateX(${motion.planeTilt}deg)` : 'none';
       story.dataset.planeTilt = String(motion.planeTilt);
       const nativeLeft = targets[0].x;
       const nativeTop = targets[0].y;
-      const nativeBottom = targets.at(-1).y + targets.at(-1).height;
-      // Depth falloff only in the history behind emerging controls. The month
-      // is never clipped, and the entire lattice continues its camera flight.
-      const contextVisibility = y => mix(1, Math.min(ease(clamp((y - nativeTop + 24) / 80)), 1 - ease(clamp((y - nativeBottom) / 64))), motion.chromeClear);
       story.dataset.contextExit = String(motion.contextExit);
       story.dataset.latticeWidth = String(lattice.dayWidth);
       story.dataset.latticeHeight = String(lattice.height);
       story.dataset.weekWidth = String(lattice.width);
       story.dataset.weekDivision = String(motion.division);
-      scaleCue.style.left = `${Math.max(122, Math.min(width - 122, lattice.x + lattice.width / 2))}px`;
-      scaleCue.style.top = `${lattice.y + Math.floor(todayIndex / 7) * lattice.pitchY - 26}px`;
-      scaleCue.style.opacity = String(motion.scaleCue);
-      weekCue.style.opacity = String(1 - ease(clamp((motion.division - .25) / .35)));
-      dayCue.style.opacity = String(ease(clamp((motion.division - .6) / .35)));
       const moneyExit = motion.moneyOpacity;
       moneyArea.style.opacity = String(moneyExit);
       moneyArea.style.transform = `translateY(${-4 * (1 - moneyExit)}px) scale(${1 - .025 * (1 - moneyExit)})`;
@@ -383,27 +358,18 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       context.clearRect(0, 0, width, height);
       if (motion.contextExit < 1) {
         context.save();
-        const left = Math.max(0, cropCol + Math.floor(-lattice.x / lattice.pitchX));
-        const right = Math.min(hierarchy.columns, cropCol + Math.ceil((width - lattice.x) / lattice.pitchX));
-        const top = Math.max(0, cropRow + Math.floor(-lattice.y / lattice.pitchY));
-        const bottom = Math.min(rows, cropRow + Math.ceil((height - lattice.y) / lattice.pitchY));
-        for (let row = top; row < bottom; row++) for (let col = left; col < right; col++) {
+        const size = unit * (width >= 760 ? .74 : .65);
+        for (let row = 0; row < rows; row++) for (let col = 0; col < hierarchy.columns; col++) {
           const i = hierarchy.weekAt(col, row);
-          const x = lattice.x + (col - cropCol) * lattice.pitchX;
-          const y = lattice.y + (row - cropRow) * lattice.pitchY;
-          context.globalAlpha = selected.has(i) ? (1 - motion.division) * (1 - skin) : (1 - motion.contextExit) * contextVisibility(y + lattice.height / 2);
+          // Those parents are already drawn by the moving shared elements.
+          if (selected.has(i)) continue;
+          const x = camera.originX + col * unit + (unit - size) / 2;
+          const y = camera.originY + row * unit + (unit - size) / 2;
+          context.globalAlpha = 1 - motion.contextExit;
           const age = time - (weekTimes[i] ?? Infinity);
           const reveal = ease(clamp(age / 450));
           context.fillStyle = weekColor(i, filled, reveal, rhythm, palette, ease(clamp(age / 180)));
-          if (selected.has(i) || motion.division === 0) context.fillRect(x, y, lattice.width, lattice.height);
-          else for (let day = 0; day < 7; day++) {
-            if (morph < .01) context.fillRect(x + day * lattice.dayPitch, y, lattice.dayWidth, lattice.height);
-            else {
-              context.beginPath();
-              context.roundRect(x + day * lattice.dayPitch, y, lattice.dayWidth, lattice.height, targets[0].radius * morph);
-              context.fill();
-            }
-          }
+          context.fillRect(x, y, size, size);
         }
         context.restore();
       }
@@ -471,19 +437,14 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       const signalColor = theme === 'light' ? '73,128,113' : theme === 'purple' ? '184,160,244' : '153,212,185';
       if (motion.signalOpacity > 0) {
         const front = motion.signal * 10;
-        const firstCol = Math.max(-cropCol * 7, Math.floor(-lattice.x / lattice.dayPitch) - 1);
-        const lastCol = Math.min((hierarchy.columns - cropCol) * 7, Math.ceil((width - lattice.x) / lattice.dayPitch) + 1);
-        const firstRow = Math.max(-cropRow, Math.floor(-lattice.y / lattice.pitchY) - 1);
-        const lastRow = Math.min(rows - cropRow, Math.ceil((height - lattice.y) / lattice.pitchY) + 1);
-        for (let row = firstRow; row < lastRow; row++) for (let col = firstCol; col < lastCol; col++) {
+        for (let row = 0; row < monthRows; row++) for (let col = 0; col < 7; col++) {
           const distance = Math.hypot(col - todayIndex % 7, row - Math.floor(todayIndex / 7));
           const pulse = Math.exp(-(((distance - front) / .85) ** 2)) * motion.signalOpacity;
           if (pulse < .025) continue;
-          const inMonth = col >= 0 && col < 7 && row >= 0 && row < monthRows;
           const parentCol = Math.floor(col / 7);
           const childCol = ((col % 7) + 7) % 7;
           const x = lattice.x + parentCol * lattice.pitchX + childCol * lattice.dayPitch, y = lattice.y + row * lattice.pitchY;
-          const intensity = pulse * (inMonth ? .42 : .18 * (1 - motion.contextExit) * contextVisibility(y + lattice.height / 2));
+          const intensity = pulse * .32;
           signalContext.strokeStyle = `rgba(${signalColor},${intensity})`;
           signalContext.lineWidth = .75;
           signalContext.beginPath();
@@ -496,16 +457,15 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         const y = lattice.y + Math.floor(todayIndex / 7) * lattice.pitchY;
         const inset = 2 + 2 * motion.month;
         const focusWidth = mix(lattice.width, lattice.dayWidth, motion.division);
-        const length = Math.min(10, focusWidth * .24) * motion.focus;
-        signalContext.strokeStyle = `rgba(${signalColor},${.48 * motion.focus})`;
+        signalContext.save();
+        signalContext.shadowColor = `rgba(${signalColor},${.2 * motion.focus})`;
+        signalContext.shadowBlur = 14 * motion.focus;
+        signalContext.strokeStyle = `rgba(${signalColor},${.32 * motion.focus})`;
         signalContext.lineWidth = .8;
         signalContext.beginPath();
-        [[x - inset, y - inset, 1, 1], [x + focusWidth + inset, y - inset, -1, 1], [x - inset, y + lattice.height + inset, 1, -1], [x + focusWidth + inset, y + lattice.height + inset, -1, -1]].forEach(([cx, cy, dx, dy]) => {
-          signalContext.moveTo(cx + dx * length, cy);
-          signalContext.lineTo(cx, cy);
-          signalContext.lineTo(cx, cy + dy * length);
-        });
+        signalContext.roundRect(x - inset, y - inset, focusWidth + inset * 2, lattice.height + inset * 2, targets[todayIndex].radius * morph + 1);
         signalContext.stroke();
+        signalContext.restore();
       }
     }
     function tick(timestamp) {
@@ -527,15 +487,14 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
   const ready = stage === 'ready';
   const zoom = stage === 'zoom' || ready;
   const question = personalStory ? [PERSONAL_COPY[lang][3], PERSONAL_COPY[lang][4], PERSONAL_COPY[lang][1], PERSONAL_COPY[lang][1]] : MONEY_QUESTION[lang];
-  const scaleCopy = WEEK_SCALE[lang];
-  const title = ready ? monthLabel : stage === 'life' || stage === 'question' ? personalStory ? PERSONAL_COPY[lang][0] : copy.life : stage === 'today' ? scaleCopy[0] : copy.today;
-  const hint = stage === 'life' || stage === 'question' ? personalStory ? PERSONAL_COPY[lang][1] : copy.lifeHint : stage === 'today' ? scaleCopy[1] : question[2];
+  const title = ready ? monthLabel : personalStory ? PERSONAL_COPY[lang][0] : copy.life;
+  const hint = personalStory ? PERSONAL_COPY[lang][1] : copy.lifeHint;
 
   return <div className={`life-story ${reduced ? 'life-story--reduced' : ''}`} data-theme={theme} data-stage={stage} data-personal={personalStory}>
     <div ref={paperRef} className="life-story-paper" aria-hidden="true" />
     <header className="life-story-top"><span className="life-story-brand"><BrandIcon className="h-7 w-7" /> DAYRIS</span><button type="button" onClick={onSkip}>{copy.skip}<ArrowRight size={14} /></button></header>
     <div className="life-story-heading" aria-live="polite" aria-atomic="true">
-      <p className="life-story-eyebrow">{stage === 'life' || stage === 'question' ? copy.future : stage === 'today' ? copy.week : copy.todayLabel}</p>
+      <p className="life-story-eyebrow">{copy.future}</p>
       <h1 key={title} id="first-run-heading" tabIndex={-1}>{title}</h1>
       <p key={hint} className="life-story-hint">{hint}</p>
     </div>
@@ -546,7 +505,6 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         <canvas ref={canvasRef} className="life-story-grid" aria-label={stats ? `${elapsedWeeks.toLocaleString(locale)} ${copy.weeks}. ${copy.legend}` : copy.generic} role="img" />
         <div ref={cellsRef} className="life-calendar-bridge" aria-hidden="true" inert="" />
         <canvas ref={signalRef} className="life-story-signal" aria-hidden="true" />
-        <div ref={scaleCueRef} className="life-story-scale-cue" aria-hidden="true"><span data-unit="week">{scaleCopy[2]}</span><span data-unit="day">{scaleCopy[3]}</span></div>
       </div>
       <div ref={moneyFlowRef} className="life-money-area" key={`money-${run}`}>
         <div className="life-money-amounts" aria-hidden="true">

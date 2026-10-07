@@ -145,126 +145,34 @@ try {
   if (!desktop) await page.setViewportSize({ width: 390, height: phoneHeight });
   await page.clock.runFor(700);
   await page.screenshot({ path: screenshotPath('weeks'), animations: 'disabled' });
-  await seek(8200);
-  assert.ok(await page.locator('.life-story').evaluate(story => {
-    const cells = [...story.querySelectorAll('.life-calendar-cell')];
-    const sources = cells.map(cell => Number(cell.dataset.sourceWeek));
-    const first = sources[0];
-    const firstDay = cells[0], lastDay = cells[6];
-    const a = new DOMMatrixReadOnly(firstDay.style.transform), b = new DOMMatrixReadOnly(lastDay.style.transform);
-    const width = parseFloat(firstDay.style.width) * a.a;
-    return sources.every((week, index) => week === first + Math.floor(index / 7)) && new Set(sources).size === cells.length / 7 && story.dataset.currentWeek === story.dataset.focusWeek && Number(story.dataset.weekDivision) === 0 && Math.abs(b.m41 + width - a.m41 - Number(story.dataset.weekWidth)) < .1;
-  }), 'Seven adjacent days initially occupy one real weekly parent; only five/six consecutive weeks become the month');
-  await seek(8500);
-  assert.equal(await page.locator('.life-story').getAttribute('data-stage'), 'today');
-  assert.equal(await money.count(), 0, 'Illustrative money leaves before arriving at today');
-  assert.ok(await page.locator('.life-calendar-week').evaluateAll(cells => cells.every(cell => Number(getComputedStyle(cell).opacity) === 1)), 'Subdividing a week preserves its brightness rather than crossfading two partially transparent copies');
-  const presentColors = await page.locator('.life-calendar-week').evaluateAll(cells => cells.map(cell => getComputedStyle(cell).backgroundColor));
-  await seek(9000);
-  const copyFrame = await page.evaluate(() => {
-    const story = document.querySelector('.life-story');
-    const heading = story.querySelector('.life-story-heading');
-    const grid = story.querySelector('.life-story-grid');
-    return { time: Number(story.dataset.time), scale: new DOMMatrixReadOnly(getComputedStyle(heading).transform).a, opacity: Number(getComputedStyle(heading).opacity), headingBottom: heading.getBoundingClientRect().bottom, apertureTop: Number(story.dataset.apertureTop), gridTop: Number(story.dataset.gridTop), mask: getComputedStyle(grid).maskImage, bridgeMask: getComputedStyle(story.querySelector('.life-calendar-bridge')).maskImage };
-  });
-  assert.ok(Math.abs(copyFrame.opacity - lifeCalendarMotion(copyFrame.time).copyOpacity) < .001 && copyFrame.opacity < .65, 'Copy opacity follows the camera directly, without a delayed CSS transition');
-  assert.ok(copyFrame.scale < .97 && Math.abs(copyFrame.scale - (1 - .09 * lifeCalendarMotion(copyFrame.time).copyRetreat)) < .001, 'The text recedes in depth while the calendar grows forward');
-  assert.ok(copyFrame.headingBottom < copyFrame.gridTop - 20 && copyFrame.mask.includes('linear-gradient') && copyFrame.bridgeMask === copyFrame.mask, 'The expanding cells remain feathered away from the heading area');
-  assert.ok(copyFrame.apertureTop < copyFrame.gridTop - 25 && copyFrame.apertureTop - copyFrame.headingBottom < 80 && copyFrame.apertureTop - 28 > copyFrame.headingBottom, 'The feathered window moves up into the retiring copy space, without covering its text or leaving a large blank gap');
-  await page.screenshot({ path: screenshotPath('copy-exit'), animations: 'disabled' });
-  await seek(9150);
-  assert.deepEqual(await page.locator('.life-calendar-week').evaluateAll(cells => cells.map(cell => getComputedStyle(cell).backgroundColor)), presentColors, 'Arriving at today never repaints the selected month over the history');
-  const todayOutline = await page.evaluate(() => {
-    const live = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')];
-    const index = live.findIndex(cell => cell.dataset.todayCell === 'true');
-    const element = document.querySelectorAll('.life-calendar-week')[index];
-    const rect = element.getBoundingClientRect();
-    const scale = rect.width / parseFloat(element.parentElement.style.width);
-    return { width: rect.width, stroke: parseFloat(getComputedStyle(element).borderLeftWidth) * scale };
-  });
-  assert.ok(todayOutline.stroke > 0 && todayOutline.stroke <= todayOutline.width * .08, 'Today keeps a thin proportional outline rather than a solid square over historical cells');
-  await page.screenshot({ path: screenshotPath('today'), animations: 'disabled' });
-  await seek(9900);
-  if (process.argv.includes('--resize-motion')) {
-    const viewport = page.viewportSize();
-    const resized = { ...viewport, width: desktop ? viewport.width - 120 : 320 };
-    await page.setViewportSize(resized);
-    await page.waitForFunction(width => document.querySelector('.life-story-grid')?.width === Math.round(width * Math.min(devicePixelRatio, 2)), resized.width);
-    await page.clock.runFor(16);
-    await page.setViewportSize(viewport);
-    await page.waitForFunction(width => document.querySelector('.life-story-grid')?.width === Math.round(width * Math.min(devicePixelRatio, 2)), viewport.width);
-    await page.clock.runFor(16);
-    assert.equal(await page.locator('.life-story').getAttribute('data-calendar-target'), 'live', 'Resizing during the optical flight keeps the real calendar target');
+  let previousWidth = 0;
+  for (const time of [8000, 8350, 8700, 9000, 9400, 9850, 10280]) {
+    await seek(time);
+    const state = await page.evaluate(() => {
+      const story = document.querySelector('.life-story');
+      const cells = [...story.querySelectorAll('.life-calendar-cell')].map(cell => cell.getBoundingClientRect());
+      const live = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')].map(cell => cell.getBoundingClientRect());
+      const left = Math.min(...cells.map(cell => cell.left)), right = Math.max(...cells.map(cell => cell.right));
+      return {
+        width: right - left, nativeWidth: live[6].right - live[0].left, left, right,
+        contextExit: Number(story.dataset.contextExit), paper: Number(story.style.getPropertyValue('--life-paper-opacity')),
+        headingOpacity: Number(getComputedStyle(story.querySelector('.life-story-heading')).opacity),
+        overlaps: cells.some((cell,index) => index % 7 !== 0 && cell.left < cells[index-1].right - .1),
+        datesVisible: [...story.querySelectorAll('.life-calendar-face > *')].some(node => Number(getComputedStyle(node).opacity) > .5),
+      };
+    });
+    assert.ok(state.width >= previousWidth, 'The selected month grows continuously without a shrinking interlude');
+    assert.ok(!state.overlaps && state.left >= 0 && state.right <= page.viewportSize().width, 'The growing month remains within the viewport, without overlapping days');
+    if (time === 9000) {
+      assert.ok(state.width >= state.nativeWidth * .55, 'The former tiny-grid frame already fills most of the calendar width');
+      assert.ok(state.contextExit < 1 && state.paper < 1, 'History and interface overlap during the movement, leaving no empty scene');
+      assert.equal(state.headingOpacity, 0, 'Departing copy has cleared the calendar');
+      assert.equal(await page.locator('.life-story-scale-cue').count(), 0, 'No floating scale label covers the cells');
+    }
+    if (time === 9400) assert.ok(state.datesVisible, 'Date content arrives while the calendar is still moving');
+    previousWidth = state.width;
+    await page.screenshot({ path: screenshotPath('transition-' + time), animations: 'disabled' });
   }
-  const sharedGrid = await page.evaluate(() => {
-    const story = document.querySelector('.life-story');
-    const cells = [...document.querySelectorAll('.life-calendar-cell')];
-    const cell = cells[0];
-    const matrix = new DOMMatrixReadOnly(getComputedStyle(cell).transform);
-    const canvas = story.querySelector('canvas');
-    const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
-    let paintAlpha = 0;
-    for (let index = 3; index < pixels.length; index += 4) paintAlpha = Math.max(paintAlpha, pixels[index]);
-    return { backgroundWidth: Number(story.dataset.latticeWidth), backgroundHeight: Number(story.dataset.latticeHeight), firstWidth: parseFloat(cell.style.width) * matrix.a, firstHeight: parseFloat(cell.style.height) * matrix.d, context: Number(story.dataset.contextExit), canvasOpacity: Number(getComputedStyle(canvas).opacity), paintAlpha, sharedPlane: canvas.parentElement === cell.closest('.life-story-projection'), tilt: Number(story.dataset.planeTilt) };
-  });
-  assert.ok(Math.abs(sharedGrid.backgroundWidth - sharedGrid.firstWidth) < .1 && Math.abs(sharedGrid.backgroundHeight - sharedGrid.firstHeight) < .1 && sharedGrid.context === 1 && sharedGrid.paintAlpha === 0, 'Surrounding history has cleared before the selected weeks expand into the month');
-  assert.ok(sharedGrid.sharedPlane && sharedGrid.tilt === 0, 'The calendar stays on a flat plane throughout the reveal');
-  await page.screenshot({ path: screenshotPath('shared-lattice'), animations: 'disabled' });
-  await seek(10250);
-  assert.equal(await page.locator('.life-story-heading').evaluate(element => Number(getComputedStyle(element).opacity)), 0, 'The heading is gone when the lattice occupies the viewport');
-  assert.equal(await page.locator('.life-calendar-bridge').evaluate(element => getComputedStyle(element).maskImage), 'none', 'The aperture fully opens before the native calendar reveal');
-  assert.equal(await page.locator('.life-story-grid').evaluate(element => getComputedStyle(element).maskImage), 'none', 'The life grid stays unmasked during the final zoom; there is no closing window');
-  const coherentCrop = await page.evaluate(() => {
-    const cells = [...document.querySelectorAll('.life-calendar-cell')].map(cell => cell.getBoundingClientRect());
-    return cells.every((cell, index) => index % 7 === 0 || Math.abs(cell.y - cells[index - 1].y) < .1 && cell.x > cells[index - 1].x);
-  });
-  assert.ok(coherentCrop, `Every source row remains contiguous, including a current week at the 52-column edge: ${JSON.stringify(await page.locator('.life-calendar-cell').evaluateAll(cells => cells.map(cell => { const r = cell.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; })))}`);
-  assert.ok(lifeCalendarMotion(Number(await page.locator('.life-story').getAttribute('data-time'))).skin > .09, 'Dates and cell paint arrive before the surrounding history leaves');
-  assert.equal(await page.locator('.first-calendar-entry-hint').evaluate(element => Number(getComputedStyle(element).opacity)), 0, 'Guidance waits for arrival instead of overlapping departing history');
-  const approachingColors = await page.locator('.life-calendar-week').evaluateAll(cells => [...new Set(cells.map(cell => getComputedStyle(cell).backgroundColor))]);
-  const neutralColors = dark ? ['rgb(91, 98, 94)', 'rgb(47, 53, 50)'] : ['rgb(191, 184, 167)', 'rgb(222, 217, 206)'];
-  assert.ok(approachingColors.every(color => neutralColors.includes(color)), 'The approaching month already contains only neutral past/future cells');
-  await page.screenshot({ path: screenshotPath('approach'), animations: 'disabled' });
-  const layoutSizes = await page.locator('.life-calendar-cell').evaluateAll(cells => cells.map(cell => [cell.style.width, cell.style.height]));
-  const movingDay = await page.locator('.life-calendar-cell').first().boundingBox();
-  const framing = await page.locator('.life-calendar-cell').evaluateAll(cells => {
-    const rects = cells.map(cell => cell.getBoundingClientRect());
-    const native = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')].map(cell => cell.getBoundingClientRect());
-    return { left: Math.min(...rects.map(r => r.left)), right: Math.max(...rects.map(r => r.right)), top: Math.min(...rects.map(r => r.top)), bottom: Math.max(...rects.map(r => r.bottom)), nativeCenter: (Math.min(...native.map(r => r.top)) + Math.max(...native.map(r => r.bottom))) / 2 - new DOMMatrixReadOnly(getComputedStyle(document.querySelector('.premium-shell')).transform).m42, width: innerWidth, height: innerHeight };
-  });
-  assert.ok(framing.right - framing.left > Math.min(framing.width - 48, 820) * .65 && framing.bottom - framing.top > framing.height * .25 && framing.left >= 12 && framing.right <= framing.width - 12 && Math.abs((framing.top + framing.bottom) / 2 - framing.nativeCenter) < 17, `The growing month remains in its calendar area throughout the curved camera move: ${JSON.stringify(framing)}`);
-  await seek(11200);
-  assert.ok(await page.evaluate(() => {
-    const canvas = document.querySelector('.life-story-grid');
-    const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
-    const dpr = canvas.width / canvas.clientWidth;
-    const header = document.querySelector('.dayris-header').getBoundingClientRect();
-    const firstDay = document.querySelector('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button').getBoundingClientRect();
-    let max = 0;
-    for (let y = Math.floor(header.top * dpr); y < Math.floor((firstDay.top - 16) * dpr); y++) for (let x = 0; x < canvas.width; x++) max = Math.max(max, pixels[(y * canvas.width + x) * 4 + 3] || 0);
-    return max < 12;
-  }), 'Enlarged financial history clears behind native controls and weekday labels without hiding the month');
-  assert.ok(await page.evaluate(() => {
-    const canvas = document.querySelector('.life-story-signal');
-    const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
-    const content = [...document.querySelectorAll('.life-calendar-face > *')];
-    return pixels.some((value, index) => index % 4 === 3 && value > 0) && content.some(node => new DOMMatrixReadOnly(getComputedStyle(node).transform).m42 > 0);
-  }), 'A single traveling edge signal and materializing date content accompany the continuous camera');
-  const unfoldingDay = await page.locator('.life-calendar-cell').first().boundingBox();
-  assert.ok(unfoldingDay.width > movingDay.width + 2 && unfoldingDay.height > movingDay.height + 8 && Math.abs(unfoldingDay.y - movingDay.y) > 1, 'Calendar arrival changes real position and shape during the reveal, rather than only opacity');
-  assert.ok(await page.locator('.life-story-paper').evaluate(element => Number(element.style.opacity) < .95), 'Calendar chrome follows the visible dates as the past rows clear its space');
-  await page.screenshot({ path: screenshotPath('reveal'), animations: 'disabled' });
-  await seek(12350);
-  assert.ok(await page.evaluate(() => {
-    const canvas = document.querySelector('.life-story-signal');
-    const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
-    return getComputedStyle(document.querySelector('.life-story-projection')).transform === 'none' && !pixels.some((value, index) => index % 4 === 3 && value > 0) && [...document.querySelectorAll('.life-calendar-face > *')].every(node => Math.abs(new DOMMatrixReadOnly(getComputedStyle(node).transform).m42) < .001);
-  }), 'The optical plane and light signal land cleanly before the live calendar takes over');
-  assert.deepEqual(await page.locator('.life-calendar-cell').evaluateAll(cells => cells.map(cell => [cell.style.width, cell.style.height])), layoutSizes, 'Revealing days scales ready cells without resizing their layout every frame');
-  await page.waitForFunction(() => Number(document.querySelector('.life-story-paper')?.style.opacity || 1) < .97);
-  assert.equal(await page.locator('.life-story').getAttribute('data-life-opacity'), '0');
-  await page.screenshot({ path: screenshotPath('morph'), animations: 'disabled' });
-  await seek(12800);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.stage === 'ready');
   const geometry = await page.evaluate(() => {
     const live = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')];
