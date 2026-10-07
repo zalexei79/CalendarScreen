@@ -31,11 +31,17 @@ try {
     await page.locator('#idle').click();
     const idle=await page.locator('.workspace-mode-panel').boundingBox();
     assert.equal(await page.locator('.pro-control-platform:disabled').count(),2);
-    assert.ok((await page.locator('.pro-platform-reveal').boundingBox()).height<1,'closed platforms must occupy no height');
+    if(width<960) assert.ok((await page.locator('.pro-platform-reveal').boundingBox()).height<1,'closed mobile platforms must occupy no height');
     await page.locator('#trader').click();
     await page.waitForTimeout(550); // Measure final layout, not entrance/rail transforms.
     const active=await page.locator('.workspace-mode-panel').boundingBox();
-    assert.ok(active.height>idle.height+40,'Trader expands a dedicated platform row');
+    if(width<960) assert.ok(active.height>idle.height+40,'Mobile trader expands a dedicated platform row');
+    else {
+     assert.equal(active.height,idle.height,'Desktop trader keeps the header height stable');
+     const platforms=await page.locator('.pro-platform-reveal').boundingBox();
+     const toggle=await page.locator('.pro-control-trader').boundingBox();
+     assert.ok(platforms.x+platforms.width<=toggle.x && Math.abs(platforms.y-toggle.y)<1,'Desktop platforms appear to the left of the trader toggle');
+    }
     assert.equal(await page.locator('.pro-control-platform:disabled').count(),0);
     const foreground = await page.locator('.pro-platform-label strong').first().evaluate(el=>getComputedStyle(el).color);
     assert.equal(foreground, light ? 'rgb(34, 35, 37)' : 'rgb(243, 240, 233)', 'platform text must match the theme');

@@ -1,5 +1,6 @@
 import {saveVoiceDestinations} from './src/shared/lib/saveVoiceDestinations.js';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import './src/shared/ui/PurpleTheme.css';
 import { useWorkspaceViewport } from './src/shared/ui/useWorkspaceViewport';
 import WorkspaceDock from './src/shared/ui/WorkspaceDock';
 import MetaTraderControl from './src/features/metatrader/MetaTraderControl.jsx';
@@ -101,7 +102,6 @@ import FirstRunSetup from './src/features/onboarding/FirstRunSetup.jsx';
 import WelcomeScreen from './src/features/auth/WelcomeScreen.jsx';
 import { getEntryCopy } from './src/features/auth/entryCopy.js';
 import { createDemoCalendar, DEMO_SESSION_KEY, ENTRY_INTENT_KEY, readEntryIntent } from './src/features/auth/demoCalendar.js';
-import { birthdayStorageKey, lifeWeeks } from './src/features/onboarding/lifeStoryModel';
 import { enablePush } from './src/features/reminders/pushClient';
 import { planDateKey, planTime, useFinancePlans } from './src/features/reminders/useFinancePlans';
 import FinancePlanComposer from './src/features/reminders/FinancePlanComposer.jsx';
@@ -648,7 +648,7 @@ export default function CalendarScreen() {
   const [themePreference, setThemePreference] = useState(() => {
     try {
       const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-      return ['light', 'dark', 'system'].includes(stored) ? stored : 'dark';
+      return ['light', 'dark', 'purple', 'system'].includes(stored) ? stored : 'dark';
     } catch {
       return 'dark';
     }
@@ -687,13 +687,12 @@ export default function CalendarScreen() {
     setViewMonth(today.getMonth());
     setSelectedKey(null);
     setSlideDirection(null);
-    let birthday = '';
-    try { birthday = localStorage.getItem(birthdayStorageKey(user?.id || 'guest')) || ''; } catch { /* The date is optional. */ }
-    setSetupStep(lifeWeeks(birthday, today) ? 'intro' : 'birthday');
+    setSetupStep('intro');
   }
 
   function restartOnboarding() {
     replayLifeStory();
+    setStoryReplay(false);
     setSetupStep('language');
   }
 
@@ -710,10 +709,12 @@ export default function CalendarScreen() {
     // Keep browser chrome and the area behind Android gesture controls in
     // the same theme as the calendar, including after returning to the PWA.
     const syncBrowserTheme = () => {
-      const color = theme === 'light' ? '#fafafa' : '#09090b';
+      const color = theme === 'light' ? '#fafafa' : theme === 'purple' ? '#100b1c' : '#09090b';
+      const colorScheme = theme === 'light' ? 'light' : 'dark';
+      document.documentElement.dataset.dayrisTheme = theme;
       document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
-      document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', theme);
-      document.documentElement.style.colorScheme = theme;
+      document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', colorScheme);
+      document.documentElement.style.colorScheme = colorScheme;
       document.documentElement.style.backgroundColor = color;
       document.body.style.backgroundColor = color;
     };
@@ -2890,7 +2891,7 @@ export default function CalendarScreen() {
 
   const storyCalendarRecords = useMemo(() => Object.entries(manualTrades || {})
     .flatMap(([dateKey, items]) => (Array.isArray(items) ? items : []).map(item => ({ ...item, dateKey })))
-    .filter(item => item.dateKey <= todayKey && !isTradingHistoryRecord(item)), [manualTrades, voiceCategories.categories, todayKey]);
+    .filter(item => item.dateKey <= todayKey), [manualTrades, todayKey]);
   const hasCalendarHistory = Object.values(manualTrades || {}).some(items => Array.isArray(items) && items.length > 0);
   const showFirstEntryGuide = !traderMode && !hasCalendarHistory && !storyReplay
     && (setupStep === 'intro' || firstRunGuideStep === 1 || firstRunGuideStep === 2);
@@ -7113,6 +7114,7 @@ export default function CalendarScreen() {
           currency={currency}
           theme={theme}
           calendarRecords={storyCalendarRecords}
+          personalStory={storyReplay}
           profileKey={user?.id || 'guest'}
           onLanguage={handleOnboardingLanguageSelect}
           onCurrency={setCurrency}

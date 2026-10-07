@@ -15,7 +15,8 @@ const records = {
 try {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
   await context.addInitScript(({ records, id }) => {
-    localStorage.setItem('atj_language', 'ru'); localStorage.setItem('atj_currency', 'USD'); localStorage.setItem('atj_theme', 'dark');
+    localStorage.setItem('atj_language', 'ru'); localStorage.setItem('atj_currency', 'USD');
+    if (!localStorage.getItem('atj_theme')) localStorage.setItem('atj_theme', 'dark');
     localStorage.setItem('dayris_onboarding_v2_completed', '1'); localStorage.setItem('calendar_guide_completed', '1');
     localStorage.setItem(`dayris_birthday_v1_${id}`, '1998-03-14');
     localStorage.setItem(`money_calendar_trades_${id}`, JSON.stringify(records));
@@ -36,14 +37,20 @@ try {
   assert.equal(await page.locator('.life-story').count(), 0, 'Completed onboarding stays completed');
   await page.getByRole('button', { name: 'Настройки', exact: true }).click();
   await page.clock.runFor(400);
-  await page.getByRole('button', { name: 'Посмотреть мою историю', exact: true }).click();
+  await page.getByRole('button', { name: /Моя история/ }).click();
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.calendarTarget === 'live');
   assert.equal(await page.getByLabel('Дата рождения', { exact: true }).count(), 0, 'Saved birthday starts replay directly');
   await page.clock.runFor(32);
+  await page.clock.fastForward(1000);
+  assert.equal(await page.locator('.life-money-current .life-money-number').innerText(), '−37,5', 'EUR entries appear even when USD is selected');
+  assert.equal(await page.locator('.life-money-current small').innerText(), 'EUR');
   await page.clock.fastForward(3500);
-  assert.equal(await page.locator('.life-money-value[data-active="true"][data-source="illustration"]').count(), 1, 'An existing account retains the fast life-history stream');
+  assert.equal(await page.locator('.life-money-value[data-active="true"][data-source="calendar"]').count(), 1, 'Settings replay shows only saved calendar entries');
+  assert.equal(await page.locator('.life-money-current .life-money-number').innerText(), '+55');
+  assert.equal(await page.locator('.life-money-label').innerText(), 'Записи из календаря');
+  assert.equal(await page.locator('.life-money-value[data-source="illustration"]').count(), 0);
   assert.equal(await page.locator('.life-money-current small').innerText(), 'USD');
-  await page.clock.fastForward(2700);
+  await page.clock.fastForward(1700);
   // A saved +55 used to come back at 8s and cover the question in this window.
   for (let time = 6200; time <= 9000; time += 100) {
     const layers = await page.evaluate(() => ({
@@ -65,13 +72,27 @@ try {
   assert.match(await page.locator('[data-today-cell="true"]').innerText(), /25/, 'The real +55 and −80 still contribute to the native calendar day');
   assert.deepEqual(await page.evaluate(id => JSON.parse(localStorage.getItem(`money_calendar_trades_${id}`)), storyUserId), records, 'Watching the story never changes saved records');
   await page.screenshot({ path: 'tests/life-story-replay-calendar.png', animations: 'disabled' });
+  await page.getByRole('button', { name: 'Настройки', exact: true }).click();
+  await page.clock.runFor(400);
+  await page.getByRole('button', { name: /Оформление/ }).click();
+  await page.getByRole('button', { name: 'Фиолетовое', exact: true }).click();
+  await page.clock.runFor(600);
+  assert.equal(await page.evaluate(() => localStorage.getItem('atj_theme')), 'purple');
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('.premium-shell')).backgroundColor === 'rgb(16, 11, 28)');
+  assert.equal(await page.locator('.premium-shell').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(16, 11, 28)');
+  await page.getByRole('button', { name: 'Закрыть настройки', exact: true }).click();
+  await page.clock.runFor(400);
+  await page.reload();
+  await page.clock.runFor(1000);
+  assert.equal(await page.locator('html').getAttribute('data-dayris-theme'), 'purple', 'Purple theme persists after reload');
+  await page.screenshot({ path: 'tests/life-story-purple-calendar.png', animations: 'disabled' });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.getByRole('button', { name: 'Настройки', exact: true }).click();
   await page.clock.runFor(32);
-  await page.getByRole('button', { name: 'Посмотреть мою историю', exact: true }).click();
+  await page.getByRole('button', { name: /Моя история/ }).click();
   await page.clock.runFor(32);
   await page.waitForFunction(() => !document.querySelector('.life-story'));
   assert.equal(await page.locator('.first-entry-whisper').count(), 0);
   assert.deepEqual(errors, []);
-  console.log('Settings replay: selected-currency stream, no saved +55 returning over the question, untouched records in all currencies, existing calendar arrival and reduced motion passed.');
+  console.log('Settings replay: real selected-currency entries, untouched saved records, calendar arrival and reduced motion passed.');
 } finally { await browser.close(); }

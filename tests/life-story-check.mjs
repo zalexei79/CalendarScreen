@@ -71,11 +71,11 @@ for (let time = 0; time <= LIFE_MOTION_END; time += 16) {
   if (frame.topAperture > 0) assert.equal(frame.copyOpacity, 0, 'The lattice can expand through the copy area only after the heading has left');
   if (frame.bottomAperture > 0) assert.equal(frame.moneyOpacity, 0, 'The bottom fills as soon as the money question has cleared');
   if (frame.month === 0) assert.equal(frame.skin, 0, 'Calendar paint starts as the shared lattice approaches its final layout');
-  if (frame.contextExit > 0) assert.ok(frame.skin > 0, 'Dates are present before the surrounding history begins dissolving');
+  if (time >= 9000) assert.equal(frame.contextExit, 1, 'Surrounding history leaves before the calendar expands across the interface');
   if (frame.handoff > 0) assert.equal(frame.month, 1, 'Swap to the live calendar only after the shared grid has landed');
   if (time >= 16) {
     const previous = lifeCalendarMotion(time - 16);
-    assert.ok(frame.contextExit - previous.contextExit < .014, 'The surrounding plane dissolves gradually, without a disappearing frame');
+    assert.ok(frame.contextExit - previous.contextExit < .041, 'The surrounding plane dissolves gradually, without a disappearing frame');
     assert.ok(frame.copyRetreat >= previous.copyRetreat && frame.copyRetreat - previous.copyRetreat < .03, 'The text recedes continuously as the calendar approaches');
     assert.ok(Math.abs(frame.copyOpacity - previous.copyOpacity) < .04, 'The story copy retires on the same smooth timeline as the camera');
     assert.ok(Math.abs(frame.paperOpacity - previous.paperOpacity) < .018, 'The application lighting changes by less than 1.8% per frame throughout the morph');
@@ -149,11 +149,11 @@ for (const width of [320, 390, 1440]) for (const monthRows of [4, 5, 6]) for (co
     close(7 * lattice.dayWidth + 6 * lattice.gap, lattice.width, 'All seven daily children and their gaps exactly partition their weekly parent');
     close(6 * lattice.dayPitch + lattice.dayWidth, lattice.width, 'The last child ends on its parent boundary instead of drifting into the next week');
     if (motion.division === 1) close(lattice.pitchX - lattice.width, lattice.gap, 'Refined weeks share the ordinary daily gutter instead of separating into towers');
-    if (motion.contextExit > .99) {
+    if (motion.month > .8) {
       assert.ok(right - left >= nativeWidth * .7, 'The life grid only leaves once the refined month has enough presence to fill the scene');
       close(camera.originX + (cropCol + .5) * unit * camera.scaleX, width / 2, 'The parent lane stays centered while becoming seven days wide');
       close(camera.originY + (cropRow + monthRows / 2) * unit * camera.scaleY, focusY - 16 * Math.sin(Math.PI * motion.month), 'The month follows the same continuous camera arc as its surroundings disappear');
-      if (compactAspect > 1) assert.ok(camera.scaleY / camera.scale > 1.7, 'The daily children already have the taller calendar proportions as the life grid leaves');
+      if (compactAspect > 1 && motion.month > .9) assert.ok(camera.scaleY / camera.scale > 1.7, 'Daily children settle into the taller calendar proportions');
     }
     if (previous) {
       // Bounds scale with the native row/card size so phone and desktop retain

@@ -9,7 +9,7 @@ import './WorkspaceModePanel.css';
 export default function WorkspaceModePanel({ proView, onModeChange, isLight, language, t, traderMode, onTraderChange, onWallet, walletAccess = false, walletLoading = false, onConnect, connected, metatrader, reconnect, onOffer }) {
   const text = (r,e,m,z) => platformText(language,r,e,m,z);
   return <div className={`workspace-mode-group ${isLight ? 'pro-light' : ''}`}>
-    <section className={`workspace-mode-panel ${proView ? 'is-pro' : 'is-free'} ${isLight ? 'pro-light' : ''}`} aria-label={text('Режим и инструменты DAYRIS','DAYRIS mode and tools','Mod și instrumente DAYRIS', "DAYRIS 模式和工具")}>
+    <section className={`workspace-mode-panel ${proView ? 'is-pro' : 'is-free'} ${traderMode ? 'is-trader' : ''} ${isLight ? 'pro-light' : ''}`} aria-label={text('Режим и инструменты DAYRIS','DAYRIS mode and tools','Mod și instrumente DAYRIS', "DAYRIS 模式和工具")}>
     <WalletEntry language={language} access={walletAccess} loading={walletLoading} onOpen={onWallet} onOffer={onOffer}/>
     <ProWorkspaceActions inPanel visible={proView} isLight={isLight} language={language} t={t} traderMode={traderMode} onTraderChange={onTraderChange} onWallet={onWallet} onConnect={onConnect} connected={connected} metatrader={metatrader} reconnect={reconnect} onOffer={onOffer}/>
     <div className="workspace-selector" role="group" aria-label={text('Режим DAYRIS','DAYRIS mode','Mod DAYRIS', "DAYRIS 模式")}>

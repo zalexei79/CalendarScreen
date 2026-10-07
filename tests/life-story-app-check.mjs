@@ -207,8 +207,8 @@ try {
     for (let index = 3; index < pixels.length; index += 4) paintAlpha = Math.max(paintAlpha, pixels[index]);
     return { backgroundWidth: Number(story.dataset.latticeWidth), backgroundHeight: Number(story.dataset.latticeHeight), firstWidth: parseFloat(cell.style.width) * matrix.a, firstHeight: parseFloat(cell.style.height) * matrix.d, context: Number(story.dataset.contextExit), canvasOpacity: Number(getComputedStyle(canvas).opacity), paintAlpha, sharedPlane: canvas.parentElement === cell.closest('.life-story-projection'), tilt: Number(story.dataset.planeTilt) };
   });
-  assert.ok(Math.abs(sharedGrid.backgroundWidth - sharedGrid.firstWidth) < .1 && Math.abs(sharedGrid.backgroundHeight - sharedGrid.firstHeight) < .1 && sharedGrid.context === 0 && sharedGrid.canvasOpacity === 1 && sharedGrid.paintAlpha === 255, 'Every weekly parent shares the same refined day size and retains its paint before the calendar reveal');
-  assert.ok(sharedGrid.sharedPlane && sharedGrid.tilt > 6, 'All past weeks and unfolding days travel on one optical plane, without independent panels');
+  assert.ok(Math.abs(sharedGrid.backgroundWidth - sharedGrid.firstWidth) < .1 && Math.abs(sharedGrid.backgroundHeight - sharedGrid.firstHeight) < .1 && sharedGrid.context === 1 && sharedGrid.paintAlpha === 0, 'Surrounding history has cleared before the selected weeks expand into the month');
+  assert.ok(sharedGrid.sharedPlane && sharedGrid.tilt === 0, 'The calendar stays on a flat plane throughout the reveal');
   await page.screenshot({ path: screenshotPath('shared-lattice'), animations: 'disabled' });
   await seek(10250);
   assert.equal(await page.locator('.life-story-heading').evaluate(element => Number(getComputedStyle(element).opacity)), 0, 'The heading is gone when the lattice occupies the viewport');

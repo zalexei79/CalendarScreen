@@ -123,7 +123,7 @@ export function reserveLifePresent(rhythm, sources, current) {
   return rhythm.map((event, week) => reserved.has(week) || week >= current - 2 && week <= current ? { tone: 'neutral', strength: 0 } : event);
 }
 
-export function calendarMoneyEvents(records, birthday, today = new Date()) {
+export function calendarMoneyEvents(records, birthday, today = new Date(), includeZero = false) {
   const now = localDateValue(today);
   const elapsed = lifeWeeks(birthday, today)?.weeks ?? 0;
   return records.flatMap(record => {
@@ -133,9 +133,9 @@ export function calendarMoneyEvents(records, birthday, today = new Date()) {
     const checked = new Date(year, month - 1, day);
     if (localDateValue(checked) !== date) return [];
     const signed = Number(record.pnl);
-    if (!Number.isFinite(signed) || signed === 0) return [];
+    if (!Number.isFinite(signed) || signed === 0 && !includeZero) return [];
     const week = lifeWeeks(birthday, checked)?.weeks;
     if (birthday && week == null) return [];
-    return [{ week: Math.min(week ?? elapsed, elapsed), tone: signed > 0 ? 'income' : 'expense', amount: Math.abs(signed), currency: record.currency || 'USD', source: 'calendar', date, time: record.time || '', id: record.id }];
+    return [{ week: Math.min(week ?? elapsed, elapsed), tone: signed > 0 ? 'income' : signed < 0 ? 'expense' : 'neutral', amount: Math.abs(signed), currency: record.currency || 'USD', source: 'calendar', date, time: record.time || '', id: record.id }];
   }).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
 }

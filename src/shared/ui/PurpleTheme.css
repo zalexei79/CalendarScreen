@@ -1,0 +1,33 @@
+/* A dark violet palette; income and expense colors retain their meaning. */
+html[data-dayris-theme="purple"] {
+  --dayris-purple-accent:#b8a0f4;
+  --glass-surface:rgba(29,20,44,.88); --glass-control:rgba(55,37,77,.6);
+  --glass-line:rgba(194,168,250,.16); --glass-highlight:rgba(194,168,250,.09);
+}
+html[data-dayris-theme="purple"] .dayris-swipe-sheet[data-glass-theme="dark"] {
+  --glass-surface:rgba(29,20,44,.88); --glass-line:rgba(194,168,250,.16); --glass-highlight:rgba(194,168,250,.09);
+}
+html[data-dayris-theme="purple"] .premium-shell {
+  background-color:#100b1c;
+  background-image:radial-gradient(ellipse at 12% 0%,#7d4dc529,transparent 42%),radial-gradient(ellipse at 90% 12%,#6549aa1c,transparent 35%);
+  color:#f0eaf9;
+}
+html[data-dayris-theme="purple"] :is(.bg-zinc-950,.bg-zinc-950\/95,.bg-zinc-950\/90) { background-color:#100b1c; }
+html[data-dayris-theme="purple"] :is(.bg-zinc-900,.bg-zinc-900\/95,.bg-zinc-900\/90,.bg-zinc-900\/80) { background-color:#1d142c; }
+html[data-dayris-theme="purple"] :is(.bg-zinc-800,.bg-zinc-800\/80,.bg-zinc-800\/60) { background-color:#2b1e3e; }
+html[data-dayris-theme="purple"] :is(.border-zinc-800,.border-zinc-700) { border-color:#b49aca29; }
+html[data-dayris-theme="purple"] :is(.text-zinc-400,.text-zinc-500) { color:#b1a2c4; }
+html[data-dayris-theme="purple"] :is(.workspace-mode-group,.pro-actions-reveal,.pro-dialog) {
+  --pro-bg:#100b1c; --pro-surface:#251a35; --pro-text:#f0eaf9; --pro-muted:#b1a2c4; --pro-line:#b49aca29; --pro-gold:#c2a8fa;
+}
+html[data-dayris-theme="purple"] .settings-surface.dayris-settings-panel.dayris-swipe-sheet {
+  --settings-bg:#1d142c; --settings-text:#f0eaf9; --settings-muted:#b1a2c4; --settings-line:#b49aca20; --settings-hover:#c2a8fa0d;
+}
+html[data-dayris-theme="purple"] .settings-choice.is-selected { background:#ad83ef18; border-color:#b8a0f466; }
+html[data-dayris-theme="purple"] :is(.dayris-settings-panel,.workspace-mode-panel) button:focus-visible { outline-color:#c2a8fa; }
+.life-story[data-theme="purple"] { --paper:#100b1c; --ink:#f0eaf9; --muted:#b1a2c4; --green:#b8a0f4; --count:#ccb1ef; color-scheme:dark; }
+.life-story[data-theme="purple"]::before { display:none; }
+.first-run-dialog[data-theme="purple"] :is(.life-birthday-card,.first-run-product-panel) { background:#1d142c; border-color:#b49aca29; }
+.first-run-dialog[data-theme="purple"] > div > div { background-color:#1d142c; }
+.first-run-dialog[data-theme="purple"] .life-birthday-field { color-scheme:dark; background:#100b1c; border-color:#71538e; color:#f0eaf9; }
+html[data-dayris-theme="purple"] .entry-welcome { background:#100b1c; color:#f0eaf9; }

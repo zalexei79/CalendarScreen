@@ -97,12 +97,12 @@
 .pro-platform-row {
   display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px;
   margin-top:4px; padding:5px 0 2px; border-top:1px solid var(--pro-line);
-  transform:translateY(-6px);
+  transform:translateX(12px);
   transition:transform .36s cubic-bezier(.22,1,.36,1);
 }
-.pro-platform-reveal.is-open .pro-platform-row { transform:translateY(0); }
-.pro-platform-reveal .pro-control-platform { transform:translateY(-5px); transition:transform .4s cubic-bezier(.22,1,.36,1),background .2s,color .2s; }
-.pro-platform-reveal.is-open .pro-control-platform { transform:translateY(0); }
+.pro-platform-reveal.is-open .pro-platform-row { transform:translateX(0); }
+.pro-platform-reveal .pro-control-platform { opacity:0; transform:translateX(8px); transition:transform .36s cubic-bezier(.22,1,.36,1),opacity .24s ease-out,background .2s,color .2s; }
+.pro-platform-reveal.is-open .pro-control-platform { opacity:1; transform:translateX(0); }
 .pro-platform-reveal.is-open .pro-control-platform:nth-child(1) { transition-delay:40ms,0ms,0ms; }
 .pro-platform-reveal.is-open .pro-control-platform:nth-child(2) { transition-delay:80ms,0ms,0ms; }
 .pro-actions-reveal .pro-control-platform {
@@ -129,7 +129,17 @@
 @media(min-width:960px) {
   .dayris-command-row { grid-template-columns:auto minmax(0,1fr); gap:clamp(28px,5vw,96px); padding-top:8px; }
   .dayris-date-navigation { gap:8px; }
-  .workspace-mode-panel { grid-template-columns:minmax(140px,1fr) 150px 88px; column-gap:24px; }
+  .workspace-mode-panel.is-pro { grid-template-columns:44px minmax(0,1fr) 96px 88px; column-gap:12px; }
+  .workspace-mode-panel.is-pro .wallet-entry-heading, .workspace-mode-panel.is-pro .wallet-entry-caption { display:none; }
+  .workspace-mode-panel.is-pro .pro-control-trader { grid-column:3; }
+  .workspace-mode-panel.is-pro .workspace-selector { grid-column:4; }
+  .workspace-mode-panel.is-pro .pro-platform-reveal {
+    grid-column:2; grid-row:1; grid-template-rows:1fr;
+    visibility:hidden; transition:opacity .2s ease-in,visibility .2s;
+  }
+  .workspace-mode-panel.is-pro .pro-platform-reveal.is-open { visibility:visible; transition:opacity .32s ease-out,visibility 0s; }
+  .workspace-mode-panel.is-pro .pro-platform-row { margin:0; padding:0; border:0; gap:4px; }
+  .workspace-mode-panel.is-pro .pro-control-platform { padding-inline:4px; gap:5px; }
   .wallet-entry-caption { display:block; }
 }
 @media(prefers-reduced-motion:reduce) {

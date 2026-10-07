@@ -24,11 +24,10 @@ export function lifeCalendarMotion(time) {
     topAperture: progress(time, 9450, 550),
     bottomAperture: progress(time, 8650, 900),
     month: progress(time, 9500, 3050),
-    contextExit: progress(time, 10000, 2300),
+    contextExit: progress(time, 8250, 750),
     skin: progress(time, 9500, 3050),
-    // A single optical plane tilts into view, then lands flat before handoff.
-    // All historical weeks and live days inherit this same projection.
-    planeTilt: 7 * progress(time, 8400, 1400) * (1 - progress(time, 10100, 2100)),
+    // Keep the calendar on a flat plane throughout the transition.
+    planeTilt: 0,
     focus: progress(time, 8500, 650) * (1 - progress(time, 11050, 800)),
     signal: progress(time, 10000, 1400),
     signalOpacity: progress(time, 9900, 400) * (1 - progress(time, 11400, 450)),
