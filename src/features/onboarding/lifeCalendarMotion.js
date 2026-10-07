@@ -24,7 +24,7 @@ export function lifeCalendarMotion(time) {
     bottomAperture: progress(time, 8300, 400),
     month,
     // All weeks share the same camera and subdivide before context recedes.
-    contextExit: progress(time, 9800, 1050),
+    contextExit: progress(time, 9350, 1250),
     skin: progress(time, 9750, 1250),
     planeTilt: 0,
     focus: progress(time, 8050, 500) * (1 - progress(time, 10300, 700)),
@@ -54,7 +54,9 @@ export function lifeLatticeFrame({ camera, unit, cropCol, cropRow, targets, init
   const finalWidth = targets[6].x + targets[6].width - first.x;
   const finalGap = finalPitchX - first.width;
   const size = unit * initialFill;
-  const height = mix(size, first.height, motion.zoom);
+  const focusHeight = Math.min(first.height, 76);
+  const zoomHeight = mix(size, focusHeight, motion.zoom);
+  const height = mix(zoomHeight, first.height, motion.month);
   const weekWidth = mix(height, finalWidth, motion.division);
   const gap = Math.min(Math.max(0, finalGap), weekWidth / 28) * motion.division;
   const dayWidth = (weekWidth - gap * 6) / 7;
@@ -62,9 +64,9 @@ export function lifeLatticeFrame({ camera, unit, cropCol, cropRow, targets, init
   const centerX = mix(sourceCenterX, first.x + finalWidth / 2, motion.zoom);
   return {
     x: centerX - weekWidth / 2,
-    y: mix(camera.originY + cropRow * unit + (unit - size) / 2, first.y, motion.zoom),
+    y: mix(mix(camera.originY + cropRow * unit + (unit - size) / 2, first.y + (first.height - focusHeight) * targets.length / 14, motion.zoom), first.y, motion.month),
     pitchX: weekWidth + mix(unit - size, finalGap, motion.zoom),
-    pitchY: mix(unit, finalPitchY, motion.zoom),
+    pitchY: mix(mix(unit, focusHeight + finalGap, motion.zoom), finalPitchY, motion.month),
     width: weekWidth, height,
     dayWidth, dayPitch: dayWidth + gap, gap, finalPitchX, finalPitchY,
   };

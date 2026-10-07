@@ -28,6 +28,57 @@ html[data-dayris-theme="purple"] :is(.dayris-settings-panel,.workspace-mode-pane
 .life-story[data-theme="purple"] { --paper:#100b1c; --ink:#f0eaf9; --muted:#b1a2c4; --green:#b8a0f4; --count:#ccb1ef; color-scheme:dark; }
 .life-story[data-theme="purple"]::before { display:none; }
 .first-run-dialog[data-theme="purple"] :is(.life-birthday-card,.first-run-product-panel) { background:#1d142c; border-color:#b49aca29; }
-.first-run-dialog[data-theme="purple"] > div > div { background-color:#1d142c; }
+.first-run-dialog[data-theme="purple"]:not([data-story="true"]) > div > div { background-color:#1d142c; }
 .first-run-dialog[data-theme="purple"] .life-birthday-field { color-scheme:dark; background:#100b1c; border-color:#71538e; color:#f0eaf9; }
 html[data-dayris-theme="purple"] .entry-welcome { background:#100b1c; color:#f0eaf9; }
+
+/* A deep emerald palette; income and expense colors retain their meaning. */
+html[data-dayris-theme="emerald"] {
+  --dayris-emerald-accent:#79d5b3;
+  --glass-surface:rgba(15,38,30,.88); --glass-control:rgba(26,66,51,.6);
+  --glass-line:rgba(121,213,179,.16); --glass-highlight:rgba(121,213,179,.09);
+}
+html[data-dayris-theme="emerald"] .dayris-swipe-sheet[data-glass-theme="dark"] {
+  --glass-surface:rgba(15,38,30,.88); --glass-line:rgba(121,213,179,.16); --glass-highlight:rgba(121,213,179,.09);
+}
+html[data-dayris-theme="emerald"] .premium-shell {
+  background-color:#091b14;
+  background-image:radial-gradient(ellipse at 12% 0%,#2f9f7029,transparent 42%),radial-gradient(ellipse at 90% 12%,#24745e1c,transparent 35%);
+  color:#e5f5ed;
+}
+html[data-dayris-theme="emerald"] :is(.bg-zinc-950,.bg-zinc-950\/95,.bg-zinc-950\/90) { background-color:#091b14; }
+html[data-dayris-theme="emerald"] :is(.bg-zinc-900,.bg-zinc-900\/95,.bg-zinc-900\/90,.bg-zinc-900\/80) { background-color:#102a20; }
+html[data-dayris-theme="emerald"] :is(.bg-zinc-800,.bg-zinc-800\/80,.bg-zinc-800\/60) { background-color:#1b3d30; }
+html[data-dayris-theme="emerald"] :is(.border-zinc-800,.border-zinc-700) { border-color:#79bda529; }
+html[data-dayris-theme="emerald"] :is(.text-zinc-400,.text-zinc-500) { color:#9ab9ab; }
+html[data-dayris-theme="emerald"] :is(.workspace-mode-group,.pro-actions-reveal,.pro-dialog) {
+  --pro-bg:#091b14; --pro-surface:#19392c; --pro-text:#e5f5ed; --pro-muted:#9ab9ab; --pro-line:#79bda529; --pro-gold:#79d5b3;
+}
+html[data-dayris-theme="emerald"] .settings-surface.dayris-settings-panel.dayris-swipe-sheet {
+  --settings-bg:#102a20; --settings-text:#e5f5ed; --settings-muted:#9ab9ab; --settings-line:#79bda520; --settings-hover:#79d5b30d;
+}
+html[data-dayris-theme="emerald"] .settings-choice.is-selected { background:#79d5b318; border-color:#79d5b366; }
+html[data-dayris-theme="emerald"] :is(.dayris-settings-panel,.workspace-mode-panel) button:focus-visible { outline-color:#79d5b3; }
+.life-story[data-theme="emerald"] { --paper:#091b14; --ink:#e5f5ed; --muted:#9ab9ab; --green:#79d5b3; --count:#b7e6ce; color-scheme:dark; }
+.life-story[data-theme="emerald"]::before { display:none; }
+.first-run-dialog[data-theme="emerald"] :is(.life-birthday-card,.first-run-product-panel) { background:#102a20; border-color:#79bda529; }
+.first-run-dialog[data-theme="emerald"]:not([data-story="true"]) > div > div { background-color:#102a20; }
+.first-run-dialog[data-theme="emerald"] .life-birthday-field { color-scheme:dark; background:#091b14; border-color:#3d8e70; color:#e5f5ed; }
+html[data-dayris-theme="emerald"] .entry-welcome { background:#091b14; color:#e5f5ed; }
+
+/* Theme changes interpolate the actual surfaces and text in both directions. */
+html, body, .premium-shell, .life-story-paper {
+  transition:background-color 520ms cubic-bezier(.4,0,.2,1),color 420ms ease;
+}
+.premium-shell .dayris-header {
+  transition:background-color 520ms cubic-bezier(.4,0,.2,1),border-color 420ms ease,color 420ms ease;
+}
+.settings-surface.dayris-settings-panel.dayris-swipe-sheet {
+  transition:transform 240ms cubic-bezier(.2,0,0,1),background-color 520ms cubic-bezier(.4,0,.2,1),color 420ms ease,border-color 420ms ease;
+}
+.settings-choice, .settings-row, .calendar-days-grid > button {
+  transition:background-color 520ms cubic-bezier(.4,0,.2,1),border-color 420ms ease,color 420ms ease;
+}
+@media(prefers-reduced-motion:reduce) {
+  html,body,.premium-shell,.premium-shell .dayris-header,.life-story-paper,.settings-surface.dayris-settings-panel.dayris-swipe-sheet,.settings-choice,.settings-row,.calendar-days-grid > button { transition:none; }
+}

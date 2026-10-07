@@ -55,10 +55,17 @@ const PERSONAL_COPY = {
   ro: ['Povestea ta din calendar.', 'Veniturile și cheltuielile tale, zi de zi.', 'Înregistrări din calendar', 'Povestea continuă.', 'Fiecare înregistrare face parte din poveste.', 'Nu există încă înregistrări'],
   zh: ['你的日历故事。', '逐日查看你的收入和支出。', '日历记录', '你的故事仍在继续。', '每条记录都是故事的一部分。', '暂无记录'],
 };
+const SCALE_COPY = {
+  ru: ['Эта неделя → 7 дней', 'Дни текущего месяца'],
+  en: ['This week → 7 days', 'Days of the current month'],
+  ro: ['Această săptămână → 7 zile', 'Zilele lunii curente'],
+  zh: ['本周 → 7天', '本月的每一天'],
+};
 const PALETTES = {
   light: { neutral: [191, 184, 167], future: [222, 217, 206], income: [113, 151, 128], expense: [198, 135, 120], today: 'rgba(77,119,100,.45)' },
   dark: { neutral: [91, 98, 94], future: [47, 53, 50], income: [110, 153, 129], expense: [172, 112, 102], today: 'rgba(142,185,159,.55)' },
   purple: { neutral: [99, 85, 117], future: [46, 34, 61], income: [110, 153, 129], expense: [172, 112, 102], today: 'rgba(184,160,244,.55)' },
+  emerald: { neutral: [77, 105, 91], future: [27, 51, 39], income: [110, 170, 137], expense: [172, 112, 102], today: 'rgba(121,213,179,.55)' },
 };
 function weekColor(index, filled, financial, rhythm, palette, arrival = 1) {
   const event = rhythm[index] || { tone: 'neutral', strength: 0 };
@@ -78,6 +85,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
   const paperRef = useRef(null);
   const cellsRef = useRef(null);
   const projectionRef = useRef(null);
+  const orientationRef = useRef(null);
   const signalRef = useRef(null);
   const moneyFlowRef = useRef(null);
   const arriveRef = useRef(onArrive);
@@ -87,6 +95,10 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
   const [reduced, setReduced] = useState(false);
   const today = new Date();
   const locale = lang === 'zh' ? 'zh-CN' : lang === 'ro' ? 'ro-RO' : lang === 'en' ? 'en-US' : 'ru-RU';
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - (today.getDay() + 6) % 7);
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
+  const weekRange = `${weekStart.toLocaleDateString(locale, { day: 'numeric', month: 'short' })} – ${weekEnd.toLocaleDateString(locale, { day: 'numeric', month: 'short' })}`;
   const monthLabel = today.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
   const stats = lifeWeeks(birthday);
   // Without a birthday, the personal timeline begins with saved history.
@@ -322,6 +334,16 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       story.dataset.latticeHeight = String(lattice.height);
       story.dataset.weekWidth = String(lattice.width);
       story.dataset.weekDivision = String(motion.division);
+      const orientation = orientationRef.current;
+      const scalePhase = motion.division > .35 ? 'month' : 'week';
+      if (orientation.dataset.scale !== scalePhase) {
+        orientation.dataset.scale = scalePhase;
+        orientation.querySelector('strong').textContent = SCALE_COPY[lang][scalePhase === 'month' ? 1 : 0];
+        orientation.querySelector('span').textContent = scalePhase === 'month' ? monthLabel : weekRange;
+      }
+      orientation.style.top = `${Math.max(80, nativeTop - 72)}px`;
+      orientation.style.opacity = String(ease(clamp((time - 8100) / 450)) * (1 - ease(clamp((time - 10100) / 700))));
+      orientation.style.transform = `translateY(${8 * (1 - motion.zoom)}px)`;
       const moneyExit = motion.moneyOpacity;
       moneyArea.style.opacity = String(moneyExit);
       moneyArea.style.transform = `translateY(${-4 * (1 - moneyExit)}px) scale(${1 - .025 * (1 - moneyExit)})`;
@@ -376,6 +398,23 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
             context.roundRect(x + day * lattice.dayPitch, y, lattice.dayWidth, lattice.height, targets[0].radius * morph);
             context.fill();
           }
+        }
+        context.restore();
+        // The same moving lattice stays inside a soft window, retaining context
+        // without turning the entire viewport into oversized squares.
+        const bounds = {
+          left: mix(camera.originX - 24, nativeLeft - 24, motion.zoom),
+          right: mix(camera.originX + gridWidth + 24, targets[6].x + targets[6].width + 24, motion.zoom),
+          top: mix(lifeTop - 24, nativeTop - 20, motion.zoom),
+          bottom: mix(lifeBottom + 24, targets.at(-1).y + targets.at(-1).height + 24, motion.zoom),
+        };
+        context.save(); context.globalCompositeOperation = 'destination-in';
+        for (const [start, end, horizontal] of [[bounds.left, bounds.right, true], [bounds.top, bounds.bottom, false]]) {
+          const feather = Math.min(48, (end - start) / 4);
+          const gradient = context.createLinearGradient(horizontal ? start : 0, horizontal ? 0 : start, horizontal ? end : 0, horizontal ? 0 : end);
+          gradient.addColorStop(0, 'transparent'); gradient.addColorStop(feather / (end - start), '#000');
+          gradient.addColorStop(1 - feather / (end - start), '#000'); gradient.addColorStop(1, 'transparent');
+          context.fillStyle = gradient; context.fillRect(0, 0, width, height);
         }
         context.restore();
       }
@@ -512,6 +551,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         <canvas ref={canvasRef} className="life-story-grid" aria-label={stats ? `${elapsedWeeks.toLocaleString(locale)} ${copy.weeks}. ${copy.legend}` : copy.generic} role="img" />
         <div ref={cellsRef} className="life-calendar-bridge" aria-hidden="true" inert="" />
         <canvas ref={signalRef} className="life-story-signal" aria-hidden="true" />
+        <div ref={orientationRef} className="life-story-orientation"><strong /><span /></div>
       </div>
       <div ref={moneyFlowRef} className="life-money-area" key={`money-${run}`}>
         <div className="life-money-amounts" aria-hidden="true">

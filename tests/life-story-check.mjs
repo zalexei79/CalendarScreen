@@ -70,7 +70,7 @@ for (let time=0;time<=LIFE_MOTION_END;time+=16) {
   assert.ok(frame.amountsOpacity===0 || frame.questionOpacity===0);
   assert.equal(frame.planeTilt,0);
   if(frame.division>0) assert.ok(frame.zoom>.7,'Weeks become large before they divide into days');
-  if(frame.contextExit>0) assert.ok(frame.division>.3,'The surrounding lattice remains until day subdivision is visible');
+  if(frame.contextExit>0) assert.ok(frame.division>0,'The surrounding lattice recedes only after day subdivision begins');
   if(frame.handoff>0) assert.ok(frame.zoom===1 && frame.division===1 && frame.month===1 && frame.skin===1 && frame.paperOpacity===0,'Handoff only after exact geometry, paint and lighting settle');
 }
 assert.equal(lifeCalendarMotion(9000).division,0,'At the first zoom, cells still represent whole weeks');

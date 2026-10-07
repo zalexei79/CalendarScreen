@@ -7,6 +7,7 @@ import { installStoryAccount } from './life-story-auth-fixture.mjs';
 const require = createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE || 'C:/Users/aveel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/package.json');
 const browser = await require('playwright').chromium.launch({ channel: 'msedge', headless: true });
 const desktop = process.argv.includes('--desktop');
+const purple = process.argv.includes('--purple');
 const dark = desktop || process.argv.includes('--dark');
 const reference = process.argv.includes('--reference');
 const compact = process.argv.includes('--compact');
@@ -16,7 +17,7 @@ const suffix = desktop ? reference ? '-desktop-reference' : '-desktop' : compact
 const screenshotPath = stage => `tests/life-story-app${suffix}-${stage}.png`;
 try {
   const context = await browser.newContext({ viewport: desktop ? reference ? { width: 1145, height: 976 } : { width: 1440, height: 1000 } : { width: 390, height: phoneHeight }, serviceWorkers: 'block' });
-  await context.addInitScript(dark => { localStorage.setItem('atj_language', 'ru'); localStorage.setItem('atj_theme', dark ? 'dark' : 'light'); localStorage.setItem('calendar_guide_completed', '1'); localStorage.setItem('dayris_voice_feedback', 'off'); }, dark);
+  await context.addInitScript(({dark,purple}) => { localStorage.setItem('atj_language', 'ru'); localStorage.setItem('atj_theme', purple ? 'purple' : dark ? 'dark' : 'light'); localStorage.setItem('calendar_guide_completed', '1'); localStorage.setItem('dayris_voice_feedback', 'off'); }, {dark,purple});
   await context.route('**/*', route => {
     const url = new URL(route.request().url());
     if (url.origin !== 'http://calendar.test') return route.abort();
@@ -120,8 +121,8 @@ try {
   assert.ok((await money.evaluateAll(nodes => nodes.map(node => Number(node.dataset.week)))).every(week => week <= filled));
   const focusDistance = await page.locator('.life-story').evaluate(element => Math.abs(Number(element.dataset.focusWeek) - Number(element.dataset.currentWeek)));
   assert.ok(focusDistance <= 6, 'The focused week remains adjacent to the chronological present, including row edges');
-  assert.equal(await page.locator('.life-story').getAttribute('data-theme'), dark ? 'dark' : 'light');
-  assert.equal(await page.locator('.life-story-paper').evaluate(element => getComputedStyle(element).backgroundColor), dark ? 'rgb(17, 23, 20)' : 'rgb(247, 244, 236)');
+  assert.equal(await page.locator('.life-story').getAttribute('data-theme'), purple ? 'purple' : dark ? 'dark' : 'light');
+  assert.equal(await page.locator('.life-story-paper').evaluate(element => getComputedStyle(element).backgroundColor), purple ? 'rgb(16, 11, 28)' : dark ? 'rgb(17, 23, 20)' : 'rgb(247, 244, 236)');
   if (desktop) assert.ok(Number(await page.locator('.life-story').getAttribute('data-grid-width')) > (reference ? 540 : 570), 'The desktop life panel uses the available screen height to make the weeks legible');
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'The financial area never adds horizontal scrolling');
   if (!desktop) await page.setViewportSize({ width: 320, height: phoneHeight });
@@ -165,6 +166,11 @@ try {
     assert.ok(state.width >= previousWidth, 'The selected month grows continuously without a shrinking interlude');
     assert.ok(!state.overlaps && state.left >= 0 && state.right <= page.viewportSize().width, 'The growing month remains within the viewport, without overlapping days');
     if (time === 9000) {
+      assert.equal(await page.locator('.life-story-scene').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)', 'No colored rectangle behind the projection');
+      assert.match(await page.locator('.life-story-orientation').innerText(), /Эта неделя → 7 дней/);
+      assert.equal(await page.locator('.life-story-grid').evaluate(canvas => {
+        const ctx=canvas.getContext('2d'); return ctx.getImageData(4,4,1,1).data[3];
+      }), 0, 'The enlarged lattice never fills the viewport corners');
       assert.ok(Math.abs(state.weekWidth-state.cellHeight)<.1 && state.cellHeight>30, 'The first camera zoom enlarges square weekly cells');
       assert.equal(state.division,0, 'The first zoom has not yet turned weeks into days');
       assert.ok(state.intactWeeks, 'Whole weeks are painted as single squares, without premature day seams');
@@ -172,6 +178,7 @@ try {
       assert.equal(state.headingOpacity, 0, 'Departing copy has cleared the calendar');
       assert.equal(await page.locator('.life-story-scale-cue').count(), 0, 'No floating scale label covers the cells');
     }
+    if (time === 10000) assert.match(await page.locator('.life-story-orientation').innerText(), /Дни текущего месяца.*октябрь/s);
     if (time === 10500) assert.ok(state.datesVisible, 'Date content arrives while the calendar is still moving');
     previousWidth = state.width;
     await page.screenshot({ path: screenshotPath('transition-' + time), animations: 'disabled' });
