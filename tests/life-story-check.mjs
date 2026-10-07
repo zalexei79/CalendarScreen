@@ -70,7 +70,7 @@ for(let time=0;time<=LIFE_MOTION_END;time+=16){
  const m=lifeCalendarMotion(time);
  assert.ok(m.amountsOpacity===0 || m.questionOpacity===0);
  if(m.division>0) assert.equal(m.zoom,1);
- if(m.neighbors>0) assert.equal(m.division,1);
+ assert.equal(m.neighbors,m.division);
  if(m.handoff>0) assert.ok(m.skin===1 && m.paperOpacity===0);
 }
 const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-6, a+' != '+b);
@@ -83,15 +83,15 @@ for(const width of [320,390,1145,1440]) for(const rows of [4,5,6]) for(const tod
   const m=lifeCalendarMotion(time),f=lifeLatticeFrame(args,m);
   close(f.dayWidth*7+f.gap*6,f.width);assert.ok(f.dayWidth>0);
   if(!m.division)close(f.width,f.height);
-  if(m.zoom===1){close(f.anchorX,targets[todayIndex].x+dayWidth/2);close(f.anchorY,targets[todayIndex].y+50);assert.ok(f.x>=24-1e-6 && f.x+f.width<=width-24+1e-6);}
+  if(m.zoom===1){close(f.anchorX,width/2);close(f.anchorY,200+((rows-1)*108+100)/2);assert.ok(f.x>=24-1e-6 && f.x+f.width<=width-24+1e-6);}
   if(previous)assert.ok(f.width>=previous.width-1e-6);
   previous=f;
  }
  const f=lifeLatticeFrame(args,lifeCalendarMotion(13600));
  targets.forEach((t,i)=>{close(f.x+i%7*f.dayPitch,t.x);close(f.y+Math.floor(i/7)*f.pitchY,t.y);});
- targets.forEach((t,i)=>assert.equal(lifeRowArrival(11300,i,todayIndex),Math.floor(i/7)===Math.floor(todayIndex/7)?1:0));
+ targets.forEach((t,i)=>assert.equal(lifeRowArrival(11300,i,todayIndex),1));
 }
-console.log('PASS: one week opens into seven days; today stays anchored; month rows arrive later; exact handoff on mobile and desktop.');
+console.log('PASS: month weeks open into day rows together; group center stays anchored; exact handoff on mobile and desktop.');
 
 for(const count of [0,1,18,32,1000,5000]) {
  const events=Array.from({length:count},(_,id)=>({id,amount:id,currency:'USD'}));

@@ -167,19 +167,25 @@ try {
     assert.ok(!state.overlaps && state.left >= 0 && state.right <= page.viewportSize().width, 'The growing month remains within the viewport, without overlapping days');
     if (time === 9000) {
       assert.equal(await page.locator('.life-story-scene').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)', 'No colored rectangle behind the projection');
-      assert.match(await page.locator('.life-story-orientation').innerText(), /Эта неделя → 7 дней/);
+      assert.match(await page.locator('.life-story-orientation').innerText(), /Недели текущего месяца/);
       assert.equal(await page.locator('.life-story-grid').evaluate(canvas => {
         const ctx=canvas.getContext('2d'); return ctx.getImageData(4,4,1,1).data[3];
       }), 0, 'The enlarged lattice never fills the viewport corners');
       assert.ok(Math.abs(state.weekWidth-state.cellHeight)<.1 && state.cellHeight>30, 'The first camera zoom enlarges square weekly cells');
       assert.equal(state.division,0, 'The first zoom has not yet turned weeks into days');
       assert.ok(state.intactWeeks, 'Whole weeks are painted as single squares, without premature day seams');
-      assert.equal(state.contextExit,1, 'Only the selected current week remains in focus');
+      assert.ok(state.contextExit>.95, 'The lifetime fades behind the bounded month group');
       assert.equal(state.headingOpacity, 0, 'Departing copy has cleared the calendar');
       assert.equal(await page.locator('.life-story-scale-cue').count(), 0, 'No floating scale label covers the cells');
     }
     if (time === 12000) assert.match(await page.locator('.life-story-orientation').innerText(), /Дни текущего месяца.*октябрь/s);
-    if (time === 11300) assert.ok(state.datesVisible, 'Date content arrives while the calendar is still moving');
+    if (time === 12000) assert.ok(state.datesVisible, 'Date content arrives while the calendar is still moving');
+    if(time===12000){
+      const visible=await page.locator('.life-calendar-cell').evaluateAll(cells=>cells.filter(c=>Number(getComputedStyle(c).opacity)>.9).map(c=>c.dataset.sourceWeek));
+      const rows=Number(await page.locator('.life-story').getAttribute('data-selected-weeks'));
+      assert.equal(visible.length,rows*7,'Every month week opens into seven days');
+      assert.equal(new Set(visible).size,rows,'Rows keep distinct source week identities');
+    }
     previousWidth = state.width;
     await page.screenshot({ path: screenshotPath('transition-' + time), animations: 'disabled' });
   }

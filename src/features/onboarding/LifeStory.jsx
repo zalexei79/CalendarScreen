@@ -67,15 +67,15 @@ const PALETTES = {
   purple: { neutral: [95, 89, 104], future: [38, 35, 43], income: [132, 161, 144], expense: [167, 128, 135], today: 'rgba(179,164,206,.45)' },
   emerald: { neutral: [84, 101, 92], future: [33, 43, 37], income: [132, 161, 144], expense: [167, 128, 135], today: 'rgba(154,189,170,.45)' },
 };
-function weekColor(index, filled, financial, rhythm, palette, arrival = 1) {
+function weekColor(index, filled, financial, rhythm, palette, arrival = 1, highlight = 0) {
   const event = rhythm[index] || { tone: 'neutral', strength: 0 };
-  const base = index >= filled ? palette.future : palette.future.map((value, channel) => mix(value, palette.neutral[channel], arrival));
+  const base = index >= filled ? palette.future.map((value, channel) => mix(value, palette.neutral[channel], highlight)) : palette.future.map((value, channel) => mix(value, palette.neutral[channel], arrival));
   const tone = index >= filled || event.tone === 'neutral' ? base : palette[event.tone];
   const color = base.map((value, channel) => mix(value, tone[channel], financial * event.strength));
   return `rgb(${color.map(Math.round).join(',')})`;
 }
 
-/** Zoom the whole week lattice, open seven days per week, then reveal the UI. */
+/** Select the month weeks, open seven days per row, then reveal the UI. */
 export default function LifeStory({ birthday, lang, theme = 'light', currency = 'USD', calendarRecords = EMPTY_RECORDS, personalStory = false, onStart, onArrive, onSkip, onBack }) {
   const copy = LIFE_COPY[lang];
   const palette = PALETTES[theme] || PALETTES.dark;
@@ -95,10 +95,6 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
   const [reduced, setReduced] = useState(false);
   const today = new Date();
   const locale = lang === 'zh' ? 'zh-CN' : lang === 'ro' ? 'ro-RO' : lang === 'en' ? 'en-US' : 'ru-RU';
-  const weekStart = new Date(today);
-  weekStart.setDate(today.getDate() - (today.getDay() + 6) % 7);
-  const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
-  const weekRange = `${weekStart.toLocaleDateString(locale, { day: 'numeric', month: 'short' })} – ${weekEnd.toLocaleDateString(locale, { day: 'numeric', month: 'short' })}`;
   const monthLabel = today.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
   const stats = lifeWeeks(birthday);
   // Without a birthday, the personal timeline begins with saved history.
@@ -159,7 +155,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     }
     const monthRows = count / 7;
     const hierarchy = lifeWeekHierarchy({ currentWeek: current, totalWeeks: total, rows, todayIndex, dayCount: count });
-    const { col: cropCol, row: cropRow } = hierarchy.position(current);
+    const { col: cropCol, row: cropRow } = hierarchy.position(hierarchy.startWeek);
     const sourceIndices = hierarchy.sourceWeeks;
     if (!personalStory) rhythm = reserveLifePresent(rhythm, sourceIndices, current);
     const moneyEvents = personalStory ? recorded : lifeMoneyEvents(rhythm, currency);
@@ -333,14 +329,14 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       story.dataset.anchorX = String(lattice.anchorX); story.dataset.anchorY = String(lattice.anchorY);
       story.dataset.currentRow = String(Math.floor(todayIndex / 7));
       const orientation = orientationRef.current;
-      const scalePhase = motion.neighbors > 0 ? 'month' : motion.division === 1 ? 'days' : 'week';
+      const scalePhase = motion.division > .35 ? 'month' : 'weeks';
       if (orientation.dataset.scale !== scalePhase) {
         orientation.dataset.scale = scalePhase;
-        orientation.querySelector('strong').textContent = SCALE_COPY[lang][scalePhase === 'month' ? 1 : scalePhase === 'days' ? 2 : 0];
-        orientation.querySelector('span').textContent = scalePhase === 'month' ? monthLabel : weekRange;
+        orientation.querySelector('strong').textContent = scalePhase === 'month' ? SCALE_COPY[lang][1] : ({ru:'Недели текущего месяца',en:'Weeks of this month',ro:'Săptămânile lunii curente',zh:'本月的每一周'}[lang]);
+        orientation.querySelector('span').textContent = monthLabel;
       }
-      orientation.style.top = `${Math.max(80, nativeTop - 72)}px`;
-      orientation.style.opacity = String(ease(clamp((time - 8100) / 450)) * (1 - ease(clamp((time - 12700) / 700))));
+      orientation.style.top = `${Math.max(80, lattice.y - 64)}px`;
+      orientation.style.opacity = String(ease(clamp((time - 8250) / 450)) * (1 - ease(clamp((time - 12700) / 700))));
       orientation.style.transform = `translateY(${8 * (1 - motion.zoom)}px)`;
       const moneyExit = motion.moneyOpacity;
       moneyArea.style.opacity = String(moneyExit);
@@ -382,7 +378,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         context.save(); context.globalAlpha = 1 - motion.contextExit;
         for (let row = 0; row < rows; row++) for (let col = 0; col < hierarchy.columns; col++) {
           const i = hierarchy.weekAt(col, row);
-          if (i === current && time >= 8000) continue;
+          if (hierarchy.selectedWeeks.has(i) && time >= 8000) continue;
           const age = time - (weekTimes[i] ?? Infinity);
           const size = unit * (width >= 760 ? .74 : .65), inset = (unit - size) / 2;
           context.fillStyle = weekColor(i, filled, ease(clamp(age / 450)), rhythm, palette, ease(clamp(age / 180)));
@@ -390,13 +386,17 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         }
         context.restore();
       }
-      // One intact parent opens into one row, never a whole month at once.
+      // Every selected week stays an intact square until its day seams open.
+      story.dataset.selectedWeeks = String(monthRows);
       if (time >= 8000 && motion.division < 1) {
         context.save(); context.globalAlpha = 1 - motion.division;
-        const age = time - (weekTimes[current] ?? Infinity);
-        context.fillStyle = weekColor(current, filled, ease(clamp(age / 450)), rhythm, palette, ease(clamp(age / 180)));
-        context.beginPath(); context.roundRect(lattice.x, lattice.y + todayRow * lattice.pitchY, lattice.width, lattice.height, targets[todayIndex].radius * motion.division);
-        context.fill(); context.restore();
+        for(let row=0;row<monthRows;row++) {
+          const source=sourceIndices[row*7],age=time-(weekTimes[source]??Infinity);
+          context.fillStyle=weekColor(source,filled,ease(clamp(age/450)),rhythm,palette,ease(clamp(age/180)),motion.zoom*.75);
+          context.beginPath();context.roundRect(lattice.x,lattice.y+row*lattice.pitchY,lattice.width,lattice.height,targets[0].radius*motion.division);
+          context.fill();
+        }
+        context.restore();
       }
       targets.forEach((target, index) => {
         const source = sourceIndices[index];
@@ -409,12 +409,12 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         const w = lattice.dayWidth + (target.width - targets[0].width) * morph;
         const h = lattice.height + (target.height - targets[0].height) * morph;
         const age = time - (weekTimes[source] ?? Infinity);
-        const color = weekColor(source, filled, ease(clamp(age / 450)), rhythm, palette, ease(clamp(age / 180)));
+        const color = weekColor(source, filled, ease(clamp(age / 450)), rhythm, palette, ease(clamp(age / 180)), motion.zoom * .75);
         if (target.bridge) {
           const { wrapper, face, week, content, opacity } = target.bridge;
           const scaleX = w / target.width, scaleY = h / target.height;
           wrapper.style.transform = `translate3d(${x}px,${y}px,0) scale(${scaleX},${scaleY})`;
-          wrapper.style.opacity = String((row === todayRow ? motion.division : rowArrival) * (1 - handoff));
+          wrapper.style.opacity = String(motion.division * (1 - handoff));
           wrapper.dataset.sourceWeek = String(source);
           wrapper.dataset.rowArrival = String(rowArrival);
           face.style.borderRadius = `${target.radius}px`;
@@ -432,7 +432,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
           return;
         }
         if (!motion.division || !rowArrival) return;
-        const arrival = row === todayRow ? motion.division : rowArrival;
+        const arrival = motion.division;
         context.save();
         context.globalAlpha = (1 - handoff) * arrival;
         context.beginPath();
@@ -461,21 +461,21 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         }
         context.restore();
       });
-      // Keep the current week and today connected by one quiet outline.
+      // A quiet outline selects the whole month before its day seams unfold.
       signalContext.clearRect(0, 0, width, height);
       const signalColor = theme === 'light' ? '73,128,113' : theme === 'purple' ? '184,160,244' : '153,212,185';
       if (motion.focus > 0) {
-        const x = lattice.x + todayIndex % 7 * lattice.dayPitch * motion.division;
-        const y = lattice.y + Math.floor(todayIndex / 7) * lattice.pitchY;
+        const x = lattice.x;
+        const y = lattice.y;
         const inset = 2 + 2 * motion.month;
-        const focusWidth = mix(lattice.width, lattice.dayWidth, motion.division);
+        const focusWidth = lattice.width;
         signalContext.save();
         signalContext.shadowColor = `rgba(${signalColor},${.2 * motion.focus})`;
         signalContext.shadowBlur = 14 * motion.focus;
         signalContext.strokeStyle = `rgba(${signalColor},${.32 * motion.focus})`;
         signalContext.lineWidth = .8;
         signalContext.beginPath();
-        signalContext.roundRect(x - inset, y - inset, focusWidth + inset * 2, lattice.height + inset * 2, targets[todayIndex].radius * morph + 1);
+        signalContext.roundRect(x - inset, y - inset, focusWidth + inset * 2, (monthRows - 1) * lattice.pitchY + lattice.height + inset * 2, targets[todayIndex].radius * morph + 1);
         signalContext.stroke();
         signalContext.restore();
       }
