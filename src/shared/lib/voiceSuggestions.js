@@ -4,10 +4,10 @@ import {extractEntryDate} from './voiceEntryReview.js';
 import {normalizeVoiceCategory} from './voiceCategory.js';
 
 const copy={
- ru:{title:'Можно продолжить',empty:'Продолжайте фразу — подходящих подсказок пока нет.',amount:'[сумма]',currency:'[валюта]',category:'на [категория]',date:'вчера / сегодня',route:'в календарь',wallet:'в кошелёк / в оба',review:'После паузы проверьте запись',corrections:['потратил на [категория]','нет, [сумма]','сохрани / отмена']},
- en:{title:'You can continue with',empty:'Keep speaking — no matching hints yet.',amount:'[amount]',currency:'[currency]',category:'on [category]',date:'yesterday / today',route:'to calendar',wallet:'to wallet / both',review:'Pause, then review the entry',corrections:['spent on [category]','no, [amount]','save / cancel']},
- ro:{title:'Poți continua cu',empty:'Continuă fraza — încă nu sunt sugestii potrivite.',amount:'[sumă]',currency:'[monedă]',category:'pe [categorie]',date:'ieri / astăzi',route:'în calendar',wallet:'în portofel / ambele',review:'După pauză, verifică înregistrarea',corrections:['cheltuit pe [categorie]','nu, [sumă]','salvează / anulează']},
- zh:{title:'可以继续说',empty:'请继续说，暂时没有匹配的提示。',amount:'[金额]',currency:'[货币]',category:'用于[类别]',date:'昨天 / 今天',route:'到日历',wallet:'到钱包 / 两者',review:'暂停后核对记录',corrections:['用于[类别]','不，[金额]','保存 / 取消']},
+ ru:{title:'Можно продолжить',empty:'Продолжайте фразу — подходящих подсказок пока нет.',amount:'[сумма]',currency:'[валюта]',category:'на [категория]',date:'вчера / сегодня',route:'в календарь',wallet:'в кошелёк / в оба',review:'После паузы разберу фразу',corrections:['потратил на [категория]','нет, [сумма]','сохрани / отмена']},
+ en:{title:'You can continue with',empty:'Keep speaking — no matching hints yet.',amount:'[amount]',currency:'[currency]',category:'on [category]',date:'yesterday / today',route:'to calendar',wallet:'to wallet / both',review:'Pause to process your phrase',corrections:['spent on [category]','no, [amount]','save / cancel']},
+ ro:{title:'Poți continua cu',empty:'Continuă fraza — încă nu sunt sugestii potrivite.',amount:'[sumă]',currency:'[monedă]',category:'pe [categorie]',date:'ieri / astăzi',route:'în calendar',wallet:'în portofel / ambele',review:'După pauză, analizez fraza',corrections:['cheltuit pe [categorie]','nu, [sumă]','salvează / anulează']},
+ zh:{title:'可以继续说',empty:'请继续说，暂时没有匹配的提示。',amount:'[金额]',currency:'[货币]',category:'用于[类别]',date:'昨天 / 今天',route:'到日历',wallet:'到钱包 / 两者',review:'暂停后处理语句',corrections:['用于[类别]','不，[金额]','保存 / 取消']},
 };
 const normalize=value=>normalizeVoiceCategory(value).replace(/[.,!?«»]/g,'').trim();
 const nav=value=>normalize(value).replace(/^(?:зайди|войди|покажи|открой)/,'открой');

@@ -11,7 +11,7 @@ export function canAutoSaveVoiceEntry(phrase,dialog,locale,categories=[],options
  if(!evidence?.isFinal||evidence.usedAlternative||!entry||dialog.batch||entry.mutation||!entry.category||entry.kind!=='record')return false;
  if(evidence.confidence>0&&evidence.confidence<0.6)return false;
  const corrected=resolveVoiceCorrections(phrase),date=extractEntryDate(corrected.text,options.todayKey);
- if(corrected.negated||date.invalid)return false;
+ if(corrected.negated||corrected.correction||date.invalid)return false;
  if(locale==='zh'){
   const command=parseCalendarVoiceCommand(phrase);
   if(command?.type!=='entry'||!command.category||!command.currency||!command.amount)return false;

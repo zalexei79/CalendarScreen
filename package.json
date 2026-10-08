@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "node scripts/build-widget-voice-core.mjs && vite build",
+    "build:widget-core": "node scripts/build-widget-voice-core.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",

@@ -39,7 +39,7 @@ def twaManifest = [
     // - short_name: Shorter string used if |name| is too long.
     // - url: Absolute path of the URL to launch the app with (e.g '/create').
     // - icon: Name of the resource in the drawable folder to use as an icon.
-    shortcuts: [],
+    shortcuts: [[name:'DAYRIS · Микрофон', short_name:'Микрофон', url:'https://ai-trade-journal-ejm8.onrender.com/?voice=1&source=android-shortcut', icon:'ic_voice_widget']],
     // The duration of fade out animation in milliseconds to be played when removing splash screen.
     splashScreenFadeOutDuration: 300,
     generatorApp: 'bubblewrap-cli', // Application that generated the Android Project
@@ -57,8 +57,8 @@ android {
         applicationId "com.dayris.calendar"
         minSdkVersion 21
         targetSdkVersion 36
-        versionCode 4
-        versionName "1.0.2"
+        versionCode 6
+        versionName "1.0.4"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -133,8 +133,11 @@ android {
         resValue "bool", "enableNotification", twaManifest.enableNotifications.toString()
 
         twaManifest.shortcuts.eachWithIndex { shortcut, index ->
-            resValue "string", "shortcut_name_$index", "$shortcut.name"
-            resValue "string", "shortcut_short_name_$index", "$shortcut.short_name"
+            // The microphone labels live in localized resources.
+            if (index > 0) {
+                resValue "string", "shortcut_name_$index", "$shortcut.name"
+                resValue "string", "shortcut_short_name_$index", "$shortcut.short_name"
+            }
         }
 
         // The splashScreenFadeOutDuration resource is used to set the duration of fade out animation in milliseconds
@@ -154,6 +157,10 @@ android {
         release {
             minifyEnabled true
         }
+    }
+    // Pairing can select a language different from the phone's system locale.
+    bundle {
+        language { enableSplit = false }
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8

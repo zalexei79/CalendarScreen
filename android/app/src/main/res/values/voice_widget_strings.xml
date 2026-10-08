@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="voice_widget_name">DAYRIS · Микрофон</string>
+    <string name="voice_widget_action">Записать голосом с рабочего стола</string>
+    <string name="voice_widget_description">Доходы и расходы без открытия календаря.</string>
+    <string name="shortcut_name_0">DAYRIS · Микрофон</string>
+    <string name="shortcut_short_name_0">Микрофон</string>
+    <string name="voice_widget_listening">Слушаю — говорите</string>
+    <string name="voice_widget_starting">Включаю микрофон</string>
+    <string name="voice_widget_processing">Обрабатываю фразу</string>
+    <string name="voice_widget_stop">Остановить микрофон</string>
+    <string name="voice_widget_setup">Подключите микрофон к аккаунту DAYRIS. Это нужно один раз.</string>
+    <string name="voice_widget_connect">Подключить</string>
+    <string name="voice_widget_unsupported">Для виджета нужен Android 6 или новее.</string>
+    <string name="voice_widget_permission">Разрешите доступ к микрофону, затем нажмите виджет снова.</string>
+    <string name="voice_widget_browser">Для подключения обновите Chrome и повторите.</string>
+    <string name="voice_widget_pair_error">Не удалось проверить связь с DAYRIS. Обновите сайт и приложение.</string>
+    <string name="voice_widget_paused">Микрофон на паузе. Нажмите, чтобы продолжить.</string>
+    <string name="voice_widget_no_recognizer">Проверьте голосовые службы Android.</string>
+    <string name="voice_widget_network">Нет связи. Нажмите для повторной отправки.</string>
+    <string name="voice_widget_no_speech">Не услышал фразу. Нажмите микрофон и повторите.</string>
+    <string name="voice_widget_storage_error">Не удалось сохранить запрос на телефоне.</string>
+    <string name="voice_widget_expired">Подключите виджет к аккаунту заново.</string>
+    <string name="voice_widget_conflict">Контекст изменился. Нажмите для повторной обработки.</string>
+    <string name="voice_widget_old_request">Запрос устарел. Проверьте календарь перед повторной записью.</string>
+</resources>

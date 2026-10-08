@@ -27,5 +27,8 @@ try{
  // A failed automatic write returns a retryable card; the success voice is not played.
  const spokenBefore=await page.evaluate(()=>spoken.length);await page.evaluate(()=>failSave=true);await say('потратил 90 лей на сок');await page.locator('.calendar-voice-review').waitFor();assert.match(await page.locator('.calendar-voice-review').textContent(),/Нет соединения/);assert.equal(await page.evaluate(()=>saved.length),3);assert.equal(await page.evaluate(()=>spoken.length),spokenBefore);
  await page.evaluate(()=>failSave=false);await page.locator('.calendar-voice-save').click();await page.waitForFunction(()=>saved.length===4);assert.equal(await page.evaluate(()=>saved[3].amount),'90');assert.equal(await page.evaluate(()=>saveCalls.length),5);
+ // New spoken aliases still pass through the actual microphone/persistence flow.
+ await say('Я заплатил полтинник лэй за сок');await page.waitForFunction(()=>saved.length===5);
+ assert.deepEqual(await page.evaluate(()=>[saved[4].amount,saved[4].currency,saved[4].category]),['50','MDL','сок']);assert.equal(await page.locator('.calendar-voice-review').count(),0);
  assert.deepEqual(errors,[]);console.log('PASS: complete phrase saves once without card; spoken success after persistence; uncertain/incomplete phrases keep review; errors show retryable card and manual retry works.');
 }finally{await browser.close();}

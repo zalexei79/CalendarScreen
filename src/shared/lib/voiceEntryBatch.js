@@ -10,9 +10,13 @@ function resultFor(batch,locale){
  if(state.draft)return {...state,batch:next,prompt:(prefixes[locale]||prefixes.ru)(activeIndex,batch.states.length,batch.commonFields.includes(state.field))+state.prompt};
  return {batch:next,entry:state.entry};
 }
-function naturalPart(text,categories,today){return parseNaturalVoiceEntry(extractEntryDate(text,today).text,{categories});}
+function naturalPart(text,categories,today){return parseNaturalVoiceEntry(extractEntryDate(text,today).text,{categories,includeInvalidSlots:true});}
+// Preserve a money clause whose category was garbled, without guessing the
+// purchase. Another clause must be independently understood.
+const unclearCategory=state=>state?.invalid&&state.patch?.amount&&state.patch.sign&&!state.patch.category&&!state.ambiguous?.length&&/^[\p{L}]{2,30}(?: [\p{L}]{2,30}){0,2}$/u.test(state.unparsed||'')&&!/(?:^|\s)(?:не|нет|удали|открой|покажи|not|delete|open|show)(?:\s|$)/u.test(state.unparsed);
 function meaningful(parts,categories,today){
  const parsed=parts.map(part=>naturalPart(part,categories,today));
+ if(parts.length>=2&&parsed.filter(unclearCategory).length===1&&parsed.filter(state=>state&&!state.invalid&&!state.ambiguous.length&&state.patch.amount&&(state.patch.category||state.patch.item)).length===parts.length-1)return true;
  if(parts.length<2||parsed.some(state=>!state||state.invalid||state.ambiguous.length||!state.patch.amount||!(state.patch.category||state.patch.item||state.patch.sign)))return false;
  const explicit=parts.map(part=>part.split(/\s+/).some(word=>naturalPart(word,categories,today)?.patch?.sign));
  return parsed.filter(state=>state.patch.category||state.patch.item).length>=2||explicit.every(Boolean)||new Set(parsed.map(state=>state.patch.sign).filter(Boolean)).size>1;
@@ -22,7 +26,7 @@ function partsFor(text,categories,today){
  // Amount ranges preserve decimals, spoken numbers, cents and numeric category
  // names. Each range must have its own category or explicit money action.
  if(!dates.invalid){
-  const parsed=parseNaturalVoiceEntry(dates.text,{categories}),ranges=parsed?.amountRanges;
+  const parsed=parseNaturalVoiceEntry(dates.text,{categories,includeInvalidSlots:true}),ranges=parsed?.amountRanges;
   if(ranges?.length>=2){
    const parts=ranges.map((range,index)=>trimConnector(dates.text.slice(index?range.start:0,ranges[index+1]?.start||dates.text.length)));
    if(meaningful(parts,categories,today))return {parts,sharedDate:dates.dateKey};
@@ -61,7 +65,15 @@ export function voiceEntryBatch(phrase,batch=null,locale='ru',categories=[],opti
   if(values.length===1)shared[field]=values[0];
  }
  if(split.sharedDate)shared.dateKey=split.sharedDate;
- const states=split.parts.map(part=>voiceEntryReview(part,shared,locale,categories,options));
+ const states=split.parts.map((part,index)=>{
+  const parsedPart=parsed[index];
+  if(unclearCategory(parsedPart)){
+   const pending=voiceEntryReview('',{...shared,...parsedPart.patch,pendingFields:['category']},locale,categories,{...options,requireCategory:true});
+   if(pending?.draft&&locale==='ru')pending.prompt=`Не разобрал «${parsedPart.unparsed}». На что потратили ${parsedPart.patch.amount}${pending.draft.currency?' '+pending.draft.currency:''}?`;
+   return pending;
+  }
+  return voiceEntryReview(part,shared,locale,categories,options);
+ });
  if(states.some(state=>!state||state.invalid||state.cancelled))return null;
  const commonFields=['currency','date','destination'].filter(field=>states.every(state=>state.field===field));
  return resultFor({states,activeIndex:0,commonFields},locale);

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <ImageView android:id="@+id/voice_widget_button"
+        android:layout_width="64dp" android:layout_height="64dp"
+        android:layout_gravity="center" android:padding="0dp"
+        android:background="@drawable/voice_widget_surface"
+        android:src="@drawable/voice_widget_preview" android:scaleType="fitCenter"
+        android:contentDescription="@string/voice_widget_action"
+        android:clickable="true" android:focusable="true" />
+    <ProgressBar android:id="@+id/voice_widget_loading"
+        android:layout_width="64dp" android:layout_height="64dp"
+        android:layout_gravity="center" android:indeterminate="true"
+        android:indeterminateTint="#DBC58A" android:visibility="gone"
+        android:importantForAccessibility="no" />
+</FrameLayout>

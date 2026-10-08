@@ -92,6 +92,8 @@ import CalendarGrid from './CalendarGrid';
 import MonthlyGoal from './MonthlyGoal';
 import AmountKeypad, {AmountInput} from './src/shared/ui/AmountEntry.jsx';
 import CalendarVoiceButton from './src/shared/ui/CalendarVoiceButton.jsx';
+import useVoiceLaunch from './src/shared/ui/useVoiceLaunch.js';
+import AndroidWidgetPairing from './src/shared/ui/AndroidWidgetPairing.jsx';
 import {financialQueryResult, financialRecordKey, resolveFinancialQueryCategory} from './src/shared/lib/financialVoiceQuery.js';
 import { categoryMatches, normalizeVoiceCategory, resolveLocalizedCategory } from './src/shared/lib/voiceCategory.js';
 import useVoiceCategories from './src/shared/ui/useVoiceCategories.js';
@@ -165,6 +167,13 @@ export default function CalendarScreen() {
     } catch { /* Login also works without browser storage. */ }
     setLoginPrompt(true);
   }
+  const homeVoiceLaunch = useVoiceLaunch();
+  const homeVoiceReady = authReady && Boolean(validUserId) && !setupStep && !nicknameModalOpen;
+  useEffect(() => {
+    if (!homeVoiceLaunch.request || !authReady) return;
+    if (!validUserId) { requestLogin(); return; }
+    if (homeVoiceReady) setAccountMode('main');
+  }, [homeVoiceLaunch.request, authReady, validUserId, homeVoiceReady]);
   useEffect(() => {
     if (!validUserId) return;
     setDemoChosen(false);
@@ -4449,6 +4458,7 @@ export default function CalendarScreen() {
       setViewYear(today.getFullYear());
     }} /> : <div className={`premium-shell min-h-screen w-full flex flex-col transition-colors duration-500 ${proView ? 'pro-active-shell' : ''} ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
       <ProGrantNotice userId={validUserId} active={proAccessActive} until={proAccessUntil} language={language} isLight={isLight} />
+      <AndroidWidgetPairing ready={homeVoiceReady} userId={validUserId} language={language} currency={currency} categories={moneyCategoryNames.map(value=>({value,label:getMoneyCategoryLabel(value,language),type:MONEY_CATEGORIES.find(item=>item.key===value)?.type}))} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
         .font-display { font-family: 'Space Grotesk', sans-serif; }
@@ -5094,7 +5104,7 @@ export default function CalendarScreen() {
               {t('addAction')}
             </span>
           </button>
-          <CalendarVoiceButton userId={user?.id} onCreateCategory={voiceCategories.add} onDeleteCategory={removeMoneyCategory} onSaveEntry={saveReviewedVoiceEntry} defaultCurrency={currency} walletAvailable={proAccessActive && !proAccessLoading} language={language} isLight={isLight} traderMode={traderMode} categoryOptions={moneyCategoryNames.map(value => ({value, label: getMoneyCategoryLabel(value, language), type: MONEY_CATEGORIES.find(item=>item.key===value)?.type, icon: getHistoryCategoryIcon(value)}))} onResetConversation={voiceConversation.reset} onConversation={voiceConversation.handle} selectedDate={selectedKey} onCommand={handleCalendarVoiceCommand} />
+          <CalendarVoiceButton launchRequest={homeVoiceReady ? homeVoiceLaunch.request : null} onLaunchHandled={homeVoiceLaunch.handled} userId={user?.id} onCreateCategory={voiceCategories.add} onDeleteCategory={removeMoneyCategory} onSaveEntry={saveReviewedVoiceEntry} defaultCurrency={currency} walletAvailable={proAccessActive && !proAccessLoading} language={language} isLight={isLight} traderMode={traderMode} categoryOptions={moneyCategoryNames.map(value => ({value, label: getMoneyCategoryLabel(value, language), type: MONEY_CATEGORIES.find(item=>item.key===value)?.type, icon: getHistoryCategoryIcon(value)}))} onResetConversation={voiceConversation.reset} onConversation={voiceConversation.handle} selectedDate={selectedKey} onCommand={handleCalendarVoiceCommand} />
         </div>
       </WorkspaceDock>
 

@@ -1,39 +1,48 @@
 import {normalizeVoicePhrase} from './voicePhrase.js';
 import {parseSpokenAmount} from './spokenAmount.js';
 import {categoryMatches,normalizeVoiceCategory} from './voiceCategory.js';
+import {isVoiceExpense,isVoiceIncome,voiceCurrencyFor} from './voiceMoneyVocabulary.js';
 
 // Resolve explicit replacements before extracting dates or other fields.
 // A negation without a replacement must never become a positive money action.
 export function resolveVoiceCorrections(value){
  let text=normalizeVoicePhrase(value).toLowerCase().replace(/ё/g,'е').replace(/[«»]/g,'"');
+ const quoted=[];
+ text=text.replace(/"[^"]*"/gu,part=>{quoted.push(part);return `__voicequote_${quoted.length-1}__`;});
+ const restore=value=>value.replace(/__voicequote_(\d+)__/gu,(_,index)=>quoted[Number(index)]);
+ let correction=/^(?:нет|no|nu)(?=[,\s]|$)/u.test(text);
  text=text.replace(/(^|\s)не забудь(?:те)?\s+(?:записать|добавить)/g,'$1запиши');
- text=text.replace(/(^|\s)не\s+(.+?)\s*[,;]?\s+(?:а|но)\s+/g,'$1')
-  .replace(/(^|\s)not\s+(.+?)\s*[,;]?\s+but\s+/g,'$1')
-  .replace(/(^|\s)nu\s+(.+?)\s*[,;]?\s+ci\s+/g,'$1');
+ const replacement=(_,prefix)=>{correction=true;return prefix;};
+ text=text.replace(/(^|\s)не\s+(.+?)\s*[,;]?\s+(?:а|но)\s+/g,replacement)
+  .replace(/(^|\s)not\s+(.+?)\s*[,;]?\s+but\s+/g,replacement)
+  .replace(/(^|\s)nu\s+(.+?)\s*[,;]?\s+ci\s+/g,replacement);
+ // Only accept explicit amount-to-amount replacements; arbitrary narrative
+ // after “вместо” remains unparsed rather than changing a purchase.
+ const pair=text.match(/^вместо\s+(.+?)\s*(?:[—–]|,|\s+(?:запиши|поставь|укажи|сделай)\s+)\s*(.+)$/u)
+  ||text.match(/^исправь\s+(?:сумму\s+)?с\s+(.+?)\s+на\s+(.+)$/u);
+ if(pair&&parseSpokenAmount(pair[1])!==null&&parseSpokenAmount(pair[2])!==null){text=pair[2];correction=true;}
+ const reverse=text.match(/^(.+?)\s+(?:вместо|а не)\s+(.+)$/u);
+ if(reverse&&parseSpokenAmount(reverse[1])!==null&&parseSpokenAmount(reverse[2])!==null){text=reverse[1];correction=true;}
+ const clarification=text.match(/^(?:(?:нет|no|nu)[,\s]+)?(?:точнее|вернее|ой|поправка|я ошибся|я ошиблась|имел в виду|имела в виду|я имел в виду|я имела в виду|должно быть|actually|i meant|de fapt)[,:\s]+(.+)$/u);
+ if(clarification){
+  const slots=parseNaturalVoiceEntry(restore(clarification[1]),{draft:{}});
+  if(slots&&!slots.invalid&&!slots.ambiguous.length){text=clarification[1];correction=true;}
+ }
  const negated=/(^|\s)(?:не|not|n-am)(?=\s|$)/.test(text)||/(^|\s)nu\s+(?![,\s]*\d)/.test(text);
- return {text:text.replace(/\s+/g,' ').trim(),negated};
+ return {text:restore(text).replace(/\s+/g,' ').trim(),negated,correction};
 }
 
-const expense=/^(?:потратил[аи]?|потрачено|потратить|расход[ы]?|заплатил[аи]?|оплатил[аи]?|платил[аи]?|плата|ушло|списали|списано|списалось|обошлось|обошелся|обошлась|израсходовал[аи]?|выложил[аи]?|потратилось|spent|spend|paid|expense|cheltuit|cheltuiala|cheltuială|platit|plătit)$/u;
-const income=/^(?:получил[аи]?|получено|получить|заработал[аи]?|заработано|доход[ы]?|пришло|поступило|поступили|зачислили|зачислено|вернули|вернулось|received|earned|income|primit|venit|castigat|câștigat)$/u;
 const purchase=/^(?:купил[аи]?|покупка|bought|cumparat|cumpărat)$/u;
 const transfer=/^(?:перевел[аи]?|перевод|отдал[аи]?|одолжил[аи]?|transferred|transfer)$/u;
 const request=/^(?:запиши|записать|добавь|добавить|внеси|занеси|учти|сохрани|исправь|измени|поменяй|замени|record|add|save|note|change|correct|adauga|adaugă|inregistreaza|înregistrează|noteaza|notează|schimba|schimbă)$/u;
-const filler=new Set('я мне это было был была ну вот пожалуйста давай сегодня за в на по сумма сумму суммой всего итого около примерно только запись запишем деньги денег вышло составил составила the i it a an am was is amount total for to in of please on pe pentru în din de o un'.split(' '));
-const currencies=[
- ['RUB',/^(?:рубль|рубля|рублей|рубли|рублях|руб|ruble|rubles|rublă|ruble|rub|₽)$/u],
- ['EUR',/^(?:евро|еврах|euro|euros|eur|€)$/u],
- ['MDL',/^(?:лей|лея|леев|леи|леях|lei|leu|mdl)$/u],
- ['USD',/^(?:доллар|доллара|долларов|доллары|долларах|dollar|dollars|dolari|usd|\$)$/u],
- ['CNY',/^(?:юань|юаня|юаней|юани|yuan|cny|¥)$/u],
-];
-const categoryMarkers=new Set(['на','категория','категорию','раздел','category','on','for','pe','pentru','categoria']);
+const filler=new Set('я мы мне это было был была были ну вот пожалуйста давай сегодня за в на по сумма сумму суммой всего итого около примерно только запись запишем деньги денег вышло составил составила the i we it a an am was were is amount total for to in of please on pe pentru în din de o un'.split(' '));
+const categoryMarkers=new Set(['на','за','для','категория','категорию','раздел','category','on','for','pe','pentru','categoria']);
 const aliases={еда:'Продукты',еду:'Продукты',едой:'Продукты',food:'Продукты',groceries:'Продукты',кофе:'Кафе',coffee:'Кафе',cafea:'Кафе',бензин:'Транспорт',fuel:'Транспорт'};
 const tokensOf=text=>Array.from(text.matchAll(/\d+(?:[.,]\d+)?|[\p{L}]+|[₽€$¥]|[-−]/gu),match=>({value:match[0],start:match.index,end:match.index+match[0].length,used:false}));
 function naturalAmount(value){
  const direct=parseSpokenAmount(value);if(direct!==null)return direct;
  let text=value.trim();const tail=text.split(/\s+/).at(-1);
- if(currencies.some(([,pattern])=>pattern.test(tail)))text=text.slice(0,text.length-tail.length).trim();
+ if(voiceCurrencyFor(tail))text=text.slice(0,text.length-tail.length).trim();
  const shortThousands=text.match(/^(.+?\s+|\d+(?:[.,]\d{1,2})?)(?:к|k|ка)$/u);
  if(shortThousands&&!/[кk]$|\sка$/.test(shortThousands[1])){const base=naturalAmount(shortThousands[1]);return base!==null&&Number(base)*1000<1e12?String(Math.round(Number(base)*100000)/100):null;}
  const halves={полсотни:50,полтысячи:500,полмиллиона:500000,полтора:1.5,полторы:1.5};
@@ -47,7 +56,7 @@ function naturalAmount(value){
 
 // Extract independent slots. Contiguous amounts are parsed by the same strict
 // amount parser as the keypad; multiple amounts remain ambiguous, not summed.
-export function parseNaturalVoiceEntry(value,{draft=null,categories=[],newEntry=false}={}){
+export function parseNaturalVoiceEntry(value,{draft=null,categories=[],newEntry=false,includeInvalidSlots=false}={}){
  const text=normalizeVoicePhrase(value).toLowerCase().replace(/ё/g,'е').trim();
  if(!text||/[\u3400-\u9fff]/u.test(text))return null;
  if(/(^|\s)(?:сколько|покажи|открой|удали|удалить|баланс|остаток|how|delete|open|cât|cat|deschide)(?=\s|$)/u.test(text))return null;
@@ -56,6 +65,11 @@ export function parseNaturalVoiceEntry(value,{draft=null,categories=[],newEntry=
  const patch={},ambiguous=new Set(),provided=new Set(),categoryHits=[];
  const mark=(start,end)=>{for(let i=start;i<end;i++)tokens[i].used=true;};
  const signs=new Set();let hasRequest=false,hasPurchase=false,hasTransfer=false;
+ // Quoted names are literal, even when they contain money or action words.
+ for(const match of text.matchAll(/(?:^|\s)(?:на|за|для|категория|категорию|раздел|on|for|pe|pentru|categoria)\s+[«"]([^»"]{1,60})[»"]/gu)){
+  const start=match.index+match[0].search(/[«"]/u)+1,end=start+match[1].length;
+  categoryHits.push(match[1]);for(const token of tokens)if(token.start>=start&&token.end<=end)token.used=true;
+ }
  // Known categories (including numeric names) are removed before looking for
  // money so a shop named “Кафе 24/7” cannot supply an extra amount.
  const known=categories.flatMap(item=>[item.value,item.label].filter(Boolean).map(label=>({value:item.value,label,type:item.type,size:tokensOf(label).length})));
@@ -83,8 +97,8 @@ export function parseNaturalVoiceEntry(value,{draft=null,categories=[],newEntry=
  if(patch.destination==='both')for(const token of tokens)if(/^(?:и|and|și|si)$/.test(token.value))token.used=true;
  for(const token of tokens){
   if(token.used)continue;
-  if(expense.test(token.value)){signs.add('minus');token.used=true;}
-  else if(income.test(token.value)){signs.add('plus');token.used=true;}
+  if(isVoiceExpense(token.value)){signs.add('minus');token.used=true;}
+  else if(isVoiceIncome(token.value)){signs.add('plus');token.used=true;}
   else if(purchase.test(token.value)){hasPurchase=true;signs.add('minus');token.used=true;}
   else if(transfer.test(token.value)){hasTransfer=true;token.used=true;}
   else if(request.test(token.value)){hasRequest=true;token.used=true;}
@@ -92,11 +106,11 @@ export function parseNaturalVoiceEntry(value,{draft=null,categories=[],newEntry=
  if(signs.size){provided.add('sign');if(signs.size===1)patch.sign=[...signs][0];else ambiguous.add('sign');}
  if(hasTransfer&&!signs.size)ambiguous.add('sign');
  const currencyHits=[];
- for(const token of tokens){if(token.used)continue;const found=currencies.find(([,pattern])=>pattern.test(token.value));if(found)currencyHits.push(found[0]);}
+ for(const token of tokens){if(token.used)continue;const found=voiceCurrencyFor(token.value);if(found)currencyHits.push(found);}
  if(currencyHits.length){provided.add('currency');const unique=[...new Set(currencyHits)];if(unique.length===1)patch.currency=unique[0];else ambiguous.add('currency');}
  const amounts=[];
  for(let start=0;start<tokens.length;start++){
-  if(tokens[start].used||naturalAmount(tokens[start].value)===null||currencies.some(([,pattern])=>pattern.test(tokens[start].value)))continue;
+  if(tokens[start].used||naturalAmount(tokens[start].value)===null||voiceCurrencyFor(tokens[start].value))continue;
   if(['o','un'].includes(tokens[start].value)&&tokens[start+1]?.used){tokens[start].used=true;continue;}
   let found=null;
   for(let end=start+1;end<=Math.min(tokens.length,start+18);end++){
@@ -107,14 +121,16 @@ export function parseNaturalVoiceEntry(value,{draft=null,categories=[],newEntry=
   if(found){amounts.push(found);mark(found.start,found.end);start=found.end-1;}
  }
  if(amounts.length){provided.add('amount');if(amounts.length===1&&Number(amounts[0].amount)>0)patch.amount=amounts[0].amount;else ambiguous.add('amount');}
- for(const token of tokens)if(currencies.some(([,pattern])=>pattern.test(token.value)))token.used=true;
+ for(const token of tokens)if(voiceCurrencyFor(token.value))token.used=true;
  let spendingCategory=false;
  for(let i=0;i<tokens.length;i++){
   if(tokens[i].used||!categoryMarkers.has(tokens[i].value))continue;
   const marker=tokens[i].value;tokens[i].used=true;
-  if(['на','on','pe','pentru'].includes(marker))spendingCategory=true;
+  // “Купил крем за 80” describes an item, rather than a category named крем.
+  if(marker==='за'&&hasPurchase)continue;
+  if(['на','за','для','on','for','pe','pentru'].includes(marker))spendingCategory=true;
   if(i+1>=tokens.length||tokens[i+1].used)continue;
-  let end=i+1;while(end<tokens.length&&!tokens[end].used&&!['на','on','pe','for','pentru'].includes(tokens[end].value)&&!request.test(tokens[end].value)&&!['и','and','și','si'].includes(tokens[end].value))end++;
+  let end=i+1;while(end<tokens.length&&!tokens[end].used&&!['на','за','для','on','pe','for','pentru'].includes(tokens[end].value)&&!request.test(tokens[end].value)&&!['и','and','și','si'].includes(tokens[end].value))end++;
   const words=tokens.slice(i+1,end);while(words.length&&filler.has(words.at(-1).value))words.pop();
   if(words.length){const name=text.slice(words[0].start,words.at(-1).end).trim();if(name.length>60)return {invalid:true};categoryHits.push(name);mark(i+1,i+1+words.length);}
  }
@@ -141,7 +157,7 @@ export function parseNaturalVoiceEntry(value,{draft=null,categories=[],newEntry=
  if(!recognized)return null;
  if(hasPurchase&&leftover.length){const item=leftover.map(token=>token.value).join(' ');if(item.length>60)return {invalid:true};patch.item=item;for(const token of leftover)token.used=true;}
  if(leftover.some(token=>!token.used&&/^(?:и|and|și|si|-|−)$/.test(token.value))&&amounts.length<=1)return {invalid:true};
- if(leftover.some(token=>!token.used)&&!hasTransfer)return {invalid:true};
+ if(leftover.some(token=>!token.used)&&!hasTransfer)return includeInvalidSlots?{invalid:true,patch,provided:[...provided],ambiguous:[...ambiguous],unparsed:leftover.filter(token=>!token.used).map(token=>token.value).join(' '),amountRanges:amounts.map(({start,end,amount})=>({start:tokens[start].start,end:tokens[end-1].end,amount}))}:{invalid:true};
  if(!draft&&!hasRequest&&!signs.size&&!hasTransfer&&!patch.category&&!patch.currency)return null;
  for(const field of ambiguous)delete patch[field];
  return {patch,provided:[...provided],ambiguous:[...ambiguous],shorthand,amountRanges:amounts.map(({start,end,amount})=>({start:tokens[start].start,end:tokens[end-1].end,amount}))};

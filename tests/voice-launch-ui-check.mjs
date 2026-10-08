@@ -1,0 +1,41 @@
+import {createRequire} from 'node:module';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+const require=createRequire(path.resolve('package.json'));
+const bundle=await require('esbuild').build({stdin:{resolveDir:process.cwd(),loader:'jsx',contents:`import React from 'react';import {createRoot} from 'react-dom/client';import Voice from './src/shared/ui/CalendarVoiceButton.jsx';import useVoiceLaunch from './src/shared/ui/useVoiceLaunch.js';function App(){const launch=useVoiceLaunch();const [ready,setReady]=React.useState(false);window.setReady=setReady;return <Voice userId="test-user" launchRequest={ready?launch.request:null} onLaunchHandled={launch.handled} defaultCurrency="MDL" onCommand={()=>{}} onSaveEntry={entry=>window.saved.push(entry)}/>;}createRoot(document.getElementById('root')).render(<React.StrictMode><App/></React.StrictMode>);`},bundle:true,write:false,outfile:'voice.js',format:'iife'});
+const browser=await createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE||import.meta.url)('playwright').chromium.launch({channel:'msedge',headless:true});
+try{
+ const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true}),errors=[];
+ page.on('pageerror',error=>errors.push(error.message));
+ await page.addInitScript(()=>{
+  localStorage.setItem('dayris_voice_feedback','off');window.saved=[];window.starts=0;
+  const nativeTimeout=window.setTimeout.bind(window);window.setTimeout=(cb,ms,...args)=>[900,1900,2400,8000,20000].includes(ms)?nativeTimeout(()=>{},60000):nativeTimeout(cb,ms,...args);
+  window.SpeechRecognition=class{constructor(){window.voice=this;}start(){starts++;if(window.denyStart){this.onerror?.({error:'not-allowed'});return;}this.onstart?.();}abort(){this.aborted=true;}};
+  window.emit=text=>voice.onresult({results:[Object.assign([{transcript:text,confidence:.95}],{isFinal:true})]});
+  window.launchAgain=()=>{history.pushState({},'','/?voice=1&source=android-widget');window.dispatchEvent(new PopStateEvent('popstate'));};
+ });
+ await page.route('http://launch.test/**',route=>route.fulfill({contentType:'text/html',body:`<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;background:#0d0e10;font-family:Arial}button{font:inherit}${bundle.outputFiles.find(file=>file.path.endsWith('.css')).text}</style><div id="root"></div><script>${bundle.outputFiles.find(file=>file.path.endsWith('.js')).text}</script>`}));
+ await page.goto('http://launch.test/');await page.waitForFunction(()=>window.setReady);await page.evaluate(()=>setReady(true));
+ assert.equal(await page.evaluate(()=>starts),0,'ordinary app visits do not activate the microphone');
+ await page.goto('http://launch.test/?voice=1&source=android-widget&referral=alex');await page.waitForFunction(()=>window.setReady);
+ assert.equal(await page.evaluate(()=>starts),0,'wait for auth/onboarding readiness');
+ await page.evaluate(()=>setReady(true));await page.waitForFunction(()=>starts===1&&voice.onresult&&!voice.aborted);
+ const sheet=page.locator('.voice-workspace'),mic=sheet.locator('.voice-workspace-mic');
+ assert.equal(await sheet.getAttribute('data-listening'),'true','StrictMode opens and starts the same voice assistant');
+ assert.equal(await page.evaluate(()=>location.search),'?referral=alex');assert.equal(await page.evaluate(()=>sessionStorage.getItem('dayris_voice_launch')),null);
+ await page.evaluate(()=>emit('потратил 50 лэй'));await mic.click();await sheet.locator('.calendar-voice-answer').waitFor();
+ await page.waitForFunction(()=>voice.onresult&&!voice.aborted);const startsBefore=await page.evaluate(()=>starts);
+ await page.evaluate(()=>launchAgain());await page.waitForFunction(()=>!location.search.includes('voice='));
+ assert.equal(await page.evaluate(()=>starts),startsBefore,'a second widget launch never stops the active recognition session');
+ assert.match(await sheet.locator('.voice-workspace-context').innerText(),/50 MDL/);
+ await page.evaluate(()=>emit('за сок'));await mic.click();await sheet.locator('.calendar-voice-review').waitFor();
+ await page.waitForFunction(()=>voice.onresult&&!voice.aborted);await page.evaluate(()=>emit('сохрани'));await mic.click();await page.waitForFunction(()=>saved.length===1);
+ assert.deepEqual(await page.evaluate(()=>[saved[0].amount,saved[0].currency,saved[0].category]),['50','MDL','сок']);
+ await sheet.locator('.voice-workspace-exit').click();await sheet.waitFor({state:'detached'});
+ await page.evaluate(()=>{window.denyStart=true;launchAgain();});await sheet.waitFor();await page.waitForFunction(()=>document.querySelector('.voice-workspace-status')?.textContent.includes('Разрешите'));
+ assert.equal(await mic.isDisabled(),false,'permission failure leaves an actionable mic');assert.equal(await page.evaluate(()=>saved.length),1);
+ const deniedStarts=await page.evaluate(()=>starts);await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pageshow')));
+ assert.equal(await page.evaluate(()=>starts),deniedStarts,'consumed launch never loops permission requests');
+ await page.evaluate(()=>window.denyStart=false);await mic.click();await page.waitForFunction(()=>voice.onresult&&!voice.aborted);
+ assert.deepEqual(errors,[]);console.log('PASS: home-screen launch waits for auth, opens once in StrictMode, consumes its URL, preserves pending context and recovers from microphone permission failure.');
+}finally{await browser.close();}

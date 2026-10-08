@@ -8,7 +8,7 @@ try{
  const page=await browser.newPage({viewport:{width:1600,height:900}});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(()=>{
-  const nativeTimeout=setTimeout.bind(window);window.setTimeout=(cb,ms,...args)=>[900,1600,1900,8000,20000].includes(ms)?nativeTimeout(()=>{},60000):nativeTimeout(cb,ms,...args);
+  const nativeTimeout=setTimeout.bind(window);window.setTimeout=(cb,ms,...args)=>[900,1600,1900,2400,8000,20000].includes(ms)?nativeTimeout(()=>{},60000):nativeTimeout(cb,ms,...args);
   window.SpeechRecognition=class{constructor(){window.voice=this;}start(){this.onstart?.();}abort(){this.aborted=true;}};
   window.emit=(phrases,isFinal=false)=>voice.onresult({results:phrases.map(transcript=>Object.assign([{transcript,confidence:0.4}],{isFinal}))});
   window.touch=(type,target,x,y)=>{const touch=new Touch({identifier:1,target,clientX:x,clientY:y});target.dispatchEvent(new TouchEvent(type,{bubbles:true,cancelable:true,touches:type==='touchend'?[]:[touch],changedTouches:[touch]}));};
@@ -27,7 +27,7 @@ try{
  const before=await sheet.boundingBox();
  assert.ok(Math.abs(before.x+before.width/2-800)<1,'assistant opens centered on desktop before any dragging');
  const drag=async(dx,dy,cancel=false)=>{const b=await brand.boundingBox();await page.mouse.move(b.x+20,b.y+8);await page.mouse.down();await page.mouse.move(b.x+20+dx,b.y+8+dy,{steps:12});if(cancel)await header.dispatchEvent('pointercancel',{pointerId:1});await page.mouse.up();};
- await drag(-300,-200);let box=await sheet.boundingBox();assert.ok(Math.abs(box.x-(before.x-300))<2);assert.ok(Math.abs(box.y-(before.y-200))<2);
+ await drag(-300,-200);let box=await sheet.boundingBox();assert.ok(Math.abs(box.x-(before.x-300))<2);assert.ok(Math.abs(box.y-Math.max(0,before.y-200))<2,'drag respects the reachable header when the guide makes the window taller');
  assert.equal(await page.evaluate(()=>voice.aborted),undefined,'moving preserves recognition');
  await brand.focus();await page.keyboard.press('ArrowLeft');assert.equal(Math.round((await sheet.boundingBox()).x),Math.round(box.x)-10);
 

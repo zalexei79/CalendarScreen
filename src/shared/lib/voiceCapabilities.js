@@ -3,11 +3,11 @@ import {voiceHelp} from './voiceHelp.js';
 
 export function isVoiceHelpRequest(phrase){
  const text=normalizeVoicePhrase(phrase).toLowerCase().replace(/ё/g,'е').replace(/[!?.,«»？！。，、：；"]/g,' ').replace(/\s+/g,' ').trim().replace(/^(?:пожалуйста |скажи |расскажи |а )+/,'').replace(/ пожалуйста$/,'');
- const words=text.replace(/что-нибудь|что-то/g,'что').split(/\s+/);
+ const words=text.replace(/что-нибудь|что-то/g,'что').replace(/(?:умеешь|можешь)-то/g,word=>word.slice(0,-3)).split(/\s+/);
  const helpWords=new Set('что чего для меня мне с в этом календарем календаре приложении можно ты вы умеешь умеете умеет можешь можете может вообще еще же делать сделать выполнить какие какая возможности функции команды доступны доступные есть у тебя вас твои свои своих о покажи знаешь знаете здесь тут чем полезен полезны помочь календарь приложение помощник это этот'.split(' '));
  const knownHelp=words.every(word=>helpWords.has(word));
  if(knownHelp&&((words.some(word=>['что','чего','чем'].includes(word))&&words.some(word=>['умеешь','умеете','умеет','можешь','можете','может','можно','полезен'].includes(word)))||(words.some(word=>['возможности','функции','команды'].includes(word))&&words.some(word=>['какие','покажи','своих'].includes(word)))))return true;
- if(/^(?:(?:расскажи )?о (?:своих|твоих) возможностях|как с тобой работать|помоги разобраться|what are your capabilities|how can you help me|what commands are available)$/.test(text))return true;
+ if(/^(?:(?:расскажи )?о (?:своих|твоих) возможностях|как с тобой (?:работать|разговаривать)|как пользоваться (?:тобой|голосом)|какие команды (?:можно|могу) (?:сказать|произнести)|помоги разобраться|what are your capabilities|how can you help me|what commands are available)$/.test(text))return true;
  return /^(?:(?:что(?:-то| то)?|чего) (?:же |вообще )?(?:ты )?(?:вообще |еще |же )?(?:умеешь|можешь)(?: делать)?|что ты можешь делать|что можно (?:сказать|сделать голосом)|(?:какие|все) (?:у тебя )?(?:возможности|команды)|какие команды (?:ты )?знаешь|покажи (?:все )?(?:возможности|команды)|чем (?:ты )?можешь помочь|какие (?:у тебя )?функции|что (?:здесь|тут) можно делать|помоги|помощь|как (?:тобой пользоваться|пользоваться голосом))$/.test(text)
   ||/^(?:what can you do|what do you do|what can i say|help(?: me)?|show (?:all )?commands|ce (?:poți|poti) (?:face|să faci|sa faci)|ajutor|你会什么|你能做什么|有什么功能|帮助)$/.test(text);
 }

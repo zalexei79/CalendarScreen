@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="voice_widget_name">DAYRIS · Microphone</string>
+    <string name="voice_widget_action">Record by voice from the home screen</string>
+    <string name="voice_widget_description">Income and expenses without opening the calendar.</string>
+    <string name="shortcut_name_0">DAYRIS · Microphone</string>
+    <string name="shortcut_short_name_0">Microphone</string>
+    <string name="voice_widget_listening">Listening — speak now</string>
+    <string name="voice_widget_starting">Starting microphone</string>
+    <string name="voice_widget_processing">Processing your phrase</string>
+    <string name="voice_widget_stop">Stop microphone</string>
+    <string name="voice_widget_setup">Connect the microphone to your DAYRIS account once.</string>
+    <string name="voice_widget_connect">Connect</string>
+    <string name="voice_widget_unsupported">Requires Android 6 or later.</string>
+    <string name="voice_widget_permission">Allow microphone access, then tap again.</string>
+    <string name="voice_widget_browser">Update Chrome to connect and retry.</string>
+    <string name="voice_widget_pair_error">Could not verify DAYRIS. Update the website and app.</string>
+    <string name="voice_widget_paused">Microphone paused. Tap to continue.</string>
+    <string name="voice_widget_no_recognizer">Check Android voice services.</string>
+    <string name="voice_widget_network">Connection failed. Tap to retry sending.</string>
+    <string name="voice_widget_no_speech">No speech heard. Tap and repeat.</string>
+    <string name="voice_widget_storage_error">Could not store the request on this phone.</string>
+    <string name="voice_widget_expired">Reconnect the widget to your account.</string>
+    <string name="voice_widget_conflict">Context changed. Tap to retry processing.</string>
+    <string name="voice_widget_old_request">Request too old. Check the calendar before recording it again.</string>
+</resources>

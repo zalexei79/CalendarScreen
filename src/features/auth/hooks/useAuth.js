@@ -7,6 +7,7 @@ import { disablePush } from '../../reminders/pushClient';
 import { restoreUser } from '../sessionRecovery';
 import { isOnboardingPreviewUser } from '../../onboarding/lifeStoryModel';
 import { startOAuthLogin, TELEGRAM_PROVIDER } from '../oauthLogin';
+import {revokeBoundWidgetDevices,widgetDisconnectError} from '../../../shared/lib/widgetDeviceBinding.js';
 
 /**
  * useAuth: manages Supabase authentication, session detection, and user profile state.
@@ -32,6 +33,11 @@ export function useAuth() {
   const authCopy = useCallback((key) => {
     try { return translate(window.localStorage.getItem(LANGUAGE_STORAGE_KEY) || navigator.language, key); }
     catch { return translate('ru', key); }
+  }, []);
+  const widgetDisconnectCopy = useCallback(() => {
+    let language = navigator.language;
+    try { language = window.localStorage.getItem(LANGUAGE_STORAGE_KEY) || language; } catch {}
+    return widgetDisconnectError(language);
   }, []);
 
   useEffect(() => {
@@ -114,18 +120,20 @@ export function useAuth() {
         disablePush: async () => {
           try { await disablePush(); }
           catch { throw new Error(authCopy('pushDisableBeforeLogin')); }
+          try { await revokeBoundWidgetDevices(supabase,getValidUserId(user)); }
+          catch { throw new Error(widgetDisconnectCopy()); }
         },
         provider,
         origin: window.location.origin,
       });
     } catch (error) {
       setLoginError(error?.message === authCopy('pushDisableBeforeLogin')
-        ? authCopy('pushDisableBeforeLogin') : authCopy('authLoginFailed'));
+        ? authCopy('pushDisableBeforeLogin') : error?.message === widgetDisconnectCopy() ? widgetDisconnectCopy() : authCopy('authLoginFailed'));
     } finally {
       loginInProgress.current = false;
       setLoginPending(null);
     }
-  }, [authCopy]);
+  }, [authCopy,user,widgetDisconnectCopy]);
 
   const handleGoogleLogin = useCallback(() => handleOAuthLogin('google'), [handleOAuthLogin]);
   const handleTelegramLogin = useCallback(() => handleOAuthLogin(TELEGRAM_PROVIDER), [handleOAuthLogin]);
@@ -133,9 +141,11 @@ export function useAuth() {
   const handleGoogleLogout = useCallback(async () => {
     try { await disablePush(); }
     catch { window.alert(authCopy('pushDisableBeforeLogout')); return; }
+    try { await revokeBoundWidgetDevices(supabase,getValidUserId(user)); }
+    catch { window.alert(widgetDisconnectCopy()); return; }
     const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) console.error('[auth] ошибка при выходе:', error);
-  }, [authCopy]);
+  }, [authCopy,user,widgetDisconnectCopy]);
 
   const validUserId = getValidUserId(user);
 

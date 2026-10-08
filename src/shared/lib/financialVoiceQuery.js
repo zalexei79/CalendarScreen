@@ -1,6 +1,7 @@
 import {normalizeVoicePhrase} from './voicePhrase.js';
 import {categoryMatches, normalizeVoiceCategory, resolveLocalizedCategory} from './voiceCategory.js';
 import {resolveVoiceAsset, assetMatchesInstrument} from './voiceAsset.js';
+import {isVoiceExpense,isVoiceIncome} from './voiceMoneyVocabulary.js';
 
 const months = [
  ['январь','января','январе','january'],['февраль','февраля','феврале','february'],['март','марта','марте','march'],
@@ -26,8 +27,8 @@ export function parseFinancialVoiceQuery(value) {
  const search=/^(?:покажи|найди|показать|найти|show|find)(?: |$)/.test(text)&&/(?:расход|трат|доход|запис|платеж|покуп|expense|spending|income|entries|payments)/.test(text);
  const question=/^(?:сколько|какие|какой|подведи|итог|итоги|how much|summarize|summary for)(?: |$)/.test(text);
  if(!last&&!lastRu&&!search&&!question)return null;
- const income=/(?:заработал|заработала|получил|получила|доход|earn|income|receive)/.test(text);
- const expense=/(?:потратил|потратила|потрачено|расход|трат|платил|платила|оплатил|оплатила|платеж|покуп|spend|spent|expense|pay)/.test(text);
+ const income=text.split(' ').some(isVoiceIncome)||/(?:заработал|заработала|получил|получила|доход|earn|income|receive)/.test(text);
+ const expense=text.split(' ').some(isVoiceExpense)||/(?:потратил|потратила|потрачено|расход|трат|платил|платила|оплатил|оплатила|платеж|покуп|spend|spent|expense|pay)/.test(text);
  const summary=/(?:итог|summar|записи|entries)/.test(text);
  if(!income&&!expense&&!summary)return null;
  if(income&&expense)return null;

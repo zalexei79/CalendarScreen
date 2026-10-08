@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="64dp" android:minHeight="64dp"
+    android:targetCellWidth="1" android:targetCellHeight="1"
+    android:initialLayout="@layout/voice_widget" android:previewLayout="@layout/voice_widget"
+    android:configure="com.dayris.calendar.VoiceWidgetSetupActivity"
+    android:previewImage="@drawable/voice_widget_preview"
+    android:description="@string/voice_widget_description"
+    android:resizeMode="none" android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

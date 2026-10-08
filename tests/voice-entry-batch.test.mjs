@@ -26,6 +26,16 @@ test('one currency answer completes the entire list without copying an amount',(
  const first=parse('80 на сок, 50 на такси и 200 на продукты');assert.equal(first.field,'currency');assert.match(first.prompt,/всех записей/);
  const next=parse('да',first.batch);assert.deepEqual(next.batch.states.map(state=>state.entry.amount),['80','50','200']);assert.ok(next.batch.states.every(state=>state.entry.currency==='MDL'));
 });
+test('a garbled category retains all three amounts and clarifies only the unclear row',()=>{
+ const state=parse('Я вчера потратил 50 лей носок 40 лей на чипсы и 50 на бумагу');
+ assert.equal(state.field,'category');assert.match(state.prompt,/1 из 3.*носок/);
+ assert.deepEqual(state.batch.states.map(item=>(item.entry||item.draft).amount),['50','40','50']);
+ assert.equal(state.batch.states[0].draft.category,undefined,'never guess juice from sock');
+ assert.ok(state.batch.states.every(item=>(item.entry||item.draft).dateKey==='2026-10-01'));
+ const next=parse('на сок',state.batch);assert.ok(next.batch.states.every(item=>item.entry));
+ assert.deepEqual(next.batch.states.map(item=>item.entry.category),['сок','чипсы','бумагу']);
+ for(const phrase of ['потратил 50 лей носок и 40 лей','потратил 50 лей не сок 40 на чипсы и 50 на бумагу'])assert.equal(parse(phrase),null,phrase);
+});
 test('mixed currencies, actions and per-entry dates remain independent',()=>{
  const state=parse('вчера потратил 80 лей на сок, сегодня получил 100 евро');assert.deepEqual(state.batch.states.map(item=>[item.entry.amount,item.entry.currency,item.entry.sign,item.entry.dateKey]),[['80','MDL','minus','2026-10-01'],['100','EUR','plus','2026-10-02']]);
  const chinese=batch('支出80元用于食品和收入100元',null,'zh',categories,options);assert.equal(chinese,null);
