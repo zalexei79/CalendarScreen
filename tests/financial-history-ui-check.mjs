@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 const require = createRequire(path.resolve('package.json'));
-const bundle = await require('esbuild').build({stdin:{resolveDir:process.cwd(),loader:'jsx',contents:"import React from 'react';import {createRoot} from 'react-dom/client';import CalendarScreen from './CalendarScreen.jsx';createRoot(document.getElementById('root')).render(<CalendarScreen/>);"},bundle:true,write:false,outfile:'financial.js',format:'iife',define:{'import.meta.env.VITE_SUPABASE_URL':JSON.stringify('https://local-fixture.supabase.co'),'import.meta.env.VITE_SUPABASE_ANON_KEY':JSON.stringify('local-test-key'),'import.meta.env.VITE_CTRADER_CLIENT_ID':JSON.stringify(''),'import.meta.env.VITE_VAPID_PUBLIC_KEY':JSON.stringify('')},plugins:[{name:'local-pro',setup(build){build.onResolve({filter:/useProAccess\.js$/},()=>({path:'pro',namespace:'fixture'}));build.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:"export const useProAccess=()=>({active:true,loading:false,until:null,refresh:async()=>true});"}));}}]});
+const auth=`import {useState} from 'react';export function useAuth(){const [setupStep,setSetupStep]=useState(null);const [owner,setOwner]=useState('22222222-2222-4222-8222-222222222222');window.switchTestOwner=setOwner;return {user:{id:owner,email:'test@example.test',user_metadata:{nickname:'Test'}},validUserId:owner,authReady:true,setupStep,setSetupStep,handleGoogleLogin:()=>{},handleGoogleLogout:()=>{},handleTelegramLogin:()=>{}};}`;
+const bundle = await require('esbuild').build({stdin:{resolveDir:process.cwd(),loader:'jsx',contents:"import React from 'react';import {createRoot} from 'react-dom/client';import CalendarScreen from './CalendarScreen.jsx';createRoot(document.getElementById('root')).render(<CalendarScreen/>);"},bundle:true,write:false,outfile:'financial.js',format:'iife',define:{'import.meta.env.VITE_SUPABASE_URL':JSON.stringify('https://local-fixture.supabase.co'),'import.meta.env.VITE_SUPABASE_ANON_KEY':JSON.stringify('local-test-key'),'import.meta.env.VITE_CTRADER_CLIENT_ID':JSON.stringify(''),'import.meta.env.VITE_VAPID_PUBLIC_KEY':JSON.stringify('')},plugins:[{name:'local-pro',setup(build){build.onResolve({filter:/\/useAuth$/},()=>({path:'auth',namespace:'fixture'}));build.onResolve({filter:/useProAccess\.js$/},()=>({path:'pro',namespace:'fixture'}));build.onLoad({filter:/.*/,namespace:'fixture'},({path:name})=>({resolveDir:process.cwd(),contents:name==='auth'?auth:"export const useProAccess=()=>({active:true,loading:false,until:null,refresh:async()=>true});"}));}}]});
 const css = fs.readFileSync(path.join('dist/assets',fs.readdirSync('dist/assets').find(file=>file.endsWith('.css'))),'utf8');
 const browser = await createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE || import.meta.url)('playwright').chromium.launch({channel:'msedge',headless:true});
 try {
@@ -14,8 +15,8 @@ try {
    for(const [key,value] of Object.entries({dayris_onboarding_v2_completed:'1',calendar_guide_completed:'1',atj_language:'ru',atj_pro_view:'1',atj_trader_mode:'0',atj_currency:'USD',atj_theme:light?'light':'dark'}))localStorage.setItem(key,value);
    const d=new Date(), key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
    const prev=new Date(d);prev.setDate(d.getDate()-1);const prevKey=`${prev.getFullYear()}-${String(prev.getMonth()+1).padStart(2,'0')}-${String(prev.getDate()).padStart(2,'0')}`;
-   localStorage.setItem('dayris_money_categories:guest',JSON.stringify(['Дизайн и работа над очень длинным названием раздела']));
-   localStorage.setItem('money_calendar_guest_trades_cache',JSON.stringify({[key]:[
+   localStorage.setItem('dayris_money_categories:22222222-2222-4222-8222-222222222222',JSON.stringify(['Дизайн и работа над очень длинным названием раздела']));
+   localStorage.setItem('money_calendar_trades_22222222-2222-4222-8222-222222222222',JSON.stringify({[key]:[
     {id:'salary',time:'09:00',instrument:'Зарплата',pnl:2400,currency:'USD',platform:'Manual'},
     {id:'food',time:'10:00',instrument:'Продукты',pnl:-450,currency:'USD',platform:'Manual'},
     {id:'trade',time:'11:00',instrument:'XAUUSD',pnl:-120,currency:'USD',platform:'cTrader'},
@@ -40,8 +41,8 @@ try {
   await dialog.getByRole('button',{name:'Все валюты',exact:true}).click();assert.equal(await dialog.locator('.financial-amount').textContent(),'—');assert.equal(await dialog.locator('.financial-distribution').count(),0);
   await dialog.getByRole('button',{name:'MDL',exact:true}).click();assert.equal(await dialog.locator('.financial-record-row').count(),1);assert.match(await dialog.locator('.financial-amount').textContent(),/9[\s,]?999/);
   await dialog.getByRole('button',{name:'USD',exact:true}).click();
-  await dialog.getByRole('button',{name:'Стать богаче',exact:false}).click();await dialog.locator('#wealth-saving').waitFor({state:'visible'});assert.equal(await dialog.locator('#wealth-saving').count(),1);
-  await dialog.getByRole('button',{name:'Стать богаче',exact:false}).click();
+  await dialog.getByRole('button',{name:'Разобрать мои расходы',exact:true}).click();await page.locator('.savings-dialog').waitFor();assert.equal(await page.locator('.savings-findings article').count(),3);
+  await page.locator('.savings-dialog').getByRole('button',{name:'Закрыть',exact:true}).click();await page.locator('.savings-dialog').waitFor({state:'detached'});
   await dialog.getByRole('button',{name:'Списания',exact:true}).click();
   await dialog.locator('.financial-category').first().click();assert.equal(await dialog.locator('.financial-record-row').count(),1);assert.match(await dialog.locator('.financial-record-row').textContent(),/Продукты/);
   await dialog.getByRole('button',{name:'Сбросить раздел',exact:true}).click();assert.equal(await dialog.locator('.financial-record-row').count(),5);

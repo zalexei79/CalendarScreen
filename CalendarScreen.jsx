@@ -9,6 +9,9 @@ import WealthPlan from './src/features/pro/WealthPlan.jsx';
 import FinancialHistoryOverview from './src/features/pro/FinancialHistoryOverview.jsx';
 import useVoiceConversation from './src/shared/ui/useVoiceConversation.js';
 import SavingsReview from './src/features/pro/SavingsReview.jsx';
+import useSavingsPlan from './src/features/pro/useSavingsPlan.js';
+import SavingsNudge from './src/features/pro/SavingsNudge.jsx';
+import {matchSavingsRule} from './src/features/pro/savingsModel.js';
 import {
   Inbox, TrendingUp, TrendingDown, Sparkles, Plus, X, Trash2, Mic,
   Calendar, ChevronDown, Link2, KeyRound, UploadCloud, FileText,
@@ -1823,7 +1826,7 @@ export default function CalendarScreen() {
     pendingSyncCount,
     failedSyncCount,
     retryFailedSync,
-    saveTrade: hookSaveTrade,
+    saveTrade: saveCalendarTrade,
     deleteTrade: hookDeleteTrade,
     detachMoneyCategory,
     mutateVoiceRecord,
@@ -1833,6 +1836,30 @@ export default function CalendarScreen() {
   const demoTrades = useMemo(() => createDemoCalendar({ today, currency, language }), [today, currency, language]);
   const manualTrades = demoMode ? demoTrades : storedManualTrades;
   const wallet = useWalletTransactions({ user });
+  const savings = useSavingsPlan(validUserId);
+  const [savingsNotice,setSavingsNotice] = useState(null);
+  const savingsOwner = useRef(null);
+  savingsOwner.current = {owner:validUserId,plan:savings.plan,active:proAccessActive};
+  useEffect(() => { setSavingsNotice(null); }, [validUserId]);
+  useEffect(() => {
+    if (!savingsNotice) return;
+    const timer = setTimeout(() => setSavingsNotice(null),12000);
+    return () => clearTimeout(timer);
+  }, [savingsNotice]);
+  async function hookSaveTrade(entry) {
+    const owner = validUserId;
+    const result = await saveCalendarTrade(entry);
+    if (savingsOwner.current.owner === owner && savingsOwner.current.active && !demoMode) {
+      const rule = matchSavingsRule(savingsOwner.current.plan,{...entry,pnl:entry.signedPnl});
+      if (rule) setSavingsNotice({...rule});
+    }
+    return result;
+  }
+  function renderSavingsNudge() {
+    if (!proAccessActive || demoMode || (traderMode && proEntryMode !== 'finance') || form.voiceDestination === 'wallet' || (traderMode && form.accountTarget === 'wallet')) return null;
+    const rule = matchSavingsRule(savings.plan,{instrument:form.instrument,currency:form.currency || currency,pnl:form.sign==='minus'?-Math.abs(Number(form.pnl)):Number(form.pnl),isEditing:Boolean(editingTrade)});
+    return <SavingsNudge rule={rule} language={language} isLight={isLight}/>;
+  }
   const voiceCategories = useVoiceCategories(user?.id);
 
   const {
@@ -2847,6 +2874,7 @@ export default function CalendarScreen() {
   const [historyCurrency, setHistoryCurrency] = useState(() => currency || 'USD');
   const [historyNameFilter, setHistoryNameFilter] = useState('');
   const [savingsReview, setSavingsReview] = useState(null);
+  useEffect(() => { setSavingsReview(null); }, [validUserId,historyCurrency,proAccessActive]);
   const [historyFiltersOpen, setHistoryFiltersOpen] = useState(false);
   const [historyPeriodMenuOpen, setHistoryPeriodMenuOpen] = useState(false);
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
@@ -2898,6 +2926,13 @@ export default function CalendarScreen() {
       || item.take_profit != null
       || item.stop_loss != null
       || !getMoneyCategoryMeta(name);
+  }
+
+  function isSavingsTradingRecord(item) {
+    if (['cTrader','MT5'].includes(item.platform)) return true;
+    if (typeof item.traderMode === 'boolean') return item.traderMode;
+    if (getMoneyCategoryMeta(item.instrument) || voiceCategories.categories.some(name => categoryMatches(name,item.instrument))) return false;
+    return item.take_profit != null || item.stop_loss != null || isTradingInstrumentName(item.instrument);
   }
 
   const storyCalendarRecords = useMemo(() => Object.entries(manualTrades || {})
@@ -4311,6 +4346,7 @@ export default function CalendarScreen() {
 
         {formError && <p className="mt-3 text-center text-xs text-red-500">{formError}</p>}
 
+        {renderSavingsNudge()}
         <button
           onClick={handleSaveTrade}
           disabled={isSaving}
@@ -5579,9 +5615,10 @@ export default function CalendarScreen() {
                       requestAnimationFrame(() => historyDealsRef.current?.scrollIntoView({behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start'}));
                     }}
                   >
-                    {savingsReview && <SavingsReview trades={wealthPlanTrades} category={savingsReview.category} symbol={historyCurrencySymbol} formatMoney={formatMoney} language={language} isLight={isLight} onClose={() => setSavingsReview(null)} />}
-                    <WealthPlan trades={wealthPlanTrades} onStartReview={category => setSavingsReview({category})}
-                      isTrading={item => item.platform === 'cTrader' || isTradingInstrumentName(item.instrument) || (!getMoneyCategoryMeta(item.instrument) && isTradingHistoryRecord(item))}
+                    {savingsReview && <SavingsReview trades={wealthPlanTrades} currency={historyCurrency} period={periodPreset === 'Вся история' ? t('allHistory') : `${dateFrom} — ${dateTo}`} savedPlan={savings.plan} onSave={savings.save}
+                      isTrading={isSavingsTradingRecord} symbol={historyCurrencySymbol} formatMoney={formatMoney} language={language} isLight={isLight} onClose={() => setSavingsReview(null)} />}
+                    <WealthPlan trades={wealthPlanTrades} plan={savings.plan} onClear={savings.clear} onStartReview={() => setSavingsReview({})}
+                      isTrading={isSavingsTradingRecord}
                       currency={historyCurrency} symbol={historyCurrencySymbol} formatMoney={formatMoney} language={language} isLight={isLight}
                       onReview={(name, scope) => { setHistoryNameFilter(name); setHistoryScope(scope); setHistoryWinLoss('all'); requestAnimationFrame(() => historyDealsRef.current?.scrollIntoView({behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start'})); }} />
                   </FinancialHistoryOverview>}
@@ -6811,6 +6848,7 @@ export default function CalendarScreen() {
 
               {formError && <p className="mt-2 text-center text-xs text-red-600">{formError}</p>}
 
+              {renderSavingsNudge()}
               <button
                 onClick={handleSaveTrade}
                 disabled={isSaving}
@@ -7681,6 +7719,7 @@ export default function CalendarScreen() {
         </div>
       )}
 
+      {proAccessActive && savingsNotice && <SavingsNudge rule={savingsNotice} language={language} isLight={isLight} onClose={() => setSavingsNotice(null)}/>}
       </>}
     </div>
   );

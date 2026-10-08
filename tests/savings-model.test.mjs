@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {analyzeSavings,calculateSavings,matchSavingsRule} from '../src/features/pro/savingsModel.js';
+const entry=(instrument,pnl,extra={})=>({instrument,pnl,currency:'USD',platform:'Manual',dateKey:'2026-10-05',...extra});
+const records=[entry('Зарплата',1000),entry('Подписки',-20),entry('Подписки',-20),entry('Жильё',-500),entry('Покупки',-200,{comment:'Спонтанная покупка, потом пожалел'}),entry('Мой раздел',-40),entry('XAUUSD',-300,{traderMode:true}),entry('Кафе',-9000,{currency:'MDL'}),entry('Кафе','nope')];
+const a=analyzeSavings(records,{currency:'USD'});
+assert.equal(a.expenses,780);assert.equal(a.income,1000);assert.equal(a.count,5);
+assert.equal(a.categories.find(g=>g.name==='Подписки').reason,'recurring');assert.equal(a.categories.find(g=>g.name==='Покупки').reason,'impulse');assert.equal(a.categories.find(g=>g.name==='Мой раздел').reason,'review');
+assert.equal(calculateSavings(a,{}).saving,0,'Never automatically choose purchases to cut');
+const r=calculateSavings(a,{'подписки':'skip','покупки':'reduce','жильё':'skip','мой раздел':'essential'});
+assert.equal(r.saving,70);assert.equal(r.expensesAfter,710);assert.equal(r.after,290);assert.equal(r.actions.length,2,'Essential expenses cannot be cut');
+const plan={currency:'USD',reminders:true,actions:r.actions};
+assert.ok(matchSavingsRule(plan,{instrument:' ПОДПИСКИ ',currency:'USD',pnl:-20}));
+for(const override of [{currency:'MDL'},{pnl:20},{isEditing:true},{traderMode:true},{platform:'MT5'}])assert.equal(matchSavingsRule(plan,{instrument:'Подписки',currency:'USD',pnl:-20,...override}),null);
+assert.equal(matchSavingsRule({...plan,reminders:false},{instrument:'Подписки',pnl:-20}),null);
+assert.equal(matchSavingsRule(plan,{instrument:'Жильё',pnl:-500}),null);
+assert.equal(JSON.stringify(records).includes('choices'),false);
+console.log('PASS: evidence, repeated purchases, essential protection, precise scenarios, currency/trading isolation and reminder matching.');
