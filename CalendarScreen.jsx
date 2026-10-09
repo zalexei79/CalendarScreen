@@ -5090,6 +5090,24 @@ export default function CalendarScreen() {
             <span className="relative font-medium">{t('history')}{traderMode && <span className="ml-1 text-amber-400">✦</span>}</span>
           </button>
 
+          <button
+            type="button"
+            onClick={openCapitalFromCalendarGesture}
+            disabled={proAccessLoading}
+            title="DAYRIS Capital · PRO"
+            aria-label="DAYRIS Capital"
+            className={`group flex items-center gap-1 rounded-full px-1 sm:gap-2 sm:px-3 py-2 sm:py-2.5 text-[10px] sm:text-sm font-medium transition-all duration-200 disabled:opacity-50 ${
+              isLight
+                ? 'text-zinc-700 hover:text-zinc-950 hover:bg-amber-50'
+                : 'text-zinc-300 hover:text-white hover:bg-zinc-900/90'
+            }`}
+          >
+            <span className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-amber-400/10 text-amber-500 transition-colors group-hover:bg-amber-400/20">
+              <ChartCandlestick className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            </span>
+            <span className="font-medium">Capital</span>
+          </button>
+
           {/* Central Add '+' Button — sleek, elegant, calm */}
           <button
             type="button"

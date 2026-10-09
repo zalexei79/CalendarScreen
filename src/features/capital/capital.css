@@ -17,3 +17,31 @@
 .capital-today-change{display:grid;gap:3px}.capital-today-change small{font-size:9px;line-height:1.35}
 .capital-today-change .capital-change-caption{color:var(--cap-muted)}
 @media(max-width:640px){.capital-quote-mobile{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.capital-asset-main{align-self:stretch;align-content:center}.capital-asset-qty{align-self:start}}
+.capital-step-label{margin:15px 0 8px;color:var(--cap-muted);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.capital-category-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.capital-category-grid button{display:flex;align-items:center;gap:8px;min-width:0;min-height:43px;padding:8px 10px;border:1px solid var(--cap-line);border-radius:12px;background:var(--cap-bg);color:var(--cap-muted);font:inherit;font-size:11px;text-align:left;cursor:pointer;transition:border-color .15s,background .15s,color .15s}
+.capital-category-grid button svg{width:15px;height:15px;flex:none}
+.capital-category-grid button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.capital-category-grid button.is-selected{border-color:color-mix(in srgb,var(--cap-gold) 65%,var(--cap-line));background:color-mix(in srgb,var(--cap-gold) 10%,var(--cap-bg));color:var(--cap-gold)}
+.capital-picker-search{display:flex!important;grid-template-columns:auto 1fr!important;align-items:center;gap:9px!important;height:45px;margin:10px 0 0!important;padding:0 12px;border:1px solid var(--cap-line);border-radius:13px;background:var(--cap-bg);color:var(--cap-muted)}
+.capital-picker-search input{height:41px!important;padding:0!important;border:0!important;background:transparent!important}
+.capital-picker-results{max-height:240px;overflow:auto;margin-top:7px;border:1px solid var(--cap-line);border-radius:13px;background:var(--cap-bg);overscroll-behavior:contain}
+.capital-picker-results>button{display:grid;grid-template-columns:minmax(80px,auto) 1fr auto;align-items:center;gap:10px;width:100%;min-height:43px;padding:8px 11px;border:0;border-bottom:1px solid var(--cap-line);background:transparent;color:var(--cap-text);font:inherit;font-size:11px;text-align:left;cursor:pointer}
+.capital-picker-results>button:last-child{border-bottom:0}
+.capital-picker-results>button:hover{background:color-mix(in srgb,var(--cap-gold) 7%,transparent)}
+.capital-picker-results>button>span:nth-child(2){overflow:hidden;color:var(--cap-muted);text-overflow:ellipsis;white-space:nowrap}
+.capital-picker-results>button>i{color:#36c99a;font-size:8px;font-style:normal;font-weight:800;letter-spacing:.06em}
+.capital-picker-results>p{margin:0;padding:14px;color:var(--cap-muted);font-size:11px;text-align:center}
+.capital-picker-symbol{color:var(--cap-text);font-size:11px;font-weight:750;letter-spacing:.02em}
+.capital-custom-link{display:flex;align-items:center;gap:6px;margin:9px 0 3px;padding:5px 2px;border:0;background:transparent;color:var(--cap-gold);font:inherit;font-size:11px;font-weight:700;cursor:pointer}
+.capital-selected-asset{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;margin:16px 0 12px;padding:12px;border:1px solid color-mix(in srgb,var(--cap-gold) 28%,var(--cap-line));border-radius:14px;background:color-mix(in srgb,var(--cap-gold) 6%,var(--cap-surface))}
+.capital-selected-asset>span:nth-child(2){display:grid;gap:4px;min-width:0}
+.capital-selected-asset strong{overflow:hidden;color:var(--cap-text);font-size:12px;text-overflow:ellipsis;white-space:nowrap}
+.capital-selected-asset small{color:var(--cap-muted);font-size:10px}
+.capital-selected-asset>button{padding:6px 8px;border:0;border-radius:8px;background:color-mix(in srgb,var(--cap-text) 6%,transparent);color:var(--cap-muted);font:inherit;font-size:9px;cursor:pointer}
+.capital-purchase-details{margin:12px 0;padding:0 12px;border:1px solid var(--cap-line);border-radius:13px}
+.capital-purchase-details summary{padding:12px 0;color:var(--cap-text);font-size:11px;font-weight:650;cursor:pointer}
+.capital-purchase-details summary span{margin-left:4px;color:var(--cap-muted);font-size:9px;font-weight:400}
+.capital-purchase-details .capital-form-grid{padding-bottom:4px}
+@media(max-width:640px){.capital-category-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.capital-category-grid button{min-height:41px}.capital-picker-results{max-height:208px}.capital-selected-asset{grid-template-columns:auto minmax(0,1fr) auto;gap:7px;padding:10px}.capital-selected-asset>button{font-size:8px}}
+@media(prefers-reduced-motion:reduce){.capital-category-grid button{transition:none}}

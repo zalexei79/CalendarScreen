@@ -16,12 +16,23 @@ test('calendar swipe opens Capital for PRO and the existing wallet remains a sep
   assert.match(calendar, /function openCapitalFromCalendarGesture\(\)[\s\S]*?if \(!proAccessActive\) \{ openProPresentation\(\); return; \}[\s\S]*?setAccountMode\('capital'\)/);
   assert.match(calendar, /accountMode === 'capital' && proAccessActive && !proAccessLoading/);
   assert.match(calendar, /onOpenCapital=\{proAccessLoading \? undefined : openCapitalFromCalendarGesture\}/);
+  assert.match(calendar, /onClick=\{openCapitalFromCalendarGesture\}[\s\S]*?aria-label="DAYRIS Capital"/);
   assert.match(grid, /navigation: 'calendar', onExit: onOpenCapital/);
   assert.match(dock, /Pull down to open Capital/);
   assert.match(calendar, /accountMode === 'wallet' \? <WalletPanel/);
   assert.match(calendar, /onWallet=\{\(\) => transitionView\(\(\) => setAccountMode\('wallet'\)\)\}/);
   assert.match(calendar, /onBackToCalendar=\{\(\) => transitionView\(\(\) => setAccountMode\('main'\)\)\}/);
   assert.match(calendar, /if \(command\.type === 'wallet'\)[\s\S]*?openWalletFromCalendarAction\(\)/);
+});
+
+test('asset entry starts with categories and searchable catalogue before the short purchase form', () => {
+  assert.match(panel, /capital-category-grid/);
+  assert.match(panel, /loadBinanceSpotPairs/);
+  assert.match(panel, /capital-picker-results/);
+  assert.match(panel, /capital-custom-link/);
+  assert.match(panel, /capital-purchase-details/);
+  assert.match(panel, /t\.quantity/);
+  assert.match(panel, /t\.purchase/);
 });
 
 test('Capital layout has a mobile breakpoint and respects reduced motion', () => {

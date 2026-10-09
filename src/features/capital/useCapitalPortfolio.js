@@ -28,7 +28,11 @@ export function useCapitalPortfolio({ user }) {
       loadAll(supabase.from('capital_operations').select('*').eq('user_id', user.id).order('occurred_on', { ascending: false }).order('created_at', { ascending: false }).order('id', { ascending: false })),
       loadAll(supabase.from('capital_valuation_snapshots').select('currency,portfolio_value,sampled_on').eq('user_id', user.id).order('sampled_on')),
     ]);
-    if (a.error || o.error || s.error) setError(a.error?.message || o.error?.message || s.error?.message || 'Could not load portfolio');
+    if (a.error || o.error || s.error) {
+      const failure = a.error || o.error || s.error;
+      setError(failure);
+      console.error('[capital] portfolio load failed', { code: failure.code, message: failure.message, details: failure.details });
+    }
     else { setAssets(a.data || []); setOperations(o.data || []); setSnapshots(s.data || []); }
     setLoading(false);
   }, [user?.id]);
