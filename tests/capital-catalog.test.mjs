@@ -33,4 +33,6 @@ test('Binance symbol metadata admits only active USDT spot pairs for live quote 
   ] });
   assert.deepEqual(assets, [{ symbol: 'BTCUSDT', name: 'BTC', currency: 'USDT', quoteSource: 'binance' }]);
   assert.equal(POPULAR_CRYPTO.length >= 20, true);
+  assert.ok(POPULAR_CRYPTO.some(asset => asset.symbol === 'PAXGUSDT' && /tokenized gold/i.test(asset.name)));
+  assert.ok(POPULAR_CRYPTO.some(asset => asset.symbol === 'XAUTUSDT' && /tokenized gold/i.test(asset.name)));
 });

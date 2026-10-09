@@ -88,3 +88,56 @@
   .capital-quote-state{max-width:82px;font-size:8px}
 }
 @media(prefers-reduced-motion:reduce){.capital-entry-card{transition:none}}
+
+/* Portfolio-first hierarchy: headline, positions, then supporting analytics. */
+.capital-content{width:min(100%,1080px);padding-top:26px}
+.capital-heading{margin-bottom:18px}
+.capital-overview{background:linear-gradient(125deg,color-mix(in srgb,var(--cap-gold) 12%,var(--cap-surface)),var(--cap-surface) 62%);box-shadow:0 16px 42px rgba(0,0,0,.1)}
+.capital-total{gap:9px}
+.capital-total>span,.capital-metric>span{font-size:10px;font-weight:650;letter-spacing:.04em;text-transform:uppercase}
+.capital-total>strong{font-size:clamp(28px,4vw,40px)}
+.capital-metric .capital-multi-value{font-size:15px}
+.capital-section-title{margin:26px 0 12px}
+.capital-section-title h2{font-size:18px;letter-spacing:-.02em}
+.capital-assets{grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:10px}
+.capital-asset{grid-template-areas:"icon main value" "icon qty quote";grid-template-rows:auto auto;min-height:94px;padding:14px 16px;border-radius:18px;background:linear-gradient(145deg,color-mix(in srgb,var(--cap-surface) 96%,var(--cap-gold)),var(--cap-surface));}
+.capital-asset-main{grid-area:main;align-self:center;gap:4px}
+.capital-asset-main strong{font-size:14px}
+.capital-asset-main small{font-size:10px}
+.capital-asset-price{overflow:hidden;color:var(--cap-text);font-size:12px;font-weight:650;text-overflow:ellipsis;white-space:nowrap}
+.capital-asset-value{grid-area:value;align-self:center;max-width:170px;gap:5px}
+.capital-asset-value strong{font-size:15px}
+.capital-asset-value small{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.capital-asset-qty{grid-area:qty;align-self:center}
+.capital-quote-state{grid-area:quote;align-self:center;max-width:170px;padding:4px 8px;border:1px solid var(--cap-line);border-radius:999px;background:color-mix(in srgb,var(--cap-text) 3%,transparent);font-size:9px}
+.capital-quote-state[data-live="true"],.capital-quote-mobile[data-live="true"]{border-color:color-mix(in srgb,#36c99a 28%,transparent);color:#36c99a}
+.capital-quote-state[data-live="false"]{color:var(--cap-muted)}
+.capital-analytics{display:block;margin-top:26px}
+.capital-analytics>h2{margin:0 0 12px;font-size:18px;letter-spacing:-.02em}
+.capital-analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.capital-insight{padding:17px 18px;border-radius:19px}
+.capital-insight h3{margin:0 0 10px;font-size:12px}
+.capital-chart>p{min-height:0;margin:10px 0;color:var(--cap-muted)}
+.capital-disclaimer{margin-top:16px;max-width:760px}
+.capital-quote-mobile{display:none}
+@media(max-width:640px){
+  .capital-content{padding:20px 13px 34px}
+  .capital-heading{gap:9px;margin-bottom:15px}
+  .capital-heading h1{font-size:25px}
+  .capital-heading p:not(.capital-kicker){max-width:230px;font-size:11px}
+  .capital-overview{border-radius:19px}
+  .capital-total{min-height:98px;padding:17px}
+  .capital-metric{min-height:70px;padding:12px}
+  .capital-metric .capital-multi-value{font-size:13px}
+  .capital-asset{grid-template-areas:"icon main value" "icon qty quote";min-height:91px;padding:11px 10px}
+  .capital-asset-main{gap:4px}
+  .capital-asset-price{font-size:11px}
+  .capital-asset-value{max-width:112px}
+  .capital-asset-value strong{font-size:12px}
+  .capital-asset-value small{max-width:112px}
+  .capital-quote-state{display:none}
+  .capital-quote-mobile{display:inline-block;max-width:100%;width:max-content;overflow:hidden;padding:3px 7px;border:1px solid var(--cap-line);border-radius:999px;color:var(--cap-muted);font-size:8px;line-height:1.2;text-overflow:ellipsis;white-space:nowrap}
+  .capital-analytics-grid{grid-template-columns:1fr}
+  .capital-analytics{margin-top:22px}
+  .capital-section-title{margin-top:23px}
+}
