@@ -92,6 +92,12 @@
 /* Portfolio-first hierarchy: headline, positions, then supporting analytics. */
 .capital-content{width:min(100%,1080px);padding-top:26px}
 .capital-heading{margin-bottom:18px}
+.capital-heading-actions{display:flex;align-items:center;gap:8px;flex:none}
+.capital-quote-connect{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:0 12px;border:1px solid color-mix(in srgb,var(--cap-gold) 35%,var(--cap-line));border-radius:14px;background:color-mix(in srgb,var(--cap-gold) 7%,var(--cap-surface));color:var(--cap-gold);font:inherit;font-size:11px;font-weight:650;white-space:nowrap;cursor:pointer;transition:background .16s,border-color .16s}
+.capital-quote-connect:hover{border-color:color-mix(in srgb,var(--cap-gold) 65%,var(--cap-line));background:color-mix(in srgb,var(--cap-gold) 12%,var(--cap-surface))}
+.capital-tiingo-link{display:inline-block;margin:4px 0 8px;color:var(--cap-gold);font-size:11px;font-weight:650;text-decoration:none}
+.capital-tiingo-link:hover,.capital-disclaimer a:hover{text-decoration:underline}
+.capital-disclaimer a{color:var(--cap-gold)}
 .capital-overview{background:linear-gradient(125deg,color-mix(in srgb,var(--cap-gold) 12%,var(--cap-surface)),var(--cap-surface) 62%);box-shadow:0 16px 42px rgba(0,0,0,.1)}
 .capital-total{gap:9px}
 .capital-total>span,.capital-metric>span{font-size:10px;font-weight:650;letter-spacing:.04em;text-transform:uppercase}
@@ -123,6 +129,10 @@
 @media(max-width:640px){
   .capital-content{padding:20px 13px 34px}
   .capital-heading{gap:9px;margin-bottom:15px}
+  .capital-heading-actions{flex-direction:column;align-items:stretch;gap:6px}
+  .capital-heading-actions .capital-add,.capital-quote-connect{min-height:37px;padding:0 9px;border-radius:11px;font-size:9px}
+  .capital-quote-connect{gap:5px}
+  .capital-quote-connect svg{width:13px;height:13px}
   .capital-heading h1{font-size:25px}
   .capital-heading p:not(.capital-kicker){max-width:230px;font-size:11px}
   .capital-overview{border-radius:19px}
