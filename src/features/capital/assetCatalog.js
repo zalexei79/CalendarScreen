@@ -26,11 +26,18 @@ export const POPULAR_CRYPTO = [
 
 const stocks = stockRows.map(([symbol,name])=>({symbol,name,currency:'USD',quoteSource:'manual'}));
 const etfs = etfRows.map(([symbol,name])=>({symbol,name,currency:'USD',quoteSource:'manual'}));
+const metals = [
+  {symbol:'XAU',name:'Gold · troy ounce',currency:'USD',quoteSource:'manual',marketSource:'gold-api'},
+  {symbol:'XAG',name:'Silver · troy ounce',currency:'USD',quoteSource:'manual',marketSource:'gold-api'},
+  {symbol:'XPT',name:'Platinum · troy ounce',currency:'USD',quoteSource:'manual',marketSource:'gold-api'},
+  {symbol:'XPD',name:'Palladium · troy ounce',currency:'USD',quoteSource:'manual',marketSource:'gold-api'},
+];
 
 export function getCatalog(category) {
   if (category === 'stock') return stocks;
   if (category === 'etf') return etfs;
   if (category === 'crypto') return POPULAR_CRYPTO;
+  if (category === 'metal') return metals;
   return [];
 }
 

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { isQuoteFresh, QUOTE_STALE_AFTER_MS } from '../src/features/capital/quoteStatus.js';
+import { isGoldApiQuoteFresh, GOLD_API_QUOTE_STALE_AFTER_MS, isQuoteFresh, QUOTE_STALE_AFTER_MS } from '../src/features/capital/quoteStatus.js';
 
 test('Binance quote freshness moves to stale after 15 seconds and rejects invalid timestamps', () => {
   const now = 1_800_000_000_000;
@@ -14,8 +14,18 @@ test('Binance quote freshness moves to stale after 15 seconds and rejects invali
   assert.equal(isQuoteFresh(null, now), false);
 });
 
+test('Gold API spot quote is fresh for five minutes and stale after that', () => {
+  const now = 1_800_000_000_000;
+  const quote = { transport: 'gold-api', price: '4195.5', at: now };
+  assert.equal(isGoldApiQuoteFresh(quote, now), true);
+  assert.equal(isGoldApiQuoteFresh({ ...quote, at: now - GOLD_API_QUOTE_STALE_AFTER_MS + 1 }, now), true);
+  assert.equal(isGoldApiQuoteFresh({ ...quote, at: now - GOLD_API_QUOTE_STALE_AFTER_MS }, now), false);
+  assert.equal(isGoldApiQuoteFresh({ ...quote, transport: 'rest' }, now), false);
+});
+
 test('Binance connection recovers after closure or silence and reacts to network changes', async () => {
   const panel = await readFile(new URL('../src/features/capital/CapitalPanel.jsx', import.meta.url), 'utf8');
+  const metalQuotes = await readFile(new URL('../src/features/capital/metalQuotes.js', import.meta.url), 'utf8');
   assert.match(panel, /socket\.onclose=[\s\S]*?setTimeout\(connect,Math\.min\(30000,1000\*2\*\*Math\.min\(attempt\+\+,5\)\)\)/);
   assert.match(panel, /const endpoints=\['wss:\/\/stream\.binance\.com:443','wss:\/\/stream\.binance\.com:9443','wss:\/\/data-stream\.binance\.vision:443'\]/);
   assert.match(panel, /endpointIndex=\(endpointIndex\+1\)%endpoints\.length/);
@@ -24,4 +34,8 @@ test('Binance connection recovers after closure or silence and reacts to network
   assert.match(panel, /addEventListener\('offline',off\)/);
   assert.match(panel, /requestAnimationFrame\(\(\)=>\{frame=null;const batch=quoteBuffer\.current/);
   assert.match(panel, /data-api\.binance\.vision\/api\/v3\/ticker\/price\?symbols=/);
+  assert.match(metalQuotes, /api\.gold-api\.com\/price/);
+  assert.match(panel, /fetchGoldApiQuote\(symbol,controller\.signal\)/);
+  assert.match(panel, /setInterval\(\(\)=>void refresh\(\),60_000\)/);
+  assert.match(panel, /isGoldApiQuoteFresh\(quotes\[asset\.symbol\],now\)/);
 });

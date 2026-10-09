@@ -6,10 +6,13 @@ import { readFile } from 'node:fs/promises';
 test('searchable stock and ETF catalogues include broad popular coverage and allow custom fallback', () => {
   const stocks = getCatalog('stock');
   const etfs = getCatalog('etf');
+  const metals = getCatalog('metal');
   assert.ok(stocks.length >= 100);
   assert.ok(etfs.length >= 40);
   assert.ok(stocks.some(asset => asset.symbol === 'NVDA'));
   assert.ok(etfs.some(asset => asset.symbol === 'CSPX'));
+  assert.deepEqual(metals.map(asset => asset.symbol), ['XAU','XAG','XPT','XPD']);
+  assert.ok(metals.every(asset => asset.marketSource === 'gold-api' && asset.currency === 'USD'));
   assert.ok(stocks.every(asset => asset.quoteSource === 'manual' && asset.currency === 'USD'));
 });
 
