@@ -847,6 +847,14 @@ export function translate(language, key) {
 
 TRANSLATIONS['zh-CN'] = zh;
 
+const capitalHomeCopy = {
+  ru: { capitalHomeBadge: 'DAYRIS CAPITAL · PRO', capitalHomeTitle: 'Инвестиционный портфель', capitalHomeSubtitle: 'Акции, криптовалюта и другие активы' },
+  en: { capitalHomeBadge: 'DAYRIS CAPITAL · PRO', capitalHomeTitle: 'Investment portfolio', capitalHomeSubtitle: 'Stocks, crypto and other assets' },
+  md: { capitalHomeBadge: 'DAYRIS CAPITAL · PRO', capitalHomeTitle: 'Portofoliu de investiții', capitalHomeSubtitle: 'Acțiuni, criptomonede și alte active' },
+  'zh-CN': { capitalHomeBadge: 'DAYRIS CAPITAL · PRO', capitalHomeTitle: '投资组合', capitalHomeSubtitle: '股票、加密货币及其他资产' },
+};
+for (const [locale, copy] of Object.entries(capitalHomeCopy)) Object.assign(TRANSLATIONS[locale], copy);
+
 const extraCopy = {
   ru: { privacyPolicy:'Политика конфиденциальности', deleteAccountData:'Удалить аккаунт и данные', entryDestination:'Куда записать операцию?', mainAccount:'Основной счёт', longDirection:'LONG', shortDirection:'SHORT', takeProfit:'Take Profit', stopLoss:'Stop Loss', journalLabel:'JOURNAL', tradingScorecard:'PRO Scorecard', scoreLabel:'SCORE', profitFactor:'Profit Factor', payoff:'Payoff', disconnectLabel:'disconnect' },
   en: { privacyPolicy:'Privacy policy', deleteAccountData:'Delete account and data', entryDestination:'Where should this entry go?', mainAccount:'Main account', longDirection:'LONG', shortDirection:'SHORT', takeProfit:'Take Profit', stopLoss:'Stop Loss', journalLabel:'JOURNAL', tradingScorecard:'PRO Scorecard', scoreLabel:'SCORE', profitFactor:'Profit Factor', payoff:'Payoff', disconnectLabel:'disconnect' },

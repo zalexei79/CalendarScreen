@@ -12,11 +12,12 @@ const [calendar, panel, grid, dock, css, offerCopy] = await Promise.all([
   readFile(new URL('src/features/pro/proOfferCopy.js', root), 'utf8'),
 ]);
 
-test('calendar swipe opens Capital for PRO and the existing wallet remains a separate screen', () => {
+test('calendar has a named Capital entry and swipe route for PRO while the wallet remains separate', () => {
   assert.match(calendar, /function openCapitalFromCalendarGesture\(\)[\s\S]*?if \(!proAccessActive\) \{ openProPresentation\(\); return; \}[\s\S]*?setAccountMode\('capital'\)/);
   assert.match(calendar, /accountMode === 'capital' && proAccessActive && !proAccessLoading/);
   assert.match(calendar, /onOpenCapital=\{proAccessLoading \? undefined : openCapitalFromCalendarGesture\}/);
-  assert.match(calendar, /onClick=\{openCapitalFromCalendarGesture\}[\s\S]*?aria-label="DAYRIS Capital"/);
+  assert.match(calendar, /className="capital-entry-card"[\s\S]*?onClick=\{openCapitalFromCalendarGesture\}[\s\S]*?t\('capitalHomeTitle'\)/);
+  assert.doesNotMatch(calendar, /aria-label="DAYRIS Capital"/);
   assert.match(grid, /navigation: 'calendar', onExit: onOpenCapital/);
   assert.match(dock, /Pull down to open Capital/);
   assert.match(calendar, /accountMode === 'wallet' \? <WalletPanel/);
@@ -39,6 +40,15 @@ test('Capital layout has a mobile breakpoint and respects reduced motion', () =>
   assert.match(css, /@media\s*\(max-width:\s*640px\)/);
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
   assert.match(css, /capital-quote-mobile/);
+  assert.match(css, /capital-assets\{grid-template-columns:repeat\(auto-fit/);
+  assert.match(css, /grid-template-areas:"icon main value" "icon qty quote"/);
+});
+
+test('Capital sheet shows one backend error and does not duplicate the custom asset label', () => {
+  assert.match(panel, /portfolio\.error&&!composer/);
+  assert.match(panel, /saveError\|\|portfolio\.error&&composer/);
+  assert.match(panel, /<strong>\{form\.name\|\|t\.customAsset\}<\/strong>/);
+  assert.doesNotMatch(panel, /assetSelection\.custom\?t\.customAsset:form\.name/);
 });
 
 test('Capital is represented in every existing PRO offer locale', () => {
