@@ -113,6 +113,7 @@ import FinancePlanComposer from './src/features/reminders/FinancePlanComposer.js
 import FinancePlanList from './src/features/reminders/FinancePlanList.jsx';
 import { useWalletTransactions } from './src/features/wallet/hooks/useWalletTransactions';
 import WalletPanel from './src/features/wallet/WalletPanel.jsx';
+import CapitalPanel from './src/features/capital/CapitalPanel.jsx';
 import { transitionView } from './src/shared/ui/transitionView';
 import SwipeDismissSheet from './src/shared/ui/SwipeDismissSheet.jsx';
 import ProOffer from './src/features/pro/ProOffer.jsx';
@@ -458,10 +459,15 @@ export default function CalendarScreen() {
   const guideAmountRef = useRef(null);
   const guideCommentRef = useRef(null);
 
-  function openWalletFromCalendarGesture() {
-    // The wallet is a PRO-only account. A swipe should never unexpectedly
-    // open the offer for FREE users; the visible PRO control remains the
-    // discoverable entry point for upgrading.
+  function openCapitalFromCalendarGesture() {
+    if (proAccessLoading) return;
+    if (!proAccessActive) { openProPresentation(); return; }
+    transitionView(() => {
+      setProViewInternal(true);
+      setAccountMode('capital');
+    });
+  }
+  function openWalletFromCalendarAction() {
     if (proAccessLoading || !proAccessActive) return;
     transitionView(() => {
       setProViewInternal(true);
@@ -494,7 +500,7 @@ export default function CalendarScreen() {
   const isFinancialPro = proView && !traderMode;
   useEffect(() => {
     if ((!proAccessLoading && !proAccessActive) || !proView) {
-      if (accountMode === 'wallet') setAccountMode('main');
+      if (accountMode === 'wallet' || accountMode === 'capital') setAccountMode('main');
     }
   }, [proAccessActive, proAccessLoading, proView, accountMode]);
   const [proAccessPromptOpen, setProAccessPromptOpen] = useState(false);
@@ -4400,7 +4406,7 @@ export default function CalendarScreen() {
             if (command.type === 'today') { jumpToTradeDate(todayKey); setSelectedKey(null); return; }
             if (command.type === 'month') { if (command.direction > 0) goToNextMonth(); else goToPrevMonth(); return; }
             if (command.type === 'pro') { setProView(command.enabled); return; }
-            if (command.type === 'wallet') { if (proAccessActive && !proAccessLoading) openWalletFromCalendarGesture(); else setProView(true); return; }
+            if (command.type === 'wallet') { if (proAccessActive && !proAccessLoading) openWalletFromCalendarAction(); else setProView(true); return; }
             const categoryNames = moneyCategoryNames;
             const resolveCategory = (name) => resolveLocalizedCategory(name, MONEY_CATEGORIES, categoryNames);
             const spokenCategory = command.category ? resolveCategory(command.category) : null;
@@ -4699,6 +4705,7 @@ export default function CalendarScreen() {
       }} />}
 
       {accountMode === 'wallet' ? <WalletPanel language={language} isLight={isLight} currency={currency} {...wallet} onSave={wallet.saveTransaction} onDelete={wallet.deleteTransaction} onClearHistory={wallet.clearHistory} onBackToCalendar={() => transitionView(() => setAccountMode('main'))} /> : null}
+      {accountMode === 'capital' && proAccessActive && !proAccessLoading ? <CapitalPanel language={language} isLight={isLight} currency={currency} user={user} onBack={() => transitionView(() => setAccountMode('main'))} onWallet={() => transitionView(() => setAccountMode('wallet'))} /> : null}
       {accountMode === 'main' && <>
       <div className="px-3 sm:px-5">
         {showFirstEntryGuide ? <div className="first-calendar-entry-hint monthly-goal-bar" data-light={isLight}>
@@ -4741,7 +4748,7 @@ export default function CalendarScreen() {
           setSelectedKey(dateKey);
         }}
         onEmptyClick={() => setSelectedKey(null)}
-        onOpenWallet={proAccessActive && !proAccessLoading ? openWalletFromCalendarGesture : undefined}
+        onOpenCapital={proAccessLoading ? undefined : openCapitalFromCalendarGesture}
         gesturesDisabled={Boolean(modalOpen || historyOpen || settingsOpen || connectOpen || metaTraderOpen || proAccessPromptOpen)}
       />
 

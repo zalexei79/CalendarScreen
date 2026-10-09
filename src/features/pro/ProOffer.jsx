@@ -1,14 +1,14 @@
 import React, { useId, useState } from 'react';
-import { ArrowDownLeft, ArrowRight, ArrowUpRight, ChartCandlestick, ChartNoAxesCombined, Check, CreditCard, Gift, RefreshCw, Wallet } from 'lucide-react';
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, ChartCandlestick, ChartNoAxesCombined, Check, CreditCard, Gift, RefreshCw, Wallet, Bitcoin } from 'lucide-react';
 import { getProOfferCopy, XAUUSD_SIGNALS_URL, XAUUSD_SIGNALS_BOT_URL } from './proOfferCopy';
 import './ProPresentation.css';
 
 // Presentation only. All account, referral and checkout actions stay with the caller.
 export default function ProOffer({ language, copy, active, daysRemaining, untilLabel, signedIn, referralLoading, referralCode, referralError, checkoutLoading, checkoutError, onInvite, onCheckout, onInvites, onWallet, onPlatforms }) {
-  const [feature, setFeature] = useState('wallet');
+  const [feature, setFeature] = useState('capital');
   const id = useId();
   const text = getProOfferCopy(language);
-  const features = [ ['wallet', Wallet, text.wallet], ['money', ChartNoAxesCombined, text.money], ['trader', ChartCandlestick, text.trader] ];
+  const features = [ ['capital', Bitcoin, text.capital], ['wallet', Wallet, text.wallet], ['money', ChartNoAxesCombined, text.money], ['trader', ChartCandlestick, text.trader] ];
   const index = features.findIndex(([key]) => key === feature);
   const selectWithKeys = (event) => {
     let next;
@@ -80,6 +80,13 @@ export default function ProOffer({ language, copy, active, daysRemaining, untilL
               <p className="pro-example-caption">{text.tradeResult}</p><strong className="pro-example-amount pro-positive">+$48<span>.00</span></strong>
               <svg className="pro-example-curve" viewBox="0 0 240 60" aria-hidden="true"><path d="M0 52 25 46 50 49 75 30 100 36 125 20 150 27 175 12 200 17 240 4" /></svg>
               <p className="pro-example-caption">{text.tradeDetail}</p>
+            </>}
+            {feature === 'capital' && <>
+              <div className="pro-example-heading"><Bitcoin aria-hidden="true" /><span>DAYRIS CAPITAL</span></div>
+              <p className="pro-example-caption">{text.capital}</p>
+              <div className="pro-example-categories"><div><div><span>Stocks · Crypto · ETFs</span><b>PRO</b></div><span className="pro-example-bar"><i style={{ width: '72%' }} /></span></div></div>
+              <svg className="pro-example-curve" viewBox="0 0 240 60" aria-hidden="true"><path d="M0 49 30 42 60 45 90 27 120 34 150 17 180 25 210 9 240 13" /></svg>
+              <p className="pro-example-caption">{text.capitalTitle}</p>
             </>}
           </div>
         </div>

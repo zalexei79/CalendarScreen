@@ -23,7 +23,7 @@ export function transitionView(update) {
       if (current === sequence) delete root.dataset.workspaceTransition;
     }, reduced ? 0 : 560);
   };
-  const surface = document.querySelector('.wallet-panel-enter, .calendar-section');
+  const surface = document.querySelector('.wallet-panel-enter, .capital-panel, .calendar-section');
   if (reduced || !surface?.animate) { arrive(); return; }
   delete root.dataset.workspaceTransition;
   // A short live departure bridges the content change. Unlike native screenshot

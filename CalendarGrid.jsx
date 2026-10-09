@@ -40,7 +40,7 @@ export default function CalendarGrid({
   formatPnlDisplay,
   onSelectDay,
   onEmptyClick,
-  onOpenWallet,
+  onOpenCapital,
   gesturesDisabled = false,
   slideDirection,
   onNextMonth,
@@ -53,7 +53,7 @@ export default function CalendarGrid({
   // A workspace return reveals the complete month, without replaying 35 cells.
   const animateCells = useRef(!slideDirection && (typeof document === 'undefined' || !document.documentElement.hasAttribute('data-workspace-transition')));
   const { surfaceRef, drag: touchDrag } = useWalletExitGesture({
-    navigation: 'calendar', onExit: onOpenWallet, disabled: gesturesDisabled, onNextMonth, onPreviousMonth,
+    navigation: 'calendar', onExit: onOpenCapital, disabled: gesturesDisabled, onNextMonth, onPreviousMonth,
   });
   useCalendarFit(surfaceRef, cells.length);
   const swipeArrival = useRef(typeof document !== 'undefined' && document.documentElement.hasAttribute('data-calendar-swipe-arrival'));

@@ -118,6 +118,26 @@ Object.assign(copy.ro, {
   mt5Guide: 'Conectare prin asistentul Windows gratuit. Actualizarea automată necesită MT5, asistentul și DAYRIS deschise în Chrome/Edge pe PC. Tranzacțiile ajung pe telefon prin cloud DAYRIS.',
   openPlatforms: 'Deschide platformele de trading',
 });
+Object.assign(copy.ru, {
+  capital:'Инвестиции', capitalTitle:'Инвестиции под контролем.',
+  capitalBody:'Следи за акциями, криптовалютами, золотом и другими активами. Смотри стоимость вложений, прибыль и изменения капитала в одном приложении.',
+  capitalPoints:['Акции, криптовалюты, ETF и другие активы','Автоматические котировки криптовалют','Аналитика портфеля и история операций'],
+});
+Object.assign(copy.en, {
+  capital:'Investments', capitalTitle:'Your investments, in one place.',
+  capitalBody:'Track stocks, crypto, gold and other assets. See investment value, profit and changes to your capital in one app.',
+  capitalPoints:['Stocks, crypto, ETFs and other assets','Automatic crypto quotes','Portfolio analytics and activity history'],
+});
+Object.assign(copy.ro, {
+  capital:'Investiții', capitalTitle:'Investițiile tale, într-un singur loc.',
+  capitalBody:'Urmărește acțiuni, cripto, aur și alte active. Vezi valoarea investițiilor, profitul și evoluția capitalului în aceeași aplicație.',
+  capitalPoints:['Acțiuni, cripto, ETF și alte active','Cotații automate pentru cripto','Analiza portofoliului și istoricul operațiunilor'],
+});
+Object.assign(copy.zh, {
+  capital:'投资组合', capitalTitle:'集中管理您的投资。',
+  capitalBody:'跟踪股票、加密货币、黄金和其他资产，在一个应用中查看投资价值、盈亏和资金变化。',
+  capitalPoints:['股票、加密货币、ETF等资产','自动加密货币行情','投资组合分析与交易记录'],
+});
 
 export const XAUUSD_SIGNALS_URL = 'https://t.me/xauusd_scalp_signal';
 export const XAUUSD_SIGNALS_BOT_URL = 'https://t.me/XauusdScalpSignal_bot';

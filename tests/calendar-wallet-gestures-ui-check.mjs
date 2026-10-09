@@ -26,7 +26,7 @@ try {
   // Verify the actual browser timeline: departure, visible arrival, and no
   // native snapshot overlay swallowing a second navigation during arrival.
   await fresh();
-  await page.evaluate(() => window.testNavigate('wallet'));
+  await page.evaluate(() => window.testNavigate('capital'));
   assert.ok(await page.locator('.calendar-section').evaluate(el => el.getAnimations().some(animation => animation.effect.getTiming().duration === 160)));
   await page.locator('.wallet-panel-enter').waitFor();
   const motion = await page.locator('.wallet-panel-enter').evaluate(el => {
@@ -38,7 +38,7 @@ try {
     animation.play();
     return result;
   });
-  assert.ok(motion && motion.opacity < .9 && motion.translate === 'none', 'wallet arrives without a whole-screen jump');
+  assert.ok(motion && motion.opacity < .9 && motion.translate === 'none', 'Capital arrives without a whole-screen jump');
   await page.evaluate(() => window.testNavigate('calendar'));
   await page.locator('.calendar-days-grid').waitFor();
   await page.waitForTimeout(650);
@@ -64,12 +64,12 @@ try {
   // Pull from a real day button: follows the finger, shows readiness, prevents ghost selection.
   await fresh(); await send('touchStart', 195, 150); await send('touchMove', 195, 220);
   assert.notEqual(await page.locator('.calendar-section').evaluate(el => getComputedStyle(el).transform), 'none');
-  assert.equal(await page.locator('.calendar-dock-wallet').textContent(), 'Pull down to open wallet');
+  assert.equal(await page.locator('.calendar-dock-capital').textContent(), 'Pull down to open Capital');
   await send('touchMove', 195, 325);
-  assert.equal(await page.locator('.calendar-dock-wallet').textContent(), 'Release to open wallet');
+  assert.equal(await page.locator('.calendar-dock-capital').textContent(), 'Release to open Capital');
   await send('touchEnd'); await page.locator('.wallet-panel-enter').waitFor();
   assert.equal(await page.locator('#selected').textContent(), '');
-  // Return uses the existing wallet interaction, then another pull enters again.
+  // Return uses the Capital surface interaction, then another pull enters again.
   await swipe(195, 115, -130, 2); await page.locator('.calendar-days-grid').waitFor();
   assert.equal(await page.locator('.calendar-section').getAttribute('data-cells-enter'), 'false');
   await page.waitForTimeout(350);
@@ -125,7 +125,7 @@ try {
   await page.getByRole('button', { name: 'PRO', exact: true }).click();
   await swipe(195, 150, 0, 180); await remains();
   await swipe(195, 150, -120, 0); await page.waitForFunction(() => document.querySelector('#month').textContent === '1'); assert.equal(await page.locator('#month').textContent(), '1');
-  // Ordinary scrolling, taps, overlays, and multiple fingers do not open the wallet.
+  // Ordinary scrolling, taps, overlays, and multiple fingers do not open Capital.
   await fresh(); await page.locator('.calendar-days-grid > button').nth(10).tap();
   assert.equal(await page.locator('#selected').textContent(), 'day-10');
   await fresh(); await page.locator('#blocked').click(); await swipe(195, 150, 0, 180); await remains();
