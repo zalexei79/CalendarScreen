@@ -98,8 +98,16 @@
 .capital-overview-brand i{color:#627087;font-size:12px;font-style:normal}
 .capital-overview-brand b{color:#d8e1ee;font-weight:600}
 .capital-overview-mark{width:24px;height:24px;color:#65d9b6}
+.capital-quote-summary .capital-quote-coverage{display:block;margin-top:3px;color:#8898ac;font-size:9px;line-height:1.4}
 .capital-total-title{margin:23px 0 6px;color:#b9c5d5;font-size:14px}
 .capital-portfolio-totals{display:flex;flex-wrap:wrap;gap:14px 38px;align-items:flex-start}
+.capital-global-total{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:3px 0 16px;padding:14px 16px;border:1px solid rgba(91,213,178,.2);border-radius:16px;background:linear-gradient(115deg,rgba(73,194,160,.1),rgba(91,213,178,.025))}
+.capital-global-total>div{display:grid;gap:4px;min-width:0}
+.capital-global-total>div>small,.capital-global-total>div>span{color:#9ba9bb;font-size:10px;line-height:1.45}
+.capital-global-total>div>strong{overflow:hidden;color:#f5f7fb;font-size:clamp(22px,4.4vw,32px);font-variant-numeric:tabular-nums;letter-spacing:-.035em;text-overflow:ellipsis;white-space:nowrap}
+.capital-global-total>div>.capital-global-pnl{color:#9ba9bb;font-size:10px;font-variant-numeric:tabular-nums;line-height:1.5}
+.capital-global-warning{max-width:42%;color:#edcd87;font-size:10px;line-height:1.45;text-align:right}
+.capital-light .capital-global-total>div>strong{color:#172337}
 .capital-currency-total{display:grid;gap:9px;min-width:0}
 .capital-total-number{display:flex;align-items:baseline;gap:10px}
 .capital-total-number strong{color:#f5f7fb;font-size:clamp(32px,5.6vw,46px);font-weight:650;letter-spacing:-.045em;line-height:1.15;font-variant-numeric:tabular-nums}
@@ -118,6 +126,7 @@
 .capital-period-heading .capital-range-selector::-webkit-scrollbar{display:none}
 .capital-period-results{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px;margin-top:12px}
 .capital-period-result{display:flex;align-items:center;gap:12px;min-width:0;padding:12px;border:1px solid var(--cap-line);border-radius:16px;background:color-mix(in srgb,var(--cap-surface) 90%,var(--cap-text) 3%)}
+.capital-period-result-global{border-color:color-mix(in srgb,#5bd5b2 38%,var(--cap-line));background:linear-gradient(115deg,color-mix(in srgb,#5bd5b2 10%,var(--cap-surface)),var(--cap-surface))}
 .capital-period-ring{position:relative;flex:0 0 56px;width:56px;height:56px;color:var(--cap-muted)}
 .capital-period-ring svg{display:block;width:100%;height:100%;transform:rotate(-90deg)}
 .capital-period-ring circle{fill:none;stroke-width:5}
@@ -132,6 +141,7 @@
 .capital-period-result[data-trend="up"] .capital-period-data>strong{color:#5bd5b2}
 .capital-period-result[data-trend="down"] .capital-period-data>strong{color:#f07e89}
 .capital-period-empty{margin-top:10px;padding:14px;border:1px dashed var(--cap-line);border-radius:14px;color:var(--cap-muted);font-size:11px;line-height:1.5}
+.capital-period-fx-note{margin-top:10px;padding:10px 12px;border-radius:11px;background:rgba(237,205,135,.07);color:#edcd87;font-size:10px;line-height:1.5}
 .capital-chart-currency{display:block;margin:0 0 8px;color:#90a0b5;font-size:10px;font-weight:700;letter-spacing:.08em}
 .capital-performance{min-width:0;color:#5bd5b2}
 .capital-range-selector{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:5px 0 11px}
@@ -396,6 +406,7 @@
 .capital-asset-value strong{font-size:15px}
 .capital-asset-value small{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .capital-asset-value .capital-asset-score-chip{color:var(--cap-gold);font-weight:650}
+@media(max-width:520px){.capital-global-total{align-items:flex-start;flex-direction:column;gap:7px}.capital-global-warning{max-width:none;text-align:left}.capital-period-results{grid-template-columns:1fr}.capital-period-heading .capital-range-selector{gap:5px}.capital-period-heading .capital-range-selector button{min-width:43px;padding-inline:9px}}
 .capital-asset-qty{grid-area:qty;align-self:center}
 .capital-quote-state{grid-area:quote;align-self:center;max-width:170px;padding:4px 8px;border:1px solid var(--cap-line);border-radius:999px;background:color-mix(in srgb,var(--cap-text) 3%,transparent);font-size:9px}
 .capital-quote-state[data-live="true"],.capital-quote-mobile[data-live="true"]{border-color:color-mix(in srgb,#36c99a 28%,transparent);color:#36c99a}
