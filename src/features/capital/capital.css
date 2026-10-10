@@ -110,6 +110,28 @@
 .capital-total-return>small,.capital-invested-line{color:#a3b0c2;font-size:11px;font-variant-numeric:tabular-nums}
 .capital-invested-line{color:#8190a5}
 .capital-currency-chart{margin-top:22px}
+.capital-period-overview{margin-top:24px;padding-top:20px;border-top:1px solid rgba(165,184,207,.14)}
+.capital-period-heading{display:grid;gap:11px}
+.capital-period-heading h2{margin:0;color:var(--cap-text);font-size:17px;letter-spacing:-.02em}
+.capital-period-heading p{max-width:650px;margin:5px 0 0;color:var(--cap-muted);font-size:10px;line-height:1.5}
+.capital-period-heading .capital-range-selector{justify-content:flex-start;margin:0;overflow-x:auto;scrollbar-width:none}
+.capital-period-heading .capital-range-selector::-webkit-scrollbar{display:none}
+.capital-period-results{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px;margin-top:12px}
+.capital-period-result{display:flex;align-items:center;gap:12px;min-width:0;padding:12px;border:1px solid var(--cap-line);border-radius:16px;background:color-mix(in srgb,var(--cap-surface) 90%,var(--cap-text) 3%)}
+.capital-period-ring{position:relative;flex:0 0 56px;width:56px;height:56px;color:var(--cap-muted)}
+.capital-period-ring svg{display:block;width:100%;height:100%;transform:rotate(-90deg)}
+.capital-period-ring circle{fill:none;stroke-width:5}
+.capital-period-ring-track{stroke:rgba(165,184,207,.14)}
+.capital-period-ring-value{stroke:var(--cap-muted);stroke-linecap:round;transition:stroke-dasharray .25s ease}
+.capital-period-result[data-trend="up"] .capital-period-ring-value{stroke:#5bd5b2}
+.capital-period-result[data-trend="down"] .capital-period-ring-value{stroke:#f07e89}
+.capital-period-ring b{position:absolute;inset:0;display:grid;place-items:center;color:var(--cap-text);font-size:9px;font-variant-numeric:tabular-nums}
+.capital-period-data{display:grid;gap:3px;min-width:0}
+.capital-period-data>span,.capital-period-data>small{overflow:hidden;color:var(--cap-muted);font-size:9px;text-overflow:ellipsis;white-space:nowrap}
+.capital-period-data>strong{overflow:hidden;color:var(--cap-text);font-size:clamp(16px,4vw,21px);font-variant-numeric:tabular-nums;text-overflow:ellipsis;white-space:nowrap}
+.capital-period-result[data-trend="up"] .capital-period-data>strong{color:#5bd5b2}
+.capital-period-result[data-trend="down"] .capital-period-data>strong{color:#f07e89}
+.capital-period-empty{margin-top:10px;padding:14px;border:1px dashed var(--cap-line);border-radius:14px;color:var(--cap-muted);font-size:11px;line-height:1.5}
 .capital-chart-currency{display:block;margin:0 0 8px;color:#90a0b5;font-size:10px;font-weight:700;letter-spacing:.08em}
 .capital-performance{min-width:0;color:#5bd5b2}
 .capital-range-selector{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:5px 0 11px}

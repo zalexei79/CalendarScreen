@@ -1,6 +1,43 @@
-import { MONEY_SCALE, parseScaled } from './decimal.js';
+import { calculateReturnPercent, MONEY_SCALE, multiplyScaled, parseScaled, QUANTITY_SCALE } from './decimal.js';
 
 const RANGE_DAYS = { week: 7, month: 30, quarter: 90, year: 365 };
+
+export function calculatePortfolioPeriodResults(snapshots, operations, range = 'all', today = new Date()) {
+  const groups = new Map();
+  for (const row of snapshots || []) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(row?.sampled_on || ''))) continue;
+    const rows = groups.get(row.currency) || [];
+    rows.push(row);
+    groups.set(row.currency, rows);
+  }
+  const days = RANGE_DAYS[range];
+  const cutoff = new Date(`${today.toISOString().slice(0, 10)}T00:00:00.000Z`);
+  if (days) cutoff.setUTCDate(cutoff.getUTCDate() - days + 1);
+  const cutoffKey = days ? cutoff.toISOString().slice(0, 10) : null;
+
+  return [...groups].map(([currency, rows]) => {
+    const sorted = rows.slice().sort((a, b) => a.sampled_on.localeCompare(b.sampled_on));
+    const candidates = cutoffKey ? sorted.filter(row => row.sampled_on <= cutoffKey) : [];
+    const start = cutoffKey ? candidates.at(-1) || sorted.find(row => row.sampled_on >= cutoffKey) : sorted[0];
+    const end = sorted.at(-1);
+    if (!start || !end || start.sampled_on >= end.sampled_on) return { currency, start, end, result: null, percent: null, buys: 0n, sales: 0n, dividends: 0n };
+
+    let buys = 0n, sales = 0n, dividends = 0n;
+    for (const row of operations || []) {
+      if (row.currency !== currency || row.occurred_on <= start.sampled_on || row.occurred_on > end.sampled_on) continue;
+      const amount = multiplyScaled(parseScaled(row.quantity || '0', QUANTITY_SCALE), QUANTITY_SCALE, parseScaled(row.unit_price || '0', MONEY_SCALE), MONEY_SCALE);
+      const fee = parseScaled(row.fee || '0', MONEY_SCALE);
+      if (row.operation === 'buy') buys += amount + fee;
+      else if (row.operation === 'sell') sales += amount - fee;
+      else if (row.operation === 'dividend') dividends += amount - fee;
+    }
+    const startValue = parseScaled(start.portfolio_value, MONEY_SCALE);
+    const endValue = parseScaled(end.portfolio_value, MONEY_SCALE);
+    const result = endValue - startValue - buys + sales + dividends;
+    const percent = calculateReturnPercent(result, startValue + buys);
+    return { currency, start, end, result, percent, buys, sales, dividends };
+  }).sort((a, b) => a.currency.localeCompare(b.currency));
+}
 
 export function filterPortfolioSnapshots(rows, range = 'all', today = new Date()) {
   const valid = (rows || []).filter(row => /^\d{4}-\d{2}-\d{2}$/.test(String(row?.sampled_on || '')));
