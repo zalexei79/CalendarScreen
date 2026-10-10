@@ -37,6 +37,15 @@ test('asset entry starts with categories and searchable catalogue before the sho
   assert.match(panel, /t\.purchase/);
 });
 
+test('large US directory waits for a search and Russian equities, ETFs, and bonds have a separate MOEX filter', () => {
+  assert.match(panel, /marketScope!=='world'[\s\S]*?assetSearch\.trim\(\)\.length<2[\s\S]*?loadCompanyCatalog\(\)/);
+  assert.match(panel, /searchMoexSecurities\(assetSearch,form\.category/);
+  assert.match(panel, /\['stock','etf','bond'\]\.includes\(form\.category\)/);
+  assert.match(panel, /worldMarket:'США'/);
+  assert.match(panel, /russiaMarket:'Россия · MOEX'/);
+  assert.match(panel, /moexSource:'MOEX · задержка до 15 мин'/);
+});
+
 test('Capital layout has a mobile breakpoint and respects reduced motion', () => {
   assert.match(css, /@media\s*\(max-width:\s*640px\)/);
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);

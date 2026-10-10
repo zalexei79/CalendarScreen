@@ -6,6 +6,10 @@ export function resolveCurrentPrice(asset, quote) {
     const price = quote?.price == null ? '' : String(quote.price);
     return DECIMAL_PRICE.test(price) ? price : null;
   }
+  if (asset?.quote_source === 'moex' && quote?.transport === 'moex-delay' && quote.currency === asset.currency) {
+    const price = quote.price == null ? '' : String(quote.price);
+    return DECIMAL_PRICE.test(price) ? price : null;
+  }
   if (isGoldApiAsset(asset)) {
     const price = quote?.transport === 'gold-api' && quote?.price != null ? String(quote.price) : '';
     return DECIMAL_PRICE.test(price) ? price : null;

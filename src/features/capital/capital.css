@@ -216,6 +216,13 @@
   .capital-result-breakdown b{font-size:9px}
   .capital-category-filters{margin-inline:-2px}
 }
+.capital-market-tabs{display:flex;gap:7px;margin:1px 0 17px;padding:4px;border:1px solid var(--cap-line);border-radius:14px;background:color-mix(in srgb,var(--cap-bg) 72%,transparent)}
+.capital-market-tabs button{flex:1;min-height:37px;padding:0 10px;border:0;border-radius:10px;background:transparent;color:var(--cap-muted);font:inherit;font-size:11px;font-weight:650;cursor:pointer}
+.capital-market-tabs button.is-active{background:color-mix(in srgb,var(--cap-gold) 12%,var(--cap-surface));color:var(--cap-gold);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--cap-gold) 20%,transparent)}
+.capital-market-note{margin:3px 0 14px;padding:9px 11px;border:1px solid var(--cap-line);border-radius:11px;color:var(--cap-muted);font-size:10px;line-height:1.5}
+.capital-picker-results button i{flex:none;color:#e5c783;font-size:8px;font-style:normal;font-weight:700;letter-spacing:.05em}
+.capital-light .capital-market-tabs button.is-active{color:#866720}
+@media(max-width:640px){.capital-market-tabs{margin-bottom:14px}.capital-market-tabs button{min-height:35px;font-size:10px}}
 .capital-light .capital-range-selector button{background:rgba(49,75,105,.07);color:#64748a}
 .capital-light .capital-range-selector button.is-active{background:rgba(37,159,128,.14);color:#18856b}
 .capital-light .capital-chart-gridline{stroke:rgba(42,64,92,.16)}

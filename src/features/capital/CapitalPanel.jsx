@@ -4,11 +4,12 @@ import { useCapitalPortfolio } from './useCapitalPortfolio';
 import { calculateDailyChange, calculateReturnPercent, formatMoney, MONEY_SCALE, multiplyScaled, parseScaled, QUANTITY_SCALE, scaledToString } from './decimal';
 import { useWalletExitGesture } from '../wallet/hooks/useWalletExitGesture';
 import SwipeDismissSheet from '../../shared/ui/SwipeDismissSheet.jsx';
-import { isGoldApiQuoteFresh, isQuoteFresh } from './quoteStatus.js';
+import { isGoldApiQuoteFresh, isMoexQuoteFresh, isQuoteFresh } from './quoteStatus.js';
 import { resolveCurrentPrice } from './capitalPricing.js';
 import { getCatalog, loadBinanceSpotPairs, POPULAR_CRYPTO } from './assetCatalog.js';
 import { fetchGoldApiQuote, isGoldApiAsset } from './metalQuotes.js';
 import { loadCompanyCatalog } from './loadCompanyCatalog.js';
+import { fetchMoexCurrency, fetchMoexQuotes, MOEX_POPULAR_BONDS, MOEX_POPULAR_ETFS, MOEX_POPULAR_STOCKS, searchMoexSecurities } from './moexMarket.js';
 import { friendlyCapitalError } from './capitalErrors.js';
 import CapitalPerformanceChart from './CapitalPerformanceChart.jsx';
 import CapitalAssetHistoryChart from './CapitalAssetHistoryChart.jsx';
@@ -63,6 +64,10 @@ Object.assign(copy.ru,{unrealizedLead:'Нереализованная прибы
 Object.assign(copy.en,{unrealizedLead:'Unrealized profit / loss',relativeCost:'Against the remaining cost basis',currentValue:'Current value',currentUnitPrice:'Price per unit',quantityUnit:'units',buyAction:'Buy',sellAction:'Sell',assetHistory:'Position history',assetHistoryNote:'From recorded transactions · no synthetic market prices',assetHistoryEmpty:'History appears after the first transaction.',costMode:'Cost basis',quantityMode:'Quantity',resultFormula:'Total = realized + unrealized. Fees are already included.'});
 Object.assign(copy.ro,{unrealizedLead:'Profit / pierdere nerealizată',relativeCost:'Față de costul rămas',currentValue:'Valoare curentă',currentUnitPrice:'Preț pe unitate',quantityUnit:'unități',buyAction:'Cumpără',sellAction:'Vinde',assetHistory:'Istoricul poziției',assetHistoryNote:'Din operațiunile salvate · fără cotații istorice inventate',assetHistoryEmpty:'Graficul apare după prima operațiune.',costMode:'Cost',quantityMode:'Cantitate',resultFormula:'Total = realizat + nerealizat. Comisioanele sunt deja incluse.'});
 Object.assign(copy.zh,{unrealizedLead:'未实现盈亏',relativeCost:'相对于剩余成本',currentValue:'当前价值',currentUnitPrice:'单价',quantityUnit:'单位',buyAction:'买入',sellAction:'卖出',assetHistory:'持仓历史',assetHistoryNote:'基于已保存交易 · 不伪造历史行情',assetHistoryEmpty:'首次交易后显示图表。',costMode:'成本',quantityMode:'数量',resultFormula:'总收益 = 已实现 + 未实现。手续费已计入。'});
+Object.assign(copy.ru,{market:'Рынок',worldMarket:'США',russiaMarket:'Россия · MOEX',moexSource:'MOEX · задержка до 15 мин',moexDelayed:'DELAYED · MOEX',moexCurrencyLoading:'Проверяем валюту инструмента…',moexCatalogUnavailable:'Не удалось загрузить справочник MOEX. Попробуйте ещё раз или добавьте актив вручную.',quoteDisclaimer:'Справочник акций и ETF США; котировки MOEX для российских акций и облигаций задерживаются. Binance передаёт криптокотировки в реальном времени, Gold API обновляет ориентировочные цены металлов. Недвижимость, вклады и другие активы оцениваются вручную.'});
+Object.assign(copy.en,{market:'Market',worldMarket:'US',russiaMarket:'Russia · MOEX',moexSource:'MOEX · up to 15 min delay',moexDelayed:'DELAYED · MOEX',moexCurrencyLoading:'Checking instrument currency…',moexCatalogUnavailable:'Could not load the MOEX directory. Try again or add the asset manually.',quoteDisclaimer:'The stock and ETF directory covers US listings; MOEX quotes for Russian shares and bonds are delayed. Binance streams crypto quotes, and Gold API refreshes indicative metal prices. Real estate, deposits, and other assets use manual valuations.'});
+Object.assign(copy.ro,{market:'Piață',worldMarket:'SUA',russiaMarket:'Rusia · MOEX',moexSource:'MOEX · întârziere de până la 15 min',moexDelayed:'ÎNTÂRZIAT · MOEX',moexCurrencyLoading:'Se verifică moneda instrumentului…',moexCatalogUnavailable:'Lista MOEX nu s-a încărcat. Încearcă din nou sau adaugă manual activul.',quoteDisclaimer:'Catalogul de acțiuni și ETF-uri include listări din SUA; cotațiile MOEX pentru acțiunile și obligațiunile rusești sunt întârziate. Binance transmite cotații crypto, iar Gold API actualizează prețuri orientative pentru metale. Imobiliarele, depozitele și alte active folosesc evaluări manuale.'});
+Object.assign(copy.zh,{market:'市场',worldMarket:'美国',russiaMarket:'俄罗斯 · MOEX',moexSource:'MOEX · 延迟最多 15 分钟',moexDelayed:'延迟 · MOEX',moexCurrencyLoading:'正在检查资产货币…',moexCatalogUnavailable:'无法加载 MOEX 目录。请重试或手动添加资产。',quoteDisclaimer:'股票和 ETF 目录涵盖美国上市证券；MOEX 的俄罗斯股票和债券报价存在延迟。Binance 提供加密货币行情，Gold API 更新金属参考价格。房地产、存款和其他资产采用手动估值。'});
 const todayKey = () => new Date().toISOString().slice(0,10);
 const formatQuantity = (value, locale) => {
   const [whole, fraction = ''] = scaledToString(value, QUANTITY_SCALE).split('.');
@@ -98,12 +103,13 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
   const locale = String(language).toLowerCase().startsWith('zh') ? 'zh' : String(language).toLowerCase().startsWith('en') ? 'en' : String(language).toLowerCase().startsWith('ro') || language === 'md' ? 'ro' : 'ru';
   const t = copy[locale], stats = statCopy[locale];
   const [composer,setComposer] = useState(false), [selected,setSelected] = useState(null), [quotes,setQuotes] = useState({}), [lastQuote,setLastQuote] = useState(null), [online,setOnline] = useState(navigator.onLine), [filter,setFilter] = useState(''), [categoryFilter,setCategoryFilter] = useState('all'), [assetsExpanded,setAssetsExpanded] = useState(false), [searchVisible,setSearchVisible] = useState(false), [historyRange,setHistoryRange] = useState('all'), [form,setForm] = useState({category:'stock',name:'',symbol:'',currency,quoteSource:'manual',quantity:'',purchasePrice:'',price:'',fee:'0',date:todayKey()});
-  const [assetSelection,setAssetSelection]=useState(null), [assetSearch,setAssetSearch]=useState(''), [binanceCatalog,setBinanceCatalog]=useState([]), [binanceCatalogLoading,setBinanceCatalogLoading]=useState(false), [binanceCatalogError,setBinanceCatalogError]=useState(false), [companyCatalog,setCompanyCatalog]=useState(null), [companyCatalogLoading,setCompanyCatalogLoading]=useState(false), [companyCatalogError,setCompanyCatalogError]=useState(false), [showPurchaseDetails,setShowPurchaseDetails]=useState(false), [saving,setSaving]=useState(false);
+  const [assetSelection,setAssetSelection]=useState(null), [assetSearch,setAssetSearch]=useState(''), [marketScope,setMarketScope]=useState('world'), [moexCatalog,setMoexCatalog]=useState([]), [moexCatalogLoading,setMoexCatalogLoading]=useState(false), [moexCatalogError,setMoexCatalogError]=useState(false), [moexCurrencyLoading,setMoexCurrencyLoading]=useState(false), [binanceCatalog,setBinanceCatalog]=useState([]), [binanceCatalogLoading,setBinanceCatalogLoading]=useState(false), [binanceCatalogError,setBinanceCatalogError]=useState(false), [companyCatalog,setCompanyCatalog]=useState(null), [companyCatalogLoading,setCompanyCatalogLoading]=useState(false), [companyCatalogError,setCompanyCatalogError]=useState(false), [showPurchaseDetails,setShowPurchaseDetails]=useState(false), [saving,setSaving]=useState(false);
   const [now,setNow] = useState(Date.now());
   const [opForm,setOpForm]=useState({operation:'sell',quantity:'',price:'',fee:'0',date:todayKey()});
   const [saveError,setSaveError]=useState('');
   const snapshotAttempts=useRef(new Set());
   const quoteBuffer=useRef({});
+  const moexLookupSequence=useRef(0);
   const portfolio = useCapitalPortfolio({ user });
   const { surfaceRef } = useWalletExitGesture({ onExit: onBack, disabled: Boolean(composer || selected), navigation: 'wallet' });
   useEffect(()=>{const id=window.setInterval(()=>setNow(Date.now()),5000);return()=>clearInterval(id);},[]);
@@ -116,17 +122,46 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
   },[composer,form.category,binanceCatalog.length]);
 
   useEffect(()=>{
-    if(!composer||!['stock','etf'].includes(form.category)||companyCatalog) return;
+    if(!composer||marketScope!=='world'||!['stock','etf'].includes(form.category)||assetSearch.trim().length<2||companyCatalog) {setCompanyCatalogLoading(false);setCompanyCatalogError(false);return;}
     let active=true; setCompanyCatalogLoading(true); setCompanyCatalogError(false);
     loadCompanyCatalog().then(items=>{if(active)setCompanyCatalog(items);}).catch(()=>{if(active)setCompanyCatalogError(true);}).finally(()=>{if(active)setCompanyCatalogLoading(false);});
     return()=>{active=false;};
-  },[composer,form.category,companyCatalog]);
+  },[composer,marketScope,form.category,assetSearch,companyCatalog]);
+
+  useEffect(()=>{
+    if(!composer||marketScope!=='russia'||!['stock','etf','bond'].includes(form.category)||assetSearch.trim().length<2) {setMoexCatalog([]);setMoexCatalogLoading(false);setMoexCatalogError(false);return;}
+    let active=true;const controller=new AbortController();setMoexCatalog([]);setMoexCatalogLoading(true);setMoexCatalogError(false);
+    const timer=window.setTimeout(()=>searchMoexSecurities(assetSearch,form.category,controller.signal).then(items=>{if(active)setMoexCatalog(items);}).catch(error=>{if(active&&error.name!=='AbortError')setMoexCatalogError(true);}).finally(()=>{if(active)setMoexCatalogLoading(false);}),250);
+    return()=>{active=false;clearTimeout(timer);controller.abort();};
+  },[composer,marketScope,form.category,assetSearch]);
 
   useEffect(() => { const on=()=>setOnline(true), off=()=>setOnline(false); window.addEventListener('online',on); window.addEventListener('offline',off); return()=>{window.removeEventListener('online',on);window.removeEventListener('offline',off);}; },[]);
   const pairs = useMemo(() => [...new Set([
     ...portfolio.assets.filter(a=>a.category==='crypto' && a.quote_source==='binance' && /^[A-Z0-9]{5,20}$/.test(a.symbol)).map(a=>a.symbol.toLowerCase()),
     ...(composer && form.category==='crypto' && form.quoteSource==='binance' && /^[A-Z0-9]{5,20}$/.test(form.symbol) ? [form.symbol.toLowerCase()] : []),
   ])], [portfolio.assets, composer, form.category, form.quoteSource, form.symbol]);
+  const moexListings = useMemo(()=>[
+    ...portfolio.assets.filter(asset=>asset.quote_source==='moex').map(asset=>({category:asset.category,symbol:asset.symbol})),
+    ...(composer&&form.quoteSource==='moex'&&form.symbol?[{category:form.category,symbol:form.symbol}]:[]),
+  ],[portfolio.assets,composer,form.quoteSource,form.category,form.symbol]);
+  useEffect(()=>{
+    if(!online||!moexListings.length)return;
+    let active=true,inFlight=false;const controller=new AbortController();
+    const refresh=async()=>{
+      if(inFlight||controller.signal.aborted)return;inFlight=true;
+      try {
+        const groups=['bond','stock'].map(category=>({category,symbols:moexListings.filter(item=>category==='bond'?item.category==='bond':item.category!=='bond').map(item=>item.symbol)})).filter(group=>group.symbols.length);
+        const snapshots=await Promise.all(groups.map(group=>fetchMoexQuotes(group.category,group.symbols,controller.signal)));
+        if(!active||controller.signal.aborted)return;
+        const next=Object.assign({},...snapshots);
+        setQuotes(previous=>{const merged={...previous};for(const [symbol,quote] of Object.entries(next))if(!merged[symbol]||Number(merged[symbol].at)<=quote.at)merged[symbol]=quote;return merged;});
+        const newest=Math.max(0,...Object.values(next).map(quote=>quote.at));if(newest)setLastQuote(previous=>Math.max(Number(previous)||0,newest));
+      }catch(error){if(active&&error.name!=='AbortError')console.warn('[capital] MOEX quote refresh failed:',error.message);}
+      finally{inFlight=false;}
+    };
+    void refresh();const timer=window.setInterval(()=>void refresh(),60_000);
+    return()=>{active=false;controller.abort();window.clearInterval(timer);};
+  },[online,moexListings.map(item=>`${item.category}:${item.symbol}`).join('|')]);
   const metalSymbols = useMemo(() => [...new Set(portfolio.assets.filter(isGoldApiAsset).map(asset=>asset.symbol.toUpperCase()))].sort(), [portfolio.assets]);
   useEffect(()=>{
     if(!online||!metalSymbols.length) return;
@@ -198,16 +233,18 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
     const quote = selected && quotes[selected.symbol];
     const quoteIsUsable = selected?.quote_source === 'binance'
       ? quote && isQuoteFresh(quote, now)
+      : selected?.quote_source === 'moex' ? quote && isMoexQuoteFresh(quote, now) && quote.currency===selected.currency
       : isGoldApiAsset(selected) ? quote && isGoldApiQuoteFresh(quote, now)
       : selected?.quote_source === 'manual' && selectedPrice !== null;
     const price = quoteIsUsable && selectedPrice !== null ? scaledToString(selectedPrice, MONEY_SCALE) : '';
     setOpForm({ operation, quantity:'', price, fee:'0', date:todayKey() });
   };
   useEffect(()=>{
-    if(!composer || !assetSelection || form.quoteSource!=='binance' || !form.symbol || form.purchasePrice) return;
+    if(!composer || !assetSelection || !['binance','moex'].includes(form.quoteSource) || !form.symbol || form.purchasePrice) return;
     const quote=quotes[form.symbol];
-    if(quote && isQuoteFresh(quote,now)) setForm(current=>current.purchasePrice?current:{...current,purchasePrice:quote.price,price:current.price||quote.price});
-  },[composer,assetSelection,form.quoteSource,form.symbol,form.purchasePrice,quotes,now]);
+    const fresh=form.quoteSource==='binance'?quote&&isQuoteFresh(quote,now):quote&&isMoexQuoteFresh(quote,now)&&quote.currency===form.currency;
+    if(fresh) setForm(current=>current.purchasePrice?current:{...current,purchasePrice:quote.price,price:current.price||quote.price});
+  },[composer,assetSelection,form.quoteSource,form.symbol,form.purchasePrice,form.currency,quotes,now]);
   const selectedValue=selectedPrice===null?null:multiplyScaled(selected.quantity,QUANTITY_SCALE,selectedPrice,MONEY_SCALE);
   const selectedUnrealized=selectedValue===null?null:selectedValue-selected.invested;
   const selectedTotalResult=selectedUnrealized===null?null:selectedUnrealized+selected.realized;
@@ -233,6 +270,8 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
   const categoryOptions = ['all',...new Set(portfolio.assets.map(asset=>asset.category))];
   const hasBinanceAssets = pairs.length > 0;
   const hasGoldApiAssets = metalSymbols.length > 0;
+  const hasMoexAssets = moexListings.length > 0;
+  const allMoexFresh = hasMoexAssets&&moexListings.every(item=>isMoexQuoteFresh(quotes[item.symbol],now));
   const allPairsFresh = hasBinanceAssets && pairs.every(pair=>quotes[pair.toUpperCase()]?.transport==='websocket'&&isQuoteFresh(quotes[pair.toUpperCase()],now));
   const allPairsRecent = hasBinanceAssets && pairs.every(pair=>isQuoteFresh(quotes[pair.toUpperCase()],now));
   const allMetalsFresh = hasGoldApiAssets && metalSymbols.every(symbol=>isGoldApiQuoteFresh(quotes[symbol],now));
@@ -242,6 +281,7 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
   const quoteSummary = !online ? t.offline : [
     hasBinanceAssets ? allPairsFresh ? t.live : allPairsRecent ? t.quoteSnapshot : lastQuote ? `${t.stale} · ${displayQuoteTime(lastQuote)}` : t.pending : null,
     hasGoldApiAssets ? allMetalsFresh ? t.spot : metalSymbols.some(symbol=>quotes[symbol]) ? `${t.stale} · ${displayQuoteTime(Math.min(...metalSymbols.map(symbol=>Number(quotes[symbol]?.at)||Infinity)))}` : t.pending : null,
+    hasMoexAssets ? allMoexFresh ? t.moexDelayed : moexListings.some(item=>quotes[item.symbol]) ? `${t.stale} · ${displayQuoteTime(Math.min(...moexListings.map(item=>Number(quotes[item.symbol]?.at)||Infinity)))}` : t.pending : null,
   ].filter(Boolean).join(' · ') || `${t.manual}${latestManualUpdate?` · ${t.updated} ${displayTime(latestManualUpdate)}`:''}`;
   const quoteLabel = (asset, quote) => {
     if (isGoldApiAsset(asset)) {
@@ -254,6 +294,11 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
       if (!quote) return t.pending;
       if (quote.transport==='rest') return `${t.quoteSnapshot} · ${displayQuoteTime(quote.at)}`;
       return `${isQuoteFresh(quote,now)?t.live:t.stale} · ${displayQuoteTime(quote.at)}`;
+    }
+    if (asset.quote_source === 'moex') {
+      if(!online)return `${t.offline}${quote?.at?` · ${displayQuoteTime(quote.at)}`:''}`;
+      if(!quote||quote.currency!==asset.currency)return t.pending;
+      return `${isMoexQuoteFresh(quote,now)?t.moexDelayed:t.stale} · ${displayQuoteTime(quote.at)}`;
     }
     return `${t.manual}${asset.updated_at?` · ${displayQuoteTime(asset.updated_at)}`:''}`;
   };
@@ -268,12 +313,18 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
       if(snapshotAttempts.current.has(key)||portfolio.snapshots.some(item=>item.currency===code&&item.sampled_on===snapshotDate)) continue;
       if(portfolio.assets.some(asset=>asset.currency===code&&asset.quote_source==='binance')&&!portfolio.assets.filter(asset=>asset.currency===code&&asset.quote_source==='binance').every(asset=>isQuoteFresh(quotes[asset.symbol],now))) continue;
       if(portfolio.assets.some(asset=>asset.currency===code&&isGoldApiAsset(asset))&&!portfolio.assets.filter(asset=>asset.currency===code&&isGoldApiAsset(asset)).every(asset=>isGoldApiQuoteFresh(quotes[asset.symbol],now))) continue;
+      if(portfolio.assets.some(asset=>asset.currency===code&&asset.quote_source==='moex')&&!portfolio.assets.filter(asset=>asset.currency===code&&asset.quote_source==='moex').every(asset=>isMoexQuoteFresh(quotes[asset.symbol],now))) continue;
       snapshotAttempts.current.add(key);
       portfolio.recordSnapshot(code,value,snapshotDate).catch(error=>console.warn('[capital] daily snapshot failed:',error.message));
     }
   },[portfolio.loading,portfolio.assets,portfolio.snapshots,portfolio.recordSnapshot,user?.id,metrics,online,quotes,now]);
   const matchedCatalog = useMemo(()=>{
     const query=assetSearch.trim().toLowerCase();
+    if(marketScope==='russia'&&['stock','etf','bond'].includes(form.category)) {
+      const fallback=form.category==='bond'?MOEX_POPULAR_BONDS:form.category==='etf'?MOEX_POPULAR_ETFS:MOEX_POPULAR_STOCKS;
+      const catalog=assetSearch.trim().length>=2?moexCatalog:fallback;
+      return (query?catalog.filter(item=>`${item.symbol} ${item.name}`.toLowerCase().includes(query)):catalog).slice(0,query?80:12);
+    }
     const curated=getCatalog(form.category);
     const exchangeDirectory=companyCatalog&&['stock','etf'].includes(form.category)
       ? companyCatalog.records.filter(item=>item.category===form.category).map(item=>({...item,currency:'USD',quoteSource:'manual'}))
@@ -284,17 +335,26 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
       : [...curated,...exchangeDirectory.filter(item=>!curatedSymbols.has(item.symbol))];
     const matches=query?catalog.filter(item=>`${item.symbol} ${item.name}`.toLowerCase().includes(query)):catalog;
     return matches.slice(0, query?80:12);
-  },[assetSearch,form.category,binanceCatalog]);
-  const chooseCatalogAsset=item=>{setAssetSelection(item);setForm(current=>({...current,name:item.name,symbol:item.symbol,currency:item.currency,quoteSource:item.quoteSource,quantity:'',purchasePrice:'',price:'',fee:'0'}));};
+  },[assetSearch,form.category,marketScope,moexCatalog,binanceCatalog]);
+  const chooseCatalogAsset=async item=>{
+    const lookup=++moexLookupSequence.current;
+    setAssetSelection(item);
+    setMoexCurrencyLoading(item.quoteSource==='moex'&&['bond','etf'].includes(item.category));
+    setForm(current=>({...current,name:item.name,symbol:item.symbol,currency:item.currency,quoteSource:item.quoteSource,quantity:'',purchasePrice:'',price:'',fee:'0'}));
+    if(item.quoteSource==='moex'&&['bond','etf'].includes(item.category)) {
+      try {const resolvedCurrency=await fetchMoexCurrency(item.category,item.symbol);if(moexLookupSequence.current===lookup&&resolvedCurrency)setForm(current=>current.symbol===item.symbol?{...current,currency:resolvedCurrency}:current);} catch {}
+      finally {if(moexLookupSequence.current===lookup)setMoexCurrencyLoading(false);}
+    }
+  };
   const chooseCustomAsset=()=>{
     const query=assetSearch.trim();
     setAssetSelection({custom:true});
-    setForm(current=>({...current,name:query,symbol:/^[A-Za-z0-9.:-]{1,24}$/.test(query)?query.toUpperCase():'',currency:current.category==='crypto'&&current.quoteSource==='binance'?'USDT':current.category==='stock'||current.category==='etf'?'USD':current.currency,quoteSource:'manual',quantity:'',purchasePrice:'',price:'',fee:'0'}));
+    setForm(current=>({...current,name:query,symbol:/^[A-Za-z0-9.:-]{1,24}$/.test(query)?query.toUpperCase():'',currency:current.category==='crypto'&&current.quoteSource==='binance'?'USDT':current.category==='stock'&&marketScope==='russia'||current.category==='bond'?'RUB':current.category==='stock'||current.category==='etf'?'USD':current.currency,quoteSource:'manual',quantity:'',purchasePrice:'',price:'',fee:'0'}));
   };
-  const changeCategory=category=>{setAssetSelection(null);setAssetSearch('');setForm(current=>({...current,category,name:'',symbol:'',currency:category==='crypto'?'USDT':category==='stock'||category==='etf'?'USD':current.currency,quoteSource:category==='crypto'?'binance':'manual',quantity:'',purchasePrice:'',price:'',fee:'0'}));};
-  const submit=async(event)=>{event.preventDefault();if(saving)return;setSaving(true);setSaveError('');try{if(!assetSelection)throw new Error(t.noAssetsFound);if(assetSelection.custom&&form.category==='crypto'&&form.quoteSource==='binance')await verifyBinanceSpotPair(form.symbol);await portfolio.addAsset({...form,price:form.price||form.purchasePrice,quoteSource:form.category==='crypto'?form.quoteSource:'manual'});setComposer(false);setAssetSelection(null);setAssetSearch('');setForm({...form,name:'',symbol:'',quantity:'',purchasePrice:'',price:'',fee:'0',date:todayKey()});}catch(error){setSaveError(friendlyCapitalError(error,locale,t));}finally{setSaving(false);}};
+  const changeCategory=category=>{moexLookupSequence.current++;setMoexCurrencyLoading(false);setAssetSelection(null);setAssetSearch('');setMarketScope(category==='bond'?'russia':'world');setMoexCatalog([]);setForm(current=>({...current,category,name:'',symbol:'',currency:category==='crypto'?'USDT':category==='stock'||category==='etf'?'USD':category==='bond'?'RUB':current.currency,quoteSource:category==='crypto'?'binance':'manual',quantity:'',purchasePrice:'',price:'',fee:'0'}));};
+  const submit=async(event)=>{event.preventDefault();if(saving)return;setSaving(true);setSaveError('');try{if(!assetSelection)throw new Error(t.noAssetsFound);if(assetSelection.custom&&form.category==='crypto'&&form.quoteSource==='binance')await verifyBinanceSpotPair(form.symbol);await portfolio.addAsset({...form,price:form.price||form.purchasePrice,quoteSource:form.quoteSource});setComposer(false);setAssetSelection(null);setAssetSearch('');setForm({...form,name:'',symbol:'',quantity:'',purchasePrice:'',price:'',fee:'0',date:todayKey()});}catch(error){setSaveError(friendlyCapitalError(error,locale,t));}finally{setSaving(false);}};
   const saveOperation=async(event)=>{event.preventDefault();if(saving)return;setSaving(true);setSaveError('');try{await portfolio.addOperation(selected,opForm);setSelected(null);setOpForm({operation:'sell',quantity:'',price:'',fee:'0',date:todayKey()});}catch(error){setSaveError(friendlyCapitalError(error,locale,t));}finally{setSaving(false);}};
-  const closeSheet=()=>{setComposer(false);setSelected(null);setAssetSelection(null);setAssetSearch('');setSaveError('');setShowPurchaseDetails(false);};
+  const closeSheet=()=>{moexLookupSequence.current++;setMoexCurrencyLoading(false);setComposer(false);setSelected(null);setAssetSelection(null);setAssetSearch('');setSaveError('');setShowPurchaseDetails(false);};
   const base=isLight?'capital-panel capital-light':'capital-panel';
   return <main ref={surfaceRef} className={base}>
     <header className="capital-top"><button className="capital-back" onClick={onBack}><ArrowLeft size={17}/><span>{t.back}</span></button><div className="capital-brand"><span>DAYRIS</span><b>CAPITAL</b><i>PRO</i></div><button className="capital-wallet" onClick={onWallet}><Wallet size={16}/><span>{t.wallet}</span></button></header>
@@ -317,7 +377,7 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
         <div className="capital-section-title"><h2>{t.myAssets} <span>{filteredAssets.length}{categoryFilter!=='all'||filter?` / ${portfolio.assets.length}`:''}</span></h2><div className="capital-holdings-actions">{portfolio.assets.length>4&&!filter&&categoryFilter==='all'&&<button type="button" className="capital-show-all" onClick={()=>setAssetsExpanded(value=>!value)}>{assetsExpanded?t.showLess:t.allAssets}<ArrowRight size={14}/></button>}<button type="button" className="capital-search-toggle" aria-label={t.search} aria-expanded={searchVisible} onClick={()=>{setSearchVisible(value=>!value);if(searchVisible)setFilter('');}}><Search size={16}/></button></div></div>
         {categoryOptions.length>2&&<div className="capital-category-filters" role="group" aria-label={t.category}>{categoryOptions.map(category=><button type="button" key={category} className={categoryFilter===category?'is-active':''} aria-pressed={categoryFilter===category} onClick={()=>{setCategoryFilter(category);setAssetsExpanded(false);}}>{category==='all'?t.allAssets:t.categories[t.cats.indexOf(category)]}</button>)}</div>}
         {searchVisible&&<label className="capital-search"><Search size={15}/><input autoFocus value={filter} onChange={e=>setFilter(e.target.value)} placeholder={t.search}/></label>}
-        {portfolio.loading?<div className="capital-empty"><RefreshCw className="capital-spin"/>{t.updated}…</div>:!visible.length?(portfolio.assets.length>0&&(filter||categoryFilter!=='all')?<div className="capital-filter-empty"><Search size={17}/><span>{t.noAssetsFound}</span></div>:<div className="capital-empty"><div className="capital-empty-icon"><ChartNoAxesCombined/></div><strong>{t.empty}</strong><span>{t.emptyHint}</span><button className="capital-add" onClick={()=>setComposer(true)}><Plus size={16}/>{t.add}</button></div>):<div className="capital-assets">{visible.map(asset=>{const Icon=icons[t.cats.indexOf(asset.category)]||BriefcaseBusiness, quote=quotes[asset.symbol], fresh=(quote?.transport==='websocket'&&isQuoteFresh(quote,now))||(isGoldApiAsset(asset)&&isGoldApiQuoteFresh(quote,now)), price=priceFor(asset), total=price===null?null:multiplyScaled(asset.quantity,QUANTITY_SCALE,price,MONEY_SCALE), pnl=total===null?null:total+asset.realized-asset.invested;return <button className="capital-asset" key={asset.id} onClick={()=>setSelected(asset)}><span className="capital-asset-icon"><Icon/></span><span className="capital-asset-main"><strong>{asset.name}</strong><small className="capital-asset-context">{t.categories[t.cats.indexOf(asset.category)]} · {formatQuantity(asset.quantity,locale)} {asset.symbol||t.manual}</small><small className="capital-asset-context">{t.currentUnitPrice}: {price===null?'—':formatMoney(price,asset.currency,locale)}</small><em className="capital-quote-mobile" data-live={fresh}>{quoteLabel(asset,quote)}</em></span><span className="capital-asset-value"><strong>{total===null?'—':formatMoney(total,asset.currency,locale)}</strong><small className={pnl===null?'':pnl>=0?'positive':'negative'}>{pnl===null?t.waitingQuote:`${pnl>=0?'+':''}${formatMoney(pnl,asset.currency,locale)} · ${formatPercent(pnl,asset.invested,locale)}`}</small><small className="capital-asset-invested">{t.invested}: {formatMoney(asset.invested,asset.currency,locale)}</small></span><span className="capital-quote-state" data-live={fresh}>{quoteLabel(asset,quote)}</span></button>})}</div>}
+        {portfolio.loading?<div className="capital-empty"><RefreshCw className="capital-spin"/>{t.updated}…</div>:!visible.length?(portfolio.assets.length>0&&(filter||categoryFilter!=='all')?<div className="capital-filter-empty"><Search size={17}/><span>{t.noAssetsFound}</span></div>:<div className="capital-empty"><div className="capital-empty-icon"><ChartNoAxesCombined/></div><strong>{t.empty}</strong><span>{t.emptyHint}</span><button className="capital-add" onClick={()=>setComposer(true)}><Plus size={16}/>{t.add}</button></div>):<div className="capital-assets">{visible.map(asset=>{const Icon=icons[t.cats.indexOf(asset.category)]||BriefcaseBusiness, quote=quotes[asset.symbol], fresh=(quote?.transport==='websocket'&&isQuoteFresh(quote,now))||(isGoldApiAsset(asset)&&isGoldApiQuoteFresh(quote,now))||(asset.quote_source==='moex'&&isMoexQuoteFresh(quote,now)), price=priceFor(asset), total=price===null?null:multiplyScaled(asset.quantity,QUANTITY_SCALE,price,MONEY_SCALE), pnl=total===null?null:total+asset.realized-asset.invested;return <button className="capital-asset" key={asset.id} onClick={()=>setSelected(asset)}><span className="capital-asset-icon"><Icon/></span><span className="capital-asset-main"><strong>{asset.name}</strong><small className="capital-asset-context">{t.categories[t.cats.indexOf(asset.category)]} · {formatQuantity(asset.quantity,locale)} {asset.symbol||t.manual}</small><small className="capital-asset-context">{t.currentUnitPrice}: {price===null?'—':formatMoney(price,asset.currency,locale)}</small><em className="capital-quote-mobile" data-live={fresh}>{quoteLabel(asset,quote)}</em></span><span className="capital-asset-value"><strong>{total===null?'—':formatMoney(total,asset.currency,locale)}</strong><small className={pnl===null?'':pnl>=0?'positive':'negative'}>{pnl===null?t.waitingQuote:`${pnl>=0?'+':''}${formatMoney(pnl,asset.currency,locale)} · ${formatPercent(pnl,asset.invested,locale)}`}</small><small className="capital-asset-invested">{t.invested}: {formatMoney(asset.invested,asset.currency,locale)}</small></span><span className="capital-quote-state" data-live={fresh}>{quoteLabel(asset,quote)}</span></button>})}</div>}
         {portfolio.assets.length>0&&<button className="capital-add capital-add-operation" onClick={()=>setComposer(true)}><Plus size={18}/>{t.addOperation}</button>}
       </section>
       {Object.entries(allocations).length>0&&<details className="capital-allocation-details"><summary>{t.distribution}<span>{t.analytics}</span></summary><div className="capital-allocation-list">{Object.entries(allocations).filter(([key])=>metrics[key.split(':')[0]]?.value!==null).map(([key,value])=>{const [code,category]=key.split(':');const percent=allocationTotals[code]?Number(value*10000n/allocationTotals[code])/100:0;return <div className="capital-allocation" key={key}><div><span>{t.categories[t.cats.indexOf(category)]} · {code}</span><b>{formatMoney(value,code,locale)}</b></div><i><span style={{width:`${percent}%`}}/></i></div>})}</div></details>}
@@ -329,24 +389,29 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
         <p className="capital-step-label">{t.chooseCategory}</p>
         <div className="capital-category-grid">{t.cats.map((category,index)=>{const Icon=icons[index]||BriefcaseBusiness;return <button type="button" key={category} className={form.category===category?'is-selected':''} onClick={()=>changeCategory(category)}><Icon/><span>{t.categories[index]}</span></button>;})}</div>
         {!assetSelection?<>
+          {['stock','etf'].includes(form.category)&&<div className="capital-market-tabs" role="group" aria-label={t.market}><button type="button" className={marketScope==='world'?'is-active':''} aria-pressed={marketScope==='world'} onClick={()=>{setMarketScope('world');setAssetSearch('');setMoexCatalog([]);}}>{t.worldMarket}</button><button type="button" className={marketScope==='russia'?'is-active':''} aria-pressed={marketScope==='russia'} onClick={()=>{setMarketScope('russia');setAssetSearch('');setMoexCatalog([]);}}>{t.russiaMarket}</button></div>}
+          {form.category==='bond'&&<p className="capital-market-note">{t.russiaMarket} · {t.moexSource}</p>}
           <p className="capital-step-label">{assetSearch?t.findAsset:t.popular}</p>
           <label className="capital-picker-search"><Search size={16}/><input autoComplete="off" value={assetSearch} onChange={event=>setAssetSearch(event.target.value)} placeholder={t.findAsset}/></label>
-          {['stock','etf'].includes(form.category)&&companyCatalogLoading&&<p className="capital-form-hint">{t.stockCatalogLoading}</p>}
-          {['stock','etf'].includes(form.category)&&companyCatalogError&&<p className="capital-form-hint">{t.stockCatalogUnavailable}</p>}
+          {marketScope==='world'&&['stock','etf'].includes(form.category)&&companyCatalogLoading&&<p className="capital-form-hint">{t.stockCatalogLoading}</p>}
+          {marketScope==='world'&&['stock','etf'].includes(form.category)&&companyCatalogError&&<p className="capital-form-hint">{t.stockCatalogUnavailable}</p>}
+          {marketScope==='russia'&&['stock','etf','bond'].includes(form.category)&&moexCatalogLoading&&<p className="capital-form-hint">{t.stockCatalogLoading}</p>}
+          {marketScope==='russia'&&moexCatalogError&&<p className="capital-form-hint">{t.moexCatalogUnavailable}</p>}
           {form.category==='crypto'&&binanceCatalogLoading&&<p className="capital-form-hint">{t.catalogLoading}</p>}
           {form.category==='crypto'&&binanceCatalogError&&<p className="capital-form-hint">{t.catalogUnavailable}</p>}
-          <div className="capital-picker-results">{matchedCatalog.map(item=><button type="button" key={item.symbol} onClick={()=>chooseCatalogAsset(item)}><span className="capital-picker-symbol">{item.symbol}</span><span>{item.name}</span>{item.quoteSource==='binance'&&<i>LIVE</i>}{item.marketSource==='gold-api'&&<i>SPOT</i>}</button>)}
-            {!matchedCatalog.length&&<p>{t.noAssetsFound}</p>}</div>
+          <div className="capital-picker-results">{matchedCatalog.map(item=><button type="button" key={`${item.marketSource||item.quoteSource}:${item.symbol}`} onClick={()=>chooseCatalogAsset(item)}><span className="capital-picker-symbol">{item.symbol}</span><span>{item.name}</span>{item.quoteSource==='binance'&&<i>LIVE</i>}{item.marketSource==='gold-api'&&<i>SPOT</i>}{item.quoteSource==='moex'&&<i>MOEX</i>}</button>)}
+            {!matchedCatalog.length&&(moexCatalogLoading||companyCatalogLoading?<p>{t.stockCatalogLoading}</p>:<p>{t.noAssetsFound}</p>)}</div>
           <button type="button" className="capital-custom-link" onClick={chooseCustomAsset}><Plus size={15}/>{t.customAsset}</button>
         </>:<>
-          <div className="capital-selected-asset"><span className="capital-picker-symbol">{form.symbol||form.category.toUpperCase()}</span><span><strong>{form.name||t.customAsset}</strong><small>{form.symbol?`${form.symbol} · ${assetSelection.custom?t.manualSource:isGoldApiAsset(form)?t.goldApiSource:form.quoteSource==='binance'?t.binanceSource:t.manualSource}`:t.manualSource}</small></span><button type="button" onClick={()=>{setAssetSelection(null);setAssetSearch('');}}>{t.changeAsset}</button></div>
+          <div className="capital-selected-asset"><span className="capital-picker-symbol">{form.symbol||form.category.toUpperCase()}</span><span><strong>{form.name||t.customAsset}</strong><small>{form.symbol?`${form.symbol} · ${assetSelection.custom?t.manualSource:isGoldApiAsset(form)?t.goldApiSource:form.quoteSource==='binance'?t.binanceSource:form.quoteSource==='moex'?t.moexSource:t.manualSource}`:t.manualSource}</small></span><button type="button" onClick={()=>{setAssetSelection(null);setAssetSearch('');}}>{t.changeAsset}</button></div>
+          {moexCurrencyLoading&&<p className="capital-form-hint">{t.moexCurrencyLoading}</p>}
           {assetSelection.custom&&<><label>{t.name}<input required maxLength="120" value={form.name} onChange={event=>setForm({...form,name:event.target.value})} placeholder={t.manualName}/></label><label>{t.symbol}<input maxLength="24" value={form.symbol} onChange={event=>setForm({...form,symbol:event.target.value.toUpperCase()})} placeholder={t.optional}/></label></>}
           <div className="capital-form-grid"><label>{t.quantity}<input required min="0.000000000001" step="any" type="number" value={form.quantity} onChange={event=>setForm({...form,quantity:event.target.value})}/></label><label>{t.purchase}<input required min="0" step="any" type="number" value={form.purchasePrice} onChange={event=>setForm({...form,purchasePrice:event.target.value})} placeholder="0.00"/></label></div>
           <details className="capital-purchase-details" open={showPurchaseDetails} onToggle={event=>setShowPurchaseDetails(event.currentTarget.open)}><summary>{t.purchaseDetails} <span>{t.optional}</span></summary>
             <div className="capital-form-grid"><label>{t.currency}<select disabled={form.category==='crypto'&&form.quoteSource==='binance'} value={form.currency} onChange={event=>setForm({...form,currency:event.target.value})}>{['USD','EUR','RON','RUB','CNY','GBP','USDT'].map(code=><option key={code}>{code}</option>)}</select></label><label>{t.fee}<input min="0" step="any" type="number" value={form.fee} onChange={event=>setForm({...form,fee:event.target.value})}/></label><label>{t.date}<input type="date" value={form.date} onChange={event=>setForm({...form,date:event.target.value})}/></label>{form.quoteSource==='manual'&&!isGoldApiAsset(form)&&<label>{t.currentEstimate}<input min="0" step="any" type="number" value={form.price} onChange={event=>setForm({...form,price:event.target.value})} placeholder={form.purchasePrice||'0.00'}/></label>}</div>
           </details>
           {form.category==='crypto'&&<><label>{t.quoteSource}<select value={form.quoteSource} onChange={event=>setForm(current=>({...current,quoteSource:event.target.value,currency:event.target.value==='binance'?'USDT':current.currency==='USDT'?currency:current.currency}))}><option value="binance">{t.binanceSource}</option><option value="manual">{t.manualSource}</option></select></label><p className="capital-form-hint">{form.quoteSource==='binance'?t.usdtNote:t.manualSource}</p></>}
-          <button className="capital-add capital-submit" type="submit" disabled={saving}>{t.save}</button>
+          <button className="capital-add capital-submit" type="submit" disabled={saving||moexCurrencyLoading}>{t.save}</button>
         </>}
       </>:selected?<>
         <div className="capital-asset-identity"><div><strong>{selected.symbol||selected.name}</strong><span>{selected.name} · {t.categories[t.cats.indexOf(selected.category)]}</span></div><span className="capital-detail-quote">{quoteLabel(selected,quotes[selected.symbol])}</span></div>
