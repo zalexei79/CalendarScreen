@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { fetchAssetQuoteHistory } from './assetQuoteHistory.js';
+import { fetchUsEquityQuotes, isUsEquityAsset } from './usEquityQuotes.js';
 import { formatMoney } from './decimal.js';
 
 function makePath(rows) {
@@ -14,18 +15,21 @@ function makePath(rows) {
 export default function CapitalQuoteHistoryChart({ asset, currency, locale, t }) {
   const [rows, setRows] = useState([]), [loading, setLoading] = useState(false), [failed, setFailed] = useState(false);
   useEffect(() => {
-    if (!asset || !['binance', 'moex'].includes(asset.quote_source)) { setRows([]); setFailed(false); return; }
+    if (!asset || !['binance', 'moex', 'alphavantage'].includes(asset.quote_source)) { setRows([]); setFailed(false); return; }
     const controller = new AbortController();
     setLoading(true); setFailed(false);
-    fetchAssetQuoteHistory(asset, { signal: controller.signal }).then(setRows)
+    const history = isUsEquityAsset(asset)
+      ? quote?.history?.length ? Promise.resolve(quote.history) : fetchUsEquityQuotes([asset.symbol], controller.signal).then(result => result.quotes[asset.symbol]?.history || [])
+      : fetchAssetQuoteHistory(asset, { signal: controller.signal });
+    history.then(setRows)
       .catch(error => { if (error.name !== 'AbortError') setFailed(true); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [asset?.id, asset?.symbol, asset?.quote_source, asset?.category]);
+  }, [asset?.id, asset?.symbol, asset?.quote_source, asset?.category, quote?.history]);
   const chart = useMemo(() => makePath(rows), [rows]);
-  if (!asset || !['binance', 'moex'].includes(asset.quote_source)) return null;
+  if (!asset || !['binance', 'moex', 'alphavantage'].includes(asset.quote_source)) return null;
   return <section className="capital-market-history" aria-label={t.marketHistory}>
-    <div className="capital-market-history-head"><div><strong>{t.marketHistory}</strong><small>{asset.quote_source === 'binance' ? t.binanceHistorySource : t.moexHistorySource} · {asset.currency}</small></div><span>{rows.at(-1)?.date || (loading ? t.loading : '')}</span></div>
+    <div className="capital-market-history-head"><div><strong>{t.marketHistory}</strong><small>{asset.quote_source === 'binance' ? t.binanceHistorySource : asset.quote_source === 'moex' ? t.moexHistorySource : t.usEquityHistorySource} · {asset.currency}</small></div><span>{rows.at(-1)?.date || (loading ? t.loading : '')}</span></div>
     {chart ? <>
       <svg className="capital-market-history-svg" viewBox="0 0 320 116" role="img" aria-label={`${t.marketHistory}: ${formatMoney(chart.last, currency, locale)}`}>
         <defs><linearGradient id="capital-market-history-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="currentColor" stopOpacity=".23"/><stop offset="100%" stopColor="currentColor" stopOpacity="0"/></linearGradient></defs>

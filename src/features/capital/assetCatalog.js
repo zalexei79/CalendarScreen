@@ -25,8 +25,8 @@ export const POPULAR_CRYPTO = [
   ['BTCUSDT','Bitcoin'],['ETHUSDT','Ethereum'],['SOLUSDT','Solana'],['PAXGUSDT','PAX Gold · tokenized gold'],['XAUTUSDT','Tether Gold · tokenized gold'],['BNBUSDT','BNB'],['XRPUSDT','XRP'],['ADAUSDT','Cardano'],['DOGEUSDT','Dogecoin'],['TRXUSDT','TRON'],['AVAXUSDT','Avalanche'],['LINKUSDT','Chainlink'],['DOTUSDT','Polkadot'],['LTCUSDT','Litecoin'],['BCHUSDT','Bitcoin Cash'],['SUIUSDT','Sui'],['TONUSDT','Toncoin'],['SHIBUSDT','Shiba Inu'],['NEARUSDT','NEAR Protocol'],['UNIUSDT','Uniswap'],['APTUSDT','Aptos'],['ATOMUSDT','Cosmos'],
 ].map(([symbol,name])=>({symbol,name,currency:'USDT',quoteSource:'binance'}));
 
-const stocks = stockRows.map(([symbol,name])=>({symbol,name,currency:'USD',quoteSource:'manual'}));
-const etfs = etfRows.map(([symbol,name])=>({symbol,name,currency:'USD',quoteSource:'manual'}));
+const stocks = stockRows.map(([symbol,name])=>({symbol,name,currency:'USD',quoteSource:'alphavantage'}));
+const etfs = etfRows.map(([symbol,name])=>({symbol,name,currency:'USD',quoteSource:'alphavantage'}));
 const metals = [
   {symbol:'XAU',name:'Gold · troy ounce',currency:'USD',quoteSource:'manual',marketSource:'gold-api'},
   {symbol:'XAG',name:'Silver · troy ounce',currency:'USD',quoteSource:'manual',marketSource:'gold-api'},
