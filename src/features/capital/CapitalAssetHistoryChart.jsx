@@ -12,15 +12,14 @@ export default function CapitalAssetHistoryChart({ rows, currency, locale, t, fo
     ? `${formatQuantity(point.quantity, locale)} ${t.quantityUnit}`
     : formatMoney(point.costBasis, currency, locale);
 
-  return <section className="capital-asset-history" aria-label={t.assetHistory}>
-    <div className="capital-asset-history-head">
-      <div><strong>{t.assetHistory}</strong><small>{t.assetHistoryNote}</small></div>
+  return <details className="capital-asset-history">
+    <summary><strong>{t.assetHistory}</strong><span>{t.assetHistoryNote}</span></summary>
+    <div className="capital-asset-history-content">
       <div className="capital-asset-history-modes" role="group" aria-label={t.assetHistory}>
-        <button type="button" aria-pressed={mode === 'cost'} onClick={() => setMode('cost')}>{t.costMode}</button>
-        <button type="button" aria-pressed={mode === 'quantity'} onClick={() => setMode('quantity')}>{t.quantityMode}</button>
+        <button type="button" aria-pressed={mode === 'cost'} className={mode==='cost'?'is-active':''} onClick={() => setMode('cost')}>{t.costMode}</button>
+        <button type="button" aria-pressed={mode === 'quantity'} className={mode==='quantity'?'is-active':''} onClick={() => setMode('quantity')}>{t.quantityMode}</button>
       </div>
-    </div>
-    {history.length ? <>
+      {history.length ? <>
       <svg className="capital-asset-history-svg" viewBox="0 0 320 124" role="img" aria-label={`${mode === 'cost' ? t.costMode : t.quantityMode}: ${value(last)}`}>
         <defs><linearGradient id="capital-asset-history-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="currentColor" stopOpacity=".26"/><stop offset="100%" stopColor="currentColor" stopOpacity="0"/></linearGradient></defs>
         <path className="capital-chart-gridline" d="M12 30H308 M12 65H308 M12 100H308"/>
@@ -29,6 +28,7 @@ export default function CapitalAssetHistoryChart({ rows, currency, locale, t, fo
         {history.length===1&&<circle className="capital-asset-history-dot" cx="160" cy="100" r="4"/>}
       </svg>
       <div className="capital-asset-history-values"><span>{first.date} · {value(first)}</span><span>{last.date} · {value(last)}</span></div>
-    </> : <p className="capital-asset-history-empty">{t.assetHistoryEmpty}</p>}
-  </section>;
+      </> : <p className="capital-asset-history-empty">{t.assetHistoryEmpty}</p>}
+    </div>
+  </details>;
 }
