@@ -26,6 +26,12 @@ test('large fractional quantities and prices are multiplied without binary float
   assert.equal(scaledToString(multiplyScaled(q, QUANTITY_SCALE, p, MONEY_SCALE), MONEY_SCALE), '15241.5787531962');
 });
 
+test('exact monetary products do not gain a phantom smallest currency unit', () => {
+  const quantity = parseScaled('10', QUANTITY_SCALE);
+  const price = parseScaled('500', MONEY_SCALE);
+  assert.equal(scaledToString(multiplyScaled(quantity, QUANTITY_SCALE, price, MONEY_SCALE), MONEY_SCALE), '5000');
+});
+
 test('full sale closes quantity and leaves realized profit and loss', () => {
   const [position] = calculatePositions([asset], [
     operation('01','buy','3','7','0.01'),

@@ -38,7 +38,7 @@ function divideRounded(numerator, denominator) {
   const n = numerator < 0n ? -numerator : numerator;
   const d = denominator < 0n ? -denominator : denominator;
   const quotient = n / d;
-  const rounded = quotient + (n % d) * 2n >= d ? 1n : 0n;
+  const rounded = (n % d) * 2n >= d ? 1n : 0n;
   return (negative ? -1n : 1n) * (quotient + rounded);
 }
 

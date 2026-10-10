@@ -89,6 +89,186 @@
 }
 @media(prefers-reduced-motion:reduce){.capital-entry-card{transition:none}}
 
+/* Capital portfolio overview follows the compact, chart-first reference layout. */
+.capital-heading{align-items:center}
+.capital-heading-actions{flex:0 0 auto}
+.capital-portfolio-card{display:block;overflow:hidden;padding:clamp(18px,3.8vw,30px);border:1px solid rgba(154,181,211,.1);border-radius:26px;background:radial-gradient(ellipse at 90% 0%,rgba(70,211,178,.08),transparent 34%),linear-gradient(145deg,#121f31,#101a29 65%,#111d2b);box-shadow:0 22px 62px rgba(0,0,0,.22)}
+.capital-overview-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.capital-overview-brand{display:flex;align-items:center;gap:8px;color:#a6b3c7;font-size:13px;font-weight:650;letter-spacing:.025em}
+.capital-overview-brand i{color:#627087;font-size:12px;font-style:normal}
+.capital-overview-brand b{color:#d8e1ee;font-weight:600}
+.capital-overview-mark{width:24px;height:24px;color:#65d9b6}
+.capital-total-title{margin:23px 0 6px;color:#b9c5d5;font-size:14px}
+.capital-portfolio-totals{display:flex;flex-wrap:wrap;gap:14px 38px;align-items:flex-start}
+.capital-currency-total{display:grid;gap:9px;min-width:0}
+.capital-total-number{display:flex;align-items:baseline;gap:10px}
+.capital-total-number strong{color:#f5f7fb;font-size:clamp(32px,5.6vw,46px);font-weight:650;letter-spacing:-.045em;line-height:1.15;font-variant-numeric:tabular-nums}
+.capital-total-number>span{color:#93a0b4;font-size:12px;font-weight:650}
+.capital-total-return{display:flex;flex-wrap:wrap;align-items:center;gap:9px}
+.capital-return-chip{display:inline-flex;align-items:center;min-height:26px;padding:0 10px;border-radius:99px;background:rgba(79,213,172,.12);color:#54d5ad;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.capital-return-chip.negative{background:rgba(242,119,119,.12);color:#ff8d95!important}
+.capital-total-return>small,.capital-invested-line{color:#a3b0c2;font-size:11px;font-variant-numeric:tabular-nums}
+.capital-invested-line{color:#8190a5}
+.capital-currency-chart{margin-top:22px}
+.capital-chart-currency{display:block;margin:0 0 8px;color:#90a0b5;font-size:10px;font-weight:700;letter-spacing:.08em}
+.capital-performance{min-width:0;color:#5bd5b2}
+.capital-range-selector{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:5px 0 11px}
+.capital-range-selector button{min-width:49px;min-height:31px;padding:0 12px;border:0;border-radius:99px;background:rgba(163,181,206,.07);color:#9eacc0;font:inherit;font-size:10px;font-weight:650;cursor:pointer;transition:background .15s,color .15s,transform .15s}
+.capital-range-selector button:hover{transform:translateY(-1px);background:rgba(163,181,206,.12);color:#e7eef8}
+.capital-range-selector button.is-active{background:rgba(82,211,174,.16);color:#6be0bd}
+.capital-performance-chart{display:block;width:100%;height:clamp(118px,24vw,198px);overflow:visible}
+.capital-chart-gridline{fill:none;stroke:rgba(165,184,207,.16);stroke-width:1;stroke-dasharray:2 6;stroke-linecap:round}
+.capital-performance-area{stroke:none}
+.capital-performance-line{fill:none;stroke:currentColor;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.capital-performance[data-trend="down"]{color:#f07e89}
+.capital-chart-dates{display:flex;justify-content:space-between;gap:10px;margin-top:-2px;color:#78889e;font-size:9px;font-variant-numeric:tabular-nums}
+.capital-chart-empty{display:grid;align-content:center;min-height:100px;padding:12px 2px 2px;border-top:1px solid rgba(165,184,207,.08)}
+.capital-chart-empty p{max-width:440px;margin:5px 0;color:#8997aa;font-size:11px;line-height:1.55}
+.capital-chart-single-value{display:flex;justify-content:space-between;gap:10px;color:#9aa8bb;font-size:10px}
+.capital-chart-single-value strong{color:#e8edf5;font-variant-numeric:tabular-nums}
+.capital-overview-footer{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-top:13px;padding-top:12px;border-top:1px solid rgba(165,184,207,.12)}
+.capital-quote-summary{display:flex;align-items:center;gap:7px;min-width:0;color:#a4b1c3}
+.capital-quote-summary small{font-size:10px;line-height:1.5}
+.capital-online-dot,.capital-offline-dot{flex:none;width:6px;height:6px;border-radius:50%;background:#53d7b1;box-shadow:0 0 10px rgba(83,215,177,.5)}
+.capital-offline-dot{background:#efb969;box-shadow:none}
+.capital-overview-footer .capital-today-change{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px 12px;text-align:right}
+.capital-overview-footer .capital-today-change small{color:#a4b1c3;font-size:9px}
+.capital-overview-footer .capital-today-change .positive{color:#5bd5b2!important}
+.capital-overview-footer .capital-today-change .negative{color:#ff8d95!important}
+.capital-holdings-panel{margin-top:21px;padding:19px 22px 17px;border:1px solid var(--cap-line);border-radius:24px;background:color-mix(in srgb,var(--cap-surface) 88%,#1c2c40)}
+.capital-holdings-panel .capital-section-title{margin:0 0 10px}
+.capital-holdings-panel .capital-section-title h2{font-size:17px;font-weight:650}
+.capital-holdings-actions{display:flex;align-items:center;gap:11px}
+.capital-show-all,.capital-search-toggle{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:6px 2px;border:0;background:transparent;color:#68d9b7;font:inherit;font-size:11px;font-weight:650;white-space:nowrap;cursor:pointer}
+.capital-search-toggle{width:30px;height:30px;padding:0;border-radius:9px;color:#91a0b4}
+.capital-search-toggle:hover{background:rgba(163,181,206,.08);color:#e3ebf5}
+.capital-holdings-panel .capital-search{width:100%;max-width:none;margin:8px 0 10px}
+.capital-holdings-panel .capital-search input{height:35px}
+.capital-holdings-panel .capital-assets{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--cap-line)}
+.capital-holdings-panel .capital-asset{grid-template-columns:48px minmax(0,1fr) auto;grid-template-rows:auto;grid-template-areas:"icon main value";gap:12px;width:100%;min-height:82px;padding:12px 3px;border:0;border-bottom:1px solid var(--cap-line);border-radius:0;background:transparent;transition:background .16s}
+.capital-holdings-panel .capital-asset:hover{transform:none;border-color:var(--cap-line);background:color-mix(in srgb,var(--cap-text) 3%,transparent)}
+.capital-holdings-panel .capital-asset-icon{width:44px;height:44px;border:0;border-radius:15px;background:rgba(116,142,176,.16);color:#a9bfdc}
+.capital-holdings-panel .capital-asset-icon svg{width:21px;height:21px}
+.capital-holdings-panel .capital-asset-main{align-self:center;gap:5px}
+.capital-holdings-panel .capital-asset-main strong{color:var(--cap-text);font-size:14px;font-weight:600}
+.capital-holdings-panel .capital-asset-main small{color:#8d9bb0;font-size:10px}
+.capital-holdings-panel .capital-quote-mobile{display:block;max-width:100%;width:max-content;overflow:hidden;color:#7f91a8;font-size:8px;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
+.capital-holdings-panel .capital-quote-mobile[data-live="true"]{color:#60d8b5}
+.capital-holdings-panel .capital-asset-value{align-self:center;max-width:180px;gap:5px}
+.capital-holdings-panel .capital-asset-value strong{color:var(--cap-text);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.capital-holdings-panel .capital-asset-value small{font-size:10px;font-variant-numeric:tabular-nums}
+.capital-holdings-panel .capital-quote-state{display:none}
+.capital-add-operation{display:flex;width:100%;min-height:54px;margin-top:15px;border:1px solid rgba(91,213,178,.08);border-radius:16px;background:linear-gradient(135deg,#1c5148,#234e4a);color:#a7ead6;font-size:14px;box-shadow:inset 0 1px rgba(255,255,255,.04);transition:filter .16s,transform .16s}
+.capital-add-operation:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.capital-allocation-details{margin-top:15px;padding:0 17px;border:1px solid var(--cap-line);border-radius:17px;background:var(--cap-surface)}
+.capital-allocation-details summary{display:flex;justify-content:space-between;gap:12px;padding:14px 0;color:var(--cap-text);font-size:12px;font-weight:650;cursor:pointer;list-style:none}
+.capital-allocation-details summary::-webkit-details-marker{display:none}
+.capital-allocation-details summary::after{content:'+';color:var(--cap-gold);font-size:15px}
+.capital-allocation-details[open] summary::after{content:'−'}
+.capital-allocation-details summary span{margin-left:auto;color:var(--cap-muted);font-size:10px;font-weight:400}
+.capital-allocation-list{padding-bottom:9px}
+.capital-light .capital-portfolio-card{border-color:rgba(75,102,128,.13);background:radial-gradient(ellipse at 90% 0%,rgba(24,148,119,.08),transparent 34%),linear-gradient(145deg,#f8fbff,#edf3f8 65%,#f1f6f8)}
+.capital-light .capital-overview-brand{color:#59677c}
+.capital-light .capital-overview-brand b,.capital-light .capital-total-number strong{color:#172337}
+.capital-light .capital-total-title,.capital-light .capital-total-return>small{color:#5f6e81}
+.capital-light .capital-invested-line,.capital-light .capital-chart-dates{color:#78869a}
+.capital-light .capital-range-selector button{background:rgba(49,75,105,.07);color:#64748a}
+.capital-light .capital-range-selector button.is-active{background:rgba(37,159,128,.14);color:#18856b}
+.capital-light .capital-chart-gridline{stroke:rgba(42,64,92,.16)}
+.capital-light .capital-chart-empty p,.capital-light .capital-chart-currency{color:#68788e}
+.capital-light .capital-chart-single-value strong{color:#253249}
+.capital-light .capital-overview-footer{border-color:rgba(42,64,92,.12)}
+.capital-light .capital-quote-summary,.capital-light .capital-overview-footer .capital-today-change small{color:#53647a}
+.capital-light .capital-holdings-panel{background:#fff}
+.capital-light .capital-holdings-panel .capital-asset-icon{background:#e8eef5;color:#58708e}
+.capital-light .capital-holdings-panel .capital-asset-main small,.capital-light .capital-holdings-panel .capital-quote-mobile{color:#69788b}
+.capital-light .capital-add-operation{background:linear-gradient(135deg,#d6f1e8,#cbece1);color:#145e4e}
+@media(max-width:640px){
+  .capital-heading{align-items:center}
+  .capital-heading h1{font-size:24px}
+  .capital-heading p:not(.capital-kicker){max-width:220px}
+  .capital-heading-actions .capital-quote-connect{min-height:36px;padding:0 9px;font-size:9px}
+  .capital-portfolio-card{padding:18px 16px;border-radius:22px}
+  .capital-overview-brand{gap:6px;font-size:11px}
+  .capital-total-title{margin-top:18px;font-size:12px}
+  .capital-total-number strong{font-size:clamp(30px,8vw,39px)}
+  .capital-portfolio-totals{gap:11px}
+  .capital-currency-total{gap:8px}
+  .capital-return-chip{min-height:24px;padding:0 8px;font-size:10px}
+  .capital-total-return>small,.capital-invested-line{font-size:9px}
+  .capital-currency-chart{margin-top:17px}
+  .capital-range-selector{gap:5px;margin:1px 0 8px}
+  .capital-range-selector button{min-width:0;min-height:29px;padding:0 10px;font-size:9px}
+  .capital-performance-chart{height:130px}
+  .capital-overview-footer{display:grid;gap:8px;margin-top:10px;padding-top:10px}
+  .capital-overview-footer .capital-today-change{justify-content:flex-start;text-align:left}
+  .capital-holdings-panel{margin-top:15px;padding:15px 14px 13px;border-radius:20px}
+  .capital-holdings-panel .capital-section-title h2{font-size:15px}
+  .capital-holdings-actions{gap:7px}
+  .capital-show-all{font-size:10px}
+  .capital-holdings-panel .capital-asset{grid-template-columns:40px minmax(0,1fr) auto;gap:9px;min-height:75px;padding:10px 0}
+  .capital-holdings-panel .capital-asset-icon{width:38px;height:38px;border-radius:13px}
+  .capital-holdings-panel .capital-asset-main strong{font-size:12px}
+  .capital-holdings-panel .capital-asset-main small{font-size:9px}
+  .capital-holdings-panel .capital-asset-value{max-width:122px}
+  .capital-holdings-panel .capital-asset-value strong{font-size:12px}
+  .capital-holdings-panel .capital-asset-value small{font-size:8px}
+  .capital-holdings-panel .capital-quote-mobile{max-width:165px;font-size:7px}
+  .capital-add-operation{min-height:49px;margin-top:12px;font-size:12px}
+}
+@media(prefers-reduced-motion:reduce){.capital-range-selector button,.capital-add-operation{transition:none}}
+
+.capital-asset-identity{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:3px 0 14px}
+.capital-asset-identity>div{display:grid;gap:3px;min-width:0}
+.capital-asset-identity>div strong{color:var(--cap-text);font-size:18px;font-weight:700;letter-spacing:-.02em}
+.capital-asset-identity>div span{color:var(--cap-muted);font-size:10px}
+.capital-detail-quote{flex:none;padding:5px 9px;border:1px solid color-mix(in srgb,#36c99a 28%,transparent);border-radius:999px;color:#36c99a;font-size:9px;font-weight:700}
+.capital-detail-performance{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 8px;margin:0 0 11px;padding:16px;border:1px solid color-mix(in srgb,#36c99a 13%,var(--cap-line));border-radius:17px;background:linear-gradient(140deg,color-mix(in srgb,#36c99a 8%,var(--cap-surface)),var(--cap-surface) 70%)}
+.capital-detail-performance>span{grid-column:1/-1;color:var(--cap-muted);font-size:10px;font-weight:650}
+.capital-detail-performance>strong{grid-row:2;color:var(--cap-text);font-size:clamp(28px,7vw,38px);line-height:1.15;font-variant-numeric:tabular-nums}
+.capital-detail-performance>b{grid-column:2;grid-row:2;align-self:center;padding:5px 8px;border-radius:999px;background:color-mix(in srgb,#35c99a 12%,transparent);font-size:12px;font-variant-numeric:tabular-nums}
+.capital-detail-performance>small{grid-column:1/-1;color:var(--cap-muted);font-size:9px}
+.capital-detail-primary-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:9px 0}
+.capital-detail-primary-stats>div{display:grid;gap:5px;min-width:0;padding:11px;border:1px solid var(--cap-line);border-radius:12px;background:color-mix(in srgb,var(--cap-text) 2.5%,var(--cap-surface))}
+.capital-detail-primary-stats span,.capital-detail-results span{color:var(--cap-muted);font-size:9px}
+.capital-detail-primary-stats b{overflow:hidden;color:var(--cap-text);font-size:12px;font-variant-numeric:tabular-nums;text-overflow:ellipsis;white-space:nowrap}
+.capital-detail-results{margin:9px 0;padding:10px 11px;border:1px solid var(--cap-line);border-radius:13px;background:color-mix(in srgb,var(--cap-text) 2.5%,var(--cap-surface))}
+.capital-detail-results>div{padding:2px}
+.capital-detail-results b{font-size:11px;font-variant-numeric:tabular-nums}
+.capital-result-formula{margin:-2px 2px 9px;color:var(--cap-muted);font-size:9px;line-height:1.45}
+.capital-asset-history{margin:12px 0 10px;padding:13px;border:1px solid var(--cap-line);border-radius:15px;background:color-mix(in srgb,var(--cap-text) 2%,var(--cap-surface))}
+.capital-asset-history-head{display:flex;align-items:flex-start;justify-content:space-between;gap:9px}
+.capital-asset-history-head>div:first-child{display:grid;gap:4px;min-width:0}
+.capital-asset-history-head>div:first-child strong{font-size:11px}
+.capital-asset-history-head>div:first-child small{color:var(--cap-muted);font-size:8px;line-height:1.4}
+.capital-asset-history-modes{display:flex;flex:none;padding:2px;border-radius:9px;background:color-mix(in srgb,var(--cap-text) 6%,transparent)}
+.capital-asset-history-modes button{min-height:26px;padding:0 8px;border:0;border-radius:7px;background:transparent;color:var(--cap-muted);font:inherit;font-size:9px;cursor:pointer}
+.capital-asset-history-modes button[aria-pressed="true"]{background:color-mix(in srgb,#36c99a 15%,var(--cap-surface));color:#39caa0}
+.capital-asset-history-svg{display:block;width:100%;height:104px;margin-top:8px;overflow:visible;color:#44d4ab}
+.capital-asset-history-area{fill:url(#capital-asset-history-fill)}
+.capital-asset-history-line{fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.capital-asset-history-dot{fill:currentColor;stroke:var(--cap-surface);stroke-width:2}
+.capital-asset-history-values{display:flex;justify-content:space-between;gap:8px;color:var(--cap-muted);font-size:8px;font-variant-numeric:tabular-nums}
+.capital-asset-history-values span{max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.capital-asset-history-empty{margin:12px 0 2px;color:var(--cap-muted);font-size:10px}
+.capital-detail-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:10px 0}
+.capital-detail-actions button{min-height:42px;border:1px solid color-mix(in srgb,#36c99a 30%,var(--cap-line));border-radius:12px;background:color-mix(in srgb,#36c99a 10%,var(--cap-surface));color:#47d4ad;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.capital-detail-actions button+button{border-color:color-mix(in srgb,var(--cap-gold) 30%,var(--cap-line));background:color-mix(in srgb,var(--cap-gold) 8%,var(--cap-surface));color:var(--cap-gold)}
+.capital-light .capital-detail-performance{background:linear-gradient(140deg,#e6f7f1,#f8fbff 70%)}
+.capital-light .capital-detail-primary-stats>div,.capital-light .capital-detail-results,.capital-light .capital-asset-history{background:#f6f9fc}
+.capital-light .capital-asset-history-svg{color:#168b6d}
+@media(max-width:640px){
+  .capital-asset-identity{margin:0 0 10px}
+  .capital-detail-performance{padding:13px;border-radius:14px}
+  .capital-detail-performance>strong{font-size:30px}
+  .capital-detail-primary-stats{gap:6px}
+  .capital-detail-primary-stats>div{padding:9px}
+  .capital-detail-primary-stats b{font-size:11px}
+  .capital-asset-history{padding:11px}
+  .capital-asset-history-head{display:grid}
+  .capital-asset-history-modes{justify-self:start}
+}
+
 /* Portfolio-first hierarchy: headline, positions, then supporting analytics. */
 .capital-content{width:min(100%,1080px);padding-top:26px}
 .capital-heading{margin-bottom:18px}
