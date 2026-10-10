@@ -1,8 +1,9 @@
-const GOLD_API_SYMBOLS = new Set(['XAU', 'XAG', 'XPT', 'XPD']);
+// Gold API currently publishes these five supported spot symbols. HG is copper.
+const GOLD_API_SYMBOLS = new Set(['XAU', 'XAG', 'XPT', 'XPD', 'HG']);
 const DECIMAL_PRICE = /^\d+(?:\.\d+)?$/;
 
 export function isGoldApiAsset(asset) {
-  return asset?.category === 'metal'
+  return ['metal', 'commodity'].includes(asset?.category)
     && asset?.currency === 'USD'
     && GOLD_API_SYMBOLS.has(String(asset?.symbol || '').toUpperCase());
 }

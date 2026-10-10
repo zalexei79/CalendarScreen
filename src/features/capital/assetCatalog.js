@@ -18,6 +18,7 @@ const etfRows = [
   ['XLY','Consumer Discretionary Select Sector SPDR Fund'],['XLP','Consumer Staples Select Sector SPDR Fund'],['XLC','Communication Services Select Sector SPDR Fund'],['XLU','Utilities Select Sector SPDR Fund'],['XLB','Materials Select Sector SPDR Fund'],['VNQ','Vanguard Real Estate ETF'],['GLD','SPDR Gold Shares'],['IAU','iShares Gold Trust'],['SLV','iShares Silver Trust'],['BND','Vanguard Total Bond Market ETF'],
   ['AGG','iShares Core US Aggregate Bond ETF'],['TLT','iShares 20+ Year Treasury Bond ETF'],['SHY','iShares 1-3 Year Treasury Bond ETF'],['LQD','iShares iBoxx Investment Grade Corporate Bond ETF'],['HYG','iShares iBoxx High Yield Corporate Bond ETF'],['TIP','iShares TIPS Bond ETF'],['VWO','Vanguard FTSE Emerging Markets ETF'],['VEA','Vanguard FTSE Developed Markets ETF'],['EFA','iShares MSCI EAFE ETF'],['EEM','iShares MSCI Emerging Markets ETF'],
   ['ARKW','ARK Next Generation Internet ETF'],['SOXX','iShares Semiconductor ETF'],['SMH','VanEck Semiconductor ETF'],['IBIT','iShares Bitcoin Trust ETF'],['FBTC','Fidelity Wise Origin Bitcoin Fund'],['BITO','ProShares Bitcoin Strategy ETF'],['CSPX','iShares Core S&P 500 UCITS ETF'],['VWRA','Vanguard FTSE All-World UCITS ETF'],['EQQQ','Invesco EQQQ Nasdaq-100 UCITS ETF'],['VUAA','Vanguard S&P 500 UCITS ETF'],
+  ['PDBC','Invesco Optimum Yield Diversified Commodity Strategy ETF'],['DBC','Invesco DB Commodity Index Tracking Fund'],['COMT','iShares GSCI Commodity Dynamic Roll Strategy ETF'],['GSG','iShares S&P GSCI Commodity-Indexed Trust'],['BCI','abrdn Bloomberg All Commodity Strategy K-1 Free ETF'],['USO','United States Oil Fund'],['BNO','United States Brent Oil Fund'],['UNG','United States Natural Gas Fund'],['DBA','Invesco DB Agriculture Fund'],['DBB','Invesco DB Base Metals Fund'],['CPER','United States Copper Index Fund'],['COPX','Global X Copper Miners ETF'],['WEAT','Teucrium Wheat Fund'],['CORN','Teucrium Corn Fund'],['SOYB','Teucrium Soybean Fund'],['CANE','Teucrium Sugar Fund'],['JO','iPath Series B Bloomberg Coffee Subindex ETN'],['NIB','iPath Series B Bloomberg Cocoa Subindex ETN'],['PPLT','abrdn Physical Platinum Shares ETF'],['PALL','abrdn Physical Palladium Shares ETF'],['SGOL','abrdn Physical Gold Shares ETF'],['GLDM','SPDR Gold MiniShares Trust'],['URA','Global X Uranium ETF'],
 ];
 
 export const POPULAR_CRYPTO = [
@@ -31,13 +32,24 @@ const metals = [
   {symbol:'XAG',name:'Silver · troy ounce',currency:'USD',quoteSource:'manual',marketSource:'gold-api'},
   {symbol:'XPT',name:'Platinum · troy ounce',currency:'USD',quoteSource:'manual',marketSource:'gold-api'},
   {symbol:'XPD',name:'Palladium · troy ounce',currency:'USD',quoteSource:'manual',marketSource:'gold-api'},
+  {symbol:'HG',name:'Copper · pound',currency:'USD',quoteSource:'manual',marketSource:'gold-api'},
 ];
+
+// Direct commodity ownership is tracked at the user's own transaction/valuation
+// price. No fictitious spot quote is attached to these instruments.
+const commodities = [
+  ['WTI','Crude oil WTI · barrel','energy'],['BRENT','Crude oil Brent · barrel','energy'],['NATGAS','Natural gas · MMBtu','energy'],['HEATOIL','Heating oil · gallon','energy'],['RBOB','Gasoline RBOB · gallon','energy'],
+  ['ALUMINUM','Aluminum · metric tonne','metals'],['NICKEL','Nickel · metric tonne','metals'],['ZINC','Zinc · metric tonne','metals'],['LEAD','Lead · metric tonne','metals'],['TIN','Tin · metric tonne','metals'],
+  ['WHEAT','Wheat · bushel','agriculture'],['CORN','Corn · bushel','agriculture'],['SOYBEAN','Soybeans · bushel','agriculture'],['COFFEE','Coffee · pound','agriculture'],['COCOA','Cocoa · metric tonne','agriculture'],['SUGAR','Sugar · pound','agriculture'],['COTTON','Cotton · pound','agriculture'],['RICE','Rice · hundredweight','agriculture'],['LUMBER','Lumber · thousand board feet','agriculture'],
+  ['LIVECATTLE','Live cattle · pound','livestock'],['LEANHOGS','Lean hogs · pound','livestock'],['FEEDERCATTLE','Feeder cattle · pound','livestock'],
+].map(([symbol,name,group])=>({symbol,name,group,currency:'USD',quoteSource:'manual'}));
 
 export function getCatalog(category) {
   if (category === 'stock') return stocks;
   if (category === 'etf') return etfs;
   if (category === 'crypto') return POPULAR_CRYPTO;
   if (category === 'metal') return metals;
+  if (category === 'commodity') return commodities;
   return [];
 }
 

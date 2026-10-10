@@ -11,8 +11,15 @@ test('searchable stock and ETF catalogues include broad popular coverage and all
   assert.ok(etfs.length >= 40);
   assert.ok(stocks.some(asset => asset.symbol === 'NVDA'));
   assert.ok(etfs.some(asset => asset.symbol === 'CSPX'));
-  assert.deepEqual(metals.map(asset => asset.symbol), ['XAU','XAG','XPT','XPD']);
+  assert.deepEqual(metals.map(asset => asset.symbol), ['XAU','XAG','XPT','XPD','HG']);
   assert.ok(metals.every(asset => asset.marketSource === 'gold-api' && asset.currency === 'USD'));
+  const commodities = getCatalog('commodity');
+  assert.ok(commodities.length >= 20);
+  assert.ok(commodities.some(asset => asset.symbol === 'WTI' && asset.group === 'energy'));
+  assert.ok(commodities.some(asset => asset.symbol === 'ALUMINUM' && asset.group === 'metals'));
+  assert.ok(commodities.some(asset => asset.symbol === 'COFFEE' && asset.group === 'agriculture'));
+  assert.ok(commodities.every(asset => asset.quoteSource === 'manual' && asset.currency === 'USD' && !asset.marketSource));
+  for (const symbol of ['USO','UNG','DBA','WEAT','CPER','PDBC','PPLT']) assert.ok(etfs.some(asset => asset.symbol === symbol));
   assert.ok(stocks.every(asset => asset.quoteSource === 'manual' && asset.currency === 'USD'));
 });
 

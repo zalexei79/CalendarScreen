@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { isGoldApiQuoteFresh, GOLD_API_QUOTE_STALE_AFTER_MS, isQuoteFresh, QUOTE_STALE_AFTER_MS } from '../src/features/capital/quoteStatus.js';
+import { isGoldApiAsset, normalizeGoldApiQuote } from '../src/features/capital/metalQuotes.js';
 
 test('Binance quote freshness moves to stale after 15 seconds and rejects invalid timestamps', () => {
   const now = 1_800_000_000_000;
@@ -21,6 +22,15 @@ test('Gold API spot quote is fresh for five minutes and stale after that', () =>
   assert.equal(isGoldApiQuoteFresh({ ...quote, at: now - GOLD_API_QUOTE_STALE_AFTER_MS + 1 }, now), true);
   assert.equal(isGoldApiQuoteFresh({ ...quote, at: now - GOLD_API_QUOTE_STALE_AFTER_MS }, now), false);
   assert.equal(isGoldApiQuoteFresh({ ...quote, transport: 'rest' }, now), false);
+});
+
+test('Gold API copper spot quote is accepted only for a USD metal or commodity position', () => {
+  const data = { symbol: 'HG', currency: 'USD', price: 4.25, updatedAt: '2026-10-10T08:00:00Z' };
+  assert.deepEqual(normalizeGoldApiQuote(data, 'HG'), { price: '4.25', at: Date.parse(data.updatedAt), transport: 'gold-api' });
+  assert.equal(isGoldApiAsset({ category: 'metal', symbol: 'HG', currency: 'USD' }), true);
+  assert.equal(isGoldApiAsset({ category: 'commodity', symbol: 'HG', currency: 'USD' }), true);
+  assert.equal(normalizeGoldApiQuote({ ...data, currency: 'EUR' }, 'HG'), null);
+  assert.equal(normalizeGoldApiQuote(data, 'ALUMINUM'), null);
 });
 
 test('Binance connection recovers after closure or silence and reacts to network changes', async () => {
