@@ -12,7 +12,7 @@ function makePath(rows) {
   return { path, area: `${path} L308 104 L12 104 Z`, first: values[0], last: values.at(-1) };
 }
 
-export default function CapitalQuoteHistoryChart({ asset, currency, locale, t }) {
+export default function CapitalQuoteHistoryChart({ asset, quote, currency, locale, t }) {
   const [rows, setRows] = useState([]), [loading, setLoading] = useState(false), [failed, setFailed] = useState(false);
   useEffect(() => {
     if (!asset || !['binance', 'moex', 'alphavantage'].includes(asset.quote_source)) { setRows([]); setFailed(false); return; }
