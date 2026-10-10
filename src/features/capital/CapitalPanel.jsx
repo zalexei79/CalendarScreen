@@ -9,7 +9,7 @@ import { resolveCurrentPrice } from './capitalPricing.js';
 import { getCatalog, loadBinanceSpotPairs, POPULAR_CRYPTO } from './assetCatalog.js';
 import { fetchGoldApiQuote, isGoldApiAsset } from './metalQuotes.js';
 import { loadCompanyCatalog } from './loadCompanyCatalog.js';
-import { fetchMoexCurrency, fetchMoexQuotes, MOEX_POPULAR_BONDS, MOEX_POPULAR_ETFS, MOEX_POPULAR_STOCKS, searchMoexSecurities } from './moexMarket.js';
+import { fetchMoexCurrency, fetchMoexQuotes, loadMoexCatalog, MOEX_POPULAR_BONDS, MOEX_POPULAR_ETFS, MOEX_POPULAR_STOCKS, searchMoexSecurities } from './moexMarket.js';
 import { friendlyCapitalError } from './capitalErrors.js';
 import CapitalPerformanceChart from './CapitalPerformanceChart.jsx';
 import CapitalAssetHistoryChart from './CapitalAssetHistoryChart.jsx';
@@ -68,6 +68,10 @@ Object.assign(copy.ru,{market:'Рынок',worldMarket:'США',russiaMarket:'Р
 Object.assign(copy.en,{market:'Market',worldMarket:'US',russiaMarket:'Russia · MOEX',moexSource:'MOEX · up to 15 min delay',moexDelayed:'DELAYED · MOEX',moexCurrencyLoading:'Checking instrument currency…',moexCatalogUnavailable:'Could not load the MOEX directory. Try again or add the asset manually.',quoteDisclaimer:'The stock and ETF directory covers US listings; MOEX quotes for Russian shares and bonds are delayed. Binance streams crypto quotes, and Gold API refreshes indicative metal prices. Real estate, deposits, and other assets use manual valuations.'});
 Object.assign(copy.ro,{market:'Piață',worldMarket:'SUA',russiaMarket:'Rusia · MOEX',moexSource:'MOEX · întârziere de până la 15 min',moexDelayed:'ÎNTÂRZIAT · MOEX',moexCurrencyLoading:'Se verifică moneda instrumentului…',moexCatalogUnavailable:'Lista MOEX nu s-a încărcat. Încearcă din nou sau adaugă manual activul.',quoteDisclaimer:'Catalogul de acțiuni și ETF-uri include listări din SUA; cotațiile MOEX pentru acțiunile și obligațiunile rusești sunt întârziate. Binance transmite cotații crypto, iar Gold API actualizează prețuri orientative pentru metale. Imobiliarele, depozitele și alte active folosesc evaluări manuale.'});
 Object.assign(copy.zh,{market:'市场',worldMarket:'美国',russiaMarket:'俄罗斯 · MOEX',moexSource:'MOEX · 延迟最多 15 分钟',moexDelayed:'延迟 · MOEX',moexCurrencyLoading:'正在检查资产货币…',moexCatalogUnavailable:'无法加载 MOEX 目录。请重试或手动添加资产。',quoteDisclaimer:'股票和 ETF 目录涵盖美国上市证券；MOEX 的俄罗斯股票和债券报价存在延迟。Binance 提供加密货币行情，Gold API 更新金属参考价格。房地产、存款和其他资产采用手动估值。'});
+Object.assign(copy.ru,{exchangeAll:'Все биржи',bondAll:'Все облигации',bondOfz:'ОФЗ',bondCorporate:'Корпоративные',bondMunicipal:'Муниципальные',showUsCatalog:'Открыть полный каталог США',catalogCount:'инструментов в каталоге',catalogSearchCount:'найдено по запросу',catalogLoadingAll:'Загружаем полный каталог MOEX…',showMoreCatalog:'Показать ещё'});
+Object.assign(copy.en,{exchangeAll:'All exchanges',bondAll:'All bonds',bondOfz:'OFZ',bondCorporate:'Corporate',bondMunicipal:'Municipal',showUsCatalog:'Open full US directory',catalogCount:'in directory',catalogSearchCount:'matches',catalogLoadingAll:'Loading the full MOEX directory…',showMoreCatalog:'Show more'});
+Object.assign(copy.ro,{exchangeAll:'Toate bursele',bondAll:'Toate obligațiunile',bondOfz:'OFZ',bondCorporate:'Corporative',bondMunicipal:'Municipale',showUsCatalog:'Deschide catalogul complet SUA',catalogCount:'instrumente în catalog',catalogSearchCount:'rezultate',catalogLoadingAll:'Se încarcă catalogul MOEX…',showMoreCatalog:'Arată mai multe'});
+Object.assign(copy.zh,{exchangeAll:'所有交易所',bondAll:'所有债券',bondOfz:'OFZ',bondCorporate:'企业债',bondMunicipal:'市政债',showUsCatalog:'打开美国完整目录',catalogCount:'个目录工具',catalogSearchCount:'个匹配项',catalogLoadingAll:'正在加载完整 MOEX 目录…',showMoreCatalog:'显示更多'});
 const todayKey = () => new Date().toISOString().slice(0,10);
 const formatQuantity = (value, locale) => {
   const [whole, fraction = ''] = scaledToString(value, QUANTITY_SCALE).split('.');
@@ -103,7 +107,7 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
   const locale = String(language).toLowerCase().startsWith('zh') ? 'zh' : String(language).toLowerCase().startsWith('en') ? 'en' : String(language).toLowerCase().startsWith('ro') || language === 'md' ? 'ro' : 'ru';
   const t = copy[locale], stats = statCopy[locale];
   const [composer,setComposer] = useState(false), [selected,setSelected] = useState(null), [quotes,setQuotes] = useState({}), [lastQuote,setLastQuote] = useState(null), [online,setOnline] = useState(navigator.onLine), [filter,setFilter] = useState(''), [categoryFilter,setCategoryFilter] = useState('all'), [assetsExpanded,setAssetsExpanded] = useState(false), [searchVisible,setSearchVisible] = useState(false), [historyRange,setHistoryRange] = useState('all'), [form,setForm] = useState({category:'stock',name:'',symbol:'',currency,quoteSource:'manual',quantity:'',purchasePrice:'',price:'',fee:'0',date:todayKey()});
-  const [assetSelection,setAssetSelection]=useState(null), [assetSearch,setAssetSearch]=useState(''), [marketScope,setMarketScope]=useState('world'), [moexCatalog,setMoexCatalog]=useState([]), [moexCatalogLoading,setMoexCatalogLoading]=useState(false), [moexCatalogError,setMoexCatalogError]=useState(false), [moexCurrencyLoading,setMoexCurrencyLoading]=useState(false), [binanceCatalog,setBinanceCatalog]=useState([]), [binanceCatalogLoading,setBinanceCatalogLoading]=useState(false), [binanceCatalogError,setBinanceCatalogError]=useState(false), [companyCatalog,setCompanyCatalog]=useState(null), [companyCatalogLoading,setCompanyCatalogLoading]=useState(false), [companyCatalogError,setCompanyCatalogError]=useState(false), [showPurchaseDetails,setShowPurchaseDetails]=useState(false), [saving,setSaving]=useState(false);
+  const [assetSelection,setAssetSelection]=useState(null), [assetSearch,setAssetSearch]=useState(''), [marketScope,setMarketScope]=useState('world'), [moexCatalog,setMoexCatalog]=useState([]), [moexCatalogCategory,setMoexCatalogCategory]=useState(''), [moexCatalogIsFull,setMoexCatalogIsFull]=useState(false), [moexCatalogLoading,setMoexCatalogLoading]=useState(false), [moexCatalogError,setMoexCatalogError]=useState(false), [moexCurrencyLoading,setMoexCurrencyLoading]=useState(false), [binanceCatalog,setBinanceCatalog]=useState([]), [binanceCatalogLoading,setBinanceCatalogLoading]=useState(false), [binanceCatalogError,setBinanceCatalogError]=useState(false), [companyCatalog,setCompanyCatalog]=useState(null), [companyCatalogLoading,setCompanyCatalogLoading]=useState(false), [companyCatalogError,setCompanyCatalogError]=useState(false), [showFullUsCatalog,setShowFullUsCatalog]=useState(false), [exchangeFilter,setExchangeFilter]=useState('all'), [bondFilter,setBondFilter]=useState('all'), [catalogVisibleLimit,setCatalogVisibleLimit]=useState(40), [showPurchaseDetails,setShowPurchaseDetails]=useState(false), [saving,setSaving]=useState(false);
   const [now,setNow] = useState(Date.now());
   const [opForm,setOpForm]=useState({operation:'sell',quantity:'',price:'',fee:'0',date:todayKey()});
   const [saveError,setSaveError]=useState('');
@@ -122,18 +126,27 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
   },[composer,form.category,binanceCatalog.length]);
 
   useEffect(()=>{
-    if(!composer||marketScope!=='world'||!['stock','etf'].includes(form.category)||assetSearch.trim().length<2||companyCatalog) {setCompanyCatalogLoading(false);setCompanyCatalogError(false);return;}
+    if(!composer||marketScope!=='world'||!['stock','etf'].includes(form.category)||(assetSearch.trim().length<2&&!showFullUsCatalog)||companyCatalog) {setCompanyCatalogLoading(false);setCompanyCatalogError(false);return;}
     let active=true; setCompanyCatalogLoading(true); setCompanyCatalogError(false);
     loadCompanyCatalog().then(items=>{if(active)setCompanyCatalog(items);}).catch(()=>{if(active)setCompanyCatalogError(true);}).finally(()=>{if(active)setCompanyCatalogLoading(false);});
     return()=>{active=false;};
-  },[composer,marketScope,form.category,assetSearch,companyCatalog]);
+  },[composer,marketScope,form.category,assetSearch,showFullUsCatalog,companyCatalog]);
 
   useEffect(()=>{
-    if(!composer||marketScope!=='russia'||!['stock','etf','bond'].includes(form.category)||assetSearch.trim().length<2) {setMoexCatalog([]);setMoexCatalogLoading(false);setMoexCatalogError(false);return;}
-    let active=true;const controller=new AbortController();setMoexCatalog([]);setMoexCatalogLoading(true);setMoexCatalogError(false);
-    const timer=window.setTimeout(()=>searchMoexSecurities(assetSearch,form.category,controller.signal).then(items=>{if(active)setMoexCatalog(items);}).catch(error=>{if(active&&error.name!=='AbortError')setMoexCatalogError(true);}).finally(()=>{if(active)setMoexCatalogLoading(false);}),250);
+    if(!composer||marketScope!=='russia'||!['stock','etf','bond'].includes(form.category)) {setMoexCatalogLoading(false);setMoexCatalogError(false);return;}
+    let active=true;setMoexCatalogLoading(true);setMoexCatalogError(false);
+    loadMoexCatalog(form.category).then(items=>{if(active){setMoexCatalog(items);setMoexCatalogCategory(form.category);setMoexCatalogIsFull(true);}}).catch(error=>{if(active){setMoexCatalogError(true);console.warn('[capital] MOEX catalogue failed:',error.message);}}).finally(()=>{if(active)setMoexCatalogLoading(false);});
+    return()=>{active=false;};
+  },[composer,marketScope,form.category]);
+
+  useEffect(()=>{
+    if(!composer||marketScope!=='russia'||!moexCatalogError||assetSearch.trim().length<2)return;
+    let active=true;const controller=new AbortController();setMoexCatalogLoading(true);
+    const timer=window.setTimeout(()=>searchMoexSecurities(assetSearch,form.category,controller.signal).then(items=>{if(active){setMoexCatalog(items);setMoexCatalogCategory(form.category);setMoexCatalogIsFull(false);setMoexCatalogError(false);}}).catch(error=>{if(active&&error.name!=='AbortError')console.warn('[capital] MOEX search failed:',error.message);}).finally(()=>{if(active)setMoexCatalogLoading(false);}),250);
     return()=>{active=false;clearTimeout(timer);controller.abort();};
-  },[composer,marketScope,form.category,assetSearch]);
+  },[composer,marketScope,moexCatalogError,assetSearch,form.category]);
+
+  useEffect(()=>{setCatalogVisibleLimit(40);},[assetSearch,form.category,marketScope,exchangeFilter,bondFilter]);
 
   useEffect(() => { const on=()=>setOnline(true), off=()=>setOnline(false); window.addEventListener('online',on); window.addEventListener('offline',off); return()=>{window.removeEventListener('online',on);window.removeEventListener('offline',off);}; },[]);
   const pairs = useMemo(() => [...new Set([
@@ -318,30 +331,37 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
       portfolio.recordSnapshot(code,value,snapshotDate).catch(error=>console.warn('[capital] daily snapshot failed:',error.message));
     }
   },[portfolio.loading,portfolio.assets,portfolio.snapshots,portfolio.recordSnapshot,user?.id,metrics,online,quotes,now]);
-  const matchedCatalog = useMemo(()=>{
+  const catalogMatches = useMemo(()=>{
     const query=assetSearch.trim().toLowerCase();
     if(marketScope==='russia'&&['stock','etf','bond'].includes(form.category)) {
       const fallback=form.category==='bond'?MOEX_POPULAR_BONDS:form.category==='etf'?MOEX_POPULAR_ETFS:MOEX_POPULAR_STOCKS;
-      const catalog=assetSearch.trim().length>=2?moexCatalog:fallback;
-      return (query?catalog.filter(item=>`${item.symbol} ${item.name}`.toLowerCase().includes(query)):catalog).slice(0,query?80:12);
+      const catalogue=moexCatalogCategory===form.category&&moexCatalog.length&&(moexCatalogIsFull||assetSearch.trim().length>=2)?moexCatalog:fallback;
+      const popularSymbols=new Set(fallback.map(item=>item.symbol));
+      const sorted=[...catalogue].sort((a,b)=>Number(popularSymbols.has(b.symbol))-Number(popularSymbols.has(a.symbol))||a.symbol.localeCompare(b.symbol,'ru'));
+      return sorted.filter(item=>{
+        if(form.category==='bond'&&bondFilter!=='all'&&item.bondGroup!==bondFilter)return false;
+        return !query||`${item.symbol} ${item.name} ${item.isin||''}`.toLowerCase().includes(query);
+      });
     }
     const curated=getCatalog(form.category);
     const exchangeDirectory=companyCatalog&&['stock','etf'].includes(form.category)
       ? companyCatalog.records.filter(item=>item.category===form.category).map(item=>({...item,currency:'USD',quoteSource:'manual'}))
       : [];
+    const inExchange=items=>exchangeFilter==='all'?items:exchangeFilter==='other'?items.filter(item=>item.exchange&&!['Nasdaq','NYSE','TXSE'].includes(item.exchange)):items.filter(item=>item.exchange===exchangeFilter);
     const curatedSymbols=new Set(curated.map(item=>item.symbol));
     const catalog=form.category==='crypto'&&binanceCatalog.length
       ? [...POPULAR_CRYPTO,...binanceCatalog.filter(item=>!POPULAR_CRYPTO.some(popular=>popular.symbol===item.symbol))]
-      : [...curated,...exchangeDirectory.filter(item=>!curatedSymbols.has(item.symbol))];
-    const matches=query?catalog.filter(item=>`${item.symbol} ${item.name}`.toLowerCase().includes(query)):catalog;
-    return matches.slice(0, query?80:12);
-  },[assetSearch,form.category,marketScope,moexCatalog,binanceCatalog]);
+      : [...inExchange(curated),...exchangeDirectory.filter(item=>!curatedSymbols.has(item.symbol))];
+    return (query?catalog.filter(item=>`${item.symbol} ${item.name} ${item.exchange||''}`.toLowerCase().includes(query)):catalog)
+      .filter((item,index,items)=>items.findIndex(candidate=>candidate.symbol===item.symbol)===index);
+  },[assetSearch,form.category,marketScope,moexCatalog,binanceCatalog,companyCatalog,exchangeFilter,bondFilter]);
+  const matchedCatalog=catalogMatches.slice(0,catalogVisibleLimit);
   const chooseCatalogAsset=async item=>{
     const lookup=++moexLookupSequence.current;
     setAssetSelection(item);
-    setMoexCurrencyLoading(item.quoteSource==='moex'&&['bond','etf'].includes(item.category));
+    setMoexCurrencyLoading(item.quoteSource==='moex'&&['bond','etf','stock'].includes(item.category));
     setForm(current=>({...current,name:item.name,symbol:item.symbol,currency:item.currency,quoteSource:item.quoteSource,quantity:'',purchasePrice:'',price:'',fee:'0'}));
-    if(item.quoteSource==='moex'&&['bond','etf'].includes(item.category)) {
+    if(item.quoteSource==='moex'&&['bond','etf','stock'].includes(item.category)) {
       try {const resolvedCurrency=await fetchMoexCurrency(item.category,item.symbol);if(moexLookupSequence.current===lookup&&resolvedCurrency)setForm(current=>current.symbol===item.symbol?{...current,currency:resolvedCurrency}:current);} catch {}
       finally {if(moexLookupSequence.current===lookup)setMoexCurrencyLoading(false);}
     }
@@ -389,18 +409,33 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
         <p className="capital-step-label">{t.chooseCategory}</p>
         <div className="capital-category-grid">{t.cats.map((category,index)=>{const Icon=icons[index]||BriefcaseBusiness;return <button type="button" key={category} className={form.category===category?'is-selected':''} onClick={()=>changeCategory(category)}><Icon/><span>{t.categories[index]}</span></button>;})}</div>
         {!assetSelection?<>
-          {['stock','etf'].includes(form.category)&&<div className="capital-market-tabs" role="group" aria-label={t.market}><button type="button" className={marketScope==='world'?'is-active':''} aria-pressed={marketScope==='world'} onClick={()=>{setMarketScope('world');setAssetSearch('');setMoexCatalog([]);}}>{t.worldMarket}</button><button type="button" className={marketScope==='russia'?'is-active':''} aria-pressed={marketScope==='russia'} onClick={()=>{setMarketScope('russia');setAssetSearch('');setMoexCatalog([]);}}>{t.russiaMarket}</button></div>}
+          {['stock','etf'].includes(form.category)&&<div className="capital-market-tabs" role="group" aria-label={t.market}><button type="button" className={marketScope==='world'?'is-active':''} aria-pressed={marketScope==='world'} onClick={()=>{setMarketScope('world');setAssetSearch('');setExchangeFilter('all');setBondFilter('all');}}>{t.worldMarket}</button><button type="button" className={marketScope==='russia'?'is-active':''} aria-pressed={marketScope==='russia'} onClick={()=>{setMarketScope('russia');setAssetSearch('');setExchangeFilter('all');setBondFilter('all');}}>{t.russiaMarket}</button></div>}
           {form.category==='bond'&&<p className="capital-market-note">{t.russiaMarket} · {t.moexSource}</p>}
           <p className="capital-step-label">{assetSearch?t.findAsset:t.popular}</p>
           <label className="capital-picker-search"><Search size={16}/><input autoComplete="off" value={assetSearch} onChange={event=>setAssetSearch(event.target.value)} placeholder={t.findAsset}/></label>
+          {marketScope==='world'&&['stock','etf'].includes(form.category)&&!companyCatalog&&!companyCatalogLoading&&<button type="button" className="capital-catalog-action" onClick={()=>setShowFullUsCatalog(true)}><span>{t.showUsCatalog}</span><b>{t.catalogCount}</b></button>}
           {marketScope==='world'&&['stock','etf'].includes(form.category)&&companyCatalogLoading&&<p className="capital-form-hint">{t.stockCatalogLoading}</p>}
           {marketScope==='world'&&['stock','etf'].includes(form.category)&&companyCatalogError&&<p className="capital-form-hint">{t.stockCatalogUnavailable}</p>}
-          {marketScope==='russia'&&['stock','etf','bond'].includes(form.category)&&moexCatalogLoading&&<p className="capital-form-hint">{t.stockCatalogLoading}</p>}
+          {marketScope==='russia'&&['stock','etf','bond'].includes(form.category)&&moexCatalogLoading&&<p className="capital-form-hint">{t.catalogLoadingAll}</p>}
           {marketScope==='russia'&&moexCatalogError&&<p className="capital-form-hint">{t.moexCatalogUnavailable}</p>}
           {form.category==='crypto'&&binanceCatalogLoading&&<p className="capital-form-hint">{t.catalogLoading}</p>}
           {form.category==='crypto'&&binanceCatalogError&&<p className="capital-form-hint">{t.catalogUnavailable}</p>}
+          {marketScope==='world'&&companyCatalog&&['stock','etf'].includes(form.category)&&(
+            <div className="capital-catalog-filters" role="group" aria-label={t.market}>
+              <button type="button" className={exchangeFilter==='all'?'is-active':''} aria-pressed={exchangeFilter==='all'} onClick={()=>setExchangeFilter('all')}>{t.exchangeAll}</button>
+              {['Nasdaq','NYSE','TXSE'].map(exchange=>(<button type="button" key={exchange} className={exchangeFilter===exchange?'is-active':''} aria-pressed={exchangeFilter===exchange} onClick={()=>setExchangeFilter(exchange)}>{exchange}</button>))}
+            </div>
+          )}
+          {marketScope==='russia'&&form.category==='bond'&&moexCatalogCategory==='bond'&&moexCatalogIsFull&&moexCatalog.length>0&&(
+            <div className="capital-catalog-filters" role="group" aria-label={t.category}>
+              {[['all',t.bondAll],['ofz',t.bondOfz],['corporate',t.bondCorporate],['municipal',t.bondMunicipal]].map(([value,label])=>(<button type="button" key={value} className={bondFilter===value?'is-active':''} aria-pressed={bondFilter===value} onClick={()=>setBondFilter(value)}>{label}</button>))}
+            </div>
+          )}
+          {marketScope==='russia'&&moexCatalogCategory===form.category&&moexCatalog.length>0&&<p className="capital-catalog-count">{catalogMatches.length.toLocaleString(locale)} {moexCatalogIsFull&&!assetSearch.trim()&&bondFilter==='all'?t.catalogCount:t.catalogSearchCount} · MOEX</p>}
+          {marketScope==='world'&&companyCatalog&&['stock','etf'].includes(form.category)&&<p className="capital-catalog-count">{catalogMatches.length.toLocaleString(locale)} {!assetSearch.trim()&&exchangeFilter==='all'?t.catalogCount:t.catalogSearchCount} · SEC</p>}
           <div className="capital-picker-results">{matchedCatalog.map(item=><button type="button" key={`${item.marketSource||item.quoteSource}:${item.symbol}`} onClick={()=>chooseCatalogAsset(item)}><span className="capital-picker-symbol">{item.symbol}</span><span>{item.name}</span>{item.quoteSource==='binance'&&<i>LIVE</i>}{item.marketSource==='gold-api'&&<i>SPOT</i>}{item.quoteSource==='moex'&&<i>MOEX</i>}</button>)}
             {!matchedCatalog.length&&(moexCatalogLoading||companyCatalogLoading?<p>{t.stockCatalogLoading}</p>:<p>{t.noAssetsFound}</p>)}</div>
+          {matchedCatalog.length<catalogMatches.length&&<button type="button" className="capital-catalog-more" onClick={()=>setCatalogVisibleLimit(limit=>limit+40)}>{t.showMoreCatalog} · {matchedCatalog.length.toLocaleString(locale)} / {catalogMatches.length.toLocaleString(locale)}</button>}
           <button type="button" className="capital-custom-link" onClick={chooseCustomAsset}><Plus size={15}/>{t.customAsset}</button>
         </>:<>
           <div className="capital-selected-asset"><span className="capital-picker-symbol">{form.symbol||form.category.toUpperCase()}</span><span><strong>{form.name||t.customAsset}</strong><small>{form.symbol?`${form.symbol} · ${assetSelection.custom?t.manualSource:isGoldApiAsset(form)?t.goldApiSource:form.quoteSource==='binance'?t.binanceSource:form.quoteSource==='moex'?t.moexSource:t.manualSource}`:t.manualSource}</small></span><button type="button" onClick={()=>{setAssetSelection(null);setAssetSearch('');}}>{t.changeAsset}</button></div>

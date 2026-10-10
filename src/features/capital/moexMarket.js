@@ -3,6 +3,7 @@ import { MONEY_SCALE, parseScaled, scaledToString } from './decimal.js';
 const API = 'https://iss.moex.com/iss';
 const REQUEST_TIMEOUT_MS = 10_000;
 const CURRENCY_MAP = { SUR: 'RUB', RUR: 'RUB', RUB: 'RUB', USD: 'USD', CNY: 'CNY', EUR: 'EUR' };
+const catalogRequests = new Map();
 
 export const MOEX_POPULAR_STOCKS = [
   ['SBER','Сбербанк'],['GAZP','Газпром'],['LKOH','ЛУКОЙЛ'],['YDEX','Яндекс'],['NVTK','НОВАТЭК'],
@@ -24,6 +25,58 @@ export const MOEX_POPULAR_BONDS = [
   ['SU26246RMFS7','ОФЗ 26246 · 2036'],['SU26247RMFS5','ОФЗ 26247 · 2039'],['SU26248RMFS3','ОФЗ 26248 · 2040'],
   ['SU26250RMFS8','ОФЗ 26250 · 2037'],['SU26251RMFS6','ОФЗ 26251 · 2041'],
 ].map(([symbol,name])=>({symbol,name,currency:'RUB',quoteSource:'moex',marketSource:'moex',category:'bond'}));
+
+function currencyCode(value) {
+  const code=String(value||'RUB').toUpperCase();
+  return CURRENCY_MAP[code]||code;
+}
+
+function tableIndex(table) {
+  return Object.fromEntries((table?.columns||[]).map((name,index)=>[String(name).toUpperCase(),index]));
+}
+
+function validMoexSymbol(value) {
+  return /^[A-Z0-9-]{1,24}$/.test(String(value||'').toUpperCase());
+}
+
+export function normalizeMoexCatalog(payload, category) {
+  const table=payload.securities||{}, index=tableIndex(table);
+  const items=(table.data||[]).flatMap(row=>{
+    const symbol=String(row[index.SECID]||'').toUpperCase();
+    const status=String(row[index.STATUS]||'').toUpperCase();
+    const securityType=String(row[index.SECTYPE]||'');
+    if(!validMoexSymbol(symbol)||status!=='A') return [];
+    const isEtf=securityType==='J';
+    if(category==='stock'&&isEtf||category==='etf'&&!isEtf) return [];
+    if(category==='bond') {
+      const bondType=String(row[index.BONDTYPE]||'');
+      const name=String(row[index.SECNAME]||row[index.SHORTNAME]||symbol);
+      const bondGroup=/муницип|субъект|регион/i.test(bondType+' '+name)?'municipal':/^SU\d/i.test(symbol)||/ОФЗ/i.test(name)?'ofz':'corporate';
+      const maturity=String(row[index.MATDATE]||'');
+      const maturityLabel=/^\d{4}-\d\d-\d\d$/.test(maturity)&&maturity!=='0000-00-00'?` · ${maturity.slice(0,4)}`:'';
+      return [{symbol,name:`${row[index.SHORTNAME]||name}${maturityLabel}`,currency:currencyCode(row[index.CURRENCYID]||row[index.FACEUNIT]),quoteSource:'moex',marketSource:'moex',category:'bond',isin:String(row[index.ISIN]||''),bondGroup}];
+    }
+    const name=String(row[index.SHORTNAME]||row[index.SECNAME]||symbol);
+    return [{symbol,name,currency:currencyCode(row[index.CURRENCYID]||row[index.FACEUNIT]),quoteSource:'moex',marketSource:'moex',category:isEtf?'etf':'stock',isin:String(row[index.ISIN]||''),exchange:'MOEX'}];
+  });
+  return [...new Map(items.map(item=>[item.symbol,item])).values()].sort((a,b)=>a.symbol.localeCompare(b.symbol,'ru'));
+}
+
+export function loadMoexCatalog(category) {
+  const market=category==='bond'?'bonds':'shares';
+  const key=category==='bond'?'bond':category==='etf'?'etf':'stock';
+  if(!catalogRequests.has(market)) {
+    const url=new URL(`${API}/engines/stock/markets/${market}/securities.json`);
+    url.searchParams.set('iss.meta','off');
+    url.searchParams.set('iss.only','securities');
+    url.searchParams.set('securities.columns',market==='bonds'
+      ? 'SECID,SHORTNAME,STATUS,MATDATE,ISIN,SECTYPE,CURRENCYID,FACEUNIT,BONDTYPE,BONDSUBTYPE,SECNAME'
+      : 'SECID,SHORTNAME,STATUS,ISIN,SECTYPE,CURRENCYID,FACEUNIT,SECNAME');
+    const request=makeRequest(url).catch(error=>{catalogRequests.delete(market);throw error;});
+    catalogRequests.set(market,request);
+  }
+  return catalogRequests.get(market).then(payload=>normalizeMoexCatalog(payload,key));
+}
 
 function makeRequest(url, signal) {
   const controller = new AbortController();
@@ -67,12 +120,12 @@ export async function fetchMoexCurrency(category, symbol, signal) {
   url.searchParams.set('iss.meta','off');
   url.searchParams.set('iss.only','boards');
   const response=await makeRequest(url,signal);
-  const table=response.boards||{}, columns=table.columns||[];
-  const index=Object.fromEntries(columns.map((name,i)=>[name.toLowerCase(),i]));
-  const primaryBoard=category==='bond'?'TQOB':'TQBR';
-  const board=(table.data||[]).find(row=>row[index.boardid]===primaryBoard&&Number(row[index.is_primary])===1)
-    ||(table.data||[]).find(row=>row[index.boardid]===primaryBoard);
-  const raw=String(board?.[index.currencyid]||'RUB').toUpperCase();
+  const table=response.boards||{}, index=tableIndex(table);
+  const priorities=category==='bond'?['TQOB','TQCB','TQIR','TQOD','SPOB']:category==='etf'?['TQTF','TQBR','TQTD']:['TQBR','SMAL','SPEQ'];
+  const boards=table.data||[];
+  const board=priorities.map(id=>boards.find(row=>row[index.BOARDID]===id&&Number(row[index.IS_PRIMARY])===1)||boards.find(row=>row[index.BOARDID]===id)).find(Boolean)
+    ||boards.find(row=>Number(row[index.IS_PRIMARY])===1);
+  const raw=String(board?.[index.CURRENCYID]||'RUB').toUpperCase();
   return CURRENCY_MAP[raw]||null;
 }
 
@@ -99,23 +152,24 @@ function bondCashPrice(marketPrice, faceValue, accruedInterest) {
 
 export function normalizeMoexQuotes(payload, market, now=Date.now()) {
   const securities=payload.securities||{}, marketdata=payload.marketdata||{};
-  const secIndex=Object.fromEntries((securities.columns||[]).map((key,i)=>[key.toUpperCase(),i]));
-  const mdIndex=Object.fromEntries((marketdata.columns||[]).map((key,i)=>[key.toUpperCase(),i]));
-  const terms=new Map((securities.data||[]).map(row=>[String(row[secIndex.SECID]||'').toUpperCase(),row]));
+  const secIndex=tableIndex(securities), mdIndex=tableIndex(marketdata);
+  const terms=new Map((securities.data||[]).map(row=>[`${String(row[secIndex.SECID]||'').toUpperCase()}|${String(row[secIndex.BOARDID]||'')}`,row]));
   const quotes={};
+  const priority=market==='bonds'?['TQOB','TQCB','TQIR','TQOD','SPOB','TQOE']:['TQBR','SMAL','SPEQ','TQTF','TQTD'];
   for(const row of marketdata.data||[]) {
     const symbol=String(row[mdIndex.SECID]||'').toUpperCase();
     const board=String(row[mdIndex.BOARDID]||'');
-    if(!symbol||board!==(market==='bonds'?'TQOB':'TQBR')) continue;
-    const details=terms.get(symbol)||[];
+    if(!symbol||!validMoexSymbol(symbol)||!priority.includes(board)) continue;
+    const details=terms.get(`${symbol}|${board}`)||[];
     const rawPrice=row[mdIndex.MARKETPRICE]??row[mdIndex.LAST]??row[mdIndex.CLOSEPRICE]??details[secIndex.PREVPRICE];
-    const currencyId=String(details[secIndex.CURRENCYID]||details[secIndex.FACEUNIT]||'RUB').toUpperCase();
-    const currency=CURRENCY_MAP[currencyId]||currencyId;
+    const currency=currencyCode(details[secIndex.CURRENCYID]||details[secIndex.FACEUNIT]);
     let price=decimalToScaled(rawPrice);
     if(market==='bonds') price=bondCashPrice(rawPrice,details[secIndex.FACEVALUE],details[secIndex.ACCRUEDINT]);
     const at=dateFromMoex(row[mdIndex.SYSTIME]||row[mdIndex.UPDATETIME]);
     if(price===null||price<=0n||!at||at>now+5*60_000) continue;
-    quotes[symbol]={price:scaledToString(price,MONEY_SCALE),currency,at,transport:'moex-delay',market};
+    const previous=quotes[symbol];
+    const rank=priority.indexOf(board), previousRank=previous?priority.indexOf(previous.board):Infinity;
+    if(!previous||rank<previousRank||rank===previousRank&&at>previous.at) quotes[symbol]={price:scaledToString(price,MONEY_SCALE),currency,at,transport:'moex-delay',market,board};
   }
   return quotes;
 }

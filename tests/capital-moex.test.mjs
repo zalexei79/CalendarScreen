@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MOEX_POPULAR_BONDS, MOEX_POPULAR_STOCKS, normalizeMoexQuotes, searchMoexSecurities } from '../src/features/capital/moexMarket.js';
+import { MOEX_POPULAR_BONDS, MOEX_POPULAR_STOCKS, normalizeMoexCatalog, normalizeMoexQuotes, searchMoexSecurities } from '../src/features/capital/moexMarket.js';
 import { resolveCurrentPrice } from '../src/features/capital/capitalPricing.js';
 import { isMoexQuoteFresh } from '../src/features/capital/quoteStatus.js';
 import { MONEY_SCALE, parseScaled } from '../src/features/capital/decimal.js';
@@ -39,6 +39,42 @@ test('MOEX catalog search uses active Russian securities and exposes stock and b
     assert.equal(results[0].currency,'RUB');
     assert.equal(results[0].quoteSource,'moex');
   } finally { globalThis.fetch=oldFetch; }
+});
+
+test('full MOEX directory separates traded shares, ETFs and bonds and drops inactive securities', () => {
+  const columns=['SECID','SHORTNAME','STATUS','MATDATE','ISIN','SECTYPE','CURRENCYID','FACEUNIT','BONDTYPE','BONDSUBTYPE','SECNAME'];
+  const shares={securities:{columns,data:[
+    ['SBER','Сбербанк','A',null,'RU0009029540','1','SUR','SUR',null,null,'Сбербанк ао'],
+    ['SBER','Сбербанк','A',null,'RU0009029540','1','SUR','SUR',null,null,'Сбербанк ао'],
+    ['SBMX','SBMX ETF','A',null,'RU000A0ZZH92','J','SUR','SUR',null,null,'БПИФ Первая'],
+    ['OLD','Старая акция','D',null,'RU0000000000','1','SUR','SUR',null,null,'Архивная'],
+  ]}};
+  const bonds={securities:{columns,data:[
+    ['SU26254RMFS1','ОФЗ 26254','A','2040-10-03','RU000A10D533','3','SUR','SUR','Облигация федерального займа','До погашения','ОФЗ-ПД'],
+    ['RU000A10AAA1','Регион 1','A','2030-01-01','RU000A10AAA1','3','RUB','RUB','Облигация субъекта РФ','Региональная','Облигация региона'],
+  ]}};
+  const stocks=normalizeMoexCatalog(shares,'stock');
+  const etfs=normalizeMoexCatalog(shares,'etf');
+  const bondItems=normalizeMoexCatalog(bonds,'bond');
+  assert.deepEqual(stocks.map(item=>item.symbol),['SBER']);
+  assert.deepEqual(etfs.map(item=>item.symbol),['SBMX']);
+  assert.equal(bondItems.length,2);
+  assert.equal(bondItems.find(item=>item.symbol==='SU26254RMFS1').bondGroup,'ofz');
+  assert.equal(bondItems.find(item=>item.symbol==='RU000A10AAA1').bondGroup,'municipal');
+  assert.equal(bondItems.find(item=>item.symbol==='SU26254RMFS1').currency,'RUB');
+});
+
+test('MOEX prices use primary boards for Russian corporate bonds and ETFs as well as blue chips', () => {
+  const securities={columns:['SECID','BOARDID','PREVPRICE','FACEVALUE','ACCRUEDINT','CURRENCYID','FACEUNIT'],data:[
+    ['RU000A10AAA1','TQCB','98.5','1000','12.2','SUR','SUR'],
+    ['SBMX','TQTF','120','1',null,'SUR','SUR'],
+  ]};
+  const marketdata={columns:['SECID','BOARDID','LAST','MARKETPRICE','CLOSEPRICE','SYSTIME','UPDATETIME'],data:[
+    ['RU000A10AAA1','TQCB',null,'98.5',null,'2026-10-10 07:15:09','07:15:09'],
+    ['SBMX','TQTF',null,'120',null,'2026-10-10 07:15:09','07:15:09'],
+  ]};
+  assert.equal(normalizeMoexQuotes({securities,marketdata},'bonds',NOW).RU000A10AAA1.price,'997.2');
+  assert.equal(normalizeMoexQuotes({securities,marketdata},'shares',NOW).SBMX.price,'120');
 });
 
 test('MOEX quote resolution requires matching currency and marks quotes stale after the exchange session ages out', () => {

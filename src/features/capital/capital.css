@@ -223,6 +223,15 @@
 .capital-picker-results button i{flex:none;color:#e5c783;font-size:8px;font-style:normal;font-weight:700;letter-spacing:.05em}
 .capital-light .capital-market-tabs button.is-active{color:#866720}
 @media(max-width:640px){.capital-market-tabs{margin-bottom:14px}.capital-market-tabs button{min-height:35px;font-size:10px}}
+.capital-catalog-action{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;margin:8px 0;padding:11px 12px;border:1px solid color-mix(in srgb,var(--cap-gold) 32%,var(--cap-line));border-radius:12px;background:color-mix(in srgb,var(--cap-gold) 6%,var(--cap-surface));color:var(--cap-text);font:inherit;text-align:left;cursor:pointer}
+.capital-catalog-action span{font-size:11px;font-weight:700}.capital-catalog-action b{color:var(--cap-gold);font-size:9px;font-weight:650}
+.capital-catalog-filters{display:flex;gap:6px;overflow-x:auto;margin:8px 0;padding:2px 1px 5px;scrollbar-width:none}.capital-catalog-filters::-webkit-scrollbar{display:none}
+.capital-catalog-filters button{flex:none;min-height:29px;padding:0 10px;border:1px solid var(--cap-line);border-radius:999px;background:transparent;color:var(--cap-muted);font:inherit;font-size:9px;white-space:nowrap;cursor:pointer}
+.capital-catalog-filters button.is-active{border-color:color-mix(in srgb,var(--cap-gold) 45%,var(--cap-line));background:color-mix(in srgb,var(--cap-gold) 10%,transparent);color:var(--cap-gold)}
+.capital-catalog-count{margin:8px 1px;color:var(--cap-muted);font-size:9px;letter-spacing:.02em}
+.capital-catalog-more{display:block;width:100%;margin:7px 0 0;padding:10px;border:1px solid var(--cap-line);border-radius:11px;background:color-mix(in srgb,var(--cap-surface) 70%,transparent);color:var(--cap-gold);font:inherit;font-size:10px;font-weight:700;cursor:pointer}
+.capital-light .capital-catalog-action{background:rgba(214,169,79,.08);color:#26354a}.capital-light .capital-catalog-filters button.is-active{color:#866720}
+@media(max-width:640px){.capital-catalog-filters{margin-inline:-2px}.capital-catalog-action{padding:10px}.capital-catalog-action span{font-size:10px}}
 .capital-light .capital-range-selector button{background:rgba(49,75,105,.07);color:#64748a}
 .capital-light .capital-range-selector button.is-active{background:rgba(37,159,128,.14);color:#18856b}
 .capital-light .capital-chart-gridline{stroke:rgba(42,64,92,.16)}
