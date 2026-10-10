@@ -1,4 +1,4 @@
-import { calculateReturnPercent, MONEY_SCALE, multiplyScaled, parseScaled, QUANTITY_SCALE } from './decimal.js';
+import { calculateReturnPercent, MONEY_SCALE, multiplyScaled, parseScaled, QUANTITY_SCALE, scaledToString } from './decimal.js';
 import { currencyRateOn } from './currencyRates.js';
 
 const RANGE_DAYS = { week: 7, month: 30, quarter: 90, year: 365 };
@@ -72,6 +72,72 @@ export function filterPortfolioSnapshots(rows, range = 'all', today = new Date()
   cutoff.setUTCDate(cutoff.getUTCDate() - days + 1);
   const dateKey = cutoff.toISOString().slice(0, 10);
   return valid.filter(row => row.sampled_on >= dateKey).sort((a, b) => a.sampled_on.localeCompare(b.sampled_on));
+}
+
+// Build one honest portfolio series in the app's base currency. Each point is
+// derived only from saved valuations; missing or stale currency snapshots are
+// left out instead of being filled with invented prices.
+export function buildConsolidatedPortfolioSnapshots(snapshots, currencies, fxSeries = {}, targetCurrency = 'USD') {
+  const included = [...new Set(currencies)].filter(code => code !== 'USDT');
+  if (!included.length) return [];
+  const byCurrency = new Map();
+  for (const row of snapshots || []) {
+    if (!included.includes(row.currency) || !/^\d{4}-\d{2}-\d{2}$/.test(String(row.sampled_on || ''))) continue;
+    const rows = byCurrency.get(row.currency) || [];
+    rows.push(row);
+    byCurrency.set(row.currency, rows);
+  }
+  if (included.some(code => !byCurrency.has(code))) return [];
+  for (const rows of byCurrency.values()) rows.sort((a, b) => a.sampled_on.localeCompare(b.sampled_on));
+  const dates = [...new Set([...byCurrency.values()].flatMap(rows => rows.map(row => row.sampled_on)))].sort();
+  return dates.flatMap(date => {
+    let total = 0n;
+    for (const code of included) {
+      const row = byCurrency.get(code).filter(item => item.sampled_on <= date).at(-1);
+      if (!row) return [];
+      const age = Date.parse(`${date}T00:00:00Z`) - Date.parse(`${row.sampled_on}T00:00:00Z`);
+      if (age < 0 || age > 7 * 86_400_000) return [];
+      const rate = currencyRateOn(fxSeries, code, targetCurrency, date);
+      if (!rate) return [];
+      total += multiplyScaled(parseScaled(row.portfolio_value, MONEY_SCALE), MONEY_SCALE, rate, MONEY_SCALE);
+    }
+    return [{ sampled_on: date, currency: targetCurrency, portfolio_value: scaledToString(total, MONEY_SCALE) }];
+  });
+}
+
+export function buildPortfolioReturnSeries(snapshots, operations, fxSeries = {}, targetCurrency = 'USD') {
+  const sorted = (snapshots || []).slice().sort((a, b) => a.sampled_on.localeCompare(b.sampled_on));
+  if (!sorted.length) return [];
+  const indexBase = 100n * 10n ** BigInt(MONEY_SCALE);
+  let index = indexBase;
+  const output = [{ ...sorted[0], portfolio_value: scaledToString(index, MONEY_SCALE) }];
+  for (let i = 1; i < sorted.length; i++) {
+    const start = sorted[i - 1], end = sorted[i];
+    const startValue = parseScaled(start.portfolio_value, MONEY_SCALE);
+    const endValue = parseScaled(end.portfolio_value, MONEY_SCALE);
+    const startTime = Date.parse(`${start.sampled_on}T00:00:00Z`);
+    const endTime = Date.parse(`${end.sampled_on}T00:00:00Z`);
+    const span = Math.max(1, Math.round((endTime - startTime) / 86_400_000));
+    let buys = 0n, sales = 0n, dividends = 0n, weightedFlows = 0n;
+    for (const row of operations || []) {
+      if (row.occurred_on <= start.sampled_on || row.occurred_on > end.sampled_on) continue;
+      if (row.operation === 'revalue') continue;
+      const rate = currencyRateOn(fxSeries, row.currency, targetCurrency, row.occurred_on);
+      if (!rate) continue;
+      const amount = multiplyScaled(multiplyScaled(parseScaled(row.quantity || '0', QUANTITY_SCALE), QUANTITY_SCALE, parseScaled(row.unit_price || '0', MONEY_SCALE)), MONEY_SCALE, rate);
+      const fee = multiplyScaled(parseScaled(row.fee || '0', MONEY_SCALE), MONEY_SCALE, rate);
+      const flowDate = Date.parse(`${row.occurred_on}T00:00:00Z`);
+      const weight = BigInt(Math.max(0, Math.min(span, Math.round((endTime - flowDate) / 86_400_000))));
+      if (row.operation === 'buy') { const flow = amount + fee; buys += flow; weightedFlows += flow * weight / BigInt(span); }
+      else if (row.operation === 'sell') { const flow = amount - fee; sales += flow; weightedFlows -= flow * weight / BigInt(span); }
+      else if (row.operation === 'dividend') dividends += amount - fee;
+    }
+    const basis = startValue + weightedFlows;
+    const periodReturn = calculateReturnPercent(endValue - startValue - buys + sales + dividends, basis);
+    if (periodReturn !== null) index = multiplyScaled(index, MONEY_SCALE, 10_000n + periodReturn, 4);
+    output.push({ ...end, portfolio_value: scaledToString(index, MONEY_SCALE) });
+  }
+  return output;
 }
 
 export function buildPortfolioChart(rows) {
