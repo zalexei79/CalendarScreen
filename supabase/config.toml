@@ -2,6 +2,3 @@
 # Device requests use a scoped, revocable credential, not a Supabase JWT.
 # The function checks Google/Supabase JWTs for pairing and device hashes for turns.
 verify_jwt = false
-
-[functions.capital-quotes]
-verify_jwt = true

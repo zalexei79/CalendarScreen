@@ -275,8 +275,7 @@
 .capital-heading-actions{display:flex;align-items:center;gap:8px;flex:none}
 .capital-quote-connect{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:0 12px;border:1px solid color-mix(in srgb,var(--cap-gold) 35%,var(--cap-line));border-radius:14px;background:color-mix(in srgb,var(--cap-gold) 7%,var(--cap-surface));color:var(--cap-gold);font:inherit;font-size:11px;font-weight:650;white-space:nowrap;cursor:pointer;transition:background .16s,border-color .16s}
 .capital-quote-connect:hover{border-color:color-mix(in srgb,var(--cap-gold) 65%,var(--cap-line));background:color-mix(in srgb,var(--cap-gold) 12%,var(--cap-surface))}
-.capital-tiingo-link{display:inline-block;margin:4px 0 8px;color:var(--cap-gold);font-size:11px;font-weight:650;text-decoration:none}
-.capital-tiingo-link:hover,.capital-disclaimer a:hover{text-decoration:underline}
+.capital-disclaimer a:hover{text-decoration:underline}
 .capital-disclaimer a{color:var(--cap-gold)}
 .capital-overview{background:linear-gradient(125deg,color-mix(in srgb,var(--cap-gold) 12%,var(--cap-surface)),var(--cap-surface) 62%);box-shadow:0 16px 42px rgba(0,0,0,.1)}
 .capital-total{gap:9px}

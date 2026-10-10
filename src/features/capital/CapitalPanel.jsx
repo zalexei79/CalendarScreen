@@ -1,16 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Bitcoin, BriefcaseBusiness, Building2, ChartNoAxesCombined, CircleDollarSign, Coins, KeyRound, Landmark, Plus, RefreshCw, Search, Wallet, X } from 'lucide-react';
+import { ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Bitcoin, BriefcaseBusiness, Building2, ChartNoAxesCombined, CircleDollarSign, Coins, Landmark, Plus, RefreshCw, Search, Wallet, X } from 'lucide-react';
 import { useCapitalPortfolio } from './useCapitalPortfolio';
 import { calculateDailyChange, calculateReturnPercent, formatMoney, MONEY_SCALE, multiplyScaled, parseScaled, QUANTITY_SCALE, scaledToString } from './decimal';
 import { useWalletExitGesture } from '../wallet/hooks/useWalletExitGesture';
 import SwipeDismissSheet from '../../shared/ui/SwipeDismissSheet.jsx';
-import { isGoldApiQuoteFresh, isQuoteFresh, isTiingoEodQuoteFresh } from './quoteStatus.js';
+import { isGoldApiQuoteFresh, isQuoteFresh } from './quoteStatus.js';
 import { resolveCurrentPrice } from './capitalPricing.js';
 import { getCatalog, loadBinanceSpotPairs, POPULAR_CRYPTO } from './assetCatalog.js';
 import { fetchGoldApiQuote, isGoldApiAsset } from './metalQuotes.js';
 import { loadCompanyCatalog } from './loadCompanyCatalog.js';
-import { clearTiingoQuoteCache, isTiingoEodAsset, normalizeTiingoEodQuote, readTiingoQuoteCache, readTiingoToken, TIINGO_EOD_REFRESH_MS, toTiingoSymbol, writeTiingoQuoteCache, writeTiingoToken } from './tiingoQuotes.js';
-import { supabase } from '../../supabaseClient';
 import { friendlyCapitalError } from './capitalErrors.js';
 import CapitalPerformanceChart from './CapitalPerformanceChart.jsx';
 import CapitalAssetHistoryChart from './CapitalAssetHistoryChart.jsx';
@@ -55,22 +53,10 @@ Object.assign(copy.ru,{today:'К оценке вчера',todayMethod:'Изме�
 Object.assign(copy.en,{today:'vs. yesterday',todayMethod:'Total value change; recorded trades are included.'});
 Object.assign(copy.ro,{today:'față de ieri',todayMethod:'Schimbarea valorii totale, inclusiv tranzacțiile.'});
 Object.assign(copy.zh,{today:'较昨日',todayMethod:'总价值变化，包含已记录交易。'});
-Object.assign(copy.ru,{eod:'EOD · Tiingo',tiingoButton:'Котировки акций',tiingoTitle:'Задержанные котировки акций и ETF',tiingoDescription:'Бесплатные дневные цены закрытия для поддерживаемых акций и ETF в USD.',tiingoTokenLabel:'Ваш личный API-токен Tiingo',tiingoTokenHelp:'Создайте бесплатный аккаунт Tiingo и используйте свой токен. Лимиты бесплатного плана: до 500 уникальных тикеров в месяц и 50 запросов в час.',tiingoTokenPrivacy:'Токен хранится только в текущем сеансе браузера и отправляется напрямую в защищённую функцию для запроса цены. DAYRIS его не сохраняет; для другого устройства подключите токен там отдельно.',tiingoTokenLink:'Получить бесплатный токен Tiingo',tiingoConnect:'Подключить Tiingo',tiingoDisconnect:'Удалить токен',tiingoSaved:'Токен проверен. Дневные котировки будут обновляться автоматически.',tiingoInvalid:'Не удалось проверить токен. Проверьте его и подключение к интернету.',tiingoRateLimit:'Лимит Tiingo временно исчерпан. Попробуйте позже.',tiingoAttribution:'Котировки акций и ETF — Tiingo, цена последнего закрытия рынка (EOD).',tiingoSignIn:'Войдите в DAYRIS, чтобы подключить источник котировок.'});
-Object.assign(copy.en,{eod:'EOD · Tiingo',tiingoButton:'Stock quotes',tiingoTitle:'Delayed stock and ETF quotes',tiingoDescription:'Free daily closing prices for supported USD stocks and ETFs.',tiingoTokenLabel:'Your personal Tiingo API token',tiingoTokenHelp:'Create a free Tiingo account and use your own token. Free tier limits: up to 500 unique symbols per month and 50 requests per hour.',tiingoTokenPrivacy:'The token stays in this browser session and is sent to a protected function only to request prices. DAYRIS does not store it; connect it separately on each device.',tiingoTokenLink:'Get a free Tiingo token',tiingoConnect:'Connect Tiingo',tiingoDisconnect:'Remove token',tiingoSaved:'Token verified. Daily quotes will refresh automatically.',tiingoInvalid:'Token could not be verified. Check it and your internet connection.',tiingoRateLimit:'Tiingo rate limit reached. Try again later.',tiingoAttribution:'Stock and ETF prices by Tiingo, at the latest market close (EOD).',tiingoSignIn:'Sign in to DAYRIS to connect a quote source.'});
-Object.assign(copy.ro,{eod:'EOD · Tiingo',tiingoButton:'Cotații acțiuni',tiingoTitle:'Cotații întârziate pentru acțiuni și ETF-uri',tiingoDescription:'Prețuri zilnice de închidere gratuite pentru acțiuni și ETF-uri USD acceptate.',tiingoTokenLabel:'Tokenul tău personal Tiingo',tiingoTokenHelp:'Creează un cont Tiingo gratuit și folosește propriul token. Limitele gratuite: până la 500 de simboluri unice pe lună și 50 de cereri pe oră.',tiingoTokenPrivacy:'Tokenul rămâne în sesiunea acestui browser și este trimis unei funcții protejate doar pentru a solicita prețuri. DAYRIS nu îl stochează; conectează-l separat pe fiecare dispozitiv.',tiingoTokenLink:'Obține un token Tiingo gratuit',tiingoConnect:'Conectează Tiingo',tiingoDisconnect:'Elimină tokenul',tiingoSaved:'Token verificat. Cotațiile zilnice se vor actualiza automat.',tiingoInvalid:'Tokenul nu a putut fi verificat. Verifică tokenul și conexiunea la internet.',tiingoRateLimit:'Limita Tiingo a fost atinsă. Încearcă mai târziu.',tiingoAttribution:'Prețuri pentru acțiuni și ETF-uri prin Tiingo, la ultima închidere a pieței (EOD).',tiingoSignIn:'Autentifică-te în DAYRIS pentru a conecta o sursă de cotații.'});
-Object.assign(copy.zh,{eod:'EOD · Tiingo',tiingoButton:'股票行情',tiingoTitle:'股票和 ETF 延迟行情',tiingoDescription:'为支持的美元股票和 ETF 提供免费每日收盘价。',tiingoTokenLabel:'您的个人 Tiingo API 令牌',tiingoTokenHelp:'创建免费的 Tiingo 账户并使用自己的令牌。免费额度：每月最多 500 个不同代码，每小时 50 次请求。',tiingoTokenPrivacy:'令牌仅保存在当前浏览器会话中，并只发送到受保护的函数以查询价格。DAYRIS 不会保存它；请在每台设备上单独连接。',tiingoTokenLink:'获取免费的 Tiingo 令牌',tiingoConnect:'连接 Tiingo',tiingoDisconnect:'移除令牌',tiingoSaved:'令牌已验证。每日行情将自动更新。',tiingoInvalid:'无法验证令牌。请检查令牌和网络连接。',tiingoRateLimit:'已达到 Tiingo 请求限制，请稍后重试。',tiingoAttribution:'股票和 ETF 行情由 Tiingo 提供，价格截至最近收盘（EOD）。',tiingoSignIn:'请登录 DAYRIS 以连接行情来源。'});
-Object.assign(copy.ru,{quoteDisclaimer:'Binance передаёт криптокотировки в реальном времени; Gold API обновляет ориентировочные спотовые цены металлов в USD. Для поддерживаемых акций и ETF доступны дневные цены закрытия Tiingo после подключения личного бесплатного токена. Недвижимость, вклады и другие активы оцениваются вручную.'});
-Object.assign(copy.en,{quoteDisclaimer:'Binance streams crypto quotes in real time; Gold API refreshes indicative metal spot prices in USD. Supported stocks and ETFs have daily Tiingo closing prices after you connect your own free token. Real estate, deposits, and other assets use manual valuations.'});
-Object.assign(copy.ro,{quoteDisclaimer:'Binance transmite cotații crypto în timp real; Gold API actualizează prețuri spot orientative pentru metale în USD. Acțiunile și ETF-urile acceptate au prețuri zilnice de închidere Tiingo după conectarea propriului token gratuit. Imobiliarele, depozitele și alte active folosesc evaluări manuale.'});
-Object.assign(copy.zh,{quoteDisclaimer:'Binance 实时提供加密货币行情；Gold API 更新以美元计价的参考金属现货价格。连接您自己的免费令牌后，Tiingo 可提供支持的股票和 ETF 每日收盘价。房地产、存款和其他资产采用手动估值。'});
-Object.assign(copy.ru,{tiingoSymbolLimit:'Лимит бесплатного тарифа Tiingo: 500 разных тикеров в месяц.'});
-Object.assign(copy.en,{tiingoSymbolLimit:'Tiingo free tier limit: 500 unique symbols per month.'});
-Object.assign(copy.ro,{tiingoSymbolLimit:'Limita planului gratuit Tiingo: 500 de simboluri unice pe lună.'});
-Object.assign(copy.zh,{tiingoSymbolLimit:'Tiingo 免费额度：每月 500 个不同代码。'});
-Object.assign(copy.ru,{tiingoUnavailable:'Источник Tiingo пока недоступен.',tiingoFunctionMissing:'Функция котировок не опубликована в Supabase. Нужно развернуть capital-quotes.',tiingoProRequired:'Для подключения источника нужен активный DAYRIS PRO.'});
-Object.assign(copy.en,{tiingoUnavailable:'The Tiingo source is currently unavailable.',tiingoFunctionMissing:'The quote function is not deployed in Supabase. Deploy capital-quotes to enable this source.',tiingoProRequired:'An active DAYRIS PRO plan is required to connect this source.'});
-Object.assign(copy.ro,{tiingoUnavailable:'Sursa Tiingo nu este disponibilă momentan.',tiingoFunctionMissing:'Funcția de cotații nu este publicată în Supabase. Publică capital-quotes pentru a activa sursa.',tiingoProRequired:'Este necesar un abonament DAYRIS PRO activ pentru această sursă.'});
-Object.assign(copy.zh,{tiingoUnavailable:'Tiingo 来源暂时不可用。',tiingoFunctionMissing:'Supabase 中尚未部署行情函数。请部署 capital-quotes 以启用此来源。',tiingoProRequired:'连接此行情来源需要有效的 DAYRIS PRO。'});
+Object.assign(copy.ru,{quoteDisclaimer:'Binance передаёт криптокотировки в реальном времени; Gold API обновляет ориентировочные цены металлов в USD. Акции, ETF, недвижимость, облигации, вклады и другие активы оцениваются вручную.'});
+Object.assign(copy.en,{quoteDisclaimer:'Binance streams crypto quotes in real time; Gold API refreshes indicative metal prices in USD. Stocks, ETFs, real estate, bonds, deposits, and other assets use manual valuations.'});
+Object.assign(copy.ro,{quoteDisclaimer:'Binance transmite cotații crypto în timp real; Gold API actualizează prețuri orientative pentru metale în USD. Acțiunile, ETF-urile, imobiliarele, obligațiunile, depozitele și alte active folosesc evaluări manuale.'});
+Object.assign(copy.zh,{quoteDisclaimer:'Binance 提供实时加密货币行情；Gold API 更新美元计价的参考金属价格。股票、ETF、房地产、债券、存款和其他资产使用手动估值。'});
 const icons = [ChartNoAxesCombined, ChartNoAxesCombined, Bitcoin, Coins, Building2, Landmark, CircleDollarSign, BriefcaseBusiness];
 const statCopy={ru:{average:'Средняя себестоимость',basis:'Себестоимость остатка',realized:'Реализовано',unrealized:'Нереализовано',total:'Общий результат',fees:'Комиссии'},en:{average:'Average cost',basis:'Remaining cost basis',realized:'Realized',unrealized:'Unrealized',total:'Total result',fees:'Fees'},ro:{average:'Cost mediu',basis:'Costul rămas',realized:'Realizat',unrealized:'Nerealizat',total:'Rezultat total',fees:'Comisioane'},zh:{average:'平均成本',basis:'剩余成本',realized:'已实现',unrealized:'未实现',total:'总收益',fees:'手续费'}};
 Object.assign(copy.ru,{unrealizedLead:'Нереализованная прибыль / убыток',relativeCost:'Относительно себестоимости остатка',currentValue:'Текущая стоимость',currentUnitPrice:'Цена за единицу',quantityUnit:'ед.',buyAction:'Купить',sellAction:'Продать',assetHistory:'История позиции',assetHistoryNote:'По сохранённым операциям · без подмены исторических котировок',assetHistoryEmpty:'График появится после первой операции.',costMode:'Себестоимость',quantityMode:'Количество',resultFormula:'Общий результат = реализованный + нереализованный. Комиссии уже учтены.'});
@@ -116,16 +102,10 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
   const [now,setNow] = useState(Date.now());
   const [opForm,setOpForm]=useState({operation:'sell',quantity:'',price:'',fee:'0',date:todayKey()});
   const [saveError,setSaveError]=useState('');
-  const [tiingoSymbolLimit,setTiingoSymbolLimit]=useState(false);
-  const [tiingoQuoteIssue,setTiingoQuoteIssue]=useState('');
-  const [quoteSettings,setQuoteSettings]=useState(false), [quoteTokenInput,setQuoteTokenInput]=useState(''), [quoteSetupError,setQuoteSetupError]=useState(''), [quoteSetupSaving,setQuoteSetupSaving]=useState(false);
-  const [tiingoTokenState,setTiingoTokenState]=useState(()=>({userId:user?.id||null,token:readTiingoToken(user?.id)}));
-  const currentUserId=user?.id||'';
-  const tiingoToken=tiingoTokenState.userId===currentUserId?tiingoTokenState.token:'';
   const snapshotAttempts=useRef(new Set());
   const quoteBuffer=useRef({});
   const portfolio = useCapitalPortfolio({ user });
-  const { surfaceRef } = useWalletExitGesture({ onExit: onBack, disabled: Boolean(composer || selected || quoteSettings), navigation: 'wallet' });
+  const { surfaceRef } = useWalletExitGesture({ onExit: onBack, disabled: Boolean(composer || selected), navigation: 'wallet' });
   useEffect(()=>{const id=window.setInterval(()=>setNow(Date.now()),5000);return()=>clearInterval(id);},[]);
 
   useEffect(()=>{
@@ -143,75 +123,11 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
   },[composer,form.category,companyCatalog]);
 
   useEffect(() => { const on=()=>setOnline(true), off=()=>setOnline(false); window.addEventListener('online',on); window.addEventListener('offline',off); return()=>{window.removeEventListener('online',on);window.removeEventListener('offline',off);}; },[]);
-  const pairs = useMemo(() => [...new Set(portfolio.assets.filter(a=>a.category==='crypto' && a.quote_source==='binance' && /^[A-Z0-9]{5,20}$/.test(a.symbol)).map(a=>a.symbol.toLowerCase()))], [portfolio.assets]);
+  const pairs = useMemo(() => [...new Set([
+    ...portfolio.assets.filter(a=>a.category==='crypto' && a.quote_source==='binance' && /^[A-Z0-9]{5,20}$/.test(a.symbol)).map(a=>a.symbol.toLowerCase()),
+    ...(composer && form.category==='crypto' && form.quoteSource==='binance' && /^[A-Z0-9]{5,20}$/.test(form.symbol) ? [form.symbol.toLowerCase()] : []),
+  ])], [portfolio.assets, composer, form.category, form.quoteSource, form.symbol]);
   const metalSymbols = useMemo(() => [...new Set(portfolio.assets.filter(isGoldApiAsset).map(asset=>asset.symbol.toUpperCase()))].sort(), [portfolio.assets]);
-  const tiingoAssets = useMemo(()=>portfolio.assets.filter(isTiingoEodAsset),[portfolio.assets]);
-  const tiingoSymbols = useMemo(()=>[...new Set(tiingoAssets.map(asset=>asset.symbol.toUpperCase()))].sort(),[tiingoAssets]);
-  useEffect(()=>{setTiingoTokenState({userId:user?.id||null,token:readTiingoToken(user?.id)});setTiingoQuoteIssue('');setQuotes(previous=>Object.fromEntries(Object.entries(previous).filter(([,quote])=>quote?.transport!=='tiingo-eod')));},[user?.id]);
-  useEffect(()=>{
-    if(!currentUserId||!tiingoSymbols.length) return;
-    let active=true, inFlight=false, retryTimer;
-    const cache=readTiingoQuoteCache(currentUserId);
-    const cachedQuotes=Object.fromEntries(Object.entries(cache.quotes).filter(([symbol,quote])=>tiingoSymbols.includes(symbol)&&quote?.transport==='tiingo-eod'));
-    if(Object.keys(cachedQuotes).length) setQuotes(previous=>({...Object.fromEntries(Object.entries(previous).filter(([,quote])=>quote?.transport!=='tiingo-eod')),...cachedQuotes}));
-    const refresh=async()=>{
-      if(!online||!tiingoToken||inFlight||!active) return;
-      inFlight=true;
-      setTiingoSymbolLimit(false);
-      try {
-        for(let index=0;index<tiingoSymbols.length;index++) {
-          if(!active) break;
-          const symbol=tiingoSymbols[index], priorAttempt=Number(cache.attemptedAt[symbol])||0;
-          if(Date.now()-priorAttempt<TIINGO_EOD_REFRESH_MS) continue;
-          const hourAgo=Date.now()-60*60_000;
-          cache.requestTimes=cache.requestTimes.filter(time=>time>hourAgo);
-          if(cache.requestTimes.length>=45) {
-            const retryIn=Math.max(1000,cache.requestTimes[0]+60*60_000-Date.now()+1500);
-            retryTimer=window.setTimeout(()=>void refresh(),retryIn);
-            writeTiingoQuoteCache(currentUserId,cache);
-            break;
-          }
-          const month=new Date().toISOString().slice(0,7);
-          const monthSymbols=Array.isArray(cache.symbolsByMonth[month])?cache.symbolsByMonth[month]:[];
-          if(!monthSymbols.includes(symbol)&&monthSymbols.length>=500) {
-            setTiingoSymbolLimit(true);
-            continue;
-          }
-          cache.requestTimes.push(Date.now());
-          if(!monthSymbols.includes(symbol)) cache.symbolsByMonth[month]=[...monthSymbols,symbol];
-          writeTiingoQuoteCache(currentUserId,cache);
-          try {
-            const {data,error}=await supabase.functions.invoke('capital-quotes',{body:{action:'quote',token:tiingoToken,symbol:toTiingoSymbol(symbol)}});
-            if(error||data?.error) {
-              const responseBody=await error?.context?.clone?.().json().catch(()=>null);
-              const errorCode=data?.error||responseBody?.error, status=error?.context?.status;
-              setTiingoQuoteIssue(status===404&&!errorCode?'missing':status===403||errorCode==='PRO_REQUIRED'?'pro':errorCode==='PROVIDER_RATE_LIMIT'?'rate':'unavailable');
-              const retryDelay=errorCode==='PROVIDER_RATE_LIMIT'?60*60_000:30*60_000;
-              cache.attemptedAt[symbol]=Date.now()-TIINGO_EOD_REFRESH_MS+retryDelay;
-            } else {
-              const quote=normalizeTiingoEodQuote([{date:data?.quote?.date,close:data?.quote?.price}],symbol);
-              if(!quote) throw new Error('Invalid EOD quote');
-              setTiingoQuoteIssue('');
-              cache.quotes[symbol]=quote;
-              cache.attemptedAt[symbol]=Date.now();
-              if(active) {
-                setQuotes(previous=>({...previous,[symbol]:quote}));
-                setLastQuote(previous=>Math.max(Number(previous)||0,quote.at));
-              }
-            }
-          } catch {
-            setTiingoQuoteIssue('unavailable');
-            cache.attemptedAt[symbol]=Date.now()-TIINGO_EOD_REFRESH_MS+30*60_000;
-          }
-          writeTiingoQuoteCache(currentUserId,cache);
-          if(index<tiingoSymbols.length-1&&active) await new Promise(resolve=>window.setTimeout(resolve,1250));
-        }
-      } finally { inFlight=false; }
-    };
-    void refresh();
-    const timer=window.setInterval(()=>void refresh(),TIINGO_EOD_REFRESH_MS);
-    return()=>{active=false;window.clearInterval(timer);window.clearTimeout(retryTimer);};
-  },[currentUserId,tiingoToken,tiingoSymbols.join('|'),online]);
   useEffect(()=>{
     if(!online||!metalSymbols.length) return;
     const controller=new AbortController(); let active=true, inFlight=false;
@@ -278,6 +194,20 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
     return price===null?null:parseScaled(price,MONEY_SCALE);
   };
   const selectedPrice=selected?priceFor(selected):null;
+  const openOperation = operation => {
+    const quote = selected && quotes[selected.symbol];
+    const quoteIsUsable = selected?.quote_source === 'binance'
+      ? quote && isQuoteFresh(quote, now)
+      : isGoldApiAsset(selected) ? quote && isGoldApiQuoteFresh(quote, now)
+      : selected?.quote_source === 'manual' && selectedPrice !== null;
+    const price = quoteIsUsable && selectedPrice !== null ? scaledToString(selectedPrice, MONEY_SCALE) : '';
+    setOpForm({ operation, quantity:'', price, fee:'0', date:todayKey() });
+  };
+  useEffect(()=>{
+    if(!composer || !assetSelection || form.quoteSource!=='binance' || !form.symbol || form.purchasePrice) return;
+    const quote=quotes[form.symbol];
+    if(quote && isQuoteFresh(quote,now)) setForm(current=>current.purchasePrice?current:{...current,purchasePrice:quote.price,price:current.price||quote.price});
+  },[composer,assetSelection,form.quoteSource,form.symbol,form.purchasePrice,quotes,now]);
   const selectedValue=selectedPrice===null?null:multiplyScaled(selected.quantity,QUANTITY_SCALE,selectedPrice,MONEY_SCALE);
   const selectedUnrealized=selectedValue===null?null:selectedValue-selected.invested;
   const selectedTotalResult=selectedUnrealized===null?null:selectedUnrealized+selected.realized;
@@ -300,27 +230,17 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
   const visible = filter||assetsExpanded?filteredAssets:filteredAssets.slice(0,4);
   const hasBinanceAssets = pairs.length > 0;
   const hasGoldApiAssets = metalSymbols.length > 0;
-  const hasTiingoAssets = tiingoSymbols.length > 0;
   const allPairsFresh = hasBinanceAssets && pairs.every(pair=>quotes[pair.toUpperCase()]?.transport==='websocket'&&isQuoteFresh(quotes[pair.toUpperCase()],now));
   const allPairsRecent = hasBinanceAssets && pairs.every(pair=>isQuoteFresh(quotes[pair.toUpperCase()],now));
   const allMetalsFresh = hasGoldApiAssets && metalSymbols.every(symbol=>isGoldApiQuoteFresh(quotes[symbol],now));
-  const allTiingoFresh = hasTiingoAssets && tiingoSymbols.every(symbol=>isTiingoEodQuoteFresh(quotes[symbol],now));
   const latestManualUpdate = portfolio.assets.reduce((latest,asset)=>asset.quote_source==='manual'&&asset.updated_at&&(!latest||asset.updated_at>latest)?asset.updated_at:latest,null);
   const displayTime = value => value ? new Date(value).toLocaleString(locale==='zh'?'zh-CN':locale) : '';
   const displayQuoteTime = value => value ? new Date(value).toLocaleTimeString(locale==='zh'?'zh-CN':locale,{hour:'2-digit',minute:'2-digit'}) : '';
-  const displayQuoteDate = value => value ? new Date(`${String(value).slice(0,10)}T12:00:00`).toLocaleDateString(locale==='zh'?'zh-CN':locale) : '';
   const quoteSummary = !online ? t.offline : [
     hasBinanceAssets ? allPairsFresh ? t.live : allPairsRecent ? t.quoteSnapshot : lastQuote ? `${t.stale} · ${displayQuoteTime(lastQuote)}` : t.pending : null,
     hasGoldApiAssets ? allMetalsFresh ? t.spot : metalSymbols.some(symbol=>quotes[symbol]) ? `${t.stale} · ${displayQuoteTime(Math.min(...metalSymbols.map(symbol=>Number(quotes[symbol]?.at)||Infinity)))}` : t.pending : null,
-    hasTiingoAssets ? allTiingoFresh ? `${t.eod} · ${displayQuoteDate(tiingoSymbols.map(symbol=>quotes[symbol]?.date).filter(Boolean).sort().at(-1))}` : tiingoQuoteIssue ? (tiingoQuoteIssue==='missing'?t.tiingoFunctionMissing:tiingoQuoteIssue==='pro'?t.tiingoProRequired:tiingoQuoteIssue==='rate'?t.tiingoRateLimit:t.tiingoUnavailable) : tiingoSymbols.some(symbol=>quotes[symbol]) ? `${t.stale} · Tiingo` : tiingoToken ? t.pending : t.tiingoConnect : null,
   ].filter(Boolean).join(' · ') || `${t.manual}${latestManualUpdate?` · ${t.updated} ${displayTime(latestManualUpdate)}`:''}`;
   const quoteLabel = (asset, quote) => {
-    if (isTiingoEodAsset(asset)) {
-      if (!online) return `${t.offline}${quote?.date?` · ${displayQuoteDate(quote.date)}`:''}`;
-      if (!tiingoToken&&!quote) return t.tiingoConnect;
-      if (!quote) return tiingoQuoteIssue==='missing'?t.tiingoFunctionMissing:tiingoQuoteIssue==='pro'?t.tiingoProRequired:tiingoQuoteIssue==='rate'?t.tiingoRateLimit:tiingoQuoteIssue?t.tiingoUnavailable:t.pending;
-      return `${isTiingoEodQuoteFresh(quote,now)?t.eod:t.stale} · ${displayQuoteDate(quote.date)}`;
-    }
     if (isGoldApiAsset(asset)) {
       if (!online) return `${t.offline}${quote?.at?` · ${displayQuoteTime(quote.at)}`:''}`;
       if (!quote) return t.pending;
@@ -345,7 +265,6 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
       if(snapshotAttempts.current.has(key)||portfolio.snapshots.some(item=>item.currency===code&&item.sampled_on===snapshotDate)) continue;
       if(portfolio.assets.some(asset=>asset.currency===code&&asset.quote_source==='binance')&&!portfolio.assets.filter(asset=>asset.currency===code&&asset.quote_source==='binance').every(asset=>isQuoteFresh(quotes[asset.symbol],now))) continue;
       if(portfolio.assets.some(asset=>asset.currency===code&&isGoldApiAsset(asset))&&!portfolio.assets.filter(asset=>asset.currency===code&&isGoldApiAsset(asset)).every(asset=>isGoldApiQuoteFresh(quotes[asset.symbol],now))) continue;
-      if(tiingoToken&&portfolio.assets.some(asset=>asset.currency===code&&isTiingoEodAsset(asset))&&!portfolio.assets.filter(asset=>asset.currency===code&&isTiingoEodAsset(asset)).every(asset=>isTiingoEodQuoteFresh(quotes[asset.symbol],now))) continue;
       snapshotAttempts.current.add(key);
       portfolio.recordSnapshot(code,value,snapshotDate).catch(error=>console.warn('[capital] daily snapshot failed:',error.message));
     }
@@ -372,44 +291,11 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
   const changeCategory=category=>{setAssetSelection(null);setAssetSearch('');setForm(current=>({...current,category,name:'',symbol:'',currency:category==='crypto'?'USDT':category==='stock'||category==='etf'?'USD':current.currency,quoteSource:category==='crypto'?'binance':'manual',quantity:'',purchasePrice:'',price:'',fee:'0'}));};
   const submit=async(event)=>{event.preventDefault();if(saving)return;setSaving(true);setSaveError('');try{if(!assetSelection)throw new Error(t.noAssetsFound);if(assetSelection.custom&&form.category==='crypto'&&form.quoteSource==='binance')await verifyBinanceSpotPair(form.symbol);await portfolio.addAsset({...form,price:form.price||form.purchasePrice,quoteSource:form.category==='crypto'?form.quoteSource:'manual'});setComposer(false);setAssetSelection(null);setAssetSearch('');setForm({...form,name:'',symbol:'',quantity:'',purchasePrice:'',price:'',fee:'0',date:todayKey()});}catch(error){setSaveError(friendlyCapitalError(error,locale,t));}finally{setSaving(false);}};
   const saveOperation=async(event)=>{event.preventDefault();if(saving)return;setSaving(true);setSaveError('');try{await portfolio.addOperation(selected,opForm);setSelected(null);setOpForm({operation:'sell',quantity:'',price:'',fee:'0',date:todayKey()});}catch(error){setSaveError(friendlyCapitalError(error,locale,t));}finally{setSaving(false);}};
-  const saveTiingoToken=async event=>{
-    event.preventDefault();
-    if(!currentUserId){setQuoteSetupError(t.tiingoSignIn);return;}
-    const token=quoteTokenInput.trim();
-    if(!token){setQuoteSetupError(t.tiingoInvalid);return;}
-    setQuoteSetupSaving(true);setQuoteSetupError('');
-    try {
-      const {data,error}=await supabase.functions.invoke('capital-quotes',{body:{action:'verify',token}});
-      if(error) {
-        const responseBody=await error.context?.clone?.().json().catch(()=>null);
-        const code=data?.error||responseBody?.error;
-        if(error.context?.status===404&&!code) throw new Error('FUNCTION_MISSING');
-        if(error.context?.status===403||code==='PRO_REQUIRED') throw new Error('PRO_REQUIRED');
-        if(code==='PROVIDER_RATE_LIMIT') throw new Error('PROVIDER_RATE_LIMIT');
-        throw new Error(code||'TOKEN_VERIFY_FAILED');
-      }
-      if(data?.error||!data?.ok) throw new Error(data?.error||'TOKEN_VERIFY_FAILED');
-      writeTiingoToken(currentUserId,token);
-      const cache=readTiingoQuoteCache(currentUserId);
-      writeTiingoQuoteCache(currentUserId,{...cache,attemptedAt:{}});
-      setTiingoTokenState({userId:currentUserId,token});setTiingoQuoteIssue('');
-      setQuoteTokenInput('');setQuoteSettings(false);
-    } catch(error) {
-      setQuoteSetupError(error?.message==='PROVIDER_RATE_LIMIT'?t.tiingoRateLimit:error?.message==='FUNCTION_MISSING'?t.tiingoFunctionMissing:error?.message==='PRO_REQUIRED'?t.tiingoProRequired:t.tiingoInvalid);
-    } finally {setQuoteSetupSaving(false);}
-  };
-  const disconnectTiingo=()=>{
-    if(!currentUserId)return;
-    writeTiingoToken(currentUserId,'');clearTiingoQuoteCache(currentUserId);
-    setTiingoTokenState({userId:currentUserId,token:''});
-    setQuotes(previous=>Object.fromEntries(Object.entries(previous).filter(([,quote])=>quote?.transport!=='tiingo-eod')));
-    setQuoteTokenInput('');setQuoteSetupError('');
-  };
-  const closeSheet=()=>{setComposer(false);setSelected(null);setQuoteSettings(false);setQuoteTokenInput('');setQuoteSetupError('');setAssetSelection(null);setAssetSearch('');setSaveError('');setShowPurchaseDetails(false);};
+  const closeSheet=()=>{setComposer(false);setSelected(null);setAssetSelection(null);setAssetSearch('');setSaveError('');setShowPurchaseDetails(false);};
   const base=isLight?'capital-panel capital-light':'capital-panel';
   return <main ref={surfaceRef} className={base}>
     <header className="capital-top"><button className="capital-back" onClick={onBack}><ArrowLeft size={17}/><span>{t.back}</span></button><div className="capital-brand"><span>DAYRIS</span><b>CAPITAL</b><i>PRO</i></div><button className="capital-wallet" onClick={onWallet}><Wallet size={16}/><span>{t.wallet}</span></button></header>
-    <div className="capital-content"><div className="capital-heading"><div><p className="capital-kicker">{t.portfolioEyebrow}</p><h1>{t.title}</h1><p>{t.subtitle}</p></div><div className="capital-heading-actions"><button type="button" className="capital-quote-connect" onClick={()=>{setQuoteSetupError('');setQuoteSettings(true);}}><KeyRound size={15}/><span>{t.tiingoButton}{tiingoToken?' ✓':''}</span></button></div></div>
+    <div className="capital-content"><div className="capital-heading"><div><p className="capital-kicker">{t.portfolioEyebrow}</p><h1>{t.title}</h1><p>{t.subtitle}</p></div></div>
       <section className="capital-overview capital-portfolio-card">
         <div className="capital-overview-head"><div className="capital-overview-brand"><span>DAYRIS PRO</span><i>/</i><b>{t.investments}</b></div><ChartNoAxesCombined className="capital-overview-mark"/></div>
         <p className="capital-total-title">{t.value}</p>
@@ -426,15 +312,14 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
       <section className="capital-holdings-panel">
         <div className="capital-section-title"><h2>{t.myAssets} <span>{portfolio.assets.length}</span></h2><div className="capital-holdings-actions">{portfolio.assets.length>4&&!filter&&<button type="button" className="capital-show-all" onClick={()=>setAssetsExpanded(value=>!value)}>{assetsExpanded?t.showLess:t.allAssets}<ArrowRight size={14}/></button>}<button type="button" className="capital-search-toggle" aria-label={t.search} aria-expanded={searchVisible} onClick={()=>{setSearchVisible(value=>!value);if(searchVisible)setFilter('');}}><Search size={16}/></button></div></div>
         {searchVisible&&<label className="capital-search"><Search size={15}/><input autoFocus value={filter} onChange={e=>setFilter(e.target.value)} placeholder={t.search}/></label>}
-        {portfolio.loading?<div className="capital-empty"><RefreshCw className="capital-spin"/>{t.updated}…</div>:!visible.length?<div className="capital-empty"><div className="capital-empty-icon"><ChartNoAxesCombined/></div><strong>{t.empty}</strong><span>{t.emptyHint}</span><button className="capital-add" onClick={()=>setComposer(true)}><Plus size={16}/>{t.add}</button></div>:<div className="capital-assets">{visible.map(asset=>{const Icon=icons[t.cats.indexOf(asset.category)]||BriefcaseBusiness, quote=quotes[asset.symbol], fresh=(quote?.transport==='websocket'&&isQuoteFresh(quote,now))||(isGoldApiAsset(asset)&&isGoldApiQuoteFresh(quote,now))||(isTiingoEodAsset(asset)&&isTiingoEodQuoteFresh(quote,now)), price=priceFor(asset), total=price===null?null:multiplyScaled(asset.quantity,QUANTITY_SCALE,price,MONEY_SCALE), pnl=total===null?null:total+asset.realized-asset.invested;return <button className="capital-asset" key={asset.id} onClick={()=>setSelected(asset)}><span className="capital-asset-icon"><Icon/></span><span className="capital-asset-main"><strong>{asset.name}</strong><small>{formatQuantity(asset.quantity,locale)} {asset.symbol||t.manual}</small><em className="capital-quote-mobile" data-live={fresh}>{quoteLabel(asset,quote)}</em></span><span className="capital-asset-value"><strong>{total===null?'—':formatMoney(total,asset.currency,locale)}</strong><small className={pnl===null?'':pnl>=0?'positive':'negative'}>{pnl===null?t.waitingQuote:`${formatPercent(pnl,asset.invested,locale)} · ${pnl>=0?'+':''}${formatMoney(pnl,asset.currency,locale)}`}</small></span><span className="capital-quote-state" data-live={fresh}>{quoteLabel(asset,quote)}</span></button>})}</div>}
+        {portfolio.loading?<div className="capital-empty"><RefreshCw className="capital-spin"/>{t.updated}…</div>:!visible.length?<div className="capital-empty"><div className="capital-empty-icon"><ChartNoAxesCombined/></div><strong>{t.empty}</strong><span>{t.emptyHint}</span><button className="capital-add" onClick={()=>setComposer(true)}><Plus size={16}/>{t.add}</button></div>:<div className="capital-assets">{visible.map(asset=>{const Icon=icons[t.cats.indexOf(asset.category)]||BriefcaseBusiness, quote=quotes[asset.symbol], fresh=(quote?.transport==='websocket'&&isQuoteFresh(quote,now))||(isGoldApiAsset(asset)&&isGoldApiQuoteFresh(quote,now)), price=priceFor(asset), total=price===null?null:multiplyScaled(asset.quantity,QUANTITY_SCALE,price,MONEY_SCALE), pnl=total===null?null:total+asset.realized-asset.invested;return <button className="capital-asset" key={asset.id} onClick={()=>setSelected(asset)}><span className="capital-asset-icon"><Icon/></span><span className="capital-asset-main"><strong>{asset.name}</strong><small>{formatQuantity(asset.quantity,locale)} {asset.symbol||t.manual}</small><em className="capital-quote-mobile" data-live={fresh}>{quoteLabel(asset,quote)}</em></span><span className="capital-asset-value"><strong>{total===null?'—':formatMoney(total,asset.currency,locale)}</strong><small className={pnl===null?'':pnl>=0?'positive':'negative'}>{pnl===null?t.waitingQuote:`${formatPercent(pnl,asset.invested,locale)} · ${pnl>=0?'+':''}${formatMoney(pnl,asset.currency,locale)}`}</small></span><span className="capital-quote-state" data-live={fresh}>{quoteLabel(asset,quote)}</span></button>})}</div>}
         {portfolio.assets.length>0&&<button className="capital-add capital-add-operation" onClick={()=>setComposer(true)}><Plus size={18}/>{t.addOperation}</button>}
       </section>
       {Object.entries(allocations).length>0&&<details className="capital-allocation-details"><summary>{t.distribution}<span>{t.analytics}</span></summary><div className="capital-allocation-list">{Object.entries(allocations).filter(([key])=>metrics[key.split(':')[0]]?.value!==null).map(([key,value])=>{const [code,category]=key.split(':');const percent=allocationTotals[code]?Number(value*10000n/allocationTotals[code])/100:0;return <div className="capital-allocation" key={key}><div><span>{t.categories[t.cats.indexOf(category)]} · {code}</span><b>{formatMoney(value,code,locale)}</b></div><i><span style={{width:`${percent}%`}}/></i></div>})}</div></details>}
-      <p className="capital-disclaimer">{t.quoteDisclaimer}{Object.values(quotes).some(quote=>quote?.transport==='tiingo-eod')&&<>{' '}<a href="https://www.tiingo.com" target="_blank" rel="noreferrer">Tiingo</a></>}{lastQuote?` ${t.updated}: ${displayTime(lastQuote)}.`:''}</p>
+      <p className="capital-disclaimer">{t.quoteDisclaimer}{lastQuote?` ${t.updated}: ${displayTime(lastQuote)}.`:''}</p>
     </div>
-    {(composer||selected||quoteSettings)&&<div className="capital-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)closeSheet();}}><SwipeDismissSheet as="form" onDismiss={closeSheet} handleClassName="-mt-3 mb-2" className="capital-sheet" onSubmit={composer?submit:selected?saveOperation:saveTiingoToken}>
-      <div className="capital-sheet-head"><div><span className="capital-kicker">DAYRIS CAPITAL</span><h2>{composer?t.add:selected?.name||t.tiingoTitle}</h2></div><button type="button" onClick={closeSheet}><X/></button></div>
-      {quoteSettings?<><p className="capital-form-hint">{t.tiingoDescription}</p><p className="capital-form-hint">{t.tiingoTokenHelp}</p>{tiingoToken&&<p className="capital-form-hint">{t.tiingoSaved}</p>}<label>{t.tiingoTokenLabel}<input type="password" autoComplete="new-password" spellCheck="false" value={quoteTokenInput} onChange={event=>setQuoteTokenInput(event.target.value)} placeholder="••••••••••••••••"/></label><p className="capital-form-hint">{t.tiingoTokenPrivacy}</p><a className="capital-tiingo-link" href="https://api.tiingo.com/account/api/token" target="_blank" rel="noreferrer">{t.tiingoTokenLink}</a><button className="capital-add capital-submit" type="submit" disabled={quoteSetupSaving||!quoteTokenInput.trim()}>{quoteSetupSaving?t.updated+'…':t.tiingoConnect}</button>{tiingoToken&&<button type="button" className="capital-cancel" onClick={disconnectTiingo}>{t.tiingoDisconnect}</button>}{quoteSetupError&&<p role="alert" className="capital-form-hint">{quoteSetupError}</p>}</>:null}
+    {(composer||selected)&&<div className="capital-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)closeSheet();}}><SwipeDismissSheet as="form" onDismiss={closeSheet} handleClassName="-mt-3 mb-2" className="capital-sheet" onSubmit={composer?submit:saveOperation}>
+      <div className="capital-sheet-head"><div><span className="capital-kicker">DAYRIS CAPITAL</span><h2>{composer?t.add:selected?.name||''}</h2></div><button type="button" onClick={closeSheet}><X/></button></div>
       {composer?<>
         <p className="capital-step-label">{t.chooseCategory}</p>
         <div className="capital-category-grid">{t.cats.map((category,index)=>{const Icon=icons[index]||BriefcaseBusiness;return <button type="button" key={category} className={form.category===category?'is-selected':''} onClick={()=>changeCategory(category)}><Icon/><span>{t.categories[index]}</span></button>;})}</div>
@@ -449,7 +334,7 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
             {!matchedCatalog.length&&<p>{t.noAssetsFound}</p>}</div>
           <button type="button" className="capital-custom-link" onClick={chooseCustomAsset}><Plus size={15}/>{t.customAsset}</button>
         </>:<>
-          <div className="capital-selected-asset"><span className="capital-picker-symbol">{form.symbol||form.category.toUpperCase()}</span><span><strong>{form.name||t.customAsset}</strong><small>{form.symbol?`${form.symbol} · ${isTiingoEodAsset(form)?t.eod:assetSelection.custom?t.manualSource:isGoldApiAsset(form)?t.goldApiSource:t.categories[t.cats.indexOf(form.category)]}`:t.manualSource}</small></span><button type="button" onClick={()=>{setAssetSelection(null);setAssetSearch('');}}>{t.changeAsset}</button></div>
+          <div className="capital-selected-asset"><span className="capital-picker-symbol">{form.symbol||form.category.toUpperCase()}</span><span><strong>{form.name||t.customAsset}</strong><small>{form.symbol?`${form.symbol} · ${assetSelection.custom?t.manualSource:isGoldApiAsset(form)?t.goldApiSource:form.quoteSource==='binance'?t.binanceSource:t.manualSource}`:t.manualSource}</small></span><button type="button" onClick={()=>{setAssetSelection(null);setAssetSearch('');}}>{t.changeAsset}</button></div>
           {assetSelection.custom&&<><label>{t.name}<input required maxLength="120" value={form.name} onChange={event=>setForm({...form,name:event.target.value})} placeholder={t.manualName}/></label><label>{t.symbol}<input maxLength="24" value={form.symbol} onChange={event=>setForm({...form,symbol:event.target.value.toUpperCase()})} placeholder={t.optional}/></label></>}
           <div className="capital-form-grid"><label>{t.quantity}<input required min="0.000000000001" step="any" type="number" value={form.quantity} onChange={event=>setForm({...form,quantity:event.target.value})}/></label><label>{t.purchase}<input required min="0" step="any" type="number" value={form.purchasePrice} onChange={event=>setForm({...form,purchasePrice:event.target.value})} placeholder="0.00"/></label></div>
           <details className="capital-purchase-details" open={showPurchaseDetails} onToggle={event=>setShowPurchaseDetails(event.currentTarget.open)}><summary>{t.purchaseDetails} <span>{t.optional}</span></summary>
@@ -481,8 +366,8 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
         </div>
         <p className="capital-result-formula">{t.resultFormula}</p>
         <CapitalAssetHistoryChart rows={selected.rows} currency={selected.currency} locale={locale} t={t} formatQuantity={formatQuantity}/>
-        <div className="capital-detail-actions"><button type="button" onClick={()=>setOpForm(value=>({...value,operation:'buy'}))}>{t.buyAction}</button><button type="button" onClick={()=>setOpForm(value=>({...value,operation:'sell'}))}>{t.sellAction}</button></div>
-        <label>{t.operation}<select value={opForm.operation} onChange={e=>setOpForm({...opForm,operation:e.target.value})}><option value="buy">{t.buy}</option><option value="sell">{t.sell}</option><option value="dividend">{t.dividend||t.sell}</option>{selected.quote_source==='manual'&&!isGoldApiAsset(selected)&&!isTiingoEodAsset(selected)&&<option value="revalue">{t.revalue}</option>}</select></label>
+        <div className="capital-detail-actions"><button type="button" onClick={()=>openOperation('buy')}>{t.buyAction}</button><button type="button" onClick={()=>openOperation('sell')}>{t.sellAction}</button></div>
+        <label>{t.operation}<select value={opForm.operation} onChange={e=>setOpForm({...opForm,operation:e.target.value})}><option value="buy">{t.buy}</option><option value="sell">{t.sell}</option><option value="dividend">{t.dividend||t.sell}</option>{selected.quote_source==='manual'&&!isGoldApiAsset(selected)&&<option value="revalue">{t.revalue}</option>}</select></label>
         <div className="capital-form-grid"><label>{t.quantity}<input required={opForm.operation!=='revalue'} min="0.000000000001" max={opForm.operation==='sell'?scaledToString(selected.quantity,QUANTITY_SCALE):undefined} step="any" type="number" value={opForm.quantity} onChange={e=>setOpForm({...opForm,quantity:e.target.value})}/></label><label>{t.purchase}<input required min="0" step="any" type="number" value={opForm.price} onChange={e=>setOpForm({...opForm,price:e.target.value})}/></label><label>{t.fee}<input min="0" step="any" type="number" value={opForm.fee} onChange={e=>setOpForm({...opForm,fee:e.target.value})}/></label><label>{t.date}<input required type="date" value={opForm.date} onChange={e=>setOpForm({...opForm,date:e.target.value})}/></label></div>
         <div className="capital-operations">{selected.rows.map(row=><div key={row.id}><span>{row.operation==='sell'?<ArrowUpRight/>:<ArrowDownLeft/>}{row.operation==='sell'?t.sell:row.operation==='revalue'?t.revalue:row.operation==='dividend'?(t.dividend||t.buy):t.buy}</span><b>{formatQuantity(row.quantity?parseScaled(row.quantity,QUANTITY_SCALE):0n,locale)} × {formatMoney(row.unit_price,row.currency,locale)}</b><time>{row.occurred_on}</time></div>)}</div>{selected.rows[0]&&<button type="button" className="capital-cancel" onClick={async()=>{if(!window.confirm(`${t.cancelOperation}?`))return;setSaveError('');try{await portfolio.deleteLatestOperation(selected.rows[0].id);setSelected(null);}catch(error){setSaveError(friendlyCapitalError(error,locale,t));}}}>{t.cancelOperation}</button>}<button className="capital-add capital-submit" type="submit" disabled={saving}>{opForm.operation==='buy'?t.save:opForm.operation==='revalue'?t.revalue:opForm.operation==='dividend'?(t.dividend||t.buy):t.sellAction}</button></>:null}
           {(saveError||portfolio.error&&composer)&&<p role="alert" className="capital-form-hint">{saveError||friendlyCapitalError(portfolio.error,locale,t)}</p>}<button type="button" className="capital-cancel" onClick={closeSheet}>{t.cancel}</button>
