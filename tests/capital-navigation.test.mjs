@@ -15,6 +15,7 @@ const [calendar, panel, grid, dock, css, offerCopy] = await Promise.all([
 test('calendar has a named Capital entry and swipe route for PRO while the wallet remains separate', () => {
   assert.match(calendar, /function openCapitalFromCalendarGesture\(\)[\s\S]*?if \(!proAccessActive\) \{ openProPresentation\(\); return; \}[\s\S]*?setAccountMode\('capital'\)/);
   assert.match(calendar, /accountMode === 'capital' && proAccessActive && !proAccessLoading/);
+  assert.match(calendar, /accountMode !== 'capital' && <Header/);
   assert.match(calendar, /onOpenCapital=\{proAccessLoading \? undefined : openCapitalFromCalendarGesture\}/);
   assert.match(calendar, /className="capital-entry-card"[\s\S]*?onClick=\{openCapitalFromCalendarGesture\}[\s\S]*?t\('capitalHomeTitle'\)/);
   assert.doesNotMatch(calendar, /aria-label="DAYRIS Capital"/);
@@ -42,6 +43,13 @@ test('Capital layout has a mobile breakpoint and respects reduced motion', () =>
   assert.match(css, /capital-quote-mobile/);
   assert.match(css, /capital-assets\{grid-template-columns:repeat\(auto-fit/);
   assert.match(css, /grid-template-areas:"icon main value" "icon qty quote"/);
+  assert.match(panel, /capital-asset-context/);
+  assert.match(panel, /capital-asset-invested/);
+  assert.match(panel, /\{t\.currentUnitPrice\}: \{price===null/);
+  assert.match(panel, /capital-category-filters/);
+  assert.match(panel, /categoryFilter==='all'\|\|a\.category===categoryFilter/);
+  assert.match(panel, /capital-result-breakdown/);
+  assert.match(panel, /realized:0n,unrealized:0n/);
 });
 
 test('Capital sheet shows one backend error and does not duplicate the custom asset label', () => {

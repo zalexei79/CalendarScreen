@@ -172,6 +172,50 @@
 .capital-light .capital-overview-brand b,.capital-light .capital-total-number strong{color:#172337}
 .capital-light .capital-total-title,.capital-light .capital-total-return>small{color:#5f6e81}
 .capital-light .capital-invested-line,.capital-light .capital-chart-dates{color:#78869a}
+
+/* Make each holding self-explanatory: category, quantity, unit price, value,
+   result, and the amount still invested are visible without opening details. */
+.capital-holdings-panel .capital-asset{min-height:96px}
+.capital-holdings-panel .capital-asset-context{display:block;color:#9aa8bb;font-size:10px;font-variant-numeric:tabular-nums}
+.capital-holdings-panel .capital-asset-invested{color:#8291a6;font-size:9px;font-variant-numeric:tabular-nums}
+.capital-holdings-panel .capital-asset-value small{white-space:nowrap}
+.capital-light .capital-holdings-panel .capital-asset-context{color:#64748b}
+.capital-light .capital-holdings-panel .capital-asset-invested{color:#7a8798}
+@media(max-width:640px){
+  .capital-content{padding-top:16px}
+  .capital-top{height:52px}
+  .capital-heading{margin-bottom:15px}
+  .capital-holdings-panel{padding:15px 13px}
+  .capital-holdings-panel .capital-asset{grid-template-columns:36px minmax(0,1fr) auto;gap:8px;min-height:94px;padding:11px 0}
+  .capital-holdings-panel .capital-asset-icon{width:34px;height:34px;border-radius:12px}
+  .capital-holdings-panel .capital-asset-main{gap:4px}
+  .capital-holdings-panel .capital-asset-main strong{font-size:13px}
+  .capital-holdings-panel .capital-asset-context{font-size:9px}
+  .capital-holdings-panel .capital-quote-mobile{font-size:8px}
+  .capital-holdings-panel .capital-asset-value{max-width:132px;gap:4px}
+  .capital-holdings-panel .capital-asset-value strong{font-size:13px}
+  .capital-holdings-panel .capital-asset-value small{font-size:9px}
+  .capital-holdings-panel .capital-asset-invested{font-size:8px!important}
+}
+.capital-total-return{gap:7px}
+.capital-result-title{color:#a5b2c4;font-size:10px;font-weight:600}
+.capital-result-breakdown{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 18px;margin-top:3px;padding-top:10px;border-top:1px solid rgba(165,184,207,.12)}
+.capital-result-breakdown small{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 7px;color:#8e9caf;font-size:10px}
+.capital-result-breakdown b{font-size:10px;font-weight:650;font-variant-numeric:tabular-nums}
+.capital-category-filters{display:flex;gap:7px;overflow-x:auto;margin:0 0 9px;padding:1px 0 6px;scrollbar-width:none;overscroll-behavior-x:contain}
+.capital-category-filters::-webkit-scrollbar{display:none}
+.capital-category-filters button{flex:none;min-height:30px;padding:0 11px;border:1px solid var(--cap-line);border-radius:99px;background:transparent;color:#99a6b8;font:inherit;font-size:10px;font-weight:600;white-space:nowrap;cursor:pointer}
+.capital-category-filters button.is-active{border-color:rgba(91,213,178,.24);background:rgba(82,211,174,.13);color:#67dbb8}
+.capital-filter-empty{display:flex;align-items:center;gap:9px;min-height:72px;padding:12px 3px;color:var(--cap-muted);font-size:12px}
+.capital-light .capital-result-title,.capital-light .capital-result-breakdown small{color:#65748a}
+.capital-light .capital-category-filters button{color:#64748b}
+.capital-light .capital-category-filters button.is-active{color:#16765f}
+@media(max-width:640px){
+  .capital-result-breakdown{gap:7px;padding-top:8px}
+  .capital-result-breakdown small{font-size:9px}
+  .capital-result-breakdown b{font-size:9px}
+  .capital-category-filters{margin-inline:-2px}
+}
 .capital-light .capital-range-selector button{background:rgba(49,75,105,.07);color:#64748a}
 .capital-light .capital-range-selector button.is-active{background:rgba(37,159,128,.14);color:#18856b}
 .capital-light .capital-chart-gridline{stroke:rgba(42,64,92,.16)}

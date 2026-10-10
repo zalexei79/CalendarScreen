@@ -4667,7 +4667,7 @@ export default function CalendarScreen() {
           </>
         </div>
       )}
-      <Header
+      {accountMode !== 'capital' && <Header
         accountMode={accountMode} setAccountMode={setAccountMode}
         monthSummary={monthSummary}
         isLight={isLight} traderMode={traderMode} t={t} theme={theme} setTheme={setTheme}
@@ -4692,7 +4692,7 @@ export default function CalendarScreen() {
         proAccessActive={proAccessActive} proAccessLoading={proAccessLoading} proAccessUntil={proAccessUntil}
         openReferralHub={openReferralHub} openProPresentation={openProPresentation} invitedCount={invitedCount} referralLabel={proAccessCopy.invitesTab}
         periodStats={periodStats} periodTrades={periodTrades} currencySymbol={currencySymbol} formatMoney={formatMoney}
-      />
+      />}
 
       <ConnectionStatus language={language} isLight={isLight} />
       {demoMode && <aside className="demo-calendar-banner" data-theme={theme}>
