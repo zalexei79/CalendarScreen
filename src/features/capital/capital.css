@@ -116,10 +116,20 @@
 .capital-range-selector button{min-width:49px;min-height:31px;padding:0 12px;border:0;border-radius:99px;background:rgba(163,181,206,.07);color:#9eacc0;font:inherit;font-size:10px;font-weight:650;cursor:pointer;transition:background .15s,color .15s,transform .15s}
 .capital-range-selector button:hover{transform:translateY(-1px);background:rgba(163,181,206,.12);color:#e7eef8}
 .capital-range-selector button.is-active{background:rgba(82,211,174,.16);color:#6be0bd}
+.capital-chart-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;margin:0 2px 9px;color:var(--cap-text);font-variant-numeric:tabular-nums}
+.capital-chart-summary>div{display:grid;gap:3px;min-width:0}
+.capital-chart-summary small{color:#8795a9;font-size:9px}
+.capital-chart-summary strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.capital-chart-period-change[data-trend="down"] strong{color:#f07e89}
+.capital-chart-period-change[data-trend="up"] strong{color:#5bd5b2}
+.capital-chart-period-change strong span{font-size:10px;font-weight:600}
+.capital-chart-points,.capital-chart-scale{grid-column:1/-1;color:#8391a5;font-size:9px;line-height:1.4}
 .capital-performance-chart{display:block;width:100%;height:clamp(118px,24vw,198px);overflow:visible}
 .capital-chart-gridline{fill:none;stroke:rgba(165,184,207,.16);stroke-width:1;stroke-dasharray:2 6;stroke-linecap:round}
 .capital-performance-area{stroke:none}
 .capital-performance-line{fill:none;stroke:currentColor;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.capital-performance-point{fill:currentColor;stroke:#10161d;stroke-width:2;vector-effect:non-scaling-stroke}
+.capital-light .capital-performance-point{stroke:#fff}
 .capital-performance[data-trend="down"]{color:#f07e89}
 .capital-chart-dates{display:flex;justify-content:space-between;gap:10px;margin-top:-2px;color:#78889e;font-size:9px;font-variant-numeric:tabular-nums}
 .capital-chart-empty{display:grid;align-content:center;min-height:100px;padding:12px 2px 2px;border-top:1px solid rgba(165,184,207,.08)}
@@ -288,6 +298,16 @@
 .capital-detail-performance>strong{grid-row:2;color:var(--cap-text);font-size:clamp(28px,7vw,38px);line-height:1.15;font-variant-numeric:tabular-nums}
 .capital-detail-performance>b{grid-column:2;grid-row:2;align-self:center;padding:5px 8px;border-radius:999px;background:color-mix(in srgb,#35c99a 12%,transparent);font-size:12px;font-variant-numeric:tabular-nums}
 .capital-detail-performance>small{grid-column:1/-1;color:var(--cap-muted);font-size:9px}
+.capital-asset-score{display:grid;gap:7px;margin:12px 0;padding:12px 14px;border:1px solid var(--cap-line);border-radius:15px;background:color-mix(in srgb,var(--cap-surface) 88%,var(--cap-gold) 12%)}
+.capital-asset-score-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.capital-asset-score-head strong{font-size:12px}
+.capital-asset-score-head b{color:var(--cap-gold);font-size:15px;font-variant-numeric:tabular-nums}
+.capital-asset-score-meter{height:6px;overflow:hidden;border-radius:99px;background:rgba(165,184,207,.14)}
+.capital-asset-score-meter span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#e88388 0%,#e8c477 50%,#5bd5b2 100%);transition:width .25s ease}
+.capital-asset-score>small{color:var(--cap-muted);font-size:10px;line-height:1.45}
+.capital-score-breakdown{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:3px}
+.capital-score-breakdown>span{display:grid;gap:4px;min-width:0;padding:8px;border-radius:10px;background:color-mix(in srgb,var(--cap-text) 3%,transparent);color:var(--cap-muted);font-size:9px;line-height:1.35}
+.capital-score-breakdown b{overflow-wrap:anywhere;color:var(--cap-text);font-size:10px;font-variant-numeric:tabular-nums}
 .capital-detail-primary-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:9px 0}
 .capital-detail-primary-stats>div{display:grid;gap:5px;min-width:0;padding:11px;border:1px solid var(--cap-line);border-radius:12px;background:color-mix(in srgb,var(--cap-text) 2.5%,var(--cap-surface))}
 .capital-detail-primary-stats span,.capital-detail-results span{color:var(--cap-muted);font-size:9px}
@@ -353,6 +373,7 @@
 .capital-asset-value{grid-area:value;align-self:center;max-width:170px;gap:5px}
 .capital-asset-value strong{font-size:15px}
 .capital-asset-value small{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.capital-asset-value .capital-asset-score-chip{color:var(--cap-gold);font-weight:650}
 .capital-asset-qty{grid-area:qty;align-self:center}
 .capital-quote-state{grid-area:quote;align-self:center;max-width:170px;padding:4px 8px;border:1px solid var(--cap-line);border-radius:999px;background:color-mix(in srgb,var(--cap-text) 3%,transparent);font-size:9px}
 .capital-quote-state[data-live="true"],.capital-quote-mobile[data-live="true"]{border-color:color-mix(in srgb,#36c99a 28%,transparent);color:#36c99a}

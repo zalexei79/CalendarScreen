@@ -14,7 +14,7 @@ export function filterPortfolioSnapshots(rows, range = 'all', today = new Date()
 
 export function buildPortfolioChart(rows) {
   const sorted = (rows || []).slice().sort((a, b) => a.sampled_on.localeCompare(b.sampled_on));
-  if (sorted.length < 2) return { linePath: '', areaPath: '', rows: sorted };
+  if (sorted.length < 2) return { linePath: '', areaPath: '', rows: sorted, points: [] };
   const values = sorted.map(row => parseScaled(row.portfolio_value, MONEY_SCALE));
   const min = values.reduce((a, b) => a < b ? a : b);
   const max = values.reduce((a, b) => a > b ? a : b);
@@ -22,10 +22,11 @@ export function buildPortfolioChart(rows) {
   const points = values.map((value, index) => ({
     x: 12 + index * (296 / (values.length - 1)),
     y: 100 - Number((value - min) * 7600n / span) / 100,
+    value,
+    date: sorted[index].sampled_on,
   }));
   const linePath = points.map(({ x, y }, index) => `${index ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
   const last = points.at(-1);
   const areaPath = `${linePath} L${last.x.toFixed(1)} 112 L${points[0].x.toFixed(1)} 112 Z`;
-  return { linePath, areaPath, rows: sorted };
+  return { linePath, areaPath, rows: sorted, points, min, max };
 }
-
