@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { supabase } from '../../supabaseClient';
 import { ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Bitcoin, BriefcaseBusiness, Building2, ChartNoAxesCombined, CircleDollarSign, Coins, Fuel, Landmark, Plus, RefreshCw, Search, Wallet, X } from 'lucide-react';
 import { useCapitalPortfolio } from './useCapitalPortfolio';
 import { calculateDailyChange, calculateReturnPercent, formatMoney, MONEY_SCALE, multiplyScaled, parseScaled, QUANTITY_SCALE, scaledToString } from './decimal';
@@ -13,9 +14,11 @@ import { fetchMoexCurrency, fetchMoexQuotes, loadMoexCatalog, MOEX_POPULAR_BONDS
 import { friendlyCapitalError } from './capitalErrors.js';
 import CapitalPerformanceChart from './CapitalPerformanceChart.jsx';
 import CapitalAssetHistoryChart from './CapitalAssetHistoryChart.jsx';
+import CapitalQuoteHistoryChart from './CapitalQuoteHistoryChart.jsx';
 import { buildConsolidatedPortfolioSnapshots, calculatePortfolioPeriodResults } from './portfolioHistory.js';
 import { calculateBasePortfolioResult, currencyRateOn, fetchDailyCurrencyRates } from './currencyRates.js';
 import './capital.css';
+
 
 const copy = {
   ru: { title:'DAYRIS Capital', subtitle:'Ваши инвестиции в одном месте', value:'Стоимость портфеля', invested:'Вложено', pnl:'Прибыль / убыток', today:'Котировки', assets:'Активы', add:'Добавить актив', empty:'Здесь появятся ваши инвестиции', emptyHint:'Добавьте актив и сохраните первую операцию покупки.', back:'К календарю', wallet:'Кошелёк', signIn:'Войдите, чтобы сохранить портфель на всех устройствах.', category:'Категория', name:'Название', symbol:'Тикер / пара Binance', currency:'Валюта', quoteSource:'Источник цены', quantity:'Количество', purchase:'Цена покупки', price:'Текущая оценка за единицу', date:'Дата', fee:'Комиссия', save:'Сохранить покупку', cancel:'Отмена', search:'Название или тикер', manual:'Ручная оценка', live:'LIVE · Binance', offline:'OFFLINE', updated:'Обновлено', history:'История операций', buy:'Покупка', sell:'Продажа', sellAction:'Продать', dividend:'Дивиденд', revalue:'Обновить оценку', operation:'Операция', lastUpdated:'Последняя цена', distribution:'Распределение активов', chart:'История оценки', chartEmpty:'История появится после первой дневной фиксации стоимости.', cancelOperation:'Отменить последнюю операцию', categories:['Акции','ETF','Криптовалюта','Металл','Сырьё','Недвижимость','Облигации','Вклад','Другое'], cats:['stock','etf','crypto','metal','commodity','real_estate','bond','deposit','other'], error:'Не удалось загрузить портфель.' },
@@ -23,6 +26,10 @@ const copy = {
   ro: { title:'DAYRIS Capital', subtitle:'Investițiile tale într-un singur loc', value:'Valoarea portofoliului', invested:'Investit', pnl:'Profit / pierdere', today:'Cotații', assets:'Active', add:'Adaugă activ', empty:'Investițiile tale vor apărea aici', emptyHint:'Adaugă un activ și înregistrează prima cumpărare.', back:'Calendar', wallet:'Portofel', signIn:'Autentifică-te pentru sincronizarea portofoliului.', category:'Categorie', name:'Nume', symbol:'Simbol / pereche Binance', currency:'Monedă', quoteSource:'Sursa prețului', quantity:'Cantitate', purchase:'Preț de cumpărare', price:'Estimare curentă pe unitate', date:'Data', fee:'Comision', save:'Salvează cumpărarea', cancel:'Anulează', search:'Nume sau simbol', manual:'Evaluare manuală', live:'LIVE · Binance', offline:'OFFLINE', updated:'Actualizat', history:'Activitate', buy:'Cumpărare', sell:'Vânzare', sellAction:'Vinde', dividend:'Dividend', revalue:'Actualizează evaluarea', operation:'Operațiune', lastUpdated:'Ultimul preț', distribution:'Alocarea activelor', chart:'Istoricul evaluării', chartEmpty:'Istoricul începe după prima evaluare zilnică salvată.', cancelOperation:'Anulează ultima operațiune', categories:['Acțiuni','ETF','Cripto','Metal','Mărfuri','Imobiliare','Obligațiuni','Depozit','Altele'], cats:['stock','etf','crypto','metal','commodity','real_estate','bond','deposit','other'], error:'Portofoliul nu a putut fi încărcat.' },
   zh: { title:'DAYRIS Capital', subtitle:'在一处管理您的投资', value:'投资组合价值', invested:'已投入', pnl:'盈亏', today:'行情', assets:'资产', add:'添加资产', empty:'您的投资将显示在这里', emptyHint:'添加资产并记录首次购买。', back:'返回日历', wallet:'钱包', signIn:'登录以在设备间同步投资组合。', category:'类别', name:'名称', symbol:'代码 / Binance交易对', currency:'货币', quoteSource:'价格来源', quantity:'数量', purchase:'买入价格', price:'当前估值/单位', date:'日期', fee:'手续费', save:'保存买入', cancel:'取消', search:'名称或代码', manual:'手动估值', live:'实时 · Binance', offline:'离线', updated:'更新于', history:'交易记录', buy:'买入', sell:'卖出', sellAction:'卖出', dividend:'股息', revalue:'更新估值', operation:'操作', lastUpdated:'最近报价', distribution:'资产分布', chart:'估值历史', chartEmpty:'首次每日估值记录后将显示历史。', cancelOperation:'取消最近操作', categories:['股票','ETF','加密货币','贵金属','大宗商品','房地产','债券','存款','其他'], cats:['stock','etf','crypto','metal','commodity','real_estate','bond','deposit','other'], error:'无法加载投资组合。' },
 };
+Object.assign(copy.ru,{marketHistory:'История цены',binanceHistorySource:'Binance · дневные свечи',moexHistorySource:'MOEX · дневные свечи',marketHistoryEmpty:'Для этого инструмента история цены недоступна.',marketHistoryUnavailable:'Не удалось загрузить историю цены.',baseCurrencyChoice:'Валюта портфеля',loading:'Загрузка…'});
+Object.assign(copy.en,{marketHistory:'Price history',binanceHistorySource:'Binance · daily candles',moexHistorySource:'MOEX · daily candles',marketHistoryEmpty:'Price history is unavailable for this instrument.',marketHistoryUnavailable:'Could not load price history.',baseCurrencyChoice:'Portfolio currency',loading:'Loading…'});
+Object.assign(copy.ro,{marketHistory:'Istoricul prețului',binanceHistorySource:'Binance · lumânări zilnice',moexHistorySource:'MOEX · lumânări zilnice',marketHistoryEmpty:'Istoricul prețului nu este disponibil pentru acest instrument.',marketHistoryUnavailable:'Istoricul prețului nu a putut fi încărcat.',baseCurrencyChoice:'Moneda portofoliului',loading:'Se încarcă…'});
+Object.assign(copy.zh,{marketHistory:'价格历史',binanceHistorySource:'Binance · 日线',moexHistorySource:'MOEX · 日线',marketHistoryEmpty:'此资产暂无价格历史。',marketHistoryUnavailable:'无法加载价格历史。',baseCurrencyChoice:'组合货币',loading:'正在加载…'});
 Object.assign(copy.ru,{binanceSource:'Binance Spot · USDT',manualSource:'Ручная оценка',usdtNote:'Котировки Binance указаны в USDT. Суммы остаются в USDT; валюты не конвертируются.',stale:'УСТАРЕЛО',pending:'Ожидание котировки'});
 Object.assign(copy.en,{binanceSource:'Binance Spot · USDT',manualSource:'Manual estimate',usdtNote:'Binance quotes are in USDT. Values stay in USDT; currencies are not converted.',stale:'STALE',pending:'Waiting for quote'});
 Object.assign(copy.ro,{binanceSource:'Binance Spot · USDT',manualSource:'Evaluare manuală',usdtNote:'Cotațiile Binance sunt în USDT. Valorile rămân în USDT; monedele nu sunt convertite.',stale:'ÎNVECHIT',pending:'Se așteaptă cotația'});
@@ -176,12 +183,21 @@ async function verifyBinanceSpotPair(symbol) {
     throw error;
   } finally { clearTimeout(timeout); }
 }
+const CAPITAL_BASE_CURRENCIES = ['USD','EUR','MDL','RON','RUB','CNY','GBP'];
+function storedBaseCurrency(fallback, user) {
+  const remote = user?.user_metadata?.dayris_capital_base_currency;
+  if (CAPITAL_BASE_CURRENCIES.includes(remote)) return remote;
+  try { const saved = localStorage.getItem('dayris_capital_base_currency'); return CAPITAL_BASE_CURRENCIES.includes(saved) ? saved : fallback; }
+  catch { return fallback; }
+}
+
 export default function CapitalPanel({ language='ru', isLight=false, currency='USD', user, onBack, onWallet }) {
   const locale = String(language).toLowerCase().startsWith('zh') ? 'zh' : String(language).toLowerCase().startsWith('en') ? 'en' : String(language).toLowerCase().startsWith('ro') || language === 'md' ? 'ro' : 'ru';
   const t = copy[locale], stats = statCopy[locale];
   const [composer,setComposer] = useState(false), [selected,setSelected] = useState(null), [quotes,setQuotes] = useState({}), [lastQuote,setLastQuote] = useState(null), [online,setOnline] = useState(navigator.onLine), [filter,setFilter] = useState(''), [categoryFilter,setCategoryFilter] = useState('all'), [assetsExpanded,setAssetsExpanded] = useState(false), [searchVisible,setSearchVisible] = useState(false), [historyRange,setHistoryRange] = useState('all'), [form,setForm] = useState({category:'stock',name:'',symbol:'',currency,quoteSource:'manual',quantity:'',purchasePrice:'',price:'',fee:'0',date:todayKey()});
   const [assetSelection,setAssetSelection]=useState(null), [assetSearch,setAssetSearch]=useState(''), [marketScope,setMarketScope]=useState('world'), [moexCatalog,setMoexCatalog]=useState([]), [moexCatalogCategory,setMoexCatalogCategory]=useState(''), [moexCatalogIsFull,setMoexCatalogIsFull]=useState(false), [moexCatalogLoading,setMoexCatalogLoading]=useState(false), [moexCatalogError,setMoexCatalogError]=useState(false), [moexCurrencyLoading,setMoexCurrencyLoading]=useState(false), [binanceCatalog,setBinanceCatalog]=useState([]), [binanceCatalogLoading,setBinanceCatalogLoading]=useState(false), [binanceCatalogError,setBinanceCatalogError]=useState(false), [companyCatalog,setCompanyCatalog]=useState(null), [companyCatalogLoading,setCompanyCatalogLoading]=useState(false), [companyCatalogError,setCompanyCatalogError]=useState(false), [showFullUsCatalog,setShowFullUsCatalog]=useState(false), [exchangeFilter,setExchangeFilter]=useState('all'), [bondFilter,setBondFilter]=useState('all'), [commodityGroup,setCommodityGroup]=useState('all'), [catalogVisibleLimit,setCatalogVisibleLimit]=useState(40), [showPurchaseDetails,setShowPurchaseDetails]=useState(false), [saving,setSaving]=useState(false);
   const [now,setNow] = useState(Date.now());
+  const [baseCurrency,setBaseCurrency]=useState(()=>storedBaseCurrency(currency,user));
   const [fxSeries,setFxSeries]=useState({}),[fxTarget,setFxTarget]=useState(currency),[fxLoading,setFxLoading]=useState(false),[fxError,setFxError]=useState(false);
   const [opForm,setOpForm]=useState({operation:'sell',quantity:'',price:'',fee:'0',date:todayKey()}),[operationEditor,setOperationEditor]=useState(false);
   const [saveError,setSaveError]=useState('');
@@ -190,7 +206,7 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
   const moexLookupSequence=useRef(0);
   const portfolio = useCapitalPortfolio({ user });
   const { surfaceRef } = useWalletExitGesture({ onExit: onBack, disabled: Boolean(composer || selected), navigation: 'wallet' });
-  const fxSources=useMemo(()=>[...new Set([...portfolio.assets.map(asset=>asset.currency),...portfolio.snapshots.map(row=>row.currency),...portfolio.operations.map(row=>row.currency)])].filter(code=>code!=='USDT'&&code!==currency&&/^[A-Z]{3}$/.test(code)),[portfolio.assets,portfolio.snapshots,portfolio.operations,currency]);
+  const fxSources=useMemo(()=>[...new Set([...portfolio.assets.map(asset=>asset.currency),...portfolio.snapshots.map(row=>row.currency),...portfolio.operations.map(row=>row.currency)])].filter(code=>code!=='USDT'&&code!==baseCurrency&&/^[A-Z]{3}$/.test(code)),[portfolio.assets,portfolio.snapshots,portfolio.operations,baseCurrency]);
   const fxStart=useMemo(()=>{
     const allDates=[...portfolio.snapshots.map(row=>row.sampled_on),...portfolio.operations.map(row=>row.occurred_on)].filter(date=>/^\d{4}-\d{2}-\d{2}$/.test(date)).sort();
     const days={week:7,month:30,quarter:90,year:365}[historyRange];
@@ -200,12 +216,18 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
   useEffect(()=>{
     if(!online||!fxSources.length){setFxLoading(false);return undefined;}
     const controller=new AbortController();setFxLoading(true);setFxError(false);
-    fetchDailyCurrencyRates(fxSources,currency,fxStart,new Date(now).toISOString().slice(0,10),controller.signal)
-      .then(series=>{if(!controller.signal.aborted){setFxSeries(series);setFxTarget(currency);}})
+    fetchDailyCurrencyRates(fxSources,baseCurrency,fxStart,new Date(now).toISOString().slice(0,10),controller.signal)
+      .then(series=>{if(!controller.signal.aborted){setFxSeries(series);setFxTarget(baseCurrency);}})
       .catch(error=>{if(!controller.signal.aborted){setFxError(true);console.warn('[capital] FX rates unavailable:',error.message);}})
       .finally(()=>{if(!controller.signal.aborted)setFxLoading(false);});
     return()=>controller.abort();
-  },[online,fxSources.join('|'),currency,fxStart]);
+  },[online,fxSources.join('|'),baseCurrency,fxStart]);
+  useEffect(()=>{try{localStorage.setItem('dayris_capital_base_currency',baseCurrency);}catch{}},[baseCurrency]);
+  useEffect(()=>{
+    if(!user?.id||user.user_metadata?.dayris_capital_base_currency===baseCurrency)return;
+    const data={...(user.user_metadata||{}),dayris_capital_base_currency:baseCurrency};
+    supabase.auth.updateUser({data}).then(({error})=>{if(error)console.warn('[capital] base currency preference sync failed:',error.message);});
+  },[user?.id,baseCurrency]);
   useEffect(()=>{const id=window.setInterval(()=>setNow(Date.now()),5000);return()=>clearInterval(id);},[]);
 
   useEffect(()=>{
@@ -368,25 +390,25 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
     },{});
     return Object.fromEntries(Object.entries(totals).map(([code,row])=>[code,{...row,value:row.hasUnpriced?null:row.value,unrealized:row.hasUnpriced?null:row.unrealized,pnl:row.hasUnpriced?null:row.pnl}]));
   },[portfolio.assets,quotes]);
-  const activeFxSeries=fxTarget===currency?fxSeries:{};
-  const periodResults=useMemo(()=>calculatePortfolioPeriodResults(portfolio.snapshots,portfolio.operations,historyRange,new Date(now),activeFxSeries,currency),[portfolio.snapshots,portfolio.operations,historyRange,now,activeFxSeries,currency]);
+  const activeFxSeries=fxTarget===baseCurrency?fxSeries:{};
+  const periodResults=useMemo(()=>calculatePortfolioPeriodResults(portfolio.snapshots,portfolio.operations,historyRange,new Date(now),activeFxSeries,baseCurrency),[portfolio.snapshots,portfolio.operations,historyRange,now,activeFxSeries,baseCurrency]);
   const chartCurrencies=useMemo(()=>Object.entries(metrics).filter(([code,row])=>code!=='USDT'&&row.value!==null).map(([code])=>code),[metrics]);
-  const consolidatedSnapshots=useMemo(()=>buildConsolidatedPortfolioSnapshots(portfolio.snapshots,chartCurrencies,activeFxSeries,currency),[portfolio.snapshots,chartCurrencies,activeFxSeries,currency]);
+  const consolidatedSnapshots=useMemo(()=>buildConsolidatedPortfolioSnapshots(portfolio.snapshots,chartCurrencies,activeFxSeries,baseCurrency),[portfolio.snapshots,chartCurrencies,activeFxSeries,baseCurrency]);
   const chartOperations=useMemo(()=>portfolio.operations.filter(row=>chartCurrencies.includes(row.currency)),[portfolio.operations,chartCurrencies]);
   const globalValue=useMemo(()=>{
     let value=0n,excludedUsdt=null;const missing=[],unpriced=[];let latestFxDate=null,converted=0;
     for(const [code,totals] of Object.entries(metrics)){
       if(code==='USDT'){excludedUsdt=totals.value;continue;}
       if(totals.value===null){unpriced.push(code);continue;}
-      const rate=currencyRateOn(activeFxSeries,code,currency,new Date(now).toISOString().slice(0,10));
+      const rate=currencyRateOn(activeFxSeries,code,baseCurrency,new Date(now).toISOString().slice(0,10));
       if(rate===null){missing.push(code);continue;}
       value+=multiplyScaled(totals.value,MONEY_SCALE,rate,MONEY_SCALE);converted++;
-      const date=code===currency?null:activeFxSeries[code]?.at(-1)?.date;
+      const date=code===baseCurrency?null:activeFxSeries[code]?.at(-1)?.date;
       if(date&&(!latestFxDate||date<latestFxDate))latestFxDate=date;
     }
-    const performance=calculateBasePortfolioResult(portfolio.assets,activeFxSeries,currency,new Date(now).toISOString().slice(0,10),priceFor);
+    const performance=calculateBasePortfolioResult(portfolio.assets,activeFxSeries,baseCurrency,new Date(now).toISOString().slice(0,10),priceFor);
     return {value:converted&&!missing.length&&!unpriced.length?value:null,missing,unpriced,excludedUsdt,latestFxDate,pnl:performance.complete&&performance.excludedUsdt===null?performance.pnl:null,realized:performance.realized,unrealized:performance.unrealized,incomplete:performance.incomplete};
-  },[metrics,activeFxSeries,currency,now,portfolio.assets,quotes]);
+  },[metrics,activeFxSeries,baseCurrency,now,portfolio.assets,quotes]);
   const selectedScore=scorePosition(selected,selectedPrice,selected?quotes[selected.symbol]:null,selected?metrics[selected.currency]?.value??null:null,now,t);
   const todayChanges = useMemo(()=>calculateDailyChange(Object.fromEntries(Object.entries(metrics).filter(([,totals])=>totals.value!==null)),portfolio.snapshots,todayKey()),[metrics,portfolio.snapshots]);
   const filteredAssets = portfolio.assets.filter(a=>(categoryFilter==='all'||a.category===categoryFilter)&&`${a.name} ${a.symbol} ${a.category}`.toLowerCase().includes(filter.toLowerCase()));
@@ -498,26 +520,26 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
         <div className="capital-overview-head"><div className="capital-overview-brand"><span>DAYRIS PRO</span><i>/</i><b>{t.investments}</b></div><ChartNoAxesCombined className="capital-overview-mark"/></div>
         <p className="capital-total-title">{t.value}</p>
         <section className="capital-global-total" aria-label={t.globalValue}>
-          <div><small>{t.globalValue} · {t.baseCurrency}: {currency}</small><strong>{globalValue.value===null?'—':formatMoney(globalValue.value,currency,locale)}</strong><span className={`capital-global-pnl ${globalValue.pnl===null?'':globalValue.pnl>=0n?'positive':'negative'}`}>{t.globalPnl}: {globalValue.pnl===null?'—':`${globalValue.pnl>0n?'+':''}${formatMoney(globalValue.pnl,currency,locale)}`} · {stats.realized}: {globalValue.pnl===null?'—':formatMoney(globalValue.realized,currency,locale)} · {stats.unrealized}: {globalValue.pnl===null?'—':formatMoney(globalValue.unrealized,currency,locale)}</span><span>{fxLoading?t.fxLoading:globalValue.latestFxDate?`${t.fxDaily} · ${t.fxAsOf} ${globalValue.latestFxDate}`:fxError?t.fxUnavailable:t.globalCoverage}</span>{globalValue.excludedUsdt!==null&&<span className="capital-global-extra">{t.usdtSeparate}: {formatMoney(globalValue.excludedUsdt,'USDT',locale)}</span>}</div>
+          <div><small>{t.globalValue} · {t.baseCurrencyChoice}</small><div className="capital-base-currency"><strong>{baseCurrency}</strong><select aria-label={t.baseCurrencyChoice} value={baseCurrency} onChange={event=>setBaseCurrency(event.target.value)}>{CAPITAL_BASE_CURRENCIES.map(code=><option key={code} value={code}>{code}</option>)}</select></div><strong>{globalValue.value===null?'—':formatMoney(globalValue.value,baseCurrency,locale)}</strong><span className={`capital-global-pnl ${globalValue.pnl===null?'':globalValue.pnl>=0n?'positive':'negative'}`}>{t.globalPnl}: {globalValue.pnl===null?'—':`${globalValue.pnl>0n?'+':''}${formatMoney(globalValue.pnl,baseCurrency,locale)}`} · {stats.realized}: {globalValue.pnl===null?'—':formatMoney(globalValue.realized,baseCurrency,locale)} · {stats.unrealized}: {globalValue.pnl===null?'—':formatMoney(globalValue.unrealized,baseCurrency,locale)}</span><span>{fxLoading?t.fxLoading:globalValue.latestFxDate?`${t.fxDaily} · ${t.fxAsOf} ${globalValue.latestFxDate}`:fxError?t.fxUnavailable:t.globalCoverage}</span>{globalValue.excludedUsdt!==null&&<span className="capital-global-extra">{t.usdtSeparate}: {formatMoney(globalValue.excludedUsdt,'USDT',locale)}</span>}</div>
           {(globalValue.excludedUsdt!==null||globalValue.missing.length>0||globalValue.unpriced.length>0)&&<small className="capital-global-warning">{globalValue.excludedUsdt!==null?t.fxExcluded:globalValue.missing.length?`${t.fxUnavailable}: ${globalValue.missing.join(', ')}`:`${t.globalIncomplete}${globalValue.unpriced.join(', ')}`}</small>}
         </section>
-        <details className="capital-currency-disclosure"><summary>{t.currencyBreakdown}<span>{Object.keys(metrics).join(' · ')||currency}</span></summary><div className="capital-portfolio-totals">{Object.entries(metrics).length?Object.entries(metrics).map(([code,totals])=><div className="capital-currency-total" key={code}>
+        <details className="capital-currency-disclosure"><summary>{t.currencyBreakdown}<span>{Object.keys(metrics).join(' · ')||baseCurrency}</span></summary><div className="capital-portfolio-totals">{Object.entries(metrics).length?Object.entries(metrics).map(([code,totals])=><div className="capital-currency-total" key={code}>
           <div className="capital-total-number"><strong>{totals.value===null?'—':formatMoney(totals.value,code,locale)}</strong>{Object.entries(metrics).length>1&&<span>{code}</span>}</div>
           <div className="capital-total-return"><span className="capital-result-title">{stats.total}</span><span className={`capital-return-chip ${totals.pnl===null?'':totals.pnl>=0?'positive':'negative'}`}>{totals.pnl===null?'—':`${totals.pnl>=0?'+':''}${formatMoney(totals.pnl,code,locale)}`}</span><small>{totals.pnl===null?'—':`${formatPercent(totals.pnl,totals.invested,locale)} ${t.allTime}`}</small></div>
           <small className="capital-invested-line">{t.invested}: {formatMoney(totals.invested,code,locale)}</small>
           <div className="capital-result-breakdown"><small><span>{stats.realized}</span><b className={totals.realized>0n?'positive':totals.realized<0n?'negative':''}>{totals.realized>0n?'+':''}{formatMoney(totals.realized,code,locale)}</b></small><small><span>{stats.unrealized}</span><b className={totals.unrealized===null?'':totals.unrealized>0n?'positive':totals.unrealized<0n?'negative':''}>{totals.unrealized===null?'—':`${totals.unrealized>0n?'+':''}${formatMoney(totals.unrealized,code,locale)}`}</b></small></div>
-        </div>):<div className="capital-currency-total"><div className="capital-total-number"><strong>{formatMoney(0,currency,locale)}</strong></div><div className="capital-total-return"><span className="capital-return-chip">—</span><small>{t.allTime}</small></div><small className="capital-invested-line">{t.emptyHint}</small></div>}</div></details>
+        </div>):<div className="capital-currency-total"><div className="capital-total-number"><strong>{formatMoney(0,baseCurrency,locale)}</strong></div><div className="capital-total-return"><span className="capital-return-chip">—</span><small>{t.allTime}</small></div><small className="capital-invested-line">{t.emptyHint}</small></div>}</div></details>
         <section className="capital-period-overview" aria-label={t.periodResult}>
           <div className="capital-period-heading"><div><h2>{t.periodResult}</h2><p>{t.periodResultNote}</p></div><div className="capital-range-selector" role="group" aria-label={t.chart}>{[['week','rangeWeek'],['month','rangeMonth'],['quarter','rangeQuarter'],['year','rangeYear'],['all','rangeAll']].map(([value,label])=><button type="button" key={value} className={historyRange===value?'is-active':''} aria-pressed={historyRange===value} onClick={()=>setHistoryRange(value)}>{t[label]}</button>)}</div></div>
           {periodResults.byCurrency.some(item=>item.result!==null)?<>{!periodResults.consolidated&&(periodResults.unsupported.length||periodResults.missingFx.length>0)&&<div className="capital-period-fx-note">{t.periodFxNote}</div>}<div className="capital-period-results">
             {periodResults.consolidated&&(()=>{const item=periodResults.consolidated,magnitude=item.percent===null?0:Number(item.percent<0n?-item.percent:item.percent)/100,dash=Math.min(100,magnitude)/100*169.65,trend=item.result>0n?'up':item.result<0n?'down':'flat';return <article className="capital-period-result capital-period-result-global" key="consolidated" data-trend={trend}><div className="capital-period-ring"><svg viewBox="0 0 64 64" role="img" aria-label={item.percent===null?'—':formatPercent(item.result,item.returnBasis,locale)}><circle className="capital-period-ring-track" cx="32" cy="32" r="27"/><circle className="capital-period-ring-value" cx="32" cy="32" r="27" strokeDasharray={`${dash} 169.65`}/></svg><b>{item.percent===null?'—':formatPercent(item.result,item.returnBasis,locale)}</b></div><div className="capital-period-data"><span>{t.globalValue} · {item.currency}</span><strong>{item.result>0n?'+':''}{formatMoney(item.result,item.currency,locale)}</strong><small>{t.periodBase}: {formatMoney(item.returnBasis,item.currency,locale)}</small></div></article>})()}
-            {periodResults.byCurrency.some(item=>item.result!==null)&&<details className="capital-period-breakdown"><summary>{t.periodBreakdown}</summary><div className="capital-period-results">{periodResults.byCurrency.map(item=>{if(item.result===null)return null;const amount=item.baseResult??item.result,pct=item.basePercent??item.percent,code=item.baseResult!==null?currency:item.currency,basis=item.baseReturnBasis??item.returnBasis,magnitude=pct===null?0:Number(pct<0n?-pct:pct)/100;const dash=Math.min(100,magnitude)/100*169.65;const trend=amount>0n?'up':amount<0n?'down':'flat';return <article className="capital-period-result" key={item.currency} data-trend={trend}>
+            {periodResults.byCurrency.some(item=>item.result!==null)&&<details className="capital-period-breakdown"><summary>{t.periodBreakdown}</summary><div className="capital-period-results">{periodResults.byCurrency.map(item=>{if(item.result===null)return null;const amount=item.baseResult??item.result,pct=item.basePercent??item.percent,code=item.baseResult!==null?baseCurrency:item.currency,basis=item.baseReturnBasis??item.returnBasis,magnitude=pct===null?0:Number(pct<0n?-pct:pct)/100;const dash=Math.min(100,magnitude)/100*169.65;const trend=amount>0n?'up':amount<0n?'down':'flat';return <article className="capital-period-result" key={item.currency} data-trend={trend}>
             <div className="capital-period-ring"><svg viewBox="0 0 64 64" role="img" aria-label={pct===null?'—':formatPercent(amount,basis,locale)}><circle className="capital-period-ring-track" cx="32" cy="32" r="27"/><circle className="capital-period-ring-value" cx="32" cy="32" r="27" strokeDasharray={`${dash} 169.65`}/></svg><b>{pct===null?'—':formatPercent(amount,basis,locale)}</b></div>
             <div className="capital-period-data"><span>{item.currency} · {item.start.sampled_on} — {item.end.sampled_on}</span><strong>{amount>0n?'+':''}{formatMoney(amount,code,locale)}</strong><small>{pct===null?`${t.periodBase}: —`:`${t.periodBase}: ${formatMoney(basis,code,locale)}`}</small></div>
           </article>})}</div></details>}
           </div></>:<div className="capital-period-empty">{t.periodNoHistory}</div>}
         </section>
-        <section className="capital-main-chart" aria-label={t.chart}><div className="capital-main-chart-heading"><strong>{t.historyValue}</strong><span>{currency}</span></div><p>{t.historyNote}</p>{consolidatedSnapshots.length?<CapitalPerformanceChart snapshots={consolidatedSnapshots} operations={chartOperations} fxSeries={activeFxSeries} currency={currency} range={historyRange} onRangeChange={setHistoryRange} t={t} locale={locale} showRanges={false}/>:<div className="capital-period-empty">{t.chartEmpty}</div>}{(chartCurrencies.length<Object.keys(metrics).filter(code=>code!=='USDT').length||metrics.USDT)&&<small className="capital-chart-coverage-note">{t.chartCoverage}</small>}</section>
+        <section className="capital-main-chart" aria-label={t.chart}><div className="capital-main-chart-heading"><strong>{t.historyValue}</strong><span>{baseCurrency}</span></div><p>{t.historyNote}</p>{consolidatedSnapshots.length?<CapitalPerformanceChart snapshots={consolidatedSnapshots} operations={chartOperations} fxSeries={activeFxSeries} currency={baseCurrency} range={historyRange} onRangeChange={setHistoryRange} t={t} locale={locale} showRanges={false}/>:<div className="capital-period-empty">{t.chartEmpty}</div>}{(chartCurrencies.length<Object.keys(metrics).filter(code=>code!=='USDT').length||metrics.USDT)&&<small className="capital-chart-coverage-note">{t.chartCoverage}</small>}</section>
         <div className="capital-overview-footer"><div className="capital-quote-summary"><span className={online?'capital-online-dot':'capital-offline-dot'}/><small>{quoteSummary}</small><small className="capital-quote-coverage">{marketQuotedAssets.length?t.quoteCoverage(freshQuoteCount,marketQuotedAssets.length,manualAssetCount):t.quoteNone}</small></div><div className="capital-today-change">{Object.entries(metrics).length?Object.entries(metrics).map(([code])=>{const change=todayChanges[code];return <small key={code} className={change?(change.value>=0n?'positive':'negative'):''}>{code} · {t.today}: {change?`${formatMoney(change.value,code,locale)} (${formatPercent(change.value,change.baseline,locale)})`:'—'}</small>}):<small>{t.today}: —</small>}{Object.keys(todayChanges).length>0&&<small className="capital-change-caption">{t.todayMethod}</small>}</div></div>
       </section>
       {!user && <div className="capital-notice"><LockIcon/> {t.signIn}</div>}
@@ -608,6 +630,7 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
         </div>
         <p className="capital-result-formula">{t.resultFormula}</p>
         <CapitalAssetHistoryChart rows={selected.rows} currency={selected.currency} locale={locale} t={t} formatQuantity={formatQuantity}/>
+        <CapitalQuoteHistoryChart asset={selected} currency={selected.currency} locale={locale} t={t}/>
         <div className="capital-detail-actions" role="group" aria-label={t.operation}>
           <button type="button" aria-pressed={operationEditor&&opForm.operation==='buy'} className={operationEditor&&opForm.operation==='buy'?'is-active':''} onClick={()=>operationEditor&&opForm.operation==='buy'?setOperationEditor(false):openOperation('buy')}>{t.buyAction}</button>
           <button type="button" aria-pressed={operationEditor&&opForm.operation==='sell'} className={operationEditor&&opForm.operation==='sell'?'is-active':''} onClick={()=>operationEditor&&opForm.operation==='sell'?setOperationEditor(false):openOperation('sell')}>{t.sellAction}</button>
