@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {salePreview} from '../src/features/capital/salePreview.js';import {parseScaled,MONEY_SCALE,QUANTITY_SCALE,scaledToString} from '../src/features/capital/decimal.js';
+const asset={quantity:parseScaled('2',QUANTITY_SCALE),invested:parseScaled('202',MONEY_SCALE)};const decimal=n=>scaledToString(n,MONEY_SCALE);
+test('partial sale distinguishes proceeds, returned cost basis and net profit',()=>{const p=salePreview(asset,'1','120','2');assert.equal(decimal(p.proceeds),'118');assert.equal(decimal(p.cost),'101');assert.equal(decimal(p.pnl),'17');});
+test('sale loss includes purchase and sale fees',()=>{const p=salePreview(asset,'2','90','3');assert.equal(decimal(p.proceeds),'177');assert.equal(decimal(p.pnl),'-25');});
+test('invalid quantities and malformed prices never produce a fictitious sale preview',()=>{for(const q of ['','0','3','abc'])assert.equal(salePreview(asset,q,'100'),null);assert.equal(salePreview(asset,'1','invalid'),null);});
+test('fractional sale allocates remaining basis exactly',()=>{const p=salePreview(asset,'0.125','120','0.1');assert.equal(decimal(p.cost),'12.625');assert.equal(decimal(p.proceeds),'14.9');assert.equal(decimal(p.pnl),'2.275');});

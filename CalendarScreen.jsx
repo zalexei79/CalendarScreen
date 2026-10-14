@@ -4705,7 +4705,7 @@ export default function CalendarScreen() {
       }} />}
 
       {accountMode === 'wallet' ? <WalletPanel language={language} isLight={isLight} currency={currency} {...wallet} onSave={wallet.saveTransaction} onDelete={wallet.deleteTransaction} onClearHistory={wallet.clearHistory} onBackToCalendar={() => transitionView(() => setAccountMode('main'))} /> : null}
-      {accountMode === 'capital' && proAccessActive && !proAccessLoading ? <CapitalPanel language={language} isLight={isLight} currency={currency} user={user} onBack={() => transitionView(() => setAccountMode('main'))} onWallet={() => transitionView(() => setAccountMode('wallet'))} /> : null}
+      {accountMode === 'capital' && proAccessActive && !proAccessLoading ? <CapitalPanel language={language} isLight={isLight} currency={currency} user={user} onBack={() => transitionView(() => setAccountMode('main'))} onWallet={() => transitionView(() => setAccountMode('wallet'))} onSettled={() => Promise.allSettled([wallet.refresh(),refreshFromCloud()])} /> : null}
       {accountMode === 'main' && <>
       <div className="px-3 sm:px-5">
         {showFirstEntryGuide ? <div className="first-calendar-entry-hint monthly-goal-bar" data-light={isLight}>

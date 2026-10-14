@@ -68,12 +68,14 @@ export function useCapitalPortfolio({ user }) {
     const quantity = operation === 'revalue' ? '0' : scaledToString(parseScaled(form.quantity, QUANTITY_SCALE), QUANTITY_SCALE);
     const unitPrice = scaledToString(parseScaled(form.price, MONEY_SCALE), MONEY_SCALE);
     const fee = scaledToString(parseScaled(form.fee || '0', MONEY_SCALE), MONEY_SCALE);
-    const { error: opError } = await supabase.rpc('capital_record_operation', {
-      p_asset_id: asset.id, p_operation: operation, p_quantity: quantity,
-      p_unit_price: unitPrice, p_fee: fee, p_occurred_on: form.date,
+    const settle=operation==='sell'&&form.destination&&form.destination!=='none';
+    const { data, error: opError } = await supabase.rpc(settle?'capital_sell_and_settle':'capital_record_operation', {
+      p_asset_id: asset.id, p_quantity: quantity, p_unit_price: unitPrice, p_fee: fee, p_occurred_on: form.date,
+      ...(settle?{p_destination:form.destination,p_request_id:form.requestId}:{p_operation:operation}),
     });
     if (opError) throw opError;
     await refresh();
+    return data;
   }, [user?.id, refresh]);
 
   const deleteLatestOperation = useCallback(async operationId => {

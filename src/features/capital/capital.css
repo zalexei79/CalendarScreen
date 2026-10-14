@@ -525,3 +525,5 @@
 @media(max-width:640px){.capital-panel.capital-overlay{align-items:stretch;padding-top:env(safe-area-inset-top)}.capital-overlay .capital-sheet{height:100%;max-height:100%;border-radius:20px 20px 0 0;padding-top:12px}.capital-sheet>.capital-sheet-head{margin-bottom:10px}}
 
 .capital-price-provenance{display:grid;gap:5px;margin:12px 0;font-size:11px}.capital-price-provenance span,.capital-price-provenance small{color:var(--cap-muted)}.capital-price-warning{padding:12px;border:1px solid var(--cap-gold);border-radius:12px;color:var(--cap-gold);font-size:11px;line-height:1.5}
+
+.capital-sale-preview{display:grid;gap:10px;padding:14px;border:1px solid var(--cap-line);border-radius:14px;margin:12px 0}.capital-sale-preview>span{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;color:var(--cap-muted)}.capital-sale-preview b{color:var(--cap-text)}.capital-quote-disclosure{margin:12px 0;color:var(--cap-muted);font-size:11px}.capital-quote-disclosure summary{cursor:pointer}
