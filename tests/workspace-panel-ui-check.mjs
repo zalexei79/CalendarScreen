@@ -38,12 +38,11 @@ try {
     const active=await page.locator('.workspace-mode-panel').boundingBox();
     if(width<960) assert.ok(active.height>idle.height+40,'Mobile trader expands a dedicated platform row');
     else {
-     assert.equal(active.height,idle.height,'Desktop trader keeps the header height stable');
-     assert.ok((await page.locator('.pro-platform-reveal').boundingBox()).width<=360,'Trading tools stay in one compact group');
+     assert.ok(active.height>idle.height,'Desktop trader reveals its tools in a dedicated row');
      if(width===1280 && language==='ru' && !light) await page.locator('#stage').screenshot({path:'tests/trader-compact-desktop.png'});
      const platforms=await page.locator('.pro-platform-reveal').boundingBox();
      const toggle=await page.locator('.pro-control-trader').boundingBox();
-     assert.ok(platforms.x+platforms.width<=toggle.x && Math.abs(platforms.y-toggle.y)<1,'Desktop platforms appear to the left of the trader toggle');
+     assert.ok(platforms.y>=toggle.y+toggle.height,'Desktop platforms appear below the navigation');
     }
     assert.equal(await page.locator('.pro-control-platform:disabled').count(),0);
     const foreground = await page.locator('.pro-platform-label strong').first().evaluate(el=>getComputedStyle(el).color);

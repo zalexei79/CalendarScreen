@@ -265,25 +265,20 @@ function MonthlyGoalForMonth({
             onClick={() => setDetailsOpen((value) => !value)}
             className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2 text-left"
             aria-expanded={detailsOpen}
+            aria-label={`${copy.title}: ${goal > 0 ? `${formatGoalNumber(netPnl, language)} / ${formatGoalNumber(goal, language)} ${currency}` : copy.setGoal}`}
           >
             <span className="shrink-0 text-[11px] font-semibold sm:text-sm">{copy.title}</span>
 
             {goal > 0 ? (
-              <span className={`min-w-0 truncate font-data text-[10px] font-semibold sm:text-xs ${mutedClass}`}>
-                {formatGoalNumber(netPnl, language)} / {formatGoalNumber(goal, language)} {currency}
+              <span className={`goal-summary-value min-w-0 truncate font-data text-[10px] font-semibold sm:text-xs ${mutedClass}`}>
+                {achieved ? <span className="goal-achieved-summary"><Check size={12} aria-hidden="true"/>{copy.achieved}</span> : `${Math.round(progress)}%`}
               </span>
             ) : (
               <span className={`min-w-0 truncate text-[11px] ${mutedClass}`}>{copy.setGoal}</span>
             )}
 
-            {goal > 0 && (
-              <span className={`ml-auto shrink-0 font-data text-[10px] font-bold sm:text-[11px] ${achieved ? 'text-emerald-500' : 'text-amber-500'}`}>
-                {Math.round(progress)}%
-              </span>
-            )}
-
             <ChevronDown
-              className={`h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0 transition-transform duration-200 ${mutedClass} ${detailsOpen ? 'rotate-180' : ''}`}
+              className={`ml-auto h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0 transition-transform duration-200 ${mutedClass} ${detailsOpen ? 'rotate-180' : ''}`}
             />
           </button>
         </div>
@@ -308,7 +303,7 @@ function MonthlyGoalForMonth({
 
         <div className={`grid transition-[grid-template-rows,opacity,margin] duration-200 ${
           detailsOpen || editing ? 'mt-2 grid-rows-[1fr] opacity-100' : 'mt-0 grid-rows-[0fr] opacity-0'
-        }`}>
+        }`} inert={detailsOpen || editing ? undefined : ''} aria-hidden={!detailsOpen && !editing}>
           <div className="min-h-0 overflow-hidden">
             {editing ? (
               <form onSubmit={saveGoal} className="flex flex-col gap-2 sm:flex-row sm:items-start">
@@ -359,6 +354,7 @@ function MonthlyGoalForMonth({
               <div className={`flex flex-wrap items-center justify-between gap-2 border-t pt-2.5 ${
                 isLight ? 'border-zinc-200' : 'border-white/5'
               }`}>
+                {goal > 0 && <p className={`w-full font-data text-xs ${mutedClass}`}>{formatGoalNumber(netPnl, language)} / {formatGoalNumber(goal, language)} {currency}</p>}
                 <p className={`text-[10px] ${mutedClass}`}>
                   {goal > 0
                     ? achieved

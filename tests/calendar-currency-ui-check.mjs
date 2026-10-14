@@ -18,6 +18,8 @@ try {
     localStorage.setItem('atj_currency','USD'); localStorage.setItem('atj_entry_currency','USD');
     localStorage.setItem('dayris_onboarding_v2_completed','1'); localStorage.setItem('calendar_guide_completed','1');
     localStorage.setItem(`money_calendar_trades_${id}`,JSON.stringify(saved));
+    localStorage.setItem(`pro_month_goal_v1:${id}:2026-10:USD`,'55');
+    localStorage.setItem(`goal_celebrated_2026-10_USD:${id}`,'55');
   },{saved,id:storyUserId,pro:process.env.DAYRIS_TEST_PRO === '1'});
   await context.route('**/*',route=>{
     const url=new URL(route.request().url());
@@ -34,6 +36,22 @@ try {
   assert.equal(await page.locator('.calendar-days-grid .pro-calendar-day').count()>0,process.env.DAYRIS_TEST_PRO==='1','Exercise the intended FREE or PRO calendar');
   assert.equal(await page.locator('.calendar-currency-caption, .calendar-other-currencies').count(),0,'Calendar has no duplicate currency labels');
   const today=page.locator('.calendar-days-grid [data-today-cell=true]');
+  assert.equal(await page.locator('.dayris-brand-row .workspace-mode-toggle').count(),1,'Mode lives in the top row');
+  assert.equal(await page.locator('.workspace-mode-panel .workspace-selector').count(),0,'No duplicate mode control');
+  const nav=await page.locator('.dayris-date-navigation').boundingBox();
+  const currencyTrigger=await page.getByRole('button',{name:'Валюта календаря: USD',exact:true}).boundingBox();
+  assert.ok(currencyTrigger.y>=nav.y && currencyTrigger.y+currencyTrigger.height<=nav.y+nav.height+1,'Currency stays next to the month');
+  if(process.env.DAYRIS_TEST_PRO==='1'){
+    const goal=page.locator('.monthly-goal-bar');
+    assert.ok((await goal.boundingBox()).height<=45,'Goal is a compact strip');
+    assert.match(await goal.innerText(),/Цель достигнута/);
+    await page.screenshot({path:'tests/header-compact-390.png',animations:'disabled'});
+    await goal.getByRole('button',{name:/^Цель месяца/}).click();await page.clock.runFor(400);
+    assert.match(await goal.innerText(),/100.*55.*USD/s,'Exact amounts are available in details');
+    assert.equal(await goal.getByRole('button',{name:'Изменить цель',exact:true}).isVisible(),true);
+    await goal.getByRole('button',{name:/^Цель месяца/}).click();await page.clock.runFor(400);
+    assert.equal(await goal.getByRole('button',{name:'Изменить цель',exact:true}).count(),0);
+  }
   assert.match(await today.innerText(),/100/);
   const assertAmountFits=async()=>assert.equal(await today.locator('.day-amount').evaluate(el=>{
     const a=el.getBoundingClientRect(),b=el.closest('button').getBoundingClientRect();

@@ -24,7 +24,8 @@ try {
   await save(100);
   assert.match(await panel.innerText(), /42%/);
   await page.getByRole('button', { name: 'August', exact: true }).click();
-  await panel.getByRole('button', { name: 'Set goal', exact: true }).waitFor({ state: 'attached' });
+  await panel.getByRole('button', { name: 'Set goal', exact: true, includeHidden: true }).waitFor({ state: 'attached' });
+  assert.equal(await panel.getByRole('button', { name: 'Set goal', exact: true }).count(),0,'Collapsed details stay outside the keyboard and accessibility navigation');
   assert.doesNotMatch(await panel.innerText(), /100%/);
   assert.equal(await page.evaluate(() => localStorage.getItem('goal_celebrated_2026-08_USD:alice')), null,
     'switching must never acknowledge the previous goal under the new month');

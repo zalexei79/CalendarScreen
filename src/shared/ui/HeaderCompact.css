@@ -1,0 +1,43 @@
+/* A quiet header: navigation first, details revealed on demand. */
+.dayris-header { --header-ease:cubic-bezier(.22,1,.36,1); padding-bottom:4px; }
+.dayris-header .dayris-brand-row { margin-bottom:4px; }
+.dayris-brand-row h1 { font-size:15px; }
+.dayris-brand-row p { display:none; }
+.dayris-brand-row img { width:28px; height:28px; }
+.header-mode-control.workspace-mode-group { width:auto; }
+.header-mode-control .workspace-selector { width:auto; gap:2px; }
+.header-mode-control .workspace-mode-toggle { flex-basis:54px; width:54px; height:32px; border-radius:10px; }
+.header-mode-control .workspace-toggle-thumb { display:none; }
+.header-mode-control .workspace-mode-toggle > span:not(.workspace-toggle-thumb) { font-size:10px; letter-spacing:.06em; }
+.header-mode-control .workspace-mode-toggle[aria-checked=true] > span:nth-child(2),
+.header-mode-control .workspace-mode-toggle[aria-checked=false] > span:last-child { display:none; }
+.header-mode-control .workspace-mode-toggle[aria-checked=true] > span:last-child { color:var(--pro-gold); }
+.header-mode-control .workspace-mode-toggle[aria-checked=true] { border-color:color-mix(in srgb,var(--pro-gold) 30%,transparent); }
+.dayris-header .workspace-mode-panel.compact-tool-rail { grid-template-columns:auto auto minmax(0,1fr); column-gap:16px; }
+.dayris-header .compact-tool-rail .workspace-capital-entry { grid-column:2; grid-row:1; min-height:44px; }
+.dayris-header .compact-tool-rail .pro-control-trader { grid-column:3; justify-self:end; }
+.dayris-header .compact-tool-rail .wallet-entry-badge { display:none; }
+.dayris-header .compact-tool-rail .pro-platform-reveal { grid-column:1/-1; grid-row:2; }
+.dayris-header .dayris-command-row { gap:0; }
+.dayris-header .dayris-date-navigation { margin-bottom:0; }
+.monthly-goal-bar { border-top:0; border-bottom:0; padding-top:0; padding-bottom:0; margin-top:0; margin-bottom:4px; }
+.monthly-goal-bar > div:first-child { min-height:38px; }
+.monthly-goal-bar > div:first-child > div { background:transparent; width:18px; height:18px; }
+.monthly-goal-bar > div:first-child > button { min-height:38px; }
+.monthly-goal-bar > div:first-child > button > span:nth-child(2) { margin-left:auto; }
+.monthly-goal-bar > div:first-child > button > svg { margin-left:4px; }
+.monthly-goal-bar > div:nth-child(2) { height:2px; margin-top:0; }
+.goal-summary-value { display:flex; align-items:center; min-height:18px; line-height:1.4; }
+.goal-achieved-summary { display:inline-flex; align-items:center; gap:4px; color:var(--dayris-profit,#10b981); font-family:system-ui,sans-serif; font-weight:500; }
+.dayris-header button, .monthly-goal-bar button { transition:background-color 180ms ease,color 180ms ease,border-color 180ms ease,transform 180ms var(--header-ease,cubic-bezier(.22,1,.36,1)); -webkit-tap-highlight-color:transparent; }
+.dayris-header button:active, .monthly-goal-bar button:active { transform:scale(.97); }
+.header-mode-control .workspace-mode-toggle > span { animation:header-label-enter 240ms var(--header-ease); }
+.monthly-goal-bar > .grid { transition-duration:320ms; transition-timing-function:cubic-bezier(.22,1,.36,1); }
+@keyframes header-label-enter { from { opacity:0; translate:0 3px; } to { opacity:1; translate:0 0; } }
+@media(min-width:640px) { .dayris-header { padding-top:12px; } .dayris-brand-row h1 { font-size:17px; } }
+@media(min-width:1024px) { .dayris-header .dayris-command-row { column-gap:32px; } }
+@media(max-width:359px) { .dayris-header .workspace-mode-panel.compact-tool-rail { column-gap:8px; } }
+@media(prefers-reduced-motion:reduce) {
+  .dayris-header button,.monthly-goal-bar button,.monthly-goal-bar > .grid,.header-mode-control .workspace-mode-toggle > span { transition:none!important; animation:none!important; }
+  .dayris-header button:active,.monthly-goal-bar button:active { transform:none; }
+}
