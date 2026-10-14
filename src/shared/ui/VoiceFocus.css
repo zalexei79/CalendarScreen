@@ -35,6 +35,14 @@
 .voice-workspace[data-minimal=true] .voice-workspace-brand small { display:none; }
 .voice-workspace[data-minimal=true] .voice-workspace-transport-state>span { visibility:hidden; }
 .voice-workspace[data-minimal=true] .voice-workspace-exit>span { display:none; }
+.voice-workspace[data-help-open=true] :is(.voice-workspace-hero,.voice-workspace-heard,.voice-workspace-transcript,.voice-workspace-context) { display:none; }
+.voice-workspace-command-catalog { padding-top:4px; }
+.voice-workspace-command-catalog .voice-capabilities { margin:0; }
+.voice-workspace-command-catalog .voice-capabilities h2 { font-size:20px;letter-spacing:-.02em; }
+.voice-workspace-command-catalog .voice-capabilities>p { margin-bottom:16px; }
+.voice-workspace-command-catalog .voice-capabilities details { border-top:1px solid var(--voice-line);padding:8px 0; }
+.voice-workspace-command-catalog .voice-capabilities summary { min-height:44px; }
+.voice-workspace-command-toggle[aria-expanded=true] { color:var(--voice-accent); }
 @media(prefers-reduced-motion:no-preference) {
  .voice-workspace-result { animation:voice-focus-enter 240ms cubic-bezier(.2,0,0,1); }
  .voice-workspace-transcript summary svg { transition:transform 180ms ease; }

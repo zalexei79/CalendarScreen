@@ -19,7 +19,6 @@ import './CalendarVoiceButton.css';
 import VoiceWorkspace from './VoiceWorkspace.jsx';
 import {prepareConversationEntry,parseVoiceConversation} from '../lib/voiceConversation.js';
 import {isVoiceHelpRequest,voiceCapabilities} from '../lib/voiceCapabilities.js';
-import VoiceCapabilities from './VoiceCapabilities.jsx';
 import {followupVoiceEntry} from '../lib/voiceQuickEntry.js';
 
 export default function CalendarVoiceButton({launchRequest,onLaunchHandled,onResetConversation,onConversation,selectedDate,onCreateCategory,onDeleteCategory,userId,language='ru',isLight,traderMode=false,categoryOptions=[],defaultCurrency,askDestination=false,walletAvailable=false,onCommand,onSaveEntry}){
@@ -149,7 +148,7 @@ export default function CalendarVoiceButton({launchRequest,onLaunchHandled,onRes
   if(saveBusy.current||saveLocked||!phrase.trim())return;
   if(isVoiceHelpRequest(phrase)){
    requestGeneration.current++;setHeard(phrase);setTranscript('');setCompact(false);setChoices([]);setAnswerAction(null);setMessage('');setAudioError('');setSaveError('');setShowCapabilities(true);setActive(true);
-   const catalog=voiceCapabilities(locale,{walletAvailable,traderMode});respond(catalog.summary,()=>start(true));return;
+   const catalog=voiceCapabilities(locale,{walletAvailable,traderMode});respond(catalog.summary);return;
   }
   setShowCapabilities(false);
   if(entryDraft.current&&!batchDraft.current&&!entryPrompt.current&&isVoiceCommit(phrase)){await saveEntry();return;}
@@ -262,8 +261,9 @@ export default function CalendarVoiceButton({launchRequest,onLaunchHandled,onRes
    contextLabel={pendingSummary||contextLabel} pendingPrompt={entryDraft.current&&!review?entryPrompt.current:''} compact={compact} phase={speaking?'speaking':phase} talking={talking} status={saving?interactionCopy.saving:phase==='starting'?ui.opening:phase==='processing'?ui.processing:listening?recognitionHint||ui.listen:speaking?speakingStatus:message&&!['',ui.listen,ui.opening].includes(message)?message:idleStatus}
    help={transcript?compactHelp:nextHelp||(review?{filtered:true,title:interactionCopy.correct,phrases:batch?interactionCopy.batch:review.mutation?interactionCopy.mutation:interactionCopy.entry}:compactHelp)}
    onClose={cancelDraft} onDismissStart={()=>{requestGeneration.current++;stop();stopSpeaking();}} onExpand={()=>setCompact(false)} onCollapse={()=>setCompact(true)} onListen={()=>start()} onSuggestion={submitReply} choices={choices} listening={listening} busy={saving||phase==='processing'} resultKey={review?(batch?'batch':'review'):answer||'idle'}
+   capabilities={voiceCapabilities(locale,{walletAvailable,traderMode})} helpRequested={showCapabilities} onHelpOpen={()=>{stop();stopSpeaking();}} onHelpClose={()=>setShowCapabilities(false)}
    settings={<>{feedbackControl}{localeVoices.length>0?voicePicker:<p className="calendar-voice-help-note">{playbackLabels.missing}</p>}</>}
-  >  {showCapabilities&&<VoiceCapabilities catalog={voiceCapabilities(locale,{walletAvailable,traderMode})}/>}
+  >
   {review&&(batch?<VoiceBatchCard batch={batch} locale={locale} categories={categoryOptions} onCreateCategory={onCreateCategory} onDeleteCategory={onDeleteCategory} userId={userId} isLight={isLight} walletAvailable={walletAvailable} onSelect={selectBatch} onChange={changeReview} onManualEdit={()=>{stop();stopSpeaking();}} onRemove={removeBatchEntry} onSave={saveEntry} onCancel={cancelDraft} busy={saving} listening={listening} error={saveError} locked={saveLocked} progress={saveProgress.current}></VoiceBatchCard>:<VoiceEntryCard correction={correction} entry={review} locale={locale} categories={categoryOptions} onCreateCategory={onCreateCategory} onDeleteCategory={onDeleteCategory} userId={userId} isLight={isLight} walletAvailable={walletAvailable} onChange={changeReview} onManualEdit={()=>{stop();stopSpeaking();}} onSave={saveEntry} onCancel={cancelDraft} busy={saving} listening={listening} error={saveError} locked={saveLocked}></VoiceEntryCard>)}
   {review&&listening&&<div className="calendar-voice-live" role="status" aria-live="polite">{phase==='starting'?ui.opening:phase==='processing'?ui.processing:ui.listen}{transcript&&<span>«{transcript}»</span>}</div>}
   {answer&&!review&&!showCapabilities&&<div className="calendar-voice-message calendar-voice-answer">

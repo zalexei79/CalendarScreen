@@ -15,15 +15,20 @@ try{
  await page.route('http://capabilities.test/**',r=>r.fulfill({contentType:'text/html',body:`<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;background:#101114;color:#eee;font-family:Arial}button{font:inherit;color:inherit;background:transparent} ${bundle.outputFiles.find(f=>f.path.endsWith('.css')).text}</style><div id="root"></div><script>${bundle.outputFiles.find(f=>f.path.endsWith('.js')).text}</script>`}));
  await page.goto('http://capabilities.test');const surface=page.locator('.voice-workspace'),catalog=page.locator('.voice-capabilities');
  const speak=async phrase=>{await page.waitForFunction(()=>voice?.onresult&&!voice.aborted);await page.evaluate(text=>emit(text),phrase);};
- await page.locator('.calendar-voice-button').click();await speak('Что-то ты умеешь?');await catalog.waitFor();assert.equal(await catalog.locator('details').count(),8);
+ await page.locator('.calendar-voice-button').click();
+ await page.getByRole('button',{name:'Возможности и все команды',exact:true}).click();await catalog.waitFor();
+ assert.equal(await surface.getAttribute('data-listening'),'false','Opening help pauses recording');
+ assert.equal(await catalog.locator('details[open]').count(),8,'All command groups are expanded');
+ await page.getByRole('button',{name:'Скрыть команды',exact:true}).click();assert.equal(await catalog.count(),0);
+ await surface.locator('.voice-workspace-mic').click();await speak('Что-то ты умеешь?');await catalog.waitFor();assert.equal(await catalog.locator('details').count(),8);
  assert.equal(await page.evaluate(()=>conversations),0);assert.deepEqual(await page.evaluate(()=>commands),[]);assert.match(await page.evaluate(()=>spoken.text),/Могу записывать/);assert.ok(!await catalog.innerText().then(text=>text.includes('кошелёк')));
- await catalog.locator('summary').first().click();assert.match(await catalog.innerText(),/Вчера потратил 250/);
+ assert.match(await catalog.innerText(),/Вчера потратил 250/);
  const mic=surface.locator('.voice-workspace-mic'),exit=surface.locator('.voice-workspace-exit');const before=await mic.boundingBox();await surface.locator('.voice-workspace-scroll').evaluate(el=>el.scrollTop=el.scrollHeight);const after=await mic.boundingBox();assert.equal(after.y,before.y,'recording control stays pinned while scrolling help');assert.ok(await exit.isVisible());
- await page.getByRole('button',{name:'Свернуть голосовой режим',exact:true}).click();assert.equal(await surface.getAttribute('data-compact'),'true');assert.ok(await mic.isVisible());assert.ok(await exit.isVisible());await page.waitForFunction(()=>document.querySelector('.voice-workspace').getBoundingClientRect().height<230);assert.ok((await surface.boundingBox()).height<230,'quick-access strip leaves calendar visible after its motion settles');
- await page.getByRole('button',{name:'Развернуть помощника',exact:true}).click();assert.equal(await surface.getAttribute('data-compact'),'false');await surface.locator('.voice-workspace-scroll').evaluate(el=>el.scrollTop=0);await surface.screenshot({path:'tests/voice-capabilities.png',animations:'disabled'});
- await page.evaluate(()=>spoken.onend());await speak('Вчера потратил 250 лей на продукты');await page.locator('.calendar-voice-review').waitFor();assert.equal(await catalog.count(),0);const count=await page.evaluate(()=>conversations);
+ await page.getByRole('button',{name:'Скрыть команды',exact:true}).click();assert.equal(await catalog.count(),0);assert.ok(await mic.isVisible());assert.ok(await exit.isVisible());
+ await page.getByRole('button',{name:'Возможности и все команды',exact:true}).click();await catalog.waitFor();await surface.locator('.voice-workspace-scroll').evaluate(el=>el.scrollTop=0);await surface.screenshot({path:'tests/voice-capabilities.png',animations:'disabled'});
+ await mic.click();await speak('Вчера потратил 250 лей на продукты');await page.locator('.calendar-voice-review').waitFor();assert.equal(await catalog.count(),0);const count=await page.evaluate(()=>conversations);
  await speak('Какие команды ты знаешь?');await catalog.waitFor();assert.equal(await page.evaluate(()=>conversations),count,'help takes priority over pending entry');assert.match(await page.locator('.calendar-voice-review').textContent(),/250 MDL/);assert.deepEqual(await page.evaluate(()=>commands),[],'asking for help never saves a pending entry');
- await page.evaluate(()=>spoken.onend());await speak('Сохрани');await page.waitForFunction(()=>commands.length===1);assert.equal(await page.evaluate(()=>commands[0].amount),'250');assert.equal(await catalog.count(),0);
+ await mic.click();await speak('Сохрани');await page.waitForFunction(()=>commands.length===1);assert.equal(await page.evaluate(()=>commands[0].amount),'250');assert.equal(await catalog.count(),0);
  await page.getByRole('button',{name:'Закрыть голосовой режим',exact:true}).click();assert.equal(await catalog.count(),0);assert.deepEqual(errors,[]);
  console.log('PASS: voice capabilities response, spoken summary, all groups, FREE restrictions, continuation, pending draft preservation and explicit save.');
 }finally{await browser.close();}
