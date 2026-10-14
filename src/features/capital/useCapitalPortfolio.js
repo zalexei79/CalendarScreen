@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toNativeOrder } from './investorTools.js';
 import { supabase } from '../../supabaseClient';
 import { calculatePositions, MONEY_SCALE, parseScaled, QUANTITY_SCALE, scaledToString } from './decimal';
 
@@ -47,13 +48,15 @@ export function useCapitalPortfolio({ user }) {
     return () => { window.clearInterval(timer); window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', sync); };
   }, [refresh, user?.id]);
 
-  const addAsset = useCallback(async form => {
+  const addAsset = useCallback(async input => {
+    const form=toNativeOrder(input);
     if (!user?.id) throw new Error('Sign in to save your portfolio.');
     const quantity = scaledToString(parseScaled(form.quantity, QUANTITY_SCALE), QUANTITY_SCALE);
     const purchasePrice = scaledToString(parseScaled(form.purchasePrice, MONEY_SCALE), MONEY_SCALE);
     const manualPrice = scaledToString(parseScaled(form.price || form.purchasePrice, MONEY_SCALE), MONEY_SCALE);
     const fee = scaledToString(parseScaled(form.fee || '0', MONEY_SCALE), MONEY_SCALE);
-    const { error: saveError } = await supabase.rpc('capital_create_asset', {
+    const { error: saveError } = await supabase.rpc(input.unit==='gram'?'capital_create_asset_with_unit':'capital_create_asset', {
+      ...(input.unit==='gram'?{p_display_unit:'gram'}:{}),
       p_name: form.name.trim(), p_symbol: form.symbol.trim().toUpperCase(), p_category: form.category,
       p_currency: form.currency, p_quote_source: form.quoteSource, p_manual_price: manualPrice,
       p_quantity: quantity, p_unit_price: purchasePrice, p_fee: fee, p_occurred_on: form.date,
@@ -62,7 +65,8 @@ export function useCapitalPortfolio({ user }) {
     await refresh();
   }, [user?.id, refresh]);
 
-  const addOperation = useCallback(async (asset, form) => {
+  const addOperation = useCallback(async (asset, input) => {
+    const form=toNativeOrder(input);
     if (!user?.id) throw new Error('Sign in to save your portfolio.');
     const operation = form.operation;
     const quantity = operation === 'revalue' ? '0' : scaledToString(parseScaled(form.quantity, QUANTITY_SCALE), QUANTITY_SCALE);

@@ -117,3 +117,5 @@ export function calculatePositions(assets, operations) {
     return { ...asset, rows: rows.reverse(), quantity, invested, realized, averageCost };
   });
 }
+
+export function formatUnitMoney(value,currency,locale){const amount=typeof value==='bigint'?value:parseScaled(value,MONEY_SCALE);if(amount===0n||amount>=10n**BigInt(MONEY_SCALE))return formatMoney(amount,currency,locale);const fraction=scaledToString(amount,MONEY_SCALE).split('.')[1].padEnd(2,'0');const parts=new Intl.NumberFormat(locale,{style:'currency',currency:currency==='USDT'?'USD':currency,minimumFractionDigits:2,maximumFractionDigits:2}).formatToParts(0);return parts.map(part=>part.type==='fraction'?fraction:part.type==='currency'&&currency==='USDT'?'USDT':part.value).join('');}

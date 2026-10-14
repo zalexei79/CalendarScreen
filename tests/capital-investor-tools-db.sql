@@ -1,0 +1,26 @@
+begin;
+do $$ declare u uuid;begin select user_id into u from public.pro_entitlements where starts_at<=now() and ends_at>now() limit 1;if u is null then raise exception 'No active PRO for rollback check';end if;perform set_config('request.jwt.claim.sub',u::text,true);end $$;
+set local role authenticated;
+do $$ declare a uuid;r uuid;op uuid;count_events integer;blocked boolean;begin
+ a:=public.capital_create_asset_with_unit('ROLLBACK gram test','XAU','metal','USD','manual',4000,1,3100,1,current_date,'gram');
+ if not exists(select 1 from public.capital_assets where id=a and display_unit='gram') then raise exception 'Unit preference failed';end if;
+ insert into public.capital_price_alerts(user_id,asset_id,threshold,direction) values(auth.uid(),a,3200,'above') returning id into r;
+ blocked:=false;begin insert into public.capital_price_alerts(user_id,asset_id,threshold,direction) values(auth.uid(),a,3200,'above');exception when unique_violation then blocked:=true;end;if not blocked then raise exception 'Duplicate active price condition allowed';end if;
+ if public.capital_check_price_alerts(a,4000,now(),'gold-api')<>0 then raise exception 'Disabled alerts triggered';end if;
+ insert into public.capital_alert_preferences(user_id,enabled,income_enabled,share_enabled,share_limit) values(auth.uid(),true,true,true,50) on conflict(user_id) do update set enabled=true,income_enabled=true,share_enabled=true,share_limit=50;
+ if public.capital_check_price_alerts(a,4000,now()-interval '10 minutes','gold-api')<>0 then raise exception 'Stale price triggered';end if;
+ if public.capital_check_price_alerts(a,4000,now(),'websocket')<>0 then raise exception 'Wrong provider triggered';end if;
+ if public.capital_check_price_alerts(a,4000,now(),'gold-api')<>1 then raise exception 'Price condition failed';end if;
+ if public.capital_check_price_alerts(a,4000,now(),'gold-api')<>0 then raise exception 'Repeated price alert';end if;
+ if not public.capital_check_share_alert(a,60) then raise exception 'Concentration condition failed';end if;
+ if public.capital_check_share_alert(a,60) then raise exception 'Repeated concentration alert';end if;
+ op:=public.capital_record_operation(a,'dividend',1,5,1,current_date);
+ if not exists(select 1 from public.capital_alert_events where operation_id=op and kind='income' and amount=4) then raise exception 'Income notification failed';end if;
+ update public.capital_alert_events set seen_at=now() where asset_id=a;
+ blocked:=false;begin update public.capital_alert_events set amount=999 where asset_id=a;exception when insufficient_privilege then blocked:=true;end;if not blocked then raise exception 'Client can tamper with notification amounts';end if;
+ perform public.capital_delete_latest_operation(op);if exists(select 1 from public.capital_alert_events where operation_id=op) then raise exception 'Cancelled income notification survived';end if;
+ perform set_config('request.jwt.claim.sub',gen_random_uuid()::text,true);if exists(select 1 from public.capital_alert_events) then raise exception 'RLS exposed another owner';end if;
+ blocked:=false;begin perform public.capital_check_price_alerts(a,4000,now(),'gold-api');exception when others then blocked:=true;end;if not blocked then raise exception 'Non PRO check allowed';end if;
+end $$;
+rollback;
+select 'PASS: gram unit, opt-in, stale rejection, provider validation, one-shot price alert, concentration, recorded income, cancellation, RLS and PRO; test writes rolled back' as verification;

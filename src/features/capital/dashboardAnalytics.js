@@ -13,7 +13,11 @@ export function dashboardAnalytics(assets, operations, priceFor, series, target,
   const result=scope==='base'?calculateBasePortfolioResult([asset],series,target,date,priceFor):null;
   const pnl=scope==='base'?result.complete?result.pnl:null:native===null?null:native-asset.invested+asset.realized;
   if(value===null)complete=false;else {total+=value;groups.set(asset.category,(groups.get(asset.category)||0n)+value);}
-  return {asset,value,pnl};
+  let incomeAll=0n,incomeKnown=true;
+  for(const op of asset.rows||[]){if(op.operation!=='dividend')continue;const fx=scope==='base'?currencyRateOn(series,asset.currency,target,op.occurred_on):10n**BigInt(MONEY_SCALE);if(fx===null){incomeKnown=false;continue;}const net=multiplyScaled(parseScaled(op.quantity||'0',QUANTITY_SCALE),QUANTITY_SCALE,parseScaled(op.unit_price||'0',MONEY_SCALE),MONEY_SCALE)-parseScaled(op.fee||'0',MONEY_SCALE);incomeAll+=multiplyScaled(net,MONEY_SCALE,fx,MONEY_SCALE);}
+  const unrealized=scope==='base'?(result.complete?result.unrealized:null):(native===null?null:native-asset.invested);
+  const closed=incomeKnown?(scope==='base'?(result.complete?result.realized-incomeAll:null):asset.realized-incomeAll):null;
+  return {asset,value,pnl,closed,unrealized};
  });
  let income=0n,incomeComplete=true,count=0;
  const ids=new Set(included.map(a=>a.id));
@@ -25,5 +29,7 @@ export function dashboardAnalytics(assets, operations, priceFor, series, target,
  }
  const allocation=[...groups].filter(([,value])=>value>0n).map(([category,value])=>({category,value,bps:complete&&total>0n?Number(value*10000n/total):null})).sort((a,b)=>a.value>b.value?-1:a.value<b.value?1:0);
  const positions=rows.filter(r=>r.asset.quantity>0n),largest=positions.filter(r=>r.value!==null).sort((a,b)=>a.value>b.value?-1:a.value<b.value?1:0)[0];
- return {rows,allocation,total:complete?total:null,complete,income:incomeComplete?income:null,incomeCount:count,largest,largestBps:complete&&total>0n&&largest?Number(largest.value*10000n/total):null};
+ const closed=rows.every(r=>r.closed!==null)?rows.reduce((n,r)=>n+r.closed,0n):null;
+ const unrealized=rows.every(r=>r.unrealized!==null)?rows.reduce((n,r)=>n+r.unrealized,0n):null;
+ return {closed,unrealized,rows,allocation,total:complete?total:null,complete,income:incomeComplete?income:null,incomeCount:count,largest,largestBps:complete&&total>0n&&largest?Number(largest.value*10000n/total):null};
 }

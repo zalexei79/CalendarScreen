@@ -1,3 +1,4 @@
+import {investorCopy} from './investorCopy.js';
 import React, { useMemo, useState } from 'react';
 import { Plus, ArrowUpRight } from 'lucide-react';
 import { dashboardAnalytics } from './dashboardAnalytics.js';
@@ -8,6 +9,7 @@ import CapitalPerformanceChart from './CapitalPerformanceChart.jsx';
 import './dashboard.css';
 const colors=['#53c9ac','#91a9e8','#d9b675','#ab8dd5','#78adbe','#de9288','#9bba82','#b5bac6','#84978e'];
 export default function CapitalDashboard({ assets, operations, snapshots, metrics, priceFor, fxSeries, baseCurrency, onCurrencyChange, currencies, range, onRangeChange, locale, t, stats, quoteSummary, quoteCoverage, online, fxLoading, fxError, fxDate, onAdd, onSelect }) {
+ const beginner=investorCopy[locale];
  const c=dashboardCopy[locale], [view,setView]=useState('auto');
  const nativeCurrencies=Object.keys(metrics),scope=view==='auto'?(nativeCurrencies.length===1&&nativeCurrencies[0]==='USDT'?'USDT':'base'):view;
  const code=scope==='base'?baseCurrency:scope;
@@ -40,7 +42,7 @@ export default function CapitalDashboard({ assets, operations, snapshots, metric
   </div>
   <CapitalPerformanceChart snapshots={chartRows} operations={scopedOperations} fxSeries={fxSeries} currency={code} range={range} onRangeChange={onRangeChange} t={t} locale={locale} showRanges={false}/>
   <p className="dashboard-note">{c.chartNote}</p>
-  <div className="dashboard-key-stats"><div><span>{c.allTime}</span><strong className={allPnl>0n?'positive':allPnl<0n?'negative':''}>{signed(allPnl)}</strong></div><div><span>{c.income}</span><strong>{money(analytics.income)}</strong><small>{analytics.incomeCount} · {t.operationHistory}</small></div><div><span>{c.concentration}</span><strong>{analytics.largest?.asset.name||'—'}</strong><small>{analytics.largestBps===null?'—':share(analytics.largestBps)} · {c.scope}</small></div></div>
+  <div className="dashboard-key-stats"><div><span>{beginner.closed}</span><strong className={analytics.closed>0n?'positive':analytics.closed<0n?'negative':''}>{signed(analytics.closed)}</strong><small>{beginner.allTime}</small></div><div><span>{beginner.open}</span><strong className={analytics.unrealized>0n?'positive':analytics.unrealized<0n?'negative':''}>{signed(analytics.unrealized)}</strong><small>{beginner.allTime}</small></div><div><span>{beginner.paid}</span><strong>{money(analytics.income)}</strong><small>{beginner.period}</small></div></div>
   <details className="dashboard-disclosure"><summary>{c.details}</summary><p>{c.method}</p><p>{c.incomeNote}</p>{periodValid&&period.start&&<p>{period.start.sampled_on} — {period.end.sampled_on}</p>}<div className="capital-result-breakdown">{nativeCurrencies.map(currency=><div key={currency}><b>{currency}</b><span>{stats.realized}: {formatMoney(metrics[currency].realized,currency,locale)}</span><span>{stats.unrealized}: {metrics[currency].unrealized===null?'—':formatMoney(metrics[currency].unrealized,currency,locale)}</span></div>)}</div></details>
   <details className="dashboard-disclosure"><summary><span className={online?'capital-online-dot':'capital-offline-dot'}/>{c.quote}<small>{quoteCoverage}</small></summary><p>{quoteSummary}</p><p>{fxLoading?t.fxLoading:fxError?t.fxUnavailable:fxDate?t.fxAsOf+' '+fxDate:t.globalCoverage}</p></details>
  </section>
