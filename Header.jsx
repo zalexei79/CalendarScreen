@@ -13,6 +13,7 @@ import BrandIcon from './src/shared/ui/BrandIcon.jsx';
 import AnimatedMonthLabel from './src/shared/ui/AnimatedMonthLabel.jsx';
 import WorkspaceModePanel, { WorkspaceModeSelector } from './src/features/pro/WorkspaceModePanel.jsx';
 import './src/shared/ui/HeaderCompact.css';
+import CalendarMonthBrief from './src/shared/ui/CalendarMonthBrief.jsx';
 import LoginButtons from './src/features/auth/LoginButtons.jsx';
 
 function pendingSyncText(count, traderMode, language) {
@@ -406,6 +407,7 @@ export default function Header({
       </div>
 
       {/* Trader Mode tools slide out only after the separate Trader Mode switch is enabled. */}
+      {monthSummary && <CalendarMonthBrief summary={monthSummary} currency={currency} language={language} traderMode={traderMode} isLight={isLight} filtered={platformFilter!=='ALL'||calendarTypeFilter!=='all'}/>}
       <div className="hidden" aria-hidden="true">
         <div className={`min-h-0 ${traderMode && accountMode === 'main' ? 'overflow-visible' : 'overflow-hidden'}`}>
           {/* Mobile keeps PRO useful without pushing the calendar below the fold. */}

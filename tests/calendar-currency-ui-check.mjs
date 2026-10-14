@@ -33,6 +33,7 @@ try {
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.clock.install({time:new Date('2026-10-05T12:00:00')});
   await page.goto('http://calendar.test/');await page.clock.pauseAt(new Date('2026-10-05T13:00:00'));
+  await page.locator(process.env.DAYRIS_TEST_PRO==='1'?'.calendar-days-grid .pro-calendar-day':'.calendar-days-grid').first().waitFor();
   assert.equal(await page.locator('.calendar-days-grid .pro-calendar-day').count()>0,process.env.DAYRIS_TEST_PRO==='1','Exercise the intended FREE or PRO calendar');
   assert.equal(await page.locator('.calendar-currency-caption, .calendar-other-currencies').count(),0,'Calendar has no duplicate currency labels');
   const today=page.locator('.calendar-days-grid [data-today-cell=true]');

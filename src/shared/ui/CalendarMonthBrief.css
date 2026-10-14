@@ -1,0 +1,19 @@
+.calendar-month-brief { margin-top:8px; border-top:1px solid var(--glass-line); color:#e3e4e8; }
+.calendar-month-brief[data-light=true] { color:#262830; }
+.calendar-month-brief summary { min-height:42px; display:flex; align-items:center; gap:8px; cursor:pointer; list-style:none; font-size:12px; }
+.calendar-month-brief summary::-webkit-details-marker { display:none; }
+.calendar-month-brief summary>span { flex:1; color:#92959f; }
+.calendar-month-brief summary>strong { font-weight:550; font-size:13px; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
+.calendar-month-brief summary>svg { color:#92959f; flex:none; }
+.calendar-month-brief summary>strong[data-sign=positive] { color:#53c9ac; }
+.calendar-month-brief summary>strong[data-sign=negative] { color:#ef8b91; }
+.calendar-month-brief[data-light=true] summary>strong[data-sign=positive] { color:#137c60; }
+.calendar-month-brief[data-light=true] summary>strong[data-sign=negative] { color:#b84251; }
+.month-brief-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; padding:8px 0; }
+.month-brief-grid>div { display:grid; gap:6px; min-width:0; }
+.month-brief-grid span,.month-brief-details p { font-size:11px; color:#92959f; line-height:1.5; }
+.month-brief-grid b { font-size:13px; font-weight:550; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+.month-brief-details p { margin:4px 0 12px; }
+.calendar-month-brief[open] summary>svg { transform:rotate(180deg); }
+.calendar-month-brief summary:focus-visible { outline:2px solid #c9ad72; outline-offset:2px; border-radius:8px; }
+@media(prefers-reduced-motion:no-preference) { .calendar-month-brief summary>svg { transition:transform 180ms ease; } .calendar-month-brief[open] .month-brief-details { animation:month-brief-enter 220ms ease-out; } @keyframes month-brief-enter { from {opacity:0;transform:translateY(-4px)} to {opacity:1;transform:none} } }

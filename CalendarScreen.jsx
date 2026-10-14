@@ -2288,13 +2288,15 @@ export default function CalendarScreen() {
   const { notes: calendarNotes } = useCurveNotes(traderMode ? validUserId : null, cells[0]?.key, cells.at(-1)?.key, notesRevision);
   const monthSummary = useMemo(() => {
     let total = 0, days = 0;
+    const records = [];
     for (const cell of cells) {
       if (!cell.inMonth) continue;
       const entries = tradesForDayFiltered(cell.key);
+      records.push(...entries);
       if (entries.length) days++;
       total += entries.reduce((sum, trade) => sum + (Number(trade.pnl) || 0), 0);
     }
-    return { total, days };
+    return { total, days, entries: records };
   }, [cells, manualTrades, platformFilter, currency, calendarTypeFilter]);
 
   // filtered by the active platform selection, so the calendar always
