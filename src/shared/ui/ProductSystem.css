@@ -1,0 +1,67 @@
+/* DAYRIS semantic roles. Data surfaces are solid; navigation has one glass layer. */
+:root {
+ --dayris-canvas:#0b0c10;
+ --dayris-surface:#15171c;
+ --dayris-raised:#1c1f25;
+ --dayris-ink:#f1f2f4;
+ --dayris-muted:#9a9faa;
+ --dayris-line:rgba(235,240,255,.10);
+ --dayris-gold:#ddbf7b;
+ --dayris-action:#e7c985;
+ --dayris-action-ink:#242018;
+ --dayris-positive:#53c9ac;
+ --dayris-negative:#ef8b91;
+ --dayris-radius:20px;
+ --dayris-ease:cubic-bezier(.2,0,0,1);
+ --dayris-quick:160ms;
+ --dayris-standard:280ms;
+ --dayris-elevation:0 14px 45px rgba(0,0,0,.18);
+}
+.theme-light,.capital-light,.pro-light,.plan-light,[data-glass-theme=light],[data-light=true] {
+ --dayris-canvas:#f4f5f7;
+ --dayris-surface:#fff;
+ --dayris-raised:#f0f2f5;
+ --dayris-ink:#242730;
+ --dayris-muted:#656c79;
+ --dayris-line:rgba(28,39,60,.12);
+ --dayris-gold:#866022;
+ --dayris-positive:#14785f;
+ --dayris-negative:#b74452;
+ --dayris-elevation:0 12px 40px rgba(22,30,48,.08);
+}
+.capital-panel.capital-panel {
+ --cap-bg:var(--dayris-canvas);--cap-surface:var(--dayris-surface);--cap-text:var(--dayris-ink);
+ --cap-muted:var(--dayris-muted);--cap-line:var(--dayris-line);--cap-gold:var(--dayris-gold);
+ --cap-up:var(--dayris-positive);--cap-down:var(--dayris-negative);
+ background:var(--cap-bg);
+}
+.capital-panel .positive { color:var(--dayris-positive); }
+.capital-panel .negative { color:var(--dayris-negative); }
+.capital-panel :is(.capital-dashboard,.dashboard-insights>article,.capital-purchase-market,.capital-detail-value) {
+ background:var(--cap-surface);box-shadow:none;
+}
+.capital-panel :is(.capital-add,.capital-submit) { background:var(--dayris-action);color:var(--dayris-action-ink);box-shadow:none; }
+.capital-panel :is(.dashboard-hero h2,.holding-value,.holding-facts b,.holding-outcome b,.capital-purchase-price) { font-variant-numeric:tabular-nums lining-nums; }
+.capital-panel :is(.capital-metric strong,.capital-detail-stats strong,.dashboard-key-stats strong) { letter-spacing:-.02em; }
+.voice-workspace.voice-workspace { --voice-ink:var(--dayris-ink);--voice-muted:var(--dayris-muted);--voice-line:var(--dayris-line); box-shadow:var(--dayris-elevation); }
+.dayris-swipe-sheet.dayris-swipe-sheet:not(.voice-workspace) {
+ background-color:var(--dayris-surface);background-image:none;box-shadow:var(--dayris-elevation);
+ backdrop-filter:none;-webkit-backdrop-filter:none;
+}
+.wallet-composer[data-glass-theme=light] { color:var(--dayris-ink); }
+.wallet-composer[data-glass-theme=light] :is(h3,label,p,.text-zinc-300,.text-zinc-500) { color:var(--dayris-ink); }
+.wallet-composer[data-glass-theme=light] :is(input,select) { background:var(--dayris-raised);border-color:var(--dayris-line);color:var(--dayris-ink); }
+.wallet-composer .dayris-sheet-footer button { background:var(--dayris-action);color:var(--dayris-action-ink); }
+.dayris-swipe-sheet :is(input,select,textarea):not([type=range]):not([type=checkbox]) { border-radius:14px; }
+.dayris-swipe-sheet :is(input,select,textarea):focus-visible,.dayris-sheet-close:focus-visible { outline-color:var(--dayris-gold); }
+.calendar-month-brief[data-light=true] summary>span,.calendar-month-brief[data-light=true] .month-brief-grid span,.calendar-month-brief[data-light=true] .month-brief-details p { color:var(--dayris-muted); }
+.calendar-month-brief summary strong { font-variant-numeric:tabular-nums; }
+.calendar-action-dock .calendar-dock-morph { box-shadow:0 8px 28px rgba(0,0,0,.22); }
+.premium-shell .font-data { font-variant-numeric:tabular-nums lining-nums; }
+@media(prefers-reduced-motion:no-preference) {
+ .capital-panel :is(.capital-add,.capital-submit),.dayris-sheet-footer button { transition:background-color var(--dayris-quick),opacity var(--dayris-quick),scale var(--dayris-quick) var(--dayris-ease); }
+ .capital-panel :is(.capital-add,.capital-submit):active:not(:disabled),.dayris-sheet-footer button:active:not(:disabled) { scale:.98; }
+}
+@media(prefers-reduced-motion:reduce) {
+ .capital-panel :is(.capital-add,.capital-submit),.dayris-sheet-footer button { transition:none; }
+}

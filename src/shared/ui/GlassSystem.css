@@ -1,3 +1,4 @@
+@import './ProductSystem.css';
 /* Glass belongs to navigation and floating surfaces. Calendar data and form
    fields stay solid so contrast never depends on what is behind them. */
 :root {
