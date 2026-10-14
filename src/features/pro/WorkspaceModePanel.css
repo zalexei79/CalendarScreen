@@ -147,3 +147,12 @@
     transition:none!important; filter:none; transform:none;
   }
 }
+
+/* Compact destinations stay available independently of Trader Mode. */
+.workspace-mode-panel{grid-template-columns:auto auto minmax(64px,1fr) 88px;column-gap:6px}
+.workspace-capital-entry{grid-column:2;grid-row:1;display:flex;align-items:center;gap:5px;min-height:44px;padding:0 2px;border:0;border-radius:8px;background:transparent;color:var(--pro-text);font:inherit;font-size:11px;cursor:pointer;white-space:nowrap}
+.workspace-capital-entry svg{width:17px;height:17px;color:var(--pro-gold);flex-shrink:0}
+.workspace-capital-entry:hover{color:var(--pro-gold)}.workspace-capital-entry:disabled{opacity:.55;cursor:wait}
+.workspace-mode-panel .pro-control-trader{grid-column:3}.workspace-mode-panel .workspace-selector{grid-column:4}
+@media(max-width:380px){.workspace-mode-panel{grid-template-columns:1fr 1fr 88px}.workspace-mode-panel .pro-control-trader{grid-column:2}.workspace-mode-panel .workspace-selector{grid-column:3}.workspace-capital-entry{grid-column:1/-1;grid-row:2;min-height:36px;justify-self:start}.workspace-mode-panel .pro-platform-reveal{grid-row:3}}
+@media(min-width:1024px){.workspace-mode-panel.is-pro .pro-platform-reveal{grid-column:1/-1;grid-row:2;grid-template-rows:0fr}.workspace-mode-panel.is-pro .pro-platform-reveal.is-open{grid-template-rows:1fr}.workspace-mode-panel.is-pro .pro-platform-row{margin-top:6px}.wallet-entry-caption{display:none}}

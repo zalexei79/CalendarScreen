@@ -47,7 +47,7 @@ export default function Header({
   proAccessActive = false, proAccessLoading = false, proAccessUntil = null,
   proView = false, setProView = () => {},
   openReferralHub = () => {}, openProPresentation = () => {}, invitedCount = 0, referralLabel = 'Invites',
-  accountMode = 'main', setAccountMode = () => {},
+  accountMode = 'main', setAccountMode = () => {}, onOpenCapital,
   onReplayLifeStory, onRestartOnboarding,
 }) {
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
@@ -412,7 +412,7 @@ export default function Header({
                 if (!next) setPlatformFilter('ALL');
                 return next;
               })}
-              onWallet={() => changeAccountMode('wallet')}
+              onWallet={() => changeAccountMode('wallet')} onCapital={onOpenCapital}
               walletAccess={proAccessActive} walletLoading={proAccessLoading}
               onConnect={openConnectModal} connected={ctraderConnected}
               metatrader={metaTraderState} reconnect={ctraderReconnect}

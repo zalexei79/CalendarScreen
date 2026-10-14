@@ -17,7 +17,8 @@ test('calendar has a named Capital entry and swipe route for PRO while the walle
   assert.match(calendar, /accountMode === 'capital' && proAccessActive && !proAccessLoading/);
   assert.match(calendar, /accountMode !== 'capital' && <Header/);
   assert.match(calendar, /onOpenCapital=\{proAccessLoading \? undefined : openCapitalFromCalendarGesture\}/);
-  assert.match(calendar, /className="capital-entry-card"[\s\S]*?onClick=\{openCapitalFromCalendarGesture\}[\s\S]*?t\('capitalHomeTitle'\)/);
+  assert.match(calendar, /onOpenCapital=\{openCapitalFromCalendarGesture\}/);
+  assert.doesNotMatch(calendar, /className="capital-entry-card"/);
   assert.doesNotMatch(calendar, /aria-label="DAYRIS Capital"/);
   assert.match(grid, /navigation: 'calendar', onExit: onOpenCapital/);
   assert.match(dock, /Pull down to open Capital/);

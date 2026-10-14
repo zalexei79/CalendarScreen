@@ -4668,7 +4668,7 @@ export default function CalendarScreen() {
         </div>
       )}
       {accountMode !== 'capital' && <Header
-        accountMode={accountMode} setAccountMode={setAccountMode}
+        accountMode={accountMode} setAccountMode={setAccountMode} onOpenCapital={openCapitalFromCalendarGesture}
         monthSummary={monthSummary}
         isLight={isLight} traderMode={traderMode} t={t} theme={theme} setTheme={setTheme}
         settingsRef={settingsRef} settingsOpen={settingsOpen} closeSettings={closeSettings}
@@ -4721,22 +4721,7 @@ export default function CalendarScreen() {
           isLight={isLight}
           userId={validUserId}
         />}
-        <button
-          type="button"
-          className="capital-entry-card"
-          data-light={isLight}
-          onClick={openCapitalFromCalendarGesture}
-          disabled={proAccessLoading}
-          aria-label={`${t('capitalHomeTitle')} · DAYRIS PRO`}
-        >
-          <span className="capital-entry-icon"><ChartCandlestick aria-hidden="true" /></span>
-          <span className="capital-entry-copy">
-            <small>{t('capitalHomeBadge')}</small>
-            <strong>{t('capitalHomeTitle')}</strong>
-            <span>{t('capitalHomeSubtitle')}</span>
-          </span>
-          <ArrowRight className="capital-entry-arrow" aria-hidden="true" />
-        </button>
+
       </div>
 
       {/* PRO controls live in Header: one clean control center, no floating duplicate block. */}
