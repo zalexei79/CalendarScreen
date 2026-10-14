@@ -12,7 +12,7 @@ try{
   const rows=Array.from({length:500},(_,i)=>[last-(499-i)*60000,'100','110','90','105','10']);return route.fulfill({contentType:'application/json',body:JSON.stringify(rows)});
  });
  await page.goto('http://history.test');await page.waitForFunction(()=>document.querySelector('.capital-chart-canvas')?.dataset.totalBars==='500');
- for(let i=0;i<7;i++)await page.getByRole('button',{name:'Уменьшить',exact:true}).click();
+ for(let i=0;i<12&&Number(await page.locator('.capital-chart-canvas').getAttribute('data-range-from'))>=12;i++)await page.getByRole('button',{name:'Уменьшить',exact:true}).click();
  await page.getByText(/Не удалось подгрузить историю/).waitFor();assert.equal(requests,2);
  await page.getByRole('button',{name:'Повторить',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.capital-chart-canvas')?.dataset.totalBars==='1000');
  await page.waitForTimeout(1400);const plot=await page.locator('.capital-chart-canvas').boundingBox();for(let i=0;i<3;i++){await page.mouse.move(plot.x+60,plot.y+plot.height/2);await page.mouse.down();await page.mouse.move(plot.x+260,plot.y+plot.height/2,{steps:12});await page.mouse.up();}

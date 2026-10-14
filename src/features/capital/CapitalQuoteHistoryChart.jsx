@@ -6,6 +6,8 @@ import { chartCopy } from './chartCopy.js';
 import {Maximize2} from 'lucide-react';
 const CapitalFullChart=lazy(()=>import('./CapitalFullChart.jsx'));
 import { buildCandles, candleHistory } from './candleModel.js';
+import {compareCandles,formatChartPercent,chartExperienceCopy} from './chartExperience.js';
+import './chartExperience.css';
 
 const labels = {
  ru:{daily:'Дневные свечи',closeOnly:'Источник пока передаёт только цены закрытия. Свечи появятся после обновления полной истории.',open:'Открытие',high:'Максимум',low:'Минимум',close:'Закрытие',range:'Период графика',month:'М'},
@@ -35,6 +37,8 @@ export default function CapitalQuoteHistoryChart({ asset, quote, currency, local
  },[candles,period]);
  const chart=useMemo(()=>buildCandles(visible),[visible]);
  const index=Math.max(0,Math.min(activeIndex??visible.length-1,visible.length-1)),current=visible[index],point=chart?.points[index];
+ const candleChange=current?compareCandles({...current,close:current.open},current):null;
+ const gradientId=descriptionId.replace(/[^a-zA-Z0-9]/g,'')+'-candle';
  const dateLabel=value=>new Intl.DateTimeFormat(locale,{day:'numeric',month:'short',year:'numeric'}).format(new Date(`${value}T12:00:00`));
  const axis=value=>new Intl.NumberFormat(locale,{notation:Math.abs(value)>=10000?'compact':'standard',maximumFractionDigits:Math.abs(value)<1?5:2}).format(value);
  if(!asset||!['binance','moex','alphavantage'].includes(asset.quote_source))return null;
@@ -43,18 +47,19 @@ export default function CapitalQuoteHistoryChart({ asset, quote, currency, local
    <div className="capital-candle-periods" role="group" aria-label={copy.range}>{[1,3,6].map(value=><button type="button" key={value} aria-pressed={period===value} onClick={()=>{setPeriod(value);setActiveIndex(null);}}>{value}{copy.month}</button>)}</div>
   </div>
   {chart ? <>
-   <div className="capital-history-readout"><strong>{formatMoney(current.close,currency,locale)}</strong><span>{dateLabel(current.date)}</span></div>
+   <div className="capital-history-readout"><strong>{formatMoney(current.close,currency,locale)}</strong><span>{dateLabel(current.date)}</span>{candleChange&&<small className="chart-mini-change" data-sign={candleChange.change>0n?'up':candleChange.change<0n?'down':'flat'}>{candleChange.change>0n?'+':''}{formatMoney(candleChange.change,currency,locale)} · {formatChartPercent(candleChange.percent,locale)}<span>{(chartExperienceCopy[locale]||chartExperienceCopy.en).move}</span></small>}</div>
    <div className="capital-candle-ohlc" id={descriptionId}>{['open','high','low','close'].map(key=><span key={key}><small>{copy[key]}</small><b>{axis(Number(current[key]))}</b></span>)}</div>
    <svg className="capital-market-history-svg capital-candle-svg" viewBox="0 0 400 156" role="img" tabIndex={0} onClick={()=>setExpanded(true)} aria-describedby={descriptionId} aria-label={`${copy.daily}: ${dateLabel(current.date)}, ${formatMoney(current.close,currency,locale)}`}
     onPointerMove={event=>{const rect=event.currentTarget.getBoundingClientRect();const x=(event.clientX-rect.left)/rect.width*400;setActiveIndex(Math.floor((x-12)/chart.step));}}
     onPointerLeave={()=>setActiveIndex(null)} onBlur={()=>setActiveIndex(null)}
     onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();setExpanded(true);return;}if(['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){event.preventDefault();setActiveIndex(event.key==='Home'?0:event.key==='End'?visible.length-1:Math.max(0,Math.min(visible.length-1,index+(event.key==='ArrowLeft'?-1:1))));}}}>
+    <defs><linearGradient id={gradientId+'-up'} x1="0" x2="1"><stop offset="0" stopColor="#67c7ac"/><stop offset="1" stopColor="#43a78f"/></linearGradient><linearGradient id={gradientId+'-down'} x1="0" x2="1"><stop offset="0" stopColor="#e3a1a5"/><stop offset="1" stopColor="#bd797f"/></linearGradient></defs>
     {chart.ticks.map((value,i)=><g key={i}><path className="capital-chart-gridline" d={`M12 ${16+i*59}H340`}/><text className="capital-candle-axis" x="348" y={19+i*59}>{axis(value)}</text></g>)}
     {chart.points.map((candle,i)=><g key={visible[i].date} className={`capital-candle ${candle.up?'is-up':'is-down'}`} opacity={activeIndex===null||index===i?1:.65}>
       <path d={`M${candle.x} ${candle.high}V${candle.low}`} />
-      <rect x={candle.x-Math.max(1,chart.step*.3)} y={Math.min(candle.open,candle.close)} width={Math.max(2,chart.step*.6)} height={Math.max(1,Math.abs(candle.close-candle.open))} rx=".3"/>
+      <rect style={{fill:`url(#${gradientId}-${candle.up?'up':'down'})`}} x={candle.x-Math.max(1,chart.step*.3)} y={Math.min(candle.open,candle.close)} width={Math.max(2,chart.step*.6)} height={Math.max(1,Math.abs(candle.close-candle.open))} rx=".6"/>
     </g>)}
-    {activeIndex!==null&&point&&<path className="capital-candle-crosshair" d={`M${point.x} 12V140`}/>}
+    {activeIndex!==null&&point&&<><path className="capital-candle-crosshair" d={`M${point.x} 12V140 M12 ${point.close}H340`}/><circle cx={point.x} cy={point.close} r="2.8" fill="var(--cap-text)"/></>}
    </svg>
    <div className="capital-market-history-values"><span>{dateLabel(visible[0].date)}</span><span>{dateLabel(visible.at(-1).date)}</span></div>
   </> : <p>{loading||quoteLoading ? t.loading : failed||quoteError ? t.marketHistoryUnavailable : rows.length ? copy.closeOnly : t.marketHistoryEmpty}</p>}

@@ -1,6 +1,6 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {createChart,CandlestickSeries,HistogramSeries,LineSeries,LineStyle,ColorType} from './marketCanvas.js';
-import {X,Plus,Minus,Maximize2,SlidersHorizontal} from 'lucide-react';
+import {X,Plus,Minus,Maximize2,SlidersHorizontal,Ruler,ArrowRight,Focus} from 'lucide-react';
 import {aggregateBars,normalizeBars,sma,rsi,CRYPTO_INTERVALS,DAILY_INTERVALS} from './chartAnalysis.js';
 import {fetchCryptoCandles,openCryptoCandleStream,fetchEarlierCandles} from './chartMarketData.js';
 import {useChartPreferences} from './useChartPreferences.js';
@@ -9,6 +9,8 @@ import {formatMoney,MONEY_SCALE} from './decimal.js';
 import './fullChart.css';
 import './historyNavigation.css';
 import {historyCopy} from './historyCopy.js';
+import {compareCandles,formatChartPercent,chartExperienceCopy} from './chartExperience.js';
+import './chartExperience.css';
 
 export default function CapitalFullChart({asset,rows,quote,locale,userId,onClose}){
  const h=historyCopy[locale]||historyCopy.en;
@@ -16,6 +18,12 @@ export default function CapitalFullChart({asset,rows,quote,locale,userId,onClose
  const dialog=useRef(null),host=useRef(null),api=useRef(null),previousRange=useRef(null);
  const [bars,setBars]=useState([]),[loading,setLoading]=useState(false),[error,setError]=useState(false),[connection,setConnection]=useState(''),[online,setOnline]=useState(navigator.onLine);
  const [analysis,setAnalysis]=useState(false),[hover,setHover]=useState(null);
+ const m=chartExperienceCopy[locale]||chartExperienceCopy.en;
+ const [measureStart,setMeasureStart]=useState(null),[measureEnd,setMeasureEnd]=useState(null),[focus,setFocus]=useState(false);
+ const canonicalBars=useRef(new Map()),measurementActive=useRef(false);measurementActive.current=Boolean(measureStart);
+ const priceNode=useRef(null),previousPrice=useRef(null);
+ const lastInspected=useRef(null);
+ useEffect(()=>{setMeasureStart(null);setMeasureEnd(null);setHover(null);lastInspected.current=null;},[asset.symbol,preferences.timeframe]);
  const [historyState,setHistoryState]=useState('');const barsRef=useRef(bars),rawHistory=useRef([]),pageRequest=useRef(null),historyEpoch=useRef(0),loadedFrame=useRef(null),pageBusy=useRef(false),pageCooldown=useRef(0),loadMoreRef=useRef(()=>{});barsRef.current=bars;
  const allowed=asset.quote_source==='binance'?CRYPTO_INTERVALS:DAILY_INTERVALS;
  useEffect(()=>{const d=dialog.current,previous=document.activeElement;const isolate=event=>event.stopPropagation();const events=['touchstart','touchmove','touchend','touchcancel','wheel','pointerdown','pointerup','pointercancel'];events.forEach(name=>d.addEventListener(name,isolate,{passive:true}));d.showModal();return()=>{events.forEach(name=>d.removeEventListener(name,isolate));d.close();previous?.focus?.();};},[]);
@@ -58,6 +66,7 @@ export default function CapitalFullChart({asset,rows,quote,locale,userId,onClose
   const chart=createChart(node,{autoSize:true,layout:{background:{type:ColorType.Solid,color:bg},textColor:text,fontFamily:'Inter,system-ui,sans-serif',fontSize:11,panes:{separatorColor:line,separatorHoverColor:'#edcd8730',enableResize:true}},grid:{vertLines:{color:line},horzLines:{color:line}},rightPriceScale:{borderColor:line},timeScale:{borderColor:line,timeVisible:preferences.timeframe.includes('m')||preferences.timeframe.includes('h'),secondsVisible:false,rightOffset:5},handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true},handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},localization:{locale,priceFormatter:price=>new Intl.NumberFormat(locale,{maximumFractionDigits:8}).format(price)}});
   const candles=chart.addSeries(CandlestickSeries,{upColor:'#67c7ac',downColor:'#d8989c',wickUpColor:'#67c7ac',wickDownColor:'#d8989c',borderVisible:false});
   const state={chart,candles,initialized:false,frame:preferences.timeframe};
+  state.measureLine=candles.createPriceLine({price:NaN,color:'#ddbf7b',title:m.start});
   chart.timeScale().subscribeVisibleLogicalRangeChange(range=>{if(range){node.dataset.visibleBars=String(range.to-range.from);node.dataset.rangeFrom=String(range.from);if(range.from<12)void loadMoreRef.current();}});
   if(preferences.sma){state.sma20=chart.addSeries(LineSeries,{color:'#e3c686',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});state.sma50=chart.addSeries(LineSeries,{color:'#889ece',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});}
   let pane=1;
@@ -65,31 +74,56 @@ export default function CapitalFullChart({asset,rows,quote,locale,userId,onClose
   if(preferences.rsi){state.rsi=chart.addSeries(LineSeries,{color:'#b1a0dd',lineWidth:1,priceLineVisible:false,lastValueVisible:true,autoscaleInfoProvider:()=>({priceRange:{minValue:0,maxValue:100}})},pane++);for(const value of [30,70])state.rsi.createPriceLine({price:value,color:'#8c909a66',lineWidth:1,lineStyle:LineStyle.Dashed,axisLabelVisible:true});}
   if(Number(asset.averageCost)>0){candles.createPriceLine({price:Number(asset.averageCost)/10**MONEY_SCALE,color:'#edcd87',lineWidth:1,lineStyle:LineStyle.Dashed,axisLabelVisible:true,title:c.bought});}
   chart.panes().forEach((p,i)=>p.setStretchFactor(i===0?5:1));
-  chart.subscribeCrosshairMove(param=>{const row=param.seriesData.get(candles);setHover(row&&'close'in row?row:null);});
+  chart.subscribeCrosshairMove(param=>{const row=param.seriesData.get(candles),canonical=row&&'close'in row?canonicalBars.current.get(Number(row.time)):null;setHover(canonical||null);if(canonical)lastInspected.current=canonical;if(canonical&&measurementActive.current)setMeasureEnd(canonical);});
   api.current=state;
   return()=>{previousRange.current=chart.timeScale().getVisibleLogicalRange();api.current=null;chart.remove();};
  },[preferences.sma,preferences.rsi,preferences.volume,asset.symbol,asset.averageCost,locale]);
+ useEffect(()=>{
+  const update=()=>{
+   const state=api.current;if(!state||!dialog.current)return;
+   const styles=getComputedStyle(dialog.current),color=(name,fallback)=>styles.getPropertyValue(name).trim()||fallback;
+   const bg=color('--cap-bg','#08090c'),text=color('--cap-muted','#8c909a'),line=color('--cap-line','#ffffff10'),up=color('--cap-up','#67c7ac'),down=color('--cap-down','#d8989c');
+   state.chart.applyOptions({layout:{background:{color:bg},textColor:text,fontSize:11},grid:{horzLines:{color:line}},crosshair:{labelBackgroundColor:color('--cap-surface','#353d48'),labelTextColor:color('--cap-text','#f1f2f4'),highlightColor:line}});
+   state.candles.applyOptions({upColor:up,downColor:down});
+  };
+  update();const themeRoot=dialog.current?.closest('.capital-panel');
+  const observer=new MutationObserver(update);if(themeRoot)observer.observe(themeRoot,{attributes:true,attributeFilter:['class','style']});
+  return()=>observer.disconnect();
+ },[preferences.sma,preferences.rsi,preferences.volume,asset.symbol,locale]);
  useEffect(()=>{
   const state=api.current;if(!state)return;
   if(state.frame!==preferences.timeframe){state.initialized=false;state.frame=preferences.timeframe;previousRange.current=null;}
   state.chart.applyOptions({timeScale:{timeVisible:preferences.timeframe.includes('m')||preferences.timeframe.includes('h')}});
   host.current.dataset.totalBars=String(bars.length);
+  canonicalBars.current=new Map(bars.map(row=>[Number(row.time),row]));
   const previous=state.chart.timeScale().getVisibleLogicalRange(),added=state.firstTime?bars.findIndex(row=>row.time===state.firstTime):0;
   state.candles.setData(bars.map(row=>({time:row.time,open:Number(row.open),high:Number(row.high),low:Number(row.low),close:Number(row.close)})));
   if(state.initialized&&added>0&&previous)state.chart.timeScale().setVisibleLogicalRange({from:previous.from+added,to:previous.to+added});state.firstTime=bars[0]?.time;
   state.sma20?.setData(indicators.sma20);state.sma50?.setData(indicators.sma50);state.rsi?.setData(indicators.rsi);
   state.volume?.setData(bars.filter(row=>row.volume!=null&&/^\d+(?:\.\d+)?$/.test(String(row.volume))&&Number.isFinite(Number(row.volume))&&Number(row.volume)>=0).map(row=>({time:row.time,value:Number(row.volume),color:Number(row.close)>=Number(row.open)?'#67c7ac88':'#d8989c88'})));
-  if(bars.length&&!state.initialized){state.initialized=true;if(previousRange.current)state.chart.timeScale().setVisibleLogicalRange(previousRange.current);else state.chart.timeScale().setVisibleLogicalRange({from:Math.max(0,bars.length-100),to:bars.length+5});}
+  if(bars.length&&!state.initialized){state.initialized=true;const count=Math.max(40,Math.min(120,Math.floor((host.current.clientWidth-90)/6)));if(previousRange.current)state.chart.timeScale().setVisibleLogicalRange(previousRange.current);else state.chart.timeScale().setVisibleLogicalRange({from:Math.max(0,bars.length-count),to:bars.length+5});}
  },[bars,indicators,preferences.sma,preferences.rsi,preferences.volume,preferences.timeframe]);
  const current=hover||bars.at(-1),intraday=['1m','5m','15m','1h','4h'].includes(preferences.timeframe),asOf=current?.time?(intraday?new Date(Number(current.time)*1000).toLocaleString(locale):new Date(Number(current.time)*1000).toLocaleDateString(locale)):'';
+ const candleChange=current?compareCandles({...current,close:current.open},current):null;
+ const comparison=compareCandles(measureStart,measureEnd);
+ const timeLabel=row=>row?new Date(Number(row.time)*1000).toLocaleString(locale,intraday?{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}:{year:'numeric',month:'short',day:'numeric'}):'';
+ useEffect(()=>{api.current?.measureLine.applyOptions({price:measureStart?Number(measureStart.close):NaN});},[measureStart,preferences.sma,preferences.rsi,preferences.volume]);
+ useEffect(()=>{
+  const value=bars.at(-1)?.close,old=previousPrice.current;previousPrice.current=value;
+  if(!value||old==null||old===value||hover||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const animation=priceNode.current?.animate([{opacity:.55},{opacity:1}],{duration:260,easing:'ease-out'});
+  return()=>animation?.cancel();
+ },[bars,hover]);
  function zoom(factor){const scale=api.current?.chart.timeScale(),range=scale?.getVisibleLogicalRange();if(!range)return;const size=(range.to-range.from)*factor;scale.setVisibleLogicalRange({from:range.to-size,to:range.to});}
- function reset(){if(bars.length)api.current?.chart.timeScale().setVisibleLogicalRange({from:Math.max(0,bars.length-100),to:bars.length+5});}
- return <dialog ref={dialog} className="capital-chart-modal" aria-label={c.title} onCancel={e=>{e.preventDefault();onClose();}} onKeyDown={e=>e.stopPropagation()}>
+ function reset(){const count=Math.max(40,Math.min(120,Math.floor((host.current?.clientWidth-90)/6)));if(bars.length)api.current?.chart.timeScale().setVisibleLogicalRange({from:Math.max(0,bars.length-count),to:bars.length+5});}
+ return <dialog ref={dialog} className="capital-chart-modal" data-focus={focus} aria-label={c.title} onCancel={e=>{e.preventDefault();onClose();}} onKeyDown={e=>e.stopPropagation()}>
   <header><div><small>DAYRIS CAPITAL</small><h2>{asset.name}<span>{asset.symbol} · {asset.currency}</span></h2></div><button type="button" onClick={onClose} aria-label={c.close}><X size={20}/></button></header>
-  <div className="capital-chart-topline"><div><strong>{current?formatMoney(current.close,asset.currency,locale):'—'}</strong><small>{asOf}</small></div><span data-state={online?connection:'offline'}>{!online?c.offline:asset.quote_source==='binance'?(c[connection]||c.connecting):asset.quote_source==='moex'?c.delayed:c.daily}{asset.quote_source==='alphavantage'&&quote?.asOf?' · '+quote.asOf:''}</span></div>
+  <div className="capital-chart-topline"><div><small className="chart-candle-context">{hover?m.selected:m.latest}</small><strong ref={priceNode}>{current?formatMoney(current.close,asset.currency,locale):'—'}</strong><small>{asOf}</small></div><div className="chart-price-change" data-sign={candleChange?.change>0n?'up':candleChange?.change<0n?'down':'flat'}>{candleChange&&<><b>{candleChange.change>0n?'+':''}{formatMoney(candleChange.change,asset.currency,locale)}</b><span>{formatChartPercent(candleChange.percent,locale)}</span><small>{m.move}</small></>}</div><span data-state={online?connection:'offline'}>{!online?c.offline:asset.quote_source==='binance'?(c[connection]||c.connecting):asset.quote_source==='moex'?c.delayed:c.daily}{asset.quote_source==='alphavantage'&&quote?.asOf?' · '+quote.asOf:''}</span></div>
   <div className="capital-chart-toolbar"><div role="group" aria-label={c.interval}>{allowed.map(value=><button type="button" key={value} aria-pressed={value===preferences.timeframe} onClick={()=>change({timeframe:value})}>{intervalLabel(value,c)}</button>)}</div><button type="button" onClick={()=>setAnalysis(value=>!value)} aria-expanded={analysis}><SlidersHorizontal size={14}/>{c.analysis}</button></div>
   {analysis&&<section className="capital-chart-analysis" aria-label={c.analysis}><div>{['sma','rsi','volume'].map(key=><button type="button" key={key} aria-pressed={preferences[key]} onClick={()=>change({[key]:!preferences[key]})}>{c[key]}</button>)}</div><p>{c.indicatorHelp}</p><small>{c[status]||''}</small></section>}
-  <div className="capital-chart-readout">{current&&['open','high','low','close'].map(key=><span key={key}>{key.toUpperCase().slice(0,1)} <b>{new Intl.NumberFormat(locale,{maximumFractionDigits:8}).format(Number(current[key]))}</b></span>)}{preferences.sma&&<span className="capital-chart-legend">SMA 20 · 50</span>}{preferences.rsi&&<span className="capital-chart-legend">RSI 14</span>}</div>
+  <div className="capital-chart-readout">{current&&['open','high','low','close'].map(key=><span key={key}><small>{m[key]}</small><b>{new Intl.NumberFormat(locale,{maximumFractionDigits:8}).format(Number(current[key]))}</b></span>)}{preferences.sma&&<span className="capital-chart-legend">SMA 20 · 50</span>}{preferences.rsi&&<span className="capital-chart-legend">RSI 14</span>}</div>
+  <div className="chart-experience-tools"><button type="button" disabled={!current} aria-pressed={Boolean(measureStart)} onClick={()=>{const anchor=lastInspected.current||current;setMeasureStart(measureStart?null:anchor);setMeasureEnd(measureStart?null:anchor);}}><Ruler size={14}/>{measureStart?m.clear:m.measure}</button><button type="button" aria-pressed={focus} onClick={()=>setFocus(value=>!value)}><Focus size={14}/>{m.focus}</button></div>
+  {measureStart&&<section className="chart-comparison" aria-label={m.measuring}><div><time>{timeLabel(measureStart)}</time><ArrowRight size={12}/><time>{timeLabel(measureEnd)}</time></div><strong data-sign={comparison?.change>0n?'up':comparison?.change<0n?'down':'flat'}>{comparison?`${comparison.change>0n?'+':''}${formatMoney(comparison.change,asset.currency,locale)} · ${formatChartPercent(comparison.percent,locale)}`:'—'}</strong><small>{m.compareNote}</small><p>{m.help}</p></section>}
   <div className="capital-chart-stage"><div ref={host} className="capital-chart-canvas"/>{(loading||error||!bars.length)&&<div className="capital-chart-empty" role="status">{loading?c.loading:error?c.unavailable:c.unavailable}</div>}</div>
   {historyState&&<p className="capital-history-boundary" role="status" data-error={historyState==='failed'}>{h[historyState]}{historyState==='failed'&&<button type="button" onClick={()=>void loadMoreRef.current(true)}>{h.retry}</button>}</p>}
   <footer><div><button type="button" aria-label={c.zoomOut} onClick={()=>zoom(1.35)}><Minus size={16}/></button><button type="button" aria-label={c.zoomIn} onClick={()=>zoom(.75)}><Plus size={16}/></button><button type="button" aria-label={c.reset} onClick={reset}><Maximize2 size={16}/></button></div><small>{c.help}</small></footer>
