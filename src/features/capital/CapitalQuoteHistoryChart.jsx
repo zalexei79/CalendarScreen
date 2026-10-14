@@ -2,51 +2,57 @@ import React, { useEffect, useId, useMemo, useState } from 'react';
 import { fetchAssetQuoteHistory } from './assetQuoteHistory.js';
 import { fetchUsEquityQuotes, isUsEquityAsset } from './usEquityQuotes.js';
 import { formatMoney } from './decimal.js';
+import { buildCandles, candleHistory } from './candleModel.js';
 
-function makePath(rows) {
-  const values = rows.map(row => Number(row.price)).filter(Number.isFinite);
-  if (values.length < 2) return null;
-  const low = Math.min(...values), high = Math.max(...values), span = high - low || Math.max(Math.abs(high) * .01, 1);
-  const points = values.map((value, index) => ({ x: 12 + index * 296 / (values.length - 1), y: 94 - (value - low) * 76 / span }));
-  const path = points.map((point, index) => `${index ? 'L' : 'M'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ');
-  return { path, area: `${path} L308 104 L12 104 Z`, first: values[0], last: values.at(-1), low, high, points };
-}
-
-export default function CapitalQuoteHistoryChart({ asset, quote, currency, locale, t, allowFetch = true }) {
-  const [rows, setRows] = useState([]), [loading, setLoading] = useState(false), [failed, setFailed] = useState(false);
-  const fillId = useId().replaceAll(':','');
-  const [activeIndex,setActiveIndex] = useState(null);
-  useEffect(() => {
-    if (!asset || !['binance', 'moex', 'alphavantage'].includes(asset.quote_source)) { setRows([]); setFailed(false); return; }
-    const controller = new AbortController();
-    setRows([]); setActiveIndex(null);
-    setLoading(true); setFailed(false);
-    const history = isUsEquityAsset(asset)
-      ? quote?.history?.length ? Promise.resolve(quote.history) : allowFetch ? fetchUsEquityQuotes([asset.symbol], controller.signal).then(result => result.quotes[asset.symbol]?.history || []) : Promise.resolve([])
-      : fetchAssetQuoteHistory(asset, { signal: controller.signal });
-    history.then(setRows)
-      .catch(error => { if (error.name !== 'AbortError') setFailed(true); })
-      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
-    return () => controller.abort();
-  }, [asset?.id, asset?.symbol, asset?.quote_source, asset?.category, quote?.history, allowFetch]);
-  const chart = useMemo(() => makePath(rows), [rows]);
-  const index = chart ? Math.max(0,Math.min(activeIndex ?? rows.length-1,rows.length-1)) : 0;
-  const active = chart?.points[index];
-  const dateLabel = value => {const date=new Date(`${value}T12:00:00`);return Number.isNaN(date.getTime())?value:new Intl.DateTimeFormat(locale,{day:'numeric',month:'short',year:'numeric'}).format(date);};
-  if (!asset || !['binance', 'moex', 'alphavantage'].includes(asset.quote_source)) return null;
-  return <section className="capital-market-history" data-direction={chart && chart.last<chart.first?'down':'up'} aria-label={t.marketHistory}>
-    <div className="capital-market-history-head"><div><strong>{t.marketHistory}</strong><small>{asset.quote_source === 'binance' ? t.binanceHistorySource : asset.quote_source === 'moex' ? t.moexHistorySource : t.usEquityHistorySource} · {asset.currency}</small></div><span>{rows.at(-1)?.date ? dateLabel(rows.at(-1).date) : (loading ? t.loading : '')}</span></div>
-    {chart ? <>
-      <div className="capital-history-readout"><strong>{formatMoney(rows[index].price,currency,locale)}</strong><span>{dateLabel(rows[index].date)}</span></div>
-      <svg className="capital-market-history-svg" viewBox="0 0 320 116" role="img" tabIndex={0} aria-label={`${t.marketHistory}: ${dateLabel(rows[index].date)}, ${formatMoney(rows[index].price, currency, locale)}`}
-        onPointerMove={event=>{const rect=event.currentTarget.getBoundingClientRect();const x=(event.clientX-rect.left)/rect.width*320;setActiveIndex(Math.round((x-12)/296*(rows.length-1)));}}
-        onPointerLeave={()=>setActiveIndex(null)} onBlur={()=>setActiveIndex(null)}
-        onKeyDown={event=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){event.preventDefault();setActiveIndex(event.key==='Home'?0:event.key==='End'?rows.length-1:Math.max(0,Math.min(rows.length-1,index+(event.key==='ArrowLeft'?-1:1))));}}}>
-        <defs><linearGradient id={fillId} x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="currentColor" stopOpacity=".18"/><stop offset="100%" stopColor="currentColor" stopOpacity="0"/></linearGradient></defs>
-        <path className="capital-chart-gridline" d="M12 18H308 M12 56H308 M12 94H308"/><path className="capital-market-history-area" style={{fill:`url(#${fillId})`}} d={chart.area}/><path className="capital-market-history-line" d={chart.path}/>
-        {active && <g className="capital-history-cursor"><path d={`M${active.x} 12V104`}/><circle cx={active.x} cy={active.y} r="3.5"/></g>}
-      </svg>
-      <div className="capital-market-history-values"><span>{dateLabel(rows[0]?.date)}</span><span>{dateLabel(rows.at(-1)?.date)}</span></div>
-    </> : <p>{loading ? t.loading : failed ? t.marketHistoryUnavailable : t.marketHistoryEmpty}</p>}
-  </section>;
+const labels = {
+ ru:{daily:'Дневные свечи',closeOnly:'Источник пока передаёт только цены закрытия. Свечи появятся после обновления полной истории.',open:'Открытие',high:'Максимум',low:'Минимум',close:'Закрытие',range:'Период графика',month:'М'},
+ en:{daily:'Daily candles',closeOnly:'Only closing prices are available. Candles require the full OHLC history.',open:'Open',high:'High',low:'Low',close:'Close',range:'Chart period',month:'M'},
+ ro:{daily:'Lumânări zilnice',closeOnly:'Sunt disponibile doar prețurile de închidere. Lumânările necesită istoricul OHLC complet.',open:'Deschidere',high:'Maxim',low:'Minim',close:'Închidere',range:'Perioada graficului',month:'L'},
+ zh:{daily:'日线蜡烛图',closeOnly:'目前只有收盘价，需要完整 OHLC 历史才能显示蜡烛图。',open:'开盘',high:'最高',low:'最低',close:'收盘',range:'图表时间范围',month:'月'},
+};
+export default function CapitalQuoteHistoryChart({ asset, quote, currency, locale, t, allowFetch = true, quoteError = '', quoteLoading = false }) {
+ const [rows,setRows]=useState([]),[loading,setLoading]=useState(false),[failed,setFailed]=useState(false);
+ const [activeIndex,setActiveIndex]=useState(null),[period,setPeriod]=useState(3);
+ const descriptionId=useId(), copy=labels[locale]||labels.en;
+ useEffect(()=>{
+  if(!asset || !['binance','moex','alphavantage'].includes(asset.quote_source)){setRows([]);return;}
+  const controller=new AbortController();setRows([]);setActiveIndex(null);setLoading(true);setFailed(false);
+  const history=isUsEquityAsset(asset)
+   ? quote?.history?.length ? Promise.resolve(quote.history) : allowFetch ? fetchUsEquityQuotes([asset.symbol],controller.signal).then(result=>{if(result.errors[asset.symbol]&&!result.quotes[asset.symbol])throw new Error(result.errors[asset.symbol]);return result.quotes[asset.symbol]?.history||[];}) : Promise.resolve([])
+   : fetchAssetQuoteHistory(asset,{signal:controller.signal});
+  history.then(data=>{if(!controller.signal.aborted)setRows(data);}).catch(error=>{if(error.name!=='AbortError'&&!controller.signal.aborted)setFailed(true);}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
+  return()=>controller.abort();
+ },[asset?.id,asset?.symbol,asset?.quote_source,asset?.category,quote?.history,allowFetch]);
+ const candles=useMemo(()=>candleHistory(rows),[rows]);
+ const visible=useMemo(()=>{
+  const last=candles.at(-1);if(!last)return [];
+  const from=new Date(`${last.date}T12:00:00Z`);from.setUTCMonth(from.getUTCMonth()-period);
+  return candles.filter(row=>row.date>=from.toISOString().slice(0,10));
+ },[candles,period]);
+ const chart=useMemo(()=>buildCandles(visible),[visible]);
+ const index=Math.max(0,Math.min(activeIndex??visible.length-1,visible.length-1)),current=visible[index],point=chart?.points[index];
+ const dateLabel=value=>new Intl.DateTimeFormat(locale,{day:'numeric',month:'short',year:'numeric'}).format(new Date(`${value}T12:00:00`));
+ const axis=value=>new Intl.NumberFormat(locale,{notation:Math.abs(value)>=10000?'compact':'standard',maximumFractionDigits:Math.abs(value)<1?5:2}).format(value);
+ if(!asset||!['binance','moex','alphavantage'].includes(asset.quote_source))return null;
+ return <section className="capital-market-history capital-candle-history" aria-label={t.marketHistory}>
+  <div className="capital-market-history-head"><div><strong>{t.marketHistory}</strong><small>{copy.daily} · {asset.quote_source==='binance'?'Binance':asset.quote_source==='moex'?'MOEX': 'Alpha Vantage'} · {currency}</small></div>
+   <div className="capital-candle-periods" role="group" aria-label={copy.range}>{[1,3,6].map(value=><button type="button" key={value} aria-pressed={period===value} onClick={()=>{setPeriod(value);setActiveIndex(null);}}>{value}{copy.month}</button>)}</div>
+  </div>
+  {chart ? <>
+   <div className="capital-history-readout"><strong>{formatMoney(current.close,currency,locale)}</strong><span>{dateLabel(current.date)}</span></div>
+   <div className="capital-candle-ohlc" id={descriptionId}>{['open','high','low','close'].map(key=><span key={key}><small>{copy[key]}</small><b>{axis(Number(current[key]))}</b></span>)}</div>
+   <svg className="capital-market-history-svg capital-candle-svg" viewBox="0 0 400 156" role="img" tabIndex={0} aria-describedby={descriptionId} aria-label={`${copy.daily}: ${dateLabel(current.date)}, ${formatMoney(current.close,currency,locale)}`}
+    onPointerMove={event=>{const rect=event.currentTarget.getBoundingClientRect();const x=(event.clientX-rect.left)/rect.width*400;setActiveIndex(Math.floor((x-12)/chart.step));}}
+    onPointerLeave={()=>setActiveIndex(null)} onBlur={()=>setActiveIndex(null)}
+    onKeyDown={event=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){event.preventDefault();setActiveIndex(event.key==='Home'?0:event.key==='End'?visible.length-1:Math.max(0,Math.min(visible.length-1,index+(event.key==='ArrowLeft'?-1:1))));}}}>
+    {chart.ticks.map((value,i)=><g key={i}><path className="capital-chart-gridline" d={`M12 ${16+i*59}H340`}/><text className="capital-candle-axis" x="348" y={19+i*59}>{axis(value)}</text></g>)}
+    {chart.points.map((candle,i)=><g key={visible[i].date} className={`capital-candle ${candle.up?'is-up':'is-down'}`} opacity={activeIndex===null||index===i?1:.65}>
+      <path d={`M${candle.x} ${candle.high}V${candle.low}`} />
+      <rect x={candle.x-Math.max(1,chart.step*.3)} y={Math.min(candle.open,candle.close)} width={Math.max(2,chart.step*.6)} height={Math.max(1,Math.abs(candle.close-candle.open))} rx=".3"/>
+    </g>)}
+    {activeIndex!==null&&point&&<path className="capital-candle-crosshair" d={`M${point.x} 12V140`}/>}
+   </svg>
+   <div className="capital-market-history-values"><span>{dateLabel(visible[0].date)}</span><span>{dateLabel(visible.at(-1).date)}</span></div>
+  </> : <p>{loading||quoteLoading ? t.loading : failed||quoteError ? t.marketHistoryUnavailable : rows.length ? copy.closeOnly : t.marketHistoryEmpty}</p>}
+ </section>;
 }

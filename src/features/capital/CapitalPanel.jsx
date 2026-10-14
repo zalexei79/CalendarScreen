@@ -185,6 +185,7 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
   const [entryMode,setEntryMode]=useState('quantity'),[budget,setBudget]=useState('');
   const [quoteFilter,setQuoteFilter]=useState('quoted');
   const [assetSelection,setAssetSelection]=useState(null), [assetSearch,setAssetSearch]=useState(''), [marketScope,setMarketScope]=useState('world'), [moexCatalog,setMoexCatalog]=useState([]), [moexCatalogCategory,setMoexCatalogCategory]=useState(''), [moexCatalogIsFull,setMoexCatalogIsFull]=useState(false), [moexCatalogLoading,setMoexCatalogLoading]=useState(false), [moexCatalogError,setMoexCatalogError]=useState(false), [moexCurrencyLoading,setMoexCurrencyLoading]=useState(false), [binanceCatalog,setBinanceCatalog]=useState([]), [binanceCatalogLoading,setBinanceCatalogLoading]=useState(false), [binanceCatalogError,setBinanceCatalogError]=useState(false), [companyCatalog,setCompanyCatalog]=useState(null), [companyCatalogLoading,setCompanyCatalogLoading]=useState(false), [companyCatalogError,setCompanyCatalogError]=useState(false), [showFullUsCatalog,setShowFullUsCatalog]=useState(false), [exchangeFilter,setExchangeFilter]=useState('all'), [bondFilter,setBondFilter]=useState('all'), [commodityGroup,setCommodityGroup]=useState('all'), [catalogVisibleLimit,setCatalogVisibleLimit]=useState(40), [showPurchaseDetails,setShowPurchaseDetails]=useState(false), [saving,setSaving]=useState(false),[purchasePriceAuto,setPurchasePriceAuto]=useState(true),[usQuoteError,setUsQuoteError]=useState('');
+  const [usQuoteLoading,setUsQuoteLoading]=useState(false);
   const [now,setNow] = useState(Date.now());
   const [baseCurrency,setBaseCurrency]=useState(()=>storedBaseCurrency(currency,user));
   const [fxSeries,setFxSeries]=useState({}),[fxTarget,setFxTarget]=useState(currency),[fxLoading,setFxLoading]=useState(false),[fxError,setFxError]=useState(false);
@@ -283,10 +284,10 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
     ...(composer&&form.quoteSource==='alphavantage'&&form.symbol?[form.symbol]:[]),
   ])],[portfolio.assets,composer,form.quoteSource,form.symbol]);
   useEffect(()=>{
-    if(!online||!user?.id||!usEquitySymbols.length)return;
+    if(!online||!user?.id||!usEquitySymbols.length){setUsQuoteLoading(false);return;}
     let active=true,inFlight=false;const controller=new AbortController();
     const refresh=async()=>{
-      if(inFlight||controller.signal.aborted)return;inFlight=true;setUsQuoteError('');
+      if(inFlight||controller.signal.aborted)return;inFlight=true;setUsQuoteLoading(true);setUsQuoteError('');
       try{
         const merged={};
         for(let i=0;i<usEquitySymbols.length;i+=10){
@@ -299,7 +300,7 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
         setQuotes(previous=>{const next={...previous};for(const [symbol,quote] of Object.entries(merged))if(!next[symbol]||Number(next[symbol].at)<=Number(quote.at))next[symbol]=quote;return next;});
         const newest=Math.max(0,...Object.values(merged).map(quote=>Number(quote.at)||0));if(newest)setLastQuote(previous=>Math.max(Number(previous)||0,newest));
       }catch(error){if(active&&error.name!=='AbortError'){setUsQuoteError(String(error.message||'QUOTE_UNAVAILABLE'));console.warn('[capital] US equity quotes unavailable:',error.message);}}
-      finally{inFlight=false;}
+      finally{inFlight=false;if(active)setUsQuoteLoading(false);}
     };
     void refresh();const timer=window.setInterval(()=>void refresh(),6*60*60_000);
     return()=>{active=false;controller.abort();window.clearInterval(timer);};
@@ -522,6 +523,7 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
   const filteredCatalog=useMemo(()=>filterQuoteCatalog(catalogMatches,quoteFilter),[catalogMatches,quoteFilter]);
   const matchedCatalog=filteredCatalog.slice(0,catalogVisibleLimit);
   const purchaseText=purchaseCopy[locale];
+  const purchasePriceUnavailable={ru:'Цена временно недоступна',en:'Price temporarily unavailable',ro:'Preț temporar indisponibil',zh:'价格暂不可用'}[locale];
   const purchaseAsset={...form,quote_source:form.quoteSource};
   const purchaseMarketPrice=resolveCurrentPrice(purchaseAsset,quotes[form.symbol]);
   const purchaseAmount=(()=>{try{return purchaseTotal(toNativeOrder(form));}catch{return null;}})();
@@ -633,16 +635,16 @@ zh: {buy:'平均买入成本',sell:'当前卖出价格',result:'卖出剩余持�
           {moexCurrencyLoading&&<p className="capital-form-hint">{t.moexCurrencyLoading}</p>}
           <section className="capital-purchase-quote" aria-label={purchaseHasMarket?purchaseText.reference:purchaseText.manual}>
             <div className="capital-quote-eyebrow"><span>{purchaseHasMarket?purchaseText.reference:purchaseText.manual}</span><span className="capital-quote-symbol">{form.symbol || form.currency}</span></div>
-            <div className="capital-quote-price"><strong key={purchaseMarketPrice ?? purchaseManualDisplay}>{purchaseHasMarket?(purchaseMarketPrice===null?t.waitingQuote:formatUnitMoney(displayPrice(parseScaled(purchaseMarketPrice,MONEY_SCALE),form.unit),form.currency,locale)):purchaseManualDisplay}</strong><small>{purchaseText.per} {priceUnit(purchaseAsset)}</small></div>
-            <div className="capital-quote-provenance">{purchaseHasMarket?<CapitalPriceStatus asset={purchaseAsset} quote={quotes[form.symbol]} now={now} online={online} locale={locale} t={t}/>:<span>{purchaseText.manualNote}</span>}</div>
+            <div className="capital-quote-price"><strong key={purchaseMarketPrice ?? purchaseManualDisplay}>{purchaseHasMarket?(purchaseMarketPrice===null?(usQuoteError&&!usQuoteLoading?purchasePriceUnavailable:t.waitingQuote):formatUnitMoney(displayPrice(parseScaled(purchaseMarketPrice,MONEY_SCALE),form.unit),form.currency,locale)):purchaseManualDisplay}</strong><small>{purchaseText.per} {priceUnit(purchaseAsset)}</small></div>
+            <div className="capital-quote-provenance">{purchaseHasMarket?<CapitalPriceStatus asset={purchaseAsset} quoteError={form.quoteSource==='alphavantage'&&!usQuoteLoading?usQuoteError:''} quote={quotes[form.symbol]} now={now} online={online} locale={locale} t={t}/>:<span>{purchaseText.manualNote}</span>}</div>
           </section>
-          {purchaseHasMarket&&['binance','moex','alphavantage'].includes(form.quoteSource)?<CapitalQuoteHistoryChart asset={purchaseAsset} quote={quotes[form.symbol]} currency={form.currency} locale={locale} t={t} allowFetch={form.quoteSource!=='alphavantage'}/>:purchaseHasMarket&&<p className="capital-form-hint">{purchaseText.noHistory}</p>}
+          {purchaseHasMarket&&['binance','moex','alphavantage'].includes(form.quoteSource)?<CapitalQuoteHistoryChart asset={purchaseAsset} quote={quotes[form.symbol]} currency={form.currency} locale={locale} t={t} allowFetch={form.quoteSource!=='alphavantage'} quoteError={form.quoteSource==='alphavantage'?usQuoteError:''} quoteLoading={form.quoteSource==='alphavantage'&&usQuoteLoading}/>:purchaseHasMarket&&<p className="capital-form-hint">{purchaseText.noHistory}</p>}
           <div className="capital-price-filter" role="group" aria-label={purchaseText.priceMode}>{purchaseHasMarket&&<button type="button" aria-pressed={purchasePriceAuto} disabled={purchaseMarketPrice===null||form.date!==todayKey()} onClick={()=>{setPurchasePriceAuto(true);if(purchaseMarketPrice!==null)setForm(current=>({...current,purchasePrice:scaledToString(displayPrice(parseScaled(purchaseMarketPrice,MONEY_SCALE),current.unit),MONEY_SCALE),nativePrice:purchaseMarketPrice}));}}>{purchaseText.useQuote}</button>}<button type="button" aria-pressed={!purchasePriceAuto} onClick={()=>setPurchasePriceAuto(false)}>{purchaseText.enterPrice}</button></div>
           {assetSelection.custom&&<><label>{t.name}<input required maxLength="120" value={form.name} onChange={event=>setForm({...form,name:event.target.value})} placeholder={t.manualName}/></label><label>{t.symbol}<input maxLength="24" value={form.symbol} onChange={event=>setForm({...form,symbol:event.target.value.toUpperCase()})} placeholder={t.optional}/></label></>}
           <div className="capital-price-filter" role="group" aria-label={beginner.budget}>{[['quantity',beginner.quantity],['budget',beginner.budget]].map(([value,label])=><button type="button" key={value} aria-pressed={entryMode===value} onClick={()=>setEntryMode(value)}>{label}</button>)}</div>
           {entryMode==='budget'&&<><label>{beginner.budgetLabel} · {form.currency}<input type="number" min="0" step="any" value={budget} onChange={event=>setBudget(event.target.value)}/></label><p className="capital-form-hint">{beginner.budgetNote}</p></>}
           <div className="capital-form-grid"><label>{t.quantity} · {priceUnit(purchaseAsset)}<input required min="0.000000000001" step="any" type="number" readOnly={entryMode==='budget'} value={form.quantity} onChange={event=>setForm({...form,quantity:event.target.value,nativeQuantity:undefined})}/></label><label>{purchaseText.yourPrice} · {form.currency}<input required min="0" step="any" type="number" value={form.purchasePrice} onChange={event=>{setPurchasePriceAuto(false);setForm({...form,purchasePrice:event.target.value,nativePrice:undefined})}} placeholder="0.00"/></label></div>
-          {form.quoteSource==='alphavantage'&&<p className="capital-form-hint">{quotes[form.symbol]?.asOf?`${t.dailyQuoteHint} · ${quotes[form.symbol].asOf}`:usQuoteError==='PROVIDER_NOT_CONFIGURED'?t.providerSetupRequired:usQuoteError?t.marketHistoryUnavailable:t.loading}</p>}
+          {form.quoteSource==='alphavantage'&&<p className="capital-form-hint">{quotes[form.symbol]?.asOf?`${t.dailyQuoteHint} · ${quotes[form.symbol].asOf}`:usQuoteError==='PROVIDER_NOT_CONFIGURED'?t.providerSetupRequired:usQuoteError==='DAILY_FREE_LIMIT_REACHED'?({ru:'Бесплатный дневной лимит источника исчерпан. Цена покупки доступна для ручного ввода.',en:'The source’s free daily limit has been reached. Enter your actual purchase price.',ro:'Limita zilnică gratuită a sursei a fost atinsă. Introdu prețul real de cumpărare.',zh:'已达到数据源的免费每日额度，请输入实际买入价格。'}[locale]):usQuoteError?t.marketHistoryUnavailable:t.loading}</p>}
           <details className="capital-purchase-details" open={showPurchaseDetails} onToggle={event=>setShowPurchaseDetails(event.currentTarget.open)}><summary>{t.purchaseDetails} <span>{t.optional}</span></summary>
             <div className="capital-form-grid"><label>{t.currency}<select disabled={purchaseHasMarket} value={form.currency} onChange={event=>setForm({...form,currency:event.target.value})}>{['USD','EUR','RON','RUB','CNY','GBP','USDT'].map(code=><option key={code}>{code}</option>)}</select></label><label>{t.fee}<input min="0" step="any" type="number" value={form.fee} onChange={event=>setForm({...form,fee:event.target.value})}/></label><label>{t.date}<input type="date" value={form.date} onChange={event=>{const manualDate=purchasePriceAuto&&form.quoteSource!=='alphavantage'&&event.target.value!==todayKey();if(manualDate)setPurchasePriceAuto(false);setForm({...form,date:event.target.value,...(manualDate?{purchasePrice:''}:{})});}}/></label>{form.quoteSource==='manual'&&!isGoldApiAsset(form)&&<label>{t.currentEstimate}<input min="0" step="any" type="number" value={form.price} onChange={event=>setForm({...form,price:event.target.value,nativeValuation:undefined})} placeholder={form.purchasePrice||'0.00'}/></label>}</div>
           </details>

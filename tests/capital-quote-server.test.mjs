@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';import test from 'node:test';import fs from 'node:fs';import vm from 'node:vm';import {transformSync} from 'esbuild';
+const source=fs.readFileSync('supabase/functions/capital-quotes/index.ts','utf8').replace(/^import .*\n/,'');
+async function run({cached=[],payload,valid=true,pro=true,throws=false}={}){
+ let handler,fetches=0,writes=[];
+ const db={from:()=>({select:()=>({eq:()=>({in:async()=>({data:cached,error:null})})}),upsert:row=>({select:()=>({single:async()=>{writes.push(row);return{data:row,error:null};}})})})};
+ const context={Response,Request,AbortController,AbortSignal,DOMException,URL,setTimeout,clearTimeout,console,fetch:async url=>{if(String(url).endsWith('/auth/v1/user'))return new Response(JSON.stringify(valid?{id:'test'}:{error:'invalid token'}),{status:valid?200:401});fetches++;if(throws)throw new Error('network failure');return new Response(JSON.stringify(payload),{status:200});},createClient:(_url,key)=>key==='service'?db:{auth:{getUser:async()=>({data:{user:valid?{id:'test'}:null},error:null})},rpc:async()=>({data:pro,error:null})},Deno:{env:{get:key=>({SUPABASE_URL:'https://test.invalid',SUPABASE_ANON_KEY:'anon',SUPABASE_SERVICE_ROLE_KEY:'service',ALPHAVANTAGE_API_KEY:'test-only'})[key]},serve:fn=>handler=fn}};
+ vm.runInNewContext(transformSync(source,{loader:'ts',format:'iife'}).code,context);
+ const response=await handler(new Request('https://test.invalid',{method:'POST',headers:{authorization:'Bearer test','content-type':'application/json'},body:JSON.stringify({symbols:['V']})}));
+ return{status:response.status,data:await response.json(),fetches,writes};
+}
+test('quote endpoint rejects invalid user and non-PRO before provider access',async()=>{for(const args of [{valid:false},{pro:false}]){const result=await run(args);assert.ok([401,403].includes(result.status));assert.equal(result.fetches,0);}});
+test('provider OHLC is cached and served with dated quote',async()=>{const result=await run({payload:{'Time Series (Daily)':{'2026-10-13':{'1. open':'100','2. high':'115','3. low':'99','4. close':'110','5. volume':'10000'}}}});assert.equal(result.status,200);assert.equal(result.data.quotes.V.history[0].open,'100');assert.equal(result.data.quotes.V.history[0].high,'115');assert.equal(result.writes.length,1);});
+test('provider limit or network failure preserves existing last quote',async()=>{for(const options of [{payload:{Information:'25 requests per day'}},{throws:true}]){const result=await run({...options,cached:[{symbol:'V',price:'100',currency:'USD',quote_as_of:'2026-01-01',last_checked_on:'2026-01-01',history:[]}]});assert.equal(result.data.quotes.V.price,'100');assert.equal(result.data.quotes.V.asOf,'2026-01-01');assert.ok(result.data.errors.V);}});

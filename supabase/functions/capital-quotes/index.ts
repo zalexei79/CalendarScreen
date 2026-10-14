@@ -28,8 +28,14 @@ Deno.serve(async (request: Request) => {
     const userDb = createClient(supabaseUrl, anonKey, {
       global: { headers: { authorization } }, auth: { persistSession: false, autoRefreshToken: false },
     });
-    const { data: userData, error: authError } = await userDb.auth.getUser();
-    if (authError || !userData.user) return json({ error: 'UNAUTHORIZED' }, 401);
+    // Validate the caller directly against Auth. An Edge runtime has no local
+    // browser session; use the original token and the project's API key.
+    const authResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { apikey: anonKey, Authorization: authorization },
+      signal: AbortSignal.timeout(10_000),
+    });
+    const authUser = await authResponse.json();
+    if (!authResponse.ok || !authUser?.id) return json({ error: 'UNAUTHORIZED', reason: `AUTH_${authResponse.status}` }, 401);
     const { data: hasPro, error: proError } = await userDb.rpc('dayris_capital_has_pro');
     if (proError) return json({ error: 'ACCESS_CHECK_FAILED' }, 503);
     if (!hasPro) return json({ error: 'PRO_REQUIRED' }, 403);
@@ -63,6 +69,7 @@ Deno.serve(async (request: Request) => {
       let row = cacheBySymbol.get(symbol);
       const refreshAfterClose = Boolean(row && afterUsClose && row.quote_as_of < today && row.last_after_close_check_on !== today);
       const needsDailyRefresh = !row || weekday && row.last_checked_on !== today;
+      try {
       if (needsDailyRefresh || refreshAfterClose) {
         const url = new URL('https://www.alphavantage.co/query');
         url.searchParams.set('function', 'TIME_SERIES_DAILY');
@@ -84,24 +91,31 @@ Deno.serve(async (request: Request) => {
             .flatMap(([date, values]) => {
               const close = String(values['4. close'] ?? '');
               if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d+(?:\.\d+)?$/.test(close)) return [];
-              return [{ date, price: close }];
+              const open=String(values['1. open'] ?? ''), high=String(values['2. high'] ?? ''), low=String(values['3. low'] ?? '');
+              const ohlc=[open,high,low,close];
+              if(!ohlc.every(value=>/^\d+(?:\.\d+)?$/.test(value) && Number(value)>0) || Number(high)<Math.max(Number(open),Number(close)) || Number(low)>Math.min(Number(open),Number(close))) return [];
+              return [{ date, price: close, close, open, high, low, volume:String(values['5. volume'] ?? '') }];
             }).sort((a, b) => a.date.localeCompare(b.date));
           const latest = history.at(-1);
-          if (!latest) { errors[symbol] = 'NO_DAILY_PRICE'; continue; }
+          if (!latest) throw new Error('NO_DAILY_PRICE');
           const updated = await db.from('capital_market_quote_cache').upsert({
             provider: 'alphavantage', symbol, currency: 'USD', quote_as_of: latest.date,
             last_checked_on: today, last_after_close_check_on: afterUsClose ? today : row?.last_after_close_check_on || null,
             price: latest.price, history, updated_at: new Date().toISOString(),
           }, { onConflict: 'provider,symbol' }).select('symbol,currency,quote_as_of,last_checked_on,last_after_close_check_on,price,history').single();
-          if (updated.error) { errors[symbol] = 'CACHE_WRITE_FAILED'; continue; }
+          if (updated.error) throw new Error('CACHE_WRITE_FAILED');
           row = updated.data;
         } else {
           const providerMessage = String(payload['Note'] || payload['Information'] || payload['Error Message'] || 'QUOTE_UNAVAILABLE');
-          errors[symbol] = /api call frequency|rate limit|25 requests/i.test(providerMessage) ? 'DAILY_FREE_LIMIT_REACHED' : 'QUOTE_UNAVAILABLE';
-          continue;
+          throw new Error(/api call frequency|rate limit|25 requests|requests per day/i.test(providerMessage) ? 'DAILY_FREE_LIMIT_REACHED' : 'QUOTE_UNAVAILABLE');
         }
       }
 
+      } catch (error) {
+        errors[symbol] = error instanceof DOMException && error.name === 'AbortError' ? 'PROVIDER_TIMEOUT' : error instanceof Error ? error.message : 'QUOTE_UNAVAILABLE';
+      }
+      // A provider failure must not hide an existing dated quote.
+      if (!row) continue;
       quotes[symbol] = {
         symbol, price: String(row.price), currency: row.currency,
         at: eodTimestamp(row.quote_as_of), asOf: row.quote_as_of,

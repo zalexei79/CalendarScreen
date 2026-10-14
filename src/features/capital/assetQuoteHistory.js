@@ -32,7 +32,7 @@ export function fetchAssetQuoteHistory(asset, { days = 180, signal } = {}) {
       return Array.isArray(rows) ? rows.flatMap(row => {
         const date = isoDate(Number(row?.[0]));
         const close = String(row?.[4] ?? '');
-        return date && /^\d+(?:\.\d+)?$/.test(close) ? [{ date, price: close }] : [];
+        return date && /^\d+(?:\.\d+)?$/.test(close) ? [{ date, price: close, close, open:String(row[1]), high:String(row[2]), low:String(row[3]), volume:String(row[5]) }] : [];
       }) : [];
     });
   }
@@ -56,7 +56,7 @@ export function fetchAssetQuoteHistory(asset, { days = 180, signal } = {}) {
       return (payload.candles?.data || []).flatMap(row => {
         const date = isoDate(row[columns.begin]);
         const price = String(row[columns.close] ?? '');
-        return date && /^\d+(?:\.\d+)?$/.test(price) ? [{ date, price }] : [];
+        return date && /^\d+(?:\.\d+)?$/.test(price) ? [{ date, price, close:price, open:String(row[columns.open]),high:String(row[columns.high]),low:String(row[columns.low]),volume:String(row[columns.volume]) }] : [];
       });
     });
   }

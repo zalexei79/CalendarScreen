@@ -5,4 +5,5 @@ verify_jwt = false
 
 [functions.capital-quotes]
 # Quote requests are gated by the authenticated user's server-side PRO entitlement.
-verify_jwt = true
+# ES256 sessions are validated with auth.getUser() inside the function.
+verify_jwt = false
