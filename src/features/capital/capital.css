@@ -513,3 +513,13 @@
   .capital-analytics{margin-top:22px}
   .capital-section-title{margin-top:23px}
 }
+
+/* Portal keeps the sheet outside transformed calendar containers. */
+.capital-panel.capital-overlay{animation:none;overflow:hidden;flex:none;background:rgba(0,0,0,.68);padding:0}
+.capital-overlay .capital-sheet{display:flex;flex-direction:column;overflow:hidden;height:min(92dvh,900px);max-height:calc(100dvh - env(safe-area-inset-top));padding-bottom:0}
+.capital-sheet>.capital-sheet-head{flex-shrink:0}
+.capital-sheet-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+.capital-sheet>.capital-detail-actions{flex-shrink:0;margin:0;padding:12px 0 calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--cap-line);background:var(--cap-surface)}
+.capital-position-details{margin:16px 0;border-top:1px solid var(--cap-line);padding-top:14px}
+.capital-position-details>summary{cursor:pointer;color:var(--cap-muted);font-size:12px}
+@media(max-width:640px){.capital-panel.capital-overlay{align-items:stretch;padding-top:env(safe-area-inset-top)}.capital-overlay .capital-sheet{height:100%;max-height:100%;border-radius:20px 20px 0 0;padding-top:12px}.capital-sheet>.capital-sheet-head{margin-bottom:10px}}

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
 import { ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Bitcoin, BriefcaseBusiness, Building2, ChartNoAxesCombined, CircleDollarSign, Coins, Fuel, Landmark, Plus, RefreshCw, Search, Wallet, X } from 'lucide-react';
 import { useCapitalPortfolio } from './useCapitalPortfolio';
@@ -562,6 +563,17 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
   const submit=async(event)=>{event.preventDefault();if(saving)return;setSaving(true);setSaveError('');try{if(!assetSelection)throw new Error(t.noAssetsFound);if(assetSelection.custom&&form.category==='crypto'&&form.quoteSource==='binance')await verifyBinanceSpotPair(form.symbol);await portfolio.addAsset({...form,price:form.price||form.purchasePrice,quoteSource:form.quoteSource});setComposer(false);setAssetSelection(null);setAssetSearch('');setForm({...form,name:'',symbol:'',quantity:'',purchasePrice:'',price:'',fee:'0',date:todayKey()});}catch(error){setSaveError(friendlyCapitalError(error,locale,t));}finally{setSaving(false);}};
   const saveOperation=async(event)=>{event.preventDefault();if(saving)return;setSaving(true);setSaveError('');try{await portfolio.addOperation(selected,opForm);setSelected(null);setOperationEditor(false);setOpForm({operation:'sell',quantity:'',price:'',fee:'0',date:todayKey()});}catch(error){setSaveError(friendlyCapitalError(error,locale,t));}finally{setSaving(false);}};
   const closeSheet=()=>{moexLookupSequence.current++;setMoexCurrencyLoading(false);setComposer(false);setSelected(null);setOperationEditor(false);setAssetSelection(null);setAssetSearch('');setSaveError('');setShowPurchaseDetails(false);};
+  useEffect(() => {
+    if (!operationEditor || !selected) return undefined;
+    const frame = requestAnimationFrame(() => document.querySelector('.capital-overlay .capital-operation-form')?.scrollIntoView({ block: 'nearest' }));
+    return () => cancelAnimationFrame(frame);
+  }, [operationEditor, opForm.operation, selected?.id]);
+  const detailCopy = {
+ru: {buy:'Куплено в среднем',sell:'Цена продажи сейчас',result:'Если продать весь остаток',note:'По указанной цене · комиссия покупки учтена, комиссия продажи не включена',details:'Расчёты и история'},
+en: {buy:'Average purchase cost',sell:'Sell price now',result:'If you sell the remaining position',note:'At the displayed price · purchase fees included, sale fees excluded',details:'Calculations and history'},
+ro: {buy:'Cost mediu de cumpărare',sell:'Preț de vânzare acum',result:'Dacă vinzi poziția rămasă',note:'La prețul afișat · comision de cumpărare inclus, cel de vânzare exclus',details:'Calcule și istoric'},
+zh: {buy:'平均买入成本',sell:'当前卖出价格',result:'卖出剩余持仓的预计收益',note:'按显示价格 · 含买入手续费，不含卖出手续费',details:'计算与历史'},
+}[locale];
   const base=isLight?'capital-panel capital-light':'capital-panel';
   return <main ref={surfaceRef} className={base}>
     <header className="capital-top"><button className="capital-back" onClick={onBack}><ArrowLeft size={17}/><span>{t.back}</span></button><div className="capital-brand"><span>DAYRIS</span><b>CAPITAL</b><i>PRO</i></div><button className="capital-wallet" onClick={onWallet}><Wallet size={16}/><span>{t.wallet}</span></button></header>
@@ -604,9 +616,9 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
       {Object.entries(allocations).length>0&&<details className="capital-allocation-details" open><summary>{t.distribution}<span>{t.analytics}</span></summary><div className="capital-allocation-list">{Object.entries(allocations).filter(([key])=>metrics[key.split(':')[0]]?.value!==null).map(([key,value])=>{const [code,category]=key.split(':');const percent=allocationTotals[code]?Number(value*10000n/allocationTotals[code])/100:0;return <div className="capital-allocation" key={key}><div><span>{t.categories[t.cats.indexOf(category)]} · {code}</span><b>{formatMoney(value,code,locale)}</b></div><i><span style={{width:`${percent}%`}}/></i></div>})}</div></details>}
       <p className="capital-disclaimer">{t.quoteDisclaimer}{lastQuote?` ${t.updated}: ${displayTime(lastQuote)}.`:''}</p>
     </div>
-    {(composer||selected)&&<div className="capital-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)closeSheet();}}><SwipeDismissSheet as="form" onDismiss={closeSheet} handleClassName="-mt-3 mb-2" className="capital-sheet" onSubmit={composer?submit:saveOperation}>
+    {(composer||selected)&&createPortal(<div className={`${base} capital-overlay`} onMouseDown={e=>{if(e.target===e.currentTarget)closeSheet();}}><SwipeDismissSheet as="form" onDismiss={closeSheet} handleClassName="-mt-3 mb-2" isLight={isLight} className="capital-sheet" onSubmit={composer?submit:saveOperation}>
       <div className="capital-sheet-head"><div><span className="capital-kicker">DAYRIS CAPITAL</span><h2>{composer?t.add:selected?.name||''}</h2></div><button type="button" onClick={closeSheet}><X/></button></div>
-      {composer?<>
+      <div className="capital-sheet-body">{composer?<>
         <p className="capital-step-label">{t.chooseCategory}</p>
         <div className="capital-category-grid">{t.cats.map((category,index)=>{const Icon=icons[index]||BriefcaseBusiness;return <button type="button" key={category} className={form.category===category?'is-selected':''} onClick={()=>changeCategory(category)}><Icon/><span>{t.categories[index]}</span></button>;})}</div>
         {!assetSelection?<>
@@ -655,24 +667,23 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
       </>:selected?<>
         <div className="capital-asset-identity"><div><strong>{selected.symbol||selected.name}</strong><span>{selected.name} · {t.categories[t.cats.indexOf(selected.category)]}</span></div><span className="capital-detail-quote">{quoteLabel(selected,quotes[selected.symbol])}</span></div>
         <section className="capital-detail-performance">
-          <span>{t.unrealizedLead}</span>
+          <span>{detailCopy.result}</span>
           <strong className={selectedUnrealized===null?'':selectedUnrealized>0n?'positive':selectedUnrealized<0n?'negative':''}>{selectedUnrealized===null?t.waitingQuote:`${selectedUnrealized>0n?'+':''}${formatMoney(selectedUnrealized,selected.currency,locale)}`}</strong>
           <b className={selectedUnrealized===null?'':selectedUnrealized>0n?'positive':selectedUnrealized<0n?'negative':''}>{selectedUnrealized===null?'—':formatPercent(selectedUnrealized,selected.invested,locale)}</b>
-          <small>{t.relativeCost}</small>
+          <small>{detailCopy.note}</small>
         </section>
+        <div className="capital-detail-primary-stats">
+<div><span>{detailCopy.buy}</span><b>{formatMoney(selected.averageCost,selected.currency,locale)} / {selected.symbol||t.quantityUnit}</b></div>
+<div><span>{detailCopy.sell}</span><b>{selectedPrice===null?t.waitingQuote:formatMoney(selectedPrice,selected.currency,locale)}</b></div>
+<div><span>{t.quantity}</span><b>{formatQuantity(selected.quantity,locale)} {selected.symbol}</b></div>
+<div><span>{t.currentValue}</span><b>{selectedValue===null?'—':formatMoney(selectedValue,selected.currency,locale)}</b></div>
+</div><details className="capital-position-details"><summary>{detailCopy.details}</summary>
         <section className="capital-asset-score" aria-label={t.assetScore}>
           <div className="capital-asset-score-head"><strong>{t.assetScore}</strong><b>{selectedScore===null?'—':`${new Intl.NumberFormat(locale).format(Number(selectedScore.value))}/100`}</b></div>
           <div className="capital-asset-score-meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow={selectedScore===null?undefined:Number(selectedScore.value)}><span style={{width:selectedScore===null?'0%':`${Number(selectedScore.value)}%`}}/></div>
           {selectedScore&&<details className="capital-score-detail"><summary>{t.scoreDetails}</summary><div className="capital-score-breakdown"><span>{t.scoreReturn}<b>{Number(selectedScore.performance)}/50</b></span><span>{t.scoreShare}<b>{`${new Intl.NumberFormat(locale,{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(selectedScore.shareBasisPoints)/100)}% · ${Number(selectedScore.diversification)}/25`}</b></span><span>{t.scorePrice}<b>{selectedScore.freshnessLabel} · {Number(selectedScore.freshness)}/25</b></span></div><small>{t.assetScoreNote}</small></details>}
           {!selectedScore&&<small>{t.scoreUnavailable}</small>}
         </section>
-        <div className="capital-detail-primary-stats">
-          <div><span>{t.currentValue}</span><b>{selectedValue===null?'—':formatMoney(selectedValue,selected.currency,locale)}</b></div>
-          <div><span>{t.currentUnitPrice}</span><b>{selectedPrice===null?t.waitingQuote:`${formatMoney(selectedPrice,selected.currency,locale)} / ${selected.symbol||t.quantityUnit}`}</b></div>
-          <div><span>{stats.basis}</span><b>{formatMoney(selected.invested,selected.currency,locale)}</b></div>
-          <div><span>{t.quantity}</span><b>{formatQuantity(selected.quantity,locale)} {selected.symbol}</b></div>
-          <div><span>{stats.average}</span><b>{formatMoney(selected.averageCost,selected.currency,locale)} / {selected.symbol||t.quantityUnit}</b></div>
-        </div>
         <div className="capital-detail-stats capital-detail-results">
           <div><span>{stats.realized}</span><b className={selected.realized>0n?'positive':selected.realized<0n?'negative':''}>{selected.realized>0n?'+':''}{formatMoney(selected.realized,selected.currency,locale)}</b></div>
           <div><span>{stats.unrealized}</span><b className={selectedUnrealized===null?'':selectedUnrealized>0n?'positive':selectedUnrealized<0n?'negative':''}>{selectedUnrealized===null?'—':`${selectedUnrealized>0n?'+':''}${formatMoney(selectedUnrealized,selected.currency,locale)}`}</b></div>
@@ -682,10 +693,7 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
         <p className="capital-result-formula">{t.resultFormula}</p>
         <CapitalAssetHistoryChart rows={selected.rows} currency={selected.currency} locale={locale} t={t} formatQuantity={formatQuantity}/>
         <CapitalQuoteHistoryChart asset={selected} quote={quotes[selected.symbol]} currency={selected.currency} locale={locale} t={t}/>
-        <div className="capital-detail-actions" role="group" aria-label={t.operation}>
-          <button type="button" aria-pressed={operationEditor&&opForm.operation==='buy'} className={operationEditor&&opForm.operation==='buy'?'is-active':''} onClick={()=>operationEditor&&opForm.operation==='buy'?setOperationEditor(false):openOperation('buy')}>{t.buyAction}</button>
-          <button type="button" aria-pressed={operationEditor&&opForm.operation==='sell'} className={operationEditor&&opForm.operation==='sell'?'is-active':''} onClick={()=>operationEditor&&opForm.operation==='sell'?setOperationEditor(false):openOperation('sell')}>{t.sellAction}</button>
-        </div>
+        </details>
         <details className="capital-more-actions"><summary>{t.moreActions}</summary><div><button type="button" onClick={()=>openOperation('dividend')}>{t.dividend||t.buy}</button>{selected.quote_source==='manual'&&!isGoldApiAsset(selected)&&<button type="button" onClick={()=>openOperation('revalue')}>{t.revalue}</button>}</div></details>
         {operationEditor&&<div className="capital-operation-form">
           <p>{opForm.operation==='sell'?t.sellAction:opForm.operation==='buy'?t.buyAction:opForm.operation==='dividend'?(t.dividend||t.buy):t.revalue}</p>
@@ -694,7 +702,12 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
         </div>}
         <details className="capital-operations-disclosure"><summary><span>{t.operationHistory}</span><small>{t.historyEntries(selected.rows.length)}</small></summary><div className="capital-operations">{selected.rows.map(row=><div key={row.id}><span>{row.operation==='sell'?<ArrowUpRight/>:<ArrowDownLeft/>}{row.operation==='sell'?t.sell:row.operation==='revalue'?t.revalue:row.operation==='dividend'?(t.dividend||t.buy):t.buy}</span><b>{formatQuantity(row.quantity?parseScaled(row.quantity,QUANTITY_SCALE):0n,locale)} × {formatMoney(row.unit_price,row.currency,locale)}</b><time>{row.occurred_on}</time></div>)}</div>{selected.rows[0]&&<button type="button" className="capital-cancel" onClick={async()=>{if(!window.confirm(`${t.cancelOperation}?`))return;setSaveError('');try{await portfolio.deleteLatestOperation(selected.rows[0].id);setSelected(null);}catch(error){setSaveError(friendlyCapitalError(error,locale,t));}}}>{t.cancelOperation}</button>}</details></>:null}
           {(saveError||portfolio.error&&composer)&&<p role="alert" className="capital-form-hint">{saveError||friendlyCapitalError(portfolio.error,locale,t)}</p>}<button type="button" className="capital-cancel" onClick={closeSheet}>{t.cancel}</button>
-    </SwipeDismissSheet></div>}
+      </div>
+      {selected&&!composer&&<div className="capital-detail-actions" role="group" aria-label={t.operation}>
+          <button type="button" aria-pressed={operationEditor&&opForm.operation==='buy'} className={operationEditor&&opForm.operation==='buy'?'is-active':''} onClick={()=>operationEditor&&opForm.operation==='buy'?setOperationEditor(false):openOperation('buy')}>{t.buyAction}</button>
+          <button type="button" aria-pressed={operationEditor&&opForm.operation==='sell'} className={operationEditor&&opForm.operation==='sell'?'is-active':''} onClick={()=>operationEditor&&opForm.operation==='sell'?setOperationEditor(false):openOperation('sell')}>{t.sellAction}</button>
+        </div>}
+    </SwipeDismissSheet></div>,document.body)}
   </main>;
 }
 function LockIcon(){return <Wallet size={16}/>}
