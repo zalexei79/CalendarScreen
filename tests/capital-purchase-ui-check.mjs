@@ -12,7 +12,7 @@ const chart=page.locator('.capital-market-history-svg');await chart.focus();awai
 assert.match(await page.locator('.capital-quote-provenance').innerText(),/Alpha Vantage/);
 await chart.evaluate(el=>el.blur());
 await page.getByRole('button',{name:'Открыть график',exact:true}).click();const full=page.getByRole('dialog',{name:'График цены',exact:true});await full.waitFor();await full.locator('.capital-chart-canvas canvas').first().waitFor();
-assert.deepEqual(await full.getByRole('group',{name:'Интервал свечи'}).getByRole('button').allTextContents(),['1Д','1Н','1М']);
+assert.deepEqual(await full.getByRole('group',{name:'Интервал свечи'}).getByRole('button').allTextContents(),['1Д','1Н','1М']);await page.waitForFunction(()=>document.querySelector('.capital-chart-modal .capital-history-boundary')?.textContent.includes('100'));assert.match(await full.locator('.capital-history-boundary').innerText(),/Бесплатный источник/);
 await page.waitForFunction(()=>Number(document.querySelector('.capital-chart-canvas')?.dataset.visibleBars)>0);const initial=Number(await full.locator('.capital-chart-canvas').getAttribute('data-visible-bars'));
 await full.getByRole('button',{name:'Увеличить',exact:true}).click();await page.waitForTimeout(150);assert.ok(Number(await full.locator('.capital-chart-canvas').getAttribute('data-visible-bars'))<initial);
 

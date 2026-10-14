@@ -1,10 +1,10 @@
 const url='https://data-api.binance.vision/api/v3/klines',cache=new Map();
 const intervals=new Set(['1m','5m','15m','1h','4h','1d','1w','1M']);
-export async function fetchCryptoCandles(symbol,interval,{signal}={}){
+export async function fetchCryptoCandles(symbol,interval,{signal,before}={}){
  if(!/^[A-Z0-9]{5,20}$/.test(symbol)||!intervals.has(interval))throw new Error('Invalid candle request');
- const key=symbol+':'+interval,saved=cache.get(key);
+ const key=symbol+':'+interval+':'+(before||'latest'),saved=cache.get(key);
  if(saved&&Date.now()-saved.at<30000)return saved.rows;
- const response=await fetch(`${url}?symbol=${encodeURIComponent(symbol)}&interval=${interval}&limit=500`,{signal,headers:{Accept:'application/json'}});
+ const response=await fetch(`${url}?symbol=${encodeURIComponent(symbol)}&interval=${interval}&limit=500${before?'&endTime='+Math.floor(before*1000-1):''}`,{signal,headers:{Accept:'application/json'}});
  if(!response.ok)throw new Error('Crypto candle source unavailable');const data=await response.json();
  if(!Array.isArray(data))throw new Error('Invalid candle response');
  const rows=data.map(row=>({date:new Date(Number(row[0])).toISOString().slice(0,10),time:Number(row[0])/1000,open:String(row[1]),high:String(row[2]),low:String(row[3]),close:String(row[4]),price:String(row[4]),volume:String(row[5])}));
@@ -19,4 +19,16 @@ export function openCryptoCandleStream(symbol,interval,onBar,onState){
  const offline=()=>{clearTimeout(timer);const old=socket;socket=null;old?.close();onState('offline');};const online=()=>{clearTimeout(timer);connect();};
  window.addEventListener('offline',offline);window.addEventListener('online',online);connect();
  return()=>{closed=true;clearTimeout(timer);socket?.close();window.removeEventListener('offline',offline);window.removeEventListener('online',online);};
+}
+
+export async function fetchEarlierCandles(asset,interval,before,{signal}={}){
+ if(asset.quote_source==='binance')return fetchCryptoCandles(asset.symbol,interval,{signal,before});
+ if(asset.quote_source!=='moex'||asset.category==='bond')return [];
+ if(!/^[A-Z0-9-]{1,24}$/.test(asset.symbol)||!Number.isFinite(before))throw new Error('Invalid history request');
+ const until=new Date(before*1000-86400000),from=new Date(until);from.setUTCFullYear(from.getUTCFullYear()-1);
+ const url=new URL('https://iss.moex.com/iss/engines/stock/markets/shares/securities/'+encodeURIComponent(asset.symbol)+'/candles.json');
+ url.searchParams.set('interval','24');url.searchParams.set('from',from.toISOString().slice(0,10));url.searchParams.set('till',until.toISOString().slice(0,10));url.searchParams.set('iss.meta','off');
+ const response=await fetch(url,{signal,headers:{Accept:'application/json'}});if(!response.ok)throw new Error('MOEX history unavailable');const payload=await response.json();
+ const columns=Object.fromEntries((payload.candles?.columns||[]).map((name,i)=>[String(name).toLowerCase(),i]));
+ return (payload.candles?.data||[]).map(row=>{const date=String(row[columns.begin]).slice(0,10);return{date,time:Date.parse(date+'T00:00:00Z')/1000,open:String(row[columns.open]),high:String(row[columns.high]),low:String(row[columns.low]),close:String(row[columns.close]),price:String(row[columns.close]),volume:row[columns.volume]};});
 }

@@ -1,0 +1,13 @@
+.capital-portfolio-interactive{height:220px;position:relative;width:100%;min-width:0;touch-action:pan-y}
+.capital-portfolio-interactive:focus-visible{outline:1px solid var(--cap-gold);outline-offset:3px;border-radius:8px}
+.capital-history-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px}
+.capital-history-tools small{font-size:9px;line-height:1.5;color:var(--cap-muted)}
+.capital-history-tools>div{display:flex;gap:4px;flex-shrink:0}
+.capital-history-tools button,.capital-history-boundary button{display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:36px;padding:5px;border:1px solid var(--cap-line);border-radius:8px;background:var(--cap-surface);color:var(--cap-muted);cursor:pointer}
+.capital-history-boundary{margin:8px 0 0;color:var(--cap-muted);font-size:10px;line-height:1.5}
+.capital-history-boundary button{margin-left:8px;font-size:10px;padding:5px 8px}
+.capital-history-boundary[data-error=true]{color:var(--cap-gold)}
+.capital-chart-modal .capital-history-boundary{margin:0;flex-shrink:0}
+@media(max-width:640px){.capital-portfolio-interactive{height:210px}}
+
+.capital-history-caption{display:flex;justify-content:space-between;gap:12px;margin:10px 0;color:var(--cap-muted);font-size:9px;line-height:1.5}.capital-history-caption>span:last-child{white-space:nowrap}

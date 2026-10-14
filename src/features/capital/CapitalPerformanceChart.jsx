@@ -1,6 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, lazy, Suspense } from 'react';
 import { calculateReturnPercent, divideScaled, formatMoney, MONEY_SCALE, parseScaled, scaledToString } from './decimal.js';
 import { buildPortfolioChart, buildPortfolioReturnSeries, filterPortfolioSnapshots } from './portfolioHistory.js';
+
+const PortfolioInteractiveChart=lazy(()=>import('./PortfolioInteractiveChart.jsx'));
 
 const RANGES = [
   ['week', 'rangeWeek'],
@@ -58,14 +60,7 @@ export default function CapitalPerformanceChart({ snapshots, operations = [], fx
       {rows.length > 1&&<span className="capital-chart-scale">{t.chartScale}: {mode==='return'?`${formatPercent(calculateReturnPercent(min-returnBase,returnBase))} — ${formatPercent(calculateReturnPercent(max-returnBase,returnBase))}`:`${formatMoney(min,currency,locale)} — ${formatMoney(max,currency,locale)}`}</span>}
     </div>}
     {linePath ? <>
-      <svg className="capital-performance-chart" viewBox="0 0 320 124" role="img" aria-label={`${t.chart} · ${currency}`}>
-        <defs><linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="currentColor" stopOpacity=".28"/><stop offset="100%" stopColor="currentColor" stopOpacity="0"/></linearGradient></defs>
-        <text className="capital-chart-axis-label" x="12" y="20">{displayValue(max)}</text><text className="capital-chart-axis-label" x="12" y="122">{displayValue(min)}</text>
-        <path className="capital-chart-gridline" d="M12 30H308 M12 65H308 M12 100H308"/>
-        <path className="capital-performance-area" d={areaPath} fill={`url(#${gradientId})`}/>
-        <path className="capital-performance-line" d={linePath}/>
-        {points.map(point=><circle key={point.date} className="capital-performance-point" cx={point.x} cy={point.y} r={points.length<4?4:2.8} tabIndex={0} onFocus={()=>setActiveDate(point.date)} onClick={()=>setActiveDate(point.date)}><title>{`${formatDate(point.date)} · ${displayValue(point.value)}`}</title></circle>)}
-      </svg>
+      <Suspense fallback={<p>{t.loading}</p>}><PortfolioInteractiveChart rows={rows} currency={currency} mode={mode} locale={locale} onSelect={setActiveDate} firstAvailable={sourceRows.map(row=>row.sampled_on).sort()[0]}/></Suspense>
       <div className="capital-chart-readout">{(()=>{const point=points.find(p=>p.date===activeDate)||points.at(-1);return point?<span>{formatDate(point.date)} · <b>{displayValue(point.value)}</b></span>:null;})()}</div>
       <div className="capital-chart-dates"><span>{formatDate(rows[0].sampled_on)}</span><span>{formatDate(rows.at(-1).sampled_on)}</span></div>
     </> : <div className="capital-chart-empty">
