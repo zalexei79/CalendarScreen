@@ -654,7 +654,7 @@ zh: {buy:'平均买入成本',sell:'当前卖出价格',result:'卖出剩余持�
             {canSettle&&opForm.destination!=='none'&&<p className="capital-form-hint">{saleText.settleNote}</p>}
             <p className="capital-form-hint">{saleText.notTrading}</p>
           </>}
-          
+
         </div>}
         <details className="capital-operations-disclosure"><summary><span>{t.operationHistory}</span><small>{t.historyEntries(selected.rows.length)}</small></summary><div className="capital-operations">{selected.rows.map(row=><div key={row.id}><span>{row.operation==='sell'?<ArrowUpRight/>:<ArrowDownLeft/>}{row.operation==='sell'?t.sell:row.operation==='revalue'?t.revalue:row.operation==='dividend'?(t.dividend||t.buy):t.buy}</span><b>{formatQuantity(row.quantity?parseScaled(row.quantity,QUANTITY_SCALE):0n,locale)} × {formatMoney(row.unit_price,row.currency,locale)}</b><time>{row.occurred_on}</time></div>)}</div>{selected.rows[0]&&<button type="button" className="capital-cancel" onClick={async()=>{if(!window.confirm(`${t.cancelOperation}?`))return;setSaveError('');try{await portfolio.deleteLatestOperation(selected.rows[0].id);void Promise.resolve(onSettled?.()).catch(()=>{});setSelected(null);}catch(error){setSaveError(friendlyCapitalError(error,locale,t));}}}>{t.cancelOperation}</button>}</details></>:null}
           {(saveError||portfolio.error&&composer)&&<p role="alert" className="capital-form-hint">{saveError||friendlyCapitalError(portfolio.error,locale,t)}</p>}<button type="button" className="capital-cancel" onClick={closeSheet}>{t.cancel}</button>
