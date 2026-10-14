@@ -1,0 +1,25 @@
+.capital-assets .capital-asset.capital-holding { display:flex; flex-direction:column; align-items:stretch; gap:14px; padding:18px; text-align:left; border-radius:20px; background:var(--cap-surface); color:var(--cap-text); border:1px solid var(--cap-line); }
+.holding-heading { display:flex; align-items:center; gap:12px; min-width:0; }
+.holding-name { display:grid; gap:5px; flex:1; min-width:0; }
+.holding-name strong { font-size:15px; font-weight:550; overflow-wrap:anywhere; }
+.holding-name small,.holding-value small { color:var(--cap-muted); font-size:11px; line-height:1.5; }
+.holding-value { display:grid; gap:5px; text-align:right; min-width:0; max-width:48%; }
+.holding-value strong { font-size:15px; font-weight:550; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+.holding-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; border-top:1px solid var(--cap-line); padding-top:12px; }
+.holding-facts>span { display:grid; gap:6px; }
+.holding-facts small { font-size:11px; color:var(--cap-muted); }
+.holding-facts b { font-size:14px; font-weight:500; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.holding-outcome { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border-radius:12px; background:color-mix(in srgb,var(--cap-text) 3%,transparent); }
+.holding-outcome>span { display:grid; gap:5px; font-size:12px; }
+.holding-outcome>span:last-child { text-align:right; min-width:0; }
+.holding-outcome b { font-size:18px; font-weight:550; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+.holding-outcome small { font-size:11px; color:var(--cap-muted); }
+.holding-outcome[data-sign=positive] b { color:var(--cap-up,#53c9ac); }
+.holding-outcome[data-sign=negative] b { color:var(--cap-down,#ef8b91); }
+.holding-freshness { color:var(--cap-muted); font-size:10px; }
+.holding-freshness .capital-human-price { display:flex; flex-wrap:wrap; gap:6px; }
+.holding-freshness small { font-size:10px; }
+.holding-explanation { font-size:11px; color:var(--cap-muted); margin:12px 0; line-height:1.6; }
+.holding-explanation summary { cursor:pointer; min-height:36px; display:flex; align-items:center; }
+@media(min-width:800px) { .capital-assets:has(.capital-holding) { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } }
+@media(prefers-reduced-motion:no-preference) { .capital-asset.capital-holding { transition:border-color 180ms ease,background-color 180ms ease; } .capital-asset.capital-holding:hover { border-color:color-mix(in srgb,var(--cap-gold) 45%,var(--cap-line)); } }
