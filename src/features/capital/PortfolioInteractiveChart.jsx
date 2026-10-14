@@ -1,5 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {createChart,AreaSeries,ColorType} from 'lightweight-charts';
+import {createChart,AreaSeries,ColorType} from './marketCanvas.js';
 import {Plus,Minus,Maximize2} from 'lucide-react';
 import {historyCopy} from './historyCopy.js';
 import './historyNavigation.css';

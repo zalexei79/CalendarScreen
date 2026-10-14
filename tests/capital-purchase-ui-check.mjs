@@ -21,7 +21,11 @@ const touchSession=await context.newCDPSession(page),plot=await full.locator('.c
 await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:100,y},{x:220,y}]});
 await touchSession.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:70,y},{x:250,y}]});
 await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await page.waitForTimeout(150);
-assert.ok(Number(await full.locator('.capital-chart-canvas').getAttribute('data-visible-bars'))<initial,'Two-finger pinch zooms the real chart');assert.ok(await full.evaluate(el=>el.open),'Chart gestures do not dismiss the purchase sheet');await touchSession.detach();
+assert.ok(Number(await full.locator('.capital-chart-canvas').getAttribute('data-visible-bars'))<initial,'Two-finger pinch zooms the real chart');assert.ok(await full.evaluate(el=>el.open),'Chart gestures do not dismiss the purchase sheet');
+const beforePan=Number(await full.locator('.capital-chart-canvas').getAttribute('data-range-from'));
+await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:90,y}]});await touchSession.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:190,y}]});await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await page.waitForTimeout(100);
+assert.ok(Number(await full.locator('.capital-chart-canvas').getAttribute('data-range-from'))<beforePan,'One-finger swipe browses older candles');
+await touchSession.detach();
 await full.getByRole('button',{name:'Анализ',exact:true}).click();
 for(const name of ['Средние SMA 20 / 50','RSI 14','Объём торгов'])await full.getByRole('button',{name,exact:true}).click();await page.waitForTimeout(1200);assert.ok(chartWrites.length>0);assert.equal(chartPreferences.sma,true);assert.equal(chartPreferences.rsi,true);assert.equal(chartPreferences.volume,true);
 for(const width of [320,390,1280]){await page.setViewportSize({width,height:844});assert.ok(await full.evaluate(el=>el.open));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:'artifacts/capital/full-chart-'+width+'.png'});}

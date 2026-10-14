@@ -10,7 +10,8 @@ import './dashboard.css';
 const colors=['#53c9ac','#91a9e8','#d9b675','#ab8dd5','#78adbe','#de9288','#9bba82','#b5bac6','#84978e'];
 export default function CapitalDashboard({ assets, operations, snapshots, metrics, priceFor, fxSeries, baseCurrency, onCurrencyChange, currencies, range, onRangeChange, locale, t, stats, quoteSummary, quoteCoverage, online, fxLoading, fxError, fxDate, onAdd, onSelect }) {
  const beginner=investorCopy[locale];
- const c=dashboardCopy[locale], [view,setView]=useState('auto');
+ const c=dashboardCopy[locale], [view,setView]=useState('auto'),[historyOpen,setHistoryOpen]=useState(false);
+ const historyLabel={ru:'История оценок',en:'Valuation history',ro:'Istoricul evaluărilor',zh:'估值历史'}[locale];
  const nativeCurrencies=Object.keys(metrics),scope=view==='auto'?(nativeCurrencies.length===1&&nativeCurrencies[0]==='USDT'?'USDT':'base'):view;
  const code=scope==='base'?baseCurrency:scope;
  const today=new Date(),day=today.toISOString().slice(0,10);
@@ -40,15 +41,20 @@ export default function CapitalDashboard({ assets, operations, snapshots, metric
   {scope==='base'&&nativeCurrencies.includes('USDT')&&<p className="dashboard-note">{c.separate} · <button type="button" onClick={()=>setView('USDT')}>USDT <ArrowUpRight size={12}/></button></p>}
   {(!analytics.complete||allPnl===null)&&<p className="dashboard-note" role="status">{c.coverage}</p>}
   </div>
-  <CapitalPerformanceChart snapshots={chartRows} operations={scopedOperations} fxSeries={fxSeries} currency={code} range={range} onRangeChange={onRangeChange} t={t} locale={locale} showRanges={false}/>
-  <p className="dashboard-note">{c.chartNote}</p>
+  <section className="dashboard-composition" aria-label={c.allocation}>
+   <div className="dashboard-composition-heading"><h3>{c.allocation}</h3><small>{code}</small></div>
+   {analytics.total!==null&&analytics.total>0n?<div className="dashboard-composition-body"><div className="dashboard-composition-ring"><svg viewBox="0 0 200 200" role="img" aria-label={analytics.allocation.map(row=>t.categories[t.cats.indexOf(row.category)]+' '+share(row.bps)).join(', ')}><circle className="composition-track" cx="100" cy="100" r="80"/>{(()=>{let offset=0;return analytics.allocation.map((row,index)=>{const weight=index===analytics.allocation.length-1?100-offset:row.bps/100,start=offset;offset+=weight;return <circle key={row.category} cx="100" cy="100" r="80" pathLength="100" fill="none" stroke={colors[index%colors.length]} strokeWidth="15" strokeDasharray={Math.max(0,weight-.8)+' '+(100-Math.max(0,weight-.8))} strokeDashoffset={-start} transform="rotate(-90 100 100)"/>;});})()}</svg><div><strong>{analytics.rows.filter(row=>row.asset.quantity>0n).length}</strong><small>{t.assets}</small></div></div>
+    <div className="dashboard-composition-legend">{analytics.allocation.map((row,index)=><div key={row.category}><i style={{background:colors[index%colors.length]}}/><span>{t.categories[t.cats.indexOf(row.category)]}<small>{money(row.value)}</small></span><b>{share(row.bps)}</b></div>)}</div></div>:<p className="dashboard-note">{analytics.complete?t.emptyHint:c.coverage}</p>}
+   {analytics.largestBps!==null&&<div className="dashboard-composition-foot"><span>{c.concentration} · {analytics.largest.asset.name}</span><b>{share(analytics.largestBps)}</b></div>}
+  </section>
+  <details className="dashboard-disclosure" onToggle={event=>setHistoryOpen(event.currentTarget.open)}><summary>{historyLabel}</summary>{historyOpen&&<><CapitalPerformanceChart snapshots={chartRows} operations={scopedOperations} fxSeries={fxSeries} currency={code} range={range} onRangeChange={onRangeChange} t={t} locale={locale} showRanges={false}/><p className="dashboard-note">{c.chartNote}</p></>}</details>
   <div className="dashboard-key-stats"><div><span>{beginner.closed}</span><strong className={analytics.closed>0n?'positive':analytics.closed<0n?'negative':''}>{signed(analytics.closed)}</strong><small>{beginner.allTime}</small></div><div><span>{beginner.open}</span><strong className={analytics.unrealized>0n?'positive':analytics.unrealized<0n?'negative':''}>{signed(analytics.unrealized)}</strong><small>{beginner.allTime}</small></div><div><span>{beginner.paid}</span><strong>{money(analytics.income)}</strong><small>{beginner.period}</small></div></div>
   <details className="dashboard-disclosure"><summary>{c.details}</summary><p>{c.method}</p><p>{c.incomeNote}</p>{periodValid&&period.start&&<p>{period.start.sampled_on} — {period.end.sampled_on}</p>}<div className="capital-result-breakdown">{nativeCurrencies.map(currency=><div key={currency}><b>{currency}</b><span>{stats.realized}: {formatMoney(metrics[currency].realized,currency,locale)}</span><span>{stats.unrealized}: {metrics[currency].unrealized===null?'—':formatMoney(metrics[currency].unrealized,currency,locale)}</span></div>)}</div></details>
   <details className="dashboard-disclosure"><summary><span className={online?'capital-online-dot':'capital-offline-dot'}/>{c.quote}<small>{quoteCoverage}</small></summary><p>{quoteSummary}</p><p>{fxLoading?t.fxLoading:fxError?t.fxUnavailable:fxDate?t.fxAsOf+' '+fxDate:t.globalCoverage}</p></details>
  </section>
- {assets.length>0&&<section className="dashboard-insights">
+ {assets.length>0&&<section className="dashboard-insights dashboard-insights-single">
  <article><h2>{c.contribution}</h2><p>{c.contributionNote}</p>{winners.length?winners.map(row=><button type="button" className="dashboard-contributor" key={row.asset.id} onClick={()=>onSelect(row.asset)}><span>{row.asset.name}<small>{row.asset.symbol}</small></span><strong className={row.pnl>0n?'positive':'negative'}>{signed(row.pnl)}</strong><i><span style={{width:maxPnl?Number((row.pnl<0n?-row.pnl:row.pnl)*10000n/maxPnl)/100+'%':'0%',background:row.pnl>0n?'#53c9ac':'#ef8b91'}}/></i></button>):<p>{c.emptyContributors}</p>}</article>
- <article><h2>{c.allocation}</h2>{analytics.total!==null&&analytics.total>0n?<div className="dashboard-allocation"><div className="dashboard-donut" role="img" aria-label={analytics.allocation.map(row=>t.categories[t.cats.indexOf(row.category)]+' '+share(row.bps)).join(', ')} style={{background:'conic-gradient('+segments.join(', ')+')'}}><span>{assets.filter(a=>a.quantity>0n&&(scope==='base'?a.currency!=='USDT':a.currency===scope)).length}<small>{t.assets}</small></span></div><div>{analytics.allocation.map((row,index)=><div className="dashboard-allocation-row" key={row.category}><i style={{background:colors[index%colors.length]}}/><span>{t.categories[t.cats.indexOf(row.category)]}</span><b>{share(row.bps)}</b></div>)}</div></div>:<p>{analytics.complete?t.emptyHint:c.coverage}</p>}</article>
+
  </section>}
  </>;
 }

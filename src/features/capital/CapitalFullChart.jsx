@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
-import {createChart,CandlestickSeries,HistogramSeries,LineSeries,LineStyle,ColorType} from 'lightweight-charts';
+import {createChart,CandlestickSeries,HistogramSeries,LineSeries,LineStyle,ColorType} from './marketCanvas.js';
 import {X,Plus,Minus,Maximize2,SlidersHorizontal} from 'lucide-react';
 import {aggregateBars,normalizeBars,sma,rsi,CRYPTO_INTERVALS,DAILY_INTERVALS} from './chartAnalysis.js';
 import {fetchCryptoCandles,openCryptoCandleStream,fetchEarlierCandles} from './chartMarketData.js';
@@ -55,10 +55,10 @@ export default function CapitalFullChart({asset,rows,quote,locale,userId,onClose
  const indicators=useMemo(()=>({sma20:sma(bars,20),sma50:sma(bars,50),rsi:rsi(bars)}),[bars]);
  useEffect(()=>{
   const node=host.current,styles=getComputedStyle(dialog.current),bg=styles.getPropertyValue('--cap-bg').trim()||'#08090c',text=styles.getPropertyValue('--cap-muted').trim()||'#8c909a',line=styles.getPropertyValue('--cap-line').trim()||'#ffffff10';
-  const chart=createChart(node,{autoSize:true,layout:{background:{type:ColorType.Solid,color:bg},textColor:text,fontFamily:'Inter,system-ui,sans-serif',fontSize:11,attributionLogo:true,panes:{separatorColor:line,separatorHoverColor:'#edcd8730',enableResize:true}},grid:{vertLines:{color:line},horzLines:{color:line}},rightPriceScale:{borderColor:line},timeScale:{borderColor:line,timeVisible:preferences.timeframe.includes('m')||preferences.timeframe.includes('h'),secondsVisible:false,rightOffset:5},handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true},handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},localization:{locale,priceFormatter:price=>new Intl.NumberFormat(locale,{maximumFractionDigits:8}).format(price)}});
+  const chart=createChart(node,{autoSize:true,layout:{background:{type:ColorType.Solid,color:bg},textColor:text,fontFamily:'Inter,system-ui,sans-serif',fontSize:11,panes:{separatorColor:line,separatorHoverColor:'#edcd8730',enableResize:true}},grid:{vertLines:{color:line},horzLines:{color:line}},rightPriceScale:{borderColor:line},timeScale:{borderColor:line,timeVisible:preferences.timeframe.includes('m')||preferences.timeframe.includes('h'),secondsVisible:false,rightOffset:5},handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:true},handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},localization:{locale,priceFormatter:price=>new Intl.NumberFormat(locale,{maximumFractionDigits:8}).format(price)}});
   const candles=chart.addSeries(CandlestickSeries,{upColor:'#67c7ac',downColor:'#d8989c',wickUpColor:'#67c7ac',wickDownColor:'#d8989c',borderVisible:false});
   const state={chart,candles,initialized:false,frame:preferences.timeframe};
-  chart.timeScale().subscribeVisibleLogicalRangeChange(range=>{if(range){node.dataset.visibleBars=String(range.to-range.from);if(range.from<12)void loadMoreRef.current();}});
+  chart.timeScale().subscribeVisibleLogicalRangeChange(range=>{if(range){node.dataset.visibleBars=String(range.to-range.from);node.dataset.rangeFrom=String(range.from);if(range.from<12)void loadMoreRef.current();}});
   if(preferences.sma){state.sma20=chart.addSeries(LineSeries,{color:'#e3c686',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});state.sma50=chart.addSeries(LineSeries,{color:'#889ece',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});}
   let pane=1;
   if(preferences.volume){state.volume=chart.addSeries(HistogramSeries,{priceFormat:{type:'volume'},priceLineVisible:false,lastValueVisible:false},pane++);}
@@ -93,6 +93,5 @@ export default function CapitalFullChart({asset,rows,quote,locale,userId,onClose
   <div className="capital-chart-stage"><div ref={host} className="capital-chart-canvas"/>{(loading||error||!bars.length)&&<div className="capital-chart-empty" role="status">{loading?c.loading:error?c.unavailable:c.unavailable}</div>}</div>
   {historyState&&<p className="capital-history-boundary" role="status" data-error={historyState==='failed'}>{h[historyState]}{historyState==='failed'&&<button type="button" onClick={()=>void loadMoreRef.current(true)}>{h.retry}</button>}</p>}
   <footer><div><button type="button" aria-label={c.zoomOut} onClick={()=>zoom(1.35)}><Minus size={16}/></button><button type="button" aria-label={c.zoomIn} onClick={()=>zoom(.75)}><Plus size={16}/></button><button type="button" aria-label={c.reset} onClick={reset}><Maximize2 size={16}/></button></div><small>{c.help}</small></footer>
-  <div className="capital-chart-credit">TradingView Lightweight Charts™ © TradingView, Inc.</div>
  </dialog>;
 }
