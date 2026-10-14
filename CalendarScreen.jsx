@@ -546,6 +546,10 @@ export default function CalendarScreen() {
     }
 
     setTraderModeInternal(requested);
+    if (!requested) {
+      setPlatformFilter('ALL');
+      setCalendarTypeFilter('all');
+    }
   }
 
   function openReferralHub() {
@@ -2296,14 +2300,23 @@ export default function CalendarScreen() {
   // filtered by the active platform selection, so the calendar always
   // matches what the platform filter says (e.g. only Bybit trades)
   function tradesForDayFiltered(key) {
+    return calendarRecordsForDay(key)
+      .filter((t) => String(t.currency || 'USD').trim().toUpperCase() === currency);
+  }
+
+  function calendarRecordsForDay(key) {
     return (manualTrades[key] || [])
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
-      .filter((t) => (t.currency || 'USD') === currency)
       .filter((t) => calendarTypeFilter === 'all' || (calendarTypeFilter === 'income' ? t.pnl >= 0 : t.pnl < 0));
   }
 
+  function otherCurrenciesForDay(key) {
+    return [...new Set(calendarRecordsForDay(key).map(t => String(t.currency || 'USD').trim().toUpperCase()))]
+      .filter(code => code !== currency);
+  }
+
   function totalPnlForDay(key) {
-    return tradesForDayFiltered(key).reduce((sum, t) => sum + t.pnl, 0);
+    return tradesForDayFiltered(key).reduce((sum, t) => sum + (Number(t.pnl) || 0), 0);
   }
 
   // heatmap scale: strongest color = the day with the biggest |PnL| this month
@@ -2333,7 +2346,7 @@ export default function CalendarScreen() {
       .flatMap(([dateKey, arr]) => arr.map((t) => ({ ...t, dateKey })))
       .filter((t) => t.dateKey >= effectiveFrom && t.dateKey <= effectiveTo)
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
-      .filter((t) => (t.currency || 'USD') === currency)
+      .filter((t) => String(t.currency || 'USD').trim().toUpperCase() === currency)
       .filter((t) => calendarTypeFilter === 'all' || (calendarTypeFilter === 'income' ? t.pnl >= 0 : t.pnl < 0))
       .sort((a, b) => (a.dateKey === b.dateKey ? String(b.time||'').localeCompare(String(a.time||'')) : b.dateKey.localeCompare(a.dateKey)));
   }, [manualTrades, effectiveFrom, effectiveTo, platformFilter, currency, calendarTypeFilter]);
@@ -4628,7 +4641,7 @@ export default function CalendarScreen() {
         .calendar-days-grid > button:active { transform: scale(.985); }
         .day-amount { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
         .day-amount-short, .day-amount-full { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .pro-calendar-day .day-amount { position: absolute; left: 8px; right: 8px; bottom: 8px; transition: bottom .24s ease, transform .24s ease; }
+        .pro-calendar-day .day-amount { position: absolute; width: auto; left: 8px; right: 8px; bottom: 8px; transition: bottom .24s ease, transform .24s ease; }
         /* Planned items occupy the same dock as the PnL amount. Keep both in a
            compact vertical stack instead of letting the absolute PnL overlap. */
         .pro-calendar-day.has-calendar-plans .day-amount { position: static; left: auto; right: auto; bottom: auto; transform: none; margin-top: auto; }
@@ -4727,6 +4740,7 @@ export default function CalendarScreen() {
       {/* PRO controls live in Header: one clean control center, no floating duplicate block. */}
       <CalendarGrid
         language={language}
+        currency={currency} otherCurrenciesForDay={otherCurrenciesForDay}
         lifeArrival={setupStep === 'intro'}
         firstEntryLabel={showFirstEntryGuide ? onboardingCopy.guideTapToday : null}
         firstEntryDayLabel={onboardingCopy.guideDayLabel}
