@@ -1,3 +1,4 @@
+import SheetCloseButton from '../../shared/ui/SheetCloseButton.jsx';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
@@ -590,7 +591,7 @@ zh: {buy:'平均买入成本',sell:'当前卖出价格',result:'卖出剩余持�
       <p className="capital-disclaimer">{t.quoteDisclaimer}{lastQuote?` ${t.updated}: ${displayTime(lastQuote)}.`:''}</p>
     </div>
     {(composer||selected)&&createPortal(<div className={`${base} capital-overlay`} onMouseDown={e=>{if(e.target===e.currentTarget)closeSheet();}}><SwipeDismissSheet as="form" onDismiss={closeSheet} handleClassName="-mt-3 mb-2" isLight={isLight} className="capital-sheet" onSubmit={composer?submit:saveOperation}>
-      <div className="capital-sheet-head"><div><span className="capital-kicker">DAYRIS CAPITAL</span><h2>{composer?purchaseText.title:selected?.name||''}</h2></div><button type="button" onClick={closeSheet}><X/></button></div>
+      <div className="capital-sheet-head"><div><span className="capital-kicker">DAYRIS CAPITAL</span><h2>{composer?purchaseText.title:selected?.name||''}</h2></div><SheetCloseButton language={language} disabled={saving} onClick={closeSheet}/></div>
       <div className="capital-sheet-body">{composer?<>
         {!assetSelection&&<>
         <p className="capital-step-label">{purchaseText.choose}</p>

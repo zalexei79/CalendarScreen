@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './GlassSystem.css';
+import './SheetSystem.css';
+import useSheetViewport from './useSheetViewport.js';
 
 const DISMISS_DISTANCE = 88;
 const DISMISS_VELOCITY = 0.55;
@@ -28,6 +30,7 @@ const SwipeDismissSheet = React.forwardRef(function SwipeDismissSheet({
   ...props
 }, forwardedRef) {
   const sheetRef = useRef(null);
+  const viewportStyle = useSheetViewport();
   const pointerGesture = useRef(null);
   const touchGesture = useRef(null);
   const offsetRef = useRef(0);
@@ -175,7 +178,7 @@ const SwipeDismissSheet = React.forwardRef(function SwipeDismissSheet({
     : {};
 
   return (
-    <Component ref={setSheetNode} data-sheet-entrance="true" data-glass-theme={isLight ? 'light' : 'dark'} className={`dayris-swipe-sheet ${className}`} style={{ ...style, ...swipeStyle }} {...props}>
+    <Component ref={setSheetNode} data-sheet-entrance="true" data-glass-theme={isLight ? 'light' : 'dark'} className={`dayris-swipe-sheet ${className}`} style={{ ...viewportStyle, ...style, ...swipeStyle }} {...props}>
       <div
         aria-hidden="true"
         className={`flex h-7 shrink-0 touch-none cursor-grab items-center justify-center active:cursor-grabbing xl:hidden ${handleClassName}`}

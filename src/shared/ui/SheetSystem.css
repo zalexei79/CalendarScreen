@@ -1,0 +1,21 @@
+.dayris-swipe-sheet { --sheet-edge:16px; --sheet-control-radius:14px; }
+.dayris-sheet-close.dayris-sheet-close { flex:none; display:grid; place-items:center; width:44px; height:44px; min-height:44px; padding:0; border:1px solid var(--glass-line); border-radius:50%; background:var(--glass-control); color:inherit; cursor:pointer; }
+.dayris-sheet-close:disabled { opacity:.45; cursor:default; }
+.dayris-swipe-sheet :is(input,select,textarea) { scroll-margin-block:72px; }
+.dayris-swipe-sheet :is(button,input,select,textarea):focus-visible { outline:2px solid #c9ad72; outline-offset:3px; }
+.dayris-sheet-body { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; padding-bottom:16px; }
+.dayris-sheet-footer { flex:none; padding:14px 0 max(8px,env(safe-area-inset-bottom)); border-top:1px solid var(--glass-line); }
+.dayris-sheet-footer button { min-height:48px; }
+.wallet-composer.wallet-composer { display:flex; flex-direction:column; overflow:hidden; }
+.wallet-composer > .dayris-sheet-body { padding-top:4px; }
+.wallet-composer > .dayris-sheet-footer > button { margin-top:0; }
+@media(max-width:767px) {
+ .dayris-swipe-sheet.dayris-swipe-sheet { max-height:calc(var(--sheet-visible-height,100dvh) - env(safe-area-inset-top,0px) - 12px)!important; margin-bottom:var(--sheet-keyboard-inset,0px); }
+ .dayris-swipe-sheet:not(.voice-workspace) :is(input:not([type=checkbox]):not([type=range]),select,textarea) { font-size:16px; }
+ .dayris-swipe-sheet.voice-workspace { max-height:calc(var(--sheet-visible-height,100dvh) - 24px)!important; }
+ .voice-workspace .voice-workspace-scroll { max-height:calc(var(--sheet-visible-height,100dvh) - 180px); }
+}
+@media(prefers-reduced-motion:no-preference) {
+ .dayris-sheet-close { transition:background-color 160ms ease,transform 160ms ease; }
+ .dayris-sheet-close:active { transform:scale(.94); }
+}
