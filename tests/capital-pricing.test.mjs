@@ -32,3 +32,17 @@ test('Gold API quote normalization rejects mismatched, non-USD, non-positive, or
   assert.equal(normalizeGoldApiQuote({ ...valid, price: -1 }, 'XAG'), null);
   assert.equal(normalizeGoldApiQuote({ ...valid, updatedAt: '' }, 'XAG'), null);
 });
+
+test('market providers cannot fall back to a manual price or a different transport', () => {
+  for (const quote_source of ['alphavantage','moex']) {
+    const asset={quote_source,currency:'USD',manual_price:'33'};
+    assert.equal(resolveCurrentPrice(asset,null),null);
+    assert.equal(resolveCurrentPrice(asset,{price:'4155',currency:'USD',transport:'gold-api'}),null);
+  }
+  assert.equal(resolveCurrentPrice({quote_source:'binance',currency:'USD'},{price:'100',transport:'websocket'}),null);
+  assert.equal(resolveCurrentPrice({quote_source:'binance',currency:'USDT'},{price:'100',transport:'gold-api'}),null);
+  assert.equal(resolveCurrentPrice({quote_source:'manual',manual_price:'invalid'},null),null);
+  assert.equal(resolveCurrentPrice({quote_source:'binance'},{price:'0'}),null);
+});
+
+test('explicit zero manual valuation is supported for worthless assets',()=>{assert.equal(resolveCurrentPrice({quote_source:'manual',manual_price:'0'},null),'0');});

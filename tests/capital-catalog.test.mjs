@@ -20,7 +20,7 @@ test('searchable stock and ETF catalogues include broad popular coverage and all
   assert.ok(commodities.some(asset => asset.symbol === 'COFFEE' && asset.group === 'agriculture'));
   assert.ok(commodities.every(asset => asset.quoteSource === 'manual' && asset.currency === 'USD' && !asset.marketSource));
   for (const symbol of ['USO','UNG','DBA','WEAT','CPER','PDBC','PPLT']) assert.ok(etfs.some(asset => asset.symbol === symbol));
-  assert.ok(stocks.every(asset => asset.quoteSource === 'manual' && asset.currency === 'USD'));
+  assert.ok(stocks.every(asset => asset.quoteSource === 'alphavantage' && asset.currency === 'USD'));
 });
 
 test('bundled SEC issuer directory adds thousands of searchable listed issuers without a client API call', async () => {

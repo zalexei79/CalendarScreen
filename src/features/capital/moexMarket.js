@@ -161,11 +161,14 @@ export function normalizeMoexQuotes(payload, market, now=Date.now()) {
     const board=String(row[mdIndex.BOARDID]||'');
     if(!symbol||!validMoexSymbol(symbol)||!priority.includes(board)) continue;
     const details=terms.get(`${symbol}|${board}`)||[];
-    const rawPrice=row[mdIndex.MARKETPRICE]??row[mdIndex.LAST]??row[mdIndex.CLOSEPRICE]??details[secIndex.PREVPRICE];
+    const rawPrice=row[mdIndex.LAST]??row[mdIndex.CLOSEPRICE]??row[mdIndex.MARKETPRICE]??details[secIndex.PREVPRICE];
     const currency=currencyCode(details[secIndex.CURRENCYID]||details[secIndex.FACEUNIT]);
     let price=decimalToScaled(rawPrice);
     if(market==='bonds') price=bondCashPrice(rawPrice,details[secIndex.FACEVALUE],details[secIndex.ACCRUEDINT]);
-    const at=dateFromMoex(row[mdIndex.SYSTIME]||row[mdIndex.UPDATETIME]);
+    const systemTime=String(row[mdIndex.SYSTIME]||'');
+    const tradeTime=String(row[mdIndex.UPDATETIME]||'');
+    const previousOnly=row[mdIndex.LAST]==null&&row[mdIndex.CLOSEPRICE]==null&&row[mdIndex.MARKETPRICE]==null;
+    const at=dateFromMoex(previousOnly&&details[secIndex.PREVDATE]?String(details[secIndex.PREVDATE])+' 23:59:59':systemTime&&tradeTime?systemTime.slice(0,10)+' '+tradeTime:systemTime||tradeTime);
     if(price===null||price<=0n||!at||at>now+5*60_000) continue;
     const previous=quotes[symbol];
     const rank=priority.indexOf(board), previousRank=previous?priority.indexOf(previous.board):Infinity;
@@ -184,7 +187,7 @@ export async function fetchMoexQuotes(category, symbols, signal) {
     url.searchParams.set('iss.meta','off');
     url.searchParams.set('iss.only','securities,marketdata');
     url.searchParams.set('securities',chunk.join(','));
-    url.searchParams.set('securities.columns','SECID,BOARDID,PREVPRICE,FACEVALUE,ACCRUEDINT,CURRENCYID,FACEUNIT');
+    url.searchParams.set('securities.columns','SECID,BOARDID,PREVPRICE,PREVDATE,FACEVALUE,ACCRUEDINT,CURRENCYID,FACEUNIT');
     url.searchParams.set('marketdata.columns','SECID,BOARDID,LAST,MARKETPRICE,CLOSEPRICE,SYSTIME,UPDATETIME');
     Object.assign(output,normalizeMoexQuotes(await makeRequest(url,signal),market));
   }

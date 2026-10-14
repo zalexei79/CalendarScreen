@@ -84,3 +84,10 @@ test('MOEX quote resolution requires matching currency and marks quotes stale af
   assert.equal(isMoexQuoteFresh(quote,NOW+60_000),true);
   assert.equal(isMoexQuoteFresh(quote,NOW+37*60*60_000),false);
 });
+
+test('MOEX uses last trade before indicative market price and shows trade time', () => {
+ const payload={securities:{columns:['SECID','BOARDID','CURRENCYID'],data:[['SBER','TQBR','SUR']]},marketdata:{columns:['SECID','BOARDID','LAST','MARKETPRICE','SYSTIME','UPDATETIME'],data:[['SBER','TQBR',287.05,286.9,'2026-10-10 09:36:16','09:21:16']]}};
+ const q=normalizeMoexQuotes(payload,'shares',Date.parse('2026-10-10T10:00:00Z')).SBER;
+ assert.equal(q.price,'287.05');
+ assert.equal(q.at,Date.parse('2026-10-10T09:21:16+03:00'));
+});

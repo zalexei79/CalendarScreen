@@ -97,3 +97,12 @@ test('parses decimal scientific notation without floating-point conversion', () 
   assert.equal(scaledToString(parseScaled('1.234e-3', MONEY_SCALE), MONEY_SCALE), '0.001234');
   assert.equal(scaledToString(parseScaled('12e2', MONEY_SCALE), MONEY_SCALE), '1200');
 });
+
+test('screenshot gold return comes from 33 USD cost per ounce, not a quote multiplier', () => {
+  const quantity=parseScaled('22',QUANTITY_SCALE);
+  const basis=parseScaled('726',MONEY_SCALE);
+  const value=multiplyScaled(quantity,QUANTITY_SCALE,parseScaled('4195.6',MONEY_SCALE),MONEY_SCALE);
+  assert.equal(scaledToString(value,MONEY_SCALE),'92303.2');
+  assert.equal(scaledToString(value-basis,MONEY_SCALE),'91577.2');
+  assert.equal(scaledToString(calculateReturnPercent(value-basis,basis),2),'12613.94');
+});

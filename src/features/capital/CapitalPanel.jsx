@@ -319,7 +319,7 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
     void refresh();const timer=window.setInterval(()=>void refresh(),6*60*60_000);
     return()=>{active=false;controller.abort();window.clearInterval(timer);};
   },[online,user?.id,usEquitySymbols.join('|')]);
-  const metalSymbols = useMemo(() => [...new Set(portfolio.assets.filter(isGoldApiAsset).map(asset=>asset.symbol.toUpperCase()))].sort(), [portfolio.assets]);
+  const metalSymbols = useMemo(() => [...new Set([...portfolio.assets,...(composer&&isGoldApiAsset(form)?[form]:[])].filter(isGoldApiAsset).map(asset=>asset.symbol.toUpperCase()))].sort(), [portfolio.assets,composer,form.category,form.currency,form.symbol]);
   useEffect(()=>{
     if(!online||!metalSymbols.length) return;
     const controller=new AbortController(); let active=true, inFlight=false;
@@ -399,11 +399,11 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
     setOperationEditor(true);
   };
   useEffect(()=>{
-    if(!composer || !assetSelection || !['binance','moex'].includes(form.quoteSource) || !form.symbol || form.purchasePrice) return;
+    if(!composer || !assetSelection || (!['binance','moex'].includes(form.quoteSource)&&!isGoldApiAsset(form)) || !form.symbol || form.purchasePrice || form.date!==todayKey()) return;
     const quote=quotes[form.symbol];
-    const fresh=form.quoteSource==='binance'?quote&&isQuoteFresh(quote,now):quote&&isMoexQuoteFresh(quote,now)&&quote.currency===form.currency;
+    const fresh=isGoldApiAsset(form)?quote&&isGoldApiQuoteFresh(quote,now):form.quoteSource==='binance'?quote&&isQuoteFresh(quote,now):quote&&isMoexQuoteFresh(quote,now)&&quote.currency===form.currency;
     if(fresh) setForm(current=>current.purchasePrice?current:{...current,purchasePrice:quote.price,price:current.price||quote.price});
-  },[composer,assetSelection,form.quoteSource,form.symbol,form.purchasePrice,form.currency,quotes,now]);
+  },[composer,assetSelection,form.quoteSource,form.symbol,form.purchasePrice,form.currency,form.date,quotes,now]);
   useEffect(()=>{
     if(!composer||form.quoteSource!=='alphavantage'||!purchasePriceAuto)return;
     const quote=quotes[form.symbol];
@@ -568,6 +568,10 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
     const frame = requestAnimationFrame(() => document.querySelector('.capital-overlay .capital-operation-form')?.scrollIntoView({ block: 'nearest' }));
     return () => cancelAnimationFrame(frame);
   }, [operationEditor, opForm.operation, selected?.id]);
+  const priceCopy = {"ru":{"unit":"тройская унция (31,1034768 г)","pound":"фунт","share":"акция / пай","latest":"Последняя доступная цена","source":"Источник и время цены","warning":"Цена покупки сильно отличается от котировки. Проверьте цену за единицу и количество в истории операций.","metalNote":"Количество и цена покупки указываются в тройских унциях, не в граммах.","manual":"Ручная оценка"},"en":{"unit":"troy ounce (31.1034768 g)","pound":"pound","share":"share / unit","latest":"Latest available price","source":"Price source and time","warning":"Purchase cost differs greatly from the quote. Check the unit price and quantity in transaction history.","metalNote":"Enter quantity and purchase price in troy ounces, not grams.","manual":"Manual valuation"},"ro":{"unit":"uncie troy (31,1034768 g)","pound":"livră","share":"acțiune / unitate","latest":"Ultimul preț disponibil","source":"Sursa și ora prețului","warning":"Costul de cumpărare diferă mult de cotație. Verifică prețul unitar și cantitatea în istoricul operațiunilor.","metalNote":"Introdu cantitatea și prețul în uncii troy, nu în grame.","manual":"Evaluare manuală"},"zh":{"unit":"金衡盎司 (31.1034768 克)","pound":"磅","share":"股 / 份","latest":"最新可用价格","source":"价格来源与时间","warning":"买入成本与行情相差较大。请在交易历史中核对单价和数量。","metalNote":"数量和买入价格以金衡盎司输入，不是克。","manual":"手动估值"}}[locale];
+  const priceUnit = asset => isGoldApiAsset(asset)?asset.symbol==='HG'?priceCopy.pound:priceCopy.unit:['stock','etf'].includes(asset?.category)?priceCopy.share:asset?.symbol?.replace(/USDT$/,'')||t.quantityUnit;
+  const selectedMarketFresh = online && selected && (isGoldApiAsset(selected)?isGoldApiQuoteFresh(quotes[selected.symbol],now):selected.quote_source==='binance'?isQuoteFresh(quotes[selected.symbol],now):false);
+  const priceMismatch = selectedPrice!==null && selected?.averageCost>0n && (selectedPrice>selected.averageCost*10n || selectedPrice*10n<selected.averageCost);
   const detailCopy = {
 ru: {buy:'Куплено в среднем',sell:'Цена продажи сейчас',result:'Если продать весь остаток',note:'По указанной цене · комиссия покупки учтена, комиссия продажи не включена',details:'Расчёты и история'},
 en: {buy:'Average purchase cost',sell:'Sell price now',result:'If you sell the remaining position',note:'At the displayed price · purchase fees included, sale fees excluded',details:'Calculations and history'},
@@ -653,6 +657,7 @@ zh: {buy:'平均买入成本',sell:'当前卖出价格',result:'卖出剩余持�
           {matchedCatalog.length<catalogMatches.length&&<button type="button" className="capital-catalog-more" onClick={()=>setCatalogVisibleLimit(limit=>limit+40)}>{t.showMoreCatalog} · {matchedCatalog.length.toLocaleString(locale)} / {catalogMatches.length.toLocaleString(locale)}</button>}
           <button type="button" className="capital-custom-link" onClick={chooseCustomAsset}><Plus size={15}/>{t.customAsset}</button>
         </>:<>
+          {isGoldApiAsset(form)&&form.symbol!=='HG'&&<p className="capital-form-hint">{priceCopy.metalNote}</p>}
           <div className="capital-selected-asset"><span className="capital-picker-symbol">{form.symbol||form.category.toUpperCase()}</span><span><strong>{form.name||t.customAsset}</strong><small>{form.symbol?`${form.symbol} · ${assetSelection.custom?t.manualSource:isGoldApiAsset(form)?(form.symbol==='HG'?t.goldApiCopper:t.goldApiSource):form.quoteSource==='binance'?t.binanceSource:form.quoteSource==='moex'?t.moexSource:form.quoteSource==='alphavantage'?t.usEquitySource:t.manualSource}`:t.manualSource}</small></span><button type="button" onClick={()=>{setAssetSelection(null);setAssetSearch('');}}>{t.changeAsset}</button></div>
           {moexCurrencyLoading&&<p className="capital-form-hint">{t.moexCurrencyLoading}</p>}
           {assetSelection.custom&&<><label>{t.name}<input required maxLength="120" value={form.name} onChange={event=>setForm({...form,name:event.target.value})} placeholder={t.manualName}/></label><label>{t.symbol}<input maxLength="24" value={form.symbol} onChange={event=>setForm({...form,symbol:event.target.value.toUpperCase()})} placeholder={t.optional}/></label></>}
@@ -673,11 +678,13 @@ zh: {buy:'平均买入成本',sell:'当前卖出价格',result:'卖出剩余持�
           <small>{detailCopy.note}</small>
         </section>
         <div className="capital-detail-primary-stats">
-<div><span>{detailCopy.buy}</span><b>{formatMoney(selected.averageCost,selected.currency,locale)} / {selected.symbol||t.quantityUnit}</b></div>
-<div><span>{detailCopy.sell}</span><b>{selectedPrice===null?t.waitingQuote:formatMoney(selectedPrice,selected.currency,locale)}</b></div>
+<div><span>{detailCopy.buy}</span><b>{formatMoney(selected.averageCost,selected.currency,locale)} / {priceUnit(selected)}</b></div>
+<div><span>{selectedMarketFresh?t.currentUnitPrice:priceCopy.latest}</span><b>{selectedPrice===null?t.waitingQuote:formatMoney(selectedPrice,selected.currency,locale)}{selectedPrice!==null&&` / ${priceUnit(selected)}`}</b></div>
 <div><span>{t.quantity}</span><b>{formatQuantity(selected.quantity,locale)} {selected.symbol}</b></div>
 <div><span>{t.currentValue}</span><b>{selectedValue===null?'—':formatMoney(selectedValue,selected.currency,locale)}</b></div>
-</div><details className="capital-position-details"><summary>{detailCopy.details}</summary>
+</div><div className="capital-price-provenance"><span>{priceCopy.source}</span><b>{isGoldApiAsset(selected)?'Gold API · USD':selected.quote_source==='binance'?'Binance · USDT':selected.quote_source==='moex'?'MOEX ISS':selected.quote_source==='alphavantage'?'Alpha Vantage · EOD':priceCopy.manual}</b><small>{quoteLabel(selected,quotes[selected.symbol])} · {quotes[selected.symbol]?.at?displayTime(quotes[selected.symbol].at):selected.updated_at?displayTime(selected.updated_at):'—'}</small></div>
+{priceMismatch&&<p className="capital-price-warning" role="status">{priceCopy.warning}</p>}
+<details className="capital-position-details"><summary>{detailCopy.details}</summary>
         <section className="capital-asset-score" aria-label={t.assetScore}>
           <div className="capital-asset-score-head"><strong>{t.assetScore}</strong><b>{selectedScore===null?'—':`${new Intl.NumberFormat(locale).format(Number(selectedScore.value))}/100`}</b></div>
           <div className="capital-asset-score-meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow={selectedScore===null?undefined:Number(selectedScore.value)}><span style={{width:selectedScore===null?'0%':`${Number(selectedScore.value)}%`}}/></div>
