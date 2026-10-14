@@ -51,3 +51,5 @@
 .capital-candle-axis { fill:var(--cap-muted); font-size:8px; }
 .capital-candle-crosshair { stroke:var(--cap-muted); stroke-width:.5; stroke-dasharray:3 3; }
 @media(prefers-reduced-motion:reduce) { .capital-candle-periods button { transition:none; } }
+
+.capital-chart-expand{display:flex;align-items:center;gap:5px;margin-top:9px;padding:0;min-height:36px;border:0;background:none;color:var(--cap-gold);font-size:10px;cursor:pointer}

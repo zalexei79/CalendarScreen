@@ -1,7 +1,10 @@
-import React, { useEffect, useId, useMemo, useState } from 'react';
+import React, { useEffect, useId, useMemo, useState, lazy, Suspense } from 'react';
 import { fetchAssetQuoteHistory } from './assetQuoteHistory.js';
 import { fetchUsEquityQuotes, isUsEquityAsset } from './usEquityQuotes.js';
 import { formatMoney } from './decimal.js';
+import { chartCopy } from './chartCopy.js';
+import {Maximize2} from 'lucide-react';
+const CapitalFullChart=lazy(()=>import('./CapitalFullChart.jsx'));
 import { buildCandles, candleHistory } from './candleModel.js';
 
 const labels = {
@@ -10,9 +13,10 @@ const labels = {
  ro:{daily:'Lumânări zilnice',closeOnly:'Sunt disponibile doar prețurile de închidere. Lumânările necesită istoricul OHLC complet.',open:'Deschidere',high:'Maxim',low:'Minim',close:'Închidere',range:'Perioada graficului',month:'L'},
  zh:{daily:'日线蜡烛图',closeOnly:'目前只有收盘价，需要完整 OHLC 历史才能显示蜡烛图。',open:'开盘',high:'最高',low:'最低',close:'收盘',range:'图表时间范围',month:'月'},
 };
-export default function CapitalQuoteHistoryChart({ asset, quote, currency, locale, t, allowFetch = true, quoteError = '', quoteLoading = false }) {
+export default function CapitalQuoteHistoryChart({ asset, quote, currency, locale, t, allowFetch = true, quoteError = '', quoteLoading = false, userId }) {
  const [rows,setRows]=useState([]),[loading,setLoading]=useState(false),[failed,setFailed]=useState(false);
  const [activeIndex,setActiveIndex]=useState(null),[period,setPeriod]=useState(3);
+ const [expanded,setExpanded]=useState(false);
  const descriptionId=useId(), copy=labels[locale]||labels.en;
  useEffect(()=>{
   if(!asset || !['binance','moex','alphavantage'].includes(asset.quote_source)){setRows([]);return;}
@@ -41,10 +45,10 @@ export default function CapitalQuoteHistoryChart({ asset, quote, currency, local
   {chart ? <>
    <div className="capital-history-readout"><strong>{formatMoney(current.close,currency,locale)}</strong><span>{dateLabel(current.date)}</span></div>
    <div className="capital-candle-ohlc" id={descriptionId}>{['open','high','low','close'].map(key=><span key={key}><small>{copy[key]}</small><b>{axis(Number(current[key]))}</b></span>)}</div>
-   <svg className="capital-market-history-svg capital-candle-svg" viewBox="0 0 400 156" role="img" tabIndex={0} aria-describedby={descriptionId} aria-label={`${copy.daily}: ${dateLabel(current.date)}, ${formatMoney(current.close,currency,locale)}`}
+   <svg className="capital-market-history-svg capital-candle-svg" viewBox="0 0 400 156" role="img" tabIndex={0} onClick={()=>setExpanded(true)} aria-describedby={descriptionId} aria-label={`${copy.daily}: ${dateLabel(current.date)}, ${formatMoney(current.close,currency,locale)}`}
     onPointerMove={event=>{const rect=event.currentTarget.getBoundingClientRect();const x=(event.clientX-rect.left)/rect.width*400;setActiveIndex(Math.floor((x-12)/chart.step));}}
     onPointerLeave={()=>setActiveIndex(null)} onBlur={()=>setActiveIndex(null)}
-    onKeyDown={event=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){event.preventDefault();setActiveIndex(event.key==='Home'?0:event.key==='End'?visible.length-1:Math.max(0,Math.min(visible.length-1,index+(event.key==='ArrowLeft'?-1:1))));}}}>
+    onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();setExpanded(true);return;}if(['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){event.preventDefault();setActiveIndex(event.key==='Home'?0:event.key==='End'?visible.length-1:Math.max(0,Math.min(visible.length-1,index+(event.key==='ArrowLeft'?-1:1))));}}}>
     {chart.ticks.map((value,i)=><g key={i}><path className="capital-chart-gridline" d={`M12 ${16+i*59}H340`}/><text className="capital-candle-axis" x="348" y={19+i*59}>{axis(value)}</text></g>)}
     {chart.points.map((candle,i)=><g key={visible[i].date} className={`capital-candle ${candle.up?'is-up':'is-down'}`} opacity={activeIndex===null||index===i?1:.65}>
       <path d={`M${candle.x} ${candle.high}V${candle.low}`} />
@@ -54,5 +58,7 @@ export default function CapitalQuoteHistoryChart({ asset, quote, currency, local
    </svg>
    <div className="capital-market-history-values"><span>{dateLabel(visible[0].date)}</span><span>{dateLabel(visible.at(-1).date)}</span></div>
   </> : <p>{loading||quoteLoading ? t.loading : failed||quoteError ? t.marketHistoryUnavailable : rows.length ? copy.closeOnly : t.marketHistoryEmpty}</p>}
+  <button type="button" className="capital-chart-expand" onClick={()=>setExpanded(true)}><Maximize2 size={13}/>{(chartCopy[locale]||chartCopy.en).open}</button>
+  {expanded&&<Suspense fallback={<p>{t.loading}</p>}><CapitalFullChart key={asset.quote_source+':'+asset.symbol} asset={asset} rows={rows} quote={quote} userId={userId} locale={locale} onClose={()=>setExpanded(false)}/></Suspense>}
  </section>;
 }
