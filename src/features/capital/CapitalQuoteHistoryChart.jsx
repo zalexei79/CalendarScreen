@@ -12,20 +12,20 @@ function makePath(rows) {
   return { path, area: `${path} L308 104 L12 104 Z`, first: values[0], last: values.at(-1) };
 }
 
-export default function CapitalQuoteHistoryChart({ asset, quote, currency, locale, t }) {
+export default function CapitalQuoteHistoryChart({ asset, quote, currency, locale, t, allowFetch = true }) {
   const [rows, setRows] = useState([]), [loading, setLoading] = useState(false), [failed, setFailed] = useState(false);
   useEffect(() => {
     if (!asset || !['binance', 'moex', 'alphavantage'].includes(asset.quote_source)) { setRows([]); setFailed(false); return; }
     const controller = new AbortController();
     setLoading(true); setFailed(false);
     const history = isUsEquityAsset(asset)
-      ? quote?.history?.length ? Promise.resolve(quote.history) : fetchUsEquityQuotes([asset.symbol], controller.signal).then(result => result.quotes[asset.symbol]?.history || [])
+      ? quote?.history?.length ? Promise.resolve(quote.history) : allowFetch ? fetchUsEquityQuotes([asset.symbol], controller.signal).then(result => result.quotes[asset.symbol]?.history || []) : Promise.resolve([])
       : fetchAssetQuoteHistory(asset, { signal: controller.signal });
     history.then(setRows)
       .catch(error => { if (error.name !== 'AbortError') setFailed(true); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [asset?.id, asset?.symbol, asset?.quote_source, asset?.category, quote?.history]);
+  }, [asset?.id, asset?.symbol, asset?.quote_source, asset?.category, quote?.history, allowFetch]);
   const chart = useMemo(() => makePath(rows), [rows]);
   if (!asset || !['binance', 'moex', 'alphavantage'].includes(asset.quote_source)) return null;
   return <section className="capital-market-history" aria-label={t.marketHistory}>
