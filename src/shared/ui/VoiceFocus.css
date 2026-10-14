@@ -22,6 +22,19 @@
 .voice-workspace .calendar-voice-review-actions button { min-height:46px; }
 .voice-workspace .voice-workspace-hints > summary,.voice-workspace .voice-workspace-settings > summary { min-height:44px; }
 .voice-workspace[data-compact=true] .voice-focus-stage { display:none; }
+/* Capture mode deliberately removes help, tools and repeated status copy.
+   Results stay mounted, so pausing never resets an editable review card. */
+.voice-workspace .voice-workspace-result[hidden] { display:none!important; }
+.voice-workspace[data-minimal=true] :is(.voice-focus-stage,.voice-workspace-instruction,.voice-turn-activity-slot,.voice-workspace-label,.voice-workspace-widget-hint) { display:none; }
+.voice-workspace[data-minimal=true] .voice-workspace-heard[data-empty=true] { display:none; }
+.voice-workspace[data-minimal=true] .voice-workspace-hero { padding:6px 0 0; }
+.voice-workspace[data-minimal=true] .voice-workspace-status { font-size:14px!important;font-weight:400;letter-spacing:0;color:var(--voice-muted); }
+.voice-workspace[data-minimal=true] .voice-workspace-heard { margin:18px 0 8px;text-align:center; }
+.voice-workspace[data-minimal=true] .voice-workspace-phrase { font-size:clamp(22px,5vw,28px);line-height:1.4;font-weight:500;margin:0; }
+.voice-workspace[data-minimal=true] .voice-workspace-scroll { padding-top:8px;padding-bottom:18px; }
+.voice-workspace[data-minimal=true] .voice-workspace-brand small { display:none; }
+.voice-workspace[data-minimal=true] .voice-workspace-transport-state>span { visibility:hidden; }
+.voice-workspace[data-minimal=true] .voice-workspace-exit>span { display:none; }
 @media(prefers-reduced-motion:no-preference) {
  .voice-workspace-result { animation:voice-focus-enter 240ms cubic-bezier(.2,0,0,1); }
  .voice-workspace-transcript summary svg { transition:transform 180ms ease; }

@@ -6,9 +6,9 @@ const result=await require('esbuild').build({stdin:{resolveDir:process.cwd(),loa
  import React,{useState} from 'react';import {createRoot} from 'react-dom/client';
  import Workspace from './src/shared/ui/VoiceWorkspace.jsx';import Card from './src/shared/ui/VoiceEntryCard.jsx';
  import './src/shared/ui/CalendarVoiceButton.css';
- function App(){const [locale,setLocale]=useState('ru'),[light,setLight]=useState(false),[review,setReview]=useState(false),[entry,setEntry]=useState({amount:'250',currency:'USD',category:'Food',sign:'minus',destination:'main',dateKey:'2026-10-01'});
- window.setLocale=setLocale;window.setLight=setLight;window.setReview=setReview;
- return <Workspace locale={locale} isLight={light} phrase="Spent 250 USD on Food" status={review?'Review':'Listening'} help={{filtered:true,phrases:['amount 70']}} phase="listening" listening={!review} resultKey={review?'review':'idle'} onClose={()=>{}} onListen={()=>{}} onSuggestion={()=>{}} onCollapse={()=>{}} categories={[]} settings={<span>Settings</span>}>
+ function App(){const [locale,setLocale]=useState('ru'),[light,setLight]=useState(false),[review,setReview]=useState(false),[pause,setPause]=useState(false),[talking,setTalking]=useState(false),[entry,setEntry]=useState({amount:'250',currency:'USD',category:'Food',sign:'minus',destination:'main',dateKey:'2026-10-01'});
+ window.setLocale=setLocale;window.setLight=setLight;window.setReview=setReview;window.setPause=setPause;window.setTalking=setTalking;
+ return <Workspace locale={locale} isLight={light} phrase="Spent 250 USD on Food" status={review?'Review':'Listening'} help={{filtered:true,phrases:['amount 70']}} phase="listening" listening={!review} quiet={pause?{id:1,duration:1500}:null} talking={talking} resultKey={review?'review':'idle'} onClose={()=>{}} onListen={()=>{}} onSuggestion={()=>{}} onCollapse={()=>{}} categories={[]} settings={<span>Settings</span>}>
  {review&&<Card entry={entry} locale={locale} categories={[]} onChange={setEntry} onSave={()=>window.saved=entry} onCancel={()=>{}}/>}</Workspace>}
  createRoot(document.getElementById('root')).render(<App/>);
  `},bundle:true,write:false,outfile:'voice.js'});
@@ -18,7 +18,16 @@ try {
  await page.route('http://focus.test/**',r=>r.fulfill({contentType:'text/html',body:`<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:Arial;background:#090a0e}${result.outputFiles.find(f=>f.path.endsWith('.css')).text}</style><div id="root"></div><script>${result.outputFiles.find(f=>f.path.endsWith('.js')).text}</script>`}));
  await page.goto('http://focus.test');await page.emulateMedia({reducedMotion:'reduce'});
  assert.equal(await page.locator('.voice-workspace-phrase').isVisible(),true);
- assert.equal(await page.locator('.voice-workspace-hints').getAttribute('open'),null,'Hints are optional, not another focal point');
+ assert.equal(await page.locator('.voice-workspace-hints').count(),0,'No hints compete with live capture');
+ assert.equal(await page.locator('.voice-workspace-settings').count(),0,'No settings while recording');
+ assert.equal(await page.locator('.voice-workspace-instruction').isVisible(),false);
+ await page.evaluate(()=>setPause(true));
+ await page.locator('.voice-workspace-hints').waitFor();
+ assert.equal(await page.locator('.voice-workspace-settings').isVisible(),true,'Settings and hints are available on a pause');
+ await page.evaluate(()=>setTalking(true));
+ await page.waitForFunction(()=>!document.querySelector('.voice-workspace-hints'));
+ assert.equal(await page.locator('.voice-workspace-phrase').isVisible(),true,'Speech resumes without hints');
+ await page.evaluate(()=>{setPause(false);setTalking(false);});
  await page.evaluate(()=>setReview(true));
  assert.equal(await page.locator('.voice-workspace-phrase').isVisible(),false,'Review focuses on the entry');
  await page.locator('.voice-workspace-transcript summary').click();
