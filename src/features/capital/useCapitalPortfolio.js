@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toNativeOrder } from './investorTools.js';
 import { supabase } from '../../supabaseClient';
 import { calculatePositions, MONEY_SCALE, parseScaled, QUANTITY_SCALE, scaledToString } from './decimal';
@@ -20,32 +20,46 @@ export function useCapitalPortfolio({ user }) {
   const [snapshots, setSnapshots] = useState([]);
   const [loading, setLoading] = useState(Boolean(user?.id));
   const [error, setError] = useState('');
+  const [refreshing,setRefreshing] = useState(false);
+  const [lastSynced,setLastSynced] = useState(null);
+  const loadedOwner = useRef(null);
+  const owner = useRef(user?.id); owner.current=user?.id;
+  const revision = useRef(0);
 
   const refresh = useCallback(async () => {
     if (!user?.id) { setAssets([]); setOperations([]); setSnapshots([]); setLoading(false); return; }
-    setLoading(true); setError('');
+    const version=++revision.current;
+    setLoading(loadedOwner.current!==user.id); setRefreshing(true);
+    try {
     const [a, o, s] = await Promise.all([
       loadAll(supabase.from('capital_assets').select('*').eq('user_id', user.id).order('created_at')),
       loadAll(supabase.from('capital_operations').select('*').eq('user_id', user.id).order('occurred_on', { ascending: false }).order('created_at', { ascending: false }).order('id', { ascending: false })),
       loadAll(supabase.from('capital_valuation_snapshots').select('currency,portfolio_value,sampled_on').eq('user_id', user.id).order('sampled_on')),
     ]);
+    if(version!==revision.current||owner.current!==user.id)return;
     if (a.error || o.error || s.error) {
       const failure = a.error || o.error || s.error;
       setError(failure);
       console.error('[capital] portfolio load failed', { code: failure.code, message: failure.message, details: failure.details });
     }
-    else { setAssets(a.data || []); setOperations(o.data || []); setSnapshots(s.data || []); }
-    setLoading(false);
+    else { setAssets(a.data || []); setOperations(o.data || []); setSnapshots(s.data || []); loadedOwner.current=user.id; setLastSynced(Date.now()); setError(''); }
+    } catch(failure) {
+      if(version===revision.current&&owner.current===user.id)setError(failure);
+    } finally {
+      if(version===revision.current&&owner.current===user.id){setLoading(false);setRefreshing(false);}
+    }
   }, [user?.id]);
 
   useEffect(() => {
+    loadedOwner.current=null;
+    setAssets([]);setOperations([]);setSnapshots([]);setError('');setLastSynced(null);
     refresh();
     if (!user?.id) return undefined;
     const sync = () => { if (document.visibilityState === 'visible') refresh(); };
     const timer = window.setInterval(sync, 60000);
     window.addEventListener('focus', sync);
     document.addEventListener('visibilitychange', sync);
-    return () => { window.clearInterval(timer); window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', sync); };
+    return () => { revision.current++; window.clearInterval(timer); window.removeEventListener('focus', sync); document.removeEventListener('visibilitychange', sync); };
   }, [refresh, user?.id]);
 
   const addAsset = useCallback(async input => {
@@ -97,5 +111,5 @@ export function useCapitalPortfolio({ user }) {
   }, [refresh]);
 
   const enriched = useMemo(() => calculatePositions(assets, operations), [assets, operations]);
-  return { assets: enriched, operations, snapshots, loading, error, refresh, addAsset, addOperation, deleteLatestOperation, recordSnapshot };
+  return { assets: enriched, operations, snapshots, loading, refreshing, lastSynced, error, refresh, addAsset, addOperation, deleteLatestOperation, recordSnapshot };
 }

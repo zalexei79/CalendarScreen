@@ -7,6 +7,8 @@ import {
 import { CURRENCIES, getCurrencyMeta } from '../../shared/config/constants';
 import SwipeDismissSheet from '../../shared/ui/SwipeDismissSheet.jsx';
 import SheetCloseButton from '../../shared/ui/SheetCloseButton.jsx';
+import { readWorkspace, writeWorkspace, clearWorkspace } from '../../shared/lib/sessionWorkspace.js';
+import useWorkspacePreference from '../../shared/ui/useWorkspacePreference.js';
 import AmountKeypad, { AmountInput } from '../../shared/ui/AmountEntry.jsx';
 import { useWalletExitGesture } from './hooks/useWalletExitGesture';
 import './WalletGestures.css';
@@ -75,14 +77,16 @@ function localeOf(language) {
 }
 
 export default function WalletPanel({
-  language = 'ru', isLight, currency, transactions, transfers = [], balanceByCurrency,
+  userId, language = 'ru', isLight, currency, transactions, transfers = [], balanceByCurrency,
   loading, error, onSave, onDelete, onClearHistory = async () => {}, onBackToCalendar,
 }) {
   const copy = COPY[localeOf(language)];
-  const [code, setCode] = useState(currency || 'USD');
+  const [code, setCode] = useWorkspacePreference(userId,'wallet-currency',currency||'USD',CURRENCIES.map(item=>item.code));
   const [composer, setComposer] = useState(null);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
+  const initialLoading=loading&&!transactions.length&&!transfers.length;
+  useEffect(()=>{if(composer)writeWorkspace(userId,`wallet-${code}-${composer.kind}`,composer);},[userId,code,composer]);
   const [onboarding, setOnboarding] = useState(() => {
     try { return localStorage.getItem(ONBOARDING_KEY) !== '1'; } catch { return false; }
   });
@@ -100,7 +104,9 @@ export default function WalletPanel({
 
   const openComposer = (kind) => {
     setActionError('');
-    setComposer({ kind, reason: kind === 'income' ? 'tradingProfit' : 'accountWithdrawal', amount: '', dateKey: today, comment: '' });
+    const draft=readWorkspace(userId,`wallet-${code}-${kind}`);
+    const valid=draft?.kind===kind&&typeof draft.amount==='string'&&typeof draft.reason==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(draft.dateKey);
+    setComposer(valid?draft:{ kind, reason: kind === 'income' ? 'tradingProfit' : 'accountWithdrawal', amount: '', dateKey: today, comment: '' });
   };
   const closeOnboarding = () => {
     try { localStorage.setItem(ONBOARDING_KEY, '1'); } catch { /* best effort */ }
@@ -119,6 +125,7 @@ export default function WalletPanel({
     setBusy(true); setActionError('');
     try {
       await onSave({ dateKey: composer.dateKey, time: new Date().toTimeString().slice(0, 5), title: reasonLabels[composer.reason], amount: Number(composer.amount), kind: composer.kind, currency: code, comment: composer.comment });
+      clearWorkspace(userId,`wallet-${code}-${composer.kind}`);
       setComposer(null);
     } catch (saveError) {
       setActionError(saveError.message || 'SAVE_FAILED');
@@ -141,7 +148,7 @@ export default function WalletPanel({
       <div className="wallet-balance-card relative overflow-hidden rounded-[30px] border border-amber-400/20 bg-gradient-to-br from-[#211d12] via-[#121317] to-[#090a0d] p-6 shadow-[0_28px_90px_rgba(0,0,0,.35)] sm:p-8">
         <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-amber-400/10 blur-3xl" />
         <div className="relative flex items-start justify-between gap-4">
-          <div><div className="flex items-center gap-2 text-amber-300"><Wallet className="h-4 w-4" /><span className="font-data text-[10px] uppercase tracking-[.2em]">{copy.account}</span></div><p className="mt-8 text-xs text-zinc-500">{copy.balance}</p><p key={`${code}-${balance}-${loading}`} className={`wallet-value-reveal mt-1 font-data text-4xl font-semibold tracking-tight text-white sm:text-5xl ${loading ? 'animate-pulse opacity-40' : ''}`}>{loading ? '—' : `${balance < 0 ? '−' : ''}${symbol}${Math.abs(balance).toLocaleString(localeOf(language), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</p><p className={`mt-2 text-xs ${monthNet >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{loading ? '—' : (monthNet >= 0 ? '+' : '−') + symbol + Math.abs(monthNet).toFixed(2)} {copy.month}</p></div>
+          <div><div className="flex items-center gap-2 text-amber-300"><Wallet className="h-4 w-4" /><span className="font-data text-[10px] uppercase tracking-[.2em]">{copy.account}</span></div><p className="mt-8 text-xs text-zinc-500">{copy.balance}</p><p key={code} className={`wallet-value-reveal mt-1 font-data text-4xl font-semibold tracking-tight text-white sm:text-5xl ${initialLoading ? 'animate-pulse opacity-40' : ''}`}>{initialLoading ? '—' : `${balance < 0 ? '−' : ''}${symbol}${Math.abs(balance).toLocaleString(localeOf(language), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</p><p className={`mt-2 text-xs ${monthNet >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{initialLoading ? '—' : (monthNet >= 0 ? '+' : '−') + symbol + Math.abs(monthNet).toFixed(2)} {copy.month}</p></div>
           <div className="relative"><select value={code} onChange={(event) => setCode(event.target.value)} className="appearance-none rounded-xl border border-white/10 bg-[#17181d] py-2.5 pl-3 pr-9 text-xs font-semibold text-zinc-100" style={{ colorScheme: 'dark' }}>{CURRENCIES.map((item) => <option key={item.code} value={item.code}>{item.code} · {item.symbol}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-3 h-3.5 w-3.5 text-zinc-500" /></div>
         </div>
         <div className="relative mt-8 grid grid-cols-2 gap-3">

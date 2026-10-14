@@ -26,6 +26,7 @@ try {
  await page.locator('.voice-workspace-transcript summary').click();
  for(const locale of ['ru','en','ro','zh'])for(const width of [320,390,1280])for(const light of [false,true]){
   await page.evaluate(({locale,light})=>{setLocale(locale);setLight(light);},{locale,light});await page.setViewportSize({width,height:844});
+  await page.waitForFunction(()=>{const box=document.querySelector('.voice-workspace').getBoundingClientRect();return box.x>=0&&box.right<=innerWidth+1;});
   const box=await page.locator('.voice-workspace').boundingBox();assert.ok(box.x>=0&&box.x+box.width<=width+1);
   const actions=page.locator('.calendar-voice-review-actions button');
   for(const button of await actions.all())assert.ok((await button.boundingBox()).height>=44);

@@ -116,6 +116,7 @@ import WalletPanel from './src/features/wallet/WalletPanel.jsx';
 import CapitalPanel from './src/features/capital/CapitalPanel.jsx';
 import { transitionView } from './src/shared/ui/transitionView';
 import SwipeDismissSheet from './src/shared/ui/SwipeDismissSheet.jsx';
+import { readWorkspace, writeWorkspace, clearWorkspace } from './src/shared/lib/sessionWorkspace.js';
 import ProOffer from './src/features/pro/ProOffer.jsx';
 import ProGrantNotice from './src/features/pro/ProGrantNotice.jsx';
 import ConnectionStatus from './src/shared/ui/ConnectionStatus.jsx';
@@ -499,10 +500,11 @@ export default function CalendarScreen() {
   const traderModePreferenceReady = useRef(false);
   const isFinancialPro = proView && !traderMode;
   useEffect(() => {
-    if ((!proAccessLoading && !proAccessActive) || !proView) {
+    if (!authReady) return;
+    if (!proAccessLoading && (!proAccessActive || (proViewPreferenceReady.current && !proView))) {
       if (accountMode === 'wallet' || accountMode === 'capital') setAccountMode('main');
     }
-  }, [proAccessActive, proAccessLoading, proView, accountMode]);
+  }, [authReady, proAccessActive, proAccessLoading, proView, accountMode]);
   const [proAccessPromptOpen, setProAccessPromptOpen] = useState(false);
   const [proOfferTab, setProOfferTab] = useState('offer');
   const [proCheckoutLoading, setProCheckoutLoading] = useState(false);
@@ -2508,10 +2510,16 @@ export default function CalendarScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const saveInFlightRef = useRef(false);
   const voiceSaveProgress = useRef({});
+  const [calendarDraftRestored,setCalendarDraftRestored]=useState(false);
+  const calendarDraftKey=`calendar-${traderMode?'trading':'finance'}-${modalDateKey}`;
+  useEffect(()=>{
+    if(modalOpen&&!editingTrade&&!isSaving&&(form.pnl||form.comment))writeWorkspace(validUserId,calendarDraftKey,{form,kind:proEntryMode});
+  },[validUserId,calendarDraftKey,modalOpen,editingTrade,isSaving,form,proEntryMode]);
 
   function openModal(tradeToEdit, dateKeyOverride = null) {
     if (!validUserId) { requestLogin(tradeToEdit ? null : dateKeyOverride || targetDateKey); return; }
     voiceSaveProgress.current = {};
+    setCalendarDraftRestored(false);
     if (tradeToEdit) {
       setEditingTrade({ id: tradeToEdit.id, dateKey: tradeToEdit.dateKey || modalDateKey || targetDateKey });
       setModalDateKey(tradeToEdit.dateKey || modalDateKey || targetDateKey);
@@ -2553,6 +2561,12 @@ export default function CalendarScreen() {
         takeProfit: '',
         stopLoss: '',
       });
+      const saved=readWorkspace(validUserId,`calendar-${traderMode?'trading':'finance'}-${newEntryDateKey}`);
+      if(saved?.form&&typeof saved.form.pnl==='string'&&typeof saved.form.currency==='string'&&['plus','minus'].includes(saved.form.sign)){
+        setForm(saved.form);setCalendarDraftRestored(true);
+        if(['trade','finance'].includes(saved.kind))setProEntryMode(saved.kind);
+        setProEntryChoiceOpen(false);
+      }
     }
     setFormError('');
     // Categories open in the compact picker. PRO opens extra details only when
@@ -2801,6 +2815,7 @@ export default function CalendarScreen() {
       }
 
       const completedFirstRunGuide = firstRunGuideStep === 2 && !editingTrade && dateKey === todayKey && !traderMode;
+      if(!editingTrade)clearWorkspace(validUserId,calendarDraftKey);
       closeModal({ immediate: true });
       if (completedFirstRunGuide) {
         try { window.localStorage.setItem('calendar_guide_completed', '1'); } catch { /* ignore */ }
@@ -4714,8 +4729,8 @@ export default function CalendarScreen() {
         try { sessionStorage.removeItem(ENTRY_INTENT_KEY); } catch { /* optional */ }
       }} />}
 
-      {accountMode === 'wallet' ? <WalletPanel language={language} isLight={isLight} currency={currency} {...wallet} onSave={wallet.saveTransaction} onDelete={wallet.deleteTransaction} onClearHistory={wallet.clearHistory} onBackToCalendar={() => transitionView(() => setAccountMode('main'))} /> : null}
-      {accountMode === 'capital' && proAccessActive && !proAccessLoading ? <CapitalPanel language={language} isLight={isLight} currency={currency} user={user} onBack={() => transitionView(() => setAccountMode('main'))} onWallet={() => transitionView(() => setAccountMode('wallet'))} onSettled={() => Promise.allSettled([wallet.refresh(),refreshFromCloud()])} /> : null}
+      {accountMode === 'wallet' ? <WalletPanel key={validUserId||'guest'} userId={validUserId} language={language} isLight={isLight} currency={currency} {...wallet} onSave={wallet.saveTransaction} onDelete={wallet.deleteTransaction} onClearHistory={wallet.clearHistory} onBackToCalendar={() => transitionView(() => setAccountMode('main'))} /> : null}
+      {accountMode === 'capital' && proAccessActive && !proAccessLoading ? <CapitalPanel key={validUserId} language={language} isLight={isLight} currency={currency} user={user} onBack={() => transitionView(() => setAccountMode('main'))} onWallet={() => transitionView(() => setAccountMode('wallet'))} onSettled={() => Promise.allSettled([wallet.refresh(),refreshFromCloud()])} /> : null}
       {accountMode === 'main' && <>
       <div className="px-3 sm:px-5">
         {showFirstEntryGuide ? <div className="first-calendar-entry-hint monthly-goal-bar" data-light={isLight}>
@@ -6538,7 +6553,7 @@ export default function CalendarScreen() {
                     ? (editingTrade ? proEntryCopy.editEntry : proEntryCopy.newEntry)
                     : (editingTrade ? t('editRecord') : t('addRecord'))}
                 </p>
-                {form.voiceDestination && <label className="mt-1 block text-xs text-amber-500">{language === 'zh-CN' ? "保存位置" : (language === 'ru' ? 'Место записи' : language === 'en' ? 'Save to' : 'Salvare în')}<select aria-label={language === 'zh-CN' ? "保存位置" : (language === 'ru' ? 'Место записи' : language === 'en' ? 'Save to' : 'Salvare în')} value={form.voiceDestination} onChange={event=>setForm(current=>({...current,voiceDestination:event.target.value}))} className="ml-2 rounded-lg border border-amber-400/20 bg-zinc-900 p-1 text-zinc-200"><option value="main">{language === 'zh-CN' ? "日历" : (language === 'ru' ? 'Календарь' : 'Calendar')}</option>{proAccessActive&&<><option value="wallet">{language === 'zh-CN' ? "钱包" : (language === 'ru' ? 'Кошелёк' : language === 'en' ? 'Wallet' : 'Portofel')}</option><option value="both">{language === 'zh-CN' ? "日历 + 钱包" : (language === 'ru' ? 'Календарь и кошелёк' : language === 'en' ? 'Calendar + Wallet' : 'Calendar + Portofel')}</option></>}</select></label>}<div className="mt-1 flex items-center gap-1.5">
+                {calendarDraftRestored&&<p className="text-xs opacity-60 mt-1">{language==='ru'?'Черновик восстановлен · ещё не сохранён':language==='en'?'Draft restored · not saved yet':['ro','md'].includes(language)?'Ciornă restaurată · încă nesalvată':'草稿已恢复，尚未保存'}</p>}{form.voiceDestination && <label className="mt-1 block text-xs text-amber-500">{language === 'zh-CN' ? "保存位置" : (language === 'ru' ? 'Место записи' : language === 'en' ? 'Save to' : 'Salvare în')}<select aria-label={language === 'zh-CN' ? "保存位置" : (language === 'ru' ? 'Место записи' : language === 'en' ? 'Save to' : 'Salvare în')} value={form.voiceDestination} onChange={event=>setForm(current=>({...current,voiceDestination:event.target.value}))} className="ml-2 rounded-lg border border-amber-400/20 bg-zinc-900 p-1 text-zinc-200"><option value="main">{language === 'zh-CN' ? "日历" : (language === 'ru' ? 'Календарь' : 'Calendar')}</option>{proAccessActive&&<><option value="wallet">{language === 'zh-CN' ? "钱包" : (language === 'ru' ? 'Кошелёк' : language === 'en' ? 'Wallet' : 'Portofel')}</option><option value="both">{language === 'zh-CN' ? "日历 + 钱包" : (language === 'ru' ? 'Календарь и кошелёк' : language === 'en' ? 'Calendar + Wallet' : 'Calendar + Portofel')}</option></>}</select></label>}<div className="mt-1 flex items-center gap-1.5">
                   <input
                     type="date"
                     max={todayKey}

@@ -7,10 +7,11 @@ import { calculatePortfolioPeriodResults, buildConsolidatedPortfolioSnapshots } 
 import { formatMoney, scaledToString } from './decimal.js';
 import CapitalPerformanceChart from './CapitalPerformanceChart.jsx';
 import './dashboard.css';
+import useWorkspacePreference from '../../shared/ui/useWorkspacePreference.js';
 const colors=['#53c9ac','#91a9e8','#d9b675','#ab8dd5','#78adbe','#de9288','#9bba82','#b5bac6','#84978e'];
-export default function CapitalDashboard({ assets, operations, snapshots, metrics, priceFor, fxSeries, baseCurrency, onCurrencyChange, currencies, range, onRangeChange, locale, t, stats, quoteSummary, quoteCoverage, online, fxLoading, fxError, fxDate, onAdd, onSelect }) {
+export default function CapitalDashboard({ workspaceOwner, assets, operations, snapshots, metrics, priceFor, fxSeries, baseCurrency, onCurrencyChange, currencies, range, onRangeChange, locale, t, stats, quoteSummary, quoteCoverage, online, fxLoading, fxError, fxDate, onAdd, onSelect }) {
  const beginner=investorCopy[locale];
- const c=dashboardCopy[locale], [view,setView]=useState('auto'),[historyOpen,setHistoryOpen]=useState(false);
+ const c=dashboardCopy[locale], [view,setView]=useWorkspacePreference(workspaceOwner,'capital-view','auto',['auto','base',...currencies,'USDT']),[historyOpen,setHistoryOpen]=useState(false);
  const historyLabel={ru:'История оценок',en:'Valuation history',ro:'Istoricul evaluărilor',zh:'估值历史'}[locale];
  const nativeCurrencies=Object.keys(metrics),scope=view==='auto'?(nativeCurrencies.length===1&&nativeCurrencies[0]==='USDT'?'USDT':'base'):view;
  const code=scope==='base'?baseCurrency:scope;

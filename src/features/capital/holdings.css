@@ -21,5 +21,9 @@
 .holding-freshness small { font-size:10px; }
 .holding-explanation { font-size:11px; color:var(--cap-muted); margin:12px 0; line-height:1.6; }
 .holding-explanation summary { cursor:pointer; min-height:36px; display:flex; align-items:center; }
+.capital-sync-status { min-height:22px; margin:-8px 0 12px; display:flex; align-items:center; gap:6px; font-size:10px; color:var(--cap-muted); }
+.capital-sync-status>span { width:5px; height:5px; border-radius:50%; background:var(--cap-up,#53c9ac); }
+.capital-sync-status>span[data-offline=true] { background:var(--cap-gold); }
+.capital-draft-hint { padding:10px 12px; border-radius:12px; background:color-mix(in srgb,var(--cap-gold) 8%,transparent); font-size:11px; color:var(--cap-muted); }
 @media(min-width:800px) { .capital-assets:has(.capital-holding) { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } }
 @media(prefers-reduced-motion:no-preference) { .capital-asset.capital-holding { transition:border-color 180ms ease,background-color 180ms ease; } .capital-asset.capital-holding:hover { border-color:color-mix(in srgb,var(--cap-gold) 45%,var(--cap-line)); } }
