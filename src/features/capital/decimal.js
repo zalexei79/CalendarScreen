@@ -58,7 +58,7 @@ export function divideScaled(numerator, numeratorScale, denominator, denominator
 }
 
 export function calculateReturnPercent(profit, costBasis) {
-  if (BigInt(costBasis) === 0n) return null;
+  if (BigInt(costBasis) <= 0n) return null;
   return divideScaled(BigInt(profit) * 100n, MONEY_SCALE, BigInt(costBasis), MONEY_SCALE, 2);
 }
 

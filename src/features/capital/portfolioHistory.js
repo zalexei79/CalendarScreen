@@ -123,9 +123,9 @@ export function buildPortfolioReturnSeries(snapshots, operations, fxSeries = {},
       if (row.occurred_on <= start.sampled_on || row.occurred_on > end.sampled_on) continue;
       if (row.operation === 'revalue') continue;
       const rate = currencyRateOn(fxSeries, row.currency, targetCurrency, row.occurred_on);
-      if (!rate) continue;
-      const amount = multiplyScaled(multiplyScaled(parseScaled(row.quantity || '0', QUANTITY_SCALE), QUANTITY_SCALE, parseScaled(row.unit_price || '0', MONEY_SCALE)), MONEY_SCALE, rate);
-      const fee = multiplyScaled(parseScaled(row.fee || '0', MONEY_SCALE), MONEY_SCALE, rate);
+      if (!rate) return [];
+      const amount = multiplyScaled(multiplyScaled(parseScaled(row.quantity || '0', QUANTITY_SCALE), QUANTITY_SCALE, parseScaled(row.unit_price || '0', MONEY_SCALE), MONEY_SCALE), MONEY_SCALE, rate, MONEY_SCALE);
+      const fee = multiplyScaled(parseScaled(row.fee || '0', MONEY_SCALE), MONEY_SCALE, rate, MONEY_SCALE);
       const flowDate = Date.parse(`${row.occurred_on}T00:00:00Z`);
       const weight = BigInt(Math.max(0, Math.min(span, Math.round((endTime - flowDate) / 86_400_000))));
       if (row.operation === 'buy') { const flow = amount + fee; buys += flow; weightedFlows += flow * weight / BigInt(span); }
@@ -134,7 +134,9 @@ export function buildPortfolioReturnSeries(snapshots, operations, fxSeries = {},
     }
     const basis = startValue + weightedFlows;
     const periodReturn = calculateReturnPercent(endValue - startValue - buys + sales + dividends, basis);
-    if (periodReturn !== null) index = multiplyScaled(index, MONEY_SCALE, 10_000n + periodReturn, 4);
+    if (periodReturn === null) return [];
+    index = multiplyScaled(index, MONEY_SCALE, 10_000n + periodReturn, 4);
+    if (index < 0n) return [];
     output.push({ ...end, portfolio_value: scaledToString(index, MONEY_SCALE) });
   }
   return output;

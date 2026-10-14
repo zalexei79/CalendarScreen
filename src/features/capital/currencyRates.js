@@ -33,7 +33,7 @@ export function calculateBasePortfolioResult(assets, series, target, date, price
   for(const asset of assets||[]){
     const currentPrice=priceFor(asset);
     if(asset.currency==='USDT'){
-      if(currentPrice!==null){const currentNative=multiplyScaled(asset.quantity,QUANTITY_SCALE,currentPrice,MONEY_SCALE);excludedUsdt=(excludedUsdt||0n)+currentNative;}
+      if(currentPrice!==null){const currentNative=asset.quantity===0n?0n:multiplyScaled(asset.quantity,QUANTITY_SCALE,currentPrice,MONEY_SCALE);excludedUsdt=(excludedUsdt||0n)+currentNative;}
       else incomplete.add('USDT');
       continue;
     }
@@ -52,10 +52,10 @@ export function calculateBasePortfolioResult(assets, series, target, date, price
         costBasis-=allocated;quantity-=q;assetRealized+=baseAmount-baseFee-allocated;
       } else if(row.operation==='dividend')assetRealized+=baseAmount-baseFee;
     }
-    if(currentPrice===null){complete=false;incomplete.add(asset.currency);continue;}
+    if(currentPrice===null&&asset.quantity>0n){complete=false;incomplete.add(asset.currency);continue;}
     const currentRate=currencyRateOn(series,asset.currency,target,date);
     if(!currentRate){complete=false;incomplete.add(asset.currency);continue;}
-    const currentNative=multiplyScaled(asset.quantity,QUANTITY_SCALE,currentPrice,MONEY_SCALE);
+    const currentNative=asset.quantity===0n?0n:multiplyScaled(asset.quantity,QUANTITY_SCALE,currentPrice,MONEY_SCALE);
     const currentBase=multiplyScaled(currentNative,MONEY_SCALE,currentRate,MONEY_SCALE);
     const unrealizedBase=currentBase-costBasis;
     value+=currentBase;realized+=assetRealized;unrealized+=unrealizedBase;

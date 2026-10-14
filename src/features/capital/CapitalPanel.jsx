@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
 import { ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Bitcoin, BriefcaseBusiness, Building2, ChartNoAxesCombined, CircleDollarSign, Coins, Fuel, Landmark, Plus, RefreshCw, Search, Wallet, X } from 'lucide-react';
 import { useCapitalPortfolio } from './useCapitalPortfolio';
-import { calculateDailyChange, calculateReturnPercent, formatMoney, MONEY_SCALE, multiplyScaled, parseScaled, QUANTITY_SCALE, scaledToString } from './decimal';
+import { calculateReturnPercent, formatMoney, MONEY_SCALE, multiplyScaled, parseScaled, QUANTITY_SCALE, scaledToString } from './decimal';
 import { useWalletExitGesture } from '../wallet/hooks/useWalletExitGesture';
 import SwipeDismissSheet from '../../shared/ui/SwipeDismissSheet.jsx';
 import { isGoldApiQuoteFresh, isMoexQuoteFresh, isQuoteFresh } from './quoteStatus.js';
@@ -13,11 +13,11 @@ import { fetchGoldApiQuote, isGoldApiAsset } from './metalQuotes.js';
 import { loadCompanyCatalog } from './loadCompanyCatalog.js';
 import { fetchMoexCurrency, fetchMoexQuotes, loadMoexCatalog, MOEX_POPULAR_BONDS, MOEX_POPULAR_ETFS, MOEX_POPULAR_STOCKS, searchMoexSecurities } from './moexMarket.js';
 import { friendlyCapitalError } from './capitalErrors.js';
-import CapitalPerformanceChart from './CapitalPerformanceChart.jsx';
+import CapitalDashboard from './CapitalDashboard.jsx';
 import CapitalAssetHistoryChart from './CapitalAssetHistoryChart.jsx';
 import CapitalQuoteHistoryChart from './CapitalQuoteHistoryChart.jsx';
 import { fetchUsEquityQuotes, isUsEquityAsset, isUsEquityQuoteFresh } from './usEquityQuotes.js';
-import { buildConsolidatedPortfolioSnapshots, calculatePortfolioPeriodResults } from './portfolioHistory.js';
+import { dashboardCopy } from './dashboardCopy.js';
 import { calculateBasePortfolioResult, currencyRateOn, fetchDailyCurrencyRates } from './currencyRates.js';
 import './capital.css';
 
@@ -144,37 +144,6 @@ const formatPercent = (pnl, basis, locale) => {
   const parts = new Intl.NumberFormat(locale,{style:'percent',minimumFractionDigits:2,maximumFractionDigits:2}).formatToParts(negative?-1:1);
   return parts.map(part=>part.type==='integer'?grouped:part.type==='fraction'?fraction:part.value).join('');
 };
-const scorePosition = (asset, currentPrice, quote, portfolioValue, now, t) => {
-  if (!asset||currentPrice===null||portfolioValue===null||portfolioValue<=0n) return null;
-  const grossInvested=asset.rows.reduce((total,row)=>row.operation==='buy'?total+multiplyScaled(parseScaled(row.quantity,QUANTITY_SCALE),QUANTITY_SCALE,parseScaled(row.unit_price,MONEY_SCALE),MONEY_SCALE)+parseScaled(row.fee||'0',MONEY_SCALE):total,0n);
-  const value=multiplyScaled(asset.quantity,QUANTITY_SCALE,currentPrice,MONEY_SCALE);
-  const percent=calculateReturnPercent(value-asset.invested+asset.realized,grossInvested);
-  if(percent===null)return null;
-  const performanceRaw=25n+percent/200n;
-  const performance=performanceRaw<0n?0n:performanceRaw>50n?50n:performanceRaw;
-  const shareBasisPoints=value*10000n/portfolioValue;
-  const diversification=shareBasisPoints>=10000n?0n:25n-shareBasisPoints*25n/10000n;
-  let freshness=0n,freshnessLabel=t.scoreFreshStale;
-  if(asset.quote_source==='binance'){
-    const fresh=quote?.transport==='websocket'&&isQuoteFresh(quote,now);
-    freshness=fresh?25n:quote&&isQuoteFresh(quote,now)?16n:5n;
-    freshnessLabel=fresh?t.scoreFreshLive:t.scoreFreshStale;
-  } else if(isGoldApiAsset(asset)) {
-    const fresh=isGoldApiQuoteFresh(quote,now);
-    freshness=fresh?20n:8n;
-    freshnessLabel=fresh?t.scoreFreshDelayed:t.scoreFreshStale;
-  } else if(asset.quote_source==='moex') {
-    const fresh=isMoexQuoteFresh(quote,now);
-    freshness=fresh?20n:8n;
-    freshnessLabel=fresh?t.scoreFreshDelayed:t.scoreFreshStale;
-  } else {
-    const updated=Date.parse(asset.updated_at||'');
-    const age=Number.isFinite(updated)?Math.max(0,now-updated):Infinity;
-    freshness=age<=86_400_000?15n:age<=604_800_000?10n:age!==Infinity?5n:0n;
-    freshnessLabel=t.scoreFreshManual;
-  }
-  return {value:performance+diversification+freshness,performance,diversification,shareBasisPoints,freshness,freshnessLabel};
-};
 async function verifyBinanceSpotPair(symbol) {
   if (!/^[A-Z0-9]{5,20}$/.test(symbol)) throw new Error('Enter a Binance USDT spot pair such as BTCUSDT, or choose manual valuation.');
   const controller = new AbortController();
@@ -215,10 +184,9 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
   const fxSources=useMemo(()=>[...new Set([...portfolio.assets.map(asset=>asset.currency),...portfolio.snapshots.map(row=>row.currency),...portfolio.operations.map(row=>row.currency)])].filter(code=>code!=='USDT'&&code!==baseCurrency&&/^[A-Z]{3}$/.test(code)),[portfolio.assets,portfolio.snapshots,portfolio.operations,baseCurrency]);
   const fxStart=useMemo(()=>{
     const allDates=[...portfolio.snapshots.map(row=>row.sampled_on),...portfolio.operations.map(row=>row.occurred_on)].filter(date=>/^\d{4}-\d{2}-\d{2}$/.test(date)).sort();
-    const days={week:7,month:30,quarter:90,year:365}[historyRange];
-    if(!days)return allDates[0]||new Date(now-7*86_400_000).toISOString().slice(0,10);
-    const date=new Date(`${new Date(now).toISOString().slice(0,10)}T00:00:00Z`);date.setUTCDate(date.getUTCDate()-days+1-7);return date.toISOString().slice(0,10);
-  },[portfolio.snapshots,portfolio.operations,historyRange,now]);
+    const start=new Date((allDates[0]||new Date(now).toISOString().slice(0,10))+'T00:00:00Z');
+    start.setUTCDate(start.getUTCDate()-7);return start.toISOString().slice(0,10);
+  },[portfolio.snapshots,portfolio.operations,now]);
   useEffect(()=>{
     if(!online||!fxSources.length){setFxLoading(false);return undefined;}
     const controller=new AbortController();setFxLoading(true);setFxError(false);
@@ -412,7 +380,7 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
     const nextPrice=match?.price||'';
     if(form.purchasePrice!==nextPrice||quote.price!==form.price)setForm(current=>current.purchasePrice===form.purchasePrice?{...current,purchasePrice:nextPrice,price:quote.price}:current);
   },[composer,form.quoteSource,form.symbol,form.date,form.purchasePrice,purchasePriceAuto,quotes]);
-  const selectedValue=selectedPrice===null?null:multiplyScaled(selected.quantity,QUANTITY_SCALE,selectedPrice,MONEY_SCALE);
+  const selectedValue=selected?.quantity===0n?0n:selectedPrice===null?null:multiplyScaled(selected.quantity,QUANTITY_SCALE,selectedPrice,MONEY_SCALE);
   const selectedUnrealized=selectedValue===null?null:selectedValue-selected.invested;
   const selectedTotalResult=selectedUnrealized===null?null:selectedUnrealized+selected.realized;
   const selectedFees=selected?.rows.reduce((total,row)=>total+parseScaled(row.fee||'0',MONEY_SCALE),0n)??0n;
@@ -422,8 +390,8 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
       if(!all[code])all[code]={value:0n,invested:0n,realized:0n,unrealized:0n,pnl:0n,hasUnpriced:false};
       all[code].invested+=asset.invested;
       all[code].realized+=asset.realized;
-      if(price===null){all[code].hasUnpriced=true;return all;}
-      const value=multiplyScaled(asset.quantity,QUANTITY_SCALE,price,MONEY_SCALE);
+      if(price===null&&asset.quantity>0n){all[code].hasUnpriced=true;return all;}
+      const value=asset.quantity===0n?0n:multiplyScaled(asset.quantity,QUANTITY_SCALE,price,MONEY_SCALE);
       all[code].value+=value;
       all[code].unrealized+=value-asset.invested;
       all[code].pnl+=value+asset.realized-asset.invested;
@@ -432,10 +400,6 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
     return Object.fromEntries(Object.entries(totals).map(([code,row])=>[code,{...row,value:row.hasUnpriced?null:row.value,unrealized:row.hasUnpriced?null:row.unrealized,pnl:row.hasUnpriced?null:row.pnl}]));
   },[portfolio.assets,quotes]);
   const activeFxSeries=fxTarget===baseCurrency?fxSeries:{};
-  const periodResults=useMemo(()=>calculatePortfolioPeriodResults(portfolio.snapshots,portfolio.operations,historyRange,new Date(now),activeFxSeries,baseCurrency),[portfolio.snapshots,portfolio.operations,historyRange,now,activeFxSeries,baseCurrency]);
-  const chartCurrencies=useMemo(()=>Object.entries(metrics).filter(([code,row])=>code!=='USDT'&&row.value!==null).map(([code])=>code),[metrics]);
-  const consolidatedSnapshots=useMemo(()=>buildConsolidatedPortfolioSnapshots(portfolio.snapshots,chartCurrencies,activeFxSeries,baseCurrency),[portfolio.snapshots,chartCurrencies,activeFxSeries,baseCurrency]);
-  const chartOperations=useMemo(()=>portfolio.operations.filter(row=>chartCurrencies.includes(row.currency)),[portfolio.operations,chartCurrencies]);
   const globalValue=useMemo(()=>{
     let value=0n,excludedUsdt=null;const missing=[],unpriced=[];let latestFxDate=null,converted=0;
     for(const [code,totals] of Object.entries(metrics)){
@@ -450,8 +414,6 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
     const performance=calculateBasePortfolioResult(portfolio.assets,activeFxSeries,baseCurrency,new Date(now).toISOString().slice(0,10),priceFor);
     return {value:converted&&!missing.length&&!unpriced.length?value:null,missing,unpriced,excludedUsdt,latestFxDate,pnl:performance.complete&&performance.excludedUsdt===null?performance.pnl:null,realized:performance.realized,unrealized:performance.unrealized,incomplete:performance.incomplete};
   },[metrics,activeFxSeries,baseCurrency,now,portfolio.assets,quotes]);
-  const selectedScore=scorePosition(selected,selectedPrice,selected?quotes[selected.symbol]:null,selected?metrics[selected.currency]?.value??null:null,now,t);
-  const todayChanges = useMemo(()=>calculateDailyChange(Object.fromEntries(Object.entries(metrics).filter(([,totals])=>totals.value!==null)),portfolio.snapshots,todayKey()),[metrics,portfolio.snapshots]);
   const filteredAssets = portfolio.assets.filter(a=>(categoryFilter==='all'||a.category===categoryFilter)&&`${a.name} ${a.symbol} ${a.category}`.toLowerCase().includes(filter.toLowerCase()));
   const visible = filter||assetsExpanded||categoryFilter!=='all'?filteredAssets:filteredAssets.slice(0,4);
   const categoryOptions = ['all',...new Set(portfolio.assets.map(asset=>asset.category))];
@@ -499,8 +461,6 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
   const marketQuotedAssets=portfolio.assets.filter(asset=>asset.quote_source==='binance'||asset.quote_source==='moex'||isGoldApiAsset(asset)||isUsEquityAsset(asset));
   const freshQuoteCount=marketQuotedAssets.filter(asset=>asset.quote_source==='binance'?isQuoteFresh(quotes[asset.symbol],now):asset.quote_source==='moex'?isMoexQuoteFresh(quotes[asset.symbol],now):isUsEquityAsset(asset)?isUsEquityQuoteFresh(quotes[asset.symbol],now):isGoldApiQuoteFresh(quotes[asset.symbol],now)).length;
   const manualAssetCount=portfolio.assets.length-marketQuotedAssets.length;
-  const allocations = useMemo(()=>portfolio.assets.reduce((all,asset)=>{const price=priceFor(asset);if(price===null)return all;const key=`${asset.currency}:${asset.category}`;const value=multiplyScaled(asset.quantity,QUANTITY_SCALE,price,MONEY_SCALE);all[key]=(all[key]||0n)+value;return all;},{}),[portfolio.assets,quotes]);
-  const allocationTotals = useMemo(()=>Object.entries(allocations).reduce((all,[key,value])=>{const code=key.split(':')[0];all[code]=(all[code]||0n)+value;return all;},{}),[allocations]);
   useEffect(()=>{
     if(portfolio.loading||!user?.id||!portfolio.assets.length) return;
     const snapshotDate=todayKey();
@@ -572,6 +532,7 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
   const priceUnit = asset => isGoldApiAsset(asset)?asset.symbol==='HG'?priceCopy.pound:priceCopy.unit:['stock','etf'].includes(asset?.category)?priceCopy.share:asset?.symbol?.replace(/USDT$/,'')||t.quantityUnit;
   const selectedMarketFresh = online && selected && (isGoldApiAsset(selected)?isGoldApiQuoteFresh(quotes[selected.symbol],now):selected.quote_source==='binance'?isQuoteFresh(quotes[selected.symbol],now):false);
   const priceMismatch = selectedPrice!==null && selected?.averageCost>0n && (selectedPrice>selected.averageCost*10n || selectedPrice*10n<selected.averageCost);
+  const incomeActionLabel = selected?.category==='bond'?dashboardCopy[locale].coupon:selected?.category==='deposit'?dashboardCopy[locale].interest:t.dividend||t.buy;
   const detailCopy = {
 ru: {buy:'Куплено в среднем',sell:'Цена продажи сейчас',result:'Если продать весь остаток',note:'По указанной цене · комиссия покупки учтена, комиссия продажи не включена',details:'Расчёты и история'},
 en: {buy:'Average purchase cost',sell:'Sell price now',result:'If you sell the remaining position',note:'At the displayed price · purchase fees included, sale fees excluded',details:'Calculations and history'},
@@ -582,42 +543,16 @@ zh: {buy:'平均买入成本',sell:'当前卖出价格',result:'卖出剩余持�
   return <main ref={surfaceRef} className={base}>
     <header className="capital-top"><button className="capital-back" onClick={onBack}><ArrowLeft size={17}/><span>{t.back}</span></button><div className="capital-brand"><span>DAYRIS</span><b>CAPITAL</b><i>PRO</i></div><button className="capital-wallet" onClick={onWallet}><Wallet size={16}/><span>{t.wallet}</span></button></header>
     <div className="capital-content"><div className="capital-heading"><div><p className="capital-kicker">{t.portfolioEyebrow}</p><h1>{t.title}</h1><p>{t.subtitle}</p></div></div>
-      <section className="capital-overview capital-portfolio-card">
-        <div className="capital-overview-head"><div className="capital-overview-brand"><span>DAYRIS PRO</span><i>/</i><b>{t.investments}</b></div><ChartNoAxesCombined className="capital-overview-mark"/></div>
-        <p className="capital-total-title">{t.value}</p>
-        <section className="capital-global-total" aria-label={t.globalValue}>
-          <div><small>{t.globalValue} · {t.baseCurrencyChoice}</small><div className="capital-base-currency"><strong>{baseCurrency}</strong><select aria-label={t.baseCurrencyChoice} value={baseCurrency} onChange={event=>setBaseCurrency(event.target.value)}>{CAPITAL_BASE_CURRENCIES.map(code=><option key={code} value={code}>{code}</option>)}</select></div><strong>{globalValue.value===null?'—':formatMoney(globalValue.value,baseCurrency,locale)}</strong><span className={`capital-global-pnl ${globalValue.pnl===null?'':globalValue.pnl>=0n?'positive':'negative'}`}>{t.globalPnl}: {globalValue.pnl===null?'—':`${globalValue.pnl>0n?'+':''}${formatMoney(globalValue.pnl,baseCurrency,locale)}`} · {stats.realized}: {globalValue.pnl===null?'—':formatMoney(globalValue.realized,baseCurrency,locale)} · {stats.unrealized}: {globalValue.pnl===null?'—':formatMoney(globalValue.unrealized,baseCurrency,locale)}</span><span>{fxLoading?t.fxLoading:globalValue.latestFxDate?`${t.fxDaily} · ${t.fxAsOf} ${globalValue.latestFxDate}`:fxError?t.fxUnavailable:t.globalCoverage}</span>{globalValue.excludedUsdt!==null&&<span className="capital-global-extra">{t.usdtSeparate}: {formatMoney(globalValue.excludedUsdt,'USDT',locale)}</span>}</div>
-          {(globalValue.excludedUsdt!==null||globalValue.missing.length>0||globalValue.unpriced.length>0)&&<small className="capital-global-warning">{globalValue.excludedUsdt!==null?t.fxExcluded:globalValue.missing.length?`${t.fxUnavailable}: ${globalValue.missing.join(', ')}`:`${t.globalIncomplete}${globalValue.unpriced.join(', ')}`}</small>}
-        </section>
-        <details className="capital-currency-disclosure"><summary>{t.currencyBreakdown}<span>{Object.keys(metrics).join(' · ')||baseCurrency}</span></summary><div className="capital-portfolio-totals">{Object.entries(metrics).length?Object.entries(metrics).map(([code,totals])=><div className="capital-currency-total" key={code}>
-          <div className="capital-total-number"><strong>{totals.value===null?'—':formatMoney(totals.value,code,locale)}</strong>{Object.entries(metrics).length>1&&<span>{code}</span>}</div>
-          <div className="capital-total-return"><span className="capital-result-title">{stats.total}</span><span className={`capital-return-chip ${totals.pnl===null?'':totals.pnl>=0?'positive':'negative'}`}>{totals.pnl===null?'—':`${totals.pnl>=0?'+':''}${formatMoney(totals.pnl,code,locale)}`}</span><small>{totals.pnl===null?'—':`${formatPercent(totals.pnl,totals.invested,locale)} ${t.allTime}`}</small></div>
-          <small className="capital-invested-line">{t.invested}: {formatMoney(totals.invested,code,locale)}</small>
-          <div className="capital-result-breakdown"><small><span>{stats.realized}</span><b className={totals.realized>0n?'positive':totals.realized<0n?'negative':''}>{totals.realized>0n?'+':''}{formatMoney(totals.realized,code,locale)}</b></small><small><span>{stats.unrealized}</span><b className={totals.unrealized===null?'':totals.unrealized>0n?'positive':totals.unrealized<0n?'negative':''}>{totals.unrealized===null?'—':`${totals.unrealized>0n?'+':''}${formatMoney(totals.unrealized,code,locale)}`}</b></small></div>
-        </div>):<div className="capital-currency-total"><div className="capital-total-number"><strong>{formatMoney(0,baseCurrency,locale)}</strong></div><div className="capital-total-return"><span className="capital-return-chip">—</span><small>{t.allTime}</small></div><small className="capital-invested-line">{t.emptyHint}</small></div>}</div></details>
-        <section className="capital-period-overview" aria-label={t.periodResult}>
-          <div className="capital-period-heading"><div><h2>{t.periodResult}</h2><p>{t.periodResultNote}</p></div><div className="capital-range-selector" role="group" aria-label={t.chart}>{[['week','rangeWeek'],['month','rangeMonth'],['quarter','rangeQuarter'],['year','rangeYear'],['all','rangeAll']].map(([value,label])=><button type="button" key={value} className={historyRange===value?'is-active':''} aria-pressed={historyRange===value} onClick={()=>setHistoryRange(value)}>{t[label]}</button>)}</div></div>
-          {periodResults.byCurrency.some(item=>item.result!==null)?<>{!periodResults.consolidated&&(periodResults.unsupported.length||periodResults.missingFx.length>0)&&<div className="capital-period-fx-note">{t.periodFxNote}</div>}<div className="capital-period-results">
-            {periodResults.consolidated&&(()=>{const item=periodResults.consolidated,magnitude=item.percent===null?0:Number(item.percent<0n?-item.percent:item.percent)/100,dash=Math.min(100,magnitude)/100*169.65,trend=item.result>0n?'up':item.result<0n?'down':'flat';return <article className="capital-period-result capital-period-result-global" key="consolidated" data-trend={trend}><div className="capital-period-ring"><svg viewBox="0 0 64 64" role="img" aria-label={item.percent===null?'—':formatPercent(item.result,item.returnBasis,locale)}><circle className="capital-period-ring-track" cx="32" cy="32" r="27"/><circle className="capital-period-ring-value" cx="32" cy="32" r="27" strokeDasharray={`${dash} 169.65`}/></svg><b>{item.percent===null?'—':formatPercent(item.result,item.returnBasis,locale)}</b></div><div className="capital-period-data"><span>{t.globalValue} · {item.currency}</span><strong>{item.result>0n?'+':''}{formatMoney(item.result,item.currency,locale)}</strong><small>{t.periodBase}: {formatMoney(item.returnBasis,item.currency,locale)}</small></div></article>})()}
-            {periodResults.byCurrency.some(item=>item.result!==null)&&<details className="capital-period-breakdown"><summary>{t.periodBreakdown}</summary><div className="capital-period-results">{periodResults.byCurrency.map(item=>{if(item.result===null)return null;const amount=item.baseResult??item.result,pct=item.basePercent??item.percent,code=item.baseResult!==null?baseCurrency:item.currency,basis=item.baseReturnBasis??item.returnBasis,magnitude=pct===null?0:Number(pct<0n?-pct:pct)/100;const dash=Math.min(100,magnitude)/100*169.65;const trend=amount>0n?'up':amount<0n?'down':'flat';return <article className="capital-period-result" key={item.currency} data-trend={trend}>
-            <div className="capital-period-ring"><svg viewBox="0 0 64 64" role="img" aria-label={pct===null?'—':formatPercent(amount,basis,locale)}><circle className="capital-period-ring-track" cx="32" cy="32" r="27"/><circle className="capital-period-ring-value" cx="32" cy="32" r="27" strokeDasharray={`${dash} 169.65`}/></svg><b>{pct===null?'—':formatPercent(amount,basis,locale)}</b></div>
-            <div className="capital-period-data"><span>{item.currency} · {item.start.sampled_on} — {item.end.sampled_on}</span><strong>{amount>0n?'+':''}{formatMoney(amount,code,locale)}</strong><small>{pct===null?`${t.periodBase}: —`:`${t.periodBase}: ${formatMoney(basis,code,locale)}`}</small></div>
-          </article>})}</div></details>}
-          </div></>:<div className="capital-period-empty">{t.periodNoHistory}</div>}
-        </section>
-        <section className="capital-main-chart" aria-label={t.chart}><div className="capital-main-chart-heading"><strong>{t.historyValue}</strong><span>{baseCurrency}</span></div><p>{t.historyNote}</p>{consolidatedSnapshots.length?<CapitalPerformanceChart snapshots={consolidatedSnapshots} operations={chartOperations} fxSeries={activeFxSeries} currency={baseCurrency} range={historyRange} onRangeChange={setHistoryRange} t={t} locale={locale} showRanges={false}/>:<div className="capital-period-empty">{t.chartEmpty}</div>}{(chartCurrencies.length<Object.keys(metrics).filter(code=>code!=='USDT').length||metrics.USDT)&&<small className="capital-chart-coverage-note">{t.chartCoverage}</small>}</section>
-        <div className="capital-overview-footer"><div className="capital-quote-summary"><span className={online?'capital-online-dot':'capital-offline-dot'}/><small>{quoteSummary}</small><small className="capital-quote-coverage">{marketQuotedAssets.length?t.quoteCoverage(freshQuoteCount,marketQuotedAssets.length,manualAssetCount):t.quoteNone}</small></div><div className="capital-today-change">{Object.entries(metrics).length?Object.entries(metrics).map(([code])=>{const change=todayChanges[code];return <small key={code} className={change?(change.value>=0n?'positive':'negative'):''}>{code} · {t.today}: {change?`${formatMoney(change.value,code,locale)} (${formatPercent(change.value,change.baseline,locale)})`:'—'}</small>}):<small>{t.today}: —</small>}{Object.keys(todayChanges).length>0&&<small className="capital-change-caption">{t.todayMethod}</small>}</div></div>
-      </section>
+      <CapitalDashboard assets={portfolio.assets} operations={portfolio.operations} snapshots={portfolio.snapshots} metrics={metrics} priceFor={priceFor} fxSeries={activeFxSeries} baseCurrency={baseCurrency} onCurrencyChange={setBaseCurrency} currencies={CAPITAL_BASE_CURRENCIES} range={historyRange} onRangeChange={setHistoryRange} locale={locale} t={t} stats={stats} quoteSummary={quoteSummary} quoteCoverage={marketQuotedAssets.length?t.quoteCoverage(freshQuoteCount,marketQuotedAssets.length,manualAssetCount):t.quoteNone} online={online} fxLoading={fxLoading} fxError={fxError} fxDate={globalValue.latestFxDate} onAdd={()=>setComposer(true)} onSelect={asset=>{setOperationEditor(false);setSelected(asset);}}/>
       {!user && <div className="capital-notice"><LockIcon/> {t.signIn}</div>}
       {portfolio.error&&!composer&&<div role="alert" className="capital-notice">{friendlyCapitalError(portfolio.error,locale,t)}</div>}
       <section className="capital-holdings-panel">
         <div className="capital-section-title"><h2>{t.myAssets} <span>{filteredAssets.length}{categoryFilter!=='all'||filter?` / ${portfolio.assets.length}`:''}</span></h2><div className="capital-holdings-actions">{portfolio.assets.length>4&&!filter&&categoryFilter==='all'&&<button type="button" className="capital-show-all" onClick={()=>setAssetsExpanded(value=>!value)}>{assetsExpanded?t.showLess:t.allAssets}<ArrowRight size={14}/></button>}<button type="button" className="capital-search-toggle" aria-label={t.search} aria-expanded={searchVisible} onClick={()=>{setSearchVisible(value=>!value);if(searchVisible)setFilter('');}}><Search size={16}/></button></div></div>
         {categoryOptions.length>2&&<div className="capital-category-filters" role="group" aria-label={t.category}>{categoryOptions.map(category=><button type="button" key={category} className={categoryFilter===category?'is-active':''} aria-pressed={categoryFilter===category} onClick={()=>{setCategoryFilter(category);setAssetsExpanded(false);}}>{category==='all'?t.allAssets:t.categories[t.cats.indexOf(category)]}</button>)}</div>}
         {searchVisible&&<label className="capital-search"><Search size={15}/><input autoFocus value={filter} onChange={e=>setFilter(e.target.value)} placeholder={t.search}/></label>}
-        {portfolio.loading?<div className="capital-empty"><RefreshCw className="capital-spin"/>{t.updated}…</div>:!visible.length?(portfolio.assets.length>0&&(filter||categoryFilter!=='all')?<div className="capital-filter-empty"><Search size={17}/><span>{t.noAssetsFound}</span></div>:<div className="capital-empty"><div className="capital-empty-icon"><ChartNoAxesCombined/></div><strong>{t.empty}</strong><span>{t.emptyHint}</span><button className="capital-add" onClick={()=>setComposer(true)}><Plus size={16}/>{t.add}</button></div>):<div className="capital-assets">{visible.map(asset=>{const Icon=icons[t.cats.indexOf(asset.category)]||BriefcaseBusiness, quote=quotes[asset.symbol], fresh=(quote?.transport==='websocket'&&isQuoteFresh(quote,now))||(isGoldApiAsset(asset)&&isGoldApiQuoteFresh(quote,now))||(asset.quote_source==='moex'&&isMoexQuoteFresh(quote,now))||(isUsEquityAsset(asset)&&isUsEquityQuoteFresh(quote,now)), price=priceFor(asset), total=price===null?null:multiplyScaled(asset.quantity,QUANTITY_SCALE,price,MONEY_SCALE), pnl=total===null?null:total+asset.realized-asset.invested, score=scorePosition(asset,price,quote,metrics[asset.currency]?.value??null,now,t);return <button className="capital-asset" key={asset.id} onClick={()=>{setOperationEditor(false);setSelected(asset);}}><span className="capital-asset-icon"><Icon/></span><span className="capital-asset-main"><strong>{asset.name}</strong><small className="capital-asset-context">{t.categories[t.cats.indexOf(asset.category)]} · {formatQuantity(asset.quantity,locale)} {asset.symbol||t.manual}</small><small className="capital-asset-context">{t.currentUnitPrice}: {price===null?'—':formatMoney(price,asset.currency,locale)}</small><em className="capital-quote-mobile" data-live={fresh}>{quoteLabel(asset,quote)}</em></span><span className="capital-asset-value"><strong>{total===null?'—':formatMoney(total,asset.currency,locale)}</strong><small className={pnl===null?'':pnl>=0?'positive':'negative'}>{pnl===null?t.waitingQuote:`${pnl>=0?'+':''}${formatMoney(pnl,asset.currency,locale)} · ${formatPercent(pnl,asset.invested,locale)}`}</small><small className="capital-asset-invested">{t.invested}: {formatMoney(asset.invested,asset.currency,locale)}</small>{score!==null&&<small className="capital-asset-score-chip">{t.assetScoreChip(new Intl.NumberFormat(locale).format(Number(score.value)))}</small>}</span><span className="capital-quote-state" data-live={fresh}>{quoteLabel(asset,quote)}</span></button>})}</div>}
+        {portfolio.loading?<div className="capital-empty"><RefreshCw className="capital-spin"/>{t.updated}…</div>:!visible.length?(portfolio.assets.length>0&&(filter||categoryFilter!=='all')?<div className="capital-filter-empty"><Search size={17}/><span>{t.noAssetsFound}</span></div>:<div className="capital-empty"><div className="capital-empty-icon"><ChartNoAxesCombined/></div><strong>{t.empty}</strong><span>{t.emptyHint}</span><button className="capital-add" onClick={()=>setComposer(true)}><Plus size={16}/>{t.add}</button></div>):<div className="capital-assets">{visible.map(asset=>{const Icon=icons[t.cats.indexOf(asset.category)]||BriefcaseBusiness, quote=quotes[asset.symbol], fresh=(quote?.transport==='websocket'&&isQuoteFresh(quote,now))||(isGoldApiAsset(asset)&&isGoldApiQuoteFresh(quote,now))||(asset.quote_source==='moex'&&isMoexQuoteFresh(quote,now))||(isUsEquityAsset(asset)&&isUsEquityQuoteFresh(quote,now)), price=priceFor(asset), total=asset.quantity===0n?0n:price===null?null:multiplyScaled(asset.quantity,QUANTITY_SCALE,price,MONEY_SCALE), pnl=total===null?null:total+asset.realized-asset.invested, grossInvested=asset.rows.reduce((sum,row)=>row.operation==='buy'?sum+multiplyScaled(parseScaled(row.quantity,QUANTITY_SCALE),QUANTITY_SCALE,parseScaled(row.unit_price,MONEY_SCALE),MONEY_SCALE)+parseScaled(row.fee||'0',MONEY_SCALE):sum,0n);return <button className="capital-asset" key={asset.id} onClick={()=>{setOperationEditor(false);setSelected(asset);}}><span className="capital-asset-icon"><Icon/></span><span className="capital-asset-main"><strong>{asset.name}</strong><small className="capital-asset-context">{t.categories[t.cats.indexOf(asset.category)]} · {formatQuantity(asset.quantity,locale)} {asset.symbol||t.manual}</small><small className="capital-asset-context">{t.currentUnitPrice}: {price===null?'—':formatMoney(price,asset.currency,locale)}</small><em className="capital-quote-mobile" data-live={fresh}>{quoteLabel(asset,quote)}</em></span><span className="capital-asset-value"><strong>{total===null?'—':formatMoney(total,asset.currency,locale)}</strong><small className={pnl===null?'':pnl>=0?'positive':'negative'}>{pnl===null?t.waitingQuote:`${pnl>=0?'+':''}${formatMoney(pnl,asset.currency,locale)} · ${formatPercent(pnl,grossInvested,locale)}`}</small><small className="capital-asset-invested">{t.invested}: {formatMoney(asset.invested,asset.currency,locale)}</small></span><span className="capital-quote-state" data-live={fresh}>{quoteLabel(asset,quote)}</span></button>})}</div>}
         {portfolio.assets.length>0&&<button className="capital-add capital-add-operation" onClick={()=>setComposer(true)}><Plus size={18}/>{t.addOperation}</button>}
       </section>
-      {Object.entries(allocations).length>0&&<details className="capital-allocation-details" open><summary>{t.distribution}<span>{t.analytics}</span></summary><div className="capital-allocation-list">{Object.entries(allocations).filter(([key])=>metrics[key.split(':')[0]]?.value!==null).map(([key,value])=>{const [code,category]=key.split(':');const percent=allocationTotals[code]?Number(value*10000n/allocationTotals[code])/100:0;return <div className="capital-allocation" key={key}><div><span>{t.categories[t.cats.indexOf(category)]} · {code}</span><b>{formatMoney(value,code,locale)}</b></div><i><span style={{width:`${percent}%`}}/></i></div>})}</div></details>}
       <p className="capital-disclaimer">{t.quoteDisclaimer}{lastQuote?` ${t.updated}: ${displayTime(lastQuote)}.`:''}</p>
     </div>
     {(composer||selected)&&createPortal(<div className={`${base} capital-overlay`} onMouseDown={e=>{if(e.target===e.currentTarget)closeSheet();}}><SwipeDismissSheet as="form" onDismiss={closeSheet} handleClassName="-mt-3 mb-2" isLight={isLight} className="capital-sheet" onSubmit={composer?submit:saveOperation}>
@@ -685,12 +620,6 @@ zh: {buy:'平均买入成本',sell:'当前卖出价格',result:'卖出剩余持�
 </div><div className="capital-price-provenance"><span>{priceCopy.source}</span><b>{isGoldApiAsset(selected)?'Gold API · USD':selected.quote_source==='binance'?'Binance · USDT':selected.quote_source==='moex'?'MOEX ISS':selected.quote_source==='alphavantage'?'Alpha Vantage · EOD':priceCopy.manual}</b><small>{quoteLabel(selected,quotes[selected.symbol])} · {quotes[selected.symbol]?.at?displayTime(quotes[selected.symbol].at):selected.updated_at?displayTime(selected.updated_at):'—'}</small></div>
 {priceMismatch&&<p className="capital-price-warning" role="status">{priceCopy.warning}</p>}
 <details className="capital-position-details"><summary>{detailCopy.details}</summary>
-        <section className="capital-asset-score" aria-label={t.assetScore}>
-          <div className="capital-asset-score-head"><strong>{t.assetScore}</strong><b>{selectedScore===null?'—':`${new Intl.NumberFormat(locale).format(Number(selectedScore.value))}/100`}</b></div>
-          <div className="capital-asset-score-meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow={selectedScore===null?undefined:Number(selectedScore.value)}><span style={{width:selectedScore===null?'0%':`${Number(selectedScore.value)}%`}}/></div>
-          {selectedScore&&<details className="capital-score-detail"><summary>{t.scoreDetails}</summary><div className="capital-score-breakdown"><span>{t.scoreReturn}<b>{Number(selectedScore.performance)}/50</b></span><span>{t.scoreShare}<b>{`${new Intl.NumberFormat(locale,{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(selectedScore.shareBasisPoints)/100)}% · ${Number(selectedScore.diversification)}/25`}</b></span><span>{t.scorePrice}<b>{selectedScore.freshnessLabel} · {Number(selectedScore.freshness)}/25</b></span></div><small>{t.assetScoreNote}</small></details>}
-          {!selectedScore&&<small>{t.scoreUnavailable}</small>}
-        </section>
         <div className="capital-detail-stats capital-detail-results">
           <div><span>{stats.realized}</span><b className={selected.realized>0n?'positive':selected.realized<0n?'negative':''}>{selected.realized>0n?'+':''}{formatMoney(selected.realized,selected.currency,locale)}</b></div>
           <div><span>{stats.unrealized}</span><b className={selectedUnrealized===null?'':selectedUnrealized>0n?'positive':selectedUnrealized<0n?'negative':''}>{selectedUnrealized===null?'—':`${selectedUnrealized>0n?'+':''}${formatMoney(selectedUnrealized,selected.currency,locale)}`}</b></div>
@@ -701,9 +630,9 @@ zh: {buy:'平均买入成本',sell:'当前卖出价格',result:'卖出剩余持�
         <CapitalAssetHistoryChart rows={selected.rows} currency={selected.currency} locale={locale} t={t} formatQuantity={formatQuantity}/>
         <CapitalQuoteHistoryChart asset={selected} quote={quotes[selected.symbol]} currency={selected.currency} locale={locale} t={t}/>
         </details>
-        <details className="capital-more-actions"><summary>{t.moreActions}</summary><div><button type="button" onClick={()=>openOperation('dividend')}>{t.dividend||t.buy}</button>{selected.quote_source==='manual'&&!isGoldApiAsset(selected)&&<button type="button" onClick={()=>openOperation('revalue')}>{t.revalue}</button>}</div></details>
+        <details className="capital-more-actions"><summary>{t.moreActions}</summary><div><button type="button" onClick={()=>openOperation('dividend')}>{incomeActionLabel}</button>{selected.quote_source==='manual'&&!isGoldApiAsset(selected)&&<button type="button" onClick={()=>openOperation('revalue')}>{t.revalue}</button>}</div></details>
         {operationEditor&&<div className="capital-operation-form">
-          <p>{opForm.operation==='sell'?t.sellAction:opForm.operation==='buy'?t.buyAction:opForm.operation==='dividend'?(t.dividend||t.buy):t.revalue}</p>
+          <p>{opForm.operation==='sell'?t.sellAction:opForm.operation==='buy'?t.buyAction:opForm.operation==='dividend'?incomeActionLabel:t.revalue}</p>
           <div className="capital-form-grid"><label>{t.quantity}<input required={opForm.operation!=='revalue'} min="0.000000000001" max={opForm.operation==='sell'?scaledToString(selected.quantity,QUANTITY_SCALE):undefined} step="any" type="number" value={opForm.quantity} onChange={e=>setOpForm({...opForm,quantity:e.target.value})}/></label><label>{opForm.operation==='sell'?t.salePrice:opForm.operation==='dividend'?t.dividendAmount:opForm.operation==='revalue'?t.valuationPrice:t.purchase}<input required min="0" step="any" type="number" value={opForm.price} onChange={e=>setOpForm({...opForm,price:e.target.value})}/></label><label>{t.fee}<input min="0" step="any" type="number" value={opForm.fee} onChange={e=>setOpForm({...opForm,fee:e.target.value})}/></label><label>{t.date}<input required type="date" value={opForm.date} onChange={e=>setOpForm({...opForm,date:e.target.value})}/></label></div>
           <button className="capital-add capital-submit" type="submit" disabled={saving}>{opForm.operation==='buy'?t.save:opForm.operation==='revalue'?t.revalue:opForm.operation==='dividend'?(t.dividend||t.buy):t.sellAction}</button>
         </div>}

@@ -64,7 +64,7 @@ test('Capital layout has a mobile breakpoint and respects reduced motion', () =>
   assert.match(panel, /\{t\.currentUnitPrice\}: \{price===null/);
   assert.match(panel, /capital-category-filters/);
   assert.match(panel, /categoryFilter==='all'\|\|a\.category===categoryFilter/);
-  assert.match(panel, /capital-result-breakdown/);
+  assert.match(panel, /<CapitalDashboard/);
   assert.match(panel, /realized:0n,unrealized:0n/);
 });
 

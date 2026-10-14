@@ -12,6 +12,7 @@ const RANGES = [
 
 export default function CapitalPerformanceChart({ snapshots, operations = [], fxSeries = {}, currency, range, onRangeChange, t, locale, showRanges = true }) {
   const [mode,setMode]=useState('value');
+  const [activeDate,setActiveDate]=useState(null);
   const sourceRows=useMemo(()=>mode==='return'?buildPortfolioReturnSeries(snapshots,operations,fxSeries,currency):snapshots,[mode,snapshots,operations,fxSeries,currency]);
   const rows = useMemo(() => {
     const filtered=filterPortfolioSnapshots(sourceRows,range,new Date());
@@ -28,7 +29,7 @@ export default function CapitalPerformanceChart({ snapshots, operations = [], fx
   const trend = rows.length < 2 || change === 0n ? 'flat' : change < 0n ? 'down' : 'up';
   const returnBase=100n*10n**BigInt(MONEY_SCALE);
   const changePercent = calculateReturnPercent(change, mode==='return'?returnBase:firstValue);
-  const displayValue=value=>mode==='return'?formatPercent(value-returnBase,returnBase):formatMoney(value,currency,locale);
+  const displayValue=value=>mode==='return'?formatPercent(calculateReturnPercent(value-returnBase,returnBase)):formatMoney(value,currency,locale);
   const formatPercent = value => {
     if (value === null) return '—';
     const negative = value < 0n, digits = (negative ? -value : value).toString().padStart(3, '0');
@@ -52,18 +53,20 @@ export default function CapitalPerformanceChart({ snapshots, operations = [], fx
     </div>}
     {rows.length > 0 && <div className="capital-chart-summary">
       <div><small>{mode==='return'?t.chartReturnLatest:t.chartLatest}</small><strong>{displayValue(lastValue)}</strong></div>
-      {rows.length > 1 && <div className="capital-chart-period-change" data-trend={trend}><small>{mode==='return'?t.chartReturnChange:t.chartPeriodChange}</small><strong>{mode==='return'?`${change>0n?'+':''}${formatPercent(change,returnBase)}`:`${change > 0n ? '+' : ''}${formatMoney(change, currency, locale)}`} <span>({formatPercent(changePercent)})</span></strong></div>}
+      {rows.length > 1 && <div className="capital-chart-period-change" data-trend={trend}><small>{mode==='return'?t.chartReturnChange:t.chartPeriodChange}</small><strong>{mode==='return'?formatPercent(changePercent):`${change > 0n ? '+' : ''}${formatMoney(change, currency, locale)}`} <span>({formatPercent(changePercent)})</span></strong></div>}
       <span className="capital-chart-points">{pointsText}{rows.length === 1 ? ` · ${t.chartOnePoint}` : ` · ${formatDate(rows[0].sampled_on)} — ${formatDate(rows.at(-1).sampled_on)}`}</span>
-      {rows.length > 1&&<span className="capital-chart-scale">{t.chartScale}: {mode==='return'?`${formatPercent(min-returnBase,returnBase)} — ${formatPercent(max-returnBase,returnBase)}`:`${formatMoney(min,currency,locale)} — ${formatMoney(max,currency,locale)}`}</span>}
+      {rows.length > 1&&<span className="capital-chart-scale">{t.chartScale}: {mode==='return'?`${formatPercent(calculateReturnPercent(min-returnBase,returnBase))} — ${formatPercent(calculateReturnPercent(max-returnBase,returnBase))}`:`${formatMoney(min,currency,locale)} — ${formatMoney(max,currency,locale)}`}</span>}
     </div>}
     {linePath ? <>
       <svg className="capital-performance-chart" viewBox="0 0 320 124" role="img" aria-label={`${t.chart} · ${currency}`}>
         <defs><linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="currentColor" stopOpacity=".28"/><stop offset="100%" stopColor="currentColor" stopOpacity="0"/></linearGradient></defs>
+        <text className="capital-chart-axis-label" x="12" y="20">{displayValue(max)}</text><text className="capital-chart-axis-label" x="12" y="122">{displayValue(min)}</text>
         <path className="capital-chart-gridline" d="M12 30H308 M12 65H308 M12 100H308"/>
         <path className="capital-performance-area" d={areaPath} fill={`url(#${gradientId})`}/>
         <path className="capital-performance-line" d={linePath}/>
-        {points.map(point=><circle key={point.date} className="capital-performance-point" cx={point.x} cy={point.y} r={points.length<4?4:2.8}><title>{`${formatDate(point.date)} · ${displayValue(point.value)}`}</title></circle>)}
+        {points.map(point=><circle key={point.date} className="capital-performance-point" cx={point.x} cy={point.y} r={points.length<4?4:2.8} tabIndex={0} onFocus={()=>setActiveDate(point.date)} onClick={()=>setActiveDate(point.date)}><title>{`${formatDate(point.date)} · ${displayValue(point.value)}`}</title></circle>)}
       </svg>
+      <div className="capital-chart-readout">{(()=>{const point=points.find(p=>p.date===activeDate)||points.at(-1);return point?<span>{formatDate(point.date)} · <b>{displayValue(point.value)}</b></span>:null;})()}</div>
       <div className="capital-chart-dates"><span>{formatDate(rows[0].sampled_on)}</span><span>{formatDate(rows.at(-1).sampled_on)}</span></div>
     </> : <div className="capital-chart-empty">
       {rows.length === 1 && <div className="capital-chart-single-value"><span>{formatDate(rows[0].sampled_on)}</span><strong>{displayValue(lastValue)}</strong></div>}
