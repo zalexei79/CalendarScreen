@@ -12,10 +12,10 @@ export default function VoiceEntryCard({correction,onManualEdit,entry,locale,cat
  const category=categories.find(item=>item.value===entry.category)?.label||entry.category||c.other;
  const valid=isVoiceEntryValid(entry);
  const change=(key,value)=>onChange({...entry,[key]:value});
- return <div className="calendar-voice-message calendar-voice-review" role="region" aria-label={c.title}>
+ return <div className="calendar-voice-message calendar-voice-review" data-kind={entry.sign} role="region" aria-label={c.title}>
   {correction&&<div className="voice-correction-feedback" key={correction.key} role="status">{correction.changes.map(change=><p key={change.key}><span>{change.label}</span><del>{change.before}</del><strong>→ {change.after}</strong></p>)}<small>{({ru:'Исправлено в черновике. Ещё не сохранено.',en:'Draft updated. Not saved yet.',ro:'Corectat în ciornă. Încă nu este salvat.',zh:'草稿已修改，尚未保存。'}[locale])}</small></div>}
   {!embedded&&<><div className="calendar-assistant-heading"><span>DAYRIS</span><small>{c.title}</small></div>
-  <p className="calendar-voice-review-summary"><span>{dateLabel} · {category}</span><strong data-changed={correction?.changes.some(change=>change.key==='amount')} key={correction?.key}>{entry.sign==='minus'?'−':'+'}{entry.amount} {entry.currency}</strong><small>{c[entry.destination]}</small></p></>}
+  <span className="calendar-voice-review-kind">{entry.sign==='minus'?c.expense:c.income}</span><p className="calendar-voice-review-summary"><span>{dateLabel} · {category}</span><strong data-changed={correction?.changes.some(change=>change.key==='amount')} key={correction?.key}>{entry.sign==='minus'?'−':'+'}{entry.amount} {entry.currency}</strong><small>{c[entry.destination]}</small></p></>}
   {entry.mutation&&<p className="voice-mutation-diff"><span>Было: {entry.beforeAmount} {entry.currency}</span><strong>→ {entry.amount} {entry.currency}</strong></p>}
   {editing&&<fieldset disabled={busy||locked||listening} className="calendar-voice-edit-fields">
    <label>{c.date}<input disabled={entry.mutation} aria-label={c.date} type="date" max={today} value={entry.dateKey} onChange={event=>change('dateKey',event.target.value)}/></label>

@@ -1,0 +1,29 @@
+/* One focal point per turn. Existing recognition and save behavior is unchanged. */
+.voice-focus-stage { display:flex; align-items:center; justify-content:center; gap:8px; margin:0 0 12px; color:var(--voice-muted); font-size:11px; letter-spacing:.03em; }
+.voice-focus-stage i { width:6px; height:6px; border-radius:50%; background:var(--voice-accent); }
+.voice-workspace[data-reviewing=true] .voice-workspace-hero { padding-bottom:10px; }
+.voice-workspace[data-reviewing=true] .voice-workspace-instruction { margin:7px 0 0; }
+.voice-workspace-transcript { margin:8px 0 14px; border-bottom:1px solid var(--voice-line); }
+.voice-workspace-transcript summary { min-height:44px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; color:var(--voice-muted); font-size:12px; }
+.voice-workspace-transcript summary::marker { content:''; }
+.voice-workspace-transcript .voice-workspace-heard { margin:0 0 12px; text-align:left; }
+.voice-workspace-transcript .voice-workspace-phrase { font-size:16px; }
+.voice-workspace-transcript[open] summary svg { transform:rotate(180deg); }
+.voice-workspace .calendar-voice-review-summary { display:flex; flex-direction:column; gap:8px; padding:12px 0 16px; }
+.voice-workspace .calendar-voice-review-summary strong { order:-1; font-size:clamp(28px,7vw,38px); line-height:1.15; letter-spacing:-.035em; }
+.voice-workspace .calendar-voice-review-summary > span { color:var(--voice-ink); font-size:14px; }
+.voice-workspace .calendar-voice-review-summary small { font-size:12px; }
+.voice-workspace .calendar-voice-review-kind { font-size:11px; color:var(--voice-muted); }
+.voice-workspace .calendar-voice-review[data-kind=plus] .calendar-voice-review-summary strong { color:#53c9ac; }
+.voice-workspace .calendar-voice-review[data-kind=minus] .calendar-voice-review-summary strong { color:var(--voice-ink); }
+.voice-workspace[data-light=true] .calendar-voice-review[data-kind=plus] .calendar-voice-review-summary strong { color:#13765c; }
+.voice-workspace .calendar-voice-review > .calendar-voice-help-note { display:none; }
+.voice-workspace .calendar-voice-review-actions { gap:8px; }
+.voice-workspace .calendar-voice-review-actions button { min-height:46px; }
+.voice-workspace .voice-workspace-hints > summary,.voice-workspace .voice-workspace-settings > summary { min-height:44px; }
+.voice-workspace[data-compact=true] .voice-focus-stage { display:none; }
+@media(prefers-reduced-motion:no-preference) {
+ .voice-workspace-result { animation:voice-focus-enter 240ms cubic-bezier(.2,0,0,1); }
+ .voice-workspace-transcript summary svg { transition:transform 180ms ease; }
+ @keyframes voice-focus-enter { from { opacity:.4; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+}
