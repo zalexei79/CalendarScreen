@@ -2310,11 +2310,6 @@ export default function CalendarScreen() {
       .filter((t) => calendarTypeFilter === 'all' || (calendarTypeFilter === 'income' ? t.pnl >= 0 : t.pnl < 0));
   }
 
-  function otherCurrenciesForDay(key) {
-    return [...new Set(calendarRecordsForDay(key).map(t => String(t.currency || 'USD').trim().toUpperCase()))]
-      .filter(code => code !== currency);
-  }
-
   function totalPnlForDay(key) {
     return tradesForDayFiltered(key).reduce((sum, t) => sum + (Number(t.pnl) || 0), 0);
   }
@@ -4740,7 +4735,6 @@ export default function CalendarScreen() {
       {/* PRO controls live in Header: one clean control center, no floating duplicate block. */}
       <CalendarGrid
         language={language}
-        currency={currency} otherCurrenciesForDay={otherCurrenciesForDay}
         lifeArrival={setupStep === 'intro'}
         firstEntryLabel={showFirstEntryGuide ? onboardingCopy.guideTapToday : null}
         firstEntryDayLabel={onboardingCopy.guideDayLabel}

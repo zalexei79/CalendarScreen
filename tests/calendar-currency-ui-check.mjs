@@ -32,10 +32,9 @@ try {
   await page.clock.install({time:new Date('2026-10-05T12:00:00')});
   await page.goto('http://calendar.test/');await page.clock.pauseAt(new Date('2026-10-05T13:00:00'));
   assert.equal(await page.locator('.calendar-days-grid .pro-calendar-day').count()>0,process.env.DAYRIS_TEST_PRO==='1','Exercise the intended FREE or PRO calendar');
-  assert.match(await page.locator('.calendar-currency-caption').innerText(),/USD/);
+  assert.equal(await page.locator('.calendar-currency-caption, .calendar-other-currencies').count(),0,'Calendar has no duplicate currency labels');
   const today=page.locator('.calendar-days-grid [data-today-cell=true]');
   assert.match(await today.innerText(),/100/);
-  assert.equal(await page.locator('.calendar-other-currencies').filter({hasText:'EUR'}).count(),2,'Other-currency records keep a visible marker');
   const assertAmountFits=async()=>assert.equal(await today.locator('.day-amount').evaluate(el=>{
     const a=el.getBoundingClientRect(),b=el.closest('button').getBoundingClientRect();
     return a.width>0 && a.height>0 && a.left>=b.left && a.right<=b.right && a.bottom<=b.bottom;
@@ -46,7 +45,6 @@ try {
   await page.locator('.calendar-currency-option').filter({hasText:'EUR'}).click();await page.clock.runFor(400);
   assert.equal(await page.evaluate(()=>localStorage.getItem('atj_currency')),'EUR');
   assert.equal(await page.evaluate(()=>localStorage.getItem('atj_entry_currency')),'USD');
-  assert.match(await page.locator('.calendar-currency-caption').innerText(),/EUR/);
   assert.match(await page.locator('.calendar-days-grid [data-today-cell=true]').innerText(),/200/);
   assert.doesNotMatch(await page.locator('.calendar-days-grid [data-today-cell=true]').innerText(),/100/);
   assert.deepEqual(await page.evaluate(id=>JSON.parse(localStorage.getItem(`money_calendar_trades_${id}`)),storyUserId),saved);

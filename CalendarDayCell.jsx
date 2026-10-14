@@ -4,8 +4,6 @@ import './CalendarDayCell.css';
 
 export default function CalendarDayCell({
   traderMode = false,
-  otherCurrencyCodes = [],
-  language = 'ru',
   proView = false,
   hasNote = false,
   noteLabel,
@@ -164,10 +162,6 @@ export default function CalendarDayCell({
         >
           {cell.date.getDate()}
         </span>
-
-        {otherCurrencyCodes.length > 0 && <span className="calendar-other-currencies block max-w-full truncate text-[8px] sm:text-[10px] text-zinc-500" title={`${language === 'en' ? 'Records in other currencies' : language === 'ro' || language === 'md' ? 'Înregistrări în alte monede' : language.startsWith('zh') ? '其他币种的记录' : 'Записи в других валютах'}: ${otherCurrencyCodes.join(', ')}`}>
-          {otherCurrencyCodes.join(' · ')}
-        </span>}
 
         {(hasTrades || hasPlans) && (
           <div className="mt-auto min-w-0 space-y-1">
