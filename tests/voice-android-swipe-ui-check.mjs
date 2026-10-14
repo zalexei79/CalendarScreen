@@ -44,8 +44,8 @@ try{
  await page.locator('.calendar-voice-button').click();await page.evaluate(()=>{window.holdCommand=true;emit(['добавь запись'],true);});await sheet.locator('.voice-workspace-mic').click();
  await page.waitForFunction(()=>typeof resolveCommand==='function');await drag(120);assert.equal(await sheet.count(),1);assert.equal(await sheet.getAttribute('data-phase'),'processing');
  await page.evaluate(()=>{holdCommand=false;resolveCommand('Готово');});await page.waitForFunction(()=>document.querySelector('.voice-workspace')?.dataset.phase!=='processing');
- // Compact view supports the same dismissal gesture.
- await sheet.getByRole('button',{name:'Свернуть голосовой режим',exact:true}).click();assert.equal(await sheet.getAttribute('data-compact'),'true');await drag(120);await sheet.waitFor({state:'detached'});
+ // The command guide supports the same dismissal gesture.
+ await sheet.getByRole('button',{name:'Возможности и все команды',exact:true}).click();assert.equal(await sheet.getAttribute('data-view'),'help');await drag(120);await sheet.waitFor({state:'detached'});
  // Recognition locale and native help questions in every supported language.
  for(const [language,lang,question,title] of [['ru','ru-RU','Что ты умеешь?','Что я умею'],['en','en-US','What can you do?','What I can do'],['md','ro-RO','Ce poți face?','Ce pot face'],['zh-CN','zh-CN','你能做什么？','我可以做什么']]){
   await page.evaluate(value=>setLanguage(value),language);

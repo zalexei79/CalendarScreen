@@ -36,21 +36,25 @@ try{
  await recordMotion();await page.getByRole('button',{name:'Вернуть окно на место',exact:true}).click();await page.waitForTimeout(650);
  const returned=await page.evaluate(()=>motionFrames);oneDirection(returned,'x');oneDirection(returned,'y');assert.ok(Math.abs(returned.at(-1).x+returned.at(-1).width/2-800)<1,'reset settles at center');
  const h=await brand.boundingBox();await page.mouse.move(h.x+20,h.y+8);await page.mouse.down();await page.mouse.move(h.x+20,875,{steps:12});await page.locator('.voice-workspace-dock-target').waitFor();const target=await page.locator('.voice-workspace-dock-target').boundingBox();assert.ok(Math.abs(target.x+target.width/2-800)<1,'preview is centered');await page.mouse.up();
- await page.waitForFunction(()=>document.querySelector('.voice-workspace')?.dataset.docked==='true'&&document.querySelector('.voice-workspace')?.dataset.compact==='true');await page.waitForTimeout(350);box=await sheet.boundingBox();assert.ok(box.y+box.height<=900&&box.y>700,'compact dock sits along bottom');assert.equal(await page.evaluate(()=>voice.aborted),undefined);
+ await page.waitForFunction(()=>document.querySelector('.voice-workspace')?.dataset.docked==='true');await page.waitForTimeout(350);box=await sheet.boundingBox();assert.ok(box.y+box.height<=900&&box.y>550,'docked studio stays reachable along bottom');assert.equal(await page.evaluate(()=>voice.aborted),undefined);
  await sheet.screenshot({path:'tests/voice-desktop-docked.png',animations:'disabled'});
  assert.ok(Math.abs(box.x+box.width/2-800)<1,'docked assistant is centered');
  await page.setViewportSize({width:900,height:900});await page.waitForTimeout(100);box=await sheet.boundingBox();assert.ok(Math.abs(box.x+box.width/2-450)<1,'dock stays centered after resizing');await page.setViewportSize({width:1600,height:900});await page.waitForTimeout(100);
- await recordMotion();await page.getByRole('button',{name:'Развернуть помощника',exact:true}).click();
- await page.waitForFunction(()=>document.querySelector('.voice-workspace').getAnimations().some(a=>a.playState==='running'&&a.effect.getKeyframes().some(k=>k.height)));
- await page.waitForTimeout(650);horizontalStill(await page.evaluate(()=>motionFrames));assert.ok((await sheet.boundingBox()).height>box.height,'expansion settles at full height');
- // Interrupt a transition while speech also updates the panel.
- await recordMotion();await sheet.locator('button[aria-label="Свернуть голосовой режим"]').evaluate(el=>el.click());await page.waitForTimeout(70);
- await sheet.locator('button[aria-label="Развернуть помощника"]').evaluate(el=>el.click());await page.evaluate(()=>emit(['на сок']));await page.waitForTimeout(650);
- horizontalStill(await page.evaluate(()=>motionFrames));assert.equal(await sheet.getAttribute('data-compact'),'false');assert.equal(await sheet.evaluate(el=>el.getAnimations().filter(a=>a.playState==='running').length),0,'rapid reversals finish without competing shell animations');
+ // The command guide replaces the former compact/expanded toggle.
+ await recordMotion();await page.getByRole('button',{name:'Возможности и все команды',exact:true}).click();
+ await page.locator('.voice-capabilities').waitFor();await page.waitForTimeout(650);
+ horizontalStill(await page.evaluate(()=>motionFrames));
+ assert.ok((await sheet.boundingBox()).height>box.height,'Guide expands into a readable studio');
+ assert.ok((await sheet.locator('.voice-workspace-scroll').boundingBox()).height>250);
+ await page.getByRole('button',{name:'Скрыть команды',exact:true}).click();
+ await page.getByRole('button',{name:'Возможности и все команды',exact:true}).click();
+ await page.getByRole('button',{name:'Скрыть команды',exact:true}).click();await page.waitForTimeout(650);
+ assert.equal(await sheet.getAttribute('data-compact'),'false');
+ assert.equal(await sheet.evaluate(el=>el.getAnimations().filter(a=>a.playState==='running').length),0,'Rapid guide changes settle without clipped height');
  await drag(100,-60);box=await sheet.boundingBox();await page.getByRole('button',{name:'Закрыть голосовой режим',exact:true}).click();await page.locator('.calendar-voice-button').click();await page.waitForTimeout(450);const reopened=await sheet.boundingBox();assert.equal(reopened.x,box.x);assert.equal(reopened.y,box.y);
  await page.getByRole('button',{name:'Вернуть окно на место',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('.voice-workspace').style.left);
  await page.setViewportSize({width:390,height:844});await page.waitForFunction(()=>document.querySelector('.voice-workspace').dataset.floating==='false');assert.equal(await brand.getAttribute('tabindex'),null);assert.equal(await sheet.evaluate(el=>el.style.left),'');
- await page.emulateMedia({reducedMotion:'reduce'});await page.getByRole('button',{name:'Свернуть голосовой режим',exact:true}).click();assert.equal(await sheet.evaluate(el=>el.getAnimations().filter(a=>a.playState==='running').length),0,'reduced motion skips shell animation');
+ await page.emulateMedia({reducedMotion:'reduce'});await page.getByRole('button',{name:'Возможности и все команды',exact:true}).click();assert.equal(await sheet.evaluate(el=>el.getAnimations().filter(a=>a.playState==='running').length),0,'reduced motion skips shell animation');
  assert.deepEqual(errors,[]);console.log('PASS: desktop drag, keyboard, reachable header, magnetic docking, position memory, reset and mobile layout without restarting microphone.');
 
 }finally{await browser.close();}
