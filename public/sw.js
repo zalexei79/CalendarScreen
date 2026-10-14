@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v22-chinese-localization';
+const CACHE_NAME = 'atj-cache-v23-localized-weekdays';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

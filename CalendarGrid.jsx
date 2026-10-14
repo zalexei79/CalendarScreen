@@ -1,7 +1,6 @@
 import React, { useRef, useMemo } from 'react';
 import CalendarDayCell from './CalendarDayCell';
-import { WEEKDAYS } from './src/shared/config/constants';
-const weekdaysFor = language => language === 'zh-CN' ? ['周一', '周二', '周三', '周四', '周五', '周六', '周日'] : WEEKDAYS;
+import { weekdaysFor } from './src/shared/i18n/weekdays';
 import { useWalletExitGesture } from './src/features/wallet/hooks/useWalletExitGesture';
 import './src/features/wallet/WalletGestures.css';
 import './src/shared/ui/CalendarMotion.css';
