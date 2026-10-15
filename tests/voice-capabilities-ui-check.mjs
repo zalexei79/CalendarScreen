@@ -18,11 +18,13 @@ try{
  await page.locator('.calendar-voice-button').click();
  await page.getByRole('button',{name:'Возможности и все команды',exact:true}).click();await catalog.waitFor();
  assert.equal(await surface.getAttribute('data-listening'),'false','Opening help pauses recording');
- assert.equal(await catalog.locator('details[open]').count(),8,'All command groups are expanded');
+ assert.equal(await catalog.locator('.voice-discover-actions button').count(),8,'All actions fit a compact grid');assert.equal(await catalog.locator('details[open]').count(),0,'No wall of instructions');
+ for(let index=0;index<8;index++){await catalog.locator('.voice-discover-actions button').nth(index).click();assert.equal(await catalog.locator('[aria-pressed=true]').count(),1);assert.ok(await catalog.locator('.voice-discover-phrase').isVisible());}
+ assert.deepEqual(await page.evaluate(()=>commands),[],'Exploring examples never executes a command');
  await page.getByRole('button',{name:'Скрыть команды',exact:true}).click();assert.equal(await catalog.count(),0);
- await surface.locator('.voice-workspace-mic').click();await speak('Что-то ты умеешь?');await catalog.waitFor();assert.equal(await catalog.locator('details').count(),8);
+ await surface.locator('.voice-workspace-mic').click();await speak('Что-то ты умеешь?');await catalog.waitFor();assert.equal(await catalog.locator('.voice-discover-actions button').count(),8);
  assert.equal(await page.evaluate(()=>conversations),0);assert.deepEqual(await page.evaluate(()=>commands),[]);assert.match(await page.evaluate(()=>spoken.text),/Могу записывать/);assert.ok(!await catalog.innerText().then(text=>text.includes('кошелёк')));
- assert.match(await catalog.innerText(),/Вчера потратил 250/);
+ await catalog.getByRole('button',{name:'Следующий пример',exact:true}).click();assert.match(await catalog.locator('.voice-discover-phrase').innerText(),/Вчера потратил 250/);
  const mic=surface.locator('.voice-workspace-mic'),exit=surface.locator('.voice-workspace-exit');const before=await mic.boundingBox();await surface.locator('.voice-workspace-scroll').evaluate(el=>el.scrollTop=el.scrollHeight);const after=await mic.boundingBox();assert.equal(after.y,before.y,'recording control stays pinned while scrolling help');assert.ok(await exit.isVisible());
  await page.getByRole('button',{name:'Скрыть команды',exact:true}).click();assert.equal(await catalog.count(),0);assert.ok(await mic.isVisible());assert.ok(await exit.isVisible());
  await page.getByRole('button',{name:'Возможности и все команды',exact:true}).click();await catalog.waitFor();await surface.locator('.voice-workspace-scroll').evaluate(el=>el.scrollTop=0);await surface.screenshot({path:'tests/voice-capabilities.png',animations:'disabled'});

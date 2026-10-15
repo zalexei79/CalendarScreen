@@ -15,7 +15,7 @@ export function isVoiceHelpRequest(phrase){
 export function voiceCapabilities(locale,{walletAvailable=false,traderMode=false}={}){
  if(locale!=='ru'){
   const help=voiceHelp(locale,traderMode);
-  const summary={en:'I can record income and expenses, find entries, calculate totals, manage categories and navigate the calendar. Say a command to continue.',ro:'Pot înregistra venituri și cheltuieli, găsi înregistrări, calcula totaluri, gestiona categorii și naviga în calendar. Spune o comandă pentru a continua.',zh:'我可以记录收入和支出、查找记录、计算汇总、管理类别和打开日历。请说出指令继续。'}[locale];
+  const summary={en:'I can record entries, find them and calculate totals. Choose an action or tell me what you need.',ro:'Pot înregistra, găsi înregistrări și calcula totaluri. Alege o acțiune sau spune ce ai nevoie.',zh:'我可以记账、查找记录和计算汇总。选择操作，或说出你的需求。'}[locale];
   return {title:{en:'What I can do',ro:'Ce pot face',zh:'我可以做什么'}[locale],summary,groups:help.groups.map(group=>({...group,phrases:group.phrases.filter(phrase=>walletAvailable||!/wallet|portofel|钱包/.test(phrase))}))};
  }
  const groups=[
@@ -28,5 +28,5 @@ export function voiceCapabilities(locale,{walletAvailable=false,traderMode=false
   {title:'Создать свой раздел',hint:'Добавлю новую категорию для доходов или расходов.',phrases:['Создай раздел Здоровье']},
   {title:'Открыть нужный экран',hint:'Даты, месяцы, история, настройки и режимы приложения.',phrases:['Открой 1 октября 2026','Следующий месяц','Вернись на сегодня','Открой историю','Вернись в календарь','Открой настройки','Включи тёмную тему','Включи режим трейдера','Включи режим про',...(walletAvailable?['Открой кошелёк','Запиши в кошелёк']:[]),...(traderMode?['Добавь сделку']:[])]},
  ];
- return {title:'Что я умею',summary:'Могу записывать доходы и расходы, исправлять и сохранять их голосом, находить записи и считать суммы. Ещё умею повторять расходы, отменять последнее действие, создавать разделы и открывать нужный экран. Все возможности и примеры — ниже. Что сделаем?',groups};
+ return {title:'Что я умею',summary:'Могу записывать доходы и расходы, находить записи и считать итоги. Выберите действие или скажите, что нужно.',groups};
 }

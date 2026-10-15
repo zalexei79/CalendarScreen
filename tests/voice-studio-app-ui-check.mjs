@@ -34,7 +34,7 @@ try {
  await studio.locator('.voice-workspace-command-toggle').click();
  await page.waitForFunction(()=>document.querySelector('[data-view=help]')?.getBoundingClientRect().height>500);
  assert.equal(await page.evaluate(()=>recognizer.aborted),true,'Guide pauses the actual recognition instance');
- assert.equal(await studio.locator('.voice-capabilities details[open]').count(),8);
+ assert.equal(await studio.locator('.voice-discover-actions button').count(),8);
  for(const width of [320,390,768,1440]){
   await page.setViewportSize({width,height:844});
   await page.waitForFunction(()=>!document.querySelector('[data-interface=voice-studio]').getAnimations().some(a=>a.playState==='running'));

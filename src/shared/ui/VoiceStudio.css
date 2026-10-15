@@ -32,10 +32,10 @@
  font-size:23px; line-height:1.3; letter-spacing:-.025em;
 }
 .voice-workspace[data-interface=voice-studio][data-view=capture] .voice-workspace-scroll {
- min-height:78px; display:flex; flex-direction:column; justify-content:center;
+ min-height:90px; display:flex; flex-direction:column; justify-content:center;
 }
 .voice-workspace[data-interface=voice-studio][data-view=capture] .voice-workspace-status {
- font-size:19px!important; color:var(--voice-ink); font-weight:500;
+ font-size:23px!important; color:var(--voice-ink); font-weight:500;
 }
 .voice-workspace[data-interface=voice-studio] .voice-workspace-transport {
  padding:14px 22px max(18px,env(safe-area-inset-bottom));
@@ -56,7 +56,7 @@
  margin-top:14px; padding-top:14px;
 }
 .voice-workspace[data-interface=voice-studio][data-view=help] {
- height:min(760px,calc(var(--sheet-visible-height,100dvh) - 36px));
+ height:min(670px,calc(var(--sheet-visible-height,100dvh) - 36px));
 }
 .voice-workspace[data-interface=voice-studio][data-view=help] .voice-workspace-scroll {
  flex:1; max-height:none; padding-top:8px;
@@ -66,17 +66,34 @@
 }
 .voice-workspace[data-interface=voice-studio][data-view=help] .voice-workspace-transport-state { display:none; }
 .voice-studio-resume { margin:0; font-size:12px; line-height:1.6; color:var(--voice-muted); }
-.voice-workspace[data-interface=voice-studio] .voice-capabilities h2 {
- font-size:26px; font-weight:550; line-height:1.2; margin:4px 0 12px;
-}
-.voice-workspace[data-interface=voice-studio] .voice-capabilities > p { font-size:13px; }
-.voice-workspace[data-interface=voice-studio] .voice-capabilities details {
- margin:10px 0; padding:6px 14px; border:1px solid var(--voice-line);
- border-radius:16px; background:color-mix(in srgb,var(--voice-muted) 4%,transparent);
-}
-.voice-workspace[data-interface=voice-studio] .voice-capabilities summary { font-size:14px; font-weight:550; }
-.voice-workspace[data-interface=voice-studio] .voice-capabilities details p { font-size:12px; }
-.voice-workspace[data-interface=voice-studio] .voice-capabilities li { font-size:13px; line-height:1.6; }
+.voice-workspace[data-interface=voice-studio] .voice-capabilities h2 { font-size:28px; font-weight:500; letter-spacing:-.04em; margin:4px 0 8px; }
+.voice-discover-heading > p { font-size:12px; line-height:1.6; color:var(--voice-muted); margin:0 0 22px; }
+.voice-discover-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin-bottom:20px; }
+.voice-discover-actions > button { display:flex; align-items:center; gap:9px; min-width:0; min-height:46px; padding:10px 12px; border-radius:13px; border:1px solid transparent; background:transparent; color:var(--voice-muted); text-align:left; font-size:12px; line-height:1.4; }
+.voice-discover-actions > button svg { flex:none; opacity:.75; }
+.voice-discover-actions > button[aria-pressed=true] { color:var(--voice-accent); border-color:color-mix(in srgb,var(--voice-accent) 22%,transparent); background:color-mix(in srgb,var(--voice-accent) 8%,transparent); }
+.voice-discover-actions > button[aria-pressed=true] svg { opacity:1; }
+.voice-discover-example { padding:18px 0 8px; border-top:1px solid var(--voice-line); }
+.voice-discover-caption { display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--voice-muted); font-size:10px; letter-spacing:.03em; }
+.voice-discover-phrase { min-height:62px; margin:16px 0 8px; font-size:clamp(20px,5.5vw,26px); font-weight:450; line-height:1.4; letter-spacing:-.025em; overflow-wrap:anywhere; color:var(--voice-ink); }
+.voice-discover-pagination { display:flex; align-items:center; gap:4px; }
+.voice-discover-pagination > span { flex:1; font-size:10px; line-height:1.5; color:var(--voice-muted); }
+.voice-discover-pagination > button { display:grid; place-items:center; width:40px; height:44px; color:var(--voice-accent); border-radius:12px; background:transparent; border:0; }
+.voice-workspace[data-interface=voice-studio] .voice-capabilities .voice-discover-details { border:0; border-top:1px solid var(--voice-line); border-radius:0; margin:0; padding:0; background:transparent; }
+.voice-workspace[data-interface=voice-studio] .voice-discover-details summary { min-height:44px; font-size:11px; font-weight:400; color:var(--voice-muted); }
+.voice-workspace[data-interface=voice-studio] .voice-discover-details p { font-size:12px; }
+.voice-workspace[data-interface=voice-studio] .voice-discover-details li { font-size:12px; line-height:1.6; }
+/* The microphone tells one state story: readiness, speech, then processing.
+   Speech recognition events drive the response; rings are not a volume meter. */
+.voice-mic-aura { position:absolute; inset:0; pointer-events:none; border-radius:inherit; }
+.voice-mic-aura > i { position:absolute; inset:-8px; border:1px solid var(--voice-accent); border-radius:50%; opacity:0; }
+.voice-workspace[data-interface=voice-studio] .voice-workspace-mic::before { animation:none; opacity:0; }
+.voice-workspace[data-interface=voice-studio][data-view=capture] .voice-workspace-transport { grid-template-columns:minmax(0,1fr) 88px minmax(0,1fr); padding-top:22px; padding-bottom:26px; }
+.voice-workspace[data-interface=voice-studio][data-view=capture] .voice-workspace-mic { width:88px; height:88px; min-height:88px; background:radial-gradient(circle at 35% 20%,#e2c58c2a,#b5925410); }
+.voice-workspace[data-interface=voice-studio][data-view=capture] .voice-workspace-mic > svg { width:32px; height:32px; }
+.voice-workspace[data-interface=voice-studio] .voice-workspace-mic-stop { width:24px; height:24px; right:0; bottom:0; }
+.voice-workspace[data-interface=voice-studio] .voice-workspace-mic > svg { z-index:1; }
+.voice-workspace[data-interface=voice-studio] .voice-workspace-transport .voice-workspace-wave { width:min(80px,100%); }
 @media(max-width:640px) {
  .voice-workspace[data-interface=voice-studio] { width:calc(100vw - 20px); max-width:none; right:10px; }
 }
@@ -84,5 +101,21 @@
  .voice-workspace[data-interface=voice-studio] .voice-workspace-command-toggle { transition:background 160ms,transform 160ms; }
  .voice-workspace[data-interface=voice-studio] .voice-workspace-command-toggle:active { transform:scale(.97); }
  .voice-workspace[data-interface=voice-studio] .voice-workspace-command-catalog { animation:voice-studio-enter 220ms ease-out; }
+ .voice-discover-actions > button { transition:background 180ms,color 180ms,border-color 180ms,transform 180ms; }
+ .voice-discover-actions > button:active,.voice-discover-pagination > button:active { transform:scale(.96); }
+ .voice-discover-example { animation:voice-studio-enter 320ms cubic-bezier(.2,0,0,1); }
+ .voice-workspace[data-interface=voice-studio] .voice-workspace-mic { transition:transform 180ms cubic-bezier(.2,0,0,1),background 350ms,box-shadow 350ms; }
+ .voice-workspace[data-interface=voice-studio] .voice-workspace-mic:active { transform:scale(.91); }
+ .voice-workspace[data-interface=voice-studio][data-listening=true] .voice-mic-aura > i:first-child { animation:voice-studio-ready 2800ms ease-in-out infinite; }
+ .voice-workspace[data-interface=voice-studio][data-talking=true] .voice-mic-aura > i:nth-child(n) { animation:voice-studio-speech 1600ms cubic-bezier(.2,0,0,1) infinite; }
+ .voice-workspace[data-interface=voice-studio][data-talking=true] .voice-mic-aura > i:nth-child(2) { animation-delay:400ms; }
+ .voice-workspace[data-interface=voice-studio][data-talking=true] .voice-mic-aura > i:nth-child(3) { animation-delay:800ms; }
+ .voice-workspace[data-interface=voice-studio]:is([data-phase=starting],[aria-busy=true]) .voice-mic-aura > i:first-child { opacity:.55; border-color:var(--voice-accent) transparent transparent; animation:voice-studio-orbit 1200ms linear infinite; }
+ @keyframes voice-studio-ready { 0%,100% { opacity:.12; transform:scale(1); } 50% { opacity:.3; transform:scale(1.06); } }
+ @keyframes voice-studio-speech { from { opacity:.4; transform:scale(.95); } to { opacity:0; transform:scale(1.48); } }
+ @keyframes voice-studio-orbit { to { transform:rotate(360deg); } }
  @keyframes voice-studio-enter { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+}
+@media(prefers-reduced-motion:reduce) {
+ .voice-workspace[data-interface=voice-studio][data-listening=true] .voice-mic-aura > i:first-child { opacity:.25; }
 }

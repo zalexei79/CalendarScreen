@@ -50,7 +50,7 @@ try{
  for(const [language,lang,question,title] of [['ru','ru-RU','Что ты умеешь?','Что я умею'],['en','en-US','What can you do?','What I can do'],['md','ro-RO','Ce poți face?','Ce pot face'],['zh-CN','zh-CN','你能做什么？','我可以做什么']]){
   await page.evaluate(value=>setLanguage(value),language);
   await page.locator('.calendar-voice-button').click();assert.equal(await page.evaluate(()=>voice.lang),lang);
-  await page.evaluate(text=>emit([text],true),question);await sheet.locator('.voice-workspace-mic').click();await page.locator('.voice-capabilities').waitFor();assert.match(await page.locator('.voice-capabilities').textContent(),new RegExp(title));
+  await page.evaluate(text=>emit([text],true),question);await sheet.locator('.voice-workspace-mic').click();await page.locator('.voice-capabilities').waitFor();assert.match(await page.locator('.voice-capabilities').getAttribute('aria-label'),new RegExp(title));
   await drag(120);await sheet.waitFor({state:'detached'});
  }
  assert.deepEqual(errors,[]);
