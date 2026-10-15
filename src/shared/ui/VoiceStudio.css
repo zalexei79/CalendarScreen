@@ -44,8 +44,9 @@
 }
 .voice-workspace[data-interface=voice-studio] .voice-workspace-transport > .voice-workspace-mic {
  width:68px; height:68px; min-height:68px;
- border:1px solid color-mix(in srgb,var(--voice-accent) 30%,transparent);
- box-shadow:inset 0 1px #ffffff16,0 5px 22px #0002;
+ border:1px solid #f4d99c; border-radius:23px; color:#302511;
+ background:linear-gradient(145deg,#f7e3b5,#ddbc77 70%,#caa55f);
+ box-shadow:inset 0 1px #fff9,inset 0 -2px #91672c30,0 8px 24px #b88c3824;
 }
 .voice-workspace[data-interface=voice-studio] .voice-workspace-transport-state > span {
  visibility:hidden;
@@ -86,14 +87,21 @@
 /* The microphone tells one state story: readiness, speech, then processing.
    Speech recognition events drive the response; rings are not a volume meter. */
 .voice-mic-aura { position:absolute; inset:0; pointer-events:none; border-radius:inherit; }
-.voice-mic-aura > i { position:absolute; inset:-8px; border:1px solid var(--voice-accent); border-radius:50%; opacity:0; }
+.voice-mic-aura > i { position:absolute; inset:-8px; border:1px solid var(--voice-accent); border-radius:30%; opacity:0; }
 .voice-workspace[data-interface=voice-studio] .voice-workspace-mic::before { animation:none; opacity:0; }
 .voice-workspace[data-interface=voice-studio][data-view=capture] .voice-workspace-transport { grid-template-columns:minmax(0,1fr) 88px minmax(0,1fr); padding-top:22px; padding-bottom:26px; }
-.voice-workspace[data-interface=voice-studio][data-view=capture] .voice-workspace-mic { width:88px; height:88px; min-height:88px; background:radial-gradient(circle at 35% 20%,#e2c58c2a,#b5925410); }
+.voice-workspace[data-interface=voice-studio][data-view=capture] .voice-workspace-mic { width:88px; height:88px; min-height:88px; border-radius:28px; }
 .voice-workspace[data-interface=voice-studio][data-view=capture] .voice-workspace-mic > svg { width:32px; height:32px; }
 .voice-workspace[data-interface=voice-studio] .voice-workspace-mic-stop { width:24px; height:24px; right:0; bottom:0; }
+.voice-workspace[data-interface=voice-studio][data-listening=true] .voice-workspace-mic-stop { background:#302819; color:#f5dda5; border-color:#e8c47e; right:-5px; bottom:-5px; }
 .voice-workspace[data-interface=voice-studio] .voice-workspace-mic > svg { z-index:1; }
 .voice-workspace[data-interface=voice-studio] .voice-workspace-transport .voice-workspace-wave { width:min(80px,100%); }
+.voice-workspace[data-interface=voice-studio][data-view=result] :is(.voice-focus-stage,.voice-workspace-instruction,.voice-turn-activity-slot,.voice-workspace-heard,.voice-workspace-context,.voice-workspace-next,.voice-workspace-settings) { display:none; }
+.voice-workspace[data-interface=voice-studio][data-view=result] .voice-workspace-hero { padding:10px 0 18px; gap:12px; }
+.voice-complete-mark { width:44px; height:44px; display:grid; place-items:center; border-radius:16px; color:var(--voice-accent); background:color-mix(in srgb,var(--voice-accent) 10%,transparent); border:1px solid color-mix(in srgb,var(--voice-accent) 22%,transparent); }
+.voice-workspace[data-interface=voice-studio][data-view=result] .voice-workspace-result { margin-top:0; padding:18px 0 4px; }
+.voice-workspace[data-interface=voice-studio][data-view=result] .calendar-voice-answer > p:first-child { font-size:19px; line-height:1.5; }
+.voice-workspace[data-interface=voice-studio][data-view=result] .calendar-voice-answer-actions > button:last-child { display:none; }
 @media(max-width:640px) {
  .voice-workspace[data-interface=voice-studio] { width:calc(100vw - 20px); max-width:none; right:10px; }
 }
@@ -106,6 +114,8 @@
  .voice-discover-example { animation:voice-studio-enter 320ms cubic-bezier(.2,0,0,1); }
  .voice-workspace[data-interface=voice-studio] .voice-workspace-mic { transition:transform 180ms cubic-bezier(.2,0,0,1),background 350ms,box-shadow 350ms; }
  .voice-workspace[data-interface=voice-studio] .voice-workspace-mic:active { transform:scale(.91); }
+ .voice-workspace[data-interface=voice-studio] .voice-studio-spinner { animation:voice-studio-orbit 1000ms linear infinite; }
+ .voice-complete-mark { animation:voice-studio-enter 320ms cubic-bezier(.2,0,0,1); }
  .voice-workspace[data-interface=voice-studio][data-listening=true] .voice-mic-aura > i:first-child { animation:voice-studio-ready 2800ms ease-in-out infinite; }
  .voice-workspace[data-interface=voice-studio][data-talking=true] .voice-mic-aura > i:nth-child(n) { animation:voice-studio-speech 1600ms cubic-bezier(.2,0,0,1) infinite; }
  .voice-workspace[data-interface=voice-studio][data-talking=true] .voice-mic-aura > i:nth-child(2) { animation-delay:400ms; }
