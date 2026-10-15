@@ -1,0 +1,101 @@
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+import fs from 'node:fs';
+import path from 'node:path';
+import { installStoryAccount, storyUserId } from './life-story-auth-fixture.mjs';
+
+const require = createRequire('C:/Users/aveel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/package.json');
+const browser = await require('playwright').chromium.launch({ channel: 'msedge', headless: true });
+const user = { id:'33333333-3333-4333-8333-333333333333',name:'Тестовый пользователь',email:'user@example.test',created_at:'2026-10-01T12:00:00Z',last_sign_in_at:'2026-10-15T12:00:00Z' };
+const other = { ...user,id:'44444444-4444-4444-8444-444444444444',name:'Другой пользователь',email:'other@example.test' };
+try {
+  const context = await browser.newContext({ viewport:{width:1440,height:1000}, serviceWorkers:'block' });
+  let mode = 'full', listCalls = 0;
+  let entry = { id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',user_id:user.id,date_key:'2026-10-05',time:'12:00:00',instrument:'Тестовая покупка',pnl:-20,currency:'USD',platform:'Manual',direction:'SHORT',comment:'' };
+  const audit = [];
+  const dist = path.resolve('dist');
+  await context.route('**/*', async route => {
+    const url = new URL(route.request().url());
+    const json = value => route.fulfill({contentType:'application/json',body:JSON.stringify(value)});
+    const args = url.pathname.includes('/rpc/') ? route.request().postDataJSON() || {} : {};
+    const rpc = url.pathname.split('/rpc/')[1];
+    if(rpc === 'admin_capabilities') return json({design:true,viewUsers:mode!=='denied',editUsers:mode==='full'});
+    if(rpc === 'admin_list_users') { listCalls++; const users=[user,other].filter(item=>`${item.name} ${item.email}`.includes(args.p_search)); return json({users,total:users.length}); }
+    if(rpc === 'admin_user_profile') return json({...([user,other].find(item=>item.id===args.p_user_id)),profile:{nickname:args.p_user_id===user.id?'Тестовый пользователь':'Другой пользователь'},providers:['google']});
+    if(rpc === 'admin_user_data') {
+      const items = args.p_user_id === user.id && args.p_dataset === 'trades' && (!args.p_from||entry.date_key>=args.p_from) && (!args.p_to||entry.date_key<=args.p_to) ? [entry] : [];
+      return json({rows:items,total:items.length,available:true});
+    }
+    if(rpc === 'admin_user_calendar') return json(args.p_user_id === user.id && args.p_month === '2026-10-01' ? [{day:'2026-10-05',dataset:'trades',currency:'USD',amount:entry.pnl,count:1},{day:'2026-10-05',dataset:'wallet_transactions',currency:'EUR',amount:12,count:1}] : []);
+    if(rpc === 'admin_update_user_record') {
+      assert.equal(mode,'full'); assert.equal(args.p_user_id,user.id); assert.equal(args.p_dataset,'trades'); assert.equal(args.p_key,entry.id);
+      assert.deepEqual(args.p_expected,entry); assert.deepEqual(args.p_changes,{pnl:-35}); assert.equal(args.p_reason,'Исправление по обращению');
+      const previous=entry; entry={...entry,...args.p_changes};
+      audit.unshift({id:1,actor_id:storyUserId,subject_id:user.id,action:'record.update',dataset:'trades',record_key:entry.id,reason:args.p_reason,before_data:previous,after_data:entry,created_at:new Date().toISOString()});
+      return json(entry);
+    }
+    if(rpc === 'admin_audit_log') return json({rows:audit,total:audit.length});
+    if(url.origin !== 'http://calendar.test') return route.abort();
+    const target=path.resolve(dist,url.pathname==='/'?'index.html':'.'+url.pathname);
+    if(!target.startsWith(dist+path.sep)||!fs.existsSync(target)||fs.statSync(target).isDirectory()) return route.fulfill({status:404,body:''});
+    const type=target.endsWith('.js')?'text/javascript':target.endsWith('.css')?'text/css':target.endsWith('.webmanifest')||target.endsWith('.json')?'application/manifest+json':target.endsWith('.png')?'image/png':'text/html';
+    return route.fulfill({contentType:type,body:fs.readFileSync(target)});
+  });
+  await installStoryAccount(context);
+  const page=await context.newPage(),errors=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  await page.clock.install({time:new Date('2026-10-15T12:00:00Z')});
+  await page.goto('http://calendar.test/admin.html');
+  assert.equal(await page.locator('link[rel="manifest"]').getAttribute('href'),'/admin.webmanifest');
+  await page.getByRole('button',{name:/Тестовый пользователь user@example.test/}).click();
+  await page.locator('.admin-record-heading strong').filter({hasText:'Тестовая покупка'}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'Редактировать запись',exact:true}).count(),0);
+  await page.getByRole('button',{name:'Открыть день 2026-10-05',exact:true}).click();
+  await page.getByRole('checkbox',{name:'Разрешить редактирование',exact:true}).check();
+  await page.getByRole('button',{name:'Редактировать запись',exact:true}).click();
+  const dialog=page.getByRole('dialog');
+  await dialog.getByLabel('Сумма / PnL',{exact:true}).fill('-35');
+  await dialog.getByLabel('Причина изменения',{exact:true}).fill('Исправление по обращению');
+  await dialog.getByRole('button',{name:'Сохранить изменения',exact:true}).click();
+  await page.getByText('Изменения сохранены. Причина и значения до / после записаны в журнал.',{exact:true}).waitFor();
+  await page.getByText('-35 USD',{exact:true}).first().waitFor();
+  assert.equal(entry.pnl,-35);
+  await page.screenshot({path:'tests/admin-users-desktop.png',fullPage:true});
+  await page.setViewportSize({width:390,height:844});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  await page.screenshot({path:'tests/admin-users-mobile.png',fullPage:true});
+  await page.getByRole('button',{name:'Журнал',exact:true}).click();
+  await page.locator('.admin-record').filter({hasText:'Исправление по обращению'}).waitFor();
+  await page.getByText('До / после изменения',{exact:true}).click();
+  assert.ok((await page.locator('.admin-audit-diff').innerText()).includes('-35'));
+  mode='readonly';
+  await page.reload();
+  await page.getByRole('button',{name:/Тестовый пользователь user@example.test/}).click();
+  await page.locator('.admin-record-heading strong').filter({hasText:'Тестовая покупка'}).waitFor();
+  assert.equal(await page.getByRole('checkbox',{name:'Разрешить редактирование',exact:true}).count(),0);
+  await page.getByRole('button',{name:/Другой пользователь other@example.test/}).click();
+  await page.getByText('За выбранный период записей нет.',{exact:true}).waitFor();
+  assert.equal(await page.locator('.admin-record-heading strong').filter({hasText:'Тестовая покупка'}).count(),0);
+  mode='denied'; const before=listCalls;
+  await page.reload(); await page.getByRole('heading',{name:'Нужен доступ к данным пользователей',exact:true}).waitFor();
+  assert.equal(listCalls,before,'denied role never loads user list');
+  const anonymous = await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block'});
+  await anonymous.route('**/*',async route=>{
+    const url=new URL(route.request().url());
+    if(url.origin!=='http://calendar.test')return route.abort();
+    const target=path.resolve(dist,'.'+url.pathname);
+    if(!target.startsWith(dist+path.sep)||!fs.existsSync(target)||fs.statSync(target).isDirectory())return route.fulfill({status:404,body:''});
+    return route.fulfill({contentType:target.endsWith('.js')?'text/javascript':target.endsWith('.css')?'text/css':'text/html',body:fs.readFileSync(target)});
+  });
+  const loginPage=await anonymous.newPage();
+  await loginPage.goto('http://calendar.test/admin.html');
+  await loginPage.getByRole('heading',{name:'Войти в DAYRIS Admin',exact:true}).waitFor();
+  assert.equal(await loginPage.getByRole('button',{name:'Войти через Google',exact:true}).count(),1);
+  assert.equal(await loginPage.getByRole('button',{name:'Войти через Telegram',exact:true}).count(),0);
+  await loginPage.getByRole('button',{name:'Оформление',exact:true}).click();
+  assert.equal(await loginPage.getByRole('button',{name:'Опубликовать',exact:true}).count(),0);
+  assert.equal(await loginPage.locator('iframe').count(),0,'unauthenticated visitors cannot open design preview');
+  await anonymous.close();
+  assert.deepEqual(errors,[]);
+  console.log('PASS: admin app entry/manifest, user calendar, explicit edit mode, target-bound patch and reason, audit before/after, read-only role, owner switching, denied-role requests, desktop/mobile layout (mock API).');
+} finally { await browser.close(); }

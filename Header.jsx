@@ -105,7 +105,7 @@ export default function Header({
     <header className={`dayris-header px-3 sm:px-8 pt-3 sm:pt-5 pb-3 sm:pb-4 border-b transition-all duration-500 ${isLight ? 'border-slate-200/70 bg-white/80' : 'border-white/[0.06] bg-zinc-950/70'}`}>
       {/* Top row: Brand app icon + Title on left, [Download] [Theme] [Settings] on right */}
       <div className="dayris-brand-row flex items-center justify-between gap-3 mb-2.5">
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div data-site-element="brand" className="flex items-center gap-2.5 min-w-0">
           <div className="relative shrink-0 flex items-center justify-center">
             <BrandIcon
               alt={t('appName')}
@@ -126,10 +126,11 @@ export default function Header({
         </div>
 
         {/* Action controls: [ Download ] [ Theme ] [ Settings ] */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div data-site-element="actions" className="flex items-center gap-1.5 shrink-0">
           {/* Install is useful in the browser, not inside the installed app. */}
           {!isPwaInstalled && <div className="relative shrink-0 block" ref={installInfoRef}>
             <button
+              data-site-element="install"
               onClick={handleInstallClick}
               title={t('app')}
               className={`group flex h-10 w-10 sm:h-9 sm:w-auto items-center justify-center gap-1.5 rounded-full sm:rounded-xl border sm:px-2.5 shadow-sm transition-all hover:-translate-y-px hover:border-amber-400/45 ${
@@ -239,6 +240,7 @@ export default function Header({
           <div className="relative" ref={settingsRef}>
             <button
               type="button"
+              data-site-element="settings"
               onClick={() => (settingsOpen ? closeSettings() : openSettings())}
               title={t('settings')}
               aria-label={t('settings')}
@@ -274,6 +276,7 @@ export default function Header({
         <div className="dayris-command-row">
           <div className="dayris-date-navigation">
           <button
+            data-site-element="previous"
             onClick={goToPrevMonth}
             aria-label={t('previousMonth')}
             title={t('previousMonth')}
@@ -337,6 +340,7 @@ export default function Header({
             </div>
           </div>
           <button
+            data-site-element="next"
             onClick={goToNextMonth}
             aria-label={t('nextMonth')}
             title={t('nextMonth')}
@@ -350,6 +354,7 @@ export default function Header({
           {(month !== today.getMonth() || year !== today.getFullYear()) && (
             <button
               type="button"
+              data-site-element="today"
               onClick={() => {
                 const now = new Date();
                 setViewMonth(now.getMonth());

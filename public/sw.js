@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v23-localized-weekdays';
+const CACHE_NAME = 'atj-cache-v24-admin-app';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
@@ -135,6 +135,18 @@ self.addEventListener('fetch', (event) => {
 
   // Handle navigation requests (opening the app or refreshing)
   if (event.request.mode === 'navigate') {
+    // Admin HTML has its own manifest and must never replace the calendar shell.
+    // Only the shell is cacheable. All user-data RPCs remain network-only above.
+    if (url.pathname === '/admin.html') {
+      event.respondWith(fetch(event.request).then(async response => {
+        if (response.ok) {
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put('/admin.html',response.clone());
+        }
+        return response;
+      }).catch(async () => (await caches.match('/admin.html')) || new Response('DAYRIS Admin: подключитесь к интернету для входа.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}})));
+      return;
+    }
     const isAppShellNavigation = url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/install';
     event.respondWith(
       fetch(event.request)

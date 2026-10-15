@@ -1,0 +1,43 @@
+.dayris-admin { min-height:100dvh; background:#101319; color:#e7ebf3; font:14px/1.5 system-ui,sans-serif; color-scheme:dark; }
+.dayris-admin * { box-sizing:border-box; }
+.dayris-admin button,.dayris-admin input,.dayris-admin select { font:inherit; }
+.dayris-admin button { min-height:44px; border:1px solid #3c4658; border-radius:10px; padding:9px 12px; background:#202735; color:#edf1fa; cursor:pointer; }
+.dayris-admin button:disabled { opacity:.45; cursor:default; }
+.dayris-admin button:focus-visible,.dayris-admin input:focus-visible,.dayris-admin select:focus-visible,.dayris-admin a:focus-visible { outline:2px solid #fbbf24; outline-offset:3px; }
+.dayris-admin a { color:#fcd56f; }
+.admin-toolbar { display:flex; justify-content:space-between; flex-wrap:wrap; gap:18px; padding:22px 24px; border-bottom:1px solid #30394a; }
+.admin-toolbar h1 { margin:5px 0; font-size:23px; font-weight:650; }
+.admin-toolbar p { margin:0; color:#a7b2c5; overflow-wrap:anywhere; }
+.admin-toolbar-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.dayris-admin .admin-primary { background:#fbbf24; color:#1b160a; border-color:#fbbf24; font-weight:650; }
+.admin-notice { padding:12px 24px; background:#1a2230; border-bottom:1px solid #30394a; color:#d2dbee; }
+.admin-notice p { margin:6px 0 0; }
+.admin-layout { display:grid; grid-template-columns:330px minmax(0,1fr); align-items:start; }
+.admin-controls { padding:20px; border-right:1px solid #30394a; min-width:0; }
+.admin-tabs { display:flex; gap:8px; }
+.admin-tabs button { flex:1; }
+.admin-tabs [aria-pressed=true] { border-color:#fbbf24; color:#fbd576; background:#332b1b; }
+.admin-hint { color:#a7b2c5; font-size:12px; margin:12px 0; }
+.admin-field { display:flex; flex-direction:column; gap:7px; margin:14px 0; }
+.admin-field > span { font-weight:600; }
+.admin-field input:not([type=color]),.admin-field select { width:100%; min-height:44px; padding:10px; border:1px solid #424d61; background:#121822; color:#e7ebf3; border-radius:9px; }
+.admin-field small { color:#a7b2c5; font-size:12px; }
+.admin-color { display:flex; align-items:center; gap:8px; }
+.admin-color input { padding:0; width:44px; height:44px; border:0; background:none; flex-shrink:0; }
+.admin-color code { font:11px system-ui; flex:1; }
+.admin-color button { font-size:12px; }
+.dayris-admin fieldset { border:1px solid #343e50; border-radius:12px; margin:18px 0; padding:12px; min-width:0; }
+.dayris-admin legend { padding:0 6px; font-weight:650; }
+.dayris-admin fieldset > button { width:100%; margin-top:10px; font-size:12px; }
+.admin-check { display:flex; align-items:center; gap:9px; min-height:44px; }
+.admin-check input { width:19px; height:19px; accent-color:#fbbf24; flex-shrink:0; }
+.admin-files h2 { font-size:16px; font-weight:650; }
+.admin-files > div { display:flex; gap:8px; flex-wrap:wrap; }
+.admin-stage { min-width:0; padding:20px; }
+.admin-preview-toolbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; }
+.admin-frame-scroll { max-width:100%; overflow:auto; background:#080b10; padding:16px; border:1px solid #30394a; border-radius:14px; }
+.admin-preview { display:block; height:780px; border:0; background:#09090b; margin:0 auto; }
+.admin-preview-mobile { width:390px; }
+.admin-preview-desktop { width:1280px; }
+@media(max-width:900px) { .admin-layout { grid-template-columns:1fr; } .admin-controls { border-right:0; border-bottom:1px solid #30394a; } .admin-stage { grid-row:1; } .admin-preview { height:560px; } .admin-toolbar { padding:16px; } .admin-notice { padding:12px 16px; } }
+@media(max-width:450px) { .admin-stage { padding:12px; } .admin-controls { padding:16px; } .admin-frame-scroll { padding:6px; } .admin-toolbar-actions button { flex:1 1 auto; } }

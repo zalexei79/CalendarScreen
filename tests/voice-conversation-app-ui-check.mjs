@@ -5,12 +5,15 @@ import http from 'node:http';
 import path from 'node:path';
 const root=path.resolve('dist');
 const bundle=await createRequire(path.resolve('package.json'))('esbuild').build({entryPoints:['src/main.jsx'],bundle:true,write:false,outfile:'voice-test.js',format:'iife',define:{'process.env.NODE_ENV':'"production"','import.meta.env':JSON.stringify({VITE_SUPABASE_URL:'https://local-fixture.supabase.co',VITE_SUPABASE_ANON_KEY:'local-test-key'})}});
-const utility=fs.readFileSync(path.join(root,'assets',fs.readdirSync(path.join(root,'assets')).find(file=>file.endsWith('.css'))),'utf8');
+const shell=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const utilityPath=shell.match(/href="(\/assets\/[^" ]+\.css)"/)?.[1];
+assert.ok(utilityPath,'Main application stylesheet must be linked in its HTML entry');
+const utility=fs.readFileSync(path.join(root,utilityPath.slice(1)),'utf8');
 const server=http.createServer((request,response)=>{
  const name=new URL(request.url,'http://localhost').pathname,file=path.resolve(root,name==='/'?'index.html':'.'+name);
  if(name==='/__voice-test.js'||name==='/__voice-test.css'){const js=name.endsWith('.js');response.writeHead(200,{'Content-Type':js?'text/javascript':'text/css'});response.end((js?'':utility)+bundle.outputFiles.find(file=>file.path.endsWith(js?'.js':'.css')).text);return;}
  if(!file.startsWith(root+path.sep)||!fs.existsSync(file)){response.writeHead(404);response.end();return;}
- response.writeHead(200,{'Content-Type':name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html'});response.end(name==='/'?fs.readFileSync(file,'utf8').replace(/\/assets\/index-[^" ]+\.js/g,'/__voice-test.js').replace(/\/assets\/index-[^" ]+\.css/g,'/__voice-test.css'):fs.readFileSync(file));
+ response.writeHead(200,{'Content-Type':name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html'});response.end(name==='/'?fs.readFileSync(file,'utf8').replace(/\/assets\/(?:index|main)-[^" ]+\.js/g,'/__voice-test.js').replace(/\/assets\/(?:index|main)-[^" ]+\.css/g,'/__voice-test.css'):fs.readFileSync(file));
 });
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const origin=`http://127.0.0.1:${server.address().port}`;

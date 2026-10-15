@@ -1,0 +1,72 @@
+.admin-app-header { display:flex; flex-wrap:wrap; align-items:center; gap:16px; padding:14px 24px; background:#171e29; border-bottom:1px solid #354052; }
+.admin-app-brand { font-size:19px; font-weight:750; text-decoration:none; color:#f3f5fa!important; white-space:nowrap; }
+.admin-app-brand span { color:#fbbf24; font-size:12px; letter-spacing:.12em; }
+.admin-app-header nav { display:flex; gap:6px; flex:1; flex-wrap:wrap; }
+.admin-app-header nav [aria-current=page] { border-color:#fbbf24; color:#fbd576; }
+.admin-page { padding:24px; max-width:1800px; margin:0 auto; }
+.admin-page h1 { font-size:24px; font-weight:650; margin:0 0 6px; }
+.admin-page h2 { font-size:20px; font-weight:650; margin:0 0 6px; }
+.admin-page h3 { font-size:16px; font-weight:650; margin:18px 0 10px; }
+.admin-page p { margin:8px 0; }
+.admin-page-title { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:20px; }
+.admin-page-title p { color:#aab8cd; }
+.admin-users-layout { display:grid; grid-template-columns:300px minmax(0,1fr); gap:24px; align-items:start; }
+.admin-user-list { padding:16px; border:1px solid #343f50; border-radius:14px; background:#151b25; min-width:0; }
+.admin-user-list form { display:flex; gap:8px; align-items:end; margin-bottom:16px; }
+.admin-user-list form .admin-field { margin:0; min-width:0; flex:1; }
+.admin-user-cards { display:grid; gap:8px; }
+.dayris-admin .admin-user-card { text-align:left; display:flex; flex-direction:column; gap:4px; width:100%; overflow-wrap:anywhere; }
+.admin-user-card span { color:#c3cddd; font-size:12px; }
+.admin-user-card small { color:#9eacc2; font-size:11px; }
+.admin-user-card[aria-pressed=true] { border-color:#fbbf24; background:#302a1d; }
+.admin-user-detail { min-width:0; }
+.admin-empty { padding:48px 24px; border:1px dashed #424e63; border-radius:14px; text-align:center; }
+.admin-subject { border-bottom:1px solid #333f52; padding-bottom:16px; }
+.admin-subject code,.admin-record code { overflow-wrap:anywhere; font-size:12px; }
+.admin-mode-badge { display:block; width:fit-content; margin-top:12px; padding:5px 10px; border-radius:8px; background:#28354b; color:#d6e3fc; font-size:12px; }
+.admin-detail-tabs { display:flex; flex-wrap:wrap; gap:8px; margin:18px 0; }
+.admin-detail-tabs [aria-pressed=true] { border-color:#fbbf24; color:#fbd576; }
+.admin-data-toolbar { display:flex; flex-wrap:wrap; align-items:end; gap:12px; margin-bottom:18px; }
+.admin-data-toolbar .admin-field { margin:0; flex:1; min-width:150px; }
+.admin-data-toolbar .admin-field:first-child { flex:2; min-width:200px; }
+.admin-calendar-nav { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.admin-month-totals { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:16px 0; }
+.admin-month-totals>div { padding:12px; border:1px solid #38445a; border-radius:12px; min-width:0; }
+.admin-month-totals span { display:block; color:#afbdd1; font-size:12px; }
+.admin-month-totals strong { display:block; margin-top:5px; font-size:15px; overflow-wrap:anywhere; }
+.admin-user-calendar { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:5px; margin-bottom:16px; }
+.admin-weekday { text-align:center; color:#a7b5c8; font-size:12px; padding:7px 0; }
+.dayris-admin .admin-user-day { min-height:92px; min-width:0; border-radius:9px; padding:7px; display:flex; flex-direction:column; align-items:stretch; text-align:left; }
+.admin-user-day[aria-pressed=true] { border-color:#fbbf24; background:#302a1d; }
+.admin-user-day>strong { font-size:13px; }
+.admin-day-value { display:block; font-size:10px; overflow-wrap:anywhere; color:#d6ddeb; padding-top:4px; }
+.admin-day-value i { font-style:normal; color:#fbd576; margin-right:3px; }
+.admin-day-wallet_transactions { color:#a7dbc9; }
+.admin-day-reminders { color:#cbb5ed; }
+.admin-data-actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:14px 0; }
+.admin-records { display:grid; gap:10px; }
+.admin-record { border:1px solid #364155; border-radius:12px; padding:14px; background:#161d28; overflow-wrap:anywhere; min-width:0; }
+.admin-record-heading { display:flex; justify-content:space-between; align-items:start; gap:10px; flex-wrap:wrap; }
+.admin-record-heading>span { color:#fcd976; }
+.admin-record-heading time { font-size:12px; color:#a7b5ca; }
+.admin-record>p { font-size:13px; color:#b9c6d9; white-space:pre-wrap; }
+.admin-record summary { cursor:pointer; min-height:44px; display:flex; align-items:center; color:#a9c5f8; text-decoration:underline; }
+.admin-record-fields { display:grid; grid-template-columns:minmax(100px,1fr) minmax(0,2fr); gap:8px 12px; margin:14px 0; font-size:12px; }
+.admin-record-fields dt { color:#a6b6cb; overflow-wrap:anywhere; }
+.admin-record-fields dd { margin:0; overflow-wrap:anywhere; white-space:pre-wrap; }
+.admin-record-fields pre,.admin-audit-diff pre { font:11px/1.6 ui-monospace,monospace; white-space:pre-wrap; overflow-wrap:anywhere; max-height:380px; overflow:auto; margin:0; }
+.admin-pagination { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:16px; }
+.admin-pagination span { font-size:12px; text-align:center; color:#b6c3d7; }
+.admin-actions { display:flex; flex-wrap:wrap; gap:10px; }
+.admin-error { color:#ffb4b4; padding:12px; border:1px solid #805050; border-radius:9px; }
+.admin-access { max-width:700px; padding-top:60px; }
+.admin-edit-dialog { width:min(560px,calc(100vw - 24px)); max-height:90dvh; padding:22px; background:#141b26; color:#e7ebf3; border:1px solid #546178; border-radius:16px; color-scheme:dark; }
+.admin-edit-dialog::backdrop { background:#000a; }
+.admin-edit-dialog h2 { font-size:20px; font-weight:650; }
+.admin-edit-dialog code { font-size:12px; overflow-wrap:anywhere; }
+.admin-edit-dialog p { margin:10px 0; }
+.admin-edit-dialog textarea { resize:vertical; width:100%; min-height:90px; border:1px solid #424d61; border-radius:9px; background:#121822; color:#e7ebf3; padding:10px; font:inherit; }
+.admin-edit-dialog fieldset { border:0; padding:0; }
+.admin-audit-diff { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+@media(max-width:1050px) { .admin-users-layout { grid-template-columns:250px minmax(0,1fr); gap:16px; } .admin-page { padding:18px; } }
+@media(max-width:760px) { .admin-app-header { padding:12px; gap:10px; } .admin-app-header nav { order:3; flex-basis:100%; } .admin-app-header nav button { flex:1; } .admin-app-header>button { margin-left:auto; font-size:12px; } .admin-app-header>a:last-child { font-size:12px; } .admin-page { padding:14px; } .admin-users-layout { grid-template-columns:1fr; } .admin-user-cards { max-height:250px; overflow:auto; } .admin-month-totals { gap:6px; } .admin-month-totals>div { padding:9px; } .admin-month-totals strong { font-size:12px; } .admin-user-calendar { gap:3px; } .dayris-admin .admin-user-day { padding:4px; min-height:72px; } .admin-day-value { font-size:9px; } .admin-audit-diff { grid-template-columns:1fr; } .admin-record-fields { grid-template-columns:minmax(80px,1fr) minmax(0,2fr); } }

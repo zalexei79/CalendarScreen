@@ -7,6 +7,8 @@ import { supabase } from './supabaseClient'
 import { reconcilePushOwner } from './features/reminders/pushClient'
 import { LANGUAGE_STORAGE_KEY } from './shared/config/constants'
 import { translate } from './shared/i18n'
+import SiteConfigRuntime from './features/admin/SiteConfigRuntime.jsx'
+const AdminPanel = React.lazy(() => import('./features/admin/AdminApp.jsx'))
 
 function browserLanguage() {
   try { return window.localStorage.getItem(LANGUAGE_STORAGE_KEY) || navigator.language || 'ru' }
@@ -122,7 +124,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AppReady>
     <AppErrorBoundary>
-      {showInstallPage ? <InstallPage /> : <CalendarScreen />}
+      {params.get('admin') === '1' || normalizedPath === '/admin.html' ? <React.Suspense fallback={<div style={{padding:24}}>Загрузка админки…</div>}><AdminPanel /></React.Suspense> : <><SiteConfigRuntime />{showInstallPage ? <InstallPage /> : <CalendarScreen />}</>}
     </AppErrorBoundary>
     </AppReady>
   </React.StrictMode>
