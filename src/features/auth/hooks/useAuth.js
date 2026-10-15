@@ -9,6 +9,8 @@ import { isOnboardingPreviewUser } from '../../onboarding/lifeStoryModel';
 import { startOAuthLogin, TELEGRAM_PROVIDER } from '../oauthLogin';
 import {revokeBoundWidgetDevices,widgetDisconnectError} from '../../../shared/lib/widgetDeviceBinding.js';
 
+const designPreview = window.parent !== window && new URLSearchParams(window.location.search).get('adminPreview') === '1';
+
 /**
  * useAuth: manages Supabase authentication, session detection, and user profile state.
  */
@@ -26,6 +28,7 @@ export function useAuth() {
   const [nicknameModalVisible, setNicknameModalVisible] = useState(false);
   const [nicknameInput, setNicknameInput] = useState('');
   const [setupStep, setSetupStep] = useState(() => {
+    if (designPreview) return null;
     try { return window.localStorage.getItem(ONBOARDING_V2_COMPLETED_STORAGE_KEY) === '1' ? null : 'language'; }
     catch { return 'language'; }
   });
@@ -77,14 +80,14 @@ export function useAuth() {
     if (!user) { previewShownFor.current = null; return; }
     if (previewShownFor.current === user.id) return;
     previewShownFor.current = user.id;
-    if (isOnboardingPreviewUser(user)) {
+    if (!designPreview && isOnboardingPreviewUser(user)) {
       setSetupStep('language');
     }
   }, [user]);
 
   // Prompt nickname modal once after fresh login if not set yet
   useEffect(() => {
-    if (!user || user.user_metadata?.nickname || nicknamePrompted.current) return;
+    if (designPreview || !user || user.user_metadata?.nickname || nicknamePrompted.current) return;
     nicknamePrompted.current = true;
     setNicknameInput(user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.preferred_username || '');
     setNicknameModalOpen(true);

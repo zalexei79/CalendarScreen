@@ -1,0 +1,8 @@
+.dayris-custom-buttons { display:flex; flex-wrap:wrap; gap:8px; }
+.dayris-custom-buttons:has(>a) { padding:12px 0 4px; }
+.dayris-custom-button { display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box; min-height:44px; max-width:100%; padding:10px 16px; border:1px solid #d9a52e; border-radius:12px; background:#fbbf24; color:#17130a; font:600 14px/1.4 system-ui,sans-serif; text-decoration:none; overflow-wrap:anywhere; cursor:pointer; }
+.dayris-custom-button:focus-visible { outline:3px solid #38bdf8; outline-offset:3px; }
+.dayris-custom-floating { position:fixed; z-index:40; bottom:max(20px,env(safe-area-inset-bottom)); right:16px; left:16px; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; pointer-events:none; }
+.dayris-custom-floating>a { pointer-events:auto; }
+html[data-design-inspect] body * { cursor:crosshair!important; }
+html[data-design-inspect] [data-design-selected] { outline:3px solid #38bdf8!important; outline-offset:-3px!important; }

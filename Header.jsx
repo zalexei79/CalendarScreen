@@ -607,6 +607,7 @@ export default function Header({
       </div>
 
       </div>
+      <div data-site-buttons="header" className="dayris-custom-buttons" />
     </header>
   );
 }

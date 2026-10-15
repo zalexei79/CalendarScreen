@@ -8,6 +8,9 @@ export const ELEMENTS = [
   { id: 'previous', label: 'Предыдущий месяц', selector: '[data-site-element="previous"]', action: true },
   { id: 'next', label: 'Следующий месяц', selector: '[data-site-element="next"]', action: true },
   { id: 'today', label: 'Сегодня', selector: '[data-site-element="today"]', action: true },
+  { id: 'calendar', label: 'Календарь', selector: '.calendar-section:not(.calendar-month-preview)' },
+  { id: 'days', label: 'Сетка дней', selector: '.calendar-section:not(.calendar-month-preview) > .calendar-days-grid' },
+  { id: 'day', label: 'Ячейки дней (все)', selector: '.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button' },
 ];
 export const EMPTY_CONFIG = { schema: 1, mobile: { global: {}, elements: {} }, desktop: { global: {}, elements: {} } };
 const color = value => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : undefined;
@@ -18,8 +21,18 @@ export function safeLink(value) {
   try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password ? url.href : ''; } catch { return ''; }
 }
 const clean = object => Object.fromEntries(Object.entries(object).filter(([, value]) => value !== undefined && value !== ''));
+export function configElements(config) {
+  return [...ELEMENTS, ...(config?.buttons || []).map(button => ({ id: button.id, label: button.label, selector: `[data-site-button="${button.id}"]`, action: true, custom: true }))];
+}
 export function normalizeConfig(input) {
   const result = { schema: 1 };
+  const ids = new Set();
+  const buttons = (Array.isArray(input?.buttons) ? input.buttons : []).slice(0, 20).flatMap(item => {
+    if (!item || !/^button-[a-z0-9-]{1,48}$/.test(item.id) || ids.has(item.id)) return [];
+    ids.add(item.id);
+    return [{ id: item.id, label: typeof item.label === 'string' ? item.label.slice(0, 80) : 'Новая кнопка', href: safeLink(item.href), placement: item.placement === 'bottom' ? 'bottom' : 'header' }];
+  });
+  if (buttons.length) result.buttons = buttons;
   for (const device of ['mobile', 'desktop']) {
     const source = input?.[device];
     const global = source?.global;
@@ -27,7 +40,7 @@ export function normalizeConfig(input) {
       global: clean({ background: color(global?.background), image: safeLink(global?.image), accent: color(global?.accent) }),
       elements: {},
     };
-    for (const { id, action } of ELEMENTS) {
+    for (const { id, action } of configElements(result)) {
       const item = source?.elements?.[id];
       if (!item || typeof item !== 'object') continue;
       result[device].elements[id] = clean({
@@ -58,7 +71,7 @@ export function configCSS(input) {
       'background-position': global.image ? 'center' : undefined,
       '--pro-gold': global.accent,
     });
-    for (const { id, selector } of ELEMENTS) {
+    for (const { id, selector } of configElements(config)) {
       const item = elements[id];
       if (!item) continue;
       const px = key => item[key] === undefined ? undefined : `${item[key]}px`;

@@ -30,3 +30,20 @@ test('configuration roundtrip is stable and rejects CSS/URL injection in global 
   const attack = configCSS({ desktop: { global: { image: 'https://example.com/x");}body{display:none}/*', background: '#fff;}' } } });
   assert.doesNotMatch(attack, /display:none|background-image|background-color/);
 });
+
+test('custom buttons have safe unique IDs, bounded text, placements and links', () => {
+  const config = normalizeConfig({ buttons: [
+    { id: 'button-help', label: '<Help>', href: '/privacy.html', placement: 'header' },
+    { id: 'button-help', label: 'duplicate' },
+    { id: 'button-"]body{', href: 'https://example.com' },
+    { id: 'button-other', label: 'x'.repeat(100), href: 'javascript:alert(1)', placement: 'evil' },
+  ], mobile: { elements: { 'button-help': { background: '#123456', width: 200 } } } });
+  assert.equal(config.buttons.length, 2);
+  assert.equal(config.buttons[0].href, '/privacy.html');
+  assert.equal(config.buttons[1].label.length, 80);
+  assert.equal(config.buttons[1].href, '');
+  assert.equal(config.buttons[1].placement, 'header');
+  assert.match(configCSS(config), /\[data-site-button="button-help"\]\{background-color:#123456!important;width:200px!important/);
+  assert.deepEqual(normalizeConfig(config), config);
+  assert.equal(normalizeConfig({buttons:Array.from({length:30}, (_, i)=>({id:`button-${i}`}))}).buttons.length,20);
+});
