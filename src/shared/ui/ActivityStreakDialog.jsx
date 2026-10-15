@@ -30,6 +30,29 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 3) {
   lines.slice(0, maxLines).forEach((item, index) => ctx.fillText(item, x, y + index * lineHeight));
 }
 
+function drawFlameSticker(ctx, x, y, scale = 1) {
+  ctx.save();
+  ctx.translate(x, y); ctx.scale(scale, scale);
+  ctx.shadowColor = 'rgba(255,126,54,.28)'; ctx.shadowBlur = 24;
+  ctx.beginPath();
+  ctx.moveTo(0, 92); ctx.bezierCurveTo(-54, 70, -58, 16, -13, -5);
+  ctx.bezierCurveTo(-20, 31, 2, 38, 13, 8);
+  ctx.bezierCurveTo(31, -30, 47, -49, 40, -77);
+  ctx.bezierCurveTo(90, -35, 91, 28, 61, 65);
+  ctx.bezierCurveTo(45, 86, 25, 94, 0, 92); ctx.closePath();
+  ctx.fillStyle = '#ff873d'; ctx.fill(); ctx.shadowBlur = 0;
+  ctx.beginPath(); ctx.moveTo(10, 76); ctx.bezierCurveTo(-18, 57, -14, 28, 10, 13);
+  ctx.bezierCurveTo(10, 35, 25, 37, 32, 18); ctx.bezierCurveTo(54, 48, 38, 72, 10, 76); ctx.fillStyle = '#ffd34e'; ctx.fill();
+  ctx.fillStyle = '#3b245c'; ctx.beginPath(); ctx.arc(10, 44, 5, 0, Math.PI * 2); ctx.arc(38, 39, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#3b245c'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(24, 49, 12, .2, Math.PI - .2); ctx.stroke();
+  ctx.restore();
+}
+
+function drawConfetti(ctx) {
+  const pieces = [[116,228,18,'#ffcf4a'],[176,292,12,'#56d6c9'],[900,242,16,'#ff8a69'],[946,336,10,'#fff'],[126,560,13,'#a78bfa'],[914,532,18,'#ffd34e'],[244,590,9,'#ff91c8'],[816,584,11,'#56d6c9']];
+  pieces.forEach(([x,y,size,color], index) => { ctx.save(); ctx.translate(x,y); ctx.rotate(index * .43); ctx.fillStyle=color; ctx.roundRect(-size/2,-size/2,size,size*.55,4); ctx.fill(); ctx.restore(); });
+}
+
 function accountName(user) {
   return user?.email || user?.user_metadata?.preferred_username || user?.user_metadata?.name
     || user?.user_metadata?.full_name || 'DAYRIS';
@@ -50,7 +73,7 @@ export default function ActivityStreakDialog({
   const [shareCode, setShareCode] = useState(activeCode);
   const copy = {
     title: t('streakModalTitle'), account: t('streakAccount'), active: t('streakStatusActive'), paused: t('streakStatusPaused'),
-    share: t('streakShare'), save: t('streakSaveImage'), close: t('streakClose'), preparing: t('streakPreparing'),
+    share: t('streakShare'), save: t('streakSavePhoto'), close: t('streakClose'), preparing: t('streakPreparing'),
     inviteTitle: t('streakInviteTitle'), inviteBody: t('streakInviteBody'), inviteHint: t('streakInviteHint'), proBadge: t('streakProBadge'),
     shareText: t('streakShareText'), error: t('streakShareError'),
   };
@@ -90,8 +113,28 @@ export default function ActivityStreakDialog({
 
   if (!open) return null;
 
-  function download() {
+  function makePhotoFile() {
+    if (!shareBlob) return null;
+    return new File([shareBlob], `dayris-streak-${days}.png`, { type: 'image/png' });
+  }
+
+  function isAppleTouchDevice() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
+  async function savePhoto() {
     if (!shareBlob) return;
+    const file = makePhotoFile();
+    // iOS does not let a PWA write directly into Photos. Opening the native
+    // share sheet with only the image exposes "Save Image" instead of Files.
+    if (file && isAppleTouchDevice() && navigator.share
+      && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+      try { await navigator.share({ title: copy.title, files: [file] }); } catch (error) {
+        if (error?.name !== 'AbortError') console.error('Streak photo save error:', error);
+      }
+      return;
+    }
     const url = URL.createObjectURL(shareBlob);
     const link = document.createElement('a');
     link.href = url;
@@ -104,11 +147,14 @@ export default function ActivityStreakDialog({
 
   async function share() {
     if (!shareBlob) return;
+    const file = makePhotoFile();
     const code = shareCode;
     const url = new URL('/?install=1', window.location.origin);
     if (code) url.searchParams.set('ref', code);
     try {
-      if (navigator.share) {
+      if (navigator.share && file && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+        await navigator.share({ title: copy.title, text: copy.shareText.replace('{0}', String(days)), url: url.toString(), files: [file] });
+      } else if (navigator.share) {
         await navigator.share({ title: copy.title, text: copy.shareText.replace('{0}', String(days)), url: url.toString() });
       } else {
         try { await navigator.clipboard.writeText(url.toString()); } catch { /* download remains available */ }
@@ -156,7 +202,7 @@ export default function ActivityStreakDialog({
         </div>
 
         <div className="activity-streak-actions">
-          <button type="button" onClick={download} disabled={busy || !shareBlob} className="activity-streak-secondary"><Download size={16} />{copy.save}</button>
+          <button type="button" onClick={savePhoto} disabled={busy || !shareBlob} className="activity-streak-secondary"><Download size={16} />{copy.save}</button>
           <button type="button" onClick={share} disabled={busy || !shareBlob} className="activity-streak-primary"><Share2 size={16} />{copy.share}</button>
         </div>
       </SwipeDismissSheet>
@@ -171,39 +217,33 @@ async function createShareBlob({ days, account, paused, code, isLight, copy }) {
   canvas.height = 1350;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('CANVAS_UNAVAILABLE');
-  const dark = !isLight;
-  const main = dark ? '#f8fafc' : '#191b20';
-  const muted = dark ? '#9aa2af' : '#6f7782';
-  const amber = '#f5b91f';
-  const panel = dark ? '#14171d' : '#ffffff';
-  const border = dark ? '#2b3039' : '#e1e5e9';
+  const main = '#30215a';
+  const muted = '#655d82';
+  const amber = '#ffb52e';
+  const panel = '#ffffff';
+  const border = '#eadff5';
   const gradient = ctx.createLinearGradient(0, 0, 1080, 1350);
-  gradient.addColorStop(0, dark ? '#08090b' : '#fffdf7');
-  gradient.addColorStop(.7, dark ? '#0b0d11' : '#f7f8fa');
-  gradient.addColorStop(1, dark ? '#171206' : '#fff4cb');
+  gradient.addColorStop(0, '#fff8df');
+  gradient.addColorStop(.48, '#f3eaff');
+  gradient.addColorStop(1, '#dff9f6');
   ctx.fillStyle = gradient; ctx.fillRect(0, 0, 1080, 1350);
-  const glow = ctx.createRadialGradient(790, 340, 0, 790, 340, 490);
-  glow.addColorStop(0, dark ? 'rgba(245,185,31,.22)' : 'rgba(245,185,31,.18)');
-  glow.addColorStop(1, 'rgba(245,185,31,0)');
-  ctx.fillStyle = glow; ctx.fillRect(320, 0, 760, 800);
+  drawConfetti(ctx);
   drawBrandIcon(ctx, brandIcon, 72, 68, 86);
   ctx.fillStyle = main; ctx.font = '700 40px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText('DAYRIS', 180, 113);
   ctx.fillStyle = amber; ctx.font = '700 19px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText('STREAK', 180, 146);
-  roundedRect(ctx, 786, 77, 222, 54, 27); ctx.fillStyle = dark ? 'rgba(245,185,31,.13)' : '#fff4cb'; ctx.fill();
-  ctx.fillStyle = amber; ctx.font = '800 18px ui-monospace, SFMono-Regular, Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillText('DAYRIS · 01', 897, 111);
+  roundedRect(ctx, 786, 77, 222, 54, 27); ctx.fillStyle = '#fff'; ctx.fill();
+  ctx.fillStyle = '#7c3aed'; ctx.font = '800 18px ui-monospace, SFMono-Regular, Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillText('MY STREAK', 897, 111);
   ctx.textAlign = 'left';
 
   // Hero: a clean, shareable focus on the achievement — no private account data.
-  roundedRect(ctx, 72, 196, 936, 438, 42); ctx.fillStyle = panel; ctx.fill(); ctx.strokeStyle = border; ctx.lineWidth = 2; ctx.stroke();
-  const heroGlow = ctx.createRadialGradient(540, 360, 0, 540, 360, 300);
-  heroGlow.addColorStop(0, dark ? 'rgba(245,185,31,.20)' : 'rgba(245,185,31,.15)'); heroGlow.addColorStop(1, 'rgba(245,185,31,0)');
-  ctx.fillStyle = heroGlow; ctx.fill();
-  ctx.beginPath(); ctx.arc(540, 365, 145, -.82, Math.PI * 1.28); ctx.strokeStyle = dark ? 'rgba(245,185,31,.20)' : 'rgba(217,119,6,.18)'; ctx.lineWidth = 3; ctx.stroke();
-  ctx.beginPath(); ctx.arc(540, 365, 145, 2.1, Math.PI * 1.74); ctx.strokeStyle = amber; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.stroke();
+  roundedRect(ctx, 72, 196, 936, 438, 42);
+  const hero = ctx.createLinearGradient(72, 196, 1008, 634); hero.addColorStop(0, '#7048d8'); hero.addColorStop(.52, '#9b55d8'); hero.addColorStop(1, '#2ab8b0');
+  ctx.fillStyle = hero; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 3; ctx.stroke();
+  drawFlameSticker(ctx, 540, 286, 1.02);
   ctx.textAlign = 'center';
-  ctx.fillStyle = amber; ctx.font = '900 210px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(String(days), 540, 424);
-  ctx.fillStyle = main; ctx.font = '800 39px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.title, 540, 500);
-  ctx.fillStyle = muted; ctx.font = '600 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(paused ? copy.paused : copy.active, 540, 552);
+  ctx.fillStyle = '#fff'; ctx.font = '900 190px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(String(days), 540, 468);
+  ctx.font = '800 34px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.title, 540, 526);
+  ctx.fillStyle = '#fdf7ff'; ctx.font = '600 23px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(paused ? copy.paused : copy.active, 540, 570);
   ctx.textAlign = 'left';
 
   roundedRect(ctx, 72, 680, 936, 450, 38); ctx.fillStyle = panel; ctx.fill(); ctx.strokeStyle = border; ctx.lineWidth = 2; ctx.stroke();
