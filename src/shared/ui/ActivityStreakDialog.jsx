@@ -51,7 +51,7 @@ export default function ActivityStreakDialog({
   const copy = {
     title: t('streakModalTitle'), account: t('streakAccount'), active: t('streakStatusActive'), paused: t('streakStatusPaused'),
     share: t('streakShare'), save: t('streakSaveImage'), close: t('streakClose'), preparing: t('streakPreparing'),
-    inviteTitle: t('streakInviteTitle'), inviteBody: t('streakInviteBody'), inviteHint: t('streakInviteHint'),
+    inviteTitle: t('streakInviteTitle'), inviteBody: t('streakInviteBody'), inviteHint: t('streakInviteHint'), proBadge: t('streakProBadge'),
     shareText: t('streakShareText'), error: t('streakShareError'),
   };
 
@@ -104,22 +104,19 @@ export default function ActivityStreakDialog({
 
   async function share() {
     if (!shareBlob) return;
-    const file = new File([shareBlob], `dayris-streak-${days}.png`, { type: 'image/png' });
     const code = shareCode;
     const url = new URL('/?install=1', window.location.origin);
     if (code) url.searchParams.set('ref', code);
     try {
-      if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
-        await navigator.share({ title: copy.title, text: copy.shareText.replace('{0}', String(days)), url: url.toString(), files: [file] });
-      } else if (navigator.share) {
+      if (navigator.share) {
         await navigator.share({ title: copy.title, text: copy.shareText.replace('{0}', String(days)), url: url.toString() });
-        download();
       } else {
         try { await navigator.clipboard.writeText(url.toString()); } catch { /* download remains available */ }
-        download();
       }
     } catch (error) {
-      if (error?.name !== 'AbortError') download();
+      if (error?.name !== 'AbortError') {
+        try { await navigator.clipboard.writeText(url.toString()); } catch { /* keep the dialog open */ }
+      }
     }
   }
 
@@ -191,21 +188,32 @@ async function createShareBlob({ days, account, paused, code, isLight, copy }) {
   ctx.fillStyle = glow; ctx.fillRect(320, 0, 760, 800);
   drawBrandIcon(ctx, brandIcon, 72, 68, 86);
   ctx.fillStyle = main; ctx.font = '700 40px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText('DAYRIS', 180, 113);
-  ctx.fillStyle = amber; ctx.font = '700 19px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.title.toUpperCase(), 180, 146);
-  ctx.textAlign = 'center';
-  ctx.fillStyle = amber; ctx.font = '900 230px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(String(days), 540, 450);
-  ctx.fillStyle = main; ctx.font = '800 43px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.title, 540, 520);
-  ctx.fillStyle = muted; ctx.font = '600 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(account, 540, 574);
+  ctx.fillStyle = amber; ctx.font = '700 19px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText('STREAK', 180, 146);
+  roundedRect(ctx, 786, 77, 222, 54, 27); ctx.fillStyle = dark ? 'rgba(245,185,31,.13)' : '#fff4cb'; ctx.fill();
+  ctx.fillStyle = amber; ctx.font = '800 18px ui-monospace, SFMono-Regular, Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillText('DAYRIS · 01', 897, 111);
   ctx.textAlign = 'left';
-  roundedRect(ctx, 72, 640, 936, 174, 34); ctx.fillStyle = panel; ctx.fill(); ctx.strokeStyle = border; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = paused ? muted : amber; ctx.font = '800 35px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(paused ? copy.paused : copy.active, 116, 710);
-  ctx.fillStyle = muted; ctx.font = '500 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; wrapText(ctx, copy.inviteBody, 116, 762, 820, 32, 2);
-  roundedRect(ctx, 72, 866, 936, 340, 38); ctx.fillStyle = panel; ctx.fill(); ctx.strokeStyle = border; ctx.lineWidth = 2; ctx.stroke();
-  roundedRect(ctx, 112, 906, 260, 260, 24); ctx.fillStyle = '#fff'; ctx.fill();
+
+  // Hero: a clean, shareable focus on the achievement — no private account data.
+  roundedRect(ctx, 72, 196, 936, 438, 42); ctx.fillStyle = panel; ctx.fill(); ctx.strokeStyle = border; ctx.lineWidth = 2; ctx.stroke();
+  const heroGlow = ctx.createRadialGradient(540, 360, 0, 540, 360, 300);
+  heroGlow.addColorStop(0, dark ? 'rgba(245,185,31,.20)' : 'rgba(245,185,31,.15)'); heroGlow.addColorStop(1, 'rgba(245,185,31,0)');
+  ctx.fillStyle = heroGlow; ctx.fill();
+  ctx.beginPath(); ctx.arc(540, 365, 145, -.82, Math.PI * 1.28); ctx.strokeStyle = dark ? 'rgba(245,185,31,.20)' : 'rgba(217,119,6,.18)'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.beginPath(); ctx.arc(540, 365, 145, 2.1, Math.PI * 1.74); ctx.strokeStyle = amber; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.stroke();
+  ctx.textAlign = 'center';
+  ctx.fillStyle = amber; ctx.font = '900 210px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(String(days), 540, 424);
+  ctx.fillStyle = main; ctx.font = '800 39px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.title, 540, 500);
+  ctx.fillStyle = muted; ctx.font = '600 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(paused ? copy.paused : copy.active, 540, 552);
+  ctx.textAlign = 'left';
+
+  roundedRect(ctx, 72, 680, 936, 450, 38); ctx.fillStyle = panel; ctx.fill(); ctx.strokeStyle = border; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = amber; ctx.font = '800 35px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.inviteTitle, 116, 750);
+  ctx.fillStyle = main; ctx.font = '800 31px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.proBadge, 116, 800);
+  roundedRect(ctx, 112, 844, 282, 244, 24); ctx.fillStyle = '#fff'; ctx.fill();
   const inviteUrl = new URL('/?install=1', window.location.origin); if (code) inviteUrl.searchParams.set('ref', code);
-  drawQrToCanvas(ctx, createQrMatrix(inviteUrl.toString()), 130, 924, 224, { foreground: '#09090b', background: '#fff' });
-  ctx.fillStyle = main; ctx.font = '800 31px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; wrapText(ctx, copy.inviteTitle, 430, 966, 510, 42, 3);
-  ctx.fillStyle = muted; ctx.font = '500 23px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; wrapText(ctx, copy.inviteHint, 430, 1100, 510, 32, 3);
+  drawQrToCanvas(ctx, createQrMatrix(inviteUrl.toString()), 134, 856, 238, { foreground: '#09090b', background: '#fff' });
+  ctx.fillStyle = muted; ctx.font = '500 23px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; wrapText(ctx, copy.inviteBody, 466, 870, 470, 34, 4);
+  ctx.fillStyle = main; ctx.font = '700 23px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; wrapText(ctx, copy.inviteHint, 466, 1030, 470, 32, 3);
   ctx.fillStyle = amber; roundedRect(ctx, 72, 1272, 72, 5, 3); ctx.fill();
   ctx.fillStyle = muted; ctx.font = '600 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText('© DAYRIS', 160, 1281);
   return new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('IMAGE_EXPORT_FAILED')), 'image/png', .96));
