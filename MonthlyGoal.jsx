@@ -96,7 +96,6 @@ function MonthlyGoalForMonth({
   language,
   isLight,
   userId,
-  onProgress,
 }) {
   const copy = COPY[resolveLanguage(language)];
   const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
@@ -132,7 +131,6 @@ function MonthlyGoalForMonth({
   const progress = goal > 0 ? Math.min(100, Math.max(0, (positiveProgress / goal) * 100)) : 0;
   const remaining = goal > 0 ? Math.max(0, goal - netPnl) : 0;
   const achieved = goal > 0 && netPnl >= goal;
-  useEffect(()=>{onProgress?.({progress,goal,achieved});},[progress,goal,achieved,onProgress]);
 
   useEffect(() => {
     let reduceMotion = false;

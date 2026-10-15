@@ -446,9 +446,6 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
           wrapper.dataset.sourceWeek = String(source);
           wrapper.dataset.rowArrival = String(rowArrival);
           face.style.borderRadius = `${target.radius}px`;
-          // The live calendar may use a translucent depth surface. Preserve
-          // its measured paint even if a copied shorthand still has old alpha.
-          face.style.setProperty('background-color',target.background,'important');
           face.style.setProperty('opacity', String(skin * opacity), 'important');
           const materialization = lifeCellMaterialization(time, index, todayIndex);
           content.forEach(({ node, transform, opacity }) => {

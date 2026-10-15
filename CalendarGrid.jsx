@@ -25,8 +25,6 @@ export default function CalendarGrid({
   notes = {},
   noteLabel,
   language = 'ru',
-  monthDepth,
-  monthLensOpen = false,
   firstEntryLabel,
   firstEntryDayLabel,
   lifeArrival = false,
@@ -73,12 +71,10 @@ export default function CalendarGrid({
   }, [cells]);
   const animClass = swipeArrival.current ? '' : slideDirection === 'next' ? 'animate-slide-next' : slideDirection === 'prev' ? 'animate-slide-prev' : '';
   return (
-    <div className="calendar-pages-viewport" data-pro={proView} data-light={isLight} data-month-lens={monthLensOpen} data-has-depth={Boolean(monthDepth)}>
-      {monthDepth}
+    <div className="calendar-pages-viewport" data-pro={proView} data-light={isLight}>
       <div className="calendar-motion-light" aria-hidden="true" />
     <section
       ref={surfaceRef}
-      inert={monthLensOpen ? '' : undefined}
       data-dragging={Boolean(touchDrag.axis) && !touchDrag.settling}
       data-settling={Boolean(touchDrag.settling)}
       data-calendar-fit="true"

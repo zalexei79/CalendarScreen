@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { transitionView } from './src/shared/ui/transitionView';
 import './src/shared/ui/GlassSystem.css';
 import {
   ChevronLeft, ChevronRight, Link2, LogOut, Download, Smartphone, Monitor, Wifi, Cloud,
-  Settings, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw, SlidersHorizontal, Wallet, ChartNoAxesCombined, Calendar,
+  Settings, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw,
 } from 'lucide-react';
 
 import CalendarCurrencyPicker from './src/shared/ui/CalendarCurrencyPicker.jsx';
@@ -11,10 +11,9 @@ import SettingsPanel from './src/shared/ui/SettingsPanel.jsx';
 import { monthsFor } from './src/shared/i18n';
 import BrandIcon from './src/shared/ui/BrandIcon.jsx';
 import AnimatedMonthLabel from './src/shared/ui/AnimatedMonthLabel.jsx';
-import { WorkspaceModeSelector } from './src/features/pro/WorkspaceModePanel.jsx';
+import WorkspaceModePanel, { WorkspaceModeSelector } from './src/features/pro/WorkspaceModePanel.jsx';
 import './src/shared/ui/HeaderCompact.css';
-import {MonthDepthTrigger} from './src/shared/ui/CalendarMonthDepth.jsx';
-import ProWorkspaceActions from './src/features/pro/ProWorkspaceActions.jsx';
+import CalendarMonthBrief from './src/shared/ui/CalendarMonthBrief.jsx';
 import LoginButtons from './src/features/auth/LoginButtons.jsx';
 import ActivityStreak from './src/shared/ui/ActivityStreak.jsx';
 
@@ -48,7 +47,6 @@ export default function Header({
   platformFilter, platformOptions = [], calendarTypeFilter, setCalendarTypeFilter,
   periodStats, periodTrades = [], currencySymbol = '$', formatMoney,
   monthSummary,
-  monthLensOpen = false, onToggleMonthLens = () => {},
   proAccessActive = false, proAccessLoading = false, proAccessUntil = null,
   proView = false, setProView = () => {},
   openReferralHub = () => {}, openProPresentation = () => {}, invitedCount = 0, referralLabel = 'Invites',
@@ -59,15 +57,6 @@ export default function Header({
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
   const [syncIssueOpen, setSyncIssueOpen] = useState(false);
   const [retryingSync, setRetryingSync] = useState(false);
-  const [toolsOpen,setToolsOpen] = useState(false);
-  const toolsRef=useRef(null);
-  useEffect(()=>{
-    if(!toolsOpen)return;
-    const outside=event=>{if(!toolsRef.current?.contains(event.target))setToolsOpen(false);};
-    const key=event=>{if(event.key==='Escape'){event.stopPropagation();setToolsOpen(false);toolsRef.current?.querySelector('button')?.focus();}};
-    document.addEventListener('pointerdown',outside);document.addEventListener('keydown',key,true);
-    return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',key,true);};
-  },[toolsOpen]);
 
   async function retrySync() {
     setRetryingSync(true);
@@ -242,14 +231,8 @@ export default function Header({
             </div>
           )}
 
-          <div className="header-tools" ref={toolsRef}>
-            <button type="button" className="header-tools-trigger" aria-expanded={toolsOpen} aria-controls="header-tools-panel" aria-label={language==='ru'?'Инструменты DAYRIS':language==='en'?'DAYRIS tools':['ro','md'].includes(language)?'Instrumente DAYRIS':'DAYRIS 工具'} onClick={()=>setToolsOpen(value=>!value)}><SlidersHorizontal size={17}/>{traderMode&&<i/>}</button>
-            {toolsOpen&&<div id="header-tools-panel" className={`header-tools-panel workspace-mode-group ${isLight?'pro-light':''}`}>
-              <WorkspaceModeSelector proView={proView} onModeChange={() => setProView(value => !value)} language={language} t={t} onOffer={()=>{setToolsOpen(false);openProPresentation();}}/>
-              <ProWorkspaceActions visible={proView} inPanel isLight={isLight} language={language} currency={currency} t={t} traderMode={traderMode}
-                onTraderChange={()=>setTraderMode(value=>{if(value)setPlatformFilter('ALL');return !value;})}
-                onConnect={platform=>{setToolsOpen(false);openConnectModal(platform);}} connected={ctraderConnected} metatrader={metaTraderState} reconnect={ctraderReconnect} onOffer={openProPresentation}/>
-            </div>}
+          <div className={`header-mode-control workspace-mode-group ${isLight ? 'pro-light' : ''}`}>
+            <WorkspaceModeSelector proView={proView} onModeChange={() => setProView(value => !value)} language={language} t={t} onOffer={openProPresentation}/>
           </div>
 
           {/* Settings gear */}
@@ -364,8 +347,6 @@ export default function Header({
 
           <CalendarCurrencyPicker currency={currency} onChange={setCurrency} usedCurrencies={usedCurrencies} language={language} isLight={isLight} onOpen={() => { setMonthMenuOpen(false); setYearMenuOpen(false); }}/>
 
-          {monthSummary&&<MonthDepthTrigger summary={monthSummary} currency={currency} language={language} traderMode={traderMode} open={monthLensOpen} onToggle={onToggleMonthLens}/>}
-
           {(month !== today.getMonth() || year !== today.getFullYear()) && (
             <button
               type="button"
@@ -409,16 +390,27 @@ export default function Header({
           </div>
 
           {/* The workspace selector is separate from server-side PRO entitlement. */}
-          <nav className="dayris-workspace-nav" aria-label={t('calendarLabel')}>
-            <button type="button" aria-current="page" onClick={()=>setSelectedKey(null)}><Calendar size={14}/><span>{t('calendarLabel')}</span></button>
-            <button type="button" onClick={()=>changeAccountMode('wallet')} disabled={proAccessLoading}><Wallet size={14}/><span>{t('walletLabel')}</span></button>
-            <button type="button" onClick={onOpenCapital} disabled={proAccessLoading}><ChartNoAxesCombined size={14}/><span>{language==='ru'?'Инвестиции':language==='en'?'Investments':['ro','md'].includes(language)?'Investiții':'投资'}</span></button>
-          </nav>
+          <div className="dayris-workspace-slot">
+            <WorkspaceModePanel
+              hideSelector proView={proView} onModeChange={() => setProView((value) => !value)} isLight={isLight}
+              language={language} currency={currency} t={t} traderMode={traderMode}
+              onTraderChange={() => setTraderMode((value) => {
+                const next = !value;
+                if (!next) setPlatformFilter('ALL');
+                return next;
+              })}
+              onWallet={() => changeAccountMode('wallet')} onCapital={onOpenCapital}
+              walletAccess={proAccessActive} walletLoading={proAccessLoading}
+              onConnect={openConnectModal} connected={ctraderConnected}
+              metatrader={metaTraderState} reconnect={ctraderReconnect}
+              onOffer={openProPresentation}
+            />
+          </div>
         </div>
       </div>
 
       {/* Trader Mode tools slide out only after the separate Trader Mode switch is enabled. */}
-
+      {monthSummary && <CalendarMonthBrief summary={monthSummary} currency={currency} language={language} traderMode={traderMode} isLight={isLight} filtered={platformFilter!=='ALL'||calendarTypeFilter!=='all'}/>}
       <div className="hidden" aria-hidden="true">
         <div className={`min-h-0 ${traderMode && accountMode === 'main' ? 'overflow-visible' : 'overflow-hidden'}`}>
           {/* Mobile keeps PRO useful without pushing the calendar below the fold. */}
