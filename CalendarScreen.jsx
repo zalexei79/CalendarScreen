@@ -120,6 +120,7 @@ import { readWorkspace, writeWorkspace, clearWorkspace } from './src/shared/lib/
 import ProOffer from './src/features/pro/ProOffer.jsx';
 import ProGrantNotice from './src/features/pro/ProGrantNotice.jsx';
 import ConnectionStatus from './src/shared/ui/ConnectionStatus.jsx';
+import ActivityStreakDialog from './src/shared/ui/ActivityStreakDialog.jsx';
 
 export default function CalendarScreen() {
   useWorkspaceViewport();
@@ -2935,6 +2936,7 @@ export default function CalendarScreen() {
   const [referralShareBusy, setReferralShareBusy] = useState(false);
   const [referralShareUrl, setReferralShareUrl] = useState('');
   const referralShareBlobRef = useRef(null);
+  const [activityStreak, setActivityStreak] = useState(null);
 
   // Keyboard navigation for PC (ArrowLeft / ArrowRight to switch months)
   useEffect(() => {
@@ -4716,6 +4718,7 @@ export default function CalendarScreen() {
         failedSyncCount={failedSyncCount} retryFailedSync={retryFailedSync}
         proAccessActive={proAccessActive} proAccessLoading={proAccessLoading} proAccessUntil={proAccessUntil}
         openReferralHub={openReferralHub} openProPresentation={openProPresentation} invitedCount={invitedCount} referralLabel={proAccessCopy.invitesTab}
+        onOpenActivityStreak={setActivityStreak}
         periodStats={periodStats} periodTrades={periodTrades} currencySymbol={currencySymbol} formatMoney={formatMoney}
       />}
 
@@ -7675,6 +7678,18 @@ export default function CalendarScreen() {
           </SwipeDismissSheet>
         </div>
       )}
+
+      <ActivityStreakDialog
+        open={Boolean(activityStreak)}
+        streak={activityStreak}
+        user={user}
+        isLight={isLight}
+        language={language}
+        t={t}
+        referralCode={referralCode}
+        ensureReferralCode={ensureReferralCode}
+        onClose={() => setActivityStreak(null)}
+      />
 
       {/* SHARE RESULTS — native image preview + Web Share API */}
       {historyShareOpen && (

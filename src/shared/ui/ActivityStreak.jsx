@@ -3,7 +3,7 @@ import { Flame } from 'lucide-react';
 import { readAndUpdateActivityStreak } from '../lib/activityStreak.js';
 import './ActivityStreak.css';
 
-export default function ActivityStreak({ ownerId, isLight, t }) {
+export default function ActivityStreak({ ownerId, isLight, t, onOpen }) {
   const [streak, setStreak] = useState(null);
 
   useEffect(() => {
@@ -19,15 +19,17 @@ export default function ActivityStreak({ ownerId, isLight, t }) {
     : (t('streakTitle') || 'Огонёк входов: {0} дней').replace('{0}', days);
 
   return (
-    <div
+    <button
+      type="button"
+      onClick={() => onOpen?.(streak)}
       className={`activity-streak ${isLight ? 'activity-streak-light' : ''} ${streak.paused ? 'activity-streak-paused' : ''}`}
-      role="status"
+      aria-haspopup="dialog"
       aria-label={title}
       title={title}
     >
       <Flame className="activity-streak-icon" aria-hidden="true" />
       <span className="activity-streak-value">{label}</span>
       {streak.paused && <span className="activity-streak-pause">· {t('streakPauseShort')}</span>}
-    </div>
+    </button>
   );
 }

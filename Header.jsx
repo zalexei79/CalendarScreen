@@ -52,6 +52,7 @@ export default function Header({
   openReferralHub = () => {}, openProPresentation = () => {}, invitedCount = 0, referralLabel = 'Invites',
   accountMode = 'main', setAccountMode = () => {}, onOpenCapital,
   onReplayLifeStory, onRestartOnboarding,
+  onOpenActivityStreak = () => {},
 }) {
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
   const [syncIssueOpen, setSyncIssueOpen] = useState(false);
@@ -121,7 +122,7 @@ export default function Header({
               {t('titleMoney')}
             </p>
           </div>
-          <ActivityStreak ownerId={user?.id} isLight={isLight} t={t} />
+          <ActivityStreak ownerId={user?.id} isLight={isLight} t={t} onOpen={onOpenActivityStreak} />
         </div>
 
         {/* Action controls: [ Download ] [ Theme ] [ Settings ] */}

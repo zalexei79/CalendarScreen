@@ -3,7 +3,11 @@
   border:1px solid rgba(251,146,60,.24); border-radius:999px; color:#fdba74;
   background:rgba(251,146,60,.08); font:600 10px/1.1 ui-sans-serif,system-ui,sans-serif;
   white-space:nowrap; letter-spacing:.01em; animation:activity-streak-in 420ms cubic-bezier(.22,1,.36,1) both;
+  cursor:pointer; transition:transform 160ms cubic-bezier(.2,0,0,1), box-shadow 160ms ease, border-color 160ms ease;
 }
+.activity-streak:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(251,146,60,.12); border-color:rgba(251,146,60,.42); }
+.activity-streak:active { transform:scale(.97); }
+.activity-streak:focus-visible { outline:2px solid #fbbf24; outline-offset:3px; }
 .activity-streak-light { color:#c2410c; border-color:rgba(234,88,12,.2); background:rgba(251,146,60,.09); }
 .activity-streak-paused { color:#a1a1aa; border-color:rgba(161,161,170,.24); background:rgba(161,161,170,.08); }
 .activity-streak-icon { width:14px; height:14px; fill:currentColor; stroke-width:1.8; }
@@ -11,4 +15,4 @@
 .activity-streak-pause { opacity:.82; font-weight:500; }
 @keyframes activity-streak-in { from { opacity:0; transform:translateY(-3px) scale(.96); } to { opacity:1; transform:none; } }
 @media(max-width:430px) { .activity-streak { padding:0 7px; } .activity-streak-pause { display:none; } }
-@media(prefers-reduced-motion:reduce) { .activity-streak { animation:none; } }
+@media(prefers-reduced-motion:reduce) { .activity-streak { animation:none; transition:none; } .activity-streak:hover,.activity-streak:active { transform:none; } }
