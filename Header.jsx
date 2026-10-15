@@ -16,6 +16,7 @@ import './src/shared/ui/HeaderCompact.css';
 import CalendarMonthBrief from './src/shared/ui/CalendarMonthBrief.jsx';
 import LoginButtons from './src/features/auth/LoginButtons.jsx';
 import ActivityStreak from './src/shared/ui/ActivityStreak.jsx';
+import AdminCalendarLink from './src/features/admin/AdminCalendarLink.jsx';
 
 function pendingSyncText(count, traderMode, language) {
   if (String(language).startsWith('zh')) return `${count} ${traderMode ? '笔交易' : '条记录'}等待同步。`;
@@ -127,6 +128,7 @@ export default function Header({
 
         {/* Action controls: [ Download ] [ Theme ] [ Settings ] */}
         <div data-site-element="actions" className="flex items-center gap-1.5 shrink-0">
+          <AdminCalendarLink user={user} language={language} isLight={isLight}/>
           {/* Install is useful in the browser, not inside the installed app. */}
           {!isPwaInstalled && <div className="relative shrink-0 block" ref={installInfoRef}>
             <button

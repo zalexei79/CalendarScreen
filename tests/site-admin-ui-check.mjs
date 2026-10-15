@@ -70,6 +70,18 @@ try {
     const button = document.querySelector('[data-site-element="settings"]');
     return button && Math.round(button.getBoundingClientRect().width) === 60;
   });
+  const adminLink = publicPage.getByRole('link',{name:'Админ-панель',exact:true});
+  await adminLink.waitFor();
+  assert.equal(await adminLink.getAttribute('href'),'/admin.html');
+  assert.equal(await adminLink.getAttribute('target'),null,'calendar entry must reuse the current session in the same tab');
+  for (const width of [320,390,1440]) {
+    await publicPage.setViewportSize({width,height:844});
+    assert.equal(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`owner header fits at ${width}px`);
+  }
+  await publicPage.screenshot({path:'tests/admin-calendar-entry.png'});
+  await adminLink.click();
+  await publicPage.getByRole('heading',{name:'Пользователи',exact:true}).waitFor();
+  assert.equal(new URL(publicPage.url()).pathname,'/admin.html');
   await publicPage.close();
   await page.getByRole('button', { name: 'ПК', exact: true }).click();
   assert.equal(await page.getByLabel('Ширина', { exact: true }).inputValue(), '');
@@ -84,6 +96,10 @@ try {
   await page.getByRole('heading',{name:'Нужен доступ к данным пользователей',exact:true}).waitFor();
   assert.equal(await page.getByRole('button', { name: 'Опубликовать', exact: true }).count(), 0);
   assert.equal(await page.getByRole('button', { name: 'Сохранить черновик', exact: true }).count(), 0);
+  await page.goto('http://calendar.test/');
+  await page.locator('.dayris-header').waitFor();
+  await page.waitForFunction(()=>document.querySelector('style[data-dayris-site-config]'));
+  assert.equal(await page.getByRole('link',{name:'Админ-панель',exact:true}).count(),0,'ordinary users do not see the admin entry');
   assert.deepEqual(errors, []);
   console.log('PASS: real iframe preview, independent device configuration, cloud draft/publish protocol and public runtime (mock backend), non-admin controls, mobile layout; no page errors.');
 } finally { await browser.close(); }

@@ -1,0 +1,6 @@
+.calendar-admin-link { display:inline-flex; flex-shrink:0; align-items:center; justify-content:center; gap:5px; min-height:40px; padding:0 8px; border:1px solid #fbbf2452; border-radius:12px; background:#fbbf2410; color:#fcd56f; text-decoration:none; font:600 11px/1.2 system-ui,sans-serif; white-space:nowrap; }
+.calendar-admin-link.is-light { color:#855b08; background:#fffbeb; border-color:#d6b461; }
+.calendar-admin-link:hover { background:#fbbf2426; }
+.calendar-admin-link:focus-visible { outline:2px solid #fbbf24; outline-offset:3px; }
+.calendar-admin-full { display:none; }
+@media(min-width:640px) { .calendar-admin-short { display:none; } .calendar-admin-full { display:inline; } .calendar-admin-link { padding:0 10px; } }
