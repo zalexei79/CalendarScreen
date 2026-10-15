@@ -79,7 +79,7 @@ export default function ActivityStreakDialog({
   const activeCode = referralCode || '';
   const [shareCode, setShareCode] = useState(activeCode);
   const copy = {
-    title: t('streakModalTitle'), account: t('streakAccount'), active: t('streakStatusActive'), paused: t('streakStatusPaused'),
+    title: t('streakModalTitle'), cardHeadline: t('streakCardHeadline'), proudLine: t('streakProudLine'), account: t('streakAccount'), active: t('streakStatusActive'), paused: t('streakStatusPaused'),
     share: t('streakShare'), save: t('streakSavePhoto'), close: t('streakClose'), preparing: t('streakPreparing'),
     inviteTitle: t('streakInviteTitle'), inviteBody: t('streakInviteBody'), inviteHint: t('streakInviteHint'), proBadge: t('streakProBadge'),
     shareText: t('streakShareText'), error: t('streakShareError'),
@@ -236,39 +236,41 @@ async function createShareBlob({ days, account, paused, code, isLight, copy }) {
   gradient.addColorStop(1, '#17102b');
   ctx.fillStyle = gradient; ctx.fillRect(0, 0, 1080, 1350);
   drawTechGrid(ctx);
-  const cyanGlow = ctx.createRadialGradient(160, 240, 0, 160, 240, 360); cyanGlow.addColorStop(0, 'rgba(103,239,255,.17)'); cyanGlow.addColorStop(1, 'rgba(103,239,255,0)'); ctx.fillStyle = cyanGlow; ctx.fillRect(0, 0, 520, 620);
-  const violetGlow = ctx.createRadialGradient(920, 820, 0, 920, 820, 430); violetGlow.addColorStop(0, 'rgba(167,139,250,.16)'); violetGlow.addColorStop(1, 'rgba(167,139,250,0)'); ctx.fillStyle = violetGlow; ctx.fillRect(500, 480, 580, 650);
+  const cyanGlow = ctx.createRadialGradient(160, 240, 0, 160, 240, 330); cyanGlow.addColorStop(0, 'rgba(103,239,255,.12)'); cyanGlow.addColorStop(1, 'rgba(103,239,255,0)'); ctx.fillStyle = cyanGlow; ctx.fillRect(0, 0, 480, 520);
+  const violetGlow = ctx.createRadialGradient(900, 760, 0, 900, 760, 380); violetGlow.addColorStop(0, 'rgba(167,139,250,.11)'); violetGlow.addColorStop(1, 'rgba(167,139,250,0)'); ctx.fillStyle = violetGlow; ctx.fillRect(560, 420, 520, 560);
   drawConfetti(ctx);
   drawBrandIcon(ctx, brandIcon, 72, 68, 86);
   ctx.fillStyle = main; ctx.font = '700 40px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText('DAYRIS', 180, 113);
-  ctx.fillStyle = amber; ctx.font = '700 19px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText('STREAK', 180, 146);
+  ctx.fillStyle = amber; ctx.font = '700 19px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText('MY STREAK', 180, 146);
   roundedRect(ctx, 786, 77, 222, 54, 27); ctx.fillStyle = 'rgba(103,239,255,.08)'; ctx.fill(); ctx.strokeStyle = 'rgba(103,239,255,.35)'; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = cyan; ctx.font = '800 17px ui-monospace, SFMono-Regular, Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillText('STREAK // LIVE', 897, 111);
+  ctx.fillStyle = cyan; ctx.font = '800 17px ui-monospace, SFMono-Regular, Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillText(`${String(days).padStart(3, '0')} DAYS`, 897, 111);
   ctx.textAlign = 'left';
 
   // Hero: a clean, shareable focus on the achievement — no private account data.
-  roundedRect(ctx, 72, 196, 936, 438, 42);
-  const hero = ctx.createLinearGradient(72, 196, 1008, 634); hero.addColorStop(0, '#121f35'); hero.addColorStop(.55, '#18243b'); hero.addColorStop(1, '#24173c');
+  roundedRect(ctx, 64, 196, 952, 654, 44);
+  const hero = ctx.createLinearGradient(64, 196, 1016, 850); hero.addColorStop(0, '#111f34'); hero.addColorStop(.56, '#162943'); hero.addColorStop(1, '#211737');
   ctx.fillStyle = hero; ctx.fill(); ctx.strokeStyle = 'rgba(103,239,255,.35)'; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = 'rgba(103,239,255,.7)'; ctx.fillRect(112, 232, 62, 3); ctx.fillStyle = 'rgba(255,184,77,.8)'; ctx.fillRect(182, 232, 24, 3);
-  drawFlameSticker(ctx, 540, 286, 1.02);
-  ctx.beginPath(); ctx.arc(540, 373, 150, -.85, Math.PI * 1.28); ctx.strokeStyle = 'rgba(103,239,255,.18)'; ctx.lineWidth = 3; ctx.stroke();
-  ctx.beginPath(); ctx.arc(540, 373, 150, 2.1, Math.PI * 1.72); ctx.strokeStyle = amber; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.stroke();
+  ctx.fillStyle = 'rgba(103,239,255,.7)'; ctx.fillRect(112, 234, 62, 3); ctx.fillStyle = 'rgba(255,184,77,.8)'; ctx.fillRect(182, 234, 24, 3);
+  ctx.fillStyle = cyan; ctx.font = '700 18px ui-monospace, SFMono-Regular, Menlo, monospace'; ctx.textAlign = 'left'; ctx.fillText('DAILY MOMENTUM', 112, 282);
+  drawFlameSticker(ctx, 540, 308, .86);
+  ctx.beginPath(); ctx.arc(540, 462, 212, -.85, Math.PI * 1.28); ctx.strokeStyle = 'rgba(103,239,255,.15)'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.beginPath(); ctx.arc(540, 462, 212, 2.1, Math.PI * 1.72); ctx.strokeStyle = amber; ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.stroke();
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#fff'; ctx.font = '900 190px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(String(days), 540, 468);
-  ctx.font = '800 34px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.title, 540, 526);
-  ctx.fillStyle = cyan; ctx.font = '600 23px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(paused ? copy.paused : copy.active, 540, 570);
+  ctx.fillStyle = '#fff'; ctx.font = '900 265px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(String(days), 540, 568);
+  ctx.font = '800 38px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.cardHeadline, 540, 654);
+  ctx.fillStyle = cyan; ctx.font = '600 25px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.proudLine.replace('{0}', String(days)), 540, 704);
+  ctx.fillStyle = paused ? muted : amber; ctx.font = '600 21px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(paused ? copy.paused : copy.active, 540, 760);
   ctx.textAlign = 'left';
 
-  roundedRect(ctx, 72, 680, 936, 450, 38); ctx.fillStyle = 'rgba(16,27,42,.92)'; ctx.fill(); ctx.strokeStyle = border; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = amber; ctx.font = '800 35px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.inviteTitle, 116, 750);
-  ctx.fillStyle = main; ctx.font = '800 31px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.proBadge, 116, 800);
-  roundedRect(ctx, 112, 844, 282, 244, 24); ctx.fillStyle = '#f7fbff'; ctx.fill(); ctx.strokeStyle = 'rgba(103,239,255,.5)'; ctx.lineWidth = 2; ctx.stroke();
+  roundedRect(ctx, 64, 892, 952, 306, 36); ctx.fillStyle = 'rgba(16,27,42,.94)'; ctx.fill(); ctx.strokeStyle = border; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = amber; ctx.font = '800 34px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.proBadge, 112, 968);
+  ctx.fillStyle = main; ctx.font = '800 31px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.inviteTitle, 112, 1022);
+  ctx.fillStyle = muted; ctx.font = '500 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; wrapText(ctx, copy.inviteBody, 112, 1070, 470, 31, 2);
+  roundedRect(ctx, 774, 930, 190, 226, 22); ctx.fillStyle = '#f7fbff'; ctx.fill(); ctx.strokeStyle = 'rgba(103,239,255,.5)'; ctx.lineWidth = 2; ctx.stroke();
   const inviteUrl = new URL('/?install=1', window.location.origin); if (code) inviteUrl.searchParams.set('ref', code);
-  drawQrToCanvas(ctx, createQrMatrix(inviteUrl.toString()), 134, 856, 238, { foreground: '#09090b', background: '#fff' });
-  ctx.fillStyle = muted; ctx.font = '500 23px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; wrapText(ctx, copy.inviteBody, 466, 870, 470, 34, 4);
-  ctx.fillStyle = main; ctx.font = '700 23px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; wrapText(ctx, copy.inviteHint, 466, 1030, 470, 32, 3);
-  ctx.fillStyle = amber; roundedRect(ctx, 72, 1272, 72, 5, 3); ctx.fill();
-  ctx.fillStyle = muted; ctx.font = '600 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText('© DAYRIS', 160, 1281);
+  drawQrToCanvas(ctx, createQrMatrix(inviteUrl.toString()), 789, 945, 160, { foreground: '#09090b', background: '#fff' });
+  ctx.fillStyle = cyan; ctx.font = '600 16px ui-monospace, SFMono-Regular, Menlo, monospace'; ctx.fillText('SCAN // JOIN', 112, 1150);
+  ctx.fillStyle = amber; roundedRect(ctx, 64, 1260, 72, 5, 3); ctx.fill();
+  ctx.fillStyle = muted; ctx.font = '600 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText('DAYRIS / EVERY DAY MATTERS', 152, 1270);
   return new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('IMAGE_EXPORT_FAILED')), 'image/png', .96));
 }
