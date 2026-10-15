@@ -41,13 +41,13 @@ export default function ActivityStreakDialog({
   const [busy, setBusy] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
   const [shareBlob, setShareBlob] = useState(null);
-  const [shareCode, setShareCode] = useState(activeCode);
   const [shareError, setShareError] = useState('');
   const blobUrlRef = useRef('');
 
   const days = Math.max(1, Number(streak?.currentStreak) || 1);
   const account = accountName(user);
   const activeCode = referralCode || '';
+  const [shareCode, setShareCode] = useState(activeCode);
   const copy = {
     title: t('streakModalTitle'), account: t('streakAccount'), active: t('streakStatusActive'), paused: t('streakStatusPaused'),
     share: t('streakShare'), save: t('streakSaveImage'), close: t('streakClose'), preparing: t('streakPreparing'),
