@@ -10,7 +10,7 @@ try{
  await page.addInitScript(()=>{
   window.autoStart=false;window.starts=0;window.audioContexts=0;window.ttsCalls=0;window.watchdogs=[];
   const nativeTimeout=window.setTimeout.bind(window);window.setTimeout=(cb,ms,...args)=>{if(ms===8000){watchdogs.push(cb);return nativeTimeout(()=>{},60000);}if([900,1600,1900,20000].includes(ms))return nativeTimeout(()=>{},60000);return nativeTimeout(cb,ms,...args);};
-  window.SpeechRecognition=window.webkitSpeechRecognition=class{constructor(){window.voice=this;}start(){starts++;if(autoStart)this.onstart?.();}abort(){this.aborted=true;}};
+  window.SpeechRecognition=window.webkitSpeechRecognition=class{constructor(){window.voice=this;}start(){starts++;if(autoStart)this.onstart?.();}abort(){this.aborted=true;queueMicrotask(()=>this.onend?.());}};
   window.AudioContext=class{constructor(){audioContexts++;}};
   window.SpeechSynthesisUtterance=class{constructor(text){this.text=text;}};
   Object.defineProperty(window,'speechSynthesis',{value:{getVoices:()=>[{voiceURI:'ru',name:'Russian',lang:'ru-RU'}],speak:()=>ttsCalls++,cancel:()=>{}}});

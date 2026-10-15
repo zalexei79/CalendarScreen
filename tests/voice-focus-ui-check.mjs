@@ -22,8 +22,8 @@ try {
  assert.equal(await page.locator('.voice-workspace-settings').count(),0,'No settings while recording');
  assert.equal(await page.locator('.voice-workspace-instruction').isVisible(),false);
  await page.evaluate(()=>setPause(true));
- await page.locator('.voice-workspace-hints').waitFor();
- assert.equal(await page.locator('.voice-workspace-settings').isVisible(),true,'Settings and hints are available on a pause');
+ assert.equal(await page.locator('.voice-workspace-hints').count(),0,'A brief speech pause never rebuilds the capture layout');
+ assert.equal(await page.locator('.voice-workspace-settings').count(),0,'Settings stay behind the explicit help control while listening');
  await page.evaluate(()=>setTalking(true));
  await page.waitForFunction(()=>!document.querySelector('.voice-workspace-hints'));
  assert.equal(await page.locator('.voice-workspace-phrase').isVisible(),true,'Speech resumes without hints');

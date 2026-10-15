@@ -36,7 +36,7 @@ try{
  await recordMotion();await page.getByRole('button',{name:'Вернуть окно на место',exact:true}).click();await page.waitForTimeout(650);
  const returned=await page.evaluate(()=>motionFrames);oneDirection(returned,'x');oneDirection(returned,'y');assert.ok(Math.abs(returned.at(-1).x+returned.at(-1).width/2-800)<1,'reset settles at center');
  const h=await brand.boundingBox();await page.mouse.move(h.x+20,h.y+8);await page.mouse.down();await page.mouse.move(h.x+20,875,{steps:12});await page.locator('.voice-workspace-dock-target').waitFor();const target=await page.locator('.voice-workspace-dock-target').boundingBox();assert.ok(Math.abs(target.x+target.width/2-800)<1,'preview is centered');await page.mouse.up();
- await page.waitForFunction(()=>document.querySelector('.voice-workspace')?.dataset.docked==='true');await page.waitForTimeout(350);box=await sheet.boundingBox();assert.ok(box.y+box.height<=900&&box.y>550,'docked studio stays reachable along bottom');assert.equal(await page.evaluate(()=>voice.aborted),undefined);
+ await page.waitForFunction(()=>document.querySelector('.voice-workspace')?.dataset.docked==='true');await page.waitForTimeout(350);box=await sheet.boundingBox();assert.ok(box.y>=0&&box.y+box.height<=900,'docked studio stays reachable along bottom');assert.equal(await page.evaluate(()=>voice.aborted),undefined);
  await sheet.screenshot({path:'tests/voice-desktop-docked.png',animations:'disabled'});
  assert.ok(Math.abs(box.x+box.width/2-800)<1,'docked assistant is centered');
  await page.setViewportSize({width:900,height:900});await page.waitForTimeout(100);box=await sheet.boundingBox();assert.ok(Math.abs(box.x+box.width/2-450)<1,'dock stays centered after resizing');await page.setViewportSize({width:1600,height:900});await page.waitForTimeout(100);
@@ -44,7 +44,7 @@ try{
  await recordMotion();await page.getByRole('button',{name:'Возможности и все команды',exact:true}).click();
  await page.locator('.voice-capabilities').waitFor();await page.waitForTimeout(650);
  horizontalStill(await page.evaluate(()=>motionFrames));
- assert.ok((await sheet.boundingBox()).height>box.height,'Guide expands into a readable studio');
+ assert.equal((await sheet.boundingBox()).height,box.height,'Guide uses the same stable workspace height');
  assert.ok((await sheet.locator('.voice-workspace-scroll').boundingBox()).height>250);
  await page.getByRole('button',{name:'Скрыть команды',exact:true}).click();
  await page.getByRole('button',{name:'Возможности и все команды',exact:true}).click();

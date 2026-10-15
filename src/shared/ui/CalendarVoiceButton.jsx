@@ -18,6 +18,7 @@ import {voicesForLocale,selectPlaybackVoice} from '../lib/voicePlayback.js';
 import './CalendarVoiceButton.css';
 import VoiceWorkspace from './VoiceWorkspace.jsx';
 import useVoiceTurnFeedback from './useVoiceTurnFeedback.js';
+import useVoiceRecognitionRelease from './useVoiceRecognitionRelease.js';
 import {prepareConversationEntry,parseVoiceConversation} from '../lib/voiceConversation.js';
 import {isVoiceHelpRequest,voiceCapabilities} from '../lib/voiceCapabilities.js';
 import {followupVoiceEntry} from '../lib/voiceQuickEntry.js';
@@ -61,6 +62,7 @@ export default function CalendarVoiceButton({launchRequest,onLaunchHandled,onRes
  const [recognitionHint,setRecognitionHint]=useState('');
  const [quiet,setQuiet]=useState(null);
  const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+ const recognitionRelease=useVoiceRecognitionRelease(isIOS);
  const noSpeech={ru:'Не услышал фразу. Нажмите микрофон и повторите.',en:'No words heard. Tap the microphone and try again.',ro:'Nu am auzit fraza. Apasă microfonul și repetă.',zh:'没有听到语音，请点击麦克风重试。'}[locale];
  const phraseTimer=useRef(null);
  const [voices,setVoices]=useState(()=>window.speechSynthesis?.getVoices()||[]);
@@ -94,7 +96,7 @@ export default function CalendarVoiceButton({launchRequest,onLaunchHandled,onRes
  const voicePicker=<label className="calendar-voice-picker"><span>{playbackLabels.voice}</span><select aria-label={playbackLabels.voice} value={localeVoices.some(voice=>voice.voiceURI===preferredVoice)?preferredVoice:''} onChange={event=>{stopSpeaking();setPreferredVoice(event.target.value);try{localStorage.setItem(`dayris_voice:${locale}`,event.target.value);}catch{/* Session preference still works. */}}}><option value="">{playbackLabels.auto}</option>{localeVoices.map(voice=><option key={voice.voiceURI} value={voice.voiceURI}>{voice.name}</option>)}</select></label>;
  const session=useRef(null),timer=useRef(null),messageTimer=useRef(null);
  const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
- function stop(){setQuiet(null);const current=session.current;session.current=null;clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);clearTimeout(startupTimer.current);clearTimeout(silenceTimer.current);setRecognitionHint('');setTalking(false);clearTimeout(timer.current);clearTimeout(releaseTimer.current);if(current){current.onspeechstart=null;current.onspeechend=null;current.onsoundstart=null;current.onsoundend=null;current.onstart=null;current.onresult=null;current.onerror=null;current.onend=null;current.abort();}setListening(false);setPhase('idle');}
+ function stop(ended=false){setQuiet(null);const current=session.current;session.current=null;clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);clearTimeout(startupTimer.current);clearTimeout(silenceTimer.current);setRecognitionHint('');setTalking(false);clearTimeout(timer.current);clearTimeout(releaseTimer.current);if(current){current.onspeechstart=null;current.onspeechend=null;current.onsoundstart=null;current.onsoundend=null;current.onstart=null;current.onresult=null;current.onerror=null;current.onend=null;recognitionRelease.retire(current,ended);}setListening(false);setPhase('idle');}
  function finish(){if(!session.current||phase==='processing')return;const value=pendingPhrase.current;stop();if(value)lifecycle.current.handlePhrase(value,recognitionEvidence.current);else notify(noSpeech);}
 
  function notify(value){if(entryDraft.current&&!entryPrompt.current)setSaveError(value);else if(entryDraft.current){setAnswer(entryPrompt.current);setAudioError(value);}else setAnswer('');setMessage(value);clearTimeout(messageTimer.current);messageTimer.current=setTimeout(()=>setMessage(''),6500);}
@@ -218,6 +220,8 @@ export default function CalendarVoiceButton({launchRequest,onLaunchHandled,onRes
  function start(automatic=false,retry=0){
   if(turnFeedback.active()){if(automatic===true)turnFeedback.defer(()=>lifecycle.current.start(true,retry),false);return;}
   if(saveBusy.current||saveLocked)return;
+  const generation=requestGeneration.current;
+  if(recognitionRelease.defer(()=>{if(mounted.current&&generation===requestGeneration.current&&(!document.hidden||widgetActive.current))lifecycle.current.start(automatic,retry);})){if(automatic!==true){setActive(true);setPhase('starting');}return;}
   if(session.current){if(entryDraft.current&&!pendingPhrase.current.trim()){setShowCapabilities(false);if(entryPrompt.current)setAnswer(entryPrompt.current);return;}finish();return;}
   setCompleted(false);clearTimeout(releaseTimer.current);stopSpeaking();if(automatic!==true){if(entryDraft.current){setShowCapabilities(false);if(!review)setAnswer(entryPrompt.current);}else{setAnswer('');setHeard('');}}setQuiet(null);setAudioError('');setRecognitionHint('');setTranscript('');pendingPhrase.current='';recognitionEvidence.current=null;setActive(true);window.speechSynthesis?.getVoices();
   // Keep iOS's recording channel free of cue playback and silent TTS warmups.
@@ -252,9 +256,9 @@ export default function CalendarVoiceButton({launchRequest,onLaunchHandled,onRes
    const pauseDuration=commit?350:command&&command.type!=='category-prompt'?900:1900;setQuiet({id:Date.now(),duration:pauseDuration});
    phraseTimer.current=setTimeout(()=>{if(session.current===recognition)lifecycle.current.finish();},pauseDuration);
   };
-  recognition.onerror=event=>{if(session.current!==recognition)return;if(event.error==='no-speech'&&pendingPhrase.current){finish();return;}stop();notify(event.error==='no-speech'?noSpeech:event.error==='audio-capture'?({ru:'Микрофон недоступен. Проверьте доступ и повторите.',en:'Microphone unavailable. Check access and retry.',ro:'Microfon indisponibil. Verifică accesul și repetă.',zh:'麦克风不可用，请检查权限后重试。'}[locale]):event.error==='not-allowed'||event.error==='service-not-allowed'?text.permission:event.error==='language-not-supported'?({
+  recognition.onerror=event=>{if(session.current!==recognition)return;if(event.error==='no-speech'&&pendingPhrase.current){finish();return;}stop();if(event.error==='audio-capture'&&automatic===true&&retry===0&&!document.hidden){setPhase('starting');lifecycle.current.start(true,1);return;}notify(event.error==='no-speech'?noSpeech:event.error==='audio-capture'?({ru:'Микрофон недоступен. Проверьте доступ и повторите.',en:'Microphone unavailable. Check access and retry.',ro:'Microfon indisponibil. Verifică accesul și repetă.',zh:'麦克风不可用，请检查权限后重试。'}[locale]):event.error==='not-allowed'||event.error==='service-not-allowed'?text.permission:event.error==='language-not-supported'?({
   zh: "设备不支持此语言识别，请检查 Google 语音输入语言。",ru:'Распознавание русского языка недоступно на устройстве. Проверьте языки голосового ввода Google.',en:'English recognition is unavailable. Check Google voice input languages.',ro:'Recunoașterea limbii române nu este disponibilă. Verifică limbile introducerii vocale Google.'}[locale]):text.error);};
-  recognition.onend=()=>{if(session.current!==recognition)return;const phrase=latestText||finalText;const early=startedAt&&Date.now()-startedAt<1200;stop();if(phrase){lifecycle.current.handlePhrase(phrase,recognitionEvidence.current);return;}if(early&&retry===0&&!document.hidden){setPhase('starting');releaseTimer.current=setTimeout(()=>lifecycle.current.start(true,1),350);return;}notify(noSpeech);};
+  recognition.onend=()=>{if(session.current!==recognition)return;const phrase=latestText||finalText;const early=startedAt&&Date.now()-startedAt<1200;stop(true);if(phrase){lifecycle.current.handlePhrase(phrase,recognitionEvidence.current);return;}if(early&&retry===0&&!document.hidden){setPhase('starting');releaseTimer.current=setTimeout(()=>lifecycle.current.start(true,1),350);return;}notify(noSpeech);};
   try{recognition.start();if(!startedAt)startupTimer.current=setTimeout(()=>{if(session.current===recognition&&!startedAt){stop();notify(text.error);}},8000);timer.current=setTimeout(()=>{if(session.current===recognition)finish();},20000);}catch{stop();notify(text.error);}
  }
  const pendingSummary=entryDraft.current&&!review?[{ru:{minus:'Расход',plus:'Доход'},en:{minus:'Expense',plus:'Income'},ro:{minus:'Cheltuială',plus:'Venit'},zh:{minus:'支出',plus:'收入'}}[locale][entryDraft.current.sign],entryDraft.current.amount&&`${entryDraft.current.amount}${entryDraft.current.currency?' '+entryDraft.current.currency:''}`,entryDraft.current.category].filter(Boolean).join(' · '):'';

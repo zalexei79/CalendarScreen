@@ -18,7 +18,7 @@ export default function VoiceWorkspace({locale,isLight,phrase,status,help,contex
  useEffect(()=>{if(helpRequested){setHelpOpen(true);onExpand?.();}},[helpRequested]);
  const widget=useVoiceWidget(onWidgetChange);
  const floating=useFloatingVoiceWindow(widget.detached,{onDock:()=>collapse(),onDetach:widget.open});
- const captureMotion=useVoiceWindowMotion(floating.sheetRef,{compact:displayCompact,mode:helpOpen?'help':resultKey,detached:widget.detached,moved:floating.moved,dragging:floating.dragging,resultKey});
+ const captureMotion=useVoiceWindowMotion(floating.sheetRef,{compact:displayCompact,detached:widget.detached,moved:floating.moved,dragging:floating.dragging});
  function collapse(){captureMotion();onCollapse();}
  function reset(){captureMotion();floating.reset();}
  useEffect(()=>{if(widget.failed)reset();},[widget.failed]);
@@ -27,12 +27,13 @@ export default function VoiceWorkspace({locale,isLight,phrase,status,help,contex
  const starting=phase==='starting',reviewing=resultKey==='review'||resultKey==='batch';
  const micState=busy||phase==='processing'?'processing':starting?'starting':listening?'listening':phase==='speaking'?'speaking':'idle';
  const settling=listening&&quiet&&!talking;
- const awaitingReply=!talking&&(reviewing||Boolean(pendingField));
- const minimalCapture=!helpOpen&&(starting||(listening&&!settling&&!awaitingReply));
- const showGuidance=!busy&&!starting&&(!listening||settling||awaitingReply);
+ // Speech and short pauses change the microphone, never the page structure.
+ const awaitingReply=reviewing||Boolean(pendingField);
+ const minimalCapture=!helpOpen&&!awaitingReply&&(starting||listening);
+ const showGuidance=awaitingReply||(!busy&&!starting&&!listening);
  const asking=pendingField&&(listening||phase==='speaking'||status===copy('Микрофон на паузе','Microphone paused','Microfon pe pauză','麦克风已暂停'));
  const questions={category:copy(draft?.sign==='plus'?'Откуда доход?':'На что потратили?',draft?.sign==='plus'?'Where is the income from?':'What did you spend it on?',draft?.sign==='plus'?'De unde este venitul?':'Pe ce ai cheltuit?',draft?.sign==='plus'?'收入来自哪里？':'花在什么上？'),amount:copy('Какая сумма?','What amount?','Ce sumă?','金额是多少？'),currency:copy('В какой валюте?','Which currency?','În ce monedă?','使用什么货币？'),date:copy('За какой день?','Which day?','Pentru ce zi?','哪一天？'),sign:copy('Доход или расход?','Income or expense?','Venit sau cheltuială?','收入还是支出？'),destination:copy('Куда записать?','Where should I record it?','Unde înregistrez?','保存到哪里？')};
- const visibleStatus=completed&&!busy?copy('Готово','Done','Gata','完成'):settling?copy('Завершаю фразу…','Finishing your phrase…','Închei fraza…','正在接收完整语句…'):phase==='processing'?copy('Разбираю фразу…','Understanding your phrase…','Analizez fraza…','正在理解语句…'):recovering?copy('Не понял фразу. Скажите иначе.','I did not understand. Try again.','Nu am înțeles. Spune altfel.','没有理解，请换个说法。'):asking&&!starting&&!busy?questions[pendingField]||status:status;
+ const visibleStatus=completed&&!busy?copy('Готово','Done','Gata','完成'):phase==='processing'?copy('Разбираю фразу…','Understanding your phrase…','Analizez fraza…','正在理解语句…'):reviewing?copy('Проверьте запись','Review your entry','Verifică înregistrarea','核对记录'):settling?copy('Завершаю фразу…','Finishing your phrase…','Închei fraza…','正在接收完整语句…'):recovering?copy('Не понял фразу. Скажите иначе.','I did not understand. Try again.','Nu am înțeles. Spune altfel.','没有理解，请换个说法。'):asking&&!starting&&!busy?questions[pendingField]||status:status;
  const suggestions=!help.filtered?{filtered:true,title:copy('Например','For example','De exemplu','例如'),phrases:ru?['Потратил 250 лей на продукты','Что записал вчера?','Покажи расходы за прошлый месяц']:help.groups.flatMap(group=>group.phrases).slice(0,3)}:help;
  const focusLabel=busy?copy('Обработка','Processing','Procesare','处理中'):pendingField?copy('Уточнение','Clarification','Clarificare','补充信息'):reviewing?copy('Проверка записи','Review entry','Verificare','核对记录'):copy('Голосовой помощник','Voice assistant','Asistent vocal','语音助手');
  const heard=<div className="voice-workspace-heard" data-empty={!phrase}><p className="voice-workspace-label">{phrase?copy('Ваша фраза','Your words','Fraza ta','你说的话'):copy('Ваши слова появятся здесь','Your words will appear here','Cuvintele tale vor apărea aici','你说的话会显示在这里')}</p>{phrase&&<p className="voice-workspace-phrase" aria-live={reviewing?undefined:'polite'}>{phrase}</p>}</div>;
@@ -50,19 +51,18 @@ export default function VoiceWorkspace({locale,isLight,phrase,status,help,contex
     <p className="voice-workspace-instruction">{pendingPrompt&&!busy&&!starting?pendingPrompt:listening?(resultKey==='review'?copy('Скажите, что изменить: «сумма 70», «на кофе». Или «сохрани».','Say what to change: “amount 70”, “on coffee”. Or say “save”.','Spune ce modificăm: „sumă 70”, „pe cafea”. Sau „salvează”.','说出要修改的金额或类别，或说“保存”。'):reviewing?copy('Продолжайте список или скажите «готово» / «сохрани»','Continue the list, or say “done” / “save”','Continuă lista sau spune „gata” / „salvează”','继续说，完成后说“完成”或“保存”'):copy('Говорите. Полную запись сохраню автоматически.','Speak. Complete entries save automatically.','Vorbește. Înregistrările complete se salvează automat.','请说话，完整记录会自动保存。')):starting?copy('Дождитесь включения микрофона','Wait for the microphone to start','Așteaptă pornirea microfonului','请等待麦克风启动'):busy?copy('Один момент','One moment','Un moment','请稍候'):copy('Нажмите микрофон, чтобы говорить','Tap the microphone to speak','Apasă microfonul pentru a vorbi','点击麦克风开始说话')}</p>
    </div>
    {reviewing&&!minimalCapture?<details className="voice-workspace-transcript"><summary>{copy('Что я сказал','What I said','Ce am spus','我说的话')}<ChevronDown size={14}/></summary>{heard}</details>:heard}
-   {!helpOpen&&showGuidance&&<VoiceTurnGuide locale={locale} phrase={phrase} field={pendingField} draft={draft} batch={batch} defaultCurrency={defaultCurrency} categories={categories} onReply={onSuggestion} busy={busy} recovering={recovering}/>}
    {!minimalCapture&&contextLabel&&<p className="voice-workspace-context">{contextLabel}</p>}
-   <div className="voice-workspace-result" hidden={minimalCapture||helpOpen} key={resultKey}>{children}</div>
+   <div className="voice-workspace-result" hidden={minimalCapture||helpOpen}>{children}</div>
+   {!helpOpen&&showGuidance&&<VoiceTurnGuide locale={locale} phrase={phrase} field={pendingField} draft={draft} batch={batch} defaultCurrency={defaultCurrency} categories={categories} onReply={onSuggestion} busy={busy} recovering={recovering}/>}
    {!helpOpen&&showGuidance&&<div className="voice-workspace-next">{choices.length?<><p className="calendar-voice-help-title">{copy('Скажите название или номер','Say a name or number','Spune numele sau numărul','说出名称或序号')}</p><div className="voice-workspace-choices">{choices.map((value,index)=><button type="button" key={value} onClick={()=>onSuggestion(value)}><small>{index+1}</small>{value}</button>)}</div></>:<details className="voice-workspace-hints" key={help.filtered?'contextual':'initial'}><summary>{copy('Что можно сказать','What can I say','Ce pot spune','可以说什么')}<ChevronDown size={14}/></summary><VoiceSuggestions onChoose={onSuggestion} help={suggestions}/>{!help.filtered&&<details className="voice-workspace-all"><summary>{copy('Все команды','All commands','Toate comenzile','全部命令')}</summary><VoiceSuggestions help={help}/></details>}</details>}</div>}
    {!helpOpen&&showGuidance&&<details className="voice-workspace-settings"><summary><Settings2 size={14}/>{copy('Звук и голос','Sound and voice','Sunet și voce','声音与语音')}<ChevronDown size={14}/></summary>{settings}</details>}
   </div>
 
   <footer className="voice-workspace-transport" data-mic-state={micState}>
    <div className="voice-workspace-transport-state"><span>{listening?copy('Слушаю','Listening','Ascult','聆听中'):starting?copy('Включаю…','Starting…','Pornesc…','启动中'):busy?copy('Обрабатываю…','Processing…','Procesez…','处理中'):phase==='speaking'?copy('Отвечаю…','Speaking…','Răspund…','回答中'):copy('Микрофон на паузе','Microphone paused','Microfon pe pauză','麦克风已暂停')}</span>
-    <div className="voice-workspace-wave" aria-hidden="true">{Array.from({length:13},(_,i)=><i key={i} style={{'--bar':i,'--height':`${12+[3,7,15,23,32,22,38,25,30,20,13,7,3][i]}px`}}/>)}</div>
+    {helpOpen?<p className="voice-studio-resume">{copy('Нажмите микрофон, чтобы продолжить','Tap the microphone to continue','Apasă microfonul pentru a continua','点击麦克风继续')}</p>:<div className="voice-workspace-wave" aria-hidden="true">{Array.from({length:13},(_,i)=><i key={i} style={{'--bar':i,'--height':`${12+[3,7,15,23,32,22,38,25,30,20,13,7,3][i]}px`}}/>)}</div>}
    </div>
     <button className="voice-workspace-mic" data-mic-state={micState} type="button" disabled={busy||starting} onClick={()=>{if(helpOpen){setHelpOpen(false);onHelpClose?.();}onListen();}} aria-label={listening?copy('Готово — обработать фразу','Done — send phrase','Gata — trimite fraza','完成，发送语音'):copy('Продолжить голосом','Continue by voice','Continuă vocal','继续说话')} aria-pressed={listening}><span className="voice-mic-aura" aria-hidden="true"><i/><i/><i/></span><Mic className="voice-mic-icon" size={30} aria-hidden="true"/><LoaderCircle className="voice-studio-spinner" size={28} aria-hidden="true"/><span className="voice-workspace-mic-stop" aria-hidden="true"><Square size={12}/></span></button>
-   {helpOpen&&<p className="voice-studio-resume">{copy('Нажмите микрофон, чтобы продолжить','Tap the microphone to continue','Apasă microfonul pentru a continua','点击麦克风继续')}</p>}
    <button className="voice-workspace-exit" type="button" aria-label={copy('Закрыть голосовой режим','Close voice mode','Închide modul vocal','关闭语音模式')} disabled={busy} onClick={onClose}><X size={18}/><span>{copy('Выйти','Exit','Ieși','退出')}</span></button>
   </footer>
  </SwipeDismissSheet>,widget.host||document.body)}</>;

@@ -1,15 +1,15 @@
 import {useLayoutEffect,useRef} from 'react';
 
-// Animate the shell's real size so text and the microphone never stretch.
-export default function useVoiceWindowMotion(sheetRef,{compact,mode,detached,moved,dragging,resultKey}) {
+// Only opening and an explicit return may move the shell. Recognition updates
+// replace content inside a fixed workspace and must never restart its entrance.
+export default function useVoiceWindowMotion(sheetRef,{compact,detached,moved,dragging}) {
  const previous=useRef(null),animations=useRef([]),captured=useRef(null);
  const capture=()=>{const sheet=sheetRef.current;if(sheet)captured.current=sheet.getBoundingClientRect();};
  useLayoutEffect(()=>{
   const sheet=sheetRef.current;if(!sheet)return;
   const old=previous.current;
   const entering=!old||old.node!==sheet;
-  const resultChanged=old&&old.resultKey!==resultKey;
-  const changed=entering||old&&(old.compact!==compact||old.mode!==mode||old.detached!==detached||(old.moved&&!moved)||resultChanged);
+  const changed=entering||old&&(old.detached!==detached||(old.moved&&!moved));
   const interrupted=animations.current.some(animation=>animation.playState==='running');
   const visual=captured.current||(interrupted?sheet.getBoundingClientRect():null);
   // Recognition updates can render during a transition. Keep its settled
@@ -17,7 +17,7 @@ export default function useVoiceWindowMotion(sheetRef,{compact,mode,detached,mov
   if(!changed&&interrupted&&!dragging)return;
   if(changed||dragging){animations.current.forEach(animation=>animation.cancel());animations.current=[];}
   const box=sheet.getBoundingClientRect();
-  previous.current={box,compact,mode,detached,moved,node:sheet,resultKey};
+  previous.current={box,detached,moved,node:sheet};
   captured.current=null;
   if(!changed||dragging||detached||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   const returning=entering||old.detached;
