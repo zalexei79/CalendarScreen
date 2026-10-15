@@ -33,24 +33,31 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 3) {
 function drawFlameSticker(ctx, x, y, scale = 1) {
   ctx.save();
   ctx.translate(x, y); ctx.scale(scale, scale);
-  ctx.shadowColor = 'rgba(255,126,54,.28)'; ctx.shadowBlur = 24;
+  ctx.shadowColor = 'rgba(88,242,255,.7)'; ctx.shadowBlur = 32;
   ctx.beginPath();
   ctx.moveTo(0, 92); ctx.bezierCurveTo(-54, 70, -58, 16, -13, -5);
   ctx.bezierCurveTo(-20, 31, 2, 38, 13, 8);
   ctx.bezierCurveTo(31, -30, 47, -49, 40, -77);
   ctx.bezierCurveTo(90, -35, 91, 28, 61, 65);
   ctx.bezierCurveTo(45, 86, 25, 94, 0, 92); ctx.closePath();
-  ctx.fillStyle = '#ff873d'; ctx.fill(); ctx.shadowBlur = 0;
+  ctx.fillStyle = '#67efff'; ctx.fill(); ctx.shadowBlur = 0;
   ctx.beginPath(); ctx.moveTo(10, 76); ctx.bezierCurveTo(-18, 57, -14, 28, 10, 13);
-  ctx.bezierCurveTo(10, 35, 25, 37, 32, 18); ctx.bezierCurveTo(54, 48, 38, 72, 10, 76); ctx.fillStyle = '#ffd34e'; ctx.fill();
-  ctx.fillStyle = '#3b245c'; ctx.beginPath(); ctx.arc(10, 44, 5, 0, Math.PI * 2); ctx.arc(38, 39, 5, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = '#3b245c'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(24, 49, 12, .2, Math.PI - .2); ctx.stroke();
+  ctx.bezierCurveTo(10, 35, 25, 37, 32, 18); ctx.bezierCurveTo(54, 48, 38, 72, 10, 76); ctx.fillStyle = '#ffb84d'; ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.beginPath(); ctx.arc(17, 31, 4, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
 
 function drawConfetti(ctx) {
-  const pieces = [[116,228,18,'#ffcf4a'],[176,292,12,'#56d6c9'],[900,242,16,'#ff8a69'],[946,336,10,'#fff'],[126,560,13,'#a78bfa'],[914,532,18,'#ffd34e'],[244,590,9,'#ff91c8'],[816,584,11,'#56d6c9']];
-  pieces.forEach(([x,y,size,color], index) => { ctx.save(); ctx.translate(x,y); ctx.rotate(index * .43); ctx.fillStyle=color; ctx.roundRect(-size/2,-size/2,size,size*.55,4); ctx.fill(); ctx.restore(); });
+  const pieces = [[116,228,18,'#ffb84d'],[176,292,12,'#67efff'],[900,242,16,'#a78bfa'],[946,336,10,'#e8fbff'],[126,560,13,'#a78bfa'],[914,532,18,'#ffb84d'],[244,590,9,'#67efff'],[816,584,11,'#a78bfa']];
+  pieces.forEach(([x,y,size,color], index) => { ctx.save(); ctx.translate(x,y); ctx.rotate(index * .43); ctx.fillStyle=color; ctx.globalAlpha=.75; ctx.fillRect(-size/2,-size/2,size,2); ctx.fillRect(-1,-size/2,2,size); ctx.restore(); });
+}
+
+function drawTechGrid(ctx) {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(112,190,220,.065)'; ctx.lineWidth = 1;
+  for (let x = 0; x <= 1080; x += 54) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1350); ctx.stroke(); }
+  for (let y = 0; y <= 1350; y += 54) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1080, y); ctx.stroke(); }
+  ctx.restore();
 }
 
 function accountName(user) {
@@ -217,39 +224,46 @@ async function createShareBlob({ days, account, paused, code, isLight, copy }) {
   canvas.height = 1350;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('CANVAS_UNAVAILABLE');
-  const main = '#30215a';
-  const muted = '#655d82';
-  const amber = '#ffb52e';
-  const panel = '#ffffff';
-  const border = '#eadff5';
+  const main = '#e8f7ff';
+  const muted = '#8da4b9';
+  const amber = '#ffb84d';
+  const cyan = '#67efff';
+  const panel = '#101b2a';
+  const border = 'rgba(116,220,240,.25)';
   const gradient = ctx.createLinearGradient(0, 0, 1080, 1350);
-  gradient.addColorStop(0, '#fff8df');
-  gradient.addColorStop(.48, '#f3eaff');
-  gradient.addColorStop(1, '#dff9f6');
+  gradient.addColorStop(0, '#050b14');
+  gradient.addColorStop(.48, '#0a1422');
+  gradient.addColorStop(1, '#17102b');
   ctx.fillStyle = gradient; ctx.fillRect(0, 0, 1080, 1350);
+  drawTechGrid(ctx);
+  const cyanGlow = ctx.createRadialGradient(160, 240, 0, 160, 240, 360); cyanGlow.addColorStop(0, 'rgba(103,239,255,.17)'); cyanGlow.addColorStop(1, 'rgba(103,239,255,0)'); ctx.fillStyle = cyanGlow; ctx.fillRect(0, 0, 520, 620);
+  const violetGlow = ctx.createRadialGradient(920, 820, 0, 920, 820, 430); violetGlow.addColorStop(0, 'rgba(167,139,250,.16)'); violetGlow.addColorStop(1, 'rgba(167,139,250,0)'); ctx.fillStyle = violetGlow; ctx.fillRect(500, 480, 580, 650);
   drawConfetti(ctx);
   drawBrandIcon(ctx, brandIcon, 72, 68, 86);
   ctx.fillStyle = main; ctx.font = '700 40px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText('DAYRIS', 180, 113);
   ctx.fillStyle = amber; ctx.font = '700 19px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText('STREAK', 180, 146);
-  roundedRect(ctx, 786, 77, 222, 54, 27); ctx.fillStyle = '#fff'; ctx.fill();
-  ctx.fillStyle = '#7c3aed'; ctx.font = '800 18px ui-monospace, SFMono-Regular, Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillText('MY STREAK', 897, 111);
+  roundedRect(ctx, 786, 77, 222, 54, 27); ctx.fillStyle = 'rgba(103,239,255,.08)'; ctx.fill(); ctx.strokeStyle = 'rgba(103,239,255,.35)'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = cyan; ctx.font = '800 17px ui-monospace, SFMono-Regular, Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillText('STREAK // LIVE', 897, 111);
   ctx.textAlign = 'left';
 
   // Hero: a clean, shareable focus on the achievement — no private account data.
   roundedRect(ctx, 72, 196, 936, 438, 42);
-  const hero = ctx.createLinearGradient(72, 196, 1008, 634); hero.addColorStop(0, '#7048d8'); hero.addColorStop(.52, '#9b55d8'); hero.addColorStop(1, '#2ab8b0');
-  ctx.fillStyle = hero; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 3; ctx.stroke();
+  const hero = ctx.createLinearGradient(72, 196, 1008, 634); hero.addColorStop(0, '#121f35'); hero.addColorStop(.55, '#18243b'); hero.addColorStop(1, '#24173c');
+  ctx.fillStyle = hero; ctx.fill(); ctx.strokeStyle = 'rgba(103,239,255,.35)'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = 'rgba(103,239,255,.7)'; ctx.fillRect(112, 232, 62, 3); ctx.fillStyle = 'rgba(255,184,77,.8)'; ctx.fillRect(182, 232, 24, 3);
   drawFlameSticker(ctx, 540, 286, 1.02);
+  ctx.beginPath(); ctx.arc(540, 373, 150, -.85, Math.PI * 1.28); ctx.strokeStyle = 'rgba(103,239,255,.18)'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.beginPath(); ctx.arc(540, 373, 150, 2.1, Math.PI * 1.72); ctx.strokeStyle = amber; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.stroke();
   ctx.textAlign = 'center';
   ctx.fillStyle = '#fff'; ctx.font = '900 190px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(String(days), 540, 468);
   ctx.font = '800 34px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.title, 540, 526);
-  ctx.fillStyle = '#fdf7ff'; ctx.font = '600 23px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(paused ? copy.paused : copy.active, 540, 570);
+  ctx.fillStyle = cyan; ctx.font = '600 23px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(paused ? copy.paused : copy.active, 540, 570);
   ctx.textAlign = 'left';
 
-  roundedRect(ctx, 72, 680, 936, 450, 38); ctx.fillStyle = panel; ctx.fill(); ctx.strokeStyle = border; ctx.lineWidth = 2; ctx.stroke();
+  roundedRect(ctx, 72, 680, 936, 450, 38); ctx.fillStyle = 'rgba(16,27,42,.92)'; ctx.fill(); ctx.strokeStyle = border; ctx.lineWidth = 2; ctx.stroke();
   ctx.fillStyle = amber; ctx.font = '800 35px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.inviteTitle, 116, 750);
   ctx.fillStyle = main; ctx.font = '800 31px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.proBadge, 116, 800);
-  roundedRect(ctx, 112, 844, 282, 244, 24); ctx.fillStyle = '#fff'; ctx.fill();
+  roundedRect(ctx, 112, 844, 282, 244, 24); ctx.fillStyle = '#f7fbff'; ctx.fill(); ctx.strokeStyle = 'rgba(103,239,255,.5)'; ctx.lineWidth = 2; ctx.stroke();
   const inviteUrl = new URL('/?install=1', window.location.origin); if (code) inviteUrl.searchParams.set('ref', code);
   drawQrToCanvas(ctx, createQrMatrix(inviteUrl.toString()), 134, 856, 238, { foreground: '#09090b', background: '#fff' });
   ctx.fillStyle = muted; ctx.font = '500 23px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; wrapText(ctx, copy.inviteBody, 466, 870, 470, 34, 4);
