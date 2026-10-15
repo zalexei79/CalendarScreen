@@ -53,11 +53,15 @@
  -webkit-backdrop-filter:blur(18px) saturate(145%); backdrop-filter:blur(18px) saturate(145%);
  box-shadow:inset 0 1px 1px #ffffff50,inset 0 -1px 1px #0003,0 8px 24px #0003,0 0 26px rgba(var(--voice-signal),.09);
  isolation:isolate; opacity:1; -webkit-tap-highlight-color:transparent;
- transition:transform 240ms cubic-bezier(.2,0,0,1),color 420ms cubic-bezier(.4,0,.2,1),background-color 420ms cubic-bezier(.4,0,.2,1),border-color 420ms cubic-bezier(.4,0,.2,1),box-shadow 420ms cubic-bezier(.4,0,.2,1);
+ transition:transform 240ms cubic-bezier(.2,0,0,1),scale 180ms cubic-bezier(.2,0,0,1),color 420ms cubic-bezier(.4,0,.2,1),background-color 420ms cubic-bezier(.4,0,.2,1),border-color 420ms cubic-bezier(.4,0,.2,1),box-shadow 420ms cubic-bezier(.4,0,.2,1);
 }
 .voice-workspace[data-interface=voice-studio] .voice-workspace-transport > .voice-workspace-mic:is([data-mic-state=listening],[data-mic-state=processing]) {
  background-color:rgba(var(--voice-signal),.12);
  box-shadow:inset 0 1px 1px #ffffff59,inset 0 -1px 1px #0003,0 8px 24px #0003,0 0 30px rgba(var(--voice-signal),.17);
+}
+.voice-workspace[data-interface=voice-studio] .voice-workspace-transport > .voice-workspace-mic[data-mic-state=processing] {
+ /* Reach red before a short local command completes; settling back stays gentle. */
+ transition-duration:240ms,180ms,140ms,140ms,140ms,140ms;
 }
 .voice-workspace[data-interface=voice-studio] .voice-workspace-mic::after {
  content:''; position:absolute; inset:1px; border-radius:inherit; pointer-events:none;
@@ -145,6 +149,10 @@
  .voice-discover-actions > button:active,.voice-discover-pagination > button:active { transform:scale(.96); }
  .voice-discover-example { animation:voice-studio-enter 320ms cubic-bezier(.2,0,0,1); }
  .voice-workspace[data-interface=voice-studio] .voice-workspace-mic:not(:disabled):active { transform:scale(.95); transition-duration:120ms; }
+ .voice-workspace[data-interface=voice-studio][data-talking=true] .voice-workspace-transport > .voice-workspace-mic[data-mic-state=listening] {
+  scale:1.035; background-color:rgba(var(--voice-signal),.18);
+  box-shadow:inset 0 1px 1px #ffffff65,inset 0 -1px 1px #0003,0 8px 24px #0003,0 0 36px rgba(var(--voice-signal),.3);
+ }
  .voice-workspace[data-interface=voice-studio] .voice-workspace-mic:is([data-mic-state=starting],[data-mic-state=processing]) .voice-studio-spinner { animation:voice-studio-orbit 1400ms linear infinite; }
  .voice-complete-mark { animation:voice-studio-enter 320ms cubic-bezier(.2,0,0,1); }
  .voice-workspace[data-interface=voice-studio][data-listening=true] .voice-mic-aura > i:first-child { animation:voice-studio-ready 2800ms ease-in-out infinite; }

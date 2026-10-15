@@ -25,6 +25,7 @@ try{
  // A clarification is a continuation, never a first-phrase automatic save.
  await say('потратил 80 лей');await sheet.locator('.calendar-voice-answer').waitFor();await say('сок');await page.locator('.calendar-voice-review').waitFor();assert.equal(await page.evaluate(()=>saved.length),2);await say('сохрани');await page.waitForFunction(()=>saved.length===3);
  // A failed automatic write returns a retryable card; the success voice is not played.
+ await page.waitForFunction(()=>document.querySelector('.voice-workspace')?.getAttribute('aria-busy')!=='true');
  const spokenBefore=await page.evaluate(()=>spoken.length);await page.evaluate(()=>failSave=true);await say('потратил 90 лей на сок');await page.locator('.calendar-voice-review').waitFor();assert.match(await page.locator('.calendar-voice-review').textContent(),/Нет соединения/);assert.equal(await page.evaluate(()=>saved.length),3);assert.equal(await page.evaluate(()=>spoken.length),spokenBefore);
  await page.evaluate(()=>failSave=false);await page.locator('.calendar-voice-save').click();await page.waitForFunction(()=>saved.length===4);assert.equal(await page.evaluate(()=>saved[3].amount),'90');assert.equal(await page.evaluate(()=>saveCalls.length),5);
  // New spoken aliases still pass through the actual microphone/persistence flow.

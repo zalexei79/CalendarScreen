@@ -23,6 +23,7 @@ try{
  assert.deepEqual(await page.evaluate(()=>commands),[],'Exploring examples never executes a command');
  await page.getByRole('button',{name:'Скрыть команды',exact:true}).click();assert.equal(await catalog.count(),0);
  await surface.locator('.voice-workspace-mic').click();await speak('Что-то ты умеешь?');await catalog.waitFor();assert.equal(await catalog.locator('.voice-discover-actions button').count(),8);
+ await page.waitForFunction(()=>window.spoken?.text);
  assert.equal(await page.evaluate(()=>conversations),0);assert.deepEqual(await page.evaluate(()=>commands),[]);assert.match(await page.evaluate(()=>spoken.text),/Могу записывать/);assert.ok(!await catalog.innerText().then(text=>text.includes('кошелёк')));
  await catalog.getByRole('button',{name:'Следующий пример',exact:true}).click();assert.match(await catalog.locator('.voice-discover-phrase').innerText(),/Вчера потратил 250/);
  const mic=surface.locator('.voice-workspace-mic'),exit=surface.locator('.voice-workspace-exit');const before=await mic.boundingBox();await surface.locator('.voice-workspace-scroll').evaluate(el=>el.scrollTop=el.scrollHeight);const after=await mic.boundingBox();assert.equal(after.y,before.y,'recording control stays pinned while scrolling help');assert.ok(await exit.isVisible());
