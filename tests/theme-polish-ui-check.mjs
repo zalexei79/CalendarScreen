@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { installStoryAccount, storyUserId } from './life-story-auth-fixture.mjs';
 const require=createRequire('C:/Users/aveel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/package.json');
+const pro=process.env.DAYRIS_TEST_PRO==='1';
 const browser=await require('playwright').chromium.launch({channel:'msedge',headless:true});
 try {
   const context=await browser.newContext({viewport:{width:1880,height:1000},serviceWorkers:'block'});
@@ -26,9 +27,14 @@ try {
     return route.fulfill({contentType:file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html',body:fs.readFileSync(file)});
   });
   await installStoryAccount(context);
+  if(pro) {
+    await context.addInitScript(()=>{localStorage.setItem('atj_pro_view','1');localStorage.setItem('atj_trader_mode','0');});
+    await context.route('**/rest/v1/rpc/get_my_pro_status',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({active:true})}));
+  }
   const page=await context.newPage(),errors=[]; page.on('pageerror',e=>errors.push(e.message));
   await page.clock.install({time:new Date('2026-10-07T12:00:00')});
   await page.goto('http://calendar.test/'); await page.clock.pauseAt(new Date('2026-10-07T13:00:00'));
+  if(pro) await page.locator('.pro-calendar-day').first().waitFor();
   for(const [theme,label,bg] of [['purple','Аметист','rgb(22, 15, 36)'],['emerald','Изумрудное','rgb(3, 14, 11)']]) {
     await page.getByRole('button',{name:'Настройки',exact:true}).click(); await page.clock.runFor(500);
     await page.getByRole('button',{name:label,exact:true}).click(); await page.clock.runFor(800);
@@ -38,6 +44,17 @@ try {
     for(const width of [1880,390]) {
       await page.setViewportSize({width,height:width===390?844:1000}); await page.clock.runFor(500);
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+      const amounts=await page.locator('.calendar-day-surface[data-in-month="true"] .day-amount').evaluateAll(elements=>elements.map(el=>{
+        const box=el.getBoundingClientRect(),cell=el.closest('button').getBoundingClientRect();
+        const visible=[...el.querySelectorAll('.day-amount-short,.day-amount-full')].find(node=>getComputedStyle(node).display!=='none')||el;
+        const textBox=visible.getBoundingClientRect();
+        const range=document.createRange();range.selectNodeContents(visible);
+        const glyphs=range.getBoundingClientRect();
+        const visibleTextWidth=Math.min(glyphs.right,textBox.right)-Math.max(glyphs.left,textBox.left);
+        return {text:el.textContent,width:box.width,height:box.height,textWidth:visibleTextWidth,requiredTextWidth:Math.min(24,glyphs.width),inside:box.left>=cell.left&&box.right<=cell.right&&box.top>=cell.top&&box.bottom<=cell.bottom};
+      }));
+      assert.ok(amounts.length>0);
+      assert.ok(amounts.every(item=>item.width>=24&&item.height>0&&item.textWidth>=item.requiredTextWidth-.1&&item.inside),`Visible amounts in ${theme} ${pro?'PRO':'FREE'} ${width}: ${JSON.stringify(amounts)}`);
       const colors=await page.evaluate(()=>{
         const style=(el,pseudo)=>getComputedStyle(el,pseudo);
         const profit=document.querySelector('.calendar-day-surface[data-pnl-tone="profit"] .day-amount');
@@ -50,7 +67,7 @@ try {
         const loss=await page.locator('.calendar-day-surface[data-pnl-tone="loss"]').first().evaluate(el=>getComputedStyle(el).backgroundImage);
         assert.match(profit,/radial-gradient/); assert.match(loss,/radial-gradient/); assert.notEqual(profit,loss);
       }
-      await page.screenshot({path:`tests/theme-${theme}-${width}.png`,animations:'disabled'});
+      await page.screenshot({path:`tests/theme-${theme}-${pro?'pro-':''}${width}.png`,animations:'disabled'});
     }
   }
   await page.emulateMedia({reducedMotion:'reduce'});

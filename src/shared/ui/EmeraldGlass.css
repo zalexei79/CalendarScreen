@@ -10,11 +10,11 @@ html[data-dayris-theme="emerald"] {
   --dayris-profit:#9bffcf; --dayris-loss:#ffa9bc;
   --dayris-line:rgba(208,255,237,.26);
   --emerald-atmosphere:radial-gradient(ellipse 75% 46% at 115% 5%,#08e49c66,transparent 70%),radial-gradient(ellipse 75% 38% at -20% 63%,#00cbb54a,transparent 70%),radial-gradient(ellipse 60% 30% at 100% 100%,#126f7450,transparent 75%),linear-gradient(155deg,#071f20,#030e0b 65%);
-  --emerald-pane:radial-gradient(ellipse at 0% 0%,#effffb28,transparent 48%),linear-gradient(125deg,#d5ffef12,#071b1d44 50%,#72f9c51a),rgba(12,30,29,.38);
-  --emerald-card:linear-gradient(145deg,#e2fff31c,#b8ffeb05 40%,#07181a33 70%,#b7ffe412),rgba(15,35,34,.22);
+  --emerald-pane:radial-gradient(ellipse at 0% 0%,#effffb20,transparent 48%),linear-gradient(125deg,#d5ffef0e,#071b1d44 50%,#72f9c512),rgba(6,23,21,.78);
+  --emerald-card:linear-gradient(145deg,#e2fff316,#b8ffeb04 40%,#07181a33 70%,#b7ffe40d),rgba(8,25,23,.56);
   --emerald-edge:inset 0 1px 0 #f0fff975,inset 1px 0 0 #d9ffed24,inset -1px -1px 0 #91ffcc18,inset 0 -3px 6px #0003;
   --emerald-shadow:var(--emerald-edge),0 22px 55px #0006,0 0 32px #4dffbe14;
-  --glass-surface:rgba(12,30,29,.48);
+  --glass-surface:rgba(6,23,21,.8);
   --glass-control:rgba(216,255,238,.09);
   --glass-line:var(--dayris-line);
   --glass-highlight:rgba(219,255,240,.13);
@@ -141,8 +141,16 @@ html[data-dayris-theme="emerald"] .calendar-day-surface.selected-calendar-cell {
   border-color:var(--dayris-accent)!important;
   box-shadow:var(--emerald-edge),inset 0 0 0 1px #8cefc029,0 0 26px #5cebb52e!important;
 }
-html[data-dayris-theme="emerald"] .calendar-day-surface .day-amount { text-shadow:0 0 16px currentColor; }
-html[data-dayris-theme="emerald"] .calendar-day-surface > :is(.font-data,.mt-auto) { position:relative; z-index:1; }
+html[data-dayris-theme="emerald"] .calendar-day-surface .day-amount { text-shadow:0 1px 3px #000,0 0 10px currentColor; }
+html[data-dayris-theme="emerald"] .calendar-day-surface > .font-data { position:relative; z-index:1; }
+/* The PRO amount is positioned against the cell, not its zero-height flex
+   wrapper. A flex item's z-index raises the text without changing its anchor. */
+html[data-dayris-theme="emerald"] .calendar-day-surface > .mt-auto { z-index:1; }
+@media(max-width:639px) {
+  html[data-dayris-theme="emerald"] .pro-calendar-day:not(.has-calendar-plans) .day-amount {
+    left:5px; right:5px; bottom:9px; font-size:10px; letter-spacing:-.04em;
+  }
+}
 .calendar-glass-optics { display:none; }
 html[data-dayris-theme="emerald"] .calendar-glass-optics {
   display:block; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
@@ -157,7 +165,7 @@ html[data-dayris-theme="emerald"] .calendar-weekdays { color:#c6e6da; }
 html[data-dayris-theme="emerald"] .calendar-weekdays > div { color:inherit; font-family:system-ui,sans-serif; font-size:10px; letter-spacing:.06em; }
 html[data-dayris-theme="emerald"] .dayris-header {
   border-bottom-color:#e3fff526;
-  background:linear-gradient(135deg,#effffb0f,#0c262524);
+  background:linear-gradient(135deg,#effffb0f,#0c262524),rgba(3,16,15,.72);
   box-shadow:inset 0 -1px #d0ffe910,0 16px 40px #0002;
 }
 html[data-dayris-theme="emerald"] .calendar-month-brief summary > strong[data-sign="positive"] { color:var(--dayris-profit); text-shadow:0 0 18px #38f9ad55; }
