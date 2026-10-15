@@ -11,7 +11,7 @@ import SettingsPanel from './src/shared/ui/SettingsPanel.jsx';
 import { monthsFor } from './src/shared/i18n';
 import BrandIcon from './src/shared/ui/BrandIcon.jsx';
 import AnimatedMonthLabel from './src/shared/ui/AnimatedMonthLabel.jsx';
-import WorkspaceModePanel from './src/features/pro/WorkspaceModePanel.jsx';
+import WorkspaceModePanel, { WorkspaceModeSelector } from './src/features/pro/WorkspaceModePanel.jsx';
 import './src/shared/ui/HeaderCompact.css';
 import CalendarMonthBrief from './src/shared/ui/CalendarMonthBrief.jsx';
 import LoginButtons from './src/features/auth/LoginButtons.jsx';
@@ -231,6 +231,10 @@ export default function Header({
             </div>
           )}
 
+          <div className={`header-mode-control workspace-mode-group ${isLight ? 'pro-light' : ''}`}>
+            <WorkspaceModeSelector proView={proView} onModeChange={() => setProView(value => !value)} language={language} t={t} onOffer={openProPresentation}/>
+          </div>
+
           {/* Settings gear */}
           <div className="relative" ref={settingsRef}>
             <button
@@ -264,7 +268,7 @@ export default function Header({
         </div>
       </div>
 
-      {/* Calendar context: month first, destinations and modes below it. */}
+      {/* Second row: Calendar month navigation + Free/PRO switch */}
       <div className="relative">
       <div>
         <div className="dayris-command-row">
@@ -388,7 +392,7 @@ export default function Header({
           {/* The workspace selector is separate from server-side PRO entitlement. */}
           <div className="dayris-workspace-slot">
             <WorkspaceModePanel
-              proView={proView} onModeChange={() => setProView((value) => !value)} isLight={isLight}
+              hideSelector proView={proView} onModeChange={() => setProView((value) => !value)} isLight={isLight}
               language={language} currency={currency} t={t} traderMode={traderMode}
               onTraderChange={() => setTraderMode((value) => {
                 const next = !value;
