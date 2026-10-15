@@ -60,6 +60,32 @@ function drawTechGrid(ctx) {
   ctx.restore();
 }
 
+function drawDisplayNumber(ctx, value, x, y) {
+  const display = String(value).padStart(2, '0');
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.font = '900 265px "Arial Black", "SFMono-Regular", ui-monospace, monospace';
+  ctx.shadowColor = 'rgba(103,239,255,.5)'; ctx.shadowBlur = 30;
+  ctx.fillStyle = 'rgba(103,239,255,.18)'; ctx.fillText(display, x + 5, y + 4);
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(103,239,255,.65)'; ctx.strokeText(display, x, y);
+  const numberGradient = ctx.createLinearGradient(x, y - 240, x, y + 20);
+  numberGradient.addColorStop(0, '#ffffff'); numberGradient.addColorStop(.48, '#dffaff'); numberGradient.addColorStop(1, '#ffb84d');
+  ctx.fillStyle = numberGradient; ctx.fillText(display, x, y);
+  ctx.restore();
+}
+
+function localizedDayCount(days, language) {
+  const value = Number(days);
+  if (String(language).toLowerCase().startsWith('zh')) return `${value} 天`;
+  if (language === 'en') return `${value} ${value === 1 ? 'day' : 'days'}`;
+  if (language === 'md' || language === 'ro') return `${value} ${value === 1 ? 'zi' : 'zile'}`;
+  if (value % 100 >= 11 && value % 100 <= 14) return `${value} дней`;
+  if (value % 10 === 1) return `${value} день`;
+  if (value % 10 >= 2 && value % 10 <= 4) return `${value} дня`;
+  return `${value} дней`;
+}
+
 function accountName(user) {
   return user?.email || user?.user_metadata?.preferred_username || user?.user_metadata?.name
     || user?.user_metadata?.full_name || 'DAYRIS';
@@ -84,6 +110,7 @@ export default function ActivityStreakDialog({
     inviteTitle: t('streakInviteTitle'), inviteBody: t('streakInviteBody'), inviteHint: t('streakInviteHint'), proBadge: t('streakProBadge'),
     shareText: t('streakShareText'), error: t('streakShareError'),
   };
+  const formatCountText = (template) => template.replace('{0}', localizedDayCount(days, language));
 
   useEffect(() => () => {
     if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
@@ -99,7 +126,7 @@ export default function ActivityStreakDialog({
       const code = activeCode || await ensureReferralCode?.();
       if (!cancelled) setShareCode(code || '');
       try {
-        const blob = await createShareBlob({ days, account, paused: Boolean(streak.paused), code, isLight, copy });
+        const blob = await createShareBlob({ days, account, paused: Boolean(streak.paused), code, isLight, copy, language });
         if (cancelled) return;
         if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
         const url = URL.createObjectURL(blob);
@@ -160,9 +187,9 @@ export default function ActivityStreakDialog({
     if (code) url.searchParams.set('ref', code);
     try {
       if (navigator.share && file && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
-        await navigator.share({ title: copy.title, text: copy.shareText.replace('{0}', String(days)), url: url.toString(), files: [file] });
+        await navigator.share({ title: copy.title, text: formatCountText(copy.shareText), url: url.toString(), files: [file] });
       } else if (navigator.share) {
-        await navigator.share({ title: copy.title, text: copy.shareText.replace('{0}', String(days)), url: url.toString() });
+        await navigator.share({ title: copy.title, text: formatCountText(copy.shareText), url: url.toString() });
       } else {
         try { await navigator.clipboard.writeText(url.toString()); } catch { /* download remains available */ }
       }
@@ -217,7 +244,7 @@ export default function ActivityStreakDialog({
   );
 }
 
-async function createShareBlob({ days, account, paused, code, isLight, copy }) {
+async function createShareBlob({ days, account, paused, code, isLight, copy, language }) {
   const brandIcon = await loadBrandIcon();
   const canvas = document.createElement('canvas');
   canvas.width = 1080;
@@ -256,9 +283,9 @@ async function createShareBlob({ days, account, paused, code, isLight, copy }) {
   ctx.beginPath(); ctx.arc(540, 462, 212, -.85, Math.PI * 1.28); ctx.strokeStyle = 'rgba(103,239,255,.15)'; ctx.lineWidth = 3; ctx.stroke();
   ctx.beginPath(); ctx.arc(540, 462, 212, 2.1, Math.PI * 1.72); ctx.strokeStyle = amber; ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.stroke();
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#fff'; ctx.font = '900 265px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(String(days), 540, 568);
+  drawDisplayNumber(ctx, days, 540, 568);
   ctx.font = '800 38px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.cardHeadline, 540, 654);
-  ctx.fillStyle = cyan; ctx.font = '600 25px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.proudLine.replace('{0}', String(days)), 540, 704);
+  ctx.fillStyle = cyan; ctx.font = '600 25px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(copy.proudLine.replace('{0}', localizedDayCount(days, language)), 540, 704);
   ctx.fillStyle = paused ? muted : amber; ctx.font = '600 21px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif'; ctx.fillText(paused ? copy.paused : copy.active, 540, 760);
   ctx.textAlign = 'left';
 
