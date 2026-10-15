@@ -90,6 +90,7 @@ import PnlCurve from './src/features/trades-sync/components/PnlCurve';
 import PeriodDynamics from './src/features/trades-sync/components/PeriodDynamics';
 import CalendarGrid from './CalendarGrid';
 import MonthlyGoal from './MonthlyGoal';
+import CalendarMonthDepth from './src/shared/ui/CalendarMonthDepth.jsx';
 import AmountKeypad, {AmountInput} from './src/shared/ui/AmountEntry.jsx';
 import CalendarVoiceButton from './src/shared/ui/CalendarVoiceButton.jsx';
 import useVoiceLaunch from './src/shared/ui/useVoiceLaunch.js';
@@ -2301,6 +2302,9 @@ export default function CalendarScreen() {
     }
     return { total, days, entries: records };
   }, [cells, manualTrades, platformFilter, currency, calendarTypeFilter]);
+  const [monthLensOpen,setMonthLensOpen] = useState(false);
+  const closeMonthLens = React.useCallback(()=>setMonthLensOpen(false),[]);
+  useEffect(()=>{setMonthLensOpen(false);},[year,month,currency,traderMode,accountMode,validUserId]);
 
   // filtered by the active platform selection, so the calendar always
   // matches what the platform filter says (e.g. only Bybit trades)
@@ -4697,6 +4701,7 @@ export default function CalendarScreen() {
       {accountMode !== 'capital' && <Header
         accountMode={accountMode} setAccountMode={setAccountMode} onOpenCapital={openCapitalFromCalendarGesture}
         monthSummary={monthSummary}
+        monthLensOpen={monthLensOpen} onToggleMonthLens={()=>setMonthLensOpen(value=>!value)}
         isLight={isLight} traderMode={traderMode} t={t} theme={theme} setTheme={setTheme}
         settingsRef={settingsRef} settingsOpen={settingsOpen} closeSettings={closeSettings}
         openSettings={openSettings} settingsVisible={settingsVisible} language={language}
@@ -4739,22 +4744,18 @@ export default function CalendarScreen() {
         {showFirstEntryGuide ? <div className="first-calendar-entry-hint monthly-goal-bar" data-light={isLight}>
           <div id="first-calendar-entry-hint"><strong>{onboardingCopy.guideCalendarHint}</strong><p>{onboardingCopy.guideTapTodayHint}</p></div>
           <button type="button" aria-label={onboardingCopy.guideExplore} onClick={markFirstRunGuideComplete}><X size={16} /></button>
-        </div> : <MonthlyGoal
-          year={year}
-          month={month}
-          currency={currency}
-          currencySymbol={currencySymbol}
-          currentPnl={monthSummary.total}
-          language={language}
-          isLight={isLight}
-          userId={validUserId}
-        />}
+        </div> : null}
 
       </div>
 
       {/* PRO controls live in Header: one clean control center, no floating duplicate block. */}
       <CalendarGrid
         language={language}
+        monthLensOpen={monthLensOpen}
+        monthDepth={<CalendarMonthDepth summary={monthSummary} currency={currency} language={language} traderMode={traderMode} isLight={isLight}
+          open={monthLensOpen} onClose={closeMonthLens} filtered={platformFilter!=='ALL'||calendarTypeFilter!=='all'} monthLabel={new Intl.DateTimeFormat(language==='md'?'ro':language,{month:'long',year:'numeric'}).format(new Date(year,month,1))}>
+          <MonthlyGoal year={year} month={month} currency={currency} currencySymbol={currencySymbol} currentPnl={monthSummary.total} language={language} isLight={isLight} userId={validUserId}/>
+        </CalendarMonthDepth>}
         lifeArrival={setupStep === 'intro'}
         firstEntryLabel={showFirstEntryGuide ? onboardingCopy.guideTapToday : null}
         firstEntryDayLabel={onboardingCopy.guideDayLabel}

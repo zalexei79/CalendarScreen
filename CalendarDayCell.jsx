@@ -103,6 +103,7 @@ export default function CalendarDayCell({
         aria-label={cell.isToday && firstEntryLabel ? firstEntryLabel : undefined}
         aria-describedby={cell.isToday && firstEntryLabel ? 'first-calendar-entry-hint' : undefined}
         onClick={onSelect}
+        data-has-records={hasTrades}
         style={{ ...heatmapStyle, ...proStyle }}
         className={[
           'calendar-day-surface relative overflow-hidden rounded-xl border flex flex-col justify-between text-left transition-all duration-200 ease-out',

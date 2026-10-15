@@ -13,7 +13,7 @@ export function summarizeCalendarEntries(entries) {
   }
   return {income,expense,net:income-expense,wins,losses,invalid,count:entries.length};
 }
-const copy={
+export const monthBriefCopy={
  ru:{title:'Итог месяца',income:'Доходы',expense:'Расходы',net:'Разница',profit:'Прибыльные сделки',loss:'Убыточные сделки',result:'Результат торговли',empty:'Пока нет записей',records:'Записей',scope:'По записям в',filtered:'Применены фильтры',incomplete:'Часть сумм не удалось прочитать'},
  en:{title:'Month summary',income:'Income',expense:'Expenses',net:'Net income',profit:'Winning trades',loss:'Losing trades',result:'Trading result',empty:'No entries yet',records:'Entries',scope:'Recorded in',filtered:'Filters applied',incomplete:'Some amounts could not be read'},
  ro:{title:'Rezumatul lunii',income:'Venituri',expense:'Cheltuieli',net:'Diferență',profit:'Tranzacții profitabile',loss:'Tranzacții în pierdere',result:'Rezultat de trading',empty:'Încă nu sunt înregistrări',records:'Înregistrări',scope:'Înregistrări în',filtered:'Filtre aplicate',incomplete:'Unele sume nu au putut fi citite'},
@@ -21,7 +21,7 @@ const copy={
 };
 export default function CalendarMonthBrief({summary,currency,language,traderMode,filtered=false,isLight}){
   const locale=String(language).startsWith('zh')?'zh':['ro','md'].includes(language)?'ro':language==='en'?'en':'ru';
-  const c=copy[locale],stats=useMemo(()=>summarizeCalendarEntries(summary?.entries||[]),[summary]);
+  const c=monthBriefCopy[locale],stats=useMemo(()=>summarizeCalendarEntries(summary?.entries||[]),[summary]);
   const money=value=>formatMoney(value,currency,locale),result=stats.invalid?'—':`${stats.net>0n?'+':''}${money(stats.net)}`;
   return <details className="calendar-month-brief" data-light={Boolean(isLight)} key={`${currency}:${traderMode}`}>
     <summary><span>{traderMode?c.result:c.title}</span><strong data-sign={stats.net>0n?'positive':stats.net<0n?'negative':'neutral'}>{stats.count?result:c.empty}</strong><ChevronDown size={14} aria-hidden="true"/></summary>

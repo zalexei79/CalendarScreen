@@ -211,14 +211,14 @@ try {
   const geometry = await page.evaluate(() => {
     const live = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')];
     const copies = [...document.querySelectorAll('.life-calendar-cell')];
-    return live.every((cell, index) => {
+    return live.flatMap((cell, index) => {
       const original = cell.getBoundingClientRect();
       const copy = copies[index]?.getBoundingClientRect();
       const face = copies[index]?.querySelector('.life-calendar-face');
-      return copy && ['x', 'y', 'width', 'height'].every(key => Math.abs(original[key] - copy[key]) < .1) && getComputedStyle(cell).padding === getComputedStyle(face).padding && getComputedStyle(cell).backgroundColor === getComputedStyle(face).backgroundColor;
+      return copy && ['x', 'y', 'width', 'height'].every(key => Math.abs(original[key] - copy[key]) < .1) && getComputedStyle(cell).padding === getComputedStyle(face).padding && getComputedStyle(cell).backgroundColor === getComputedStyle(face).backgroundColor ? [] : [{index,original:original.toJSON(),copy:copy?.toJSON(),color:getComputedStyle(cell).backgroundColor,faceColor:face&&getComputedStyle(face).backgroundColor}];
     });
   });
-  assert.ok(geometry, 'The moving cells settle onto the real calendar with its exact paint and geometry');
+  assert.deepEqual(geometry, [], 'The moving cells settle onto the real calendar with its exact paint and geometry');
   await seek(LIFE_MOTION_END - 150);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.settled === 'true');
   assert.equal(await money.count(), 0, 'The financial flow leaves before the calendar becomes interactive');
