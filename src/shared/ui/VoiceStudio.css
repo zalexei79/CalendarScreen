@@ -38,15 +38,39 @@
  font-size:23px!important; color:var(--voice-ink); font-weight:500;
 }
 .voice-workspace[data-interface=voice-studio] .voice-workspace-transport {
+ --voice-mic-size:80px; --voice-signal:186,201,210; --voice-signal-ink:224,233,237;
  padding:14px 22px max(18px,env(safe-area-inset-bottom));
- grid-template-columns:minmax(0,1fr) 68px minmax(0,1fr);
+ grid-template-columns:minmax(0,1fr) var(--voice-mic-size) minmax(0,1fr);
  background:transparent; gap:10px;
 }
-.voice-workspace[data-interface=voice-studio] .voice-workspace-transport > .voice-workspace-mic {
- width:68px; height:68px; min-height:68px;
- border:1px solid #f4d99c; border-radius:23px; color:#302511;
- background:linear-gradient(145deg,#f7e3b5,#ddbc77 70%,#caa55f);
- box-shadow:inset 0 1px #fff9,inset 0 -2px #91672c30,0 8px 24px #b88c3824;
+.voice-workspace[data-interface=voice-studio] .voice-workspace-transport[data-mic-state=listening] { --voice-signal:84,221,163; --voice-signal-ink:176,249,216; }
+.voice-workspace[data-interface=voice-studio] .voice-workspace-transport[data-mic-state=processing] { --voice-signal:244,113,112; --voice-signal-ink:255,202,194; }
+.voice-workspace[data-interface=voice-studio] .voice-workspace-transport > .voice-workspace-mic[data-mic-state] {
+ width:var(--voice-mic-size); height:var(--voice-mic-size); min-height:var(--voice-mic-size);
+ border:1px solid rgba(var(--voice-signal),.35); border-radius:26px;
+ color:rgb(var(--voice-signal-ink)); background-color:rgba(var(--voice-signal),.075);
+ background-image:radial-gradient(ellipse at 12% 0%,#ffffff22,transparent 64%),linear-gradient(145deg,#ffffff0b,#121a2026 60%,#ffffff04);
+ -webkit-backdrop-filter:blur(18px) saturate(145%); backdrop-filter:blur(18px) saturate(145%);
+ box-shadow:inset 0 1px 1px #ffffff50,inset 0 -1px 1px #0003,0 8px 24px #0003,0 0 26px rgba(var(--voice-signal),.09);
+ isolation:isolate; opacity:1; -webkit-tap-highlight-color:transparent;
+ transition:transform 240ms cubic-bezier(.2,0,0,1),color 420ms cubic-bezier(.4,0,.2,1),background-color 420ms cubic-bezier(.4,0,.2,1),border-color 420ms cubic-bezier(.4,0,.2,1),box-shadow 420ms cubic-bezier(.4,0,.2,1);
+}
+.voice-workspace[data-interface=voice-studio] .voice-workspace-transport > .voice-workspace-mic:is([data-mic-state=listening],[data-mic-state=processing]) {
+ background-color:rgba(var(--voice-signal),.12);
+ box-shadow:inset 0 1px 1px #ffffff59,inset 0 -1px 1px #0003,0 8px 24px #0003,0 0 30px rgba(var(--voice-signal),.17);
+}
+.voice-workspace[data-interface=voice-studio] .voice-workspace-mic::after {
+ content:''; position:absolute; inset:1px; border-radius:inherit; pointer-events:none;
+ background:linear-gradient(135deg,#fff3,transparent 32%,transparent 72%,#ffffff0a);
+ box-shadow:inset 1px 1px #ffffff1a,inset -1px -1px #ffffff06;
+}
+.voice-workspace[data-interface=voice-studio] .voice-workspace-mic:focus-visible { outline:2px solid rgb(var(--voice-signal)); outline-offset:6px; }
+.voice-workspace[data-interface=voice-studio][data-light=true] .voice-workspace-transport { --voice-signal:95,114,126; --voice-signal-ink:62,81,92; }
+.voice-workspace[data-interface=voice-studio][data-light=true] .voice-workspace-transport[data-mic-state=listening] { --voice-signal:21,139,96; --voice-signal-ink:13,104,70; }
+.voice-workspace[data-interface=voice-studio][data-light=true] .voice-workspace-transport[data-mic-state=processing] { --voice-signal:199,66,66; --voice-signal-ink:164,43,43; }
+.voice-workspace[data-interface=voice-studio][data-light=true] .voice-workspace-transport > .voice-workspace-mic {
+ background-image:radial-gradient(ellipse at 12% 0%,#ffffffc9,transparent 66%),linear-gradient(145deg,#ffffff42,#ffffff0a);
+ box-shadow:inset 0 1px 1px #fff,inset 0 -1px 1px #32434a14,0 8px 22px #22333b0c,0 0 26px rgba(var(--voice-signal),.12);
 }
 .voice-workspace[data-interface=voice-studio] .voice-workspace-transport-state > span {
  visibility:hidden;
@@ -63,7 +87,7 @@
  flex:1; max-height:none; padding-top:8px;
 }
 .voice-workspace[data-interface=voice-studio][data-view=help] .voice-workspace-transport {
- grid-template-columns:68px minmax(0,1fr) 44px;
+ grid-template-columns:var(--voice-mic-size) minmax(0,1fr) 44px;
 }
 .voice-workspace[data-interface=voice-studio][data-view=help] .voice-workspace-transport-state { display:none; }
 .voice-studio-resume { margin:0; font-size:12px; line-height:1.6; color:var(--voice-muted); }
@@ -87,15 +111,23 @@
 /* The microphone tells one state story: readiness, speech, then processing.
    Speech recognition events drive the response; rings are not a volume meter. */
 .voice-mic-aura { position:absolute; inset:0; pointer-events:none; border-radius:inherit; }
-.voice-mic-aura > i { position:absolute; inset:-8px; border:1px solid var(--voice-accent); border-radius:30%; opacity:0; }
-.voice-workspace[data-interface=voice-studio] .voice-workspace-mic::before { animation:none; opacity:0; }
-.voice-workspace[data-interface=voice-studio][data-view=capture] .voice-workspace-transport { grid-template-columns:minmax(0,1fr) 88px minmax(0,1fr); padding-top:22px; padding-bottom:26px; }
-.voice-workspace[data-interface=voice-studio][data-view=capture] .voice-workspace-mic { width:88px; height:88px; min-height:88px; border-radius:28px; }
-.voice-workspace[data-interface=voice-studio][data-view=capture] .voice-workspace-mic > svg { width:32px; height:32px; }
-.voice-workspace[data-interface=voice-studio] .voice-workspace-mic-stop { width:24px; height:24px; right:0; bottom:0; }
-.voice-workspace[data-interface=voice-studio][data-listening=true] .voice-workspace-mic-stop { background:#302819; color:#f5dda5; border-color:#e8c47e; right:-5px; bottom:-5px; }
-.voice-workspace[data-interface=voice-studio] .voice-workspace-mic > svg { z-index:1; }
-.voice-workspace[data-interface=voice-studio] .voice-workspace-transport .voice-workspace-wave { width:min(80px,100%); }
+.voice-mic-aura > i { position:absolute; inset:-8px; border:1px solid rgba(var(--voice-signal),.7); border-radius:33px; opacity:0; transition:border-color 420ms; }
+.voice-workspace[data-interface=voice-studio] .voice-workspace-mic::before { inset:-7px; border-radius:33px; border:1px solid rgba(var(--voice-signal),.13); transform:none; animation:none; opacity:1; transition:border-color 420ms; }
+.voice-workspace[data-interface=voice-studio] .voice-workspace-mic-stop {
+ display:grid; width:23px; height:23px; right:-4px; bottom:-4px; z-index:2;
+ color:rgb(var(--voice-signal-ink)); border:1px solid rgba(var(--voice-signal),.5);
+ background:#19362c; box-shadow:inset 0 1px #ffffff1c,0 3px 10px #0002;
+ opacity:0; transform:translateY(2px) scale(.75); pointer-events:none;
+ transition:opacity 180ms,transform 280ms cubic-bezier(.2,0,0,1),color 420ms,border-color 420ms;
+}
+.voice-workspace[data-interface=voice-studio] .voice-workspace-mic[data-mic-state=listening] .voice-workspace-mic-stop { opacity:1; transform:none; }
+.voice-workspace[data-interface=voice-studio][data-light=true] .voice-workspace-mic-stop { background:#e1f3e9; }
+.voice-workspace[data-interface=voice-studio] .voice-workspace-mic > svg { grid-area:1/1; z-index:1; width:30px; height:30px; pointer-events:none; transition:opacity 180ms,scale 280ms cubic-bezier(.2,0,0,1); }
+.voice-workspace[data-interface=voice-studio] .voice-workspace-mic .voice-mic-icon { opacity:1; scale:1; }
+.voice-workspace[data-interface=voice-studio] .voice-workspace-mic .voice-studio-spinner { opacity:0; scale:.75; }
+.voice-workspace[data-interface=voice-studio] .voice-workspace-mic:is([data-mic-state=starting],[data-mic-state=processing]) .voice-mic-icon { opacity:0; scale:.75; }
+.voice-workspace[data-interface=voice-studio] .voice-workspace-mic:is([data-mic-state=starting],[data-mic-state=processing]) .voice-studio-spinner { opacity:1; scale:1; }
+.voice-workspace[data-interface=voice-studio] .voice-workspace-transport .voice-workspace-wave { width:min(80px,100%); color:rgb(var(--voice-signal)); transition:color 420ms; }
 .voice-workspace[data-interface=voice-studio][data-view=result] :is(.voice-focus-stage,.voice-workspace-instruction,.voice-turn-activity-slot,.voice-workspace-heard,.voice-workspace-context,.voice-workspace-next,.voice-workspace-settings) { display:none; }
 .voice-workspace[data-interface=voice-studio][data-view=result] .voice-workspace-hero { padding:10px 0 18px; gap:12px; }
 .voice-complete-mark { width:44px; height:44px; display:grid; place-items:center; border-radius:16px; color:var(--voice-accent); background:color-mix(in srgb,var(--voice-accent) 10%,transparent); border:1px solid color-mix(in srgb,var(--voice-accent) 22%,transparent); }
@@ -112,20 +144,21 @@
  .voice-discover-actions > button { transition:background 180ms,color 180ms,border-color 180ms,transform 180ms; }
  .voice-discover-actions > button:active,.voice-discover-pagination > button:active { transform:scale(.96); }
  .voice-discover-example { animation:voice-studio-enter 320ms cubic-bezier(.2,0,0,1); }
- .voice-workspace[data-interface=voice-studio] .voice-workspace-mic { transition:transform 180ms cubic-bezier(.2,0,0,1),background 350ms,box-shadow 350ms; }
- .voice-workspace[data-interface=voice-studio] .voice-workspace-mic:active { transform:scale(.91); }
- .voice-workspace[data-interface=voice-studio] .voice-studio-spinner { animation:voice-studio-orbit 1000ms linear infinite; }
+ .voice-workspace[data-interface=voice-studio] .voice-workspace-mic:not(:disabled):active { transform:scale(.95); transition-duration:120ms; }
+ .voice-workspace[data-interface=voice-studio] .voice-workspace-mic:is([data-mic-state=starting],[data-mic-state=processing]) .voice-studio-spinner { animation:voice-studio-orbit 1400ms linear infinite; }
  .voice-complete-mark { animation:voice-studio-enter 320ms cubic-bezier(.2,0,0,1); }
  .voice-workspace[data-interface=voice-studio][data-listening=true] .voice-mic-aura > i:first-child { animation:voice-studio-ready 2800ms ease-in-out infinite; }
  .voice-workspace[data-interface=voice-studio][data-talking=true] .voice-mic-aura > i:nth-child(n) { animation:voice-studio-speech 1600ms cubic-bezier(.2,0,0,1) infinite; }
  .voice-workspace[data-interface=voice-studio][data-talking=true] .voice-mic-aura > i:nth-child(2) { animation-delay:400ms; }
  .voice-workspace[data-interface=voice-studio][data-talking=true] .voice-mic-aura > i:nth-child(3) { animation-delay:800ms; }
- .voice-workspace[data-interface=voice-studio]:is([data-phase=starting],[aria-busy=true]) .voice-mic-aura > i:first-child { opacity:.55; border-color:var(--voice-accent) transparent transparent; animation:voice-studio-orbit 1200ms linear infinite; }
- @keyframes voice-studio-ready { 0%,100% { opacity:.12; transform:scale(1); } 50% { opacity:.3; transform:scale(1.06); } }
- @keyframes voice-studio-speech { from { opacity:.4; transform:scale(.95); } to { opacity:0; transform:scale(1.48); } }
+ .voice-workspace[data-interface=voice-studio]:is([data-phase=starting],[aria-busy=true]) .voice-mic-aura > i:first-child { animation:voice-studio-ready 3200ms cubic-bezier(.4,0,.2,1) infinite; }
+ @keyframes voice-studio-ready { 0%,100% { opacity:.12; transform:scale(1); } 50% { opacity:.3; transform:scale(1.04); } }
+ @keyframes voice-studio-speech { from { opacity:.3; transform:scale(.98); } to { opacity:0; transform:scale(1.24); } }
  @keyframes voice-studio-orbit { to { transform:rotate(360deg); } }
  @keyframes voice-studio-enter { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
 }
 @media(prefers-reduced-motion:reduce) {
+ .voice-workspace[data-interface=voice-studio] .voice-workspace-transport > .voice-workspace-mic[data-mic-state],.voice-workspace[data-interface=voice-studio] .voice-workspace-transport .voice-workspace-wave { transition:none; }
+ .voice-workspace[data-interface=voice-studio] :is(.voice-workspace-mic,.voice-workspace-mic > svg,.voice-workspace-mic-stop,.voice-workspace-wave,.voice-mic-aura > i),.voice-workspace[data-interface=voice-studio] .voice-workspace-mic::before { animation:none; transition:none; }
  .voice-workspace[data-interface=voice-studio][data-listening=true] .voice-mic-aura > i:first-child { opacity:.25; }
 }

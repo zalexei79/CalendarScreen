@@ -22,7 +22,7 @@ try{
  assert.equal(await surface.getAttribute('data-listening'),'false','not listening before browser confirms start');assert.equal(await mic.isDisabled(),true);assert.match(await surface.locator('.voice-workspace-status').textContent(),/Включаю/);
  assert.equal(await surface.locator('.voice-workspace-phrase').count(),0);assert.equal(await surface.locator('.calendar-voice-commands li:visible').count(),0);
  assert.deepEqual(await page.evaluate(()=>[ttsCalls,audioContexts]),[0,0],'iOS mic start must not compete with TTS/cue playback');
- assert.equal(await surface.locator('.voice-mic-aura i').first().evaluate(el=>getComputedStyle(el).animationName),'voice-studio-orbit');
+ assert.equal(await surface.locator('.voice-mic-aura i').first().evaluate(el=>getComputedStyle(el).animationName),'voice-studio-ready');
  await page.evaluate(()=>voice.onstart());assert.equal(await surface.locator('.voice-mic-aura i').first().evaluate(el=>getComputedStyle(el).animationName),'voice-studio-ready');assert.equal(await mic.isDisabled(),false);assert.match(await surface.locator('.voice-workspace-status').textContent(),/Слушаю/);
  await page.evaluate(()=>watchdogs.at(-1)());assert.match(await surface.locator('.voice-workspace-status').textContent(),/Пока не слышу/);await page.evaluate(()=>voice.onspeechstart());assert.match(await surface.locator('.voice-workspace-status').textContent(),/Слушаю/);
  await surface.screenshot({path:'tests/voice-listening-ready.png',animations:'disabled'});

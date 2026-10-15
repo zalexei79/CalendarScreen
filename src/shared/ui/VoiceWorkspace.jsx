@@ -25,6 +25,7 @@ export default function VoiceWorkspace({locale,isLight,phrase,status,help,contex
  const ru=locale==='ru',ro=locale==='ro',zh=locale==='zh';
  const copy=(r,e,m,z)=>ru?r:ro?m:zh?z:e;
  const starting=phase==='starting',reviewing=resultKey==='review'||resultKey==='batch';
+ const micState=busy||phase==='processing'?'processing':starting?'starting':listening?'listening':phase==='speaking'?'speaking':'idle';
  const settling=listening&&quiet&&!talking;
  const awaitingReply=!talking&&(reviewing||Boolean(pendingField));
  const minimalCapture=!helpOpen&&(starting||(listening&&!settling&&!awaitingReply));
@@ -56,11 +57,11 @@ export default function VoiceWorkspace({locale,isLight,phrase,status,help,contex
    {!helpOpen&&showGuidance&&<details className="voice-workspace-settings"><summary><Settings2 size={14}/>{copy('Звук и голос','Sound and voice','Sunet și voce','声音与语音')}<ChevronDown size={14}/></summary>{settings}</details>}
   </div>
 
-  <footer className="voice-workspace-transport">
+  <footer className="voice-workspace-transport" data-mic-state={micState}>
    <div className="voice-workspace-transport-state"><span>{listening?copy('Слушаю','Listening','Ascult','聆听中'):starting?copy('Включаю…','Starting…','Pornesc…','启动中'):busy?copy('Обрабатываю…','Processing…','Procesez…','处理中'):phase==='speaking'?copy('Отвечаю…','Speaking…','Răspund…','回答中'):copy('Микрофон на паузе','Microphone paused','Microfon pe pauză','麦克风已暂停')}</span>
     <div className="voice-workspace-wave" aria-hidden="true">{Array.from({length:13},(_,i)=><i key={i} style={{'--bar':i,'--height':`${12+[3,7,15,23,32,22,38,25,30,20,13,7,3][i]}px`}}/>)}</div>
    </div>
-    <button className="voice-workspace-mic" type="button" disabled={busy||starting} onClick={()=>{if(helpOpen){setHelpOpen(false);onHelpClose?.();}onListen();}} aria-label={listening?copy('Готово — обработать фразу','Done — send phrase','Gata — trimite fraza','完成，发送语音'):copy('Продолжить голосом','Continue by voice','Continuă vocal','继续说话')} aria-pressed={listening}><span className="voice-mic-aura" aria-hidden="true"><i/><i/><i/></span>{busy||starting?<LoaderCircle className="voice-studio-spinner" size={28}/>:<Mic size={30}/>}<span className="voice-workspace-mic-stop"><Square size={12}/></span></button>
+    <button className="voice-workspace-mic" data-mic-state={micState} type="button" disabled={busy||starting} onClick={()=>{if(helpOpen){setHelpOpen(false);onHelpClose?.();}onListen();}} aria-label={listening?copy('Готово — обработать фразу','Done — send phrase','Gata — trimite fraza','完成，发送语音'):copy('Продолжить голосом','Continue by voice','Continuă vocal','继续说话')} aria-pressed={listening}><span className="voice-mic-aura" aria-hidden="true"><i/><i/><i/></span><Mic className="voice-mic-icon" size={30} aria-hidden="true"/><LoaderCircle className="voice-studio-spinner" size={28} aria-hidden="true"/><span className="voice-workspace-mic-stop" aria-hidden="true"><Square size={12}/></span></button>
    {helpOpen&&<p className="voice-studio-resume">{copy('Нажмите микрофон, чтобы продолжить','Tap the microphone to continue','Apasă microfonul pentru a continua','点击麦克风继续')}</p>}
    <button className="voice-workspace-exit" type="button" aria-label={copy('Закрыть голосовой режим','Close voice mode','Închide modul vocal','关闭语音模式')} disabled={busy} onClick={onClose}><X size={18}/><span>{copy('Выйти','Exit','Ieși','退出')}</span></button>
   </footer>
