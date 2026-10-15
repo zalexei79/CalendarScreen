@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Download, Flame, RefreshCw, Share2, X } from 'lucide-react';
+import { Flame, RefreshCw, Share2, X } from 'lucide-react';
 import SwipeDismissSheet from './SwipeDismissSheet.jsx';
 import { createQrMatrix, drawQrToCanvas } from '../../../qrCode.js';
 import { drawBrandIcon, loadBrandIcon } from '../lib/brandIcon.js';
@@ -106,7 +106,7 @@ export default function ActivityStreakDialog({
   const [shareCode, setShareCode] = useState(activeCode);
   const copy = {
     title: t('streakModalTitle'), cardHeadline: t('streakCardHeadline'), proudLine: t('streakProudLine'), account: t('streakAccount'), active: t('streakStatusActive'), paused: t('streakStatusPaused'),
-    share: t('streakShare'), save: t('streakSavePhoto'), close: t('streakClose'), preparing: t('streakPreparing'),
+    share: t('streakSharePhoto'), close: t('streakClose'), preparing: t('streakPreparing'),
     inviteTitle: t('streakInviteTitle'), inviteBody: t('streakInviteBody'), inviteHint: t('streakInviteHint'), proBadge: t('streakProBadge'),
     shareText: t('streakShareText'), error: t('streakShareError'),
   };
@@ -155,36 +155,6 @@ export default function ActivityStreakDialog({
   function isAppleTouchDevice() {
     return /iPad|iPhone|iPod/.test(navigator.userAgent)
       || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  }
-
-  async function savePhoto() {
-    if (!shareBlob) return;
-    const file = makePhotoFile();
-    const code = shareCode;
-    const shareUrl = new URL('/?install=1', window.location.origin);
-    if (code) shareUrl.searchParams.set('ref', code);
-    // iOS does not let a PWA write directly into Photos. Opening the native
-    // share sheet with only the image exposes "Save Image" instead of Files.
-    if (file && isAppleTouchDevice() && navigator.share) {
-      try {
-        await navigator.share({
-          title: copy.title,
-          text: `${formatCountText(copy.shareText)}\n${shareUrl.toString()}`,
-          files: [file],
-        });
-      } catch (error) {
-        if (error?.name !== 'AbortError') console.error('Streak photo save error:', error);
-      }
-      return;
-    }
-    const downloadUrl = URL.createObjectURL(shareBlob);
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = `dayris-streak-${days}.png`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
   }
 
   async function share() {
@@ -256,8 +226,7 @@ export default function ActivityStreakDialog({
         </div>
 
         <div className="activity-streak-actions">
-          <button type="button" onClick={savePhoto} disabled={busy || !shareBlob} className="activity-streak-secondary"><Download size={16} />{copy.save}</button>
-          <button type="button" onClick={share} disabled={busy || !shareBlob} className="activity-streak-primary"><Share2 size={16} />{copy.share}</button>
+          <button type="button" onClick={share} disabled={busy || !shareBlob} className="activity-streak-primary"><Share2 size={19} />{copy.share}</button>
         </div>
       </SwipeDismissSheet>
     </div>
