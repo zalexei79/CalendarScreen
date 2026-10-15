@@ -2,25 +2,35 @@
    Solid field tokens keep form text readable; only outer layers refract. */
 html[data-dayris-theme="emerald"] {
   --dayris-canvas:#030e0b;
-  --dayris-surface:#0c261e;
-  --dayris-raised:#163d2e;
-  --dayris-text:#edfff6;
-  --dayris-muted:#accfbe;
-  --dayris-accent:#8cefc0;
-  --dayris-line:rgba(143,241,194,.23);
-  --emerald-atmosphere:radial-gradient(ellipse at 85% 8%,#17b88330,transparent 44%),radial-gradient(ellipse at 0% 65%,#0d896f21,transparent 48%),linear-gradient(155deg,#061e17,#030e0b 70%);
-  --emerald-pane:linear-gradient(125deg,#bcffe816,transparent 24%,#38dca40a 65%,#b3ffe80c),rgba(7,37,28,.64);
-  --emerald-card:linear-gradient(135deg,#b6ffe91a,transparent 35%,#48e3ba06 70%,#c3ffeb0a),rgba(10,45,33,.42);
-  --emerald-edge:inset 0 1px 0 #ddfff438,inset 1px 0 0 #bcffe511,inset 0 -1px 0 #0005;
-  --emerald-shadow:var(--emerald-edge),0 18px 55px #0005,0 0 28px #36e5ac0b;
-  --glass-surface:rgba(7,37,28,.72);
-  --glass-control:rgba(100,224,172,.1);
+  --dayris-surface:#112725;
+  --dayris-raised:#203e36;
+  --dayris-text:#f3fff9;
+  --dayris-muted:#b3c9c3;
+  --dayris-accent:#8affd0;
+  --dayris-profit:#9bffcf; --dayris-loss:#ffa9bc;
+  --dayris-line:rgba(208,255,237,.26);
+  --emerald-atmosphere:radial-gradient(ellipse 75% 46% at 115% 5%,#08e49c66,transparent 70%),radial-gradient(ellipse 75% 38% at -20% 63%,#00cbb54a,transparent 70%),radial-gradient(ellipse 60% 30% at 100% 100%,#126f7450,transparent 75%),linear-gradient(155deg,#071f20,#030e0b 65%);
+  --emerald-pane:radial-gradient(ellipse at 0% 0%,#effffb28,transparent 48%),linear-gradient(125deg,#d5ffef12,#071b1d44 50%,#72f9c51a),rgba(12,30,29,.38);
+  --emerald-card:linear-gradient(145deg,#e2fff31c,#b8ffeb05 40%,#07181a33 70%,#b7ffe412),rgba(15,35,34,.22);
+  --emerald-edge:inset 0 1px 0 #f0fff975,inset 1px 0 0 #d9ffed24,inset -1px -1px 0 #91ffcc18,inset 0 -3px 6px #0003;
+  --emerald-shadow:var(--emerald-edge),0 22px 55px #0006,0 0 32px #4dffbe14;
+  --glass-surface:rgba(12,30,29,.48);
+  --glass-control:rgba(216,255,238,.09);
   --glass-line:var(--dayris-line);
   --glass-highlight:rgba(219,255,240,.13);
   background:var(--dayris-canvas);
   color-scheme:dark;
 }
 html[data-dayris-theme="emerald"] body { background:var(--dayris-canvas); }
+html[data-dayris-theme="emerald"] :is(.premium-shell,.first-run-dialog,.entry-welcome,.dayris-swipe-sheet,.capital-panel) {
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+html[data-dayris-theme="emerald"] .font-data { font-family:inherit; font-variant-numeric:tabular-nums; }
+html[data-dayris-theme="emerald"] button:is(.bg-amber-400,.bg-amber-300) {
+  background:linear-gradient(145deg,#c8ffe9,#6ceab3); color:#062b20;
+  box-shadow:inset 0 1px #fff9,0 5px 22px #5cffb426;
+}
 html[data-dayris-theme="emerald"] :is(.premium-shell,.wallet-panel-enter,.capital-panel,.entry-welcome) {
   background:var(--emerald-atmosphere); background-color:var(--dayris-canvas); color:var(--dayris-text);
 }
@@ -93,31 +103,80 @@ html[data-dayris-theme="emerald"] :is(.wallet-balance-card,.wallet-activity-list
 }
 html[data-dayris-theme="emerald"] .calendar-day-surface {
   background:var(--emerald-card)!important;
-  border-color:#88f3bd30!important;
-  box-shadow:var(--emerald-edge),0 7px 22px #0002!important;
+  border-color:#ddfff332!important;
+  box-shadow:var(--emerald-edge),0 8px 22px #0003!important;
+}
+html[data-dayris-theme="emerald"] .calendar-days-grid > .calendar-day-surface { border-radius:18px!important; }
+@media(min-width:640px) {
+  html[data-dayris-theme="emerald"] .calendar-days-grid > .calendar-day-surface { border-radius:24px!important; }
 }
 html[data-dayris-theme="emerald"] .calendar-day-surface::before {
-  background:linear-gradient(125deg,#d0ffec16,transparent 28%,transparent 65%,#8effd408);
+  background:radial-gradient(ellipse 110% 65% at 15% -20%,#f3fffb28,transparent 75%);
   opacity:1;
 }
 html[data-dayris-theme="emerald"] .calendar-day-surface[data-in-month="false"] {
   background:rgba(3,17,12,.4)!important; border-color:#88f3bd12!important;
 }
 html[data-dayris-theme="emerald"] .calendar-day-surface[data-pnl-tone="profit"] {
-  border-color:#77efae70!important;
-  box-shadow:var(--emerald-edge),inset 0 -25px 35px -24px #77efae60,0 0 20px #51dc9114!important;
+  background:radial-gradient(ellipse at 50% 115%,#20ef9d80,transparent 70%),linear-gradient(145deg,#caffed22,#0c8a5d28 45%,#05251d88)!important;
+  border-color:#8bffd580!important;
+  box-shadow:var(--emerald-edge),inset 0 -1px #8affd0a6,0 6px 25px #05e99d20!important;
 }
 html[data-dayris-theme="emerald"] .calendar-day-surface[data-pnl-tone="loss"] {
-  border-color:#eea6b34d!important;
-  box-shadow:var(--emerald-edge),inset 0 -25px 35px -24px #eea6b338!important;
+  background:radial-gradient(ellipse at 50% 115%,#ff447b99,transparent 72%),linear-gradient(145deg,#ffd0e42b,#b22d5738 45%,#27132499)!important;
+  border-color:#ffb4d180!important;
+  box-shadow:var(--emerald-edge),inset 0 -1px #ff99c0aa,0 6px 26px #ff3d7629!important;
 }
 html[data-dayris-theme="emerald"] .calendar-day-surface.today-calendar-cell {
-  border-color:#f4d990b8!important;
-  box-shadow:var(--emerald-edge),0 0 22px #f4d9901a!important;
+  border-color:#edffeeb8!important;
+  box-shadow:var(--emerald-edge),inset 0 0 25px #8affc616,0 0 0 1px #b6ffe421,0 0 30px #5bffbf26!important;
+}
+html[data-dayris-theme="emerald"] .today-calendar-cell::after {
+  background:radial-gradient(ellipse at 50% 0%,#a5ffd92b,transparent 68%);
+}
+html[data-dayris-theme="emerald"] .today-calendar-cell > .bg-amber-400 {
+  background:#b6ffe4; box-shadow:0 0 12px #8affd0aa;
 }
 html[data-dayris-theme="emerald"] .calendar-day-surface.selected-calendar-cell {
   border-color:var(--dayris-accent)!important;
   box-shadow:var(--emerald-edge),inset 0 0 0 1px #8cefc029,0 0 26px #5cebb52e!important;
+}
+html[data-dayris-theme="emerald"] .calendar-day-surface .day-amount { text-shadow:0 0 16px currentColor; }
+html[data-dayris-theme="emerald"] .calendar-day-surface > :is(.font-data,.mt-auto) { position:relative; z-index:1; }
+.calendar-glass-optics { display:none; }
+html[data-dayris-theme="emerald"] .calendar-glass-optics {
+  display:block; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+  background:radial-gradient(ellipse 80% 60% at var(--glass-x,15%) var(--glass-y,0%),#eafff72b,transparent 75%),linear-gradient(125deg,transparent 60%,#e8fff408 61%,transparent 80%);
+  opacity:.5; transition:opacity 350ms cubic-bezier(.4,0,.2,1);
+}
+html[data-dayris-theme="emerald"] .calendar-motion-light {
+  inset:-80px -20% 0; height:auto; opacity:.7;
+  background:radial-gradient(ellipse 45% 45% at 95% 0%,#2fffba2e,transparent 80%),radial-gradient(ellipse 45% 50% at 0% 75%,#00d8cd21,transparent 80%);
+}
+html[data-dayris-theme="emerald"] .calendar-weekdays { color:#c6e6da; }
+html[data-dayris-theme="emerald"] .calendar-weekdays > div { color:inherit; font-family:system-ui,sans-serif; font-size:10px; letter-spacing:.06em; }
+html[data-dayris-theme="emerald"] .dayris-header {
+  border-bottom-color:#e3fff526;
+  background:linear-gradient(135deg,#effffb0f,#0c262524);
+  box-shadow:inset 0 -1px #d0ffe910,0 16px 40px #0002;
+}
+html[data-dayris-theme="emerald"] .calendar-month-brief summary > strong[data-sign="positive"] { color:var(--dayris-profit); text-shadow:0 0 18px #38f9ad55; }
+html[data-dayris-theme="emerald"] .calendar-month-brief summary > strong[data-sign="negative"] { color:var(--dayris-loss); text-shadow:0 0 18px #ff528455; }
+html[data-dayris-theme="emerald"] .calendar-action-dock > .calendar-dock-morph {
+  border-color:#effffb66; background:var(--emerald-pane);
+  box-shadow:var(--emerald-edge),0 14px 40px #0008,0 0 35px #6affc328;
+}
+html[data-dayris-theme="emerald"] .calendar-dock-morph .calendar-dock-money {
+  background:linear-gradient(135deg,#b9ffe350,#42ffab1a); border-color:#b9ffe350;
+}
+@media(hover:hover) and (pointer:fine) {
+  html[data-dayris-theme="emerald"] .calendar-day-surface:hover .calendar-glass-optics { opacity:1; }
+  html[data-dayris-theme="emerald"] .calendar-days-grid > .calendar-day-surface:hover:not(.selected-calendar-cell) {
+    border-color:#dcfff4a3!important; transform:translateY(-2px);
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  html[data-dayris-theme="emerald"] .calendar-glass-optics { transition:none; }
 }
 /* First-run dialog is in the browser top layer, above the main app. */
 html[data-dayris-theme="emerald"] .first-run-dialog[data-theme="emerald"] {
@@ -161,4 +220,7 @@ html[data-dayris-theme="emerald"] [data-theme-option="emerald"] { --theme-label:
   html[data-dayris-theme="emerald"] .wallet-panel-enter > .fixed > .max-w-md {
     backdrop-filter:none!important; -webkit-backdrop-filter:none!important;
   }
+  html[data-dayris-theme="emerald"] :is(.calendar-glass-optics,.calendar-motion-light) { display:none; }
+  html[data-dayris-theme="emerald"] .calendar-day-surface[data-pnl-tone="profit"] { background:#133d2e!important; }
+  html[data-dayris-theme="emerald"] .calendar-day-surface[data-pnl-tone="loss"] { background:#442334!important; }
 }

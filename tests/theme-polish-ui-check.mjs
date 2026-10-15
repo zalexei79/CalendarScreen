@@ -14,6 +14,9 @@ try {
     localStorage.setItem(`money_calendar_trades_${id}`,JSON.stringify({
       '2026-10-05':[{id:'loss',pnl:-136,currency:'USD',instrument:'Продукты',traderMode:false,time:'10:00'}],
       '2026-10-06':[{id:'profit',pnl:500,currency:'USD',instrument:'Подарок',traderMode:false,time:'10:00'}],
+      '2026-10-02':[{id:'salary',pnl:2400,currency:'USD',instrument:'Зарплата',traderMode:false,time:'09:00'}],
+      '2026-10-03':[{id:'rent',pnl:-650,currency:'USD',instrument:'Жильё',traderMode:false,time:'11:00'}],
+      '2026-10-01':[{id:'coffee',pnl:-8,currency:'USD',instrument:'Кофе',traderMode:false,time:'08:00'}],
     }));
   },storyUserId);
   await context.route('**/*',route=>{
@@ -41,7 +44,12 @@ try {
         const loss=document.querySelector('.calendar-day-surface[data-pnl-tone="loss"] .day-amount');
         return {profit:style(profit).color,loss:style(loss).color,ambient:style(document.querySelector('.today-calendar-cell'),'::after').animationName};
       });
-      assert.equal(colors.profit,'rgb(145, 197, 172)'); assert.equal(colors.loss,'rgb(211, 160, 167)'); assert.equal(colors.ambient,'none');
+      assert.equal(colors.profit,theme==='emerald'?'rgb(155, 255, 207)':'rgb(145, 197, 172)'); assert.equal(colors.loss,theme==='emerald'?'rgb(255, 169, 188)':'rgb(211, 160, 167)'); assert.equal(colors.ambient,'none');
+      if(theme==='emerald') {
+        const profit=await page.locator('.calendar-day-surface[data-pnl-tone="profit"]').first().evaluate(el=>getComputedStyle(el).backgroundImage);
+        const loss=await page.locator('.calendar-day-surface[data-pnl-tone="loss"]').first().evaluate(el=>getComputedStyle(el).backgroundImage);
+        assert.match(profit,/radial-gradient/); assert.match(loss,/radial-gradient/); assert.notEqual(profit,loss);
+      }
       await page.screenshot({path:`tests/theme-${theme}-${width}.png`,animations:'disabled'});
     }
   }

@@ -96,6 +96,16 @@ export default function CalendarDayCell({
   return (
     <>
       <button
+        onPointerMove={(event) => {
+          if (event.pointerType !== 'mouse' || document.documentElement.dataset.dayrisTheme !== 'emerald' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+          const rect = event.currentTarget.getBoundingClientRect();
+          event.currentTarget.style.setProperty('--glass-x', `${((event.clientX - rect.left) / rect.width * 100).toFixed(1)}%`);
+          event.currentTarget.style.setProperty('--glass-y', `${((event.clientY - rect.top) / rect.height * 100).toFixed(1)}%`);
+        }}
+        onPointerLeave={(event) => {
+          event.currentTarget.style.removeProperty('--glass-x');
+          event.currentTarget.style.removeProperty('--glass-y');
+        }}
         data-pnl-tone={hasTrades ? pnlTone : 'neutral'}
         data-in-month={String(cell.inMonth)}
         data-today-cell={cell.isToday ? 'true' : undefined}
@@ -123,6 +133,7 @@ export default function CalendarDayCell({
             : isLight ? 'hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm' : 'hover:border-zinc-600 hover:bg-zinc-800/60',
         ].join(' ')}
       >
+        <span className="calendar-glass-optics" aria-hidden="true" />
         {cell.isToday && (
           <>
             {todayPulse && (
