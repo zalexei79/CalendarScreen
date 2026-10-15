@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronLeft, ChevronRight, Check, Sun, Moon, Monitor, Languages, CircleDollarSign, Mic, Play, Sparkles, User, LogOut, ShieldCheck, Info, RotateCcw } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Check, Sun, Moon, Monitor, Languages, CircleDollarSign, Mic, Play, Sparkles, User, LogOut, ShieldCheck, Info, RotateCcw, Send, ArrowUpRight } from 'lucide-react';
 import SwipeDismissSheet from './SwipeDismissSheet.jsx';
 import VoiceSettings from './VoiceSettings.jsx';
 import BrandIcon from './BrandIcon.jsx';
@@ -15,6 +15,20 @@ const COPY = {
   zh: { app:'应用', personal:'个性化', account:'账户', about:'关于应用', theme:'外观', language:'语言', currency:'新记录货币',calendar:'日历',help:'帮助与 DAYRIS',storyHint:'你的记录概览',currencyHint:'用于新记录。在月份旁切换日历货币。', voice:'语音和输入', story:'我的故事', watch:'查看', restart:'重新查看介绍', profile:'个人资料', active:'已启用', learn:'了解更多', guest:'认识 DAYRIS', guestHint:'登录以保存你的记录。', light:'浅色', system:'跟随系统', dark:'深色', purple:'紫水晶', emerald:'翡翠绿', systemHint:'跟随设备的外观设置。', close:'关闭设置', description:'在一个日历中记录收入、支出和财务节奏。', currencies:['美元','欧元','摩尔多瓦列伊','俄罗斯卢布','人民币'] },
 };
 const LANGUAGES = [{code:'ru',label:'Русский'}, {code:'en',label:'English'}, {code:'md',label:'Română'}, {code:'zh-CN',label:'中文'}];
+const FEEDBACK = {
+  ru: ['Связаться с создателем', 'Есть вопрос или идея для DAYRIS? Напиши мне в Telegram.'],
+  en: ['Contact the creator', 'Have a question or an idea for DAYRIS? Message me on Telegram.'],
+  ro: ['Contactează creatorul', 'Ai o întrebare sau o idee pentru DAYRIS? Scrie-mi pe Telegram.'],
+  zh: ['联系创作者', '有关于 DAYRIS 的问题或建议？欢迎通过 Telegram 联系我。'],
+};
+function CreatorContact({locale}) {
+  const [title,description] = FEEDBACK[locale];
+  return <a className="settings-creator-contact" href="https://t.me/AVEEL_Z" target="_blank" rel="noopener noreferrer">
+    <span className="settings-contact-icon"><Send size={18} aria-hidden="true"/></span>
+    <span className="settings-contact-copy"><strong>{title}</strong><small>{description}</small><span>Telegram <i aria-hidden="true">·</i> @AVEEL_Z</span></span>
+    <ArrowUpRight size={16} aria-hidden="true"/>
+  </a>;
+}
 
 function Row({ icon: Icon, label, value, onClick }) {
   return <button type="button" className="settings-row" onClick={onClick}><Icon size={18} aria-hidden="true"/><span>{label}</span>{value && <small>{value}</small>}<ChevronRight size={15} aria-hidden="true"/></button>;
@@ -71,6 +85,7 @@ export default function SettingsPanel({ t, language, setLanguage, currency, setC
           <Group title={copy.calendar}><Row icon={CircleDollarSign} label={copy.currency} value={currency} onClick={()=>navigate('currency')}/><Row icon={Languages} label={copy.language} value={LANGUAGES.find(item=>item.code===language)?.label} onClick={()=>navigate('language')}/><Row icon={Mic} label={copy.voice} onClick={()=>navigate('voice')}/></Group>
           {onStory && <button type="button" className="settings-story-card" onClick={()=>action(onStory)}><Play size={18} aria-hidden="true"/><span><strong>{copy.story}</strong><small>{copy.storyHint}</small></span><ChevronRight size={15} aria-hidden="true"/></button>}
           <Row icon={Info} label={copy.help} onClick={()=>navigate('help')}/>
+          <CreatorContact locale={locale}/>
           {!user && <Row icon={Sparkles} label="DAYRIS PRO" value={copy.learn} onClick={()=>action(onPro)}/>}
         </>}
         {choices.length > 0 && <div className="settings-choices" role="group" aria-label={title}>{choices.map(({code,label,icon:Icon,symbol,selected,choose})=><button type="button" key={code} className={`settings-choice${selected?' is-selected':''}`} aria-pressed={selected} onClick={choose}>{Icon && <Icon size={21}/>} {symbol && <span className="settings-choice-symbol">{symbol}</span>}<span>{label}</span>{selected && <Check size={19}/>}</button>)}{page==='theme' && <p className="settings-note">{copy.systemHint}</p>}</div>}
