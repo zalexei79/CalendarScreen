@@ -1,6 +1,7 @@
 import {saveVoiceDestinations} from './src/shared/lib/saveVoiceDestinations.js';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import './src/shared/ui/PurpleTheme.css';
+import './src/shared/ui/EmeraldGlass.css';
 import { useWorkspaceViewport } from './src/shared/ui/useWorkspaceViewport';
 import WorkspaceDock from './src/shared/ui/WorkspaceDock';
 import MetaTraderControl from './src/features/metatrader/MetaTraderControl.jsx';

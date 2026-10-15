@@ -1,0 +1,164 @@
+/* A single material contract for emerald, including body portals and first run.
+   Solid field tokens keep form text readable; only outer layers refract. */
+html[data-dayris-theme="emerald"] {
+  --dayris-canvas:#030e0b;
+  --dayris-surface:#0c261e;
+  --dayris-raised:#163d2e;
+  --dayris-text:#edfff6;
+  --dayris-muted:#accfbe;
+  --dayris-accent:#8cefc0;
+  --dayris-line:rgba(143,241,194,.23);
+  --emerald-atmosphere:radial-gradient(ellipse at 85% 8%,#17b88330,transparent 44%),radial-gradient(ellipse at 0% 65%,#0d896f21,transparent 48%),linear-gradient(155deg,#061e17,#030e0b 70%);
+  --emerald-pane:linear-gradient(125deg,#bcffe816,transparent 24%,#38dca40a 65%,#b3ffe80c),rgba(7,37,28,.64);
+  --emerald-card:linear-gradient(135deg,#b6ffe91a,transparent 35%,#48e3ba06 70%,#c3ffeb0a),rgba(10,45,33,.42);
+  --emerald-edge:inset 0 1px 0 #ddfff438,inset 1px 0 0 #bcffe511,inset 0 -1px 0 #0005;
+  --emerald-shadow:var(--emerald-edge),0 18px 55px #0005,0 0 28px #36e5ac0b;
+  --glass-surface:rgba(7,37,28,.72);
+  --glass-control:rgba(100,224,172,.1);
+  --glass-line:var(--dayris-line);
+  --glass-highlight:rgba(219,255,240,.13);
+  background:var(--dayris-canvas);
+  color-scheme:dark;
+}
+html[data-dayris-theme="emerald"] body { background:var(--dayris-canvas); }
+html[data-dayris-theme="emerald"] :is(.premium-shell,.wallet-panel-enter,.capital-panel,.entry-welcome) {
+  background:var(--emerald-atmosphere); background-color:var(--dayris-canvas); color:var(--dayris-text);
+}
+/* Connect local component palettes; selectors also match portalled dialogs. */
+html[data-dayris-theme="emerald"] :is(.capital-panel,.capital-overlay,.capital-sheet) {
+  --cap-bg:var(--dayris-canvas); --cap-surface:var(--dayris-surface);
+  --cap-text:var(--dayris-text); --cap-muted:var(--dayris-muted);
+  --cap-line:var(--dayris-line); --cap-gold:#d9c48f;
+}
+html[data-dayris-theme="emerald"] :is(.pro-dialog,.pro-actions-reveal,.workspace-mode-group) {
+  --pro-bg:var(--dayris-canvas); --pro-surface:var(--dayris-surface);
+  --pro-text:var(--dayris-text); --pro-muted:var(--dayris-muted); --pro-line:var(--dayris-line);
+}
+html[data-dayris-theme="emerald"] :is(.wealth-entry,.savings-dialog,.savings-nudge) {
+  --sp-surface:var(--dayris-surface); --sp-ink:var(--dayris-text);
+  --sp-muted:var(--dayris-muted); --sp-line:var(--dayris-line);
+}
+html[data-dayris-theme="emerald"] .plan-overlay {
+  --plan-bg:var(--dayris-canvas); --plan-surface:var(--dayris-surface); --plan-field:#092219;
+  --plan-text:var(--dayris-text); --plan-muted:var(--dayris-muted); --plan-line:var(--dayris-line);
+  --plan-accent:#d9c48f; --plan-selected:#184a36;
+}
+html[data-dayris-theme="emerald"] :is(.category-picker,.category-picker-layer) {
+  --cp-bg:var(--dayris-surface); --cp-raised:var(--dayris-raised);
+  --cp-text:var(--dayris-text); --cp-muted:var(--dayris-muted); --cp-line:var(--dayris-line);
+}
+html[data-dayris-theme="emerald"] .voice-workspace {
+  --voice-ink:var(--dayris-text); --voice-muted:var(--dayris-muted);
+  --voice-accent:var(--dayris-accent); --voice-line:var(--dayris-line);
+}
+html[data-dayris-theme="emerald"] .financial-history-dialog {
+  --fh-ink:var(--dayris-text); --fh-muted:var(--dayris-muted); --fh-line:var(--dayris-line);
+  background:var(--emerald-pane)!important;
+}
+html[data-dayris-theme="emerald"] :is(.entry-welcome,.entry-login-dialog) {
+  --entry-text:var(--dayris-text); --entry-muted:var(--dayris-muted);
+  --entry-panel:var(--dayris-surface); --entry-border:var(--dayris-line);
+}
+html[data-dayris-theme="emerald"] .amount-keypad {
+  --amount-key:rgba(140,239,192,.09); --amount-line:var(--dayris-line); --amount-ink:var(--dayris-text);
+}
+html[data-dayris-theme="emerald"] .life-story[data-theme="emerald"] {
+  --paper:var(--dayris-canvas); --ink:var(--dayris-text); --muted:var(--dayris-muted);
+  --green:#64c99c; background:var(--emerald-atmosphere);
+}
+/* Floating glass: reflection, crisp rim, refraction and soft edge illumination. */
+html[data-dayris-theme="emerald"] :is(.dayris-header,.dayris-date-menu,.dayris-status-menu,.pro-dialog,.capital-sheet,.plan-dialog,.savings-dialog,.lot-calculator,.voice-workspace,.voice-workspace[data-interface="voice-studio"],.category-picker-sheet),
+html[data-dayris-theme="emerald"] .dayris-swipe-sheet[data-glass-theme="dark"],
+html[data-dayris-theme="emerald"] .settings-surface.dayris-settings-panel.dayris-swipe-sheet,
+html[data-dayris-theme="emerald"] .calendar-action-dock > .calendar-dock-morph {
+  background:var(--emerald-pane); border-color:var(--dayris-line);
+  box-shadow:var(--emerald-shadow);
+  backdrop-filter:blur(28px) saturate(1.55);
+  -webkit-backdrop-filter:blur(28px) saturate(1.55);
+}
+html[data-dayris-theme="emerald"] :is(.entry-login-dialog,.calendar-currency-menu,.category-picker-sheet,.financial-history-dialog),
+html[data-dayris-theme="emerald"] .wallet-panel-enter > .fixed > .max-w-md {
+  background:var(--emerald-pane); border-color:var(--dayris-line);
+  box-shadow:var(--emerald-shadow);
+  backdrop-filter:blur(28px) saturate(1.55); -webkit-backdrop-filter:blur(28px) saturate(1.55);
+}
+html[data-dayris-theme="emerald"] .settings-surface.dayris-settings-panel.dayris-swipe-sheet {
+  --settings-bg:#0c261e; --settings-text:var(--dayris-text);
+  --settings-muted:var(--dayris-muted); --settings-line:#b0ffdc19; --settings-hover:#86efbc0d;
+}
+/* Inner cards use translucent reflections without dozens of nested blur layers. */
+html[data-dayris-theme="emerald"] :is(.wallet-balance-card,.wallet-activity-list > div,.capital-asset,.capital-overview,.capital-insight,.capital-holdings-panel,.wealth-entry,.savings-nudge,.settings-account-card,.settings-story-card,.settings-creator-contact,.first-run-money-preview,.life-birthday-card) {
+  background:var(--emerald-card); border-color:var(--dayris-line);
+  box-shadow:var(--emerald-edge),0 8px 26px #0002;
+}
+html[data-dayris-theme="emerald"] .calendar-day-surface {
+  background:var(--emerald-card)!important;
+  border-color:#88f3bd30!important;
+  box-shadow:var(--emerald-edge),0 7px 22px #0002!important;
+}
+html[data-dayris-theme="emerald"] .calendar-day-surface::before {
+  background:linear-gradient(125deg,#d0ffec16,transparent 28%,transparent 65%,#8effd408);
+  opacity:1;
+}
+html[data-dayris-theme="emerald"] .calendar-day-surface[data-in-month="false"] {
+  background:rgba(3,17,12,.4)!important; border-color:#88f3bd12!important;
+}
+html[data-dayris-theme="emerald"] .calendar-day-surface[data-pnl-tone="profit"] {
+  border-color:#77efae70!important;
+  box-shadow:var(--emerald-edge),inset 0 -25px 35px -24px #77efae60,0 0 20px #51dc9114!important;
+}
+html[data-dayris-theme="emerald"] .calendar-day-surface[data-pnl-tone="loss"] {
+  border-color:#eea6b34d!important;
+  box-shadow:var(--emerald-edge),inset 0 -25px 35px -24px #eea6b338!important;
+}
+html[data-dayris-theme="emerald"] .calendar-day-surface.today-calendar-cell {
+  border-color:#f4d990b8!important;
+  box-shadow:var(--emerald-edge),0 0 22px #f4d9901a!important;
+}
+html[data-dayris-theme="emerald"] .calendar-day-surface.selected-calendar-cell {
+  border-color:var(--dayris-accent)!important;
+  box-shadow:var(--emerald-edge),inset 0 0 0 1px #8cefc029,0 0 26px #5cebb52e!important;
+}
+/* First-run dialog is in the browser top layer, above the main app. */
+html[data-dayris-theme="emerald"] .first-run-dialog[data-theme="emerald"] {
+  background:var(--emerald-atmosphere); color:var(--dayris-text);
+}
+html[data-dayris-theme="emerald"] .first-run-dialog[data-theme="emerald"]:not([data-story="true"]) > div > .first-run-shell {
+  background:var(--emerald-pane); border-color:var(--dayris-line);
+  box-shadow:var(--emerald-shadow);
+  backdrop-filter:blur(28px) saturate(1.55); -webkit-backdrop-filter:blur(28px) saturate(1.55);
+}
+html[data-dayris-theme="emerald"] .first-run-dialog .first-run-product-panel {
+  background:linear-gradient(145deg,#70ffbc0c,transparent 70%); border-color:var(--dayris-line);
+}
+html[data-dayris-theme="emerald"] .first-run-dialog[data-theme="emerald"] :is([role="group"] > button,.first-run-theme-picker,.life-birthday-card) {
+  background:var(--emerald-card); border-color:var(--dayris-line);
+  box-shadow:var(--emerald-edge),0 6px 24px #0002;
+}
+html[data-dayris-theme="emerald"] .first-run-dialog [data-theme-option="emerald"][aria-pressed="true"] {
+  background:linear-gradient(125deg,#a8ffe52b,#46d99715);
+  color:var(--dayris-accent); box-shadow:var(--emerald-edge),0 0 18px #53e8ac20;
+}
+html[data-dayris-theme="emerald"] .first-run-dialog :is(.text-zinc-400,.first-run-product-type) { color:var(--dayris-muted); }
+html[data-dayris-theme="emerald"] :is(.entry-calendar-preview,.entry-welcome-card),
+html[data-dayris-theme="emerald"] .plan-templates > button {
+  background:var(--emerald-card); border-color:var(--dayris-line); box-shadow:var(--emerald-edge);
+}
+html[data-dayris-theme="emerald"] [data-theme-option="emerald"] { --theme-label:var(--dayris-accent); }
+.settings-theme-sample[data-theme="emerald"] {
+  background:radial-gradient(ellipse at 20% 0%,#3fdc9b44,transparent 70%),#041a12;
+}
+.settings-theme-sample[data-theme="emerald"] i { background:linear-gradient(135deg,#caffea42,#39c88a14); box-shadow:inset 0 1px #ceffea42; }
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  html[data-dayris-theme="emerald"] { --emerald-pane:linear-gradient(125deg,#153d2d,#0b2119); }
+}
+@media(prefers-reduced-transparency:reduce) {
+  html[data-dayris-theme="emerald"] {
+    --emerald-pane:#0c261e; --emerald-card:#0c261e;
+    --emerald-atmosphere:#030e0b;
+  }
+  html[data-dayris-theme="emerald"] :is(.dayris-header,.dayris-date-menu,.dayris-status-menu,.pro-dialog,.capital-sheet,.plan-dialog,.savings-dialog,.lot-calculator,.voice-workspace,.dayris-swipe-sheet,.first-run-shell,.category-picker-sheet,.calendar-dock-morph,.entry-login-dialog,.calendar-currency-menu,.financial-history-dialog),
+  html[data-dayris-theme="emerald"] .wallet-panel-enter > .fixed > .max-w-md {
+    backdrop-filter:none!important; -webkit-backdrop-filter:none!important;
+  }
+}

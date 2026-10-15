@@ -128,7 +128,7 @@ export default function FirstRunSetup({ step, language, currency, theme, calenda
     <dialog ref={dialogRef} lang={lang==='zh'?'zh-CN':lang} data-theme={theme} data-story={story || undefined} aria-labelledby="first-run-heading" onCancel={(event) => { event.preventDefault(); onSkip(); }}
       className={`first-run-dialog fixed inset-0 m-0 h-[100dvh] max-h-none w-full max-w-none overflow-y-auto border-0 bg-transparent p-0 backdrop:bg-black/75 backdrop:backdrop-blur-md ${light ? 'text-zinc-900' : 'text-zinc-100'}`}>
       {story ? <LifeStory birthday={birthday} lang={lang} theme={theme} currency={currency} calendarRecords={calendarRecords} personalStory={personalStory} onStart={onStart} onArrive={onArrive} onSkip={onSkip} onBack={() => onStep('birthday')} /> : <div className="flex min-h-full items-center justify-center p-3 sm:p-6">
-        <div className={`grid w-full max-w-[940px] overflow-hidden rounded-[28px] border shadow-2xl md:grid-cols-[0.85fr_1.15fr] ${light ? 'border-white bg-[#faf9f6]' : 'border-white/10 bg-[#111214]'}`}>
+        <div className={`first-run-shell grid w-full max-w-[940px] overflow-hidden rounded-[28px] border shadow-2xl md:grid-cols-[0.85fr_1.15fr] ${light ? 'border-white bg-[#faf9f6]' : 'border-white/10 bg-[#111214]'}`}>
           <div className="first-run-product-panel relative hidden flex-col justify-between overflow-hidden border-r border-white/10 bg-[#111714] p-9 text-white md:flex">
             <div className="relative flex items-center gap-3"><BrandIcon className="h-10 w-10" /><div><span className="text-sm font-semibold tracking-[0.16em]">DAYRIS</span><p className="first-run-product-type">{copy.productType}</p></div></div>
             <div className="relative py-12">
@@ -166,7 +166,7 @@ export default function FirstRunSetup({ step, language, currency, theme, calenda
               {index === 1 && <>
                 <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
                   <span className={`text-xs ${muted}`}>{copy.appearance}</span>
-                  <div className={`grid w-full grid-cols-2 gap-1 rounded-xl p-1 sm:w-auto ${light ? 'bg-zinc-200/60' : 'bg-black/25'}`}>
+                  <div className={`first-run-theme-picker grid w-full grid-cols-2 gap-1 rounded-xl p-1 sm:w-auto ${light ? 'bg-zinc-200/60' : 'bg-black/25'}`}>
                     {[['light', Sun, copy.light], ['dark', Moon, copy.dark], ['purple', Moon, copy.purple], ['emerald', Moon, copy.emerald]].map(([value, Icon, label]) => <button key={value} type="button" data-theme-option={value} aria-pressed={theme === value} onClick={() => onTheme(value)} className={`flex min-h-9 min-w-0 items-center justify-center gap-1.5 rounded-lg px-1 text-[10px] sm:px-2.5 sm:text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${theme === value ? light ? 'bg-white text-zinc-900 shadow-sm' : 'bg-white/10 text-zinc-100' : muted}`}><Icon className="hidden h-3.5 w-3.5 sm:block" /><span className="theme-option-label">{label}</span></button>)}
                   </div>
                 </div>
