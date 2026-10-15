@@ -160,23 +160,31 @@ export default function ActivityStreakDialog({
   async function savePhoto() {
     if (!shareBlob) return;
     const file = makePhotoFile();
+    const code = shareCode;
+    const shareUrl = new URL('/?install=1', window.location.origin);
+    if (code) shareUrl.searchParams.set('ref', code);
     // iOS does not let a PWA write directly into Photos. Opening the native
     // share sheet with only the image exposes "Save Image" instead of Files.
-    if (file && isAppleTouchDevice() && navigator.share
-      && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
-      try { await navigator.share({ title: copy.title, files: [file] }); } catch (error) {
+    if (file && isAppleTouchDevice() && navigator.share) {
+      try {
+        await navigator.share({
+          title: copy.title,
+          text: `${formatCountText(copy.shareText)}\n${shareUrl.toString()}`,
+          files: [file],
+        });
+      } catch (error) {
         if (error?.name !== 'AbortError') console.error('Streak photo save error:', error);
       }
       return;
     }
-    const url = URL.createObjectURL(shareBlob);
+    const downloadUrl = URL.createObjectURL(shareBlob);
     const link = document.createElement('a');
-    link.href = url;
+    link.href = downloadUrl;
     link.download = `dayris-streak-${days}.png`;
     document.body.appendChild(link);
     link.click();
     link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
   }
 
   async function share() {
@@ -185,11 +193,23 @@ export default function ActivityStreakDialog({
     const code = shareCode;
     const url = new URL('/?install=1', window.location.origin);
     if (code) url.searchParams.set('ref', code);
+    const shareText = formatCountText(copy.shareText);
     try {
+      if (navigator.share && file && isAppleTouchDevice()) {
+        // WebKit can reject a payload containing both `url` and `files`.
+        // Put the URL in the caption so iOS keeps the image and the link together.
+        try {
+          await navigator.share({ title: copy.title, text: `${shareText}\n${url.toString()}`, files: [file] });
+          return;
+        } catch (error) {
+          if (error?.name === 'AbortError') return;
+          // Fall through to the URL-only fallback if this WebKit build cannot share files.
+        }
+      }
       if (navigator.share && file && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
-        await navigator.share({ title: copy.title, text: formatCountText(copy.shareText), url: url.toString(), files: [file] });
+        await navigator.share({ title: copy.title, text: shareText, url: url.toString(), files: [file] });
       } else if (navigator.share) {
-        await navigator.share({ title: copy.title, text: formatCountText(copy.shareText), url: url.toString() });
+        await navigator.share({ title: copy.title, text: shareText, url: url.toString() });
       } else {
         try { await navigator.clipboard.writeText(url.toString()); } catch { /* download remains available */ }
       }
