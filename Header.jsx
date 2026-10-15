@@ -15,6 +15,7 @@ import WorkspaceModePanel, { WorkspaceModeSelector } from './src/features/pro/Wo
 import './src/shared/ui/HeaderCompact.css';
 import CalendarMonthBrief from './src/shared/ui/CalendarMonthBrief.jsx';
 import LoginButtons from './src/features/auth/LoginButtons.jsx';
+import ActivityStreak from './src/shared/ui/ActivityStreak.jsx';
 
 function pendingSyncText(count, traderMode, language) {
   if (String(language).startsWith('zh')) return `${count} ${traderMode ? '笔交易' : '条记录'}等待同步。`;
@@ -120,6 +121,7 @@ export default function Header({
               {t('titleMoney')}
             </p>
           </div>
+          <ActivityStreak ownerId={user?.id} isLight={isLight} t={t} />
         </div>
 
         {/* Action controls: [ Download ] [ Theme ] [ Settings ] */}

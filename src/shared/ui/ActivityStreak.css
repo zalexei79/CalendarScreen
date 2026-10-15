@@ -1,0 +1,14 @@
+.activity-streak {
+  display:inline-flex; align-items:center; gap:4px; min-height:28px; padding:0 9px;
+  border:1px solid rgba(251,146,60,.24); border-radius:999px; color:#fdba74;
+  background:rgba(251,146,60,.08); font:600 10px/1.1 ui-sans-serif,system-ui,sans-serif;
+  white-space:nowrap; letter-spacing:.01em; animation:activity-streak-in 420ms cubic-bezier(.22,1,.36,1) both;
+}
+.activity-streak-light { color:#c2410c; border-color:rgba(234,88,12,.2); background:rgba(251,146,60,.09); }
+.activity-streak-paused { color:#a1a1aa; border-color:rgba(161,161,170,.24); background:rgba(161,161,170,.08); }
+.activity-streak-icon { width:14px; height:14px; fill:currentColor; stroke-width:1.8; }
+.activity-streak-value { font-variant-numeric:tabular-nums; }
+.activity-streak-pause { opacity:.82; font-weight:500; }
+@keyframes activity-streak-in { from { opacity:0; transform:translateY(-3px) scale(.96); } to { opacity:1; transform:none; } }
+@media(max-width:430px) { .activity-streak { padding:0 7px; } .activity-streak-pause { display:none; } }
+@media(prefers-reduced-motion:reduce) { .activity-streak { animation:none; } }
