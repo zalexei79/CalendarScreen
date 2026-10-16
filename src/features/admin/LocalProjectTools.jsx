@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-export default function LocalProjectTools({ local, savedPath, dirty }) {
+export default function LocalProjectTools({ local, savedPath, dirty, hidePreview = false }) {
   const [state, setState] = useState(null);
   const [selected, setSelected] = useState([]);
   const [message, setMessage] = useState('');
@@ -57,6 +57,6 @@ export default function LocalProjectTools({ local, savedPath, dirty }) {
     </>}
     {notice && <p role="alert" className="project-warning">{notice}</p>}
     {job && <section className="project-job" aria-label="Ход операции"><strong>{job.state === 'running' ? 'Выполняется' : job.state === 'success' ? 'Готово' : 'Остановлено'}: {job.phase}</strong>{job.commit && <p>Commit: <code>{job.commit}</code></p>}<pre>{job.log}</pre></section>}
-    <details className="project-live-preview" open><summary>Локальный предпросмотр</summary><p><small>Для входа через Google откройте результат отдельно, войдите там и перезагрузите предпросмотр: Google может запрещать вход внутри iframe.</small></p><div className="admin-actions"><button aria-pressed={device === 'mobile'} onClick={() => setDevice('mobile')}>Вид телефона</button><button aria-pressed={device === 'desktop'} onClick={() => setDevice('desktop')}>Вид ПК</button><button onClick={() => setPreviewKey(previous => previous + 1)}>Перезагрузить предпросмотр</button></div><div className="project-live-scroll"><iframe key={previewKey} title="Локальный результат DAYRIS" src="/" allow="microphone" style={{ width: device === 'mobile' ? 390 : 1280 }}/></div></details>
+    {!hidePreview && <details className="project-live-preview" open><summary>Локальный предпросмотр</summary><p><small>Для входа через Google откройте результат отдельно, войдите там и перезагрузите предпросмотр: Google может запрещать вход внутри iframe.</small></p><div className="admin-actions"><button aria-pressed={device === 'mobile'} onClick={() => setDevice('mobile')}>Вид телефона</button><button aria-pressed={device === 'desktop'} onClick={() => setDevice('desktop')}>Вид ПК</button><button onClick={() => setPreviewKey(previous => previous + 1)}>Перезагрузить предпросмотр</button></div><div className="project-live-scroll"><iframe key={previewKey} title="Локальный результат DAYRIS" src="/" allow="microphone" style={{ width: device === 'mobile' ? 390 : 1280 }}/></div></details>}
   </section>;
 }

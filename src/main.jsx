@@ -8,6 +8,7 @@ import { reconcilePushOwner } from './features/reminders/pushClient'
 import { LANGUAGE_STORAGE_KEY } from './shared/config/constants'
 import { translate } from './shared/i18n'
 import SiteConfigRuntime from './features/admin/SiteConfigRuntime.jsx'
+import ExtensionRuntime from './features/extensions/ExtensionRuntime.jsx'
 const AdminPanel = React.lazy(() => import('./features/admin/AdminApp.jsx'))
 
 function browserLanguage() {
@@ -124,7 +125,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AppReady>
     <AppErrorBoundary>
-      {params.get('admin') === '1' || normalizedPath === '/admin.html' ? <React.Suspense fallback={<div style={{padding:24}}>Загрузка админки…</div>}><AdminPanel /></React.Suspense> : <><SiteConfigRuntime />{showInstallPage ? <InstallPage /> : <CalendarScreen />}</>}
+      {params.get('admin') === '1' || normalizedPath === '/admin.html' ? <React.Suspense fallback={<div style={{padding:24}}>Загрузка админки…</div>}><AdminPanel /></React.Suspense> : <><SiteConfigRuntime />{showInstallPage ? <InstallPage /> : <><ExtensionRuntime /><CalendarScreen /></>}</>}
     </AppErrorBoundary>
     </AppReady>
   </React.StrictMode>

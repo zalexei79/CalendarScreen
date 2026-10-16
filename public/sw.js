@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v28-contextual-studio';
+const CACHE_NAME = 'atj-cache-v29-local-functions';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
