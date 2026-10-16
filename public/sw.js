@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v29-local-functions';
+const CACHE_NAME = 'atj-cache-v30-visual-workspace';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

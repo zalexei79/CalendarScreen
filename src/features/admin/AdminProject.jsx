@@ -4,18 +4,19 @@ import { describePath, RECIPES } from './projectGuide.js';
 import { editableProjectPath, fileRisk, readProjectFile, saveProjectFile, validateProjectRoot } from './projectFiles.js';
 import './AdminProject.css';
 import LocalProjectTools from './LocalProjectTools.jsx';
+import useEditorHistory from './useEditorHistory.js';
 
 const fileIndex = new Map(catalog.files.map(file => [file.path, file]));
 const folderSet = new Set(catalog.folders);
 const nameOf = path => path.split('/').at(-1);
 
-export default function AdminProject({ initialPath = 'src/features', rootHandle = null, onRootChange } = {}) {
+export default function AdminProject({ initialPath = 'src/features', rootHandle = null, onRootChange, compact = false, onDirtyChange } = {}) {
   const [root, setRootState] = useState(rootHandle);
   const setRoot = value => { setRootState(value); onRootChange?.(value); };
   const [selected, setSelected] = useState(() => folderSet.has(initialPath) || fileIndex.has(initialPath) ? initialPath : 'src/features');
   const [query, setQuery] = useState('');
   const [snapshot, setSnapshot] = useState(null);
-  const [text, setText] = useState('');
+  const [text, setText, textHistory] = useEditorHistory('');
   const [editing, setEditing] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -29,12 +30,17 @@ export default function AdminProject({ initialPath = 'src/features', rootHandle 
   const entry = fileIndex.get(selected);
   const description = describePath(selected, directory);
   const dirty = snapshot !== null && text !== snapshot.text;
+  useEffect(()=>{onDirtyChange?.(dirty);return()=>onDirtyChange?.(false);},[dirty,onDirtyChange]);
+  useEffect(()=>{
+    const key=event=>{if(!(event.ctrlKey || event.metaKey) || event.altKey || event.target.closest?.('input,textarea,select,[contenteditable=true]'))return;if(!event.target.closest?.('.admin-project'))return;const letter=event.key.toLowerCase();if(letter==='z'||letter==='y'){event.preventDefault();event.stopImmediatePropagation();setEditing(true);(event.shiftKey||letter==='y'?textHistory.redo:textHistory.undo)();}};
+    window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);
+  },[textHistory]);
   const highRisk = fileRisk(selected) === 'high';
   const editable = Boolean(root && entry?.editable && editableProjectPath(selected) && snapshot);
   useEffect(() => {
     if (!root || !entry) return;
     let active = true; setBusy(true);
-    readProjectFile(root, selected).then(value => { if (active) { setSnapshot(value); setText(value.text); } }).catch(error => { if (active) setNotice(error.message); }).finally(() => { if (active) setBusy(false); });
+    readProjectFile(root, selected).then(value => { if (active) { setSnapshot(value); textHistory.reset(value.text); } }).catch(error => { if (active) setNotice(error.message); }).finally(() => { if (active) setBusy(false); });
     return () => { active = false; };
   }, []);
   const related = useMemo(() => catalog.files.filter(file => file.imports.includes(selected)).map(file => file.path), [selected]);
@@ -66,12 +72,12 @@ export default function AdminProject({ initialPath = 'src/features', rootHandle 
   const discard = () => !dirty || window.confirm('Есть несохранённые изменения. Продолжить без сохранения? Сначала можно скачать свой вариант.');
   async function open(path, isDirectory = folderSet.has(path)) {
     if (busy || !discard()) return;
-    setSelected(path); setSnapshot(null); setText(''); setEditing(false); setAcknowledged(false); setNotice(''); setLastBackup(''); setSaving(false);
+    setSelected(path); setSnapshot(null); textHistory.reset(''); setEditing(false); setAcknowledged(false); setNotice(''); setLastBackup(''); setSaving(false);
     if (isDirectory || !root || !fileIndex.has(path)) return;
     setBusy(true);
     try {
       const value = await readProjectFile(root, path);
-      if (alive.current) { setSnapshot(value); setText(value.text); }
+      if (alive.current) { setSnapshot(value); textHistory.reset(value.text); }
     } catch (error) { if (alive.current) setNotice(`Не удалось открыть файл. ${error.message}`); }
     finally { if (alive.current) setBusy(false); }
   }
@@ -82,9 +88,9 @@ export default function AdminProject({ initialPath = 'src/features', rootHandle 
       const handle = await window.showDirectoryPicker({ id: 'dayris-project', mode: 'readwrite' });
       setBusy(true); await validateProjectRoot(handle, local ? window.__DAYRIS_DESK_WORKSPACE__ : undefined);
       if (!alive.current) return;
-      setRoot(handle); setSnapshot(null); setText(''); setEditing(false); setSaving(false); setAcknowledged(false); setLastBackup('');
+      setRoot(handle); setSnapshot(null); textHistory.reset(''); setEditing(false); setSaving(false); setAcknowledged(false); setLastBackup('');
       setNotice(`Подключена локальная папка «${handle.name}». Выберите файл. Содержимое не отправляется на сервер.`);
-      if (entry) { const value = await readProjectFile(handle, selected); if (alive.current) { setSnapshot(value); setText(value.text); } }
+      if (entry) { const value = await readProjectFile(handle, selected); if (alive.current) { setSnapshot(value); textHistory.reset(value.text); } }
     } catch (error) { if (alive.current && error.name !== 'AbortError') setNotice(`Не удалось подключить папку. ${error.message}`); }
     finally { if (alive.current) setBusy(false); }
   }
@@ -104,7 +110,7 @@ export default function AdminProject({ initialPath = 'src/features', rootHandle 
     const anchor = document.createElement('a'); anchor.href = url; anchor.download = nameOf(selected); anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   const pathButton = path => <button key={path} className="project-path" disabled={busy} onClick={() => open(path)}>{folderSet.has(path) ? '📁 ' : ''}{path}</button>;
-  return <section className={`admin-project admin-page${local ? ' project-is-local' : ''}`}>
+  return <section className={`admin-project admin-page${local && !compact ? ' project-is-local' : ''}${compact ? ' project-embedded' : ''}`}>
     <div className="admin-page-title"><div><h1>Карта проекта</h1><p>Что за что отвечает · {catalog.folders.length} папок · {catalog.files.length} файлов</p></div><div className="admin-actions"><button disabled={busy} onClick={connect}>{root ? 'Выбрать другую папку' : 'Подключить папку проекта'}</button>{root && <button disabled={busy} onClick={() => { if (discard()) { setRoot(null); setSnapshot(null); setText(''); setEditing(false); setSaving(false); setNotice('Папка отключена от этой вкладки. Разрешение сайта можно отозвать в настройках браузера.'); } }}>Отключить папку</button>}</div></div>
     <p className="project-boundary">{root ? `Локальная папка: ${root.name}. ` : 'Пока открыта карта версии сборки, а не файлы вашего компьютера. '}Изменения исходников сохраняются на ПК. {local ? 'Сборка и push запускаются отдельно явными кнопками ниже. Предпросмотр выполняет локальный код приложения.' : 'HTTPS-вкладка не запускает команды, SQL и не публикует исходники. Для сборки и push откройте локальную мастерскую.'} Для цветов и кнопок без кода используйте «Оформление».</p>
     <div role="status" aria-live="polite" className="project-status">{busy ? 'Работаем с локальным файлом…' : notice || (dirty ? 'Есть несохранённые изменения.' : 'Выберите папку или файл: справа появятся назначение и связи.')}</div>
@@ -121,7 +127,7 @@ export default function AdminProject({ initialPath = 'src/features', rootHandle 
         {directory ? <div className="project-child-list">{children.map(pathButton)}{children.length === 0 && <p>В этой папке нет показываемых файлов.</p>}</div> : <>
           {!root && <p>Для чтения и редактирования выберите локальную папку проекта. Сервер не отдаёт содержимое исходников.</p>}
           {snapshot && <>
-            <div className="admin-actions project-editor-actions"><button disabled={busy || !editable || editing} onClick={() => setEditing(true)}>Редактировать локально</button><button disabled={busy || !dirty || !editing} onClick={() => setSaving(true)}>Проверить и сохранить</button><button disabled={busy} onClick={download}>Скачать мой вариант</button><button disabled={busy} onClick={() => open(selected, false)}>Заново открыть файл</button></div>
+            <div className="admin-actions project-editor-actions"><button disabled={busy || !editable || editing} onClick={() => setEditing(true)}>Редактировать локально</button><button disabled={busy || !textHistory.canUndo} onClick={()=>{setEditing(true);textHistory.undo();}}>Отменить ввод</button><button disabled={busy || !textHistory.canRedo} onClick={()=>{setEditing(true);textHistory.redo();}}>Вернуть ввод</button><button disabled={busy || !dirty || !editing} onClick={() => setSaving(true)}>Проверить и сохранить</button><button disabled={busy} onClick={download}>Скачать мой вариант</button><button disabled={busy} onClick={() => open(selected, false)}>Заново открыть файл</button></div>
             {editing && <p className="project-warning">Редактируется исходный код, а не настройки. Ошибка может сломать сборку. Для отмены до сохранения заново откройте файл; после сохранения используйте резервную копию.</p>}
             <label className="project-source"><span>{editing ? 'Редактор исходного текста' : 'Просмотр исходного текста'} · {text.split('\n').length} строк</span><textarea aria-label="Исходный текст файла" readOnly={!editing || busy} spellCheck={false} value={text} onChange={event => { setText(event.target.value); setSaving(false); }} /></label>
             {saving && <section className="project-review" aria-label="Подтверждение локального сохранения"><h3>Проверьте изменение</h3><p><code>{selected}</code> · сохранение только на этом компьютере</p><div className="project-compare"><label>Было<textarea aria-label="Исходный вариант" readOnly value={snapshot.text}/></label><label>Станет<textarea aria-label="Новый вариант" readOnly value={text}/></label></div>{highRisk && <label className="admin-check"><input type="checkbox" checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)}/>Понимаю: этот файл влияет на права, данные или сборку. После сохранения проверю изменения.</label>}<div className="admin-actions"><button className="admin-primary" disabled={busy || !dirty || (highRisk && !acknowledged)} onClick={save}>Создать копию и сохранить файл</button><button disabled={busy} onClick={() => setSaving(false)}>Продолжить редактирование</button></div></section>}

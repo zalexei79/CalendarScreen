@@ -67,11 +67,13 @@ try {
   assert.ok((await page.locator('.admin-command-result').innerText()).includes('"direction":1'));
   await page.screenshot({path:'tests/admin-studio-voice.png',fullPage:true});
   await page.getByRole('button',{name:'Вид',exact:true}).click();
+  await page.getByRole('button',{name:'Закрыть редактор элемента',exact:true}).click();
   await preview.locator('.workspace-mode-toggle:visible').first().click();
   await preview.getByRole('menuitem',{name:'◇ Логика и команды',exact:true}).click();
   await page.getByRole('heading',{name:'Режим PRO',exact:true}).waitFor();
   assert.ok((await page.locator('.admin-feature-card').innerText()).includes('доступ определяется сервером'));
   await page.getByRole('button',{name:'Вид',exact:true}).click();
+  await page.getByRole('button',{name:'Закрыть редактор элемента',exact:true}).click();
   // Inspection intercepts calendar days, pointer handlers and keyboard activation.
   const day = preview.locator('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button').first();
   await day.click();

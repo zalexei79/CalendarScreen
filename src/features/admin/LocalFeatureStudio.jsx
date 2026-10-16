@@ -5,9 +5,10 @@ import { readProjectFile, saveProjectFile, validateProjectRoot } from './project
 import LocalProjectTools from './LocalProjectTools.jsx';
 import './AdminProject.css';
 import './LocalFeatureStudio.css';
+import useEditorHistory from './useEditorHistory.js';
 
 export default function LocalFeatureStudio({ rootHandle, onRootChange, onDirtyChange }) {
-  const [config, setConfig] = useState(() => validateExtensions(manifest));
+  const [config, setConfig, history] = useEditorHistory(() => validateExtensions(manifest));
   const [saved, setSaved] = useState(() => JSON.stringify(validateExtensions(manifest)));
   const [snapshot, setSnapshot] = useState(null), [selected, setSelected] = useState('');
   const [device, setDevice] = useState('mobile'), [mode, setMode] = useState('edit');
@@ -30,11 +31,15 @@ export default function LocalFeatureStudio({ rootHandle, onRootChange, onDirtyCh
       await validateProjectRoot(root, window.__DAYRIS_DESK_WORKSPACE__);
       const original = await readProjectFile(root, EXTENSION_PATH), value = validateExtensions(JSON.parse(original.text));
       if (!alive.current) return;
-      setSnapshot(original); setConfig(value); setSaved(JSON.stringify(value)); setPreview(value); setSelected(value.features[0]?.id || ''); setReview(false); setMode('edit');
+      setSnapshot(original); history.reset(value); setSaved(JSON.stringify(value)); setPreview(value); setSelected(value.features[0]?.id || ''); setReview(false); setMode('edit');
       setNotice('Файл функций открыт с этого ПК. Изменения появятся на сайте только после публикации.');
     } catch (error) { if (alive.current) { setSnapshot(null); setNotice(error.message); } }
     finally { if (alive.current) setBusy(false); }
   }, []);
+  useEffect(()=>{
+    const key=event=>{if(!(event.ctrlKey || event.metaKey) || event.altKey || event.target.closest?.('input,textarea,select,[contenteditable=true]'))return;const letter=event.key.toLowerCase();if(letter==='z'||letter==='y'){event.preventDefault();setReview(false);(event.shiftKey||letter==='y'?history.redo:history.undo)();}};
+    window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);
+  },[history]);
   useEffect(() => { if (rootHandle) load(rootHandle); }, [rootHandle, load]);
   useEffect(() => {
     if (!ready) return;
@@ -65,7 +70,7 @@ export default function LocalFeatureStudio({ rootHandle, onRootChange, onDirtyCh
     setReview(false); setConfig(previous => ({ ...previous, features: previous.features.map(item => item.id === selected ? { ...item, ...patch } : item) }));
   }
   function apply() {
-    try { const value = validateExtensions(config); setPreview(value); setMode('test'); setEvents([]); setNotice('Тестируется текущий черновик. Нажмите новую кнопку в календаре. Переходы только записываются в журнал.'); }
+    try { const value = validateExtensions(config); setPreview(value); setMode('test'); setEvents([]); setNotice('Тестируется текущий черновик. Нажмите новую кнопку в календаре. Переходы только записываются в журнал.'); requestAnimationFrame(()=>frame.current?.scrollIntoView({block:'start'})); }
     catch (error) { setNotice(error.message); }
   }
   async function save() {
@@ -87,6 +92,7 @@ export default function LocalFeatureStudio({ rootHandle, onRootChange, onDirtyCh
   return <section className="admin-page feature-studio">
     <div className="admin-page-title"><div><h1>Конструктор функций</h1><p>Элемент → события → свой экран и код → проверка → выпуск</p></div><div className="admin-actions"><button disabled={busy} onClick={connect}>{rootHandle ? 'Заново подключить папку' : 'Подключить папку проекта'}</button><button onClick={download}>Скачать черновик</button></div></div>
     <p className="project-boundary">Только локальная мастерская. Код мини-экранов изолирован: без аккаунта, сети и доступа к данным DAYRIS. Новые API, запись календаря и серверные функции подключаются отдельно через исходники — эта версия не генерирует их автоматически. Обычный календарь в предпросмотре использует ваш настоящий аккаунт. <a href="/docs/LOCAL_FUNCTION_STUDIO.md" target="_blank" rel="noreferrer">Инструкция и API ↗</a></p>
+    <div className="admin-actions"><button disabled={!history.canUndo || busy} onClick={()=>{history.undo();setReview(false);}}>Отменить действие</button><button disabled={!history.canRedo || busy} onClick={()=>{history.redo();setReview(false);}}>Вернуть действие</button><small>Ctrl+Z вне текстового поля; внутри поля — обычная отмена ввода. Запись файла и push не отменяются автоматически.</small></div>
     <p role="status" className="project-status">{notice}{dirty ? ' · Есть несохранённые изменения.' : ''}</p>
     <div className="feature-studio-layout"><aside className="feature-studio-controls">
       <h2>Функции · {config.features.length}/20</h2>

@@ -4,6 +4,9 @@ import { supabase } from '../../supabaseClient';
 import { configCSS, configElements, EMPTY_CONFIG, normalizeConfig } from './siteConfig.js';
 import './SiteConfigRuntime.css';
 import { setRuntimeVoiceCommands } from '../../shared/lib/customVoiceCommands.js';
+import localDesign from '../appearance/siteDesign.json';
+import localCSS from '../appearance/calendar-custom.css?raw';
+import { mergeDesign, validLocalCSS } from '../appearance/designModel.js';
 
 export default function SiteConfigRuntime() {
   const [buttons, setButtons] = useState([]);
@@ -12,8 +15,9 @@ export default function SiteConfigRuntime() {
   const execute = useRef(null);
   useEffect(() => { if (menu) document.querySelector('[data-design-menu] button')?.focus({ preventScroll: true }); }, [menu]);
   useEffect(() => {
-    let active = true, config = EMPTY_CONFIG, selected = 'global';
+    let active = true, config = normalizeConfig(localDesign), selected = 'global';
     const preview = new URLSearchParams(location.search).get('adminPreview') === '1' && window.parent !== window;
+    const localStudio = import.meta.env.DEV && preview && new URLSearchParams(location.search).get('localStudio') === '1';
     let inspect = preview, passThrough = false;
     execute.current = node => {
       setMenu(null);
@@ -24,6 +28,7 @@ export default function SiteConfigRuntime() {
     const style = document.createElement('style');
     style.dataset.dayrisSiteConfig = '';
     document.head.append(style);
+    const themeStyle = document.createElement('style'); themeStyle.dataset.dayrisCustomTheme=''; themeStyle.textContent=localCSS;document.head.append(themeStyle);
     const highlight = () => {
       document.documentElement.toggleAttribute('data-design-inspect', inspect);
       document.querySelectorAll('[data-design-selected]').forEach(node => node.removeAttribute('data-design-selected'));
@@ -43,11 +48,11 @@ export default function SiteConfigRuntime() {
     };
     let loading = false;
     const refresh = async () => {
-      if (loading || preview) return;
+      if (loading || preview || localDesign.overrideCloud === true) return;
       loading = true;
       try {
         const { data, error } = await supabase.from('site_live_config').select('config').eq('id', 1).maybeSingle();
-        if (active && !error && data) apply(data.config);
+        if (active && !error && data) apply(mergeDesign(localDesign,data.config));
       } catch { /* Fall back to the original design. */ }
       finally { loading = false; }
     };
@@ -57,6 +62,7 @@ export default function SiteConfigRuntime() {
       if (!inspect) setMenu(null);
       selected = event.data.selected || 'global';
       apply(event.data.config);
+      if(localStudio && typeof event.data.localCSS === 'string') { try{themeStyle.textContent=validLocalCSS(event.data.localCSS);}catch{/* Keep the previous theme. */} }
     };
     const click = event => {
       if (event.target instanceof Element && event.target.closest('[data-design-menu]')) return;
@@ -68,8 +74,15 @@ export default function SiteConfigRuntime() {
       if (inspect && !passThrough) {
         event.preventDefault(); event.stopImmediatePropagation();
         selected = element?.id || 'global'; highlight();
-        window.parent.postMessage({ type: 'dayris:select', id: selected }, location.origin);
         const node = event.target instanceof Element ? event.target.closest('button,a,[role="button"],[role="switch"]') : null;
+        let target = node || (event.target instanceof Element ? event.target : null), meta;
+        if(localStudio && target){
+          const sources=[];let fiber=target[Object.keys(target).find(key=>key.startsWith('__reactFiber$'))];
+          for(let depth=0;fiber&&depth<30;depth++,fiber=fiber.return)if(fiber._debugSource?.fileName && sources.length<12)sources.push({file:String(fiber._debugSource.fileName).slice(0,1000),line:fiber._debugSource.lineNumber});
+          const path=[];for(let current=target;current && current!==document.body && path.length<6;current=current.parentElement){const tag=current.tagName.toLowerCase();if(current.id){path.unshift('#'+CSS.escape(current.id));break;}const siblings=[...current.parentElement?.children||[]].filter(item=>item.tagName===current.tagName);path.unshift(tag+(siblings.length>1?`:nth-of-type(${siblings.indexOf(current)+1})`:''));}
+          meta={label:(target.getAttribute('aria-label') || target.textContent || target.tagName).trim().slice(0,100),selector:path.join(' > ').slice(0,600),sources,registered:Boolean(element)};
+        }
+        window.parent.postMessage({ type: 'dayris:select', id: selected,...(meta?{meta}:{}) }, location.origin);
         setMenu({ id: selected, label: element?.label || 'Этот участок', node, left: Math.max(8, Math.min(innerWidth - 232, event.clientX - 30)), top: Math.max(8, Math.min(innerHeight - 248, event.clientY + 16)) });
         return;
       }
@@ -80,6 +93,9 @@ export default function SiteConfigRuntime() {
     };
     // Stop calendar gestures and React handlers before a click arrives; keep native scrolling.
     const guard = event => {
+      if (preview && event.type === 'keydown' && (event.ctrlKey || event.metaKey) && ['z','y'].includes(event.key.toLowerCase()) && !(event.target instanceof Element && event.target.closest('input,textarea,select,[contenteditable=true]'))) {
+        event.preventDefault();event.stopImmediatePropagation();window.parent.postMessage({type:'dayris:history',redo:event.shiftKey || event.key.toLowerCase() === 'y'},location.origin);return;
+      }
       if (!inspect || passThrough || (event.target instanceof Element && event.target.closest('[data-design-menu]')) || (event.type === 'keydown' && event.key === 'Tab')) return;
       if (event.type === 'keydown' && event.key === 'Escape') setMenu(null);
       event.stopImmediatePropagation();
@@ -87,15 +103,25 @@ export default function SiteConfigRuntime() {
     };
     const guarded = ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'keydown', 'submit', 'contextmenu', 'dblclick', 'dragstart'];
     const focus = () => { if (!document.hidden) refresh(); };
+    const wheel = event=>{if(!preview || event.shiftKey || (!inspect && !event.ctrlKey && !event.metaKey))return;event.preventDefault();event.stopImmediatePropagation();window.parent.postMessage({type:'dayris:zoom',delta:event.deltaY,x:event.clientX,y:event.clientY},location.origin);};
+    const report=(level,value)=>{if(localStudio)window.parent.postMessage({type:'dayris:console',level,message:String(value).slice(0,2000)},location.origin);};
+    const onError=event=>report('error',`${event.message || 'Ошибка ресурса'} ${event.filename || ''}:${event.lineno || ''}`);
+    const onRejection=event=>report('error',event.reason?.message || String(event.reason));
+    const originals={error:console.error,warn:console.warn};
+    if(localStudio)for(const level of ['error','warn'])console[level]=(...args)=>{originals[level](...args);report(level,args.map(item=>typeof item === 'string' ? item : item instanceof Error ? item.message : '[объект — подробности в DevTools]').join(' '));};
+    window.addEventListener('wheel',wheel,{capture:true,passive:false});
+    window.addEventListener('error',onError);window.addEventListener('unhandledrejection',onRejection);
     window.addEventListener('message', message);
     window.addEventListener('click', click, true);
     guarded.forEach(type => window.addEventListener(type, guard, true));
     document.addEventListener('visibilitychange', focus);
     const interval = preview ? null : window.setInterval(focus, 60000);
-    highlight(); refresh();
+    apply(localDesign); highlight(); refresh();
     if (preview) window.parent.postMessage({ type: 'dayris:preview-ready' }, location.origin);
     return () => {
-      active = false; observer.disconnect(); style.remove(); clearInterval(interval);
+      active = false; observer.disconnect(); style.remove(); themeStyle.remove(); clearInterval(interval);
+      window.removeEventListener('wheel',wheel,true);window.removeEventListener('error',onError);window.removeEventListener('unhandledrejection',onRejection);
+      if(localStudio)for(const level of ['error','warn'])console[level]=originals[level];
       setRuntimeVoiceCommands([]); execute.current = null;
       document.documentElement.removeAttribute('data-design-inspect');
       document.querySelectorAll('[data-design-selected]').forEach(node => node.removeAttribute('data-design-selected'));
@@ -104,7 +130,7 @@ export default function SiteConfigRuntime() {
       guarded.forEach(type => window.removeEventListener(type, guard, true));
       document.removeEventListener('visibilitychange', focus);
     };
-  }, []);
+  }, [localDesign,localCSS]);
   const links = placement => buttons.filter(item => item.placement === placement).map(item => <a key={item.id} data-site-button={item.id} className="dayris-custom-button" href={item.href || undefined} aria-disabled={!item.href} onClick={event => { if (!item.href) event.preventDefault(); }}>{item.label || 'Новая кнопка'}</a>);
   return <>
     {headerSlot && createPortal(links('header'), headerSlot)}

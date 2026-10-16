@@ -1,0 +1,6 @@
+{
+  "schema": 1,
+  "overrideCloud": false,
+  "mobile": { "global": {}, "elements": {} },
+  "desktop": { "global": {}, "elements": {} }
+}

@@ -9,9 +9,10 @@ const browser = await require('playwright').chromium.launch({ channel:'msedge',h
 let page;
 try {
   const context=await browser.newContext({viewport:{width:1440,height:1050},serviceWorkers:'block'});
-  await context.addInitScript(()=>{
+  await context.addInitScript(appearance=>{
     const files = new Map([['package.json','{"name":"ai-trade-journal"}'],['src/main.jsx','export {};'],['Header.jsx','export const label = "Микрофон";'],['src/shared/ui/CalendarVoiceButton.jsx','export const microphone = "local";']]);
     window.__testFiles=files;
+    files.set('src/features/appearance/siteDesign.json',appearance.design);files.set('src/features/appearance/calendar-custom.css',appearance.style);
     const directory=(prefix='')=>({name:'ai-trade-journal',getDirectoryHandle:async name=>directory(prefix+name+'/'),getFileHandle:async(name,options)=>{
       const key=prefix+name;
       if(key==='.dayris-project-desk.json') files.set(key,JSON.stringify({workspace:window.__DAYRIS_DESK_WORKSPACE__}));
@@ -20,7 +21,7 @@ try {
     }});
     window.showDirectoryPicker=async()=>directory();
     localStorage.setItem('atj_language','ru');localStorage.setItem('dayris_onboarding_v2_completed','1');localStorage.setItem('calendar_guide_completed','1');
-  });
+  },{design:fs.readFileSync('src/features/appearance/siteDesign.json','utf8'),style:fs.readFileSync('src/features/appearance/calendar-custom.css','utf8')});
   let admin=true;const payloads=[];
   const dist=path.resolve('dist');
   await context.route('**/*',async route=>{
@@ -86,6 +87,7 @@ try {
       return route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
     });
     await local.goto(process.env.DAYRIS_DESK_URL+'/project-desk.html',{waitUntil:'domcontentloaded'});
+    await local.getByRole('button',{name:'Карта и исходники',exact:true}).click();
     await local.getByRole('heading',{name:'Карта проекта',exact:true}).waitFor();
     await local.getByText(/Ветка:/).waitFor();
     assert.equal((await context.request.get(process.env.DAYRIS_DESK_URL+'/__dayris_desk/status')).status(),403);
@@ -97,7 +99,8 @@ try {
     assert.equal(await local.getByRole('button',{name:'Подготовить публикацию',exact:true}).isDisabled(),true,'no files selected automatically');
     await local.screenshot({path:'tests/project-local-desk.png',fullPage:true});
     await local.getByRole('button',{name:'Визуально',exact:true}).click();
-    await local.getByText('Администратор · версия черновика 0',{exact:true}).waitFor();
+    await local.getByText('Локальное оформление',{exact:true}).waitFor();
+    await local.getByRole('button',{name:'Подогнать',exact:true}).click();
     const visual=local.frameLocator('iframe[title="Предпросмотр DAYRIS"]');
     await visual.locator('.calendar-voice-button').click();
     await visual.getByRole('menuitem',{name:'◇ Логика и команды',exact:true}).click();

@@ -1,4 +1,8 @@
 .admin-project { max-width:1800px; }
+.project-embedded .project-layout { grid-template-columns:1fr; }
+.project-embedded .project-browser,.project-embedded .project-recipes,.project-embedded > .project-help,.project-embedded > .project-boundary,.project-embedded > .project-local-launch { display:none; }
+.project-embedded { padding:10px 0; }
+.project-embedded .project-source textarea { min-height:360px; }
 .admin-project .admin-page-title { align-items:flex-start; }
 .project-boundary,.project-warning { padding:14px 16px; background:#30291b; color:#f5dda2; border:1px solid #685333; border-radius:12px; }
 .project-status { min-height:48px; padding:12px 0; color:#a9c7ed; overflow-wrap:anywhere; }
