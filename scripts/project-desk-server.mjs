@@ -80,7 +80,7 @@ export function makeDeskService({ root = ROOT, run = runCommand } = {}) {
         job.phase = 'Сборка'; log('> npm run build\n');
         await run(process.platform === 'win32' ? 'cmd.exe' : 'npm', process.platform === 'win32' ? ['/d', '/s', '/c', 'npm run build'] : ['run', 'build'], { cwd: root, log, env: { NODE_ENV: 'production' } });
         job.phase = 'Базовые тесты'; log('> node --test (project / admin safety)\n');
-        await run(process.execPath, ['--test', 'tests/site-config.test.mjs', 'tests/admin-service-worker.test.mjs', 'tests/project-files.test.mjs', 'tests/project-desk-server.test.mjs'], { cwd: root, log });
+        await run(process.execPath, ['--test', 'tests/site-config.test.mjs', 'tests/admin-service-worker.test.mjs', 'tests/project-files.test.mjs', 'tests/project-desk-server.test.mjs', 'tests/custom-voice-commands.test.mjs', 'tests/voice-capabilities.test.mjs'], { cwd: root, log });
         if (kind === 'build') { job.phase = 'Сборка и базовые тесты прошли. Проверьте изменённый экран и профильные тесты.'; job.state = 'success'; return; }
         job.phase = 'Проверка перед commit';
         const after = await status();

@@ -11,6 +11,7 @@ let checkPage;
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, serviceWorkers: 'block', hasTouch:true });
   await context.addInitScript(() => {
+    window.SpeechRecognition=class { constructor(){window.testRecognition=this;}start(){this.onstart?.();}stop(){}abort(){} };
     localStorage.setItem('atj_language', 'ru');
     localStorage.setItem('dayris_onboarding_v2_completed', '1');
     localStorage.setItem('calendar_guide_completed', '1');
@@ -49,6 +50,28 @@ try {
   await page.getByText('Администратор · версия черновика 0', { exact: true }).waitFor();
   const preview = page.frameLocator('iframe');
   await preview.locator('[data-site-element="settings"]').waitFor();
+  await page.getByRole('button',{name:'100% · с прокруткой',exact:true}).click();
+  await page.waitForFunction(()=>Math.round(document.querySelector('iframe').getBoundingClientRect().width)===390);
+  await page.getByRole('button',{name:'Подогнать',exact:true}).click();
+  await preview.locator('.calendar-voice-button').click();
+  await page.screenshot({path:'tests/admin-studio-menu.png',fullPage:true});
+  await preview.getByRole('menuitem',{name:'✎ Редактировать вид',exact:true}).press('Escape');
+  await preview.getByRole('menu').waitFor({state:'detached'});
+  await preview.locator('.calendar-voice-button').click();
+  await preview.getByRole('menuitem',{name:'◇ Логика и команды',exact:true}).click();
+  await page.getByRole('heading',{name:'Голосовые команды',exact:true}).waitFor();
+  await page.getByLabel('Новая голосовая фраза',{exact:true}).fill('Мой новый месяц');
+  await page.getByLabel('Действие команды',{exact:true}).selectOption('next-month');
+  await page.getByRole('button',{name:'Добавить голосовую команду',exact:true}).click();
+  await page.getByLabel('Проверить фразу без микрофона',{exact:true}).fill('Мой новый месяц');
+  assert.ok((await page.locator('.admin-command-result').innerText()).includes('"direction":1'));
+  await page.screenshot({path:'tests/admin-studio-voice.png',fullPage:true});
+  await page.getByRole('button',{name:'Вид',exact:true}).click();
+  await preview.locator('.workspace-mode-toggle:visible').first().click();
+  await preview.getByRole('menuitem',{name:'◇ Логика и команды',exact:true}).click();
+  await page.getByRole('heading',{name:'Режим PRO',exact:true}).waitFor();
+  assert.ok((await page.locator('.admin-feature-card').innerText()).includes('доступ определяется сервером'));
+  await page.getByRole('button',{name:'Вид',exact:true}).click();
   // Inspection intercepts calendar days, pointer handlers and keyboard activation.
   const day = preview.locator('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button').first();
   await day.click();
@@ -58,6 +81,12 @@ try {
   assert.equal(await preview.getByRole('dialog').count(), 0);
   await preview.locator('[data-site-element="settings"]').click();
   assert.equal(await preview.getByRole('dialog').count(), 0);
+  await preview.getByRole('menuitem',{name:'↗ Выполнить действие',exact:true}).click();
+  await preview.locator('.dayris-settings-panel').waitFor();
+  await preview.locator('.settings-close').click();
+  await preview.getByRole('menuitem',{name:'↗ Выполнить действие',exact:true}).click();
+  await preview.locator('.dayris-settings-panel').waitFor({state:'detached'});
+  await page.getByLabel('Элемент',{exact:true}).selectOption('settings');
   await page.getByLabel('Ширина', { exact: true }).fill('60');
   await preview.locator('[data-site-element="settings"]').evaluate(element => new Promise((resolve, reject) => {
     const start = Date.now();
@@ -89,6 +118,7 @@ try {
   await page.getByRole('button', { name: 'Опубликовать', exact: true }).click();
   await page.getByText(/^Опубликовано\./).waitFor();
   assert.equal(live.mobile.elements.settings.width, 60);
+  assert.equal(live.voiceCommands[0].phrase,'Мой новый месяц');
   assert.equal(live.buttons[0].label,'Помощь');
   const publicPage = await context.newPage();
   await publicPage.setViewportSize({ width: 390, height: 844 });
@@ -99,6 +129,17 @@ try {
   });
   const publishedLink = publicPage.getByRole('link',{name:'Помощь',exact:true});
   await publishedLink.waitFor();
+  const beforeMonth = await publicPage.locator('.dayris-date-navigation').innerText();
+  await publicPage.locator('.calendar-voice-button').click();
+  await publicPage.waitForFunction(()=>Boolean(window.testRecognition));
+  await publicPage.evaluate(()=>window.testRecognition.onresult({results:[Object.assign([{transcript:'Мой новый месяц',confidence:0.95}],{isFinal:true})]}));
+  await publicPage.waitForFunction(()=>{const button=document.querySelector('.voice-workspace-mic');return button&&!button.disabled;});
+  await publicPage.locator('.voice-workspace-mic').click();
+  await publicPage.waitForFunction(before=>document.querySelector('.dayris-date-navigation')?.innerText!==before,beforeMonth).catch(async error=>{console.error('Voice result:',await publicPage.locator('.voice-workspace').innerText());throw error;});
+  await publicPage.locator('.voice-workspace-exit').click();
+  await publicPage.locator('.voice-workspace').waitFor({state:'detached'});
+  assert.notEqual(await publicPage.locator('.dayris-date-navigation').innerText(),beforeMonth,'published alias runs the real month action');
+  assert.equal(await publicPage.locator('.calendar-voice-button').isVisible(),true);
   assert.equal(await publishedLink.getAttribute('href'),'/privacy.html');
   assert.equal(await publishedLink.evaluate(node=>getComputedStyle(node).backgroundColor),'rgb(18, 52, 86)');
   await publishedLink.click();

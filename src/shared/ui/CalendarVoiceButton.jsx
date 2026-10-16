@@ -5,6 +5,7 @@ import {spokenText} from '../lib/spokenText.js';
 import React,{useEffect,useRef,useState} from 'react';
 import {Mic,Square,Volume2,X} from 'lucide-react';
 import {parseCalendarVoiceCommand} from '../lib/calendarVoiceCommand.js';
+import {getRuntimeVoiceCommands,matchVoiceCommand} from '../lib/customVoiceCommands.js';
 import {voiceEntryReview,shortEntryAnswer,localDateKey} from '../lib/voiceEntryReview.js';
 import {prepareVoiceCue,playVoiceCue} from '../lib/voiceReadyCue.js';
 import VoiceEntryCard from './VoiceEntryCard.jsx';
@@ -172,6 +173,14 @@ export default function CalendarVoiceButton({launchRequest,onLaunchHandled,onRes
   setHeard(phrase);setCompact(false);setChoices([]);setAnswerAction(null);const request=++requestGeneration.current;
   // Only an explicit save command submits a reviewed draft.
   if(review&&isVoiceCommit(phrase)){saveEntry();return;}
+  // Custom phrases never interrupt a pending financial draft or bypass confirmation.
+  const customCommand=!entryDraft.current&&!batchDraft.current&&matchVoiceCommand(phrase,getRuntimeVoiceCommands());
+  if(customCommand){
+   if(customCommand.type==='voice-help'){setShowCapabilities(true);setActive(true);respond(voiceCapabilities(locale,{walletAvailable,traderMode}).summary);return;}
+   try { const reply=await handlers.current.onCommand(customCommand);if(mounted.current&&request===requestGeneration.current)receiveReply(reply); }
+   catch(error){if(mounted.current){setActive(true);notify(error.message||text.error);}}
+   return;
+  }
   if(!entryDraft.current&&onConversation){
    try{const reply=await handlers.current.onConversation(phrase,conversationContext.current);if(!mounted.current||request!==requestGeneration.current)return;if(reply){
      if(reply.type==='conversation-entry'){firstUtterance=false;const prepared=prepareConversationEntry(reply.phrase,{baseDate:reply.dateKey||handlers.current.selectedDate,context:conversationContext.current});phrase=prepared.phrase;conversationContext.current={period:'exact-day',dateKey:reply.dateKey||prepared.dateKey||localDateKey()};}

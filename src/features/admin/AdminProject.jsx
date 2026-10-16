@@ -9,9 +9,10 @@ const fileIndex = new Map(catalog.files.map(file => [file.path, file]));
 const folderSet = new Set(catalog.folders);
 const nameOf = path => path.split('/').at(-1);
 
-export default function AdminProject() {
-  const [root, setRoot] = useState(null);
-  const [selected, setSelected] = useState('src/features');
+export default function AdminProject({ initialPath = 'src/features', rootHandle = null, onRootChange } = {}) {
+  const [root, setRootState] = useState(rootHandle);
+  const setRoot = value => { setRootState(value); onRootChange?.(value); };
+  const [selected, setSelected] = useState(() => folderSet.has(initialPath) || fileIndex.has(initialPath) ? initialPath : 'src/features');
   const [query, setQuery] = useState('');
   const [snapshot, setSnapshot] = useState(null);
   const [text, setText] = useState('');
@@ -30,6 +31,12 @@ export default function AdminProject() {
   const dirty = snapshot !== null && text !== snapshot.text;
   const highRisk = fileRisk(selected) === 'high';
   const editable = Boolean(root && entry?.editable && editableProjectPath(selected) && snapshot);
+  useEffect(() => {
+    if (!root || !entry) return;
+    let active = true; setBusy(true);
+    readProjectFile(root, selected).then(value => { if (active) { setSnapshot(value); setText(value.text); } }).catch(error => { if (active) setNotice(error.message); }).finally(() => { if (active) setBusy(false); });
+    return () => { active = false; };
+  }, []);
   const related = useMemo(() => catalog.files.filter(file => file.imports.includes(selected)).map(file => file.path), [selected]);
   const children = useMemo(() => [...catalog.folders, ...catalog.files.map(file => file.path)].filter(path => path.startsWith(`${selected}/`) && !path.slice(selected.length + 1).includes('/')), [selected]);
   const matches = useMemo(() => {
@@ -50,7 +57,7 @@ export default function AdminProject() {
   useEffect(() => {
     if (!dirty) return;
     const guard = event => {
-      const target = event.target instanceof Element ? event.target.closest('.admin-app-header button,.admin-app-header a') : null;
+      const target = event.target instanceof Element ? event.target.closest('.admin-app-header button,.admin-app-header a,.project-desk-header button,.project-desk-header a') : null;
       if (target && !window.confirm('Есть несохранённые изменения файла. Покинуть редактор и потерять их?')) { event.preventDefault(); event.stopImmediatePropagation(); }
     };
     window.addEventListener('click', guard, true);
@@ -77,6 +84,7 @@ export default function AdminProject() {
       if (!alive.current) return;
       setRoot(handle); setSnapshot(null); setText(''); setEditing(false); setSaving(false); setAcknowledged(false); setLastBackup('');
       setNotice(`Подключена локальная папка «${handle.name}». Выберите файл. Содержимое не отправляется на сервер.`);
+      if (entry) { const value = await readProjectFile(handle, selected); if (alive.current) { setSnapshot(value); setText(value.text); } }
     } catch (error) { if (alive.current && error.name !== 'AbortError') setNotice(`Не удалось подключить папку. ${error.message}`); }
     finally { if (alive.current) setBusy(false); }
   }

@@ -35,6 +35,9 @@ const FEATURES = {
 for (const [name, info] of Object.entries(FEATURES)) AREAS[`src/features/${name}`] = info;
 
 export const KEY_FILES = {
+  'src/shared/lib/customVoiceCommands.js': ['Свои голосовые фразы', 'Нормализация фраз и разрешённые действия. Нет произвольного JavaScript и прямой записи денег; подтверждения и помощь защищены.'],
+  'src/features/admin/featureRegistry.js': ['Связи визуальной студии', 'Описание модулей, схема работы и связанные исходники для выбранных кнопок. Здесь подключаются следующие модули к инспектору.'],
+  'src/features/admin/VoiceCommandsEditor.jsx': ['Конструктор голосовых команд', 'Форма добавления фраз, выбор действия, проверка и встроенный справочник в инспекторе микрофона.'],
   'src/shared/ui/CalendarVoiceButton.jsx': ['Кнопка микрофона в календаре', 'Кнопка запуска голоса, разрешение микрофона и управление голосовым сценарием. Внешний вид ищите в CalendarVoiceButton.css.'],
   'src/shared/ui/CalendarVoiceButton.css': ['Стиль кнопки микрофона', 'Внешний вид кнопки голоса и состояний прослушивания. Голосовой диалог также использует VoiceWorkspace.'],
   'src/shared/ui/VoiceWorkspace.jsx': ['Голосовой диалог', 'Панель голосового взаимодействия и её внутренняя кнопка микрофона.'],

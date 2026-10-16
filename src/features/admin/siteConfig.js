@@ -1,3 +1,4 @@
+import { normalizeVoiceCommands } from '../../shared/lib/customVoiceCommands.js';
 // Stable IDs are the contract between the editor and the application.
 export const ELEMENTS = [
   { id: 'header', label: 'Шапка', selector: '.dayris-header' },
@@ -11,6 +12,18 @@ export const ELEMENTS = [
   { id: 'calendar', label: 'Календарь', selector: '.calendar-section:not(.calendar-month-preview)' },
   { id: 'days', label: 'Сетка дней', selector: '.calendar-section:not(.calendar-month-preview) > .calendar-days-grid' },
   { id: 'day', label: 'Ячейки дней (все)', selector: '.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button' },
+  { id: 'voice-button', label: 'Микрофон календаря', selector: '.calendar-voice-button' },
+  { id: 'voice-panel', label: 'Голосовое окно', selector: '.voice-workspace' },
+  { id: 'voice-mic', label: 'Микрофон голосового окна', selector: '.voice-workspace-mic' },
+  { id: 'voice-help', label: 'Помощь по голосу', selector: '.voice-workspace-command-toggle' },
+  { id: 'pro-mode', label: 'Переключатель PRO', selector: '.workspace-mode-toggle' },
+  { id: 'pro-info', label: 'Возможности PRO', selector: '.workspace-pro-info' },
+  { id: 'pro-offer', label: 'Предложение PRO', selector: '.pro-offer' },
+  { id: 'wallet', label: 'Вход в кошелёк', selector: '.wallet-entry' },
+  { id: 'capital', label: 'Вход в инвестиции', selector: '.workspace-capital-entry' },
+  { id: 'trader', label: 'Торговый режим', selector: '.pro-control-trader' },
+  { id: 'goal', label: 'Цель месяца', selector: '.monthly-goal-bar' },
+  { id: 'settings-panel', label: 'Окно настроек', selector: '.dayris-settings-panel' },
 ];
 export const EMPTY_CONFIG = { schema: 1, mobile: { global: {}, elements: {} }, desktop: { global: {}, elements: {} } };
 const color = value => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : undefined;
@@ -26,6 +39,8 @@ export function configElements(config) {
 }
 export function normalizeConfig(input) {
   const result = { schema: 1 };
+  const voiceCommands = normalizeVoiceCommands(input?.voiceCommands);
+  if (voiceCommands.length) result.voiceCommands = voiceCommands;
   const ids = new Set();
   const buttons = (Array.isArray(input?.buttons) ? input.buttons : []).slice(0, 20).flatMap(item => {
     if (!item || !/^button-[a-z0-9-]{1,48}$/.test(item.id) || ids.has(item.id)) return [];

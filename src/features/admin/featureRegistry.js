@@ -1,0 +1,16 @@
+const voice = { title: 'Голосовой помощник', description: 'Кнопка → распознавание речи → разбор фразы → существующее действие → ответ или форма проверки.', files: ['src/shared/ui/CalendarVoiceButton.jsx', 'src/shared/ui/CalendarVoiceButton.css', 'src/shared/ui/VoiceWorkspace.jsx', 'src/shared/lib/customVoiceCommands.js', 'src/shared/lib/calendarVoiceCommand.js', 'src/shared/lib/voiceCapabilities.js', 'src/shared/lib/voiceEntryReview.js'], steps: ['Микрофон и разрешение', 'Распознавание и команды', 'Проверка данных', 'Действие и ответ'], voice: true };
+const pro = { title: 'Режим PRO', description: 'Переключатель открывает PRO-интерфейс. Настоящий доступ определяется сервером: редактор не выдаёт подписку и не меняет оплату.', files: ['src/features/pro/WorkspaceModePanel.jsx', 'src/features/pro/ProOffer.jsx', 'src/features/pro/proOfferCopy.js', 'src/features/pro/ProPresentation.css'], steps: ['Переключатель', 'Предложение PRO', 'Серверная проверка доступа'] };
+const calendar = { title: 'Календарь и записи', description: 'Месяц, ячейки и записи связаны с датой и аккаунтом. Размеры и цвета редактируются здесь, сложные расчёты — в исходниках.', files: ['CalendarScreen.jsx', 'CalendarGrid.jsx', 'CalendarDayCell.jsx', 'CalendarDayCell.css'], steps: ['Выбор даты', 'Записи дня', 'Расчёты и отображение'] };
+const settings = { title: 'Настройки', description: 'Язык, тема, валюта и аккаунт. Можно войти в настройки через меню элемента, затем выбирать вложенные блоки.', files: ['src/shared/ui/SettingsPanel.jsx', 'src/shared/i18n/index.js', 'src/features/auth/hooks/useAuth.js'], steps: ['Открыть настройки', 'Выбрать раздел', 'Пользовательские параметры'] };
+export const FEATURE_REGISTRY = {
+  'voice-button': voice, 'voice-panel': voice, 'voice-mic': voice, 'voice-help': voice,
+  'pro-mode': pro, 'pro-info': pro, 'pro-offer': pro, trader: pro,
+  wallet: { title: 'Кошелёк', description: 'Отдельные доходы и расходы кошелька; не смешиваются с торговым PnL. Доступ PRO проверяется обычным приложением.', files: ['src/features/pro/WalletEntry.jsx', 'src/features/wallet'], steps: ['Проверка доступа', 'Кошелёк', 'Собственные операции'] },
+  capital: { title: 'Капитал', description: 'Инвестиционные активы и цены. Не меняет торговые записи или кошелёк.', files: ['src/features/capital'], steps: ['Позиции', 'Котировки', 'Стоимость и история'] },
+  settings, 'settings-panel': settings,
+  calendar, days: calendar, day: calendar, previous: calendar, next: calendar, today: calendar,
+  goal: { title: 'Цель месяца', description: 'Цель выбранного месяца, прогресс и пояснения. Финансовые расчёты остаются в приложении.', files: ['MonthlyGoal.jsx'], steps: ['Цель', 'Прогресс', 'Итог'] },
+};
+export function featureFor(id) {
+  return FEATURE_REGISTRY[id] || { title: 'Интерфейс приложения', description: 'Оформление — в этом инспекторе. Для расширения поведения откройте карту и связанные исходники. Редактор не изменяет произвольный React-код автоматически.', files: ['Header.jsx', 'src/features/admin/siteConfig.js'], steps: ['Элемент', 'Оформление', 'Связанные исходники'] };
+}

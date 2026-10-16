@@ -18,6 +18,20 @@ export default function AdminApp() {
   const [notice, setNotice] = useState('');
   const [installPrompt, setInstallPrompt] = useState(window.__atjInstallPrompt);
   const [pending, setPending] = useState(false);
+  const [projectPath, setProjectPath] = useState('src/features');
+  const [designDirty, setDesignDirty] = useState(false);
+  useEffect(() => {
+    const open = event => {
+      const path = event.detail?.path;
+      if (typeof path !== 'string' || path.length > 300) return;
+      if (designDirty && !window.confirm('В оформлении есть несохранённые изменения. Перейти к исходникам без сохранения?')) return;
+      setProjectPath(path); setSection('project');
+    };
+    window.addEventListener('dayris:open-project', open);
+    const guard = event => { if (designDirty && event.target instanceof Element && event.target.closest('.admin-app-header button,.admin-app-header a') && !window.confirm('В оформлении есть несохранённые изменения. Покинуть редактор?')) { event.preventDefault(); event.stopImmediatePropagation(); } };
+    window.addEventListener('click', guard, true);
+    return () => { window.removeEventListener('dayris:open-project', open); window.removeEventListener('click', guard, true); };
+  }, [designDirty]);
   useEffect(() => {
     let active = true, revision = 0, knownUser;
     const { data } = supabase.auth.onAuthStateChange((_event, next) => {
@@ -55,7 +69,7 @@ export default function AdminApp() {
   }
   const allowed = section === 'design' || section === 'project' ? capabilities.design === true : capabilities.viewUsers === true;
   const sections = [['users','Пользователи'],['design','Оформление'],['project','Проект'],['audit','Журнал']];
-  const designOrProject = section === 'project' ? <ProjectExplorer key={session?.user.id} /> : <DesignEditor />;
+  const designOrProject = section === 'project' ? <ProjectExplorer key={session?.user.id} initialPath={projectPath}/> : <DesignEditor onDirtyChange={setDesignDirty}/>;
   return <div className="dayris-admin admin-app">
     <header className="admin-app-header"><a href="/admin.html" className="admin-app-brand">DAYRIS <span>ADMIN</span></a><nav aria-label="Разделы админки">{sections.map(([id,label]) => <button key={id} aria-current={section === id ? 'page' : undefined} onClick={() => setSection(id)}>{label}</button>)}</nav><button onClick={install}>Установить приложение</button><a href="/admin.html" target="_blank" rel="noreferrer">Открыть отдельно ↗</a>{session && <button onClick={async () => { try { const {error}=await supabase.auth.signOut(); if(error) throw error; } catch { setNotice('Не удалось выйти. Проверьте подключение.'); } }}>Выйти</button>}</header>
     {notice && <p className="admin-notice" role="status">{notice}</p>}

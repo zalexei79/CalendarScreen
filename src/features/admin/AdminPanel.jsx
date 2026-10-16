@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import { configElements, EMPTY_CONFIG, normalizeConfig, safeLink } from './siteConfig.js';
 import './AdminPanel.css';
+import { featureFor } from './featureRegistry.js';
+import VoiceCommandsEditor from './VoiceCommandsEditor.jsx';
 
 const LOCAL_DRAFT = 'dayris:site-admin:local-draft:v1';
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -17,7 +19,7 @@ function errorText(error) {
   return 'Не удалось выполнить операцию. Проверьте подключение и установку миграции админки.';
 }
 
-export default function AdminPanel() {
+export default function AdminPanel({ onOpenSource, onDirtyChange } = {}) {
   const [config, setConfig] = useState(() => clone(EMPTY_CONFIG));
   const [saved, setSaved] = useState(JSON.stringify(EMPTY_CONFIG));
   const [version, setVersion] = useState(null);
@@ -26,6 +28,8 @@ export default function AdminPanel() {
   const [device, setDevice] = useState('mobile');
   const [selected, setSelected] = useState('global');
   const [inspect, setInspect] = useState(true);
+  const [view, setView] = useState('design');
+  const [zoom, setZoom] = useState('fit');
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [releases, setReleases] = useState([]);
@@ -41,13 +45,15 @@ export default function AdminPanel() {
   const latest = useRef({ config, inspect, selected });
   latest.current = { config, inspect, selected };
   const dirty = JSON.stringify(config) !== saved;
+  useEffect(() => { onDirtyChange?.(dirty); return () => onDirtyChange?.(false); }, [dirty, onDirtyChange]);
   const canWrite = access === 'admin' && version !== null;
   const elements = configElements(config);
   const element = elements.find(item => item.id === selected);
+  const feature = featureFor(selected);
   const custom = config.buttons?.find(item => item.id === selected);
   const values = selected === 'global' ? config[device].global : config[device].elements[selected] || {};
   const previewWidth = device === 'mobile' ? 390 : 1280;
-  const scale = Math.min(1, Math.max(0.1, (canvasWidth - 32) / previewWidth), canvasHeight === null ? 1 : Math.max(0.1, (canvasHeight - 32) / 780));
+  const scale = zoom === 'actual' ? 1 : Math.min(1, Math.max(0.1, (canvasWidth - 32) / previewWidth), canvasHeight === null ? 1 : Math.max(0.1, (canvasHeight - 32) / 780));
 
   useEffect(() => {
     const observer = new ResizeObserver(([entry]) => {
@@ -102,7 +108,10 @@ export default function AdminPanel() {
   useEffect(() => {
     const message = event => {
       if (event.origin !== location.origin || event.source !== frame.current?.contentWindow) return;
-      if (event.data?.type === 'dayris:select' && (event.data.id === 'global' || configElements(latest.current.config).some(item => item.id === event.data.id))) setSelected(event.data.id);
+      if (event.data?.type === 'dayris:select' && (event.data.id === 'global' || configElements(latest.current.config).some(item => item.id === event.data.id))) {
+        setSelected(event.data.id);
+        if (['design','logic','sources'].includes(event.data.view)) { setView(event.data.view); if (matchMedia('(max-width:900px)').matches) controls.current?.scrollIntoView({ block: 'start' }); }
+      }
       if (event.data?.type === 'dayris:preview-ready') sendPreview();
     };
     window.addEventListener('message', message);
@@ -226,6 +235,11 @@ export default function AdminPanel() {
         <p className="admin-hint">Настройки телефона и ПК независимы. В предпросмотре нажмите на элемент или выберите его ниже.</p>
         <button className="admin-add" onClick={addButton} disabled={busy || !canWrite || (config.buttons?.length || 0) >= 20}>+ Добавить кнопку</button>
         <label className="admin-field"><span>Элемент</span><select aria-label="Элемент" value={selected} disabled={busy} onChange={event => { setSelected(event.target.value); setInspect(true); }}><option value="global">Фон приложения</option>{elements.map(item => <option value={item.id} key={item.id}>{item.custom ? '↳ ' : ''}{item.label}</option>)}</select></label>
+        <div className="admin-tabs admin-inspector-tabs" role="group" aria-label="Редактор выбранного элемента">{[['design','Вид'],['logic','Логика'],['sources','Связи']].map(([id,label]) => <button key={id} aria-pressed={view === id} onClick={() => setView(id)}>{label}</button>)}</div>
+        <section className="admin-feature-card"><small>ВЫБРАННЫЙ МОДУЛЬ</small><h2>{feature.title}</h2><p>{feature.description}</p><ol>{feature.steps.map(step => <li key={step}>{step}</li>)}</ol></section>
+        {view === 'logic' && (feature.voice ? <VoiceCommandsEditor commands={config.voiceCommands} disabled={busy || !canWrite} onChange={commands => { const next = clone(config); next.voiceCommands = commands; change(next); }}/> : <section className="admin-feature-logic"><h3>Как работает модуль</h3><p>{feature.description}</p><p>«Выполнить действие» в меню элемента открывает настоящий экран, не выключая инспектор. Внутри можно выбрать следующий зарегистрированный элемент.</p><button onClick={() => setView('sources')}>Открыть связанные файлы</button><p className="admin-hint">Здесь ещё нет универсального конструктора произвольной логики. Поведение этого модуля меняется в связанных исходниках; права и финансовые проверки нельзя отключить визуальными настройками.</p></section>)}
+        {view === 'sources' && <section className="admin-feature-sources"><h3>Связанные исходники</h3>{feature.files.map(path => <button key={path} className="admin-source-link" onClick={() => { if (onOpenSource) onOpenSource(path); else window.dispatchEvent(new CustomEvent('dayris:open-project', { detail: { path } })); }}>{path} ↗</button>)}<p className="admin-hint">Откроется карта с назначением файла. Содержимое читается с вашего ПК только после подключения папки; изменение кода требует проверки и сборки.</p></section>}
+        <div hidden={view !== 'design'}>
         <fieldset disabled={busy || access === 'loading'}><legend>{selected === 'global' ? 'Фон приложения' : element?.label}</legend>
           {selected === 'global' ? <>
             {colorField('background', 'Цвет фона')}{colorField('accent', 'Акцент PRO')}
@@ -247,6 +261,7 @@ export default function AdminPanel() {
           <button onClick={() => { const next = clone(config); if (selected === 'global') next[device].global = {}; else delete next[device].elements[selected]; change(next); }}>Сбросить параметры элемента</button>
           <button onClick={() => { const next = clone(config); next[device === 'mobile' ? 'desktop' : 'mobile'] = clone(config[device]); change(next); }}>Скопировать оформление на {device === 'mobile' ? 'ПК' : 'телефон'}</button>
         </fieldset>
+        </div>
         <section className="admin-files"><h2>Черновики и версии</h2><div><button onClick={exportConfig}>Экспорт JSON</button><button onClick={() => file.current.click()} disabled={busy}>Импорт JSON</button><input ref={file} type="file" accept="application/json,.json" hidden onChange={importConfig}/>{localAvailable && <button onClick={restoreLocal} disabled={busy}>Открыть локальный черновик</button>}</div>
           {releases.length > 0 && <label className="admin-field"><span>Восстановить публикацию в черновик</span><select value="" disabled={busy} onChange={event => { const release = releases.find(item => String(item.id) === event.target.value); if (release) { change(release.config); setStatus('Версия открыта в черновике. Проверьте предпросмотр и опубликуйте для отката.'); } }}><option value="">Выберите версию</option>{releases.map(release => <option key={release.id} value={release.id}>#{release.id} · {new Date(release.published_at).toLocaleString('ru')}</option>)}</select></label>}
         </section>
@@ -255,6 +270,7 @@ export default function AdminPanel() {
         <div className="admin-preview-toolbar"><strong>{device === 'mobile' ? 'Телефон · 390 px' : 'ПК · 1280 px'} · {Math.round(scale * 100)}%</strong><div className="admin-tabs" role="group" aria-label="Режим предпросмотра"><button aria-pressed={inspect} onClick={resumeEditing}>Редактирование</button><button aria-pressed={!inspect} onClick={() => setInspect(false)}>Проверить приложение</button></div></div>
         <p className="admin-hint">{inspect ? 'Нажмите на элемент: появится голубая рамка, параметры — слева (на телефоне ниже). Нажатия не открывают календарь и не меняют данные.' : 'Внимание: это ваш настоящий аккаунт. Кнопки и ввод выполняют обычные действия приложения, включая изменение данных.'}</p>
         <button className="admin-selection" onClick={() => controls.current?.scrollIntoView({ block: 'start' })}>Параметры: {element?.label || 'Фон приложения'} ↓</button>
+        <div className="admin-preview-zoom" role="group" aria-label="Масштаб макета"><button aria-pressed={zoom === 'fit'} onClick={() => setZoom('fit')}>Подогнать</button><button aria-pressed={zoom === 'actual'} onClick={() => setZoom('actual')}>100% · с прокруткой</button></div>
         <div ref={canvas} className="admin-frame-scroll"><div className="admin-frame-size" style={{ width: previewWidth * scale, height: 780 * scale }}><iframe ref={frame} title="Предпросмотр DAYRIS" src="/?adminPreview=1" className={`admin-preview admin-preview-${device}`} style={{ transform: `scale(${scale})` }} onLoad={sendPreview}/></div></div>
       </section>
     </main>

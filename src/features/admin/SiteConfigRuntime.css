@@ -2,7 +2,16 @@
 .dayris-custom-buttons:has(>a) { padding:12px 0 4px; }
 .dayris-custom-button { display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box; min-height:44px; max-width:100%; padding:10px 16px; border:1px solid #d9a52e; border-radius:12px; background:#fbbf24; color:#17130a; font:600 14px/1.4 system-ui,sans-serif; text-decoration:none; overflow-wrap:anywhere; cursor:pointer; }
 .dayris-custom-button:focus-visible { outline:3px solid #38bdf8; outline-offset:3px; }
-.dayris-custom-floating { position:fixed; z-index:40; bottom:max(20px,env(safe-area-inset-bottom)); right:16px; left:16px; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; pointer-events:none; }
+.dayris-custom-floating { position:fixed; z-index:40; bottom:calc(88px + env(safe-area-inset-bottom,0px)); right:16px; left:16px; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; pointer-events:none; }
 .dayris-custom-floating>a { pointer-events:auto; }
 html[data-design-inspect] body * { cursor:crosshair!important; }
 html[data-design-inspect] [data-design-selected] { outline:3px solid #38bdf8!important; outline-offset:-3px!important; }
+[data-design-menu] { position:fixed; z-index:2147483647; width:224px; box-sizing:border-box; padding:10px; border:1px solid #5793b8; border-radius:16px; background:linear-gradient(145deg,#1b3043,#101923); color:#eaf4ff; box-shadow:0 12px 45px #0009; font:13px/1.4 system-ui,sans-serif; animation:design-menu-enter 180ms cubic-bezier(.2,0,0,1) both; }
+[data-design-menu] strong { display:block; padding:4px 4px 8px; font-size:12px; color:#9ddafa; }
+[data-design-menu] button { display:block; box-sizing:border-box; width:100%; min-height:38px; margin:3px 0; padding:8px; text-align:left; border:1px solid #47617a; border-radius:9px; background:#213247; color:#eef7ff; font:inherit; }
+[data-design-menu] button:disabled { opacity:.45; }
+[data-design-menu] button:focus-visible { outline:2px solid #fbbf24; outline-offset:1px; }
+[data-design-menu] small { display:block; padding:5px; font-size:10px; color:#a4b6c8; }
+html[data-design-inspect] [data-design-menu],html[data-design-inspect] [data-design-menu] * { cursor:auto!important; }
+@keyframes design-menu-enter { from { opacity:0; transform:translateY(6px) scale(.98); box-shadow:0 4px 12px #0004; } to { opacity:1; transform:translateY(0) scale(1); box-shadow:0 12px 45px #0009; } }
+@media(prefers-reduced-motion:reduce) { [data-design-menu] { animation:none; } }

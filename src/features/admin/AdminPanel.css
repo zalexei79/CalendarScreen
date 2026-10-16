@@ -13,6 +13,25 @@
 .admin-notice { padding:12px 24px; background:#1a2230; border-bottom:1px solid #30394a; color:#d2dbee; }
 .admin-notice p { margin:6px 0 0; }
 .admin-publish-hint { display:block; color:#a7b2c5; margin-top:4px; }
+.admin-feature-card { padding:14px; margin:14px 0; border:1px solid #385b78; border-radius:14px; background:linear-gradient(150deg,#182b3c,#151c28); }
+.admin-feature-card small { color:#7dd3fc; font-size:9px; letter-spacing:.12em; }
+.admin-feature-card h2 { margin:5px 0 10px; font-size:17px; }
+.admin-feature-card p,.admin-feature-logic p,.admin-voice-commands p { font-size:12px; color:#b6c6d9; }
+.admin-feature-card ol { padding:0; margin:12px 0 0; list-style:none; display:grid; gap:6px; }
+.admin-feature-card li { padding:6px 9px; border:1px solid #3b5168; border-radius:8px; color:#bbe3fb; font-size:11px; }
+.admin-feature-card li+li::before { content:'↓ '; color:#67b6e8; }
+.admin-inspector-tabs { position:sticky; top:-20px; padding:8px 0; background:#101319; z-index:2; }
+.admin-inspector-tabs button { padding:8px; font-size:12px; }
+.dayris-admin .admin-source-link { display:block; width:100%; margin:7px 0; text-align:left; overflow-wrap:anywhere; font:11px/1.5 ui-monospace,monospace; color:#9ddafa; }
+.admin-command-list article { margin:9px 0; padding:12px; border:1px solid #364c65; border-radius:12px; background:#172331; }
+.admin-command-list strong,.admin-command-list span { display:block; overflow-wrap:anywhere; }
+.admin-command-list span { margin-top:6px; font-size:12px; color:#a6bcd3; }
+.admin-command-result { display:block; padding:12px; border:1px solid #436d64; border-radius:10px; background:#132d29; color:#b8e8d8; overflow-wrap:anywhere; font:11px/1.6 ui-monospace,monospace; }
+.admin-voice-commands details article { border-top:1px solid #33455a; padding:10px 0; }
+.admin-voice-commands details article button { margin:4px 0; width:100%; text-align:left; font-size:11px; }
+.admin-feature-logic,.admin-feature-sources,.admin-voice-commands { animation:admin-inspector-enter 220ms cubic-bezier(.2,0,0,1) both; }
+@keyframes admin-inspector-enter { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+@media(prefers-reduced-motion:reduce) { .admin-feature-logic,.admin-feature-sources,.admin-voice-commands { animation:none; } }
 .admin-layout { display:grid; grid-template-columns:330px minmax(0,1fr); align-items:start; }
 .admin-controls { padding:20px; border-right:1px solid #30394a; min-width:0; }
 .admin-tabs { display:flex; gap:8px; }
@@ -41,6 +60,9 @@
 .admin-preview { display:block; height:780px; border:0; background:#09090b; transform-origin:top left; position:absolute; top:0; left:0; }
 .admin-add { width:100%; margin-top:16px; border-style:dashed!important; border-color:#fbbf24!important; }
 .admin-selection { margin:0 0 12px; color:#7dd3fc!important; border-color:#245878!important; }
+.admin-preview-zoom { display:flex; gap:6px; margin-bottom:10px; }
+.dayris-admin .admin-preview-zoom button { min-height:32px; padding:4px 10px; font-size:11px; }
+.admin-preview-zoom [aria-pressed=true] { border-color:#68bce8; color:#a7ddfa; }
 @media(min-width:901px) {
   .admin-app:has(.admin-stage) { height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
   .admin-app:has(.admin-stage) > .admin-app-header { flex-shrink:0; }

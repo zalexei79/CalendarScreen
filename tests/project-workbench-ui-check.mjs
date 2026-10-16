@@ -3,13 +3,14 @@ import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import path from 'node:path';
 import { installStoryAccount } from './life-story-auth-fixture.mjs';
+import { EMPTY_CONFIG } from '../src/features/admin/siteConfig.js';
 const require = createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE || 'C:/Users/aveel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/package.json');
 const browser = await require('playwright').chromium.launch({ channel:'msedge',headless:true });
 let page;
 try {
   const context=await browser.newContext({viewport:{width:1440,height:1050},serviceWorkers:'block'});
   await context.addInitScript(()=>{
-    const files = new Map([['package.json','{"name":"ai-trade-journal"}'],['src/main.jsx','export {};'],['Header.jsx','export const label = "Микрофон";']]);
+    const files = new Map([['package.json','{"name":"ai-trade-journal"}'],['src/main.jsx','export {};'],['Header.jsx','export const label = "Микрофон";'],['src/shared/ui/CalendarVoiceButton.jsx','export const microphone = "local";']]);
     window.__testFiles=files;
     const directory=(prefix='')=>({name:'ai-trade-journal',getDirectoryHandle:async name=>directory(prefix+name+'/'),getFileHandle:async(name,options)=>{
       const key=prefix+name;
@@ -79,6 +80,11 @@ try {
     page=local;
     // Keep the real local server; all outside API requests remain blocked by the route.
     await context.unroute('**/*');
+    await context.route('**/rest/v1/**',route=>{
+      const pathname=new URL(route.request().url()).pathname;
+      const data=pathname.endsWith('/rpc/is_site_admin')?true:pathname.endsWith('/site_config_draft')?{config:EMPTY_CONFIG,version:0}:pathname.endsWith('/site_live_config')?{config:EMPTY_CONFIG}:[];
+      return route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
+    });
     await local.goto(process.env.DAYRIS_DESK_URL+'/project-desk.html',{waitUntil:'domcontentloaded'});
     await local.getByRole('heading',{name:'Карта проекта',exact:true}).waitFor();
     await local.getByText(/Ветка:/).waitFor();
@@ -90,6 +96,17 @@ try {
     assert.equal(await local.getByRole('button',{name:'Выбрать другую папку',exact:true}).count(),1,'build must preserve the connected folder');
     assert.equal(await local.getByRole('button',{name:'Подготовить публикацию',exact:true}).isDisabled(),true,'no files selected automatically');
     await local.screenshot({path:'tests/project-local-desk.png',fullPage:true});
+    await local.getByRole('button',{name:'Визуально',exact:true}).click();
+    await local.getByText('Администратор · версия черновика 0',{exact:true}).waitFor();
+    const visual=local.frameLocator('iframe[title="Предпросмотр DAYRIS"]');
+    await visual.locator('.calendar-voice-button').click();
+    await visual.getByRole('menuitem',{name:'◇ Логика и команды',exact:true}).click();
+    await local.getByRole('heading',{name:'Голосовые команды',exact:true}).waitFor();
+    await local.getByRole('button',{name:'Связи',exact:true}).click();
+    await local.getByRole('button',{name:'src/shared/ui/CalendarVoiceButton.jsx ↗',exact:true}).click();
+    await local.getByRole('heading',{name:'Кнопка микрофона в календаре',exact:true}).waitFor();
+    assert.equal(await local.getByRole('button',{name:'Выбрать другую папку',exact:true}).count(),1,'visual-to-source navigation retains folder handle');
+    assert.equal(await local.getByRole('textbox',{name:'Исходный текст файла',exact:true}).inputValue(),'export const microphone = "local";');
   }
   console.log('PASS: project map/search, local source editing, before/after, backup, conflict, unsaved guard, no source upload, role gate, responsive layout; optional real local build API.');
 } catch(error){console.error('Workbench scenario failed:',error.message);if(page)await page.screenshot({path:'tests/project-workbench-failure.png',fullPage:true,timeout:3000}).catch(()=>{});throw error;}
