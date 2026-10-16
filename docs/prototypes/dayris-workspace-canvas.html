@@ -1,0 +1,121 @@
+<section id="dayris-workspace-canvas" aria-label="DAYRIS — свободная песочница">
+<style>
+#dayris-workspace-canvas{--dw-shell:light-dark(#f2f4f7,#15191f);--dw-text:light-dark(#243142,#e6edf5);--dw-edge:light-dark(#ccd3dd,#343d49);font:14px/1.45 system-ui,sans-serif;color:var(--dw-text);background:var(--dw-shell);border:1px solid var(--dw-edge);border-radius:12px;overflow:hidden}
+#dayris-workspace-canvas *{box-sizing:border-box}
+#dayris-workspace-canvas button,#dayris-workspace-canvas input,#dayris-workspace-canvas textarea{font:inherit}
+#dayris-workspace-canvas button{color:inherit;background:transparent;border:1px solid var(--dw-edge);border-radius:6px;padding:7px 10px}
+#dayris-workspace-canvas button:disabled{opacity:.45}
+#dayris-workspace-canvas .dw-bar{display:flex;align-items:center;gap:8px;padding:12px;flex-wrap:wrap}
+#dayris-workspace-canvas .dw-brand{font-weight:600;margin-right:auto}
+#dayris-workspace-canvas .dw-tag{font-size:11px;letter-spacing:1px;opacity:.7;margin-left:8px}
+#dayris-workspace-canvas .dw-stage{height:700px;position:relative;overflow:hidden;touch-action:none;background-color:#10151c;background-image:radial-gradient(#35404d 1px,transparent 1px);background-size:22px 22px;color:#e6edf5;--dw-edge:#3c4857}
+#dayris-workspace-canvas .dw-world{position:absolute;inset:0;transform-origin:0 0;width:1600px;height:1200px}
+#dayris-workspace-canvas .dw-links{position:absolute;inset:0;width:1600px;height:1200px;pointer-events:none;overflow:visible}
+#dayris-workspace-canvas .dw-links path{fill:none;stroke:#6caaab;stroke-width:1.5}
+#dayris-workspace-canvas .dw-window{position:absolute;width:310px;border:1px solid #3c4857;border-radius:10px;background:#1d2632;box-shadow:0 14px 36px #0005;overflow:hidden}
+#dayris-workspace-canvas .dw-window[data-pinned="true"]{border-color:#80b9ad}
+#dayris-workspace-canvas .dw-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #394453;background:#273341;cursor:grab;user-select:none;touch-action:none;min-height:48px}
+#dayris-workspace-canvas .dw-head strong{font-size:13px;font-weight:600;flex:1}
+#dayris-workspace-canvas .dw-head button{padding:5px;display:flex;align-items:center;gap:4px;font-size:11px}
+#dayris-workspace-canvas .dw-head button[aria-pressed="true"]{background:#355b52;border-color:#80b9ad}
+#dayris-workspace-canvas .dw-head svg{width:15px;height:15px}
+#dayris-workspace-canvas .dw-calendar{width:352px;left:40px;top:54px;background:#151d28}
+#dayris-workspace-canvas .dw-calbody{padding:18px}
+#dayris-workspace-canvas .dw-calnav{display:flex;align-items:center;gap:8px;margin-bottom:18px}
+#dayris-workspace-canvas .dw-calnav strong{flex:1;font-size:18px}
+#dayris-workspace-canvas .dw-pro{color:#d8c99c;background:#3b3526}
+#dayris-workspace-canvas .dw-week,#dayris-workspace-canvas .dw-days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+#dayris-workspace-canvas .dw-week{color:#aebaca;font-size:11px;margin-bottom:8px}
+#dayris-workspace-canvas .dw-days button{border:0;min-height:36px;padding:5px}
+#dayris-workspace-canvas .dw-days button[data-today]{background:#325c54;color:#e8fff6;border-radius:9px}
+#dayris-workspace-canvas .dw-events{margin-top:18px;padding:12px;border-radius:8px;background:#22302f;border-left:3px solid #80b9ad}
+#dayris-workspace-canvas .dw-small{font-size:12px;color:#b7c4d3}
+#dayris-workspace-canvas .dw-calfoot{display:flex;align-items:center;gap:10px;margin-top:22px}
+#dayris-workspace-canvas [data-element="voice"]{margin-left:auto;border-radius:16px;min-width:52px;height:52px;background:#669e90;color:#0b211b;display:flex;justify-content:center;align-items:center}
+#dayris-workspace-canvas [data-element="voice"] svg{width:22px;height:22px}
+#dayris-workspace-canvas [data-selected="true"]{outline:2px solid #b8eadc;outline-offset:3px}
+#dayris-workspace-canvas .dw-tabs{display:flex;gap:4px;padding:10px 12px 0}
+#dayris-workspace-canvas .dw-tabs button{font-size:12px;padding:5px 8px}
+#dayris-workspace-canvas .dw-tabs button[aria-pressed="true"]{background:#3b505b;border-color:#95b2c3}
+#dayris-workspace-canvas .dw-content{padding:14px;min-height:235px}
+#dayris-workspace-canvas label{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;font-size:12px}
+#dayris-workspace-canvas input,#dayris-workspace-canvas textarea{color:#edf3fa;background:#121b27;border:1px solid #526073;border-radius:5px;padding:7px;min-width:0;max-width:100%}
+#dayris-workspace-canvas input[type="text"]{width:150px}
+#dayris-workspace-canvas input[type="range"]{width:150px}
+#dayris-workspace-canvas input[type="color"]{width:60px;height:34px;padding:3px}
+#dayris-workspace-canvas textarea{width:100%;min-height:114px;resize:vertical;font:12px/1.6 ui-monospace,monospace;overflow-wrap:anywhere}
+#dayris-workspace-canvas .dw-source{display:block;color:#a7d5cc;font:11px/1.6 ui-monospace,monospace;overflow-wrap:anywhere;margin-bottom:10px}
+#dayris-workspace-canvas .dw-route{padding:10px 0;border-bottom:1px solid #3c4857;font-size:12px}
+#dayris-workspace-canvas .dw-command{background:#14202a;border-radius:6px;padding:9px;margin-bottom:8px;font-size:12px}
+#dayris-workspace-canvas .dw-command span{display:block;color:#a9c3ba;margin-top:3px}
+#dayris-workspace-canvas .dw-command-input{display:block;margin-top:12px}
+#dayris-workspace-canvas .dw-command-input input{width:100%;margin:5px 0}
+#dayris-workspace-canvas .dw-tools{position:absolute;bottom:16px;left:16px;display:flex;gap:6px;padding:6px;background:#202b37;border:1px solid #3c4857;border-radius:9px;align-items:center;z-index:100}
+#dayris-workspace-canvas .dw-tools button{min-width:34px;padding:5px 8px}
+#dayris-workspace-canvas .dw-hint{position:absolute;top:14px;left:16px;color:#bcc9d6;font-size:12px;pointer-events:none}
+#dayris-workspace-canvas .dw-footer{padding:10px 12px;font-size:12px;display:flex;gap:14px;flex-wrap:wrap}
+#dayris-workspace-canvas .dw-footer [data-status]{flex:1;min-width:200px}
+@media(max-width:600px){#dayris-workspace-canvas .dw-stage{height:auto;min-height:0;padding:14px;touch-action:auto}#dayris-workspace-canvas .dw-world{position:relative;inset:auto;width:100%;height:auto;transform:none!important;display:flex;flex-direction:column;gap:16px}#dayris-workspace-canvas .dw-window{position:relative;left:auto!important;top:auto!important;width:100%;max-width:352px;margin:auto}#dayris-workspace-canvas .dw-links,#dayris-workspace-canvas .dw-hint,#dayris-workspace-canvas .dw-tools{display:none}#dayris-workspace-canvas .dw-head{cursor:default}#dayris-workspace-canvas .dw-bar{padding:10px}#dayris-workspace-canvas .dw-brand{width:100%}#dayris-workspace-canvas input,#dayris-workspace-canvas textarea{font-size:16px}}
+@media(pointer:coarse){#dayris-workspace-canvas button{min-height:44px;min-width:44px}#dayris-workspace-canvas .dw-head{flex-wrap:wrap}}
+</style>
+<header class="dw-bar"><div class="dw-brand">DAYRIS Studio <span class="dw-tag">МАКЕТ · ЛОКАЛЬНО</span></div><button type="button" class="cursor-interaction" data-action="theme">Оформление</button><button type="button" class="cursor-interaction" data-action="undo" disabled>↶ Отменить</button><button type="button" class="cursor-interaction" data-action="reset">Собрать окна</button></header>
+<div class="dw-stage" aria-label="Рабочая область календаря и окон элементов">
+ <div class="dw-hint">Нажмите элемент · перетаскивайте окна · колесо — масштаб</div>
+ <div class="dw-world">
+  <svg class="dw-links" aria-hidden="true"></svg>
+  <section class="dw-window dw-calendar" data-window="calendar" aria-label="Календарь">
+   <header class="dw-head"><i data-lucide="calendar-days" aria-hidden="true"></i><strong>Календарь</strong><span class="dw-small">экран</span></header>
+   <div class="dw-calbody"><div class="dw-calnav"><strong>Октябрь 2026</strong><button type="button" class="dw-pro cursor-interaction" data-element="pro">PRO</button></div>
+    <div class="dw-week"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span></div><div class="dw-days" data-days></div>
+    <div class="dw-events"><div>Пятница, 16 октября</div><div class="dw-small">Демонстрационный календарь</div></div>
+    <div class="dw-calfoot"><button type="button" class="cursor-interaction" data-element="settings" aria-label="Настройки"><i data-lucide="settings-2" aria-hidden="true"></i></button><span class="dw-small">Выбор элемента</span><button type="button" class="cursor-interaction" data-element="voice" aria-label="Микрофон"><i data-lucide="mic" aria-hidden="true"></i></button></div>
+   </div>
+  </section>
+ </div>
+ <div class="dw-tools"><button type="button" class="cursor-interaction" data-action="minus" aria-label="Уменьшить">−</button><output data-zoom>100%</output><button type="button" class="cursor-interaction" data-action="plus" aria-label="Увеличить">+</button><button type="button" class="cursor-interaction" data-action="fit">Всё в кадр</button></div>
+</div>
+<footer class="dw-footer"><span data-status role="status" aria-live="polite">Нажмите микрофон, чтобы открыть его окно.</span><span>Черновик макета · файлы не изменяются</span></footer>
+<script>
+(()=>{
+const root=document.getElementById('dayris-workspace-canvas'), stage=root.querySelector('.dw-stage'),world=root.querySelector('.dw-world'),links=root.querySelector('.dw-links');
+const defs={voice:{name:'Микрофон',icon:'mic',file:'src/shared/ui/CalendarVoiceButton.jsx',route:['Нажатие на микрофон','Открытие голосового помощника','Распознавание → выбор команды → подтверждение']},pro:{name:'PRO-режим',icon:'sparkles',file:'src/shared/ui/Header.jsx',route:['Нажатие PRO','Открытие существующего PRO-экрана','Права подтверждает сервер, не эта кнопка']},settings:{name:'Настройки',icon:'settings-2',file:'src/features/settings/SettingsPanel.jsx',route:['Нажатие на настройки','Открытие панели настроек','Выбор раздела']},theme:{name:'Весь календарь',icon:'palette',file:'src/features/appearance/calendar-custom.css',route:['Общий стиль','Все элементы календаря','Проверка перед сохранением в проект']},day:{name:'День календаря',icon:'calendar-days',file:'src/features/calendar/',route:['Выбор дня','Список записей выбранного дня','Создание или просмотр записи']}};
+const initial={pan:{x:0,y:0},zoom:1,calendar:{x:40,y:54},panels:[],selected:null,color:'#669e90',size:52,winter:false,commands:[{phrase:'Добавь встречу завтра',action:'Создание события'},{phrase:'Покажи расходы за неделю',action:'Просмотр расходов'}]};
+let state=structuredClone(initial),history=[],z=3,drag=null,lastSaved='';
+const saved=window.openai?.widgetState?.privateContent;
+function hydrate(value){if(!value||value.version!==1)return;const v=value.workspace;if(!v||!Array.isArray(v.panels))return;state={...structuredClone(initial),...v,panels:v.panels.filter(p=>defs[p.id]).slice(0,5)};state.zoom=Math.max(.65,Math.min(1.6,Number(state.zoom)||1));}
+hydrate(saved);
+function remember(){lastSaved=JSON.stringify({version:1,workspace:state});window.openai?.setWidgetState?.({modelContent:{concept:'Свободная песочница DAYRIS',selected:defs[state.selected]?.name||null,pinned:state.panels.filter(p=>p.pinned).map(p=>defs[p.id].name)},privateContent:JSON.parse(lastSaved)})?.catch(()=>{});}
+function checkpoint(){history.push(structuredClone(state));if(history.length>30)history.shift();root.querySelector('[data-action="undo"]').disabled=false;}
+function message(text){root.querySelector('[data-status]').textContent=text;}
+function icon(name){return '<i data-lucide="'+name+'" aria-hidden="true"></i>';}
+function esc(text){return String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function open(id){checkpoint();let p=state.panels.find(p=>p.id===id);if(!p){state.panels=state.panels.filter(p=>p.pinned);const count=state.panels.length;p={id,x:430+(count%2)*330,y:70+Math.floor(count/2)*470,pinned:false,tab:'view'};state.panels.push(p);}state.selected=id;render();if(stage.clientWidth>=600)fit();remember();message(defs[id].name+' · окно открыто. Закрепите, чтобы оставить при следующем выборе.');}
+function content(p){const d=defs[p.id];if(p.tab==='code')return '<code class="dw-source">'+d.file+'</code><label style="display:block">Пример точки изменения<textarea readonly aria-label="Пример кода '+d.name+'">'+esc(p.id==='theme'?'/* Общий сезонный стиль */\n.calendar {\n  --season-accent: #8bcbd6;\n}':'// Иллюстрация связи, не исполняемый код\nonClick → открыть связанный экран\n→ выполнить существующий обработчик')+'</textarea></label><div class="dw-small">В рабочей студии здесь открывается исходник. Сейчас это макет.</div>';
+if(p.tab==='logic'){if(p.id==='voice')return state.commands.map(c=>'<div class="dw-command">«'+esc(c.phrase)+'»<span>→ '+esc(c.action)+'</span></div>').join('')+'<form data-command-form><label class="dw-command-input">Новая фраза<input name="phrase" required maxlength="80" aria-label="Новая голосовая команда" placeholder="Например: открой календарь"></label><button type="submit" class="cursor-interaction">Добавить → открыть календарь</button></form><div class="dw-small" style="margin-top:10px">Команды здесь демонстрационные.</div>';return d.route.map((v,i)=>'<div class="dw-route">'+(i+1)+'. '+v+'</div>').join('');}
+if(p.id==='voice')return '<label>Цвет кнопки<input type="color" data-property="color" aria-label="Цвет микрофона" value="'+state.color+'"></label><label>Размер · '+state.size+' px<input type="range" data-property="size" aria-label="Размер микрофона" min="40" max="76" value="'+state.size+'"></label><div class="dw-small">Изменения сразу видны на календаре. Ctrl+Z — отмена.</div>';
+if(p.id==='theme')return '<label>Новогодний стиль<input type="checkbox" data-property="winter" '+(state.winter?'checked':'')+'></label><div class="dw-small">Общее оформление всего экрана, а не отдельной кнопки.</div>';
+return '<div class="dw-small">Выбран элемент: '+d.name+'</div><div class="dw-route">Вид → оформление элемента</div><div class="dw-route">Логика → что происходит после нажатия</div><div class="dw-route">Код → где менять в проекте</div>';}
+function render(){world.querySelectorAll('[data-panel]').forEach(n=>n.remove());for(const p of state.panels){const n=document.createElement('section');n.className='dw-window';n.dataset.panel=p.id;n.dataset.window=p.id;n.dataset.pinned=String(p.pinned);n.setAttribute('aria-label','Окно: '+defs[p.id].name);n.style.left=p.x+'px';n.style.top=p.y+'px';n.style.zIndex=++z;n.innerHTML='<header class="dw-head">'+icon(defs[p.id].icon)+'<strong>'+defs[p.id].name+'</strong><button type="button" class="cursor-interaction" data-pin="'+p.id+'" aria-label="Закрепить окно '+defs[p.id].name+'" aria-pressed="'+p.pinned+'" data-tooltip="Закрепить: не заменять при выборе другого элемента">'+icon('pin')+(p.pinned?'Оставлено':'')+'</button><button type="button" class="cursor-interaction" data-close="'+p.id+'" aria-label="Закрыть окно '+defs[p.id].name+'">'+icon('x')+'</button></header><nav class="dw-tabs" aria-label="Разделы '+defs[p.id].name+'">'+[['view','Вид'],['logic',p.id==='voice'?'Команды':'Логика'],['code','Код']].map(([id,label])=>'<button type="button" class="cursor-interaction" data-tab="'+id+'" aria-pressed="'+(p.tab===id)+'">'+label+'</button>').join('')+'</nav><div class="dw-content">'+content(p)+'</div>';world.append(n);}
+root.querySelectorAll('[data-element]').forEach(n=>n.dataset.selected=String(n.dataset.element===state.selected));const voice=root.querySelector('[data-element="voice"]');voice.style.background=state.color;voice.style.width=state.size+'px';voice.style.height=state.size+'px';const cal=world.querySelector('.dw-calendar');cal.style.left=state.calendar.x+'px';cal.style.top=state.calendar.y+'px';cal.style.background=state.winter?'#15313f':'#151d28';cal.querySelector('.dw-events').style.background=state.winter?'#234957':'#22302f';root.querySelector('[data-action="undo"]').disabled=!history.length;transform();globalThis.lucide?.createIcons({attrs:{width:16,height:16}});requestAnimationFrame(wires);}
+function transform(){world.style.transform='translate('+state.pan.x+'px,'+state.pan.y+'px) scale('+state.zoom+')';root.querySelector('[data-zoom]').textContent=Math.round(state.zoom*100)+'%';}
+function wires(){links.replaceChildren();if(stage.clientWidth<600)return;const wr=world.getBoundingClientRect();for(const p of state.panels){const source=root.querySelector('[data-element="'+p.id+'"]')||root.querySelector('.dw-calendar .dw-head'),target=world.querySelector('[data-panel="'+p.id+'"]');if(!target)continue;const a=source.getBoundingClientRect(),b=target.getBoundingClientRect(),x=(a.right-wr.left)/state.zoom,y=(a.top+a.height/2-wr.top)/state.zoom,tx=(b.left-wr.left)/state.zoom,ty=(b.top+24*state.zoom-wr.top)/state.zoom;const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',`M${x},${y} C${x+70},${y} ${tx-70},${ty} ${tx},${ty}`);links.append(path);}}
+function zoom(delta,cx=stage.clientWidth/2,cy=stage.clientHeight/2){const old=state.zoom,next=Math.max(.65,Math.min(1.6,old*delta));state.pan={x:cx-(cx-state.pan.x)*next/old,y:cy-(cy-state.pan.y)*next/old};state.zoom=next;transform();remember();}
+function fit(){const nodes=[...world.querySelectorAll('.dw-window')];const minX=Math.min(...nodes.map(n=>parseFloat(n.style.left)||40)),minY=Math.min(...nodes.map(n=>parseFloat(n.style.top)||54)),maxX=Math.max(...nodes.map(n=>(parseFloat(n.style.left)||40)+n.offsetWidth)),maxY=Math.max(...nodes.map(n=>(parseFloat(n.style.top)||54)+n.offsetHeight));state.zoom=Math.max(.65,Math.min(1,(stage.clientWidth-48)/(maxX-minX),(stage.clientHeight-108)/(maxY-minY)));state.pan={x:24-minX*state.zoom,y:48-minY*state.zoom};transform();remember();}
+root.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.element){open(b.dataset.element);return;}const pane=b.closest('[data-panel]'),p=state.panels.find(p=>p.id===pane?.dataset.panel);if(b.dataset.pin){checkpoint();p.pinned=!p.pinned;render();remember();message(p.pinned?'Окно закреплено: останется открытым при выборе другого элемента.':'Закрепление снято.');return;}if(b.dataset.close){checkpoint();state.panels=state.panels.filter(p=>p.id!==b.dataset.close);render();remember();return;}if(b.dataset.tab){p.tab=b.dataset.tab;render();remember();return;}switch(b.dataset.action){case'theme':open('theme');break;case'plus':zoom(1.12);break;case'minus':zoom(1/1.12);break;case'fit':fit();break;case'reset':checkpoint();state.calendar={x:40,y:54};state.panels.forEach((p,i)=>{p.x=430+i*330;p.y=70;});render();fit();break;case'undo':undo();}});
+function undo(){if(!history.length)return;state=history.pop();render();remember();message('Последнее действие отменено.');}
+root.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.target.matches('input,textarea')){e.preventDefault();undo();}});
+root.addEventListener('change',e=>{const prop=e.target.dataset.property;if(!prop)return;checkpoint();if(prop==='size')state.size=Number(e.target.value);else if(prop==='color')state.color=e.target.value;else state.winter=e.target.checked;render();remember();message('Изменено только в макете.');});
+function addCommand(form){const phrase=form.querySelector('input').value.trim();if(!phrase||state.commands.length>=8)return;checkpoint();state.commands.push({phrase,action:'Открыть календарь'});render();remember();message('Демонстрационная команда добавлена.');}
+root.addEventListener('click',e=>{const button=e.target.closest('[data-command-form] button');if(button){e.preventDefault();addCommand(button.closest('form'));}});
+root.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.closest('[data-command-form]')){e.preventDefault();addCommand(e.target.closest('form'));}});
+root.addEventListener('submit',e=>{if(e.target.matches('[data-command-form]'))e.preventDefault();});
+stage.addEventListener('wheel',e=>{if(stage.clientWidth<600||e.target.closest('textarea,input'))return;e.preventDefault();const r=stage.getBoundingClientRect();zoom(Math.exp(-e.deltaY*.001),e.clientX-r.left,e.clientY-r.top);},{passive:false});
+stage.addEventListener('pointerdown',e=>{if(stage.clientWidth<600||e.button!==0||e.target.closest('button,input,textarea'))return;const head=e.target.closest('.dw-head'),win=head?.closest('[data-window]');if(!win&&e.target.closest('.dw-window'))return;checkpoint();const model=win?(win.dataset.window==='calendar'?state.calendar:state.panels.find(p=>p.id===win.dataset.window)):state.pan;if(win)win.style.zIndex=++z;drag={model,win,x:e.clientX,y:e.clientY,startX:model.x,startY:model.y};stage.setPointerCapture(e.pointerId);});
+stage.addEventListener('pointermove',e=>{if(!drag)return;const divisor=drag.win?state.zoom:1;drag.model.x=drag.startX+(e.clientX-drag.x)/divisor;drag.model.y=drag.startY+(e.clientY-drag.y)/divisor;if(drag.win){drag.win.style.left=drag.model.x+'px';drag.win.style.top=drag.model.y+'px';wires();}else transform();});
+function endDrag(){if(!drag)return;drag=null;remember();}stage.addEventListener('pointerup',endDrag);stage.addEventListener('pointercancel',endDrag);
+const days=root.querySelector('[data-days]');for(let i=0;i<3;i++)days.append(document.createElement('span'));for(let d=1;d<=31;d++){const b=document.createElement('button');b.type='button';b.className='cursor-interaction';b.dataset.element='day';b.textContent=d;b.setAttribute('aria-label',d+' октября');if(d===16)b.dataset.today='';days.append(b);}
+window.addEventListener('openai:set_globals',e=>{const incoming=e.detail?.globals?.widgetState?.privateContent;if(incoming&&JSON.stringify(incoming)!==lastSaved){hydrate(incoming);history=[];render();}});
+new ResizeObserver(()=>{wires();}).observe(stage);render();
+})();
+</script>
+</section>

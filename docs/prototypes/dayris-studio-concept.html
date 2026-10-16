@@ -1,0 +1,214 @@
+<div id="dayris-studio-concept" aria-label="DAYRIS Studio — интерактивный макет">
+  <style>
+    #dayris-studio-concept { --ds-bg:light-dark(#f5f6f8,#171b22);--ds-panel:light-dark(#ffffff,#202630);--ds-bar:light-dark(#edf0f4,#272e39);--ds-fg:light-dark(#202735,#e7edf6);--ds-muted:light-dark(#536274,#adbacb);--ds-line:light-dark(#d3dbe5,#414b5b);--ds-selected:light-dark(#dbeaff,#193f67);--ds-blue:light-dark(#1354a1,#a0cfff);--ds-inspector:248px;--ds-font:13px;font:var(--ds-font)/1.5 system-ui,sans-serif;color:var(--ds-fg);background:var(--ds-bg);border:1px solid var(--ds-line);border-radius:9px;overflow:clip; }
+    #dayris-studio-concept * { box-sizing:border-box; }
+    #dayris-studio-concept button,#dayris-studio-concept input,#dayris-studio-concept select,#dayris-studio-concept textarea { font:inherit; }
+    #dayris-studio-concept button { color:var(--ds-fg);background:transparent;border:1px solid transparent;padding:7px 9px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px; }
+    #dayris-studio-concept button:hover { background:var(--ds-bar);border-color:var(--ds-line); }
+    #dayris-studio-concept button:disabled { opacity:.45; }
+    #dayris-studio-concept button[aria-pressed=true] { background:var(--ds-selected);color:var(--ds-blue);border-color:var(--ds-line); }
+    #dayris-studio-concept svg { flex-shrink:0; }
+    #dayris-studio-concept .ds-title { display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 16px;border-bottom:1px solid var(--ds-line);background:var(--ds-panel); }
+    #dayris-studio-concept .ds-brand { display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600; }
+    #dayris-studio-concept .ds-mark { background:var(--ds-blue);color:var(--ds-panel);padding:1px 7px;border-radius:4px;font-weight:600; }
+    #dayris-studio-concept .ds-subtle { color:var(--ds-muted);font-size:12px; }
+    #dayris-studio-concept .ds-prototype { margin-left:auto;padding:3px 7px;background:var(--ds-bar);border:1px solid var(--ds-line);font-size:11px;letter-spacing:.06em; }
+    #dayris-studio-concept .ds-toolbar { display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:7px 10px;background:var(--ds-bar);border-bottom:1px solid var(--ds-line); }
+    #dayris-studio-concept .ds-divider { height:24px;width:1px;background:var(--ds-line);margin:0 4px; }
+    #dayris-studio-concept .ds-publish { margin-left:auto;background:var(--ds-blue);color:var(--ds-panel); }
+    #dayris-studio-concept .ds-publish:hover { color:var(--ds-blue); }
+    #dayris-studio-concept .ds-layout { display:grid;grid-template-columns:182px minmax(0,1fr) var(--ds-inspector);min-width:0; }
+    #dayris-studio-concept .ds-left { border-right:1px solid var(--ds-line);background:var(--ds-panel);min-width:0; }
+    #dayris-studio-concept .ds-right { border-left:1px solid var(--ds-line);background:var(--ds-panel);min-width:0; }
+    #dayris-studio-concept .ds-panel-title { padding:10px 12px;background:var(--ds-bar);font-weight:600;border-bottom:1px solid var(--ds-line); }
+    #dayris-studio-concept .ds-tree { padding:8px 5px; }
+    #dayris-studio-concept .ds-tree button { width:100%;justify-content:flex-start;text-align:left;overflow-wrap:anywhere; }
+    #dayris-studio-concept .ds-tree .ds-child { padding-left:22px; }
+    #dayris-studio-concept .ds-tree-group { display:flex;gap:6px;align-items:center;color:var(--ds-muted);padding:12px 9px 4px;font-size:12px; }
+    #dayris-studio-concept .ds-tree-file { display:block;padding:7px 10px 7px 22px;font-size:12px;color:var(--ds-muted);overflow-wrap:anywhere; }
+    #dayris-studio-concept .ds-main { min-width:0;background:var(--ds-bg); }
+    #dayris-studio-concept .ds-tabs { display:flex;gap:2px;padding:5px 7px 0;border-bottom:1px solid var(--ds-line);background:var(--ds-panel); }
+    #dayris-studio-concept .ds-tabs button { border-radius:4px 4px 0 0;padding:8px 12px; }
+    #dayris-studio-concept .ds-canvas-bar { padding:9px 12px;display:flex;gap:7px;align-items:center;justify-content:space-between;flex-wrap:wrap; }
+    #dayris-studio-concept .ds-canvas-label { font-size:12px;color:var(--ds-muted); }
+    #dayris-studio-concept .ds-artboard { padding:18px 12px 24px;background-image:radial-gradient(var(--ds-line) .6px,transparent .6px);background-size:14px 14px;min-height:460px;display:grid;align-content:start;justify-items:center; }
+    #dayris-studio-concept .ds-phone { background:#101821;color:#eaf0f8;width:min(100%,350px);padding:12px;border:1px solid #4b5e72;border-radius:16px;box-shadow:0 6px 18px #0002; }
+    #dayris-studio-concept .ds-phone.winter { background:#102a2c; }
+    #dayris-studio-concept .ds-phone button { color:#eaf0f8; }
+    #dayris-studio-concept .ds-phone .ds-subtle { color:#b7c4d3; }
+    #dayris-studio-concept .ds-phone button:hover { background:#2c3949;border-color:#778b9e; }
+    #dayris-studio-concept .ds-phone-head { display:flex;align-items:center;gap:6px;padding:4px 1px 12px; }
+    #dayris-studio-concept .ds-logo { font-weight:600;letter-spacing:.03em;flex:1; }
+    #dayris-studio-concept .ds-phone .ds-pro { border:1px solid #7e6940;color:#f6d48a;font-size:12px; }
+    #dayris-studio-concept .ds-month { display:flex;align-items:center;justify-content:space-between;padding:8px 0 15px; }
+    #dayris-studio-concept .ds-month strong { font-size:19px;font-weight:600; }
+    #dayris-studio-concept .ds-days { display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;padding:10px 0; }
+    #dayris-studio-concept .ds-weekday { text-align:center;color:#adbacb;font-size:11px;padding:3px 0; }
+    #dayris-studio-concept .ds-day { min-height:39px;border:1px solid #344353;border-radius:6px;font-size:11px;padding:5px; }
+    #dayris-studio-concept .ds-day.other { color:#788799; }
+    #dayris-studio-concept .ds-day.today { background:#23364a;border-color:#88b5e8; }
+    #dayris-studio-concept .ds-phone-bottom { display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:12px; }
+    #dayris-studio-concept .ds-phone .ds-mic { width:48px;height:48px;border-radius:50%;background:#dfb95d;color:#14212d;border:1px solid #f2d48e; }
+    #dayris-studio-concept .ds-phone .ds-wallet { color:#e2c07d; }
+    #dayris-studio-concept .ds-target { position:relative; }
+    #dayris-studio-concept .ds-target.ds-chosen { outline:2px solid #76b7ff;outline-offset:4px; }
+    #dayris-studio-concept .ds-target.ds-chosen::after { content:'';position:absolute;right:-7px;bottom:-7px;width:6px;height:6px;background:#edf7ff;border:1px solid #3c88dc; }
+    #dayris-studio-concept .ds-selection-label { width:min(100%,350px);padding:10px 0 0;font-size:12px;color:var(--ds-blue);display:flex;justify-content:space-between;gap:8px; }
+    #dayris-studio-concept .ds-object-name { padding:12px;border-bottom:1px solid var(--ds-line); }
+    #dayris-studio-concept .ds-object-name strong { display:block;font-size:14px;font-weight:600; }
+    #dayris-studio-concept .ds-object-name code { color:var(--ds-muted);font-size:11px; }
+    #dayris-studio-concept .ds-props { padding:12px; }
+    #dayris-studio-concept .ds-prop { display:grid;grid-template-columns:1fr minmax(0,1fr);gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--ds-line); }
+    #dayris-studio-concept .ds-prop input,#dayris-studio-concept .ds-prop select { width:100%;min-height:30px;min-width:0;padding:5px;border:1px solid var(--ds-line);border-radius:3px;background:var(--ds-bg);color:var(--ds-fg); }
+    #dayris-studio-concept .ds-prop input[type=color] { height:32px;padding:2px; }
+    #dayris-studio-concept .ds-prop input[type=checkbox] { width:18px;height:18px;min-height:0; }
+    #dayris-studio-concept .ds-prop label { font-size:12px; }
+    #dayris-studio-concept .ds-description { margin-top:14px;font-size:12px;color:var(--ds-muted); }
+    #dayris-studio-concept .ds-events { padding:12px; }
+    #dayris-studio-concept .ds-event { border-bottom:1px solid var(--ds-line);padding:10px 0; }
+    #dayris-studio-concept .ds-event strong { display:block;font-weight:600; }
+    #dayris-studio-concept .ds-event code { color:var(--ds-blue);font-size:11px;overflow-wrap:anywhere; }
+    #dayris-studio-concept .ds-event button { margin-top:8px;padding:5px 0;color:var(--ds-blue); }
+    #dayris-studio-concept .ds-source { padding:12px;border-top:1px solid var(--ds-line);font-size:12px;overflow-wrap:anywhere; }
+    #dayris-studio-concept .ds-source code { display:block;margin:5px 0;color:var(--ds-blue);font-size:11px; }
+    #dayris-studio-concept .ds-code { padding:14px;min-height:490px; }
+    #dayris-studio-concept .ds-code-path { color:var(--ds-muted);font:12px ui-monospace,monospace;margin-bottom:12px;overflow-wrap:anywhere; }
+    #dayris-studio-concept .ds-code textarea { width:100%;min-height:350px;resize:vertical;background:var(--ds-panel);border:1px solid var(--ds-line);border-radius:5px;color:var(--ds-fg);padding:12px;font:12px/1.8 ui-monospace,monospace;tab-size:2; }
+    #dayris-studio-concept .ds-bottom { border-top:1px solid var(--ds-line);background:var(--ds-panel); }
+    #dayris-studio-concept .ds-output { padding:12px 15px;min-height:72px;color:var(--ds-muted); }
+    #dayris-studio-concept .ds-output strong { color:var(--ds-fg);font-weight:500; }
+    #dayris-studio-concept .ds-footer { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:7px 12px;border-top:1px solid var(--ds-line);background:var(--ds-bar);font-size:11px;color:var(--ds-muted); }
+    #dayris-studio-concept .ds-theme { padding:25px;min-height:490px; }
+    #dayris-studio-concept .ds-theme h3 { margin:0 0 10px;font-size:18px;font-weight:500; }
+    #dayris-studio-concept .ds-theme textarea { margin-top:16px;min-height:220px; }
+    #dayris-studio-concept .ds-review { padding:15px;border-top:1px solid var(--ds-line);background:var(--ds-panel); }
+    #dayris-studio-concept .ds-review h3 { margin:0 0 10px;font-weight:500;font-size:16px; }
+    #dayris-studio-concept [hidden] { display:none!important; }
+    @media(max-width:850px) { #dayris-studio-concept .ds-layout { grid-template-columns:155px minmax(0,1fr); } #dayris-studio-concept .ds-right { grid-column:1/-1;display:grid;grid-template-columns:190px minmax(0,1fr);border-top:1px solid var(--ds-line);border-left:0; } #dayris-studio-concept .ds-right > .ds-panel-title { grid-column:1/-1; } #dayris-studio-concept .ds-right > .ds-object-name { grid-row:2/4; } #dayris-studio-concept .ds-source { grid-column:1/-1; } }
+    @media(max-width:500px) { #dayris-studio-concept .ds-layout { grid-template-columns:1fr; } #dayris-studio-concept .ds-left { border-right:0;border-bottom:1px solid var(--ds-line); } #dayris-studio-concept .ds-tree { display:flex;gap:3px;flex-wrap:wrap; } #dayris-studio-concept .ds-tree-group { width:100%;padding-top:5px; } #dayris-studio-concept .ds-tree button { width:auto; } #dayris-studio-concept .ds-tree .ds-child { padding-left:9px; } #dayris-studio-concept .ds-tree-file { display:none; } #dayris-studio-concept .ds-right { display:block; } #dayris-studio-concept .ds-title { padding:10px; } #dayris-studio-concept .ds-toolbar .ds-divider { display:none; } #dayris-studio-concept .ds-publish { margin-left:0; } #dayris-studio-concept .ds-artboard { padding:16px 10px; } #dayris-studio-concept input,#dayris-studio-concept select,#dayris-studio-concept textarea { font-size:16px!important; } #dayris-studio-concept button { min-height:42px; } }
+  </style>
+  <div class="ds-title"><span class="ds-brand"><span class="ds-mark">D</span> DAYRIS Studio</span><span class="ds-subtle">Проект: DAYRIS</span><span class="ds-prototype">МАКЕТ · НЕ РАБОЧИЙ ПРОЕКТ</span></div>
+  <div class="ds-toolbar" aria-label="Действия проекта">
+    <button class="cursor-interaction" data-action="save"><i data-lucide="save" aria-hidden="true"></i>Сохранить</button>
+    <button class="cursor-interaction" data-action="undo" disabled><i data-lucide="undo-2" aria-hidden="true"></i>Отменить</button>
+    <button class="cursor-interaction" data-action="redo" disabled><i data-lucide="redo-2" aria-hidden="true"></i>Вернуть</button><span class="ds-divider"></span>
+    <button class="cursor-interaction" data-action="add"><i data-lucide="plus" aria-hidden="true"></i>Кнопка</button>
+    <button class="cursor-interaction" data-action="run"><i data-lucide="play" aria-hidden="true"></i>Проверить</button>
+    <button class="cursor-interaction" data-action="help"><i data-lucide="circle-help" aria-hidden="true"></i>Как работать</button>
+    <button class="ds-publish cursor-interaction" data-action="publish"><i data-lucide="upload" aria-hidden="true"></i>Опубликовать</button>
+  </div>
+  <div class="ds-layout">
+    <aside class="ds-left" aria-label="Структура проекта"><div class="ds-panel-title">Проект</div><nav class="ds-tree" aria-label="Экраны и элементы">
+      <div class="ds-tree-group"><i data-lucide="panels-top-left" aria-hidden="true"></i>Экраны</div>
+      <button class="cursor-interaction" data-select="calendar"><i data-lucide="layout-template" aria-hidden="true"></i>Календарь</button>
+      <button class="ds-child cursor-interaction" data-select="header">↳ Шапка</button><button class="ds-child cursor-interaction" data-select="pro">↳ Режим PRO</button><button class="ds-child cursor-interaction" data-select="settings">↳ Настройки</button><button class="ds-child cursor-interaction" data-select="voice">↳ Микрофон</button><div data-new-tree></div>
+      <div class="ds-tree-group"><i data-lucide="palette" aria-hidden="true"></i>Оформление</div><button class="cursor-interaction" data-action="theme">Тема всего приложения</button>
+      <div class="ds-tree-group"><i data-lucide="folder-code" aria-hidden="true"></i>Исходники</div><span class="ds-tree-file">Компоненты экрана</span><span class="ds-tree-file">Обработчики событий</span>
+      <div class="ds-tree-group"><i data-lucide="book-open" aria-hidden="true"></i>Справка проекта</div><button class="cursor-interaction" data-action="help">Как устроен DAYRIS</button>
+    </nav></aside>
+    <main class="ds-main" aria-label="Редактор выбранного экрана">
+      <div class="ds-tabs" aria-label="Режим редактора"><button class="cursor-interaction" data-mode="design" aria-pressed="true">Дизайн</button><button class="cursor-interaction" data-mode="code" aria-pressed="false">Код</button></div>
+      <section data-view="design"><div class="ds-canvas-bar"><span class="ds-canvas-label">Календарь · вид телефона</span><span class="ds-subtle" data-canvas-mode>Выбор элементов</span></div>
+        <div class="ds-artboard"><div class="ds-phone" aria-label="Пример календаря DAYRIS"><div class="ds-phone-head ds-target" data-target="header"><span class="ds-logo">DAYRIS</span><button class="ds-pro ds-target cursor-interaction" data-target="pro">PRO</button><button class="ds-target cursor-interaction" data-target="settings" aria-label="Выбрать настройки"><i data-lucide="settings" aria-hidden="true"></i></button></div>
+          <div class="ds-month"><span>‹</span><strong>Октябрь 2026</strong><span>›</span></div><div class="ds-subtle">Пример экрана · без данных аккаунта</div><div class="ds-days ds-target" data-target="calendar" aria-label="Календарная сетка примера"></div>
+          <div data-new-canvas></div><div class="ds-phone-bottom"><span class="ds-subtle">Календарь</span><button class="ds-mic ds-target cursor-interaction" data-target="voice" aria-label="Выбрать микрофон"><i data-lucide="mic" aria-hidden="true"></i></button></div>
+        </div><div class="ds-selection-label"><span data-selected-caption>Выбрано: Микрофон</span><span>Двойной щелчок → код</span></div></div>
+      </section>
+      <section class="ds-code" data-view="code" hidden><div class="ds-code-path" data-code-path>src/shared/ui/CalendarVoiceButton.jsx</div><label><span data-code-title>Событие: нажатие</span><textarea aria-label="Код обработчика в макете" spellcheck="false"></textarea></label><div class="ds-subtle">Код примера редактируется, но не исполняется и не записывается в проект.</div></section>
+      <section class="ds-theme ds-code" data-view="theme" hidden><h3>Оформление всего приложения</h3><div class="ds-subtle">Одна тема для всех экранов. Пример не меняет рабочий DAYRIS.</div><button class="cursor-interaction" data-action="winter">Пример: зимняя тема</button><div class="ds-code-path">src/features/appearance/calendar-custom.css</div><label><span>CSS темы · пример</span><textarea aria-label="CSS темы в макете" spellcheck="false">/* Здесь — общий стиль приложения. */</textarea></label><button class="cursor-interaction" data-action="design">Вернуться к календарю</button></section>
+    </main>
+    <aside class="ds-right" aria-label="Инспектор выбранного объекта"><div class="ds-panel-title">Инспектор объекта</div><div class="ds-object-name"><strong data-object-name>Микрофон</strong><code data-object-id>calendar.voice</code></div>
+      <div class="ds-tabs" aria-label="Параметры объекта"><button class="cursor-interaction" data-inspector="properties" aria-pressed="true">Свойства</button><button class="cursor-interaction" data-inspector="events" aria-pressed="false">События</button></div>
+      <div class="ds-props" data-inspector-view="properties"><div class="ds-prop"><label for="ds-caption">Название</label><input id="ds-caption" value="Микрофон" maxlength="35"></div><div class="ds-prop"><label for="ds-width">Ширина</label><input id="ds-width" type="number" min="28" max="300" value="48"></div><div class="ds-prop"><label for="ds-height">Высота</label><input id="ds-height" type="number" min="28" max="100" value="48"></div><div class="ds-prop"><label for="ds-color">Цвет</label><input id="ds-color" type="color" value="#dfb95d"></div><div class="ds-prop"><label for="ds-visible">Видимость</label><input id="ds-visible" type="checkbox" checked></div><div class="ds-description" data-property-help>Кнопка запускает голосовой помощник. Оформление — здесь, поведение — во вкладке «События».</div></div>
+      <div class="ds-events" data-inspector-view="events" hidden><div class="ds-event"><strong>Нажатие · OnClick</strong><code data-handler>openVoiceAssistant()</code><div><button class="cursor-interaction" data-action="handler">Открыть обработчик →</button></div></div><div class="ds-description" data-event-help>Событие связывает кнопку с действием. Его код открывается в центре; выбранный элемент остаётся тем же.</div></div>
+      <div class="ds-props" data-theme-inspector hidden>Общий CSS всех экранов. Здесь меняется оформление приложения, а не поведение отдельной кнопки.</div>
+      <div class="ds-source"><span class="ds-subtle">Связанный файл</span><code data-source>CalendarVoiceButton.jsx</code><button class="cursor-interaction" data-action="handler">Показать код →</button></div>
+    </aside>
+  </div>
+  <section class="ds-review" hidden aria-label="Пример выпуска"><h3>Публикация · пример</h3><div>Сохранение проекта → сборка и тесты → просмотр изменений → подтверждение отправки.</div><label class="ds-prop"><span>Изменяемый файл</span><span data-release-file>siteDesign.json</span></label><button disabled>Отправка недоступна в макете</button><button class="cursor-interaction" data-action="close-publish">Закрыть</button></section>
+  <section class="ds-bottom"><div class="ds-tabs"><button class="cursor-interaction" data-bottom="help" aria-pressed="true">Подсказка</button><button class="cursor-interaction" data-bottom="changes" aria-pressed="false">Изменения</button></div><div class="ds-output" aria-live="polite" data-output></div></section>
+  <div class="ds-footer"><span data-status>Прототип · реальные файлы и сервер не подключены</span><span>Ctrl+Z — отмена · F1 — помощь</span></div>
+  <script>
+  (() => {
+    const root=document.getElementById('dayris-studio-concept');
+    const q=selector=>root.querySelector(selector), all=selector=>[...root.querySelectorAll(selector)];
+    const objects={
+      voice:{name:'Микрофон',id:'calendar.voice',width:48,height:48,color:'#dfb95d',visible:true,path:'src/shared/ui/CalendarVoiceButton.jsx',handler:'openVoiceAssistant',help:'Открывает голосовой помощник. Название, размер и цвет меняются в свойствах. Команды и действия — в событиях.'},
+      settings:{name:'Настройки',id:'calendar.settings',width:34,height:34,color:'#243346',visible:true,path:'src/shared/ui/SettingsPanel.jsx',handler:'openSettings',help:'Открывает настройки пользователя. Событие ведёт к окну, внешний вид относится к самой кнопке.'},
+      pro:{name:'Режим PRO',id:'calendar.pro',width:52,height:34,color:'#243346',visible:true,path:'src/features/pro/WorkspaceModePanel.jsx',handler:'openProPanel',help:'Открывает экран PRO. Серверная проверка подписки не отключается свойствами интерфейса.'},
+      header:{name:'Шапка',id:'calendar.header',width:324,height:45,color:'#172431',visible:true,path:'Header.jsx',handler:'onHeaderAction',help:'Контейнер логотипа и кнопок. Вложенные кнопки выбираются отдельно в дереве проекта.'},
+      calendar:{name:'Календарь',id:'screen.calendar',width:324,height:250,color:'#101821',visible:true,path:'CalendarGrid.jsx',handler:'onSelectDay',help:'Экран календаря. Данные аккаунта отделены от оформления; в макете используется пустой пример.'}
+    };
+    const defaults={selected:'voice',mode:'design',inspector:'properties',bottom:'help',objects,code:{},winter:false,newCount:0,hints:true,panel:248};
+    let state=structuredClone(defaults),past=[],future=[],message='';
+    const validSaved=value=>value && typeof value==='object' && value.objects?.voice && typeof value.selected==='string' && value.objects[value.selected];
+    const restore=stored=>{const value=stored?.privateContent?.studio;if(validSaved(value)){state={...structuredClone(defaults),...value,objects:{...structuredClone(objects),...value.objects}};render();}};
+    const remember=()=>{const snapshot={...state,code:{},testing:false};if(window.openai?.setWidgetState)window.openai.setWidgetState({modelContent:{concept:'DAYRIS Studio — единое окно',selected:state.objects[state.selected]?.name,mode:state.mode},privateContent:{studio:snapshot}}).catch(()=>{});};
+    const edit=change=>{past.push(structuredClone(state));past=past.slice(-35);future=[];change();message='Есть изменения в примере';render();remember();};
+    function select(id){if(!state.objects[id])return;state.selected=id;state.mode='design';message='';render();remember();}
+    function showCode(){state.mode='code';state.inspector='events';render();remember();}
+    function codeFor(item){return `// Пример обработчика, не рабочий исходник\n// ${item.path}\n\nfunction ${item.handler}() {\n  // Здесь связываются элемент и действие.\n  // В рабочей студии откроется связанный код проекта.\n}\n`;}
+    function render(){
+      const item=state.objects[state.selected]||state.objects.voice;
+      root.style.setProperty('--ds-inspector',state.panel+'px');
+      all('[data-view]').forEach(node=>node.hidden=node.dataset.view!==state.mode);
+      all('[data-mode]').forEach(node=>node.setAttribute('aria-pressed',String(node.dataset.mode===state.mode)));
+      all('[data-inspector]').forEach(node=>node.setAttribute('aria-pressed',String(node.dataset.inspector===state.inspector)));
+      all('[data-inspector-view]').forEach(node=>node.hidden=node.dataset.inspectorView!==state.inspector);
+      const created=Object.entries(state.objects).filter(([key])=>key.startsWith('new'));
+      q('[data-new-tree]').replaceChildren(...created.map(([key,value])=>{const button=document.createElement('button');button.type='button';button.className='ds-child cursor-interaction';button.dataset.select=key;button.textContent='↳ '+value.name;return button;}));
+      q('[data-new-canvas]').replaceChildren(...created.map(([key,value])=>{const button=document.createElement('button');button.type='button';button.className='ds-target cursor-interaction';button.dataset.target=key;button.textContent=value.name;return button;}));
+      all('[data-select]').forEach(node=>{node.setAttribute('aria-pressed',String(state.mode!=='theme'&&node.dataset.select===state.selected));node.textContent=(node.classList.contains('ds-child')?'↳ ':'')+state.objects[node.dataset.select].name;});
+      all('[data-target]').forEach(node=>{const value=state.objects[node.dataset.target];if(!value)return;node.classList.toggle('ds-chosen',node.dataset.target===state.selected);node.style.width=value.width+'px';node.style.maxWidth='100%';node.style.minHeight=value.height+'px';node.style.backgroundColor=value.color;node.style.opacity=value.visible?'1':'.25';if(node.tagName==='BUTTON')node.setAttribute('aria-label',value.name);});
+      q('[data-object-name]').textContent=item.name;q('[data-object-id]').textContent=item.id;q('[data-selected-caption]').textContent='Выбрано: '+item.name;
+      q('#ds-caption').value=item.name;q('#ds-width').value=item.width;q('#ds-height').value=item.height;q('#ds-color').value=item.color;q('#ds-visible').checked=item.visible;
+      q('[data-property-help]').textContent=item.help;q('[data-handler]').textContent=item.handler+'()';q('[data-source]').textContent=item.path;
+      const theme=state.mode==='theme';q('[data-theme-inspector]').hidden=!theme;q('.ds-right > .ds-tabs').hidden=theme;
+      if(theme){q('[data-inspector-view="properties"]').hidden=true;q('[data-inspector-view="events"]').hidden=true;q('[data-object-name]').textContent='Оформление приложения';q('[data-object-id]').textContent='application.theme';q('[data-source]').textContent='src/features/appearance/calendar-custom.css';}
+      q('[data-action="theme"]').setAttribute('aria-pressed',String(theme));
+      q('.ds-source [data-action="handler"]').textContent=theme?'Редактировать CSS →':'Показать код →';
+      q('[data-code-path]').textContent=item.path;q('[data-code-title]').textContent='Нажатие → '+item.handler+'()';
+      const code=q('[aria-label="Код обработчика в макете"]');if(document.activeElement!==code)code.value=state.code[state.selected]??codeFor(item);
+      q('.ds-phone').classList.toggle('winter',state.winter);
+      q('[data-action="undo"]').disabled=!past.length;q('[data-action="redo"]').disabled=!future.length;
+      all('[data-bottom]').forEach(node=>node.setAttribute('aria-pressed',String(node.dataset.bottom===state.bottom)));
+      q('[data-output]').textContent=state.bottom==='changes' ? (past.length ? 'Правок в примере: '+past.length+'. Они затрагивают только этот макет; рабочие файлы не изменялись.' : 'В примере пока нет правок.') : state.hints ? (message || item.help+' Один щелчок — свойства; двойной — код события.') : 'Подсказки скрыты';
+      q('[data-status]').textContent=message || 'Прототип · реальные файлы и сервер не подключены';
+      q('[data-release-file]').textContent=state.mode==='theme'?'calendar-custom.css':'siteDesign.json / '+item.path.split('/').at(-1);
+    }
+    const days=q('.ds-days');
+    ['ПН','ВТ','СР','ЧТ','ПТ','СБ','ВС'].forEach(day=>{const node=document.createElement('span');node.className='ds-weekday';node.textContent=day;days.append(node);});
+    const offset=(new Date(Date.UTC(2026,9,1)).getUTCDay()+6)%7;
+    for(let i=0;i<35;i++){const date=new Date(Date.UTC(2026,9,1-offset+i));const node=document.createElement('div');node.className='ds-day'+(date.getUTCMonth()!==9?' other':'')+(date.getUTCMonth()===9&&date.getUTCDate()===16?' today':'');node.textContent=date.getUTCDate();days.append(node);}
+    root.addEventListener('click',event=>{
+      const node=event.target.closest('button,[data-target]');if(!node)return;
+      if(node.dataset.select){select(node.dataset.select);return;}
+      if(node.dataset.target){event.stopPropagation();if(state.testing){message='Пример: '+state.objects[node.dataset.target].handler+'() — реальное действие не выполняется';state.testing=false;render();}else select(node.dataset.target);return;}
+      if(node.dataset.mode){state.mode=node.dataset.mode;render();remember();return;}
+      if(node.dataset.inspector){state.inspector=node.dataset.inspector;render();remember();return;}
+      if(node.dataset.bottom){state.bottom=node.dataset.bottom;render();return;}
+      switch(node.dataset.action){
+        case 'handler':if(state.mode!=='theme')showCode();break;
+        case 'undo':if(past.length){future.unshift(structuredClone(state));state=past.pop();message='Последняя правка примера отменена';render();remember();}break;
+        case 'redo':if(future.length){past.push(structuredClone(state));state=future.shift();message='Правка примера возвращена';render();remember();}break;
+        case 'add':if(state.newCount>=4){message='В примере можно добавить до четырёх кнопок';render();break;}edit(()=>{const id='new'+(++state.newCount);state.objects[id]={name:'Новая кнопка '+state.newCount,id:'calendar.'+id,width:145,height:36,color:'#355778',visible:true,path:'src/features/extensions/extensions.json',handler:'onNewButtonClick',help:'Новый элемент. Сначала задайте свойства, затем выберите действие во вкладке «События».'};state.selected=id;state.mode='design';});break;
+        case 'save':message='Черновик макета сохранён в разговоре. Файлы проекта не записывались.';render();remember();break;
+        case 'run':state.mode='design';state.testing=true;message='Пример проверки: нажмите кнопку на календаре. Рабочее приложение не запускается.';render();break;
+        case 'help':state.bottom='help';state.hints=true;message='Один проект → выберите экран → выберите элемент → свойства или события → проверка → сохранение → публикация. В рабочей версии эта справка будет лежать в проекте и работать без ИИ.';render();break;
+        case 'theme':state.mode='theme';render();remember();break;
+        case 'design':state.mode='design';render();remember();break;
+        case 'winter':edit(()=>{state.winter=!state.winter;q('[aria-label="CSS темы в макете"]').value=state.winter?'/* Пример сезонной темы */\n.dayris-header { background: #123c35; }\n.calendar-section { border-color: #9ed6c4; }':'/* Здесь — общий стиль приложения. */';});break;
+        case 'publish':q('.ds-review').hidden=false;render();break;
+        case 'close-publish':q('.ds-review').hidden=true;break;
+      }
+    });
+    root.addEventListener('dblclick',event=>{if(event.target.closest('[data-target]'))showCode();});
+    [['ds-caption','name',value=>value.slice(0,35)],['ds-width','width',value=>Math.max(28,Math.min(350,Number(value)||28))],['ds-height','height',value=>Math.max(28,Math.min(100,Number(value)||28))],['ds-color','color',value=>value],['ds-visible','visible',(_,node)=>node.checked]].forEach(([id,key,parse])=>q('#'+id).addEventListener('change',event=>edit(()=>{state.objects[state.selected][key]=parse(event.target.value,event.target);})));
+    q('[aria-label="Код обработчика в макете"]').addEventListener('change',event=>edit(()=>{state.code[state.selected]=event.target.value;}));
+    root.addEventListener('keydown',event=>{if(event.key==='F1'){event.preventDefault();q('[data-action="help"]').click();}if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='z'&&!event.target.closest('input,textarea')){event.preventDefault();q('[data-action="'+(event.shiftKey?'redo':'undo')+'"]').click();}});
+    render();restore(window.openai?.widgetState);
+    window.addEventListener('openai:set_globals',event=>{if(event.detail?.globals?.widgetState)restore(event.detail.globals.widgetState);});
+    if(globalThis.Tweak){const controls=new Tweak({container:root,onChange:render});controls.addSlider(state,'panel',{label:'Ширина инспектора',min:220,max:290,step:10,unit:'px'});controls.addToggle(state,'hints',{label:'Контекстные подсказки'});}
+  })();
+  </script>
+</div>
