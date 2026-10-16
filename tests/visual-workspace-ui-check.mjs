@@ -32,9 +32,11 @@ try{
   await page.waitForFunction(before=>document.querySelector('.admin-preview-toolbar > strong').textContent!==before,before);
   assert.equal(await page.getByRole('button',{name:'Сохранить в проект',exact:true}).isDisabled(),true,'zoom is not a content edit');
   await page.getByRole('button',{name:'Подогнать',exact:true}).click();
+  await page.locator('.studio-surface').evaluate(node=>{node.scrollTop=300;});
   await preview.locator('.calendar-voice-button').click();
   await preview.getByRole('menuitem',{name:'◇ Логика и команды',exact:true}).click();
-  await page.getByRole('dialog').waitFor();
+  await page.locator('.studio-window-active').waitFor();
+  assert.equal(await page.getByRole('dialog').count(),0,'local editors are nonmodal');
   await page.getByRole('heading',{name:'Голосовые команды',exact:true}).waitFor();
   await page.getByRole('button',{name:'Связи',exact:true}).click();
   await page.getByRole('button',{name:'src/shared/ui/CalendarVoiceButton.jsx ↗',exact:true}).click();
@@ -43,8 +45,12 @@ try{
   await page.getByRole('button',{name:'Редактировать локально',exact:true}).click();await code.fill('export const original = false;');
   await page.getByRole('button',{name:'Отменить ввод',exact:true}).click();assert.equal(await code.inputValue(),'export const original = true;');
   await page.getByRole('button',{name:'Вернуть ввод',exact:true}).click();
+  page.once('dialog',dialog=>dialog.dismiss());await page.getByRole('button',{name:'+ Добавить кнопку',exact:true}).click();
+  assert.equal(await code.inputValue(),'export const original = false;','add button must not discard dirty source');
+  page.once('dialog',dialog=>dialog.dismiss());await page.getByLabel('Найти элемент календаря',{exact:true}).selectOption('settings');
+  assert.equal(await code.inputValue(),'export const original = false;','another element must not discard dirty source');
   page.once('dialog',dialog=>dialog.dismiss());await page.getByRole('button',{name:'Закрыть редактор элемента',exact:true}).click();
-  assert.equal(await page.getByRole('dialog').count(),1,'dirty source must not disappear');
+  assert.equal(await page.locator('.studio-window-active').count(),1,'dirty source must not disappear');
   await page.getByRole('button',{name:'Проверить и сохранить',exact:true}).click();await page.getByRole('button',{name:'Создать копию и сохранить файл',exact:true}).click();
   await page.getByText(/Сохранено на этом ПК/).waitFor();
   await page.getByRole('button',{name:'Закрыть редактор элемента',exact:true}).click();
@@ -77,6 +83,6 @@ try{
   await page.getByRole('button',{name:'Сохранить в проект',exact:true}).click();await page.getByRole('button',{name:'Создать копии и сохранить оформление',exact:true}).click();
   await page.getByText(/Файл изменился в другом редакторе/).waitFor();assert.equal(await page.evaluate(path=>window.__workspaceFiles.get(path),STYLE_PATH),'/* external edit */');
   assert.deepEqual(errors,[]);
-  console.log('PASS: default visual workspace, real wheel zoom, separate inspector, embedded source editing/undo/backup/close guard, global CSS preview, host+iframe Ctrl+Z/redo, console, local design+CSS save, no cloud source upload and conflict protection. Real project source/theme files unchanged.');
-}catch(error){console.error(error);await page?.screenshot({path:'tests/visual-workspace-failure.png',fullPage:true,timeout:3000}).catch(()=>{});throw error;}
+  console.log('PASS: default visual workspace, real wheel zoom, nonmodal sandbox inspector, embedded source editing/undo/backup/close guard, global CSS preview, host+iframe Ctrl+Z/redo, console, local design+CSS save, no cloud source upload and conflict protection. Real project source/theme files unchanged.');
+}catch(error){console.error(error);console.error(await page?.locator('.admin-console pre').textContent().catch(()=>''));await page?.screenshot({path:'tests/visual-workspace-failure.png',fullPage:true,timeout:3000}).catch(()=>{});throw error;}
 finally{await browser.close();}

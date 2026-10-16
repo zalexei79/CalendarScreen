@@ -1,0 +1,88 @@
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+import fs from 'node:fs';
+import { installStoryAccount } from './life-story-auth-fixture.mjs';
+import { DESIGN_PATH,STYLE_PATH } from '../src/features/appearance/designModel.js';
+const require=createRequire('C:/Users/aveel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/package.json');
+const browser=await require('playwright').chromium.launch({channel:'msedge',headless:true});
+const base=process.env.DAYRIS_DESK_URL || 'http://127.0.0.1:5173';
+let page;
+try{
+  const context=await browser.newContext({viewport:{width:1560,height:1080}});
+  await context.addInitScript(({design,style,designPath,stylePath})=>{
+    if(location.href==='about:srcdoc')return;
+    const files=new Map([['package.json','{"name":"ai-trade-journal"}'],['src/main.jsx','export {};'],['src/shared/ui/CalendarVoiceButton.jsx','export const original = true;'],[designPath,design],[stylePath,style]]);window.__workspaceFiles=files;
+    const directory=(prefix='')=>({name:'ai-trade-journal',getDirectoryHandle:async name=>directory(prefix+name+'/'),getFileHandle:async(name,options)=>{const key=prefix+name;if(key==='.dayris-project-desk.json')files.set(key,JSON.stringify({workspace:window.__DAYRIS_DESK_WORKSPACE__}));if(!files.has(key)&&!options?.create)throw new Error('No fixture file: '+key);return{getFile:async()=>{const value=files.get(key)||'';return{size:new Blob([value]).size,lastModified:1,text:async()=>value};},createWritable:async()=>{let value;return{write:async text=>{value=text;},close:async()=>files.set(key,value),abort:async()=>{}};}};}});
+    window.showDirectoryPicker=async()=>directory();
+    localStorage.setItem('atj_language','ru');localStorage.setItem('dayris_onboarding_v2_completed','1');localStorage.setItem('calendar_guide_completed','1');
+  },{design:fs.readFileSync(DESIGN_PATH,'utf8'),style:fs.readFileSync(STYLE_PATH,'utf8'),designPath:DESIGN_PATH,stylePath:STYLE_PATH});
+  await installStoryAccount(context);
+  let sourceUploads=[];
+  await context.route('**/rest/v1/**',route=>{if(route.request().postData())sourceUploads.push(route.request().postData());return route.fulfill({contentType:'application/json',body:JSON.stringify(new URL(route.request().url()).pathname.endsWith('/site_live_config')?{config:{schema:1,mobile:{global:{},elements:{}},desktop:{global:{},elements:{}}}}:[])});});
+  page=await context.newPage();const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await page.goto(base+'/project-desk.html');
+  await page.getByRole('heading',{name:'Редактор приложения',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Подключить папку проекта',exact:true}).click();
+  await page.getByText('Оформление открыто из папки проекта. Сохранение будет локальным.',{exact:true}).waitFor();
+
+  await page.frameLocator('iframe[title="Предпросмотр DAYRIS"]').locator('.calendar-voice-button').waitFor();
+  const picker=page.getByLabel('Найти элемент календаря',{exact:true});
+  await picker.selectOption('voice-button');
+  const mic=page.locator('[data-editor-key="voice-button"]');
+  await mic.waitFor();
+  assert.equal(await page.getByRole('dialog').count(),0);
+  await mic.locator('button[aria-label^="Закрепить окно"]').click();
+  await picker.selectOption('settings');
+  const settings=page.locator('[data-editor-key="settings"]');await settings.waitFor();
+  assert.equal(await page.locator('.studio-element-window').count(),2);
+  await settings.getByLabel('Ширина',{exact:true}).fill('64');
+  await mic.getByLabel('Ширина',{exact:true}).fill('58');
+  assert.equal(await settings.getByLabel('Ширина',{exact:true}).inputValue(),'64');
+  assert.equal(await mic.getByLabel('Ширина',{exact:true}).inputValue(),'58');
+  await page.getByRole('button',{name:'Отменить',exact:true}).click();
+  assert.equal(await mic.getByLabel('Ширина',{exact:true}).inputValue(),'');
+  assert.equal(await settings.getByLabel('Ширина',{exact:true}).inputValue(),'64');
+  await page.getByRole('button',{name:'Вернуть',exact:true}).click();
+  await mic.getByRole('button',{name:'Логика',exact:true}).click();
+  await mic.getByLabel('Новая голосовая фраза',{exact:true}).fill('Покажи мои запасы');
+  await mic.getByRole('button',{name:'Добавить голосовую команду',exact:true}).click();
+  await mic.getByText('«Покажи мои запасы»',{exact:true}).waitFor();
+  await settings.getByRole('button',{name:'Вид',exact:true}).click();
+  assert.equal(await mic.getByText('«Покажи мои запасы»',{exact:true}).count(),1);
+  // Moving a pinned editor changes only the workspace layout, not its target.
+  const header=mic.locator('.studio-window-header strong');await header.scrollIntoViewIfNeeded();const box=await header.boundingBox();
+  const before=await mic.evaluate(n=>parseFloat(n.style.left));
+  await page.mouse.move(box.x+12,box.y+8);await page.mouse.down();await page.mouse.move(box.x+45,box.y+28,{steps:6});await page.mouse.up();
+  assert.ok((await mic.evaluate(n=>parseFloat(n.style.left)))>before+25);
+  await page.getByRole('button',{name:'Собрать окна',exact:true}).click();
+  await page.screenshot({path:'tests/studio-sandbox-desktop.png',fullPage:true});
+  await picker.selectOption('pro-mode');assert.equal(await page.locator('.studio-element-window').count(),2);
+  assert.equal(await page.locator('[data-editor-key="settings"]').count(),0);
+  assert.equal(await mic.getAttribute('data-pinned'),'true');
+  await mic.getByRole('button',{name:'Закрыть редактор элемента',exact:true}).click();
+  assert.equal(await mic.count(),0);
+  await picker.selectOption('settings');
+  await page.getByRole('button',{name:'Сохранить в проект',exact:true}).click();
+  await page.getByRole('button',{name:'Создать копии и сохранить оформление',exact:true}).click();
+  await page.getByText(/Сохранено локально с резервными копиями/).waitFor();
+  const saved=await page.evaluate(path=>JSON.parse(window.__workspaceFiles.get(path)),DESIGN_PATH);
+  assert.equal(saved.mobile.elements.settings.width,64);assert.equal(saved.mobile.elements['voice-button'].width,58);
+  assert.ok(saved.voiceCommands.some(c=>c.phrase==='Покажи мои запасы'));
+  await page.getByRole('button',{name:'+ Добавить кнопку',exact:true}).click();
+  const newPane=page.locator('.studio-window-active'),newKey=await newPane.getAttribute('data-editor-key');
+  await newPane.getByLabel('Название кнопки',{exact:true}).fill('Мой переход');
+  await newPane.locator('button[aria-label^="Закрепить окно"]').click();
+  await newPane.getByRole('button',{name:'Удалить кнопку из черновика',exact:true}).click();
+  assert.equal(await page.locator('[data-editor-key="'+newKey+'"]').count(),0,'deleted custom button does not leave a stale pinned editor');
+  await page.getByRole('group',{name:'Устройство песочницы'}).getByRole('button',{name:'ПК',exact:true}).click();
+  await page.getByRole('button',{name:'Собрать окна',exact:true}).click();
+  assert.equal(await page.locator('.admin-preview-desktop').count(),1);
+  for(const width of [1024,736,390,320]){
+    await page.setViewportSize({width,height:1080});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'No page overflow at '+width);
+  }
+  await page.screenshot({path:'tests/studio-sandbox-mobile.png',fullPage:true});
+  assert.deepEqual(errors,[]);
+  console.log('PASS: independent pinned editors, actual per-element edits/undo/redo, voice command persistence, replacement, drag/arrange/close, device switch, responsive 1024/736/390/320. Fixture disk only.');
+}catch(error){console.error(error);await page?.screenshot({path:'tests/studio-sandbox-failure.png',fullPage:true,timeout:3000}).catch(()=>{});throw error;}
+finally{await browser.close();}

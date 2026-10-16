@@ -5,6 +5,7 @@ import './AdminPanel.css';
 import { featureFor } from './featureRegistry.js';
 import VoiceCommandsEditor from './VoiceCommandsEditor.jsx';
 import InspectorDialog from './InspectorDialog.jsx';
+import StudioWorkspace from './StudioWorkspace.jsx';
 import AdminProject from './AdminProject.jsx';
 import LocalProjectTools from './LocalProjectTools.jsx';
 import localDesign from '../appearance/siteDesign.json';
@@ -59,9 +60,9 @@ export default function AdminPanel({ onOpenSource, onDirtyChange, localProject }
   const [canvasHeight, setCanvasHeight] = useState(null);
   const file = useRef(null);
   const latest = useRef({ config, inspect, selected });
-  const zoomActions = useRef(null), historyActions = useRef(null);
+  const zoomActions = useRef(null), historyActions = useRef(null), selectionActions = useRef(null);
   const loadedRoot = useRef(null), unsavedDesign = useRef(false);
-  latest.current = { config, inspect, selected, ...(local ? {localCSS:css} : {}) };
+  latest.current = { config, inspect, selected, sourceDirty, ...(local ? {localCSS:css} : {}) };
   const designDirty = JSON.stringify(config) !== saved;
   const dirty = designDirty || (local && css !== savedCSS) || sourceDirty;
   unsavedDesign.current = designDirty || (local && css !== savedCSS);
@@ -69,11 +70,6 @@ export default function AdminPanel({ onOpenSource, onDirtyChange, localProject }
   const canWrite = access === 'admin' && version !== null;
   const elements = configElements(config);
   const element = elements.find(item => item.id === selected);
-  const feature = featureFor(selected);
-  const debugSource = local && matchSource(targetMeta?.sources,catalog.files.map(file=>file.path));
-  const featureFiles = [...new Set([...(debugSource ? [debugSource.path] : []),...feature.files])];
-  const custom = config.buttons?.find(item => item.id === selected);
-  const values = selected === 'global' ? config[device].global : config[device].elements[selected] || {};
   const previewWidth = device === 'mobile' ? 390 : 1280;
   const fitScale = Math.min(1, Math.max(0.1, (canvasWidth - 32) / previewWidth), canvasHeight === null ? 1 : Math.max(0.1, (canvasHeight - 32) / 780));
   const scale = typeof zoom === 'number' ? zoom : zoom === 'actual' ? 1 : fitScale;
@@ -147,10 +143,7 @@ export default function AdminPanel({ onOpenSource, onDirtyChange, localProject }
     const message = event => {
       if (event.origin !== location.origin || event.source !== frame.current?.contentWindow) return;
       if (event.data?.type === 'dayris:select' && (event.data.id === 'global' || configElements(latest.current.config).some(item => item.id === event.data.id))) {
-        if(local && event.data.meta && typeof event.data.meta.selector === 'string')setTargetMeta(event.data.meta);
-        if(latest.current.selected !== event.data.id)setSourcePath('');
-        setSelected(event.data.id);
-        if (['design','logic','sources'].includes(event.data.view)) { setView(event.data.view); setInspectorOpen(true); }
+        selectionActions.current?.(event.data.id,['design','logic','sources'].includes(event.data.view) ? event.data.view : (local ? 'design' : null),event.data.meta || null);
       }
       if (event.data?.type === 'dayris:preview-ready') sendPreview();
       if (event.data?.type === 'dayris:zoom' && Number.isFinite(event.data.delta) && Number.isFinite(event.data.x) && Number.isFinite(event.data.y)) zoomActions.current?.(event.data.delta,event.data.x,event.data.y);
@@ -177,7 +170,7 @@ export default function AdminPanel({ onOpenSource, onDirtyChange, localProject }
       const url = new URL(frame.current.contentWindow.location.href);
       if (url.origin === location.origin && url.pathname === '/' && url.searchParams.get('adminPreview') === '1') return;
     } catch { /* An external preview link may be cross-origin. */ }
-    if (frame.current) frame.current.src = '/?adminPreview=1';
+    if (frame.current) frame.current.src = local ? '/?adminPreview=1&localStudio=1' : '/?adminPreview=1';
   }
   function change(next, nextCSS = css) {
     const normalized = normalizeConfig(next);
@@ -185,36 +178,40 @@ export default function AdminPanel({ onOpenSource, onDirtyChange, localProject }
     setPast(previous => [...previous.slice(-49), {config,css}]); setFuture([]);
     setConfig(normalized); setCSS(nextCSS); setStatus('Есть несохранённые изменения.'); setLocalReview(false);
   }
-  function edit(key, value) {
+  function editElement(key, value, id = selected) {
     const next = clone(config);
-    const target = selected === 'global' ? next[device].global : (next[device].elements[selected] ||= {});
+    const target = id === 'global' ? next[device].global : (next[device].elements[id] ||= {});
     if (value === '' || value === undefined) delete target[key]; else target[key] = value;
     change(next);
   }
-  function editButton(key, value) {
+  function editCustom(key, value, id = selected) {
     const next = clone(config);
-    next.buttons.find(item => item.id === selected)[key] = value;
+    const button=next.buttons.find(item => item.id === id); if(!button)return; button[key] = value;
     change(next);
   }
   function addButton() {
+    if(sourceDirty && !window.confirm('В исходнике есть несохранённый текст. Создать кнопку без сохранения исходника?'))return;
+    setSourceDirty(false);setSourcePath('');setTargetMeta(null);
     const id = `button-${Array.from(crypto.getRandomValues(new Uint8Array(12)), value => value.toString(16).padStart(2, '0')).join('')}`;
     const next = clone(config);
     (next.buttons ||= []).push({ id, label: 'Новая кнопка', href: '', placement: 'header' });
-    change(next); setSelected(id); setInspect(true);
+    change(next); setSelected(id); setInspect(true); if(local){setView('design');setInspectorOpen(true);}
     setStatus('Кнопка добавлена в черновик. Задайте название, переход и расположение. До публикации пользователи её не увидят.');
   }
-  function removeButton() {
+  function removeCustom(id = selected) {
+    if(sourceDirty && !window.confirm('В исходнике есть несохранённый текст. Продолжить без сохранения?'))return;
+    setSourceDirty(false);setSourcePath('');setTargetMeta(null);
     const next = clone(config);
-    next.buttons = next.buttons.filter(item => item.id !== selected);
-    for (const target of ['mobile', 'desktop']) delete next[target].elements[selected];
+    next.buttons = next.buttons.filter(item => item.id !== id);
+    for (const target of ['mobile', 'desktop']) delete next[target].elements[id];
     change(next); setSelected('global');
   }
   function undo() {
-    if (!past.length || busy) return;
+    if (!past.length || busy || sourceDirty) return;
     setFuture(previous => [{config,css}, ...previous]); setConfig(past.at(-1).config); setCSS(past.at(-1).css); setPast(past.slice(0, -1)); setLocalReview(false);
   }
   function redo() {
-    if (!future.length || busy) return;
+    if (!future.length || busy || sourceDirty) return;
     setPast(previous => [...previous, {config,css}]); setConfig(future[0].config); setCSS(future[0].css); setFuture(future.slice(1)); setLocalReview(false);
   }
   historyActions.current = {undo,redo};
@@ -299,46 +296,56 @@ export default function AdminPanel({ onOpenSource, onDirtyChange, localProject }
       change(input);
     } catch { setStatus('Нужен файл конфигурации DAYRIS версии 1 размером до 64 КБ.'); }
   }
-  function colorField(key, label) {
-    return <label className="admin-field" key={key}><span>{label}</span><div className="admin-color"><input aria-label={label} type="color" value={values[key] || '#ffffff'} onChange={event => edit(key, event.target.value)}/><code>{values[key] || 'Как в приложении'}</code><button onClick={() => edit(key, undefined)} disabled={!values[key]}>Сброс</button></div></label>;
-  }
   function closeInspector() {
     if (sourceDirty && !window.confirm('В исходнике есть несохранённый текст. Закрыть и потерять его?')) return;
-    setSourceDirty(false); setInspectorOpen(false);
+    setSourceDirty(false); setInspectorOpen(false); return true;
   }
-  function openSource(path) {
+  function openSourceFile(path) {
     if (!local) { if(onOpenSource)onOpenSource(path);else window.dispatchEvent(new CustomEvent('dayris:open-project',{detail:{path}}));return; }
     if(sourceDirty && !window.confirm('Открыть другой файл без сохранения текущего?'))return;
     setSourceDirty(false);setSourcePath(path);setView('sources');setInspectorOpen(true);
   }
   const renderControls = content => inspectorOpen ? <InspectorDialog title={`${view === 'logic' ? 'Логика и команды' : view === 'sources' ? 'Исходники' : view === 'theme' ? 'Тема и CSS' : view === 'release' ? 'Сборка и публикация' : 'Редактор вида'} · ${element?.label || 'Всё приложение'}`} onClose={closeInspector} actions={<><button disabled={busy || !past.length || sourceDirty} onClick={undo}>Отменить оформление</button><button disabled={busy || !future.length || sourceDirty} onClick={redo}>Вернуть оформление</button>{local && <button disabled={busy || !disk || !dirty || sourceDirty} onClick={()=>{setInspectorOpen(false);setLocalReview(true);}}>Сохранить оформление</button>}</>}>{content}</InspectorDialog> : content;
 
-  return <div className={`dayris-admin${local ? ' admin-local-studio' : ''}`}>
-    <header className="admin-toolbar"><div><a href="/">← DAYRIS</a><h1>Редактор приложения</h1><p>{identity || 'Визуальная настройка DAYRIS'}</p></div><div className="admin-toolbar-actions"><button onClick={undo} title="Ctrl+Z вне текстового поля" disabled={busy || !past.length}>Отменить</button><button onClick={redo} title="Ctrl+Shift+Z / Ctrl+Y" disabled={busy || !future.length}>Вернуть</button>{local ? <><button disabled={busy} onClick={connectLocal}>{localProject.root ? 'Переподключить папку' : 'Подключить папку проекта'}</button><button onClick={()=>{setView('theme');setInspectorOpen(true);}}>Тема и CSS</button><button className="admin-primary" onClick={()=>setLocalReview(true)} disabled={busy || !disk || !dirty || sourceDirty}>Сохранить в проект</button><button onClick={()=>{setView('release');setInspectorOpen(true);}}>Сборка и публикация</button></> : <><button onClick={saveLocal} disabled={busy}>На устройство</button><button onClick={() => persist(false)} disabled={busy || !canWrite || !dirty}>Сохранить черновик</button><button className="admin-primary" onClick={() => persist(true)} disabled={busy || !canWrite}>Опубликовать</button></>}</div></header>
-    <div className="admin-notice" role="status" aria-live="polite">
-      {access === 'loading' && 'Проверяем доступ…'}
-      {access === 'guest' && <>Для публикации <a href="/">войдите в DAYRIS</a> и вернитесь в редактор. Пока доступен локальный предпросмотр.</>}
-      {access === 'denied' && 'У аккаунта нет роли администратора. Доступен только локальный предпросмотр.'}
-      {access === 'unavailable' && 'Облачная админка недоступна. Требуется миграция Supabase и назначение администратора. Локальный редактор работает.'}
-      {access === 'admin' && <><span>{local ? `Локальное оформление${dirty ? ' · есть изменения' : ''}` : `Администратор · версия черновика ${version}${dirty ? ' · есть изменения' : ''}`}</span><small className="admin-publish-hint">{local ? 'Сохранение — в папку проекта с копией. Выпуск — через сборку, выбранные файлы Git и push.' : 'Черновик виден только вам. Публикация меняет оформление всех пользователей.'}</small></>}
-      {!local && localDesign.overrideCloud === true && <p>Оформление закреплено в локальном проекте. Облачные настройки не перекроют его до отключения overrideCloud в siteDesign.json.</p>}
-      {status && <p>{status}</p>}
-    </div>
-    {localReview && <section className="admin-local-review"><h2>Сохранение оформления в проект</h2><p>Будут обновлены изменённые файлы: {designDirty ? DESIGN_PATH : ''} {css !== savedCSS ? STYLE_PATH : ''}. Каждый сохраняется со своей резервной копией и проверкой конфликта. Это не атомарная запись двух файлов. После выпуска локальный файл оформления имеет приоритет над облачным.</p><button disabled={busy || !disk || sourceDirty} onClick={saveProject}>Создать копии и сохранить оформление</button><button disabled={busy} onClick={()=>setLocalReview(false)}>Отмена</button></section>}
-    <main className="admin-layout">
-      {renderControls(<aside ref={controls} className={`admin-controls${inspectorOpen ? ' admin-controls-popup' : ''}`} aria-label="Параметры оформления">
+
+  function activateSelection(id, nextView, meta = null) {
+    if(latest.current.sourceDirty && !window.confirm('В исходнике есть несохранённый текст. Перейти без сохранения?'))return false;
+    const nextMeta=local && typeof meta?.selector==='string' ? {...meta,selector:meta.selector.slice(0,600)} : null;
+    setSourceDirty(false);setSourcePath('');setSelected(id);setTargetMeta(nextMeta);
+    if(nextView){setView(nextView);setInspectorOpen(true);}return true;
+  }
+  selectionActions.current=activateSelection;
+  const activeSelected=selected,activeView=view,activeMeta=targetMeta,updateView=setView,updateSelected=setSelected;
+  function renderEditor(panel = null) {
+    const selected=panel?.id ?? activeSelected,view=panel?.view ?? activeView,targetMeta=panel ? panel.meta : activeMeta;
+    const element=elements.find(item=>item.id===selected),feature=featureFor(selected);
+    const custom=config.buttons?.find(item=>item.id===selected);
+    const values=selected==='global'?config[device].global:config[device].elements[selected] || {};
+    const debugSource=local && matchSource(targetMeta?.sources,catalog.files.map(file=>file.path));
+    const featureFiles=[...new Set([...(debugSource?[debugSource.path]:[]),...feature.files])];
+    const setView=panel?panel.onView:updateView;
+    const setSelected=panel?id=>panel.onSelect(id,null):updateSelected;
+    const edit=(key,value)=>editElement(key,value,selected);
+    const editButton=(key,value)=>editCustom(key,value,selected);
+    const removeButton=()=>removeCustom(selected);
+    const openSource=path=>{if(panel&&!panel.active&&!activateSelection(selected,'sources',targetMeta))return;openSourceFile(path);};
+  function colorField(key, label) {
+    return <label className="admin-field" key={key}><span>{label}</span><div className="admin-color"><input aria-label={label} type="color" value={values[key] || '#ffffff'} onChange={event => edit(key, event.target.value)}/><code>{values[key] || 'Как в приложении'}</code><button onClick={() => edit(key, undefined)} disabled={!values[key]}>Сброс</button></div></label>;
+  }
+
+    return (<aside ref={panel ? undefined : controls} className={`admin-controls${(local || inspectorOpen) ? ' admin-controls-popup' : ''}`} aria-label="Параметры оформления">
         <div className="admin-tabs" role="group" aria-label="Устройство">{[['mobile', 'Телефон'], ['desktop', 'ПК']].map(([id, label]) => <button key={id} aria-pressed={device === id} onClick={() => setDevice(id)}>{label}</button>)}</div>
         <p className="admin-hint">Настройки телефона и ПК независимы. В предпросмотре нажмите на элемент или выберите его ниже.</p>
         <button className="admin-add" onClick={addButton} disabled={busy || !canWrite || (config.buttons?.length || 0) >= 20}>+ Добавить кнопку</button>
         <label className="admin-field"><span>Элемент</span><select aria-label="Элемент" value={selected} disabled={busy} onChange={event => { setSelected(event.target.value); setTargetMeta(null);setSourcePath('');setInspect(true); }}><option value="global">Фон приложения</option>{elements.map(item => <option value={item.id} key={item.id}>{item.custom ? '↳ ' : ''}{item.label}</option>)}</select></label>
-        <div className="admin-tabs admin-inspector-tabs" role="group" aria-label="Редактор выбранного элемента">{[['design','Вид'],['logic','Логика'],['sources','Связи']].map(([id,label]) => <button key={id} aria-pressed={view === id} onClick={() => {if(sourceDirty && !window.confirm('Перейти без сохранения исходника?'))return;setSourceDirty(false);setView(id);setInspectorOpen(true);}}>{label}</button>)}</div>
+        <div className="admin-tabs admin-inspector-tabs" role="group" aria-label="Редактор выбранного элемента">{[['design','Вид'],['logic','Логика'],['sources','Связи']].map(([id,label]) => <button key={id} aria-pressed={view === id} onClick={() => {if(panel){panel.onView(id);return;}if(sourceDirty && !window.confirm('Перейти без сохранения исходника?'))return;setSourceDirty(false);setView(id);setInspectorOpen(true);}}>{label}</button>)}</div>
         <details className="admin-module-details" open={!inspectorOpen || view !== 'design'}><summary>Как работает · {feature.title}</summary>
         <section className="admin-feature-card"><small>ВЫБРАННЫЙ МОДУЛЬ</small><h2>{feature.title}</h2><p>{feature.description}</p><ol>{feature.steps.map(step => <li key={step}>{step}</li>)}</ol></section>
         {local && targetMeta && <section className="admin-dom-source"><h3>Выбрано: {String(targetMeta.label || 'DOM-элемент').slice(0,100)}</h3><code>{String(targetMeta.selector).slice(0,600)}</code><p>{debugSource ? `Исходник React: ${debugSource.path}${debugSource.line ? ':'+debugSource.line : ''}` : 'Точная привязка к исходнику не найдена. Ниже — зарегистрированные связи модуля.'}</p>{debugSource && <button onClick={()=>openSource(debugSource.path)}>Редактировать исходник элемента</button>}<button onClick={()=>{change(config,css+'\n/* Выбранный DOM-элемент; проверьте селектор при перестройке DOM. */\n'+String(targetMeta.selector).slice(0,600)+' {\n  /* Ваши стили */\n}\n');setView('theme');setInspectorOpen(true);}}>Добавить CSS выбранного элемента</button>{targetMeta.registered === false && <p>Этот узел не зарегистрирован в настройках. Поля «Фон приложения» меняют весь фон, не этот узел. Для него используйте CSS или исходник.</p>}</section>}
         </details>
         {view === 'logic' && (feature.voice ? <VoiceCommandsEditor commands={config.voiceCommands} disabled={busy || !canWrite} onChange={commands => { const next = clone(config); next.voiceCommands = commands; change(next); }}/> : <section className="admin-feature-logic"><h3>Как работает модуль</h3><p>{feature.description}</p><p>«Выполнить действие» в меню элемента открывает настоящий экран, не выключая инспектор. Внутри можно выбрать следующий зарегистрированный элемент.</p><button onClick={() => {setView('sources');setInspectorOpen(true);}}>Открыть связанные файлы</button><p className="admin-hint">Поведение этого модуля меняется в связанных исходниках; права и финансовые проверки нельзя отключить визуальными настройками.</p></section>)}
-        {view === 'sources' && <section className="admin-feature-sources"><h3>Связанные исходники</h3>{featureFiles.map(path => <button key={path} className="admin-source-link" onClick={() => openSource(path)}>{path} ↗</button>)}<p className="admin-hint">Ниже — назначение, связи и локальный редактор. Содержимое читается с ПК после подключения папки. Сохранение исходника не публикует сайт.</p>{local && inspectorOpen && <AdminProject key={sourcePath || featureFiles[0]} compact initialPath={sourcePath || featureFiles[0]} rootHandle={localProject.root} onRootChange={root=>{if((designDirty || css !== savedCSS)&&!window.confirm('Подключение папки заново откроет оформление с диска. Продолжить без сохранения?'))return;localProject.onRootChange(root);}} onDirtyChange={setSourceDirty}/>}</section>}
-        {local && view === 'theme' && <section className="admin-global-code"><h3>Общее оформление календаря</h3><p>Файл: <code>{STYLE_PATH}</code>. Вставьте CSS от GPT сюда или откройте этот файл в любом редакторе. Не JavaScript, не HTML. CSS доверенный: может скрывать элементы и загружать внешние изображения; проверьте код перед выпуском. Админка не оформляется этим файлом.</p><div className="admin-actions"><button onClick={()=>{if(window.confirm('Заменить текущий CSS зимним примером? Отмена доступна через кнопку «Отменить».'))change(config,WINTER_CSS);}}>Вставить зимний пример</button><button onClick={()=>change(config,'')}>Очистить CSS</button><button disabled={!past.length} onClick={undo}>Отменить правку CSS</button><button disabled={!future.length} onClick={redo}>Вернуть правку CSS</button></div><label className="project-source"><span>Общий CSS календаря</span><textarea aria-label="Общий CSS календаря" value={css} spellCheck={false} onChange={event=>{try{change(config,validLocalCSS(event.target.value));}catch(error){setStatus(error.message);}}}/></label><p>Предпросмотр обновляется сразу. Закройте окно, чтобы увидеть календарь. Затем «Сохранить в проект» → сборка → выбранные файлы → push.</p><button onClick={()=>{setInspectorOpen(false);}}>Посмотреть календарь</button></section>}
+        {view === 'sources' && <section className="admin-feature-sources"><h3>Связанные исходники</h3>{featureFiles.map(path => <button key={path} className="admin-source-link" onClick={() => openSource(path)}>{path} ↗</button>)}<p className="admin-hint">Ниже — назначение, связи и локальный редактор. Содержимое читается с ПК после подключения папки. Сохранение исходника не публикует сайт.</p>{local && inspectorOpen && (!panel || panel.active) && <AdminProject key={sourcePath || featureFiles[0]} compact initialPath={sourcePath || featureFiles[0]} rootHandle={localProject.root} onRootChange={root=>{if((designDirty || css !== savedCSS)&&!window.confirm('Подключение папки заново откроет оформление с диска. Продолжить без сохранения?'))return;localProject.onRootChange(root);}} onDirtyChange={setSourceDirty}/>}{local && panel && !panel.active && <button onClick={()=>panel.onView('sources')}>Открыть редактор этого исходника</button>}</section>}
+        {local && view === 'theme' && <section className="admin-global-code"><h3>Общее оформление календаря</h3><p>Файл: <code>{STYLE_PATH}</code>. Вставьте CSS от GPT сюда или откройте этот файл в любом редакторе. Не JavaScript, не HTML. CSS доверенный: может скрывать элементы и загружать внешние изображения; проверьте код перед выпуском. Админка не оформляется этим файлом.</p><div className="admin-actions"><button onClick={()=>{if(window.confirm('Заменить текущий CSS зимним примером? Отмена доступна через кнопку «Отменить».'))change(config,WINTER_CSS);}}>Вставить зимний пример</button><button onClick={()=>change(config,'')}>Очистить CSS</button><button disabled={!past.length} onClick={undo}>Отменить правку CSS</button><button disabled={!future.length} onClick={redo}>Вернуть правку CSS</button></div><label className="project-source"><span>Общий CSS календаря</span><textarea aria-label="Общий CSS календаря" value={css} spellCheck={false} onChange={event=>{try{change(config,validLocalCSS(event.target.value));}catch(error){setStatus(error.message);}}}/></label><p>Предпросмотр обновляется сразу. Календарь остаётся доступен рядом с этим окном. Затем «Сохранить в проект» → сборка → выбранные файлы → push.</p><button onClick={()=>{setInspectorOpen(false);}}>Посмотреть календарь</button></section>}
         {local && view === 'release' && <LocalProjectTools local savedPath={savedPath} dirty={dirty} hidePreview/>}
         <div className="admin-design-fields" hidden={view !== 'design'}>
         <fieldset disabled={busy || access === 'loading'}><legend>{selected === 'global' ? 'Фон приложения' : element?.label}</legend>
@@ -366,8 +373,24 @@ export default function AdminPanel({ onOpenSource, onDirtyChange, localProject }
         <section className="admin-files"><h2>Черновики и версии</h2><div><button onClick={exportConfig}>Экспорт JSON</button><button onClick={() => file.current.click()} disabled={busy}>Импорт JSON</button><input ref={file} type="file" accept="application/json,.json" hidden onChange={importConfig}/>{localAvailable && <button onClick={restoreLocal} disabled={busy}>Открыть локальный черновик</button>}</div>
           {releases.length > 0 && <label className="admin-field"><span>Восстановить публикацию в черновик</span><select value="" disabled={busy} onChange={event => { const release = releases.find(item => String(item.id) === event.target.value); if (release) { change(release.config); setStatus('Версия открыта в черновике. Проверьте предпросмотр и опубликуйте для отката.'); } }}><option value="">Выберите версию</option>{releases.map(release => <option key={release.id} value={release.id}>#{release.id} · {new Date(release.published_at).toLocaleString('ru')}</option>)}</select></label>}
         </section>
-      </aside>)}
-      <section className="admin-stage" aria-label="Предпросмотр приложения">
+      </aside>);
+  }
+
+  return <div className={`dayris-admin${local ? ' admin-local-studio' : ''}`}>
+    <header className="admin-toolbar"><div><a href="/">← DAYRIS</a><h1>Редактор приложения</h1><p>{identity || 'Визуальная настройка DAYRIS'}</p></div><div className="admin-toolbar-actions"><button onClick={undo} title="Ctrl+Z вне текстового поля" disabled={busy || !past.length}>Отменить</button><button onClick={redo} title="Ctrl+Shift+Z / Ctrl+Y" disabled={busy || !future.length}>Вернуть</button>{local ? <><button disabled={busy} onClick={connectLocal}>{localProject.root ? 'Переподключить папку' : 'Подключить папку проекта'}</button><button onClick={()=>activateSelection('global','theme',null)}>Тема и CSS</button><button className="admin-primary" onClick={()=>setLocalReview(true)} disabled={busy || !disk || !dirty || sourceDirty}>Сохранить в проект</button><button onClick={()=>activateSelection('global','release',null)}>Сборка и публикация</button></> : <><button onClick={saveLocal} disabled={busy}>На устройство</button><button onClick={() => persist(false)} disabled={busy || !canWrite || !dirty}>Сохранить черновик</button><button className="admin-primary" onClick={() => persist(true)} disabled={busy || !canWrite}>Опубликовать</button></>}</div></header>
+    <div className="admin-notice" role="status" aria-live="polite">
+      {access === 'loading' && 'Проверяем доступ…'}
+      {access === 'guest' && <>Для публикации <a href="/">войдите в DAYRIS</a> и вернитесь в редактор. Пока доступен локальный предпросмотр.</>}
+      {access === 'denied' && 'У аккаунта нет роли администратора. Доступен только локальный предпросмотр.'}
+      {access === 'unavailable' && 'Облачная админка недоступна. Требуется миграция Supabase и назначение администратора. Локальный редактор работает.'}
+      {access === 'admin' && <><span>{local ? `Локальное оформление${dirty ? ' · есть изменения' : ''}` : `Администратор · версия черновика ${version}${dirty ? ' · есть изменения' : ''}`}</span><small className="admin-publish-hint">{local ? 'Сохранение — в папку проекта с копией. Выпуск — через сборку, выбранные файлы Git и push.' : 'Черновик виден только вам. Публикация меняет оформление всех пользователей.'}</small></>}
+      {!local && localDesign.overrideCloud === true && <p>Оформление закреплено в локальном проекте. Облачные настройки не перекроют его до отключения overrideCloud в siteDesign.json.</p>}
+      {status && <p>{status}</p>}
+    </div>
+    {localReview && <section className="admin-local-review"><h2>Сохранение оформления в проект</h2><p>Будут обновлены изменённые файлы: {designDirty ? DESIGN_PATH : ''} {css !== savedCSS ? STYLE_PATH : ''}. Каждый сохраняется со своей резервной копией и проверкой конфликта. Это не атомарная запись двух файлов. После выпуска локальный файл оформления имеет приоритет над облачным.</p><button disabled={busy || !disk || sourceDirty} onClick={saveProject}>Создать копии и сохранить оформление</button><button disabled={busy} onClick={()=>setLocalReview(false)}>Отмена</button></section>}
+    <main className={`admin-layout${local ? ' studio-layout' : ''}`}>
+      {local ? <StudioWorkspace config={config} selected={selected} view={view} meta={targetMeta} open={inspectorOpen} label={view==='theme'?'Общее оформление':view==='release'?'Сборка и публикация':element?.label || targetMeta?.label || 'Фон приложения'} renderEditor={renderEditor} onActivate={activateSelection} onClose={closeInspector} frameRef={frame} calendarWidth={previewWidth+56} toolbar={<><div className="admin-tabs" role="group" aria-label="Устройство песочницы">{[['mobile','Телефон'],['desktop','ПК']].map(([id,title])=><button key={id} aria-pressed={device===id} onClick={()=>setDevice(id)}>{title}</button>)}</div><label className="studio-element-picker">Элемент <select aria-label="Найти элемент календаря" value={selected} onChange={event=>activateSelection(event.target.value,'design',null)}><option value="global">Фон приложения</option>{elements.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label><button onClick={addButton} disabled={busy || !canWrite || (config.buttons?.length || 0)>=20}>+ Добавить кнопку</button></>}>
+<section className="admin-stage" aria-label="Предпросмотр приложения">
         <div className="admin-preview-toolbar"><strong>{device === 'mobile' ? 'Телефон · 390 px' : 'ПК · 1280 px'} · {Math.round(scale * 100)}%</strong><div className="admin-tabs" role="group" aria-label="Режим предпросмотра"><button aria-pressed={inspect} onClick={resumeEditing}>Редактирование</button><button aria-pressed={!inspect} onClick={() => setInspect(false)}>Проверить приложение</button></div></div>
         <p className="admin-hint">{inspect ? 'Выберите элемент. «Редактировать вид» и «Логика и команды» откроют отдельное окно. В режиме выбора нажатия не меняют данные.' : 'Внимание: это ваш настоящий аккаунт. Кнопки и ввод выполняют обычные действия приложения, включая изменение данных.'}</p>
         <button className="admin-selection" onClick={() => {setView('design');setInspectorOpen(true);}}>Параметры: {element?.label || 'Фон приложения'} ↗</button>
@@ -375,6 +398,14 @@ export default function AdminPanel({ onOpenSource, onDirtyChange, localProject }
         <div ref={canvas} className="admin-frame-scroll"><div className="admin-frame-size" style={{ width: previewWidth * scale, height: 780 * scale }}><iframe ref={frame} title="Предпросмотр DAYRIS" src={local ? '/?adminPreview=1&localStudio=1' : '/?adminPreview=1'} className={`admin-preview admin-preview-${device}`} style={{ transform: `scale(${scale})` }} onLoad={sendPreview}/></div></div>
         {local && <details className="admin-console"><summary>Консоль предпросмотра · {consoleLines.length}</summary><p>Ошибки и предупреждения этого предпросмотра. Журнал build/Git — в «Сборка и публикация». Это не shell и не запуск произвольного JavaScript.</p><pre>{consoleLines.join('\n') || 'Ошибок не зарегистрировано.'}</pre><button onClick={()=>setConsoleLines([])}>Очистить консоль</button></details>}
       </section>
+      </StudioWorkspace> : <>{renderControls(renderEditor())}<section className="admin-stage" aria-label="Предпросмотр приложения">
+        <div className="admin-preview-toolbar"><strong>{device === 'mobile' ? 'Телефон · 390 px' : 'ПК · 1280 px'} · {Math.round(scale * 100)}%</strong><div className="admin-tabs" role="group" aria-label="Режим предпросмотра"><button aria-pressed={inspect} onClick={resumeEditing}>Редактирование</button><button aria-pressed={!inspect} onClick={() => setInspect(false)}>Проверить приложение</button></div></div>
+        <p className="admin-hint">{inspect ? 'Выберите элемент. «Редактировать вид» и «Логика и команды» откроют отдельное окно. В режиме выбора нажатия не меняют данные.' : 'Внимание: это ваш настоящий аккаунт. Кнопки и ввод выполняют обычные действия приложения, включая изменение данных.'}</p>
+        <button className="admin-selection" onClick={() => {setView('design');setInspectorOpen(true);}}>Параметры: {element?.label || 'Фон приложения'} ↗</button>
+        <div className="admin-preview-zoom" role="group" aria-label="Масштаб макета"><button aria-pressed={zoom === 'fit'} onClick={() => setZoom('fit')}>Подогнать</button><button onClick={()=>setZoom(Math.max(.25,scale-.1))} aria-label="Уменьшить календарь">−</button><button aria-pressed={zoom === 'actual'} onClick={() => setZoom('actual')}>100% · с прокруткой</button><button onClick={()=>setZoom(Math.min(2.5,scale+.1))} aria-label="Увеличить календарь">+</button><small>Колесо — масштаб · Shift+колесо — прокрутка · Ctrl+Z — отмена</small></div>
+        <div ref={canvas} className="admin-frame-scroll"><div className="admin-frame-size" style={{ width: previewWidth * scale, height: 780 * scale }}><iframe ref={frame} title="Предпросмотр DAYRIS" src={local ? '/?adminPreview=1&localStudio=1' : '/?adminPreview=1'} className={`admin-preview admin-preview-${device}`} style={{ transform: `scale(${scale})` }} onLoad={sendPreview}/></div></div>
+        {local && <details className="admin-console"><summary>Консоль предпросмотра · {consoleLines.length}</summary><p>Ошибки и предупреждения этого предпросмотра. Журнал build/Git — в «Сборка и публикация». Это не shell и не запуск произвольного JavaScript.</p><pre>{consoleLines.join('\n') || 'Ошибок не зарегистрировано.'}</pre><button onClick={()=>setConsoleLines([])}>Очистить консоль</button></details>}
+      </section></>}
     </main>
   </div>;
 }

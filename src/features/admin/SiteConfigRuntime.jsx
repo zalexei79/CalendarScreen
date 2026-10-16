@@ -83,7 +83,7 @@ export default function SiteConfigRuntime() {
           meta={label:(target.getAttribute('aria-label') || target.textContent || target.tagName).trim().slice(0,100),selector:path.join(' > ').slice(0,600),sources,registered:Boolean(element)};
         }
         window.parent.postMessage({ type: 'dayris:select', id: selected,...(meta?{meta}:{}) }, location.origin);
-        setMenu({ id: selected, label: element?.label || 'Этот участок', node, left: Math.max(8, Math.min(innerWidth - 232, event.clientX - 30)), top: Math.max(8, Math.min(innerHeight - 248, event.clientY + 16)) });
+        setMenu({ id: selected, meta, label: element?.label || 'Этот участок', node, left: Math.max(8, Math.min(innerWidth - 232, event.clientX - 30)), top: Math.max(8, Math.min(innerHeight - 248, event.clientY + 16)) });
         return;
       }
       if (!element || element.custom) return;
@@ -144,8 +144,8 @@ export default function SiteConfigRuntime() {
       }
     }}>
       <strong>{menu.label}</strong>
-      <button role="menuitem" onClick={() => { window.parent.postMessage({ type: 'dayris:select', id: menu.id, view: 'design' }, location.origin); setMenu(null); }}>✎ Редактировать вид</button>
-      <button role="menuitem" onClick={() => { window.parent.postMessage({ type: 'dayris:select', id: menu.id, view: 'logic' }, location.origin); setMenu(null); }}>◇ Логика и команды</button>
+      <button role="menuitem" onClick={() => { window.parent.postMessage({ type: 'dayris:select', id: menu.id, view: 'design', meta: menu.meta }, location.origin); setMenu(null); }}>✎ Редактировать вид</button>
+      <button role="menuitem" onClick={() => { window.parent.postMessage({ type: 'dayris:select', id: menu.id, view: 'logic', meta: menu.meta }, location.origin); setMenu(null); }}>◇ Логика и команды</button>
       <button role="menuitem" disabled={!menu.node || menu.node.disabled} onClick={() => execute.current?.(menu.node)}>↗ Выполнить действие</button>
       <small>Настоящий аккаунт: действие может менять данные.</small>
       <button role="menuitem" onClick={() => { setMenu(null); menu.node?.focus?.(); }}>Закрыть меню</button>
