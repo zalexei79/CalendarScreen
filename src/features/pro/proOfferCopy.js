@@ -119,21 +119,25 @@ Object.assign(copy.ro, {
   openPlatforms: 'Deschide platformele de trading',
 });
 Object.assign(copy.ru, {
+  proKicker: 'PRO · всё важное в одном месте', previewLive: 'Живое превью', previewPause: 'Пауза',
   capital:'Инвестиции', capitalTitle:'Инвестиции под контролем.',
   capitalBody:'Следи за акциями, криптовалютами, золотом и другими активами. Смотри стоимость вложений, прибыль и изменения капитала в одном приложении.',
   capitalPoints:['Акции, криптовалюты, ETF и другие активы','Автоматические котировки криптовалют','Аналитика портфеля и история операций'],
 });
 Object.assign(copy.en, {
+  proKicker: 'PRO · your whole picture in one place', previewLive: 'Live preview', previewPause: 'Paused',
   capital:'Investments', capitalTitle:'Your investments, in one place.',
   capitalBody:'Track stocks, crypto, gold and other assets. See investment value, profit and changes to your capital in one app.',
   capitalPoints:['Stocks, crypto, ETFs and other assets','Automatic crypto quotes','Portfolio analytics and activity history'],
 });
 Object.assign(copy.ro, {
+  proKicker: 'PRO · totul important într-un singur loc', previewLive: 'Previzualizare live', previewPause: 'Pauză',
   capital:'Investiții', capitalTitle:'Investițiile tale, într-un singur loc.',
   capitalBody:'Urmărește acțiuni, cripto, aur și alte active. Vezi valoarea investițiilor, profitul și evoluția capitalului în aceeași aplicație.',
   capitalPoints:['Acțiuni, cripto, ETF și alte active','Cotații automate pentru cripto','Analiza portofoliului și istoricul operațiunilor'],
 });
 Object.assign(copy.zh, {
+  proKicker: 'PRO · 一处掌握全貌', previewLive: '实时预览', previewPause: '已暂停',
   capital:'投资组合', capitalTitle:'集中管理您的投资。',
   capitalBody:'跟踪股票、加密货币、黄金和其他资产，在一个应用中查看投资价值、盈亏和资金变化。',
   capitalPoints:['股票、加密货币、ETF等资产','自动加密货币行情','投资组合分析与交易记录'],

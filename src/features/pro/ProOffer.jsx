@@ -1,11 +1,12 @@
-import React, { useId, useState } from 'react';
-import { ArrowDownLeft, ArrowRight, ArrowUpRight, ChartCandlestick, ChartNoAxesCombined, Check, CreditCard, Gift, RefreshCw, Wallet, Bitcoin } from 'lucide-react';
+import React, { useEffect, useId, useState } from 'react';
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, ChartCandlestick, ChartNoAxesCombined, Check, Gift, RefreshCw, Wallet, Bitcoin } from 'lucide-react';
 import { getProOfferCopy, XAUUSD_SIGNALS_URL, XAUUSD_SIGNALS_BOT_URL } from './proOfferCopy';
 import './ProPresentation.css';
 
 // Presentation only. All account, referral and checkout actions stay with the caller.
 export default function ProOffer({ language, copy, active, daysRemaining, untilLabel, signedIn, referralLoading, referralCode, referralError, checkoutLoading, checkoutError, onInvite, onCheckout, onInvites, onWallet, onPlatforms }) {
   const [feature, setFeature] = useState('capital');
+  const [demoPaused, setDemoPaused] = useState(false);
   const id = useId();
   const text = getProOfferCopy(language);
   const features = [ ['capital', Bitcoin, text.capital], ['wallet', Wallet, text.wallet], ['money', ChartNoAxesCombined, text.money], ['trader', ChartCandlestick, text.trader] ];
@@ -23,17 +24,37 @@ export default function ProOffer({ language, copy, active, daysRemaining, untilL
   };
   const inviteLabel = !signedIn ? copy.signIn : referralCode ? text.inviteAction : referralError ? copy.retryInvite : copy.preparing;
 
+  useEffect(() => {
+    if (demoPaused || active) return undefined;
+    const timer = window.setInterval(() => {
+      setFeature(current => features[(features.findIndex(([key]) => key === current) + 1) % features.length][0]);
+    }, 4200);
+    return () => window.clearInterval(timer);
+  }, [active, demoPaused]);
+
   return <div className="pro-offer">
     {active && <section className="pro-membership-status" aria-label={copy.myPro}>
       <div><span className="pro-eyebrow">{copy.myPro}</span><strong>{copy.proRemaining}: {daysRemaining} {copy.daysShort}</strong><p>{copy.proUntil} {untilLabel}</p></div>
       <Check aria-hidden="true" />
     </section>}
     <section className="pro-offer-intro">
+      <div className="pro-offer-kicker"><span className="pro-live-dot" /> {text.proKicker}</div>
       <h2 id="pro-offer-title">{text.title}<br /><span>{text.titleAccent}</span></h2>
       <p>{text.intro}</p>
+      <div className="pro-quick-access" aria-label={text.choose}>
+        <button type="button" className="pro-quick-access-primary" onClick={onCheckout} disabled={checkoutLoading} aria-busy={checkoutLoading}>
+          <span>{checkoutLoading ? copy.buyLoading : active ? text.renewAction : text.buyAction}</span>
+          {copy.buyPrice && <small>{copy.buyPrice} {copy.buyPeriod}</small>}
+          {checkoutLoading ? <RefreshCw className="animate-spin" aria-hidden="true" /> : <ArrowRight aria-hidden="true" />}
+        </button>
+        <button type="button" className="pro-quick-access-secondary" onClick={onInvite} disabled={signedIn && referralLoading} aria-busy={signedIn && referralLoading}>
+          <Gift aria-hidden="true" /><span>{inviteLabel}</span>
+        </button>
+      </div>
     </section>
 
-    <section className="pro-explorer" aria-label={text.explore}>
+    <section className="pro-explorer" aria-label={text.explore} onMouseEnter={() => setDemoPaused(true)} onMouseLeave={() => setDemoPaused(false)} onFocusCapture={() => setDemoPaused(true)} onBlurCapture={() => setDemoPaused(false)}>
+      <div className="pro-explorer-heading"><span>{text.explore}</span><span className="pro-demo-status"><i /> {demoPaused ? text.previewPause : text.previewLive}</span></div>
       <div className="pro-feature-tabs" role="tablist" aria-label={text.explore}>
         {features.map(([key, Icon, label]) => <button key={key} type="button" role="tab" id={`${id}-${key}`} aria-selected={feature === key} aria-controls={`${id}-panel`} tabIndex={feature === key ? 0 : -1} onKeyDown={selectWithKeys} onClick={() => setFeature(key)}><Icon aria-hidden="true" /><span>{label}</span></button>)}
       </div>
@@ -93,21 +114,6 @@ export default function ProOffer({ language, copy, active, daysRemaining, untilL
       </div>
     </section>
 
-    <section className="pro-offer-access" aria-label={text.choose}>
-      <div className="pro-offer-section-heading"><h3>{text.choose}</h3><button type="button" className="pro-text-action" onClick={onInvites}>{copy.invitesTab}<ArrowRight aria-hidden="true" /></button></div>
-      <div className="pro-access-options">
-        <article className="pro-access-card pro-access-invite">
-          <Gift className="pro-access-icon" aria-hidden="true" /><h4>{text.inviteTitle}</h4><p>{text.inviteBody}</p>
-          <button type="button" className="pro-offer-action pro-offer-action-primary" disabled={signedIn && referralLoading} onClick={onInvite} aria-busy={signedIn && referralLoading}>{inviteLabel}<ArrowRight aria-hidden="true" /></button>
-        </article>
-        <article className="pro-access-card">
-          <CreditCard className="pro-access-icon" aria-hidden="true" /><h4>{active ? copy.renewTitle : text.buyTitle}</h4>
-          <div className="pro-offer-price"><strong>{copy.buyPrice}</strong><span>{copy.buyPeriod}</span></div>
-          <p>{active ? text.renewBody : text.buyBody}</p>
-          <button type="button" className="pro-offer-action" onClick={onCheckout} disabled={checkoutLoading} aria-busy={checkoutLoading}>{checkoutLoading ? copy.buyLoading : active ? text.renewAction : text.buyAction}{checkoutLoading ? <RefreshCw className="animate-spin" aria-hidden="true" /> : <ArrowRight aria-hidden="true" />}</button>
-        </article>
-      </div>
-      <p className={`pro-offer-payment-note ${checkoutError ? 'has-error' : ''}`} role={checkoutError ? 'alert' : undefined}>{checkoutError ? copy.buyError : copy.comingSoon}</p>
-    </section>
+    <p className={`pro-offer-payment-note ${checkoutError ? 'has-error' : ''}`} role={checkoutError ? 'alert' : undefined}>{checkoutError ? copy.buyError : copy.comingSoon}</p>
   </div>;
 }
