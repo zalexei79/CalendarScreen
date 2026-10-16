@@ -77,7 +77,7 @@ window.addEventListener('appinstalled', () => {
   window.__atjInstallPrompt = null
 })
 
-if ('serviceWorker' in navigator) {
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').then((registration) => registration.update()).catch((err) => console.error('[sw] регистрация не удалась:', err))
   })

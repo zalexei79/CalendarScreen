@@ -1,0 +1,54 @@
+.admin-project { max-width:1800px; }
+.admin-project .admin-page-title { align-items:flex-start; }
+.project-boundary,.project-warning { padding:14px 16px; background:#30291b; color:#f5dda2; border:1px solid #685333; border-radius:12px; }
+.project-status { min-height:48px; padding:12px 0; color:#a9c7ed; overflow-wrap:anywhere; }
+.project-help { padding:16px; margin:14px 0 20px; border:1px solid #364155; border-radius:12px; background:#151c27; }
+.project-help summary,.project-links summary { cursor:pointer; min-height:30px; font-weight:650; }
+.project-help li { padding:5px 0; }
+.project-layout { display:grid; grid-template-columns:320px minmax(0,1fr); gap:20px; align-items:start; }
+.project-browser,.project-detail { min-width:0; padding:16px; border:1px solid #354155; border-radius:14px; background:#141a24; }
+.project-browser { position:sticky; top:12px; max-height:85dvh; overflow:auto; }
+.project-browser .admin-field { margin-top:0; }
+.project-tree ul { padding:0 0 0 12px; margin:0; list-style:none; }
+.project-tree > ul { padding-left:0; }
+.project-tree-row { display:flex; align-items:stretch; min-width:0; }
+.dayris-admin .project-tree-row button { border:0; background:transparent; border-radius:6px; min-height:36px; padding:6px; text-align:left; font-size:12px; overflow-wrap:anywhere; }
+.project-tree-row button:last-child { flex:1; }
+.dayris-admin .project-tree-row [aria-current=page] { color:#fcd56f; background:#342b18; }
+.dayris-admin .project-path { display:block; width:100%; text-align:left; margin:5px 0; background:#1c2533; border-color:#35465b; font:12px/1.5 ui-monospace,monospace; overflow-wrap:anywhere; }
+.project-breadcrumb { display:flex; align-items:center; gap:10px; font-size:12px; overflow-wrap:anywhere; }
+.project-breadcrumb code { min-width:0; }
+.project-file-state { color:#a6b5ca; font-size:12px; }
+.project-editor-actions { margin:16px 0; flex-wrap:wrap; }
+.project-source { display:flex; flex-direction:column; gap:8px; font-size:12px; color:#a9c7ed; }
+.project-source textarea,.project-compare textarea { display:block; width:100%; min-height:480px; resize:vertical; padding:16px; border:1px solid #40516b; border-radius:10px; background:#090e16; color:#e2eaf7; font:13px/1.65 ui-monospace,Consolas,monospace; tab-size:2; white-space:pre; overflow:auto; }
+.project-source textarea:read-only { color:#a7b3c5; }
+.project-review { border:1px solid #a17f38; border-radius:12px; padding:16px; margin:18px 0; }
+.project-compare { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:12px 0; }
+.project-compare label { min-width:0; }
+.project-compare textarea { min-height:240px; max-height:380px; font-size:11px; }
+.project-backup { overflow-wrap:anywhere; color:#a7d8b8; }
+.project-links { margin-top:22px; padding-top:16px; border-top:1px solid #354155; }
+.project-links small { display:block; margin-top:12px; color:#a7b3c5; }
+.project-recipes { margin-top:28px; }
+.project-recipes > div { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.project-recipes article { min-width:0; padding:16px; border:1px solid #354155; border-radius:12px; background:#151c27; }
+.project-recipes h3 { font-size:15px; }
+.project-local-launch { padding:18px; margin:18px 0; border:1px solid #375b72; border-radius:14px; background:#14232d; }
+.project-local-launch .admin-actions { flex-wrap:wrap; align-items:center; }
+.project-git-file { font:12px ui-monospace,monospace; overflow-wrap:anywhere; }
+.project-job { padding:14px; margin:14px 0; border:1px solid #4a6079; border-radius:10px; overflow-wrap:anywhere; }
+.project-job pre { max-height:300px; overflow:auto; white-space:pre-wrap; background:#090e16; padding:12px; font:12px/1.5 ui-monospace,monospace; }
+.project-live-preview { margin-top:20px; }
+.project-live-preview summary { min-height:44px; cursor:pointer; }
+.project-live-scroll { margin-top:12px; max-width:100%; overflow:auto; border:1px solid #40516b; background:#080b10; padding:12px; }
+.project-live-scroll iframe { display:block; height:700px; border:0; background:#101014; margin:auto; }
+@media(min-width:1300px) {
+  .project-is-local { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:0 20px; align-items:start; }
+  .project-is-local > :not(.project-layout):not(.project-local-launch) { grid-column:1/-1; }
+  .project-is-local > .project-local-launch { grid-column:2; grid-row:5; position:sticky; top:12px; max-height:94dvh; overflow:auto; margin-top:0; }
+  .project-is-local > .project-layout { grid-column:1; grid-row:5; grid-template-columns:190px minmax(0,1fr); gap:12px; }
+  .project-is-local .project-browser { padding:10px; }
+}
+@media(max-width:1000px) { .project-layout { grid-template-columns:260px minmax(0,1fr); } .project-recipes > div { grid-template-columns:1fr 1fr; } }
+@media(max-width:700px) { .admin-project { padding:14px; } .project-layout,.project-compare,.project-recipes > div { grid-template-columns:1fr; } .project-browser { position:static; max-height:380px; } .admin-project .admin-page-title { flex-direction:column; } .project-source textarea { min-height:360px; font-size:12px; } }

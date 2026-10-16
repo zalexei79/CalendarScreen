@@ -4,8 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/build-project-catalog.mjs",
     "dev": "vite",
-    "build": "node scripts/build-widget-voice-core.mjs && vite build",
+    "build": "node scripts/build-widget-voice-core.mjs && node scripts/build-project-catalog.mjs && vite build",
+    "project:map": "node scripts/build-project-catalog.mjs",
+    "project:desk": "node scripts/project-desk-server.mjs",
     "build:widget-core": "node scripts/build-widget-voice-core.mjs"
   },
   "dependencies": {

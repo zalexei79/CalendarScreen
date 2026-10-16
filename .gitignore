@@ -25,3 +25,6 @@ dist
 # Generated UI screenshots (keep locally, exclude from commits)
 /tests/*.png
 /tests/.life-story-preview.html
+/.dayris-project-backups/
+/.dayris-project-desk.json
+/src/features/admin/projectCatalog.generated.json
