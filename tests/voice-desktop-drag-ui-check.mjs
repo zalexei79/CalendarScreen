@@ -16,7 +16,7 @@ try{
  await page.route('http://android.test/**',r=>r.fulfill({contentType:'text/html',body:`<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;background:#0d0e10;font-family:Arial}button{font:inherit}${bundle.outputFiles.find(f=>f.path.endsWith('.css')).text}</style><div id="root"></div><script>${bundle.outputFiles.find(f=>f.path.endsWith('.js')).text}</script>`}));
  await page.goto('http://android.test');const sheet=page.locator('.voice-workspace');
 
- const recordMotion=()=>page.evaluate(()=>{window.motionFrames=[];const start=performance.now();const sample=()=>{const el=document.querySelector('.voice-workspace');if(el){const b=el.getBoundingClientRect();motionFrames.push({x:b.x,y:b.y,width:b.width,height:b.height,bottom:b.bottom,floating:el.dataset.floating});}if(performance.now()-start<600)requestAnimationFrame(sample);};requestAnimationFrame(sample);});
+ const recordMotion=()=>page.evaluate(()=>{window.motionFrames=[];const start=performance.now();const sample=()=>{const el=document.querySelector('.voice-workspace');if(el){const b=el.getBoundingClientRect(),mic=el.querySelector('.voice-workspace-mic').getBoundingClientRect();motionFrames.push({x:b.x,y:b.y,width:b.width,height:b.height,bottom:b.bottom,micY:mic.y+mic.height/2,floating:el.dataset.floating});}if(performance.now()-start<600)requestAnimationFrame(sample);};requestAnimationFrame(sample);});
  const horizontalStill=frames=>assert.ok(Math.max(...frames.map(f=>f.x))-Math.min(...frames.map(f=>f.x))<1,'centered transitions never wander horizontally');
  const oneDirection=(frames,key)=>{const delta=frames.at(-1)[key]-frames[0][key];for(let i=1;i<frames.length;i++)assert.ok((frames[i][key]-frames[i-1][key])*Math.sign(delta)>=-1,'return follows one direction without reversing');};
  await recordMotion();await page.locator('.calendar-voice-button').click();
@@ -43,13 +43,16 @@ try{
  // The command guide replaces the former compact/expanded toggle.
  await recordMotion();await page.getByRole('button',{name:'Возможности и все команды',exact:true}).click();
  await page.locator('.voice-capabilities').waitFor();await page.waitForTimeout(650);
- horizontalStill(await page.evaluate(()=>motionFrames));
- assert.equal((await sheet.boundingBox()).height,box.height,'Guide uses the same stable workspace height');
+ const expanding=await page.evaluate(()=>motionFrames);horizontalStill(expanding);oneDirection(expanding,'height');
+ assert.ok(expanding.some(frame=>frame.height>370&&frame.height<660),'Guide reveals through intermediate heights');
+ assert.ok(Math.max(...expanding.map(frame=>frame.micY))-Math.min(...expanding.map(frame=>frame.micY))<1,'Expanding keeps the microphone in place');
+ assert.ok((await sheet.boundingBox()).height>box.height+200,'Guide expands from the compact listening panel');
  assert.ok((await sheet.locator('.voice-workspace-scroll').boundingBox()).height>250);
  await page.getByRole('button',{name:'Скрыть команды',exact:true}).click();
  await page.getByRole('button',{name:'Возможности и все команды',exact:true}).click();
  await page.getByRole('button',{name:'Скрыть команды',exact:true}).click();await page.waitForTimeout(650);
  assert.equal(await sheet.getAttribute('data-compact'),'false');
+ assert.equal(Math.round((await sheet.boundingBox()).height),340,'Rapid guide changes return to the compact CSS height');
  assert.equal(await sheet.evaluate(el=>el.getAnimations().filter(a=>a.playState==='running').length),0,'Rapid guide changes settle without clipped height');
  await drag(100,-60);box=await sheet.boundingBox();await page.getByRole('button',{name:'Закрыть голосовой режим',exact:true}).click();await page.locator('.calendar-voice-button').click();await page.waitForTimeout(450);const reopened=await sheet.boundingBox();assert.equal(reopened.x,box.x);assert.equal(reopened.y,box.y);
  await page.getByRole('button',{name:'Вернуть окно на место',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('.voice-workspace').style.left);

@@ -16,18 +16,30 @@ try{
    abort(){this.aborted=true;if(this.started){this.started=false;timeout(()=>{if(window.hardware===this)window.hardware=null;this.onend?.();},700);}else timeout(()=>this.onend?.(),30);}
   };
   window.emit=(text,isFinal=false)=>voice.onresult({results:[Object.assign([{transcript:text,confidence:.4}],{isFinal})]});
-  window.boxes=()=>{const b=s=>{const e=document.querySelector(s);if(!e)return null;const r=e.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,cx:r.x+r.width/2,cy:r.y+r.height/2};};return {sheet:b('.voice-workspace'),header:b('.voice-workspace-header'),mic:b('.voice-workspace-mic'),status:b('.voice-workspace-status'),card:b('.calendar-voice-review')};};
+  window.boxes=()=>{const b=s=>{const e=document.querySelector(s);if(!e)return null;const r=e.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,bottom:r.bottom,cx:r.x+r.width/2,cy:r.y+r.height/2};};return {sheet:b('.voice-workspace'),header:b('.voice-workspace-header'),mic:b('.voice-workspace-mic'),status:b('.voice-workspace-status'),card:b('.calendar-voice-review')};};
   window.record=()=>{window.frames=[];window.sampling=true;const tick=()=>{if(!sampling)return;frames.push(boxes());requestAnimationFrame(tick);};requestAnimationFrame(tick);};
  });
  await page.route('http://stable.test/**',route=>route.fulfill({contentType:'text/html',body:`<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;background:#0d0e10;font-family:Arial}button{font:inherit}${bundle.outputFiles.find(file=>file.path.endsWith('.css')).text}</style><div id="root"></div><script>${bundle.outputFiles.find(file=>file.path.endsWith('.js')).text}</script>`}));
  await page.goto('http://stable.test');const sheet=page.locator('.voice-workspace'),mic=sheet.locator('.voice-workspace-mic');
  const listen=()=>page.waitForFunction(()=>voice.started&&!voice.aborted);
  const still=(frames,name,keys)=>{for(const key of keys){const values=frames.map(frame=>frame[name]?.[key]).filter(Number.isFinite);assert.ok(Math.max(...values)-Math.min(...values)<1.1,name+'.'+key+' must stay fixed');}};
- await page.locator('.calendar-voice-button').click();await listen();await page.waitForTimeout(350);await page.evaluate(()=>record());
- await page.evaluate(()=>emit('потратил 500'));await page.waitForTimeout(120);await page.evaluate(()=>emit('потратил 500 лей на продукты',true));await mic.click();
+ await page.locator('.calendar-voice-button').click();await listen();await page.waitForTimeout(420);
+ assert.equal(Math.round((await sheet.boundingBox()).height),340,'empty listening opens as a compact sheet');
+ await page.evaluate(()=>record());
+ await page.evaluate(()=>emit('потратил 500'));await page.waitForFunction(()=>document.querySelector('.voice-workspace').dataset.layout==='speech');
+ await page.evaluate(()=>window.sizeMotions=document.querySelector('.voice-workspace').getAnimations());await page.waitForTimeout(120);
+ await page.evaluate(()=>emit('потратил 500 лей'));assert.equal(await sheet.evaluate(el=>el.getAnimations().filter(a=>a.playState==='running').every(a=>window.sizeMotions.includes(a))),true,'new ASR words never restart the size transition');
+ await page.waitForFunction(()=>!document.querySelector('.voice-workspace').getAnimations().some(a=>a.playState==='running'));assert.equal(Math.round((await sheet.boundingBox()).height),420,'speech gets a bounded amount of room');
+ await page.evaluate(()=>emit('потратил 500 лей на продукты',true));await mic.click();
  await sheet.locator('.calendar-voice-review').waitFor();await listen();await page.evaluate(()=>window.sampling=false);
- const first=await page.evaluate(()=>frames);for(const name of ['sheet','header'])still(first,name,['x','y','w','h']);still(first,'mic',['cx','cy']);
+ const first=await page.evaluate(()=>frames);still(first,'sheet',['x','w','bottom']);still(first,'header',['x','w','h']);still(first,'mic',['cx','cy']);
+ assert.ok(first.at(-1).sheet.h-first[0].sheet.h>200,'review grows out of the compact listening panel');
+ assert.ok(first.some(frame=>frame.sheet.h>430&&frame.sheet.h<660),'height has intermediate frames, not an instant jump: '+JSON.stringify(first.map(frame=>Math.round(frame.sheet.h))));
+ for(let i=1;i<first.length;i++)assert.ok(first[i].sheet.h>=first[i-1].sheet.h-1,'interrupted speech-to-review growth never reverses');
  assert.equal(await page.evaluate(()=>busyErrors),0,'automatic continuation waits for Safari to release the old input');
+ await sheet.screenshot({path:'tests/voice-compact-review.png',animations:'disabled'});
+ const actions=await sheet.evaluate(el=>({footer:el.querySelector('.voice-workspace-transport').getBoundingClientRect().top,buttons:[...el.querySelectorAll('.calendar-voice-review-actions button')].map(button=>({text:button.textContent,bottom:button.getBoundingClientRect().bottom}))}));
+ assert.ok(actions.buttons.every(button=>button.bottom<=actions.footer),'the default review exposes all actions above the microphone: '+JSON.stringify(actions));
  await page.evaluate(()=>{window.card=document.querySelector('.calendar-voice-review');window.result=document.querySelector('.voice-workspace-result');window.details=document.querySelector('.voice-workspace-transcript');details.open=true;});
  await page.waitForTimeout(100);await page.evaluate(()=>record());
  await page.evaluate(()=>{voice.onspeechstart();emit('нет не 500 а 700');});
@@ -49,5 +61,5 @@ try{
  for(const key of ['x','y','w','h'])assert.equal(help.sheet[key],before.sheet[key]);for(const key of ['cx','cy'])assert.equal(help.mic[key],before.mic[key],'help keeps microphone centered');
  await sheet.locator('.voice-workspace-command-toggle').click();assert.equal(await page.evaluate(()=>details.open),true,'help preserves expanded transcript');
  for(const width of [320,390,1440]){await page.setViewportSize({width,height:844});await page.waitForTimeout(80);const b=await sheet.boundingBox();assert.ok(b.x>=0&&b.x+b.width<=width+1&&b.y>=0&&b.y+b.height<=844);}
- assert.deepEqual(errors,[]);console.log('PASS: stable shell/header/mic across speech, pause, processing, review, corrections, help and audio errors; preserved DOM; Safari input release; bounded retry; 320–1440px.');
+ assert.deepEqual(errors,[]);console.log('PASS: compact capture grows smoothly upward with a pinned mic; stable review across corrections, help and audio errors; preserved DOM; Safari input release; bounded retry; 320–1440px.');
 }finally{await browser.close();}

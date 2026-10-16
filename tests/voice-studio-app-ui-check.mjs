@@ -52,6 +52,12 @@ try {
  await studio.locator('.voice-workspace-mic').click();
  await page.waitForFunction(()=>document.querySelector('[data-view=capture]')&&recognizer&&!recognizer.aborted);
  assert.equal(await studio.locator('.voice-capabilities').count(),0);
+ await page.evaluate(()=>recognizer.onresult({results:[Object.assign([{transcript:'потратил 500 лей на продукты',confidence:.4}],{isFinal:true})]}));
+ await studio.locator('.voice-workspace-mic').click();await studio.locator('.calendar-voice-review').waitFor();
+ await page.waitForFunction(()=>!document.querySelector('[data-interface=voice-studio]').getAnimations().some(a=>a.playState==='running'));
+ assert.equal(await studio.evaluate(el=>[...el.querySelectorAll('.calendar-voice-review-actions button')].every(button=>button.getBoundingClientRect().bottom<=el.querySelector('.voice-workspace-transport').getBoundingClientRect().top)),true,'Entry actions fit above the pinned microphone in production CSS');
+ await page.screenshot({path:'tests/voice-studio-review.png',animations:'disabled'});
+ await page.waitForFunction(()=>document.querySelector('[data-interface=voice-studio]')?.getAttribute('aria-busy')!=='true');
  await studio.locator('.voice-workspace-exit').click();await studio.waitFor({state:'detached'});
  assert.deepEqual(errors,[]);
  console.log('PASS: production calendar voice studio, real command guide, paused capture, pinned controls, resume, 320–1440px, no runtime errors.');

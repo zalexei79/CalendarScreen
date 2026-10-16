@@ -1,11 +1,15 @@
-/* Voice studio owns the shell layout. Recognition, review and help share one
-   transport; no compact variant is allowed to clip their contents. */
+/* Grow upwards only when the task needs room. Word, pause and microphone
+   updates share a size; the transport always sits outside the scroll area. */
 .voice-workspace[data-interface=voice-studio] {
+ --voice-panel-height:340px;
  width:440px; right:20px; bottom:max(16px,env(safe-area-inset-bottom));
- height:min(670px,calc(var(--sheet-visible-height,100dvh) - 36px));
+ height:min(var(--voice-panel-height),calc(var(--sheet-visible-height,100dvh) - 36px));
  border-radius:28px; border-color:var(--voice-line);
  box-shadow:0 28px 90px #0005; isolation:isolate;
 }
+.voice-workspace[data-interface=voice-studio][data-layout=speech] { --voice-panel-height:420px; }
+.voice-workspace[data-interface=voice-studio][data-layout=expanded] { --voice-panel-height:670px; }
+.voice-workspace[data-interface=voice-studio][data-layout=result] { --voice-panel-height:400px; }
 .voice-workspace[data-interface=voice-studio][data-floating=true] { left:calc(50vw - 220px); right:auto; }
 .voice-workspace[data-interface=voice-studio][data-widget=true] { width:100vw; max-width:none; height:100dvh; left:0; right:0; top:0; bottom:0; border-radius:0; }
 .voice-workspace[data-interface=voice-studio][data-widget=true] .voice-workspace-scroll { flex:1; max-height:none; }
@@ -38,6 +42,10 @@
 .voice-workspace[data-interface=voice-studio] .voice-turn-activity-slot { grid-row:3; margin:0; min-height:0; }
 .voice-workspace[data-interface=voice-studio][data-minimal=true] .voice-turn-activity-slot { display:block; }
 .voice-workspace[data-interface=voice-studio] .voice-workspace-instruction { grid-row:4; margin:0; }
+.voice-workspace[data-interface=voice-studio]:is([data-layout=listen],[data-layout=speech]) .voice-workspace-hero { grid-template-rows:0 minmax(38px,auto) 32px 0; }
+.voice-workspace[data-interface=voice-studio]:is([data-layout=listen],[data-layout=speech]) :is(.voice-focus-stage,.voice-workspace-instruction) { display:none; }
+.voice-workspace[data-interface=voice-studio]:is([data-layout=listen],[data-layout=speech]) .voice-workspace-heard { min-height:0; margin:8px 0; }
+.voice-workspace[data-interface=voice-studio][data-layout=result] .voice-workspace-hero { grid-template-rows:24px minmax(40px,auto) 0 0; }
 .voice-workspace[data-interface=voice-studio][data-view=capture] .voice-workspace-status {
  font-size:23px!important; color:var(--voice-ink); font-weight:500;
 }
@@ -139,8 +147,18 @@
 .voice-workspace[data-interface=voice-studio] .voice-workspace-result { animation:none; }
 .voice-workspace[data-interface=voice-studio] .voice-workspace-heard { min-height:72px; margin:12px 0; }
 .voice-workspace[data-interface=voice-studio] .voice-workspace-transcript { margin:8px 0 14px; }
-.voice-workspace[data-interface=voice-studio] .calendar-voice-feedback-slot { height:76px; margin:8px 0; overflow-y:auto; overflow-anchor:none; }
+.voice-workspace[data-interface=voice-studio] .calendar-voice-feedback-slot { height:52px; margin:6px 0; overflow-y:auto; overflow-anchor:none; }
 .voice-workspace[data-interface=voice-studio] .calendar-voice-feedback-slot > :is(.voice-correction-feedback,.calendar-voice-audio-error) { margin:0; }
+.voice-workspace[data-interface=voice-studio] .voice-correction-feedback { padding:8px 12px; }
+.voice-workspace[data-interface=voice-studio] .calendar-voice-review-actions { margin-top:10px; }
+/* Give the actual entry and its actions room before secondary details. These
+   rows keep their size during listening, processing and correction feedback. */
+.voice-workspace[data-interface=voice-studio][data-reviewing=true] .voice-workspace-hero { grid-template-rows:0 minmax(34px,auto) 24px minmax(32px,auto); }
+.voice-workspace[data-interface=voice-studio][data-reviewing=true] .voice-focus-stage { display:none; }
+.voice-workspace[data-interface=voice-studio][data-reviewing=true] .voice-workspace-transcript { margin:0 0 6px; }
+.voice-workspace[data-interface=voice-studio][data-reviewing=true] .voice-workspace-result { margin-top:0; padding-top:8px; border-top:0; }
+.voice-workspace[data-interface=voice-studio][data-reviewing=true] .calendar-assistant-heading { display:none; }
+.voice-workspace[data-interface=voice-studio][data-reviewing=true] .calendar-voice-review-summary { padding-bottom:8px; margin-bottom:6px; }
 @media(max-width:640px) {
  .voice-workspace[data-interface=voice-studio] { width:calc(100vw - 20px); max-width:none; right:10px; }
 }

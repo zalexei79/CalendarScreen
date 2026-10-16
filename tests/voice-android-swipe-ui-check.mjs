@@ -9,7 +9,7 @@ try{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(()=>{
   const nativeTimeout=setTimeout.bind(window);window.setTimeout=(cb,ms,...args)=>[900,1600,1900,8000,20000].includes(ms)?nativeTimeout(()=>{},60000):nativeTimeout(cb,ms,...args);
-  window.SpeechRecognition=class{constructor(){window.voice=this;}start(){this.onstart?.();}abort(){this.aborted=true;}};
+  window.SpeechRecognition=class{constructor(){window.voice=this;}start(){this.onstart?.();}abort(){this.aborted=true;queueMicrotask(()=>this.onend?.());}};
   window.emit=(phrases,isFinal=false)=>voice.onresult({results:phrases.map(transcript=>Object.assign([{transcript,confidence:0.4}],{isFinal}))});
   window.touch=(type,target,x,y)=>{const touch=new Touch({identifier:1,target,clientX:x,clientY:y});target.dispatchEvent(new TouchEvent(type,{bubbles:true,cancelable:true,touches:type==='touchend'?[]:[touch],changedTouches:[touch]}));};
  });
@@ -35,7 +35,7 @@ try{
  assert.equal(await page.evaluate(()=>voice.aborted),true);await sheet.waitFor({state:'detached'});
  await page.evaluate(()=>lateResult({results:[Object.assign([{transcript:'добавь запись'}],{isFinal:true})]}));assert.equal(await sheet.count(),0);
  // Scrolling content must not close the assistant.
- await page.locator('.calendar-voice-button').click();await page.evaluate(()=>emit(['Что ты умеешь?'],true));await sheet.locator('.voice-workspace-mic').click();await page.locator('.voice-capabilities').waitFor();
+ await page.locator('.calendar-voice-button').click();await page.evaluate(()=>emit(['Что ты умеешь?'],true));await sheet.locator('.voice-workspace-mic').click();await page.locator('.voice-capabilities').waitFor();await page.waitForFunction(()=>document.querySelector('.voice-workspace')?.getAttribute('aria-busy')!=='true');
  await page.evaluate(()=>{const el=document.querySelector('.voice-workspace-scroll');el.scrollTop=80;});
  assert.ok(await sheet.locator('.voice-workspace-scroll').evaluate(el=>el.scrollTop)>0);
  await drag(120,0,'.voice-workspace-scroll');await page.waitForTimeout(240);assert.equal(await sheet.count(),1);
@@ -50,7 +50,7 @@ try{
  for(const [language,lang,question,title] of [['ru','ru-RU','Что ты умеешь?','Что я умею'],['en','en-US','What can you do?','What I can do'],['md','ro-RO','Ce poți face?','Ce pot face'],['zh-CN','zh-CN','你能做什么？','我可以做什么']]){
   await page.evaluate(value=>setLanguage(value),language);
   await page.locator('.calendar-voice-button').click();assert.equal(await page.evaluate(()=>voice.lang),lang);
-  await page.evaluate(text=>emit([text],true),question);await sheet.locator('.voice-workspace-mic').click();await page.locator('.voice-capabilities').waitFor();assert.match(await page.locator('.voice-capabilities').getAttribute('aria-label'),new RegExp(title));
+  await page.evaluate(text=>emit([text],true),question);await sheet.locator('.voice-workspace-mic').click();await page.locator('.voice-capabilities').waitFor();assert.match(await page.locator('.voice-capabilities').getAttribute('aria-label'),new RegExp(title));await page.waitForFunction(()=>document.querySelector('.voice-workspace')?.getAttribute('aria-busy')!=='true');
   await drag(120);await sheet.waitFor({state:'detached'});
  }
  assert.deepEqual(errors,[]);
