@@ -60,6 +60,7 @@ export function normalizeConfig(input) {
       if (!item || typeof item !== 'object') continue;
       result[device].elements[id] = clean({
         color: color(item.color), background: color(item.background),
+        emphasis: ['accent','quiet'].includes(item.emphasis) ? item.emphasis : undefined,
         width: number(item.width, 32, 1200), height: number(item.height, 32, 500),
         fontSize: number(item.fontSize, 10, 64), radius: number(item.radius, 0, 100),
         x: number(item.x, -200, 200), y: number(item.y, -200, 200), order: number(item.order, -20, 20),
@@ -91,7 +92,8 @@ export function configCSS(input) {
       if (!item) continue;
       const px = key => item[key] === undefined ? undefined : `${item[key]}px`;
       rule(selector, {
-        color: item.color, 'background-color': item.background,
+        color: item.color || (item.emphasis==='accent' ? 'var(--pro-gold,#d5bc83)' : item.emphasis==='quiet' ? 'inherit' : undefined),
+        'background-color': item.background || (item.emphasis==='accent' ? 'color-mix(in srgb,var(--pro-gold,#d5bc83) 16%,transparent)' : item.emphasis==='quiet' ? 'transparent' : undefined),
         width: px('width'), height: px('height'), 'font-size': px('fontSize'),
         'border-radius': px('radius'), order: item.order,
         translate: item.x !== undefined || item.y !== undefined ? `${item.x || 0}px ${item.y || 0}px` : undefined,

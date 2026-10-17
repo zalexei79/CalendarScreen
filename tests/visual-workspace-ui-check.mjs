@@ -28,7 +28,10 @@ try{
   await preview.locator('.calendar-voice-button').waitFor();
   const before=await page.locator('.admin-preview-toolbar > strong').innerText();
   const bounds=await page.locator('.admin-preview').boundingBox();
-  await page.mouse.move(bounds.x+100,bounds.y+100);await page.mouse.wheel(0,-160);
+  await page.mouse.move(bounds.x+100,bounds.y+100);await page.mouse.wheel(0,160);
+  await page.waitForTimeout(200);
+  assert.equal(await page.locator('.admin-preview-toolbar > strong').innerText(),before,'ordinary wheel must not change calendar scale');
+  await page.keyboard.down('Control');await page.mouse.wheel(0,-160);await page.keyboard.up('Control');
   await page.waitForFunction(before=>document.querySelector('.admin-preview-toolbar > strong').textContent!==before,before);
   assert.equal(await page.getByRole('button',{name:'Сохранить в проект',exact:true}).isDisabled(),true,'zoom is not a content edit');
   await page.getByRole('button',{name:'Подогнать',exact:true}).click();
@@ -38,7 +41,7 @@ try{
   await page.locator('.studio-window-active').waitFor();
   assert.equal(await page.getByRole('dialog').count(),0,'local editors are nonmodal');
   await page.getByRole('heading',{name:'Голосовые команды',exact:true}).waitFor();
-  await page.getByRole('button',{name:'Связи',exact:true}).click();
+  await page.getByRole('button',{name:'Код',exact:true}).click();
   await page.getByRole('button',{name:'src/shared/ui/CalendarVoiceButton.jsx ↗',exact:true}).click();
   const code=page.getByRole('textbox',{name:'Исходный текст файла',exact:true});
   await code.waitFor();assert.equal(await code.inputValue(),'export const original = true;');
@@ -55,12 +58,13 @@ try{
   await page.getByText(/Сохранено на этом ПК/).waitFor();
   await page.getByRole('button',{name:'Закрыть редактор элемента',exact:true}).click();
   await preview.locator('[data-site-element="settings"]').click();await preview.getByRole('menuitem',{name:'✎ Редактировать вид',exact:true}).click();
+  await page.locator('.studio-window-active').getByRole('button',{name:'Расположение',exact:true}).click();
   await page.getByLabel('Ширина',{exact:true}).fill('64');
   await page.screenshot({path:'tests/visual-workspace-inspector.png'});
   await page.getByRole('button',{name:'Закрыть редактор элемента',exact:true}).click();
   await page.getByRole('button',{name:'Тема и CSS',exact:true}).click();
   page.once('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Вставить зимний пример',exact:true}).click();
-  await page.getByRole('button',{name:'Посмотреть календарь',exact:true}).click();
+  await page.getByRole('button',{name:'Вернуться к полотну',exact:true}).click();
   const theme=()=>preview.locator('style[data-dayris-custom-theme]').textContent();
   assert.ok((await theme()).includes('Зимний пример'));
   await page.getByRole('button',{name:'Отменить',exact:true}).focus();await page.keyboard.press('Control+z');
@@ -78,7 +82,7 @@ try{
   const written=await page.evaluate(({designPath,stylePath})=>({design:JSON.parse(window.__workspaceFiles.get(designPath)),style:window.__workspaceFiles.get(stylePath),backups:[...window.__workspaceFiles.keys()].filter(path=>path.startsWith('.dayris-project-backups/'))}),{designPath:DESIGN_PATH,stylePath:STYLE_PATH});
   assert.equal(written.design.mobile.elements.settings.width,64);assert.equal(written.design.overrideCloud,true);assert.ok(written.style.includes('Зимний пример'));assert.equal(written.backups.length,3);
   assert.equal(sourceUploads.some(value=>value.includes('Зимний пример')||value.includes('original = false')),false,'local code and design are not uploaded to Supabase');
-  await page.getByRole('button',{name:'Тема и CSS',exact:true}).click();await page.getByLabel('Общий CSS календаря',{exact:true}).fill(written.style+'\nbody { color: white; }');await page.getByRole('button',{name:'Посмотреть календарь',exact:true}).click();
+  await page.getByRole('button',{name:'Тема и CSS',exact:true}).click();await page.getByLabel('Общий CSS календаря',{exact:true}).fill(written.style+'\nbody { color: white; }');await page.getByRole('button',{name:'Вернуться к полотну',exact:true}).click();
   await page.evaluate(path=>window.__workspaceFiles.set(path,'/* external edit */'),STYLE_PATH);
   await page.getByRole('button',{name:'Сохранить в проект',exact:true}).click();await page.getByRole('button',{name:'Создать копии и сохранить оформление',exact:true}).click();
   await page.getByText(/Файл изменился в другом редакторе/).waitFor();assert.equal(await page.evaluate(path=>window.__workspaceFiles.get(path),STYLE_PATH),'/* external edit */');

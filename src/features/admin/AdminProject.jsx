@@ -10,7 +10,7 @@ const fileIndex = new Map(catalog.files.map(file => [file.path, file]));
 const folderSet = new Set(catalog.folders);
 const nameOf = path => path.split('/').at(-1);
 
-export default function AdminProject({ initialPath = 'src/features', rootHandle = null, onRootChange, compact = false, onDirtyChange } = {}) {
+export default function AdminProject({ initialPath = 'src/features', rootHandle = null, onRootChange, compact = false, onDirtyChange, onSaved } = {}) {
   const [root, setRootState] = useState(rootHandle);
   const setRoot = value => { setRootState(value); onRootChange?.(value); };
   const [selected, setSelected] = useState(() => folderSet.has(initialPath) || fileIndex.has(initialPath) ? initialPath : 'src/features');
@@ -101,6 +101,7 @@ export default function AdminProject({ initialPath = 'src/features', rootHandle 
       const result = await saveProjectFile(root, selected, snapshot, text);
       if (!alive.current) return;
       setSnapshot(result.snapshot); setLastBackup(result.backup); setEditing(false); setSaving(false);
+      onSaved?.(selected);
       setNotice('Сохранено на этом ПК. Резервная копия создана. На сайте ничего не опубликовано — теперь проверьте сборку и тесты.');
     } catch (error) { if (alive.current) setNotice(`Сохранение отменено. ${error.message}`); }
     finally { if (alive.current) setBusy(false); }
@@ -115,7 +116,7 @@ export default function AdminProject({ initialPath = 'src/features', rootHandle 
     <p className="project-boundary">{root ? `Локальная папка: ${root.name}. ` : 'Пока открыта карта версии сборки, а не файлы вашего компьютера. '}Изменения исходников сохраняются на ПК. {local ? 'Сборка и push запускаются отдельно явными кнопками ниже. Предпросмотр выполняет локальный код приложения.' : 'HTTPS-вкладка не запускает команды, SQL и не публикует исходники. Для сборки и push откройте локальную мастерскую.'} Для цветов и кнопок без кода используйте «Оформление».</p>
     <div role="status" aria-live="polite" className="project-status">{busy ? 'Работаем с локальным файлом…' : notice || (dirty ? 'Есть несохранённые изменения.' : 'Выберите папку или файл: справа появятся назначение и связи.')}</div>
     <details className="project-help"><summary>Как пользоваться без помощи ИИ</summary><ol><li>Найдите нужный раздел через поиск или подсказки ниже.</li><li>На ПК откройте панель в Edge/Chrome, нажмите «Подключить папку проекта» и выберите ai-trade-journal.</li><li>Выберите текстовый файл, прочитайте назначение и связи. Нажмите «Редактировать локально».</li><li>Проверьте изменения, подтвердите сохранение. Предыдущий текст останется в .dayris-project-backups.</li><li>В терминале проекта: <code>npm run build</code>, затем подходящие тесты из tests. Проверьте изменения через <code>git diff</code>.</li><li>После проверки сделайте commit и push. Supabase SQL/функции и Android выпускаются отдельно. Подробная инструкция — docs/PROJECT_GUIDE.md.</li></ol><p>Нет встроенного ИИ и зависимости от подписки Codex. Это редактор текста, не гарантия правильности кода. Бинарные файлы, секреты и служебные папки закрыты. Новые файлы попадут в карту после npm run project:map и следующей сборки.</p></details>
-    <LocalProjectTools local={local} savedPath={lastBackup} dirty={dirty}/>
+    {!compact && <LocalProjectTools local={local} savedPath={lastBackup} dirty={dirty}/>}
     <div className="project-layout">
       <aside className="project-browser" aria-label="Папки и файлы проекта"><label className="admin-field"><span>Поиск по назначению или пути</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Например: календарь, тема, вход"/></label>
         {query.trim() ? <div><p>{matches.length} совпадений{matches.length > 100 ? ' · первые 100' : ''}</p>{matches.slice(0, 100).map(pathButton)}{!matches.length && <p>Ничего не найдено. Попробуйте название папки или другое описание.</p>}</div> : <ProjectTree selected={selected} onSelect={open} disabled={busy}/>}

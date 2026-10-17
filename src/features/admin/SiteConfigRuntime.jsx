@@ -18,7 +18,7 @@ export default function SiteConfigRuntime() {
     let active = true, config = normalizeConfig(localDesign), selected = 'global';
     const preview = new URLSearchParams(location.search).get('adminPreview') === '1' && window.parent !== window;
     const localStudio = import.meta.env.DEV && preview && new URLSearchParams(location.search).get('localStudio') === '1';
-    let inspect = preview, passThrough = false;
+    let inspect = preview, passThrough = false, viewOnly = false;
     execute.current = node => {
       setMenu(null);
       if (!node?.isConnected || typeof node.click !== 'function' || node.disabled) return;
@@ -57,8 +57,13 @@ export default function SiteConfigRuntime() {
       finally { loading = false; }
     };
     const message = event => {
-      if (!preview || event.origin !== location.origin || event.source !== window.parent || event.data?.type !== 'dayris:preview') return;
+      if (!preview || event.origin !== location.origin || event.data?.type !== 'dayris:preview') return;
+      // A detached result is rendered by its same-origin studio opener through a React portal.
+      let fromStudio=false;
+      if(localStudio && event.data.previewOnly===true){try{fromStudio=event.source===window.parent.opener;}catch{/* Cross-origin parents have no authority. */}}
+      if(event.source!==window.parent && !fromStudio)return;
       inspect = event.data.inspect !== false;
+      viewOnly = event.data.previewOnly === true;
       if (!inspect) setMenu(null);
       selected = event.data.selected || 'global';
       apply(event.data.config);
@@ -73,6 +78,7 @@ export default function SiteConfigRuntime() {
       }
       if (inspect && !passThrough) {
         event.preventDefault(); event.stopImmediatePropagation();
+        if(viewOnly)return;
         selected = element?.id || 'global'; highlight();
         const node = event.target instanceof Element ? event.target.closest('button,a,[role="button"],[role="switch"]') : null;
         let target = node || (event.target instanceof Element ? event.target : null), meta;
@@ -93,6 +99,7 @@ export default function SiteConfigRuntime() {
     };
     // Stop calendar gestures and React handlers before a click arrives; keep native scrolling.
     const guard = event => {
+      if(localStudio && event.type==='keydown' && (event.ctrlKey||event.metaKey) && event.key.toLowerCase()==='s'){event.preventDefault();event.stopImmediatePropagation();window.parent.postMessage({type:'dayris:save-request'},location.origin);return;}
       if (preview && event.type === 'keydown' && (event.ctrlKey || event.metaKey) && ['z','y'].includes(event.key.toLowerCase()) && !(event.target instanceof Element && event.target.closest('input,textarea,select,[contenteditable=true]'))) {
         event.preventDefault();event.stopImmediatePropagation();window.parent.postMessage({type:'dayris:history',redo:event.shiftKey || event.key.toLowerCase() === 'y'},location.origin);return;
       }
@@ -103,7 +110,7 @@ export default function SiteConfigRuntime() {
     };
     const guarded = ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'keydown', 'submit', 'contextmenu', 'dblclick', 'dragstart'];
     const focus = () => { if (!document.hidden) refresh(); };
-    const wheel = event=>{if(!preview || event.shiftKey || (!inspect && !event.ctrlKey && !event.metaKey))return;event.preventDefault();event.stopImmediatePropagation();window.parent.postMessage({type:'dayris:zoom',delta:event.deltaY,x:event.clientX,y:event.clientY},location.origin);};
+    const wheel = event=>{if(!preview || event.shiftKey || (!event.ctrlKey && !event.metaKey))return;event.preventDefault();event.stopImmediatePropagation();window.parent.postMessage({type:'dayris:zoom',delta:event.deltaY,x:event.clientX,y:event.clientY},location.origin);};
     const report=(level,value)=>{if(localStudio)window.parent.postMessage({type:'dayris:console',level,message:String(value).slice(0,2000)},location.origin);};
     const onError=event=>report('error',`${event.message || 'Ошибка ресурса'} ${event.filename || ''}:${event.lineno || ''}`);
     const onRejection=event=>report('error',event.reason?.message || String(event.reason));

@@ -1,0 +1,130 @@
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+import fs from 'node:fs';
+import { installStoryAccount } from './life-story-auth-fixture.mjs';
+import { DESIGN_PATH,STYLE_PATH } from '../src/features/appearance/designModel.js';
+const require=createRequire('C:/Users/aveel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/package.json');
+const browser=await require('playwright').chromium.launch({channel:'msedge',headless:true});
+const base=process.env.DAYRIS_DESK_URL || 'http://127.0.0.1:5173';
+let page,resultPage;
+try{
+  const context=await browser.newContext({viewport:{width:1560,height:1080}});
+  await context.addInitScript(({design,style,designPath,stylePath})=>{
+    if(location.href==='about:srcdoc')return;
+    const files=new Map([['package.json','{"name":"ai-trade-journal"}'],['src/main.jsx','export {};'],['src/shared/ui/CalendarVoiceButton.jsx','export const original = true;'],[designPath,design],[stylePath,style]]);window.__workspaceFiles=files;
+    const directory=(prefix='')=>({name:'ai-trade-journal',getDirectoryHandle:async name=>directory(prefix+name+'/'),getFileHandle:async(name,options)=>{const key=prefix+name;if(key==='.dayris-project-desk.json')files.set(key,JSON.stringify({workspace:window.__DAYRIS_DESK_WORKSPACE__}));if(!files.has(key)&&!options?.create)throw new Error('No fixture file: '+key);return{getFile:async()=>{const value=files.get(key)||'';return{size:new Blob([value]).size,lastModified:1,text:async()=>value};},createWritable:async()=>{let value;return{write:async text=>{value=text;},close:async()=>files.set(key,value),abort:async()=>{}};}};}});
+    window.showDirectoryPicker=async()=>directory();
+    localStorage.setItem('atj_language','ru');localStorage.setItem('dayris_onboarding_v2_completed','1');localStorage.setItem('calendar_guide_completed','1');
+  },{design:fs.readFileSync(DESIGN_PATH,'utf8'),style:fs.readFileSync(STYLE_PATH,'utf8'),designPath:DESIGN_PATH,stylePath:STYLE_PATH});
+  await installStoryAccount(context);
+  let sourceUploads=[];
+  await context.route('**/rest/v1/**',route=>{if(route.request().postData())sourceUploads.push(route.request().postData());return route.fulfill({contentType:'application/json',body:JSON.stringify(new URL(route.request().url()).pathname.endsWith('/site_live_config')?{config:{schema:1,mobile:{global:{},elements:{}},desktop:{global:{},elements:{}}}}:[])});});
+  page=await context.newPage();const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await page.goto(base+'/project-desk.html');
+  await page.getByRole('heading',{name:'Редактор приложения',exact:true}).waitFor();
+
+  let publishBody=null,job=null;
+  const gitStatus={branch:'main',head:'a'.repeat(40),hasStaged:false,files:[{path:DESIGN_PATH,hash:'a'.repeat(64)}]};
+  await context.route('**/__dayris_desk/**',route=>{
+    const path=new URL(route.request().url()).pathname;
+    if(path.endsWith('/status'))return route.fulfill({json:gitStatus});
+    if(path.endsWith('/job'))return route.fulfill({json:job});
+    if(path.endsWith('/publish')){publishBody=route.request().postDataJSON();job={id:1,state:'success',kind:'publish',phase:'Push выполнен (тестовый API)',log:'fixture only',commit:'b'.repeat(40)};return route.fulfill({status:202,json:{id:1}});}
+    return route.fulfill({status:403,json:{error:'Unexpected operation in preview test'}});
+  });
+  const picker=page.getByLabel('Найти элемент календаря',{exact:true});
+  await picker.selectOption('settings');const settings=page.locator('[data-editor-key="settings"]');
+  await settings.getByRole('button',{name:'Расположение',exact:true}).click();
+  await settings.getByLabel('Ширина',{exact:true}).fill('64');
+  await settings.getByRole('button',{name:'Стиль темы',exact:true}).click();
+  assert.equal(await settings.getByRole('group',{name:'Вариант оформления'}).isVisible(),true);
+  await settings.getByRole('button',{name:'Акцент темы',exact:false}).click();
+  await settings.getByRole('button',{name:'Элемент',exact:true}).click();
+  assert.equal(await settings.getByLabel('Скругление',{exact:true}).count(),0,'raw controls are not the default menu');
+  const popupPromise=page.waitForEvent('popup');await page.getByRole('button',{name:'Посмотреть',exact:true}).click();
+  resultPage=await popupPromise;resultPage.on('pageerror',error=>errors.push(error.message));await resultPage.setViewportSize({width:1360,height:1100});
+  await resultPage.getByRole('heading',{name:'Моя версия календаря',exact:true}).waitFor();
+  await resultPage.evaluate(()=>{window.showDirectoryPicker=()=>window.opener.showDirectoryPicker();});
+  const preview=resultPage.frameLocator('iframe[title="Моя версия DAYRIS"]');
+  await preview.locator('[data-site-element="settings"]').waitFor();
+  await preview.locator('style[data-dayris-site-config]').waitFor({state:'attached'});
+  await resultPage.waitForFunction(()=>document.querySelector('iframe').contentDocument.querySelector('style[data-dayris-site-config]')?.textContent.includes('width:64px'));
+  assert.equal(await preview.locator('[data-site-element="settings"]').evaluate(n=>Math.round(n.getBoundingClientRect().width)),64);
+  await preview.locator('body').evaluate(()=>{
+    const config={schema:1,mobile:{global:{},elements:{settings:{width:1200}}},desktop:{global:{},elements:{}}};
+    for(const [origin,source,previewOnly] of [['https://evil.example',window.parent,true],[location.origin,window,true],[location.origin,window.parent.opener,false]])window.dispatchEvent(new MessageEvent('message',{origin,source,data:{type:'dayris:preview',config,localCSS:'body {display:none}',previewOnly}}));
+  });
+  assert.equal(await preview.locator('[data-site-element="settings"]').evaluate(n=>Math.round(n.getBoundingClientRect().width)),64,'preview messages require the right origin and parent/opener authority');
+  await preview.locator('[data-site-element="settings"]').click();
+  assert.equal(await preview.locator('.dayris-settings-panel').count(),0,'view-only result does not execute account actions');
+  await resultPage.getByLabel('Разрешить действия в моём аккаунте:',{exact:false}).check();
+  await preview.locator('[data-site-element="settings"]').click();
+  await preview.locator('.dayris-settings-panel').waitFor();
+  await resultPage.getByLabel('Разрешить действия в моём аккаунте:',{exact:false}).uncheck();
+  await resultPage.getByRole('button',{name:'Обновить просмотр',exact:true}).click();
+  await preview.locator('[data-site-element="settings"]').waitFor();
+  assert.equal(await resultPage.getByRole('button',{name:'Подготовить push',exact:true}).isDisabled(),true);
+  await resultPage.getByRole('button',{name:'Подключить папку проекта',exact:true}).click();
+  await resultPage.getByText(/Ваш несохранённый черновик сохранён в редакторе/).waitFor();
+  assert.equal(await preview.locator('[data-site-element="settings"]').evaluate(n=>Math.round(n.getBoundingClientRect().width)),64,'first folder connection keeps the draft');
+  await resultPage.getByRole('button',{name:'Сохранить локально',exact:true}).click();
+  await resultPage.getByRole('button',{name:'Создать копии и сохранить оформление',exact:true}).click();
+  await resultPage.getByText(/Сохранено локально с резервными копиями/).waitFor();
+  let written=await page.evaluate(path=>JSON.parse(window.__workspaceFiles.get(path)),DESIGN_PATH);
+  assert.equal(written.mobile.elements.settings.width,64);assert.equal(written.mobile.elements.settings.emphasis,'accent');
+  await resultPage.getByLabel('Я проверил эту версию.',{exact:false}).check();
+  await resultPage.waitForFunction(()=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Подготовить push'))?.disabled===false);
+  assert.equal(await resultPage.getByRole('button',{name:'Подготовить push',exact:true}).isEnabled(),true);
+  await settings.getByRole('button',{name:'Расположение',exact:true}).click();
+  await settings.getByLabel('Ширина',{exact:true}).fill('68');
+  await resultPage.getByText(/В редакторе есть новая версия/).waitFor();
+  assert.equal(await resultPage.getByRole('button',{name:'Подготовить push',exact:true}).isDisabled(),true);
+  assert.equal(await resultPage.getByRole('button',{name:'Сохранить локально',exact:true}).isDisabled(),true);
+  assert.equal(await preview.locator('[data-site-element="settings"]').evaluate(n=>Math.round(n.getBoundingClientRect().width)),64,'view remains the captured draft until explicit refresh');
+  await resultPage.getByRole('button',{name:'Обновить просмотр',exact:true}).click();
+  await resultPage.waitForFunction(()=>document.querySelector('iframe').contentDocument.querySelector('style[data-dayris-site-config]')?.textContent.includes('width:68px'));
+  await resultPage.keyboard.press('Control+s');
+  await resultPage.getByRole('button',{name:'Создать копии и сохранить оформление',exact:true}).click();
+  await resultPage.getByRole('button',{name:'Сохранено локально',exact:true}).waitFor();
+  await resultPage.getByLabel('Я проверил эту версию.',{exact:false}).check();
+  await resultPage.screenshot({path:'tests/studio-result-preview.png',fullPage:true});
+  await resultPage.getByRole('button',{name:'Подготовить push',exact:true}).click();
+  const release=resultPage.getByRole('region',{name:'Локальная сборка и публикация'});
+  await release.getByText(/Выбрать файлы для commit/).click();
+  await release.getByLabel(DESIGN_PATH,{exact:true}).check();
+  await release.getByLabel('Комментарий к commit',{exact:true}).fill('Preview-approved settings');
+  await release.getByRole('button',{name:'Подготовить публикацию',exact:true}).click();
+  assert.equal(await release.getByRole('button',{name:'Собрать, сделать commit и push',exact:true}).isDisabled(),true);
+  await release.getByLabel('Введите ПУБЛИКОВАТЬ для отправки на сервер',{exact:true}).fill('ПУБЛИКОВАТЬ');
+  await release.getByRole('button',{name:'Собрать, сделать commit и push',exact:true}).click();
+  await resultPage.waitForFunction(()=>true);
+  assert.ok(publishBody);assert.deepEqual(publishBody.files,[DESIGN_PATH]);assert.equal(publishBody.message,'Preview-approved settings');
+  gitStatus.files[0].hash='c'.repeat(64);
+  await release.getByRole('button',{name:'Обновить изменения Git',exact:true}).click();
+  await release.getByText(/Файлы или HEAD изменились после проверки версии/).waitFor();
+  assert.equal(await release.getByRole('button',{name:'Подготовить публикацию',exact:true}).isDisabled(),true);
+  if(process.env.DAYRIS_PREVIEW_REAL_BUILD==='1'){
+    await context.unroute('**/__dayris_desk/**');
+    await resultPage.getByRole('button',{name:'Обновить просмотр',exact:true}).click();
+    await resultPage.getByLabel('Я проверил эту версию.',{exact:false}).check();
+    await resultPage.getByRole('button',{name:'Подготовить push',exact:true}).click();
+    const realTools=resultPage.getByRole('region',{name:'Локальная сборка и публикация'});
+    await realTools.getByRole('button',{name:'Проверить сборку',exact:true}).click();
+    await realTools.getByText(/Готово: Сборка и базовые тесты прошли/).waitFor({timeout:340000});
+    assert.equal(await realTools.getByRole('button',{name:'Подготовить публикацию',exact:true}).isDisabled(),true,'real build never selects files or pushes automatically');
+    console.log('PASS: real authenticated local build API invoked from detached preview; no real publish requested.');
+  }
+  await resultPage.screenshot({path:'tests/studio-result-desktop.png',fullPage:true});
+  await resultPage.emulateMedia({reducedMotion:'reduce'});
+  assert.equal(await resultPage.locator('.studio-result-header').evaluate(n=>getComputedStyle(n).animationName),'none');
+  for(const width of [736,390,320]){await resultPage.setViewportSize({width,height:1100});assert.equal(await resultPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'result fits '+width);}
+  await resultPage.screenshot({path:'tests/studio-result-mobile.png',fullPage:true});
+  await resultPage.close();
+  // A blocked popup must be reported, never silently replaced with the published site.
+  await page.evaluate(()=>{window.open=()=>null;});
+  await page.getByRole('button',{name:'Посмотреть',exact:true}).click();
+  await page.getByText(/Браузер заблокировал окно/).waitFor();
+  assert.deepEqual(errors,[]);
+  console.log('PASS: real result window receives unsaved draft, first folder connection preserves it, local save/backup, stale view blocks release, explicit refresh, Ctrl+S, acknowledged file-scoped push UI (mock API), responsive/reduced motion, popup-block feedback. No real source files or remote Git changed.');
+}catch(error){console.error(error);await resultPage?.screenshot({path:'tests/studio-result-failure.png',fullPage:true,timeout:3000}).catch(()=>{});await page?.screenshot({path:'tests/studio-result-editor-failure.png',fullPage:true,timeout:3000}).catch(()=>{});throw error;}
+finally{await browser.close();}

@@ -35,6 +35,8 @@ try{
   await picker.selectOption('settings');
   const settings=page.locator('[data-editor-key="settings"]');await settings.waitFor();
   assert.equal(await page.locator('.studio-element-window').count(),2);
+  await settings.getByRole('button',{name:'Расположение',exact:true}).click();
+  await mic.getByRole('button',{name:'Расположение',exact:true}).click();
   await settings.getByLabel('Ширина',{exact:true}).fill('64');
   await mic.getByLabel('Ширина',{exact:true}).fill('58');
   assert.equal(await settings.getByLabel('Ширина',{exact:true}).inputValue(),'64');
@@ -43,11 +45,11 @@ try{
   assert.equal(await mic.getByLabel('Ширина',{exact:true}).inputValue(),'');
   assert.equal(await settings.getByLabel('Ширина',{exact:true}).inputValue(),'64');
   await page.getByRole('button',{name:'Вернуть',exact:true}).click();
-  await mic.getByRole('button',{name:'Логика',exact:true}).click();
+  await mic.getByRole('button',{name:'Поведение',exact:true}).click();
   await mic.getByLabel('Новая голосовая фраза',{exact:true}).fill('Покажи мои запасы');
   await mic.getByRole('button',{name:'Добавить голосовую команду',exact:true}).click();
   await mic.getByText('«Покажи мои запасы»',{exact:true}).waitFor();
-  await settings.getByRole('button',{name:'Вид',exact:true}).click();
+  await settings.getByRole('button',{name:'Расположение',exact:true}).click();
   assert.equal(await mic.getByText('«Покажи мои запасы»',{exact:true}).count(),1);
   // Moving a pinned editor changes only the workspace layout, not its target.
   const header=mic.locator('.studio-window-header strong');await header.scrollIntoViewIfNeeded();const box=await header.boundingBox();
