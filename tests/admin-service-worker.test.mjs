@@ -21,10 +21,14 @@ test('admin shell never overwrites the main shell or caches user RPCs',async()=>
   offline = true;
   handlers.get('fetch')(event({method:'GET',mode:'navigate',url:'https://dayris.test/admin.html'}));
   assert.equal(await (await response).clone().text(),'<html>admin only</html>');
+  saved.set('/',new Response('cached calendar'));
+  handlers.get('fetch')(event({method:'GET',mode:'navigate',url:'https://dayris.test/project-desk.html'}));
+  const studio=await response;assert.equal(studio.status,503);assert.match(await studio.text(),/npm run project:desk/);
   for (const request of [
     {method:'POST',mode:'cors',url:'https://project.supabase.co/rest/v1/rpc/admin_user_data'},
     {method:'GET',mode:'cors',url:'https://project.supabase.co/rest/v1/site_admin_audit'},
     {method:'GET',mode:'cors',url:'https://custom.test/rest/v1/site_admin_audit'},
+    {method:'GET',mode:'cors',url:'https://dayris.test/__dayris_desk/status'},
   ]) { response=null; handlers.get('fetch')(event(request)); assert.equal(response,null); }
 });
 

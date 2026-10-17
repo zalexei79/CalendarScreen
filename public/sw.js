@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v30-visual-workspace';
+const CACHE_NAME = 'atj-cache-v31-studio-entry';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
@@ -121,6 +121,12 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
+  // A stopped local studio must not fall back to the cached public calendar.
+  if(url.pathname === '/project-desk.html'){
+    event.respondWith(fetch(event.request).catch(()=>new Response('<!doctype html><html lang="ru"><meta charset="utf-8"><title>DAYRIS · Запуск студии</title><body style="background:#101319;color:#e7ebf3;font:16px/1.6 system-ui;padding:32px"><h1>Локальная студия не отвечает</h1><p>На этом ПК откройте терминал в папке проекта и выполните:</p><pre>npm run project:desk</pre><p>Оставьте терминал открытым и обновите страницу.</p></body></html>',{status:503,headers:{'Content-Type':'text/html; charset=utf-8'}})));
+    return;
+  }
+  if(url.pathname.startsWith('/__dayris_desk/'))return;
 
   // Never cache Supabase, backend API, or OAuth calls
   if (

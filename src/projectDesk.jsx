@@ -3,12 +3,14 @@ import { createRoot } from 'react-dom/client';
 import AdminProject from './features/admin/AdminProject.jsx';
 import AdminPanel from './features/admin/AdminPanel.jsx';
 import LocalFeatureStudio from './features/admin/LocalFeatureStudio.jsx';
+import {notifyAdminOfStudio} from './features/admin/studioLaunch.js';
 import './features/admin/AdminPanel.css';
 import './features/admin/AdminUsers.css';
 
 const local = import.meta.env.DEV && ['127.0.0.1','localhost'].includes(location.hostname) && Boolean(window.__DAYRIS_DESK_TOKEN__);
 if (local && 'serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(items => Promise.all(items.map(item => item.unregister()))).catch(() => {});
 function Desk() {
+  React.useEffect(()=>{window.dispatchEvent(new Event('dayris:studio-mounted'));if(local)notifyAdminOfStudio();},[]);
   const [view, setView] = React.useState('visual');
   const [path, setPath] = React.useState('src/features');
   const [root, setRoot] = React.useState(null);
