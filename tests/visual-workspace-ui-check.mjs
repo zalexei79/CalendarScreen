@@ -76,7 +76,10 @@ try{
   await preview.locator('body').press('Control+z');assert.ok(!(await theme()).includes('Зимний пример'));
   await preview.locator('body').press('Control+Shift+z');assert.ok((await theme()).includes('Зимний пример'));
   await preview.locator('body').evaluate(()=>console.warn('workspace-test-warning'));
+  const consoleArea=await page.locator('.studio-surface').boundingBox();
+  await page.mouse.move(consoleArea.x+consoleArea.width-12,consoleArea.y+350);await page.mouse.down();await page.mouse.move(consoleArea.x+consoleArea.width-12,consoleArea.y+50,{steps:8});await page.mouse.up();
   await page.locator('.admin-console summary').click();await page.waitForFunction(()=>document.querySelector('.admin-console pre')?.textContent.includes('warn: workspace-test-warning'));
+  await page.getByRole('button',{name:'К календарю',exact:true}).click();
   await page.getByRole('button',{name:'100% · с прокруткой',exact:true}).click();
   await page.screenshot({path:'tests/visual-workspace-calendar.png'});
   await page.getByRole('button',{name:'Сохранить в проект',exact:true}).click();await page.getByRole('button',{name:'Создать копии и сохранить оформление',exact:true}).click();
