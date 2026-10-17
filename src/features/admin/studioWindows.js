@@ -8,9 +8,10 @@ export function openStudioWindow(windows, {id, view='design', meta=null, label=i
   return [...kept,{key,id,view,meta,label,pinned:false,x:500+(kept.length%2)*450,y:54+Math.floor(kept.length/2)*520}];
 }
 export function restoreStudioLayout(raw) {
+  const coordinate=n=>Math.max(-10000000,Math.min(10000000,n));
   try {
     const value=JSON.parse(raw);
     const point=value?.calendar;
-    return {calendar:point && Number.isFinite(point.x) && Number.isFinite(point.y) ? {x:Math.max(16,Math.min(5000,point.x)),y:Math.max(16,Math.min(5000,point.y))} : {x:24,y:54},positions:Array.isArray(value?.positions)?value.positions.filter(p=>typeof p.key==='string'&&p.key.length<=610&&Number.isFinite(p.x)&&Number.isFinite(p.y)).slice(0,8).map(p=>({key:p.key,x:Math.max(16,Math.min(5000,p.x)),y:Math.max(16,Math.min(5000,p.y))})):[]};
+    return {calendar:point && Number.isFinite(point.x) && Number.isFinite(point.y) ? {x:coordinate(point.x),y:coordinate(point.y)} : {x:24,y:54},positions:Array.isArray(value?.positions)?value.positions.filter(p=>typeof p.key==='string'&&p.key.length<=610&&Number.isFinite(p.x)&&Number.isFinite(p.y)).slice(0,8).map(p=>({key:p.key,x:coordinate(p.x),y:coordinate(p.y)})):[]};
   }catch{return {calendar:{x:24,y:54},positions:[]};}
 }

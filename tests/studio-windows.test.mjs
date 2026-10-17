@@ -14,5 +14,5 @@ test('DOM selections have independent identities and pin limit never drops pinne
 });
 test('layout storage is bounded and stores no source or account data',()=>{
  assert.deepEqual(restoreStudioLayout('bad'),{calendar:{x:24,y:54},positions:[]});
- assert.deepEqual(restoreStudioLayout(JSON.stringify({calendar:{x:-4,y:999999},positions:[{key:'voice',x:23,y:45,code:'secret'},{key:'bad',x:'no',y:0}]})),{calendar:{x:16,y:5000},positions:[{key:'voice',x:23,y:45}]});
+ assert.deepEqual(restoreStudioLayout(JSON.stringify({calendar:{x:-4,y:999999},positions:[{key:'voice',x:23,y:45,code:'secret'},{key:'bad',x:'no',y:0}]})),{calendar:{x:-4,y:999999},positions:[{key:'voice',x:23,y:45}]});
 });

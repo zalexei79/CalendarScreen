@@ -234,11 +234,12 @@ export default function AdminPanel({ onOpenSource, onDirtyChange, localProject }
   function wheelZoom(delta,x,y,fromFrame=true) {
     if (!Number.isFinite(delta) || !frame.current || !canvas.current) return;
     const old = frame.current.getBoundingClientRect();
-    const point = fromFrame ? {x:old.left+x*scale,y:old.top+y*scale} : {x,y};
-    const ratio = {x:(point.x-old.left)/scale,y:(point.y-old.top)/scale};
+    const renderedScale=old.width/frame.current.offsetWidth,worldScale=renderedScale/scale;
+    const point = fromFrame ? {x:old.left+x*renderedScale,y:old.top+y*renderedScale} : {x,y};
+    const ratio = {x:(point.x-old.left)/renderedScale,y:(point.y-old.top)/renderedScale};
     const next = Math.max(.25,Math.min(2.5,scale*Math.exp(-Math.max(-120,Math.min(120,delta))*.0025)));
     setZoom(next);
-    requestAnimationFrame(()=>{const box=frame.current?.getBoundingClientRect();if(box && canvas.current){canvas.current.scrollLeft+=box.left+ratio.x*next-point.x;canvas.current.scrollTop+=box.top+ratio.y*next-point.y;}});
+    requestAnimationFrame(()=>{const box=frame.current?.getBoundingClientRect();if(box && canvas.current){canvas.current.scrollLeft+=(box.left+ratio.x*next*worldScale-point.x)/worldScale;canvas.current.scrollTop+=(box.top+ratio.y*next*worldScale-point.y)/worldScale;}});
   }
   zoomActions.current = wheelZoom;
   useEffect(()=>{

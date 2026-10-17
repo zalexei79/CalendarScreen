@@ -26,6 +26,22 @@ try{
   await page.getByText('Оформление открыто из папки проекта. Сохранение будет локальным.',{exact:true}).waitFor();
 
   await page.frameLocator('iframe[title="Предпросмотр DAYRIS"]').locator('.calendar-voice-button').waitFor();
+  const surface=page.locator('.studio-surface'),world=page.locator('.studio-world');
+  const area=await surface.boundingBox();
+  const anchor={x:area.x+area.width-12,y:area.y+120};
+  const original=await world.evaluate(n=>getComputedStyle(n).transform);
+  await page.mouse.move(anchor.x,anchor.y);await page.mouse.wheel(0,-220);
+  await page.waitForFunction(original=>getComputedStyle(document.querySelector('.studio-world')).transform!==original,original);
+  assert.notEqual(await page.getByLabel('Масштаб полотна',{exact:true}).innerText(),'100%');
+  await page.mouse.down();await page.mouse.move(anchor.x-180,anchor.y+200,{steps:8});await page.mouse.up();
+  assert.notEqual(await world.evaluate(n=>getComputedStyle(n).transform),original);
+  await page.keyboard.press('Control');
+  assert.notEqual(await world.evaluate(n=>getComputedStyle(n).transform),original,'plain Ctrl does not reset the workspace');
+  await page.getByRole('button',{name:'К календарю',exact:true}).click();
+  assert.equal(await page.getByLabel('Масштаб полотна',{exact:true}).innerText(),'100%');
+  const focused=await page.locator('[data-studio-window="calendar"]').boundingBox();
+  assert.ok(Math.abs(focused.x-area.x-24)<2&&Math.abs(focused.y-area.y-24)<2);
+  assert.equal(await page.getByRole('button',{name:'Сохранить в проект',exact:true}).isDisabled(),true,'camera navigation must not edit the project');
   const picker=page.getByLabel('Найти элемент календаря',{exact:true});
   await picker.selectOption('voice-button');
   const mic=page.locator('[data-editor-key="voice-button"]');

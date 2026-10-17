@@ -35,7 +35,8 @@ try{
   await page.waitForFunction(before=>document.querySelector('.admin-preview-toolbar > strong').textContent!==before,before);
   assert.equal(await page.getByRole('button',{name:'Сохранить в проект',exact:true}).isDisabled(),true,'zoom is not a content edit');
   await page.getByRole('button',{name:'Подогнать',exact:true}).click();
-  await page.locator('.studio-surface').evaluate(node=>{node.scrollTop=300;});
+  const surface=await page.locator('.studio-surface').boundingBox();
+  await page.mouse.move(surface.x+surface.width-12,surface.y+350);await page.mouse.down();await page.mouse.move(surface.x+surface.width-12,surface.y+50,{steps:8});await page.mouse.up();
   await preview.locator('.calendar-voice-button').click();
   await preview.getByRole('menuitem',{name:'◇ Логика и команды',exact:true}).click();
   await page.locator('.studio-window-active').waitFor();
@@ -57,6 +58,7 @@ try{
   await page.getByRole('button',{name:'Проверить и сохранить',exact:true}).click();await page.getByRole('button',{name:'Создать копию и сохранить файл',exact:true}).click();
   await page.getByText(/Сохранено на этом ПК/).waitFor();
   await page.getByRole('button',{name:'Закрыть редактор элемента',exact:true}).click();
+  await page.getByRole('button',{name:'К календарю',exact:true}).click();
   await preview.locator('[data-site-element="settings"]').click();await preview.getByRole('menuitem',{name:'✎ Редактировать вид',exact:true}).click();
   await page.locator('.studio-window-active').getByRole('button',{name:'Расположение',exact:true}).click();
   await page.getByLabel('Ширина',{exact:true}).fill('64');
