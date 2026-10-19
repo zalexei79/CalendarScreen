@@ -20,10 +20,15 @@ try {
  await page.evaluate(()=>setPro(false));await page.locator('.receipt-launch').click();assert.equal(await page.evaluate(()=>upgrades),1);assert.equal(await page.evaluate(()=>ocrCalls),0);
  await page.evaluate(()=>setPro(true));await upload();await page.locator('.receipt-fields').waitFor();
  assert.equal(await page.getByLabel('Итог чека',{exact:true}).inputValue(),'67.00');assert.equal(await page.locator('.receipt-item').count(),2);
+ await page.getByRole('button',{name:'Изменить итог',exact:true}).click();assert.equal(await page.getByLabel('Итог чека',{exact:true}).evaluate(el=>el===document.activeElement),true);
  assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isDisabled(),true);
- await page.getByLabel('Количество 2',{exact:true}).fill('3');assert.equal(await page.getByLabel('Сумма позиции 2',{exact:true}).inputValue(),'89.85');
- await page.getByLabel('Итог чека',{exact:true}).fill('96.95');await page.getByLabel('Название 1',{exact:true}).fill('Хлеб');
- await page.getByRole('checkbox').check();await page.getByLabel('Магазин',{exact:true}).fill('Мой магазин');assert.equal(await page.getByRole('checkbox').isChecked(),false,'any edit clears total confirmation');
+ assert.equal(await page.locator('.receipt-item-editor:visible').count(),0,'purchases are initially a readable list');
+ assert.match(await page.locator('.receipt-item-summary').first().innerText(),/Хлеб/);
+ assert.match(await page.locator('.receipt-item-summary').nth(1).innerText(),/Пиво/);
+ await page.locator('.receipt-item-summary').nth(1).click();assert.ok(await page.getByLabel('Количество 2',{exact:true}).evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>=16),'mobile editing does not trigger iOS input zoom');await page.getByLabel('Количество 2',{exact:true}).fill('3');assert.equal(await page.getByLabel('Сумма позиции 2',{exact:true}).inputValue(),'89.85');
+ await page.getByLabel('Итог чека',{exact:true}).fill('96.95');await page.locator('.receipt-item-summary').first().click();await page.getByLabel('Название 1',{exact:true}).fill('Хлеб');
+ await page.getByRole('checkbox').check();await page.locator('.receipt-metadata>summary').click();await page.getByLabel('Магазин',{exact:true}).fill('Мой магазин');assert.equal(await page.getByRole('checkbox').isChecked(),false,'any edit clears total confirmation');
+ await page.locator('.receipt-metadata>summary').click();await page.locator('.receipt-item-summary').first().click();await page.locator('.receipt-scroll').evaluate(el=>el.scrollTop=0);
  for(const width of [320,390,1280]){
   await page.setViewportSize({width,height:width===1280?900:844});
   for(const light of [false,true]){

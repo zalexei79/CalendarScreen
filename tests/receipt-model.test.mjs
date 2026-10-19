@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseReceipt, receiptMoney, receiptLineTotal, receiptValidation, receiptCategory, receiptComment } from '../src/features/receipts/receiptModel.js';
+import { parseReceipt, receiptMoney, receiptLineTotal, receiptValidation, receiptCategory, receiptComment, receiptProduct, validReceiptName } from '../src/features/receipts/receiptModel.js';
 
 export const sample = `MOLDRETAIL GROUP S.R.L.
 rn. Floresti, sat. Sanatauca
@@ -74,4 +74,29 @@ test('common products map to existing categories across languages', () => {
   for (const name of ['pâine','pîine','хлеб','bread','面包','bere','пиво','beer','lapte','молоко']) assert.equal(receiptCategory(name),'Продукты');
   assert.equal(receiptCategory('ibuprofen'),'Здоровье'); assert.equal(receiptCategory('motorina'),'Транспорт');
   assert.equal(receiptCategory('unknown product'),'Другое');
+});
+test('broken price rows use the previous product name, or require a name correction', () => {
+  const receipt = parseReceipt('IDNO: 123\nSnack 4 You Ansoa sarat uscat 80g\nbuc x 23.95= 23.95 A\nTOTAL 23.95');
+  assert.equal(receipt.items[0].name,'Snack 4 You Ansoa sarat uscat 80g');
+  assert.equal(receiptProduct(receipt.items[0].name,'ru').title,'Анчоусы');
+  for(const name of ['buc x 23.95=','n 1 buc x 15.9%=','1 Бис х 44.95','400g']) assert.equal(validReceiptName(name),false,name);
+  const unknown=parseReceipt('IDNO: 123\nbuc x 23.95= 23.95 A\nTOTAL 23.95');
+  assert.equal(unknown.items[0].name,'');
+  assert.equal(receiptValidation({...unknown,dateKey:'2026-10-19',currency:'MDL'},'2026-10-19',['MDL']).valid,false);
+  const mismatch=parseReceipt('IDNO: 123\nBIERMANN Bere blonda 2.4l\n2 buc x 23.95 = 39.90 A\nSUBTOTAL 39.90\nReducere Total 17.00\nTOTAL LEI 39.90');
+  assert.equal(mismatch.items.length,1,'subtotal/discount lines are not purchases');
+  assert.equal(mismatch.items[0].unitPrice,'23.95');assert.equal(mismatch.items[0].total,'39.90','uncertain OCR prices are never silently corrected');
+  assert.equal(receiptValidation(mismatch,'2026-10-19',['MDL']).lineMismatch,true);
+});
+test('readable localized product titles retain brands, preserve original text and never invent sizes or prices', () => {
+  const beer=receiptProduct('BIERMANN Bere blonda 2.4l','ru');
+  assert.equal(beer.title,'Пиво BIERMANN');assert.equal(beer.detail,'2.4l');assert.equal(beer.original,'BIERMANN Bere blonda 2.4l');
+  assert.equal(receiptProduct('BEERka Arahide cu sare 900','ru').title,'Арахис BEERka');
+  assert.equal(receiptProduct('BEERka Arahide cu sare 900','ru').detail,'');
+  assert.equal(receiptProduct('FRANZELUTA Paine GRAHAM 400g','ru').title,'Хлеб FRANZELUTA');
+  assert.equal(receiptProduct('bere','en').title,'Beer');assert.equal(receiptProduct('хлеб','ro').title,'Pâine');
+  assert.equal(receiptProduct('milk','zh-CN').title,'牛奶');
+  assert.equal(receiptProduct('Mystery product 150g','ru').title,'Mystery product 150g');
+  const weighted=parseReceipt('IDNO: 123\nMere\n0.125 kg x 10.20 = 1.28 A\nTOTAL 1.28');
+  assert.equal(weighted.items[0].unit,'kg');assert.match(receiptComment(weighted),/0.125 kg × 10.20 = 1.28/);
 });

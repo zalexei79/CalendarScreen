@@ -5,6 +5,13 @@ choose an image or take a new photo, review/edit recognized items and save one
 expense. Item details are persisted in the calendar entry's comment, not as
 additional expenses. The receipt photo and raw OCR text are not uploaded/stored.
 
+The review starts with a prominent total and a compact purchase list. Known
+product names have localized readable labels (with the original brand retained);
+the original recognized name remains editable. Tap a row to edit its name,
+quantity, unit, price and line total. Broken calculation fragments cannot pass as
+product names. Unknown names require correction/removal. Each conflicting row is
+marked; the difference between item sums and the receipt total is shown explicitly.
+
 Tesseract.js runs locally. Build/dev preparation copies the pinned language
 packages (English, Romanian, Russian, simplified Chinese) and engine from npm
 dependencies into ignored `public/receipt-ocr/v1`. No OCR API key or third-party
