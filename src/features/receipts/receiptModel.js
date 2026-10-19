@@ -101,7 +101,9 @@ export function receiptValidation(draft, today, currencies) {
   const invalidItem = draft.items.some(item => !validReceiptName(item.name) || receiptMoney(item.total) === null || receiptMoney(item.total) <= 0 || !receiptLineTotal(item.quantity, item.unitPrice));
   const sum = draft.items.reduce((value,item) => value + (receiptMoney(item.total) || 0), 0);
   const lineMismatch = draft.items.some(item => receiptMoney(receiptLineTotal(item.quantity, item.unitPrice)) !== receiptMoney(item.total));
-  return { valid: total > 0 && currencies.includes(draft.currency) && validReceiptDate(draft.dateKey, today) && !invalidItem, total, sum, mismatch: Boolean(draft.items.length && sum !== total), lineMismatch };
+  const mismatch = Boolean(draft.items.length && sum !== total);
+  // The printed total is independent evidence, never proof that OCR item prices are correct.
+  return { valid: total > 0 && currencies.includes(draft.currency) && validReceiptDate(draft.dateKey, today) && !invalidItem && !lineMismatch && !mismatch, total, sum, mismatch, lineMismatch };
 }
 export function receiptComment(draft,language='ru') {
   return [`🧾 ${draft.merchant.trim()}`, ...draft.items.map(item => {

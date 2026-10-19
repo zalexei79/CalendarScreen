@@ -28,6 +28,7 @@ try{
   await page.locator('[data-today-cell=true]').click();await page.locator('.receipt-history').first().waitFor();
   assert.equal(await page.locator('.receipt-history').count(),2);
   const card=page.locator('.receipt-history').filter({hasText:'MOLDRETAIL'});assert.equal(await card.locator('.receipt-history-items>li').count(),5);assert.match(await card.innerText(),/151,85/);assert.match(await card.innerText(),/Пиво BIERMANN/);assert.match(await card.innerText(),/20,00/);
+  const beer=card.locator('.receipt-history-items>li').first();assert.match(await beer.innerText(),/2 шт\. × 23,95 = 47,90 MDL/);assert.match(await beer.innerText(),/Считано\s*39,90/);assert.match(await beer.innerText(),/Цена и сумма не сходятся/);
   assert.equal(await card.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);await card.locator('h4').click();assert.equal(await card.isVisible(),true,'reading receipt text does not dismiss day history');
   assert.equal(await page.getByText('Важный обычный комментарий',{exact:true}).isVisible(),true);
   await card.screenshot({path:`artifacts/receipt-history/day-${width}-${light?'light':'dark'}.png`});

@@ -68,7 +68,24 @@ test('editable items flag disagreement without overwriting printed total', () =>
   const receipt = parseReceipt(sample); receipt.items[0].total='60.00';
   const validation = receiptValidation(receipt,'2026-10-19',['MDL']);
   assert.equal(validation.mismatch,true); assert.equal(validation.lineMismatch,true); assert.equal(receipt.total,'151.85');
+  assert.equal(validation.valid,false,'inconsistent OCR cannot be saved');
   receipt.items[0].name=''; assert.equal(receiptValidation(receipt,'2026-10-19',['MDL']).valid,false);
+});
+
+test('independent receipt total cannot override a wrong item equation or a missing item', () => {
+  const receipt=parseReceipt(sample);
+  receipt.items[0].unitPrice='23.95';receipt.items[0].total='39.90';
+  let checked=receiptValidation(receipt,'2026-10-19',['MDL']);
+  assert.equal(checked.valid,false);assert.equal(checked.lineMismatch,true);assert.equal(checked.sum,13185);assert.equal(checked.total,15185);
+  // Even when item totals agree with the receipt total, the equation must be true.
+  receipt.total='131.85';checked=receiptValidation(receipt,'2026-10-19',['MDL']);
+  assert.equal(checked.mismatch,false);assert.equal(checked.valid,false);
+  receipt.items[0].unitPrice='29.95';receipt.items[0].total='59.90';
+  checked=receiptValidation(receipt,'2026-10-19',['MDL']);
+  assert.equal(checked.lineMismatch,false);assert.equal(checked.valid,false,'correct equations still need to reconcile with the printed total');
+  receipt.total='151.85';assert.equal(receiptValidation(receipt,'2026-10-19',['MDL']).valid,true);
+  receipt.items.pop();assert.equal(receiptValidation(receipt,'2026-10-19',['MDL']).valid,false,'missing purchases block detailed saving');
+  assert.equal(receiptValidation({...receipt,items:[]},'2026-10-19',['MDL']).valid,true,'explicit total-only fallback remains available');
 });
 test('common products map to existing categories across languages', () => {
   for (const name of ['pâine','pîine','хлеб','bread','面包','bere','пиво','beer','lapte','молоко']) assert.equal(receiptCategory(name),'Продукты');

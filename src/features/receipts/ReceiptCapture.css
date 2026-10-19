@@ -65,6 +65,7 @@
 .receipt-difference>b,.receipt-sum>b{flex:none;font-variant-numeric:tabular-nums}
 .receipt-raw{margin-top:8px}
 .receipt-raw>summary{font-size:11px}
+.receipt-warning>p{margin:0}.receipt-warning>button{margin:9px 0}.receipt-warning>p:last-child:not(:first-child){font-size:11px;color:var(--receipt-muted)}
 .receipt-confirm{font-size:12px;margin:12px 0 2px}
 .receipt-choose{margin-top:12px}
 .receipt-choose button{font-size:11px}

@@ -42,8 +42,25 @@ try {
  await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Сохранить расход',exact:true}).dblclick();await page.locator('.receipt-success').waitFor();
  assert.equal(await page.evaluate(()=>writes.length),1);assert.equal(await page.evaluate(()=>writes[0].draft.total),'96.95');assert.equal(await page.evaluate(()=>writes[0].draft.items[0].name),'Хлеб');assert.match(await page.locator('.receipt-success').innerText(),/167.00 MDL/);
  await page.getByRole('button',{name:'Готово',exact:true}).click();
+ // A checked confirmation cannot bypass either item arithmetic or total reconciliation.
+ await page.evaluate(()=>{receiptText='SHOP\nIDNO: 123\nBere\n2 buc x 23.95 = 39.90 A\nTOTAL LEI 39.90\n19-10-2026';});
+ await upload();await page.locator('.receipt-fields').waitFor();await page.getByRole('checkbox').check();
+ assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isDisabled(),true,'matching grand total does not validate a false equation');
+ assert.match(await page.locator('.receipt-item-summary').innerText(),/47,90/);assert.match(await page.locator('.receipt-item-summary').innerText(),/Считано/);
+ for(const width of [320,1280]){await page.setViewportSize({width,height:900});for(const light of [false,true]){await page.evaluate(value=>setLight(value),light);assert.equal(await page.locator('.receipt-scroll').evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);await page.screenshot({path:`artifacts/receipt-check/arithmetic-block-${width}-${light?'light':'dark'}.png`});}}
+ await page.locator('.receipt-item-summary').click();await page.getByLabel('Цена за единицу 1',{exact:true}).fill('29.95');
+ assert.equal(await page.getByLabel('Сумма позиции 1',{exact:true}).inputValue(),'59.90');
+ await page.getByRole('checkbox').check();assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isDisabled(),true,'correct item still requires correct receipt total');
+ await page.getByLabel('Итог чека',{exact:true}).fill('59.90');await page.getByRole('checkbox').check();assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isEnabled(),true);
+ await page.getByLabel('Сумма позиции 1',{exact:true}).fill('39.90');await page.getByRole('checkbox').check();
+ await page.getByRole('button',{name:'Оставить только итог без покупок',exact:true}).click();assert.equal(await page.locator('.receipt-item').count(),0);assert.equal(await page.getByRole('checkbox').isChecked(),false);
+ assert.equal(await page.getByLabel('Итог чека',{exact:true}).inputValue(),'59.90','total-only mode preserves the independently verified total');
+ await page.getByRole('checkbox').check();assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isEnabled(),true);
+ await page.getByRole('button',{name:'Вернуть покупки для исправления',exact:true}).click();assert.equal(await page.locator('.receipt-item').count(),1);assert.equal(await page.getByRole('checkbox').isChecked(),false);
+ await page.getByRole('checkbox').check();assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isDisabled(),true);assert.equal(await page.evaluate(()=>writes.length),1);
+ await page.getByRole('button',{name:'Закрыть чек',exact:true}).click();
  // Revoked access stops OCR even when the old UI still displays PRO.
- await page.evaluate(()=>serverPro=false);await upload();await page.waitForFunction(()=>upgrades===2);assert.equal(await page.evaluate(()=>ocrCalls),1);
+ const previousOcr=await page.evaluate(()=>ocrCalls);await page.evaluate(()=>serverPro=false);await upload();await page.waitForFunction(()=>upgrades===2);assert.equal(await page.evaluate(()=>ocrCalls),previousOcr);
  await page.evaluate(()=>{serverPro=true;delay=true;});await upload();await page.waitForFunction(()=>Boolean(window.releaseOcr));await page.getByRole('button',{name:'Закрыть чек',exact:true}).click();assert.equal(await page.evaluate(()=>aborted),true);await page.evaluate(()=>releaseOcr());assert.equal(await page.locator('.receipt-dialog').isVisible(),false);
  await page.evaluate(()=>{delete window.releaseOcr;});await upload();await page.waitForFunction(()=>Boolean(window.releaseOcr));await page.evaluate(()=>setOwner('owner-b'));await page.evaluate(()=>releaseOcr());assert.equal(await page.locator('.receipt-dialog').isVisible(),false,'account switch discards old OCR');assert.equal(await page.evaluate(()=>writes.length),1);
  await page.evaluate(()=>{delay=false;receiptText='TOTAL 25.50';});await upload();await page.locator('.receipt-fields').waitFor();assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isDisabled(),true);

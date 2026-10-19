@@ -64,6 +64,22 @@ try{
   await page.screenshot({path:'artifacts/receipt-check/real-sample-mobile.png'});
   await page.locator('.receipt-scroll').evaluate(el=>el.scrollTop=el.scrollHeight);
   await page.screenshot({path:'artifacts/receipt-check/real-sample-total.png'});
+  await page.getByRole('checkbox').check();
+  if(await page.locator('.receipt-item[data-issue="true"]').count() || await page.locator('.receipt-difference').count()){
+   assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isDisabled(),true,'real OCR disagreements cannot be confirmed away');
+  }
+  // Corrections come from the original photo, never from distributing the grand total.
+  for(const [index,quantity,price,total] of [[0,'2','29.95','59.90'],[1,'1','23.95','23.95'],[2,'1','15.95','15.95'],[3,'1','7.10','7.10'],[4,'1','44.95','44.95']]){
+   await page.locator('.receipt-item-summary').nth(index).click();
+   await page.getByLabel(`Количество ${index+1}`,{exact:true}).fill(quantity);
+   await page.getByLabel(`Цена за единицу ${index+1}`,{exact:true}).fill(price);
+   await page.getByLabel(`Сумма позиции ${index+1}`,{exact:true}).fill(total);
+  }
+  assert.equal(await page.getByRole('checkbox').isChecked(),false);await page.getByRole('checkbox').check();
+  assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isEnabled(),true);
+  await page.getByRole('button',{name:'Сохранить расход',exact:true}).click();await page.locator('.receipt-success').waitFor();
+  assert.equal(writes.length,2);assert.equal(writes[1].pnl,-151.85);assert.match(writes[1].comment,/2 × 29.95 = 59.90 MDL/);
+  console.log('REAL SAMPLE CORRECTIONS: five photo-verified rows reconcile to 151.85 MDL, mocked persistence only.');
  }
  await page.setViewportSize({width:1280,height:900});await page.screenshot({path:'artifacts/receipt-check/full-app-desktop.png'});
  assert.equal(requests.some(item=>item.method==='POST' && !item.url.includes('supabase.co') && !item.url.startsWith(origin)),false,'photo is never sent to an OCR service');
