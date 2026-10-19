@@ -29,7 +29,6 @@
 .receipt-section-title{margin:19px 0 10px;min-height:40px}
 .receipt-section-title h3{margin:0;font-size:15px}
 .receipt-section-title small{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:6px;background:var(--receipt-field);font-size:11px}
-.receipt-section-title p{margin:5px 0 0;font-size:10px;color:var(--receipt-muted)}
 .receipt-section-title>button{width:38px;min-height:38px;padding:0;border-radius:11px;flex:none}
 .receipt-items{border:1px solid var(--receipt-line);border-radius:16px;overflow:hidden;background:var(--receipt-field)}
 .receipt-items:empty{display:none}
@@ -43,7 +42,8 @@
 .receipt-item-description>strong{font-size:13px;line-height:1.4;font-weight:600;overflow-wrap:anywhere}
 .receipt-product-size{font-size:10px;color:var(--receipt-muted);margin-top:-2px}
 .receipt-item-calculation{font-size:11px;color:var(--receipt-muted);font-variant-numeric:tabular-nums;line-height:1.4}
-.receipt-item-status{font-size:10px;color:#d9b76d;line-height:1.3}
+.receipt-item-status{display:flex;align-items:center;gap:5px;font-size:10px;color:#d9b76d;line-height:1.3}
+.receipt-item-status>span{width:4px;height:4px;border-radius:50%;background:currentColor;flex:none}
 .receipt-dialog[data-light="true"] .receipt-item-status{color:#865c12}
 .receipt-item-amount{flex:none;display:flex;flex-direction:column;align-items:end;gap:4px;font-variant-numeric:tabular-nums;max-width:45%;overflow-wrap:anywhere;text-align:right}
 .receipt-item-amount>b{font-size:16px;font-weight:600;line-height:1.2;letter-spacing:-.025em}
@@ -57,15 +57,29 @@
 .receipt-item-editor .receipt-item-numbers .receipt-field>span{min-height:30px}
 .receipt-unit-field{display:grid;grid-template-columns:1fr 100px;align-items:center;margin:12px 0 0}
 .receipt-unit-field select{font-size:13px;min-height:38px;padding:6px 10px}
-.receipt-item-explanation{color:var(--receipt-muted);font-size:11px;margin:12px 0 0;line-height:1.6}
+.receipt-field input[aria-invalid="true"]{border-color:#b58a3870}
+.receipt-price-check{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:13px;padding:12px 0 2px;border-top:1px solid var(--receipt-line);font-size:10px;color:var(--receipt-muted);font-variant-numeric:tabular-nums}
+.receipt-price-check>span:not(:nth-child(2)){display:flex;flex-direction:column;gap:6px;min-width:0}
+.receipt-price-check>span:last-child{text-align:right}
+.receipt-price-check>span:nth-child(2){font-size:18px;color:#d9b76d}
+.receipt-dialog[data-light="true"] .receipt-price-check>span:nth-child(2){color:#865c12}
+.receipt-price-check b{font-size:15px;font-weight:550;color:var(--receipt-fg);overflow-wrap:anywhere}
+.receipt-price-check small{font-size:10px;font-weight:400;color:var(--receipt-muted)}
 .receipt-reconciliation{margin-top:13px;padding:0 2px}
 .receipt-reconciliation .receipt-sum{margin:0;padding:9px 0;font-size:12px}
-.receipt-difference{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:11px;color:#d9b76d;margin:0;padding:4px 0 8px}
+.receipt-dialog .receipt-difference{display:flex;align-items:center;gap:8px;width:100%;min-height:42px;margin:0;padding:9px 0;border:0;border-radius:0;background:none;font-size:11px;color:#d9b76d;text-align:left}
+.receipt-difference>span{flex:1}.receipt-difference>svg{flex:none}
 .receipt-dialog[data-light="true"] .receipt-difference{color:#865c12}
 .receipt-difference>b,.receipt-sum>b{flex:none;font-variant-numeric:tabular-nums}
+.receipt-dialog .receipt-total-only{justify-content:start;gap:10px;width:100%;margin-top:6px;padding:11px 0;border:0;border-top:1px solid var(--receipt-line);border-bottom:1px solid var(--receipt-line);border-radius:0;background:none;text-align:left;color:var(--receipt-muted)}
+.receipt-total-only>span{display:flex;flex:1;flex-direction:column;gap:4px;font-size:12px;color:var(--receipt-fg)}
+.receipt-total-only small{font-size:10px;color:var(--receipt-muted)}
+.receipt-total-only>svg{flex:none}
+.receipt-omitted{display:flex;align-items:center;gap:8px;padding:10px 0;font-size:11px;color:var(--receipt-muted)}
+.receipt-omitted>span{flex:1}
+.receipt-dialog .receipt-omitted>button{border:0;background:none;padding:8px 0;font-size:11px;color:var(--receipt-fg)}
 .receipt-raw{margin-top:8px}
 .receipt-raw>summary{font-size:11px}
-.receipt-warning>p{margin:0}.receipt-warning>button{margin:9px 0}.receipt-warning>p:last-child:not(:first-child){font-size:11px;color:var(--receipt-muted)}
 .receipt-confirm{font-size:12px;margin:12px 0 2px}
 .receipt-choose{margin-top:12px}
 .receipt-choose button{font-size:11px}

@@ -47,6 +47,10 @@ try{
  if(await page.locator('.receipt-warning[role="alert"]').count())throw new Error(await page.locator('.receipt-warning[role="alert"]').innerText());
  assert.equal(await page.getByLabel('Итог чека',{exact:true}).inputValue(),'67.00');assert.equal(await page.getByLabel('Валюта чека',{exact:true}).inputValue(),'MDL');assert.equal(await page.locator('.receipt-item').count(),2);
  assert.equal(writes.length,0,'OCR alone does not write');
+ await page.locator('.receipt-item-summary').nth(1).click();await page.getByLabel('Сумма позиции 2',{exact:true}).fill('39.90');
+ await page.getByRole('button',{name:'Проверить покупку',exact:true}).click();await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Цена за единицу 2');
+ assert.equal(writes.length,0,'the primary correction action cannot save inconsistent values');assert.equal(await page.getByRole('checkbox').count(),0);assert.equal(await page.locator('.receipt-warning').count(),0);
+ await page.getByLabel('Сумма позиции 2',{exact:true}).fill('59.90');await page.locator('.receipt-item-summary').nth(1).click();
  await page.locator('.receipt-item-summary').first().click();await page.getByLabel('Название 1',{exact:true}).fill('Хлеб');await page.locator('.receipt-item-summary').first().click();await page.getByRole('checkbox').check();
  await page.screenshot({path:'artifacts/receipt-check/full-app-mobile.png'});
  await page.getByRole('button',{name:'Сохранить расход',exact:true}).click();await page.locator('.receipt-success').waitFor();
@@ -64,9 +68,9 @@ try{
   await page.screenshot({path:'artifacts/receipt-check/real-sample-mobile.png'});
   await page.locator('.receipt-scroll').evaluate(el=>el.scrollTop=el.scrollHeight);
   await page.screenshot({path:'artifacts/receipt-check/real-sample-total.png'});
-  await page.getByRole('checkbox').check();
   if(await page.locator('.receipt-item[data-issue="true"]').count() || await page.locator('.receipt-difference').count()){
-   assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isDisabled(),true,'real OCR disagreements cannot be confirmed away');
+   assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).count(),0,'real OCR disagreements cannot be confirmed away');
+   assert.equal(await page.getByRole('checkbox').count(),0);
   }
   // Corrections come from the original photo, never from distributing the grand total.
   for(const [index,quantity,price,total] of [[0,'2','29.95','59.90'],[1,'1','23.95','23.95'],[2,'1','15.95','15.95'],[3,'1','7.10','7.10'],[4,'1','44.95','44.95']]){

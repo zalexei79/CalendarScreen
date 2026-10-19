@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v35-receipt-arithmetic';
+const CACHE_NAME = 'atj-cache-v36-receipt-review';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertCircle, Camera, Check, ChevronDown, Pencil, Plus, ShoppingBag, Trash2, X } from 'lucide-react';
+import { AlertCircle, Camera, Check, ChevronDown, ChevronRight, Pencil, Plus, ReceiptText, ShoppingBag, Trash2, X } from 'lucide-react';
 import { CURRENCIES, MONEY_CATEGORIES } from '../../shared/config/constants';
 import { localDateKey } from '../../shared/lib/voiceEntryReview.js';
 import { checkReceiptAccess } from './receiptAccess.js';
@@ -89,6 +89,26 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
     }
   }
   const validation = draft ? receiptValidation(draft, today, CURRENCIES.map(item => item.code)) : null;
+  const itemIssues = draft ? draft.items.flatMap((item,index) => {
+    const expected = receiptMoney(receiptLineTotal(item.quantity,item.unitPrice)), amount = receiptMoney(item.total);
+    return !validReceiptName(item.name) || !expected || !amount || expected !== amount ? [index] : [];
+  }) : [];
+  const needsReview = Boolean(itemIssues.length || validation?.mismatch);
+  function focusTotal() {
+    const input = dialog.current?.querySelector('.receipt-total input');
+    input?.focus({preventScroll:true}); input?.scrollIntoView({block:'nearest'});
+  }
+  function focusCorrection() {
+    if (!itemIssues.length) { focusTotal(); return; }
+    const index = itemIssues[0];
+    setEditingIndex(index);
+    requestAnimationFrame(() => {
+      const item = dialog.current?.querySelectorAll('.receipt-item')[index];
+      const input = validReceiptName(draft.items[index].name) ? item?.querySelectorAll('.receipt-item-numbers input')[1] : item?.querySelector('.receipt-item-name input');
+      input?.focus({preventScroll:true}); item?.scrollIntoView({block:'nearest'});
+    });
+  }
+  const actionLabel = saved ? c.done : phase === 'saving' ? c.saving : itemIssues.length ? (itemIssues.length === 1 ? c.checkPurchase : c.checkPurchases) : validation?.mismatch ? c.checkTotal : c.save;
   async function save() {
     if (busySave.current || !confirmed || !validation?.valid) return;
     const owner = userId, request = generation.current;
@@ -108,6 +128,7 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
   const numberLocale = String(language).startsWith('zh') ? 'zh-CN' : ['md','ro'].includes(language) ? 'ro-MD' : language === 'en' ? 'en-US' : 'ru-RU';
   const displayMoney = value => { const minor = receiptMoney(value); return minor === null ? '—' : new Intl.NumberFormat(numberLocale,{minimumFractionDigits:2,maximumFractionDigits:2}).format(minor/100); };
   const dateLabel = draft && validReceiptDate(draft.dateKey,today) ? new Intl.DateTimeFormat(numberLocale,{day:'numeric',month:'short',year:'numeric'}).format(new Date(`${draft.dateKey}T12:00:00`)) : c.dateMissing;
+  const photoChoices = <div className="receipt-choose"><button type="button" onClick={() => camera.current?.click()}><Camera size={16}/>{c.camera}</button><button type="button" onClick={() => gallery.current?.click()}>{c.gallery}</button></div>;
   return <>
     <button ref={trigger} type="button" className="receipt-launch" data-light={isLight} aria-label={`${c.photo} · PRO`} title={`${c.photo} · PRO`} disabled={proLoading} onClick={choose}><Camera size={20}/></button>
     <input ref={gallery} className="receipt-file" type="file" accept="image/*" aria-label={c.gallery} onChange={selectFile}/>
@@ -117,13 +138,13 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
         <header className="receipt-heading"><div><small>DAYRIS <b>PRO</b></small><h2 id="receipt-title" tabIndex={-1}>{c.title}</h2></div><button type="button" aria-label={c.close} disabled={phase === 'saving'} onClick={close}><X size={20}/></button></header>
         <div className="receipt-scroll">
           {saved ? <div className="receipt-success" role="status"><Check size={32}/><h3>{c.saved}</h3><strong>{moneyText(receiptMoney(saved.total))} {saved.currency}</strong><p>{saved.dateKey}</p>{saved.dayTotal !== undefined && <p>{c.dayTotal}: <b>{saved.dayTotal} {saved.currency}</b></p>}</div> : <>
-            {preview && <details className="receipt-preview" open={!draft}><summary>{c.photo}</summary><a href={preview} target="_blank" rel="noreferrer"><img src={preview} alt={c.photo}/></a></details>}
+            {preview && <details className="receipt-preview" open={!draft}><summary>{c.photo}</summary><a href={preview} target="_blank" rel="noreferrer"><img src={preview} alt={c.photo}/></a>{draft && !busy && photoChoices}</details>}
             {(phase === 'reading' || phase === 'checking') && <div className="receipt-progress" role="status"><strong>{c.reading} {phase === 'reading' ? `${progress}%` : ''}</strong><progress max="100" value={progress}/><p>{c.loading}</p></div>}
             {error && <p className="receipt-warning" role="alert">{error}</p>}
             {draft && <fieldset disabled={busy} className="receipt-fields"><legend className="receipt-sr-only">{c.review}</legend>
               <div className="receipt-overview">
                 <div className="receipt-store"><ShoppingBag size={15}/><span>{draft.merchant || c.merchant}</span></div>
-                <div className="receipt-total">{field(c.total,'total',{inputMode:'decimal','aria-label':c.total})}<span className="receipt-currency">{draft.currency || '—'}</span><button type="button" className="receipt-edit-total" aria-label={c.editTotal} onClick={() => dialog.current?.querySelector('.receipt-total input')?.focus()}><Pencil size={15}/></button></div>
+                <div className="receipt-total">{field(c.total,'total',{inputMode:'decimal','aria-label':c.total})}<span className="receipt-currency">{draft.currency || '—'}</span><button type="button" className="receipt-edit-total" aria-label={c.editTotal} onClick={focusTotal}><Pencil size={15}/></button></div>
                 {!draft.evidence && <p className="receipt-warning">{c.missing}</p>}
                 <details className="receipt-metadata" open={metadataOpen}>
                   <summary onClick={event => { event.preventDefault(); setMetadataOpen(!metadataOpen); }}><span>{dateLabel}</span><span>{categoryLabel(MONEY_CATEGORIES.find(item => item.key === draft.category) || MONEY_CATEGORIES.at(-1))}</span><ChevronDown size={15}/></summary>
@@ -134,36 +155,36 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
                   </div>
                 </details>
               </div>
-              <div className="receipt-section-title"><div><h3>{c.items} <small>{draft.items.length}</small></h3><p>{c.editHint}</p></div><button type="button" aria-label={c.add} onClick={() => { setOmittedItems(null); setEditingIndex(draft.items.length); update({items:[...draft.items,{name:'',quantity:'1',unit:'pcs',unitPrice:'',total:''}]}); }}><Plus size={18}/></button></div>
-              {!draft.items.length && <p className="receipt-muted">{c.totalOnly}</p>}
+              {!omittedItems && <div className="receipt-section-title"><h3>{c.items} <small>{draft.items.length}</small></h3><button type="button" aria-label={c.add} onClick={() => { setEditingIndex(draft.items.length); update({items:[...draft.items,{name:'',quantity:'1',unit:'pcs',unitPrice:'',total:''}]}); }}><Plus size={18}/></button></div>}
+              {!draft.items.length && !omittedItems && <p className="receipt-muted">{c.totalOnly}</p>}
               <div className="receipt-items">{draft.items.map((item,index) => {
                 const product = receiptProduct(item.name,language,item.productType), expected = receiptLineTotal(item.quantity,item.unitPrice), mismatch = receiptMoney(expected) !== receiptMoney(item.total), unknown = !validReceiptName(item.name);
                 const unit = c[item.unit] || c.pcs;
                 return <details className="receipt-item" data-issue={mismatch || unknown} key={index} open={editingIndex === index}>
                   <summary className="receipt-item-summary" aria-label={`${c.editItem} ${index+1}`} onClick={event => { event.preventDefault(); setEditingIndex(editingIndex === index ? -1 : index); }}>
                     <span className="receipt-item-icon" aria-hidden="true">{unknown ? <AlertCircle size={19}/> : product.symbol || <ShoppingBag size={18}/>}</span>
-                    <span className="receipt-item-description"><strong>{product.title || c.unknownItem}</strong>{product.detail && <span className="receipt-product-size">{product.detail}</span>}<span className="receipt-item-calculation">{String(item.quantity).replace('.',numberLocale.startsWith('en')||numberLocale.startsWith('zh')?'.':',')} {unit} × {displayMoney(item.unitPrice)}{mismatch && <> = {displayMoney(expected)}</>} {draft.currency}</span>{(unknown || mismatch) && <span className="receipt-item-status">{unknown ? c.unknownItem : c.checkItem}</span>}</span>
+                    <span className="receipt-item-description"><strong>{product.title || c.unknownItem}</strong>{product.detail && <span className="receipt-product-size">{product.detail}</span>}<span className="receipt-item-calculation">{String(item.quantity).replace('.',numberLocale.startsWith('en')||numberLocale.startsWith('zh')?'.':',')} {unit} × {displayMoney(item.unitPrice)} {draft.currency}</span>{(unknown || mismatch) && <span className="receipt-item-status"><span aria-hidden="true"/>{unknown ? c.unknownItem : c.refinePrice}</span>}</span>
                     <span className="receipt-item-amount">{mismatch && <small>{c.readAmount}</small>}<b>{displayMoney(item.total)}</b><small>{draft.currency}</small></span><ChevronDown size={14} className="receipt-item-chevron"/>
                   </summary>
                   <div className="receipt-item-editor">
                     <ProductTypePicker language={language} value={item.productType||product.type} onChange={id=>chooseProductType(index,id)}/>
-                    <div className="receipt-item-name"><label className="receipt-field"><span>{c.name} {index+1}</span><input aria-label={`${c.name} ${index+1}`} value={item.name} maxLength={180} onChange={event => updateItem(index,'name',event.target.value)}/></label><button type="button" aria-label={`${c.remove} ${index+1}`} onClick={() => { setEditingIndex(-1); update({items:draft.items.filter((_,row) => row !== index)}); }}><Trash2 size={17}/></button></div>
-                    <div className="receipt-item-numbers">{[['quantity',c.quantity],['unitPrice',c.price],['total',c.lineTotal]].map(([key,label]) => <label className="receipt-field" key={key}><span>{label}</span><input aria-label={`${label} ${index+1}`} inputMode="decimal" value={item[key]} onChange={event => updateItem(index,key,event.target.value)}/></label>)}</div>
+                    <div className="receipt-item-name"><label className="receipt-field"><span>{c.name} {index+1}</span><input aria-label={`${c.name} ${index+1}`} aria-invalid={unknown || undefined} value={item.name} maxLength={180} onChange={event => updateItem(index,'name',event.target.value)}/></label><button type="button" aria-label={`${c.remove} ${index+1}`} onClick={() => { setEditingIndex(-1); update({items:draft.items.filter((_,row) => row !== index)}); }}><Trash2 size={17}/></button></div>
+                    <div className="receipt-item-numbers">{[['quantity',c.quantity],['unitPrice',c.price],['total',c.lineTotal]].map(([key,label]) => <label className="receipt-field" key={key}><span>{label}</span><input aria-label={`${label} ${index+1}`} aria-invalid={mismatch || undefined} aria-describedby={mismatch ? `receipt-price-check-${index}` : undefined} inputMode="decimal" value={item[key]} onChange={event => updateItem(index,key,event.target.value)}/></label>)}</div>
+                    {mismatch && <div className="receipt-price-check" id={`receipt-price-check-${index}`} role="status"><span>{c.readAmount}<b>{displayMoney(item.total)} <small>{draft.currency}</small></b></span><span aria-hidden="true">≠</span><span>{c.calculated}<b>{displayMoney(expected)} <small>{draft.currency}</small></b></span></div>}
                     <label className="receipt-field receipt-unit-field"><span>{c.unit}</span><select aria-label={`${c.unit} ${index+1}`} value={item.unit || 'pcs'} onChange={event => updateItem(index,'unit',event.target.value)}>{['pcs','kg','l'].map(value => <option key={value} value={value}>{c[value]}</option>)}</select></label>
-                    {mismatch && <p className="receipt-item-explanation">{c.expected}: <b>{displayMoney(expected)} {draft.currency}</b></p>}
                   </div>
                 </details>;
               })}</div>
-              {draft.items.length > 0 && <div className="receipt-reconciliation"><p className="receipt-sum">{c.itemSum}<b>{displayMoney(moneyText(validation.sum))} {draft.currency}</b></p>{validation.mismatch && <p className="receipt-difference"><span>{c.difference}</span><b>{displayMoney(moneyText(Math.abs((validation.total || 0)-validation.sum)))} {draft.currency}</b></p>}</div>}
-              {(validation.mismatch || validation.lineMismatch) && <div className="receipt-warning" role="status"><p>{c.mismatch}</p><button type="button" onClick={toggleTotalOnly}>{c.useTotalOnly}</button><p>{c.totalOnlyHint}</p></div>}
-              {omittedItems && <div className="receipt-warning"><p>{c.totalOnlyHint}</p><button type="button" onClick={toggleTotalOnly}>{c.restoreItems}</button></div>}
+              {draft.items.length > 0 && <div className="receipt-reconciliation"><p className="receipt-sum">{c.itemSum}<b>{displayMoney(moneyText(validation.sum))} {draft.currency}</b></p>{validation.mismatch && <button type="button" className="receipt-difference" aria-label={c.checkTotal} onClick={focusTotal}><AlertCircle size={14}/><span>{c.shortDifference}</span><b>{displayMoney(moneyText(Math.abs((validation.total || 0)-validation.sum)))} {draft.currency}</b><ChevronRight size={14}/></button>}</div>}
+              {needsReview && <button type="button" className="receipt-total-only" aria-label={c.useTotalOnly} onClick={toggleTotalOnly}><ReceiptText size={17}/><span>{c.useTotalOnly}<small>{c.withoutItems}</small></span><ChevronRight size={15}/></button>}
+              {omittedItems && <div className="receipt-omitted"><ReceiptText size={16}/><span>{c.withoutItems}</span><button type="button" onClick={toggleTotalOnly}>{c.restoreItems}</button></div>}
               <details className="receipt-raw"><summary>{c.raw}</summary>{draft.evidence && <blockquote className="receipt-evidence">{draft.evidence}</blockquote>}<textarea aria-label={c.raw} value={draft.rawText} maxLength={40000} onChange={event => update({rawText:event.target.value})}/><button type="button" onClick={() => review(draft.rawText)}>{c.reparse}</button></details>
-              <label className="receipt-confirm"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)}/><span>{c.confirm}</span></label>
+              {!needsReview && <label className="receipt-confirm"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)}/><span>{c.confirm}</span></label>}
             </fieldset>}
-            {!busy && <div className="receipt-choose"><button type="button" onClick={() => camera.current?.click()}><Camera size={16}/>{c.camera}</button><button type="button" onClick={() => gallery.current?.click()}>{c.gallery}</button></div>}
+            {!draft && !busy && photoChoices}
           </>}
         </div>
-        <footer className="receipt-footer"><button type="button" className="receipt-primary" aria-label={saved ? c.done : phase === 'saving' ? c.saving : c.save} disabled={!saved && (busy || !confirmed || !validation?.valid)} onClick={saved ? close : save}><span>{saved ? c.done : phase === 'saving' ? c.saving : c.save}</span>{!saved && draft && <b aria-hidden="true">{displayMoney(draft.total)} {draft.currency}</b>}</button></footer>
+        <footer className="receipt-footer"><button type="button" className="receipt-primary" aria-label={actionLabel} disabled={!saved && (busy || (!needsReview && (!confirmed || !validation?.valid)))} onClick={saved ? close : needsReview ? focusCorrection : save}><span>{actionLabel}</span>{!saved && draft && <b aria-hidden="true">{displayMoney(draft.total)} {draft.currency}</b>}</button></footer>
       </div>}
     </dialog>,document.body)}
   </>;

@@ -20,6 +20,8 @@ try {
  await page.evaluate(()=>setPro(false));await page.locator('.receipt-launch').click();assert.equal(await page.evaluate(()=>upgrades),1);assert.equal(await page.evaluate(()=>ocrCalls),0);
  await page.evaluate(()=>setPro(true));await upload();await page.locator('.receipt-fields').waitFor();
  assert.equal(await page.getByLabel('Итог чека',{exact:true}).inputValue(),'67.00');assert.equal(await page.locator('.receipt-item').count(),2);
+ assert.equal(await page.getByRole('button',{name:'Сфотографировать',exact:true}).isVisible(),false,'photo actions stay inside the photo section');
+ await page.locator('.receipt-preview>summary').click();assert.equal(await page.getByRole('button',{name:'Сфотографировать',exact:true}).isVisible(),true);assert.equal(await page.getByRole('button',{name:'Выбрать фото',exact:true}).isVisible(),true);await page.locator('.receipt-preview>summary').click();
  await page.getByRole('button',{name:'Изменить итог',exact:true}).click();assert.equal(await page.getByLabel('Итог чека',{exact:true}).evaluate(el=>el===document.activeElement),true);
  assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isDisabled(),true);
  assert.equal(await page.locator('.receipt-item-editor:visible').count(),0,'purchases are initially a readable list');
@@ -42,22 +44,39 @@ try {
  await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Сохранить расход',exact:true}).dblclick();await page.locator('.receipt-success').waitFor();
  assert.equal(await page.evaluate(()=>writes.length),1);assert.equal(await page.evaluate(()=>writes[0].draft.total),'96.95');assert.equal(await page.evaluate(()=>writes[0].draft.items[0].name),'Хлеб');assert.match(await page.locator('.receipt-success').innerText(),/167.00 MDL/);
  await page.getByRole('button',{name:'Готово',exact:true}).click();
- // A checked confirmation cannot bypass either item arithmetic or total reconciliation.
+ // Disagreements lead straight to the field to correct, never to persistence.
  await page.evaluate(()=>{receiptText='SHOP\nIDNO: 123\nBere\n2 buc x 23.95 = 39.90 A\nTOTAL LEI 39.90\n19-10-2026';});
- await upload();await page.locator('.receipt-fields').waitFor();await page.getByRole('checkbox').check();
- assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isDisabled(),true,'matching grand total does not validate a false equation');
- assert.match(await page.locator('.receipt-item-summary').innerText(),/47,90/);assert.match(await page.locator('.receipt-item-summary').innerText(),/Считано/);
- for(const width of [320,1280]){await page.setViewportSize({width,height:900});for(const light of [false,true]){await page.evaluate(value=>setLight(value),light);assert.equal(await page.locator('.receipt-scroll').evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);await page.screenshot({path:`artifacts/receipt-check/arithmetic-block-${width}-${light?'light':'dark'}.png`});}}
- await page.locator('.receipt-item-summary').click();await page.getByLabel('Цена за единицу 1',{exact:true}).fill('29.95');
+ await upload();await page.locator('.receipt-fields').waitFor();
+ assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).count(),0,'a false equation cannot offer saving');
+ assert.equal(await page.getByRole('checkbox').count(),0,'confirmation appears after resolving disagreements');
+ assert.equal(await page.locator('.receipt-warning').count(),0,'no warning paragraph is shown for item disagreements');
+ assert.match(await page.locator('.receipt-item-summary').innerText(),/Уточнить цену/);
+ for(const width of [320,390,1280]){await page.setViewportSize({width,height:width===1280?900:844});for(const light of [false,true]){await page.evaluate(value=>setLight(value),light);assert.equal(await page.locator('.receipt-scroll').evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);await page.screenshot({path:`artifacts/receipt-check/arithmetic-block-${width}-${light?'light':'dark'}.png`});}}
+ await page.getByRole('button',{name:'Проверить покупку',exact:true}).click();await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Цена за единицу 1');
+ assert.match(await page.locator('.receipt-price-check').innerText(),/Считано\s*39,90 MDL\s*≠\s*По расчёту\s*47,90 MDL/);assert.equal(await page.evaluate(()=>writes.length),1);
+ await page.setViewportSize({width:390,height:844});await page.evaluate(()=>setLight(false));await page.screenshot({path:'artifacts/receipt-check/arithmetic-editor-390-dark.png'});
+ await page.getByLabel('Цена за единицу 1',{exact:true}).fill('29.95');
  assert.equal(await page.getByLabel('Сумма позиции 1',{exact:true}).inputValue(),'59.90');
- await page.getByRole('checkbox').check();assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isDisabled(),true,'correct item still requires correct receipt total');
+ assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).count(),0,'correct item still requires correct receipt total');
+ await page.locator('.receipt-item-summary').click();await page.locator('.receipt-scroll').evaluate(el=>el.scrollTop=0);await page.screenshot({path:'artifacts/receipt-check/reconciliation-390-dark.png'});
+ await page.locator('.receipt-footer').getByRole('button',{name:'Сверить итог',exact:true}).click();assert.equal(await page.getByLabel('Итог чека',{exact:true}).evaluate(el=>el===document.activeElement),true);
  await page.getByLabel('Итог чека',{exact:true}).fill('59.90');await page.getByRole('checkbox').check();assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isEnabled(),true);
- await page.getByLabel('Сумма позиции 1',{exact:true}).fill('39.90');await page.getByRole('checkbox').check();
- await page.getByRole('button',{name:'Оставить только итог без покупок',exact:true}).click();assert.equal(await page.locator('.receipt-item').count(),0);assert.equal(await page.getByRole('checkbox').isChecked(),false);
+ await page.locator('.receipt-item-summary').click();await page.getByLabel('Сумма позиции 1',{exact:true}).fill('39.90');
+ await page.getByRole('button',{name:'Только итог',exact:true}).click();assert.equal(await page.locator('.receipt-item').count(),0);assert.equal(await page.getByRole('checkbox').isChecked(),false);
+ assert.equal(await page.locator('.receipt-omitted').isVisible(),true);assert.match(await page.locator('.receipt-omitted').innerText(),/Без списка покупок/);
+ assert.equal(await page.locator('.receipt-section-title').count(),0);await page.screenshot({path:'artifacts/receipt-check/total-only-390-dark.png'});
  assert.equal(await page.getByLabel('Итог чека',{exact:true}).inputValue(),'59.90','total-only mode preserves the independently verified total');
  await page.getByRole('checkbox').check();assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isEnabled(),true);
- await page.getByRole('button',{name:'Вернуть покупки для исправления',exact:true}).click();assert.equal(await page.locator('.receipt-item').count(),1);assert.equal(await page.getByRole('checkbox').isChecked(),false);
- await page.getByRole('checkbox').check();assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isDisabled(),true);assert.equal(await page.evaluate(()=>writes.length),1);
+ await page.getByRole('button',{name:'Вернуть покупки',exact:true}).click();assert.equal(await page.locator('.receipt-item').count(),1);assert.equal(await page.getByRole('checkbox').count(),0);
+ assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).count(),0);assert.equal(await page.evaluate(()=>writes.length),1);
+ for(const [language,label]of[['en','Review item'],['ro','Verifică produsul'],['zh-CN','核对商品']]){await page.evaluate(value=>setLanguage(value),language);assert.equal(await page.locator('.receipt-footer .receipt-primary').getAttribute('aria-label'),label);}
+ await page.evaluate(()=>setLanguage('ru'));
+ await page.getByRole('button',{name:'Закрыть чек',exact:true}).click();
+ await page.evaluate(()=>{receiptText='SHOP\nIDNO: 123\nPaine\n1 buc x 7.10 = 7.11 A\nBere\n2 buc x 23.95 = 39.90 A\nTOTAL LEI 47.01\n19-10-2026';});
+ await upload();await page.locator('.receipt-fields').waitFor();await page.getByRole('button',{name:'Проверить покупки',exact:true}).click();await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Цена за единицу 1');
+ await page.getByLabel('Сумма позиции 1',{exact:true}).fill('7.10');await page.getByRole('button',{name:'Проверить покупку',exact:true}).click();await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Цена за единицу 2');
+ await page.getByLabel('Цена за единицу 2',{exact:true}).fill('29.95');await page.locator('.receipt-footer').getByRole('button',{name:'Сверить итог',exact:true}).click();await page.getByLabel('Итог чека',{exact:true}).fill('67.00');
+ await page.getByRole('checkbox').check();assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isEnabled(),true);assert.equal(await page.evaluate(()=>writes.length),1);
  await page.getByRole('button',{name:'Закрыть чек',exact:true}).click();
  // Revoked access stops OCR even when the old UI still displays PRO.
  const previousOcr=await page.evaluate(()=>ocrCalls);await page.evaluate(()=>serverPro=false);await upload();await page.waitForFunction(()=>upgrades===2);assert.equal(await page.evaluate(()=>ocrCalls),previousOcr);
