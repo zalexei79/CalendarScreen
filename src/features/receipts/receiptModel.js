@@ -18,6 +18,21 @@ export function receiptLineTotal(quantity, unitPrice) {
   const result = (BigInt(price) * numerator + denominator / 2n) / denominator;
   return result < 100000000000000n ? moneyText(Number(result)) : '';
 }
+// Only read factors from the same printed equation; never derive them from a receipt total.
+export function receiptMath(value) {
+  const match = String(value).match(/(\d+(?:\s*[.,]\s*\d{1,3})?)\s*([\p{L}]{1,4}\.?)?\s*[xх×*]\s*(\d+(?:\s*[.,]\s*\d{1,2})?)\s*(?:[=:\-]\s*|\s+)(\d+(?:\s*[.,]\s*\d{1,2})?)(?![\d.,])[^\d]{0,12}$/iu);
+  if (!match) return null;
+  const quantity = match[1].replace(/\s/g,'').replace(',','.'), unitPrice = moneyText(receiptMoney(match[3])), printedTotal = moneyText(receiptMoney(match[4]));
+  const unit = /^(?:kg|кг)$/i.test(match[2] || '') ? 'kg' : /^(?:l|л)$/i.test(match[2] || '') ? 'l' : 'pcs';
+  const total = receiptLineTotal(quantity,unitPrice);
+  return {index:match.index,quantity,unit,unitPrice,printedTotal,total,consistent:Boolean(total && receiptMoney(total) === receiptMoney(printedTotal))};
+}
+export const looksLikeReceiptMath = value => /\d(?:[\d\s.,]*)(?:[\p{L}]{1,4}\.?\s*)?[xх×*]\s*\d/iu.test(value);
+export function receiptItemMathIssue(item) {
+  const calculated = receiptMoney(receiptLineTotal(item.quantity,item.unitPrice));
+  return !calculated || receiptMoney(item.total) !== calculated || (!item.priceReviewed && (item.mathUncertain || item.printedTotal !== undefined && receiptMoney(item.printedTotal) !== calculated));
+}
+export const receiptItemIssue = item => !validReceiptName(item.name) || receiptItemMathIssue(item);
 const totalLabel = /(?:\b(?:grand\s+total|total(?:ul)?(?:\s+(?:de\s+plata|lei))?|amount\s+due|all\s+price|suma\s+totala)\b|итого|всего|к\s+оплате|合计|总计|应付)/i;
 const excludedTotal = /sub\s*total|reduc|discount|econom|скид|сэконом|tva|vat|tax|ндс|brut|rest\b|change|cash|numerar|налич|сдач|card|карта|subtotal|小计|优惠|找零|税/i;
 const moneyTokens = line => [...line.matchAll(/(?<![\p{L}\d])\d+(?:[ \u00a0.,]\d{3})*[.,]\d{2}(?!\d)/gu)];
@@ -80,16 +95,16 @@ export function parseReceipt(rawText) {
     if (totalLabel.test(normalizedLine) && !excludedTotal.test(normalizedLine)) break;
     if (/^[>\s]*(?:sub\s*total\b|reduc\w*\b|discount\b|скидка|подытог|промежуточ|brut\b|numerar\b|cash\b|rest\b|change\b|小计|优惠|找零)/iu.test(normalizedLine)) { pending = []; continue; }
     if (/casier|cashier|idno|idnp|\binr\b|\btva\b|\bvat\b|str\.|s\.r\.l|\bbon\b|\btelefon\b|\btel\b/i.test(normalizedLine)) { pending = []; continue; }
-    const multiplication = line.match(/(\d+(?:[.,]\d{1,3})?)\s*([\p{L}]{1,4}\.?)?\s*[xх×*]\s*(\d+(?:[.,]\d{2}))\s*[=:\-]?\s*(\d+(?:[.,]\d{2}))(?!\d)[^\d]{0,12}$/iu);
+    const multiplication = receiptMath(line);
     const amounts = moneyTokens(line);
     const last = amounts.at(-1);
     if (multiplication || last && /^\s*[^\d]{0,12}$/i.test(line.slice(last.index + last[0].length))) {
       let name = multiplication ? line.slice(0, multiplication.index).trim() : line.slice(0, last.index).trim();
       name = cleanReceiptName(name);
       if (!validReceiptName(name) || /^\d+\s*(?:g|gr|kg|ml|l|г|кг)?$/i.test(name)) name = cleanReceiptName([...pending.filter(validReceiptName), /^\d+\s*(?:g|gr|kg|ml|l|г|кг)?$/i.test(name) ? name : ''].filter(Boolean).join(' '));
-      const amount = multiplication ? multiplication[4] : last[0];
-      const unit = /^(?:kg|кг)$/i.test(multiplication?.[2] || '') ? 'kg' : /^(?:l|л)$/i.test(multiplication?.[2] || '') ? 'l' : 'pcs';
-      if (receiptMoney(amount) > 0) items.push({name: validReceiptName(name) ? name.slice(0,180) : '', quantity: multiplication?.[1].replace(',','.') || '1', unit, unitPrice: multiplication ? moneyText(receiptMoney(multiplication[3])) : moneyText(receiptMoney(amount)), total: moneyText(receiptMoney(amount))});
+      const amount = multiplication ? multiplication.printedTotal : moneyText(receiptMoney(last[0]));
+      const quantity = multiplication?.quantity || '1', unit = multiplication?.unit || 'pcs', unitPrice = multiplication?.unitPrice || amount;
+      if (receiptMoney(amount) > 0) items.push({name: validReceiptName(name) ? name.slice(0,180) : '', quantity, unit, unitPrice, total:receiptLineTotal(quantity,unitPrice), printedTotal:amount, ...(!multiplication && looksLikeReceiptMath(line) ? {mathUncertain:true} : {})});
       pending = [];
     } else if (moneyTokens(line).length) pending = [];
     else if (/[\p{L}]/u.test(line) && !/\d{2}[:/-]\d{2}|^\s*\d{6,}/.test(line)) pending = [...pending.slice(-1), line];
@@ -98,9 +113,9 @@ export function parseReceipt(rawText) {
 }
 export function receiptValidation(draft, today, currencies) {
   const total = receiptMoney(draft.total);
-  const invalidItem = draft.items.some(item => !validReceiptName(item.name) || receiptMoney(item.total) === null || receiptMoney(item.total) <= 0 || !receiptLineTotal(item.quantity, item.unitPrice));
-  const sum = draft.items.reduce((value,item) => value + (receiptMoney(item.total) || 0), 0);
-  const lineMismatch = draft.items.some(item => receiptMoney(receiptLineTotal(item.quantity, item.unitPrice)) !== receiptMoney(item.total));
+  const invalidItem = draft.items.some(receiptItemIssue);
+  const sum = draft.items.reduce((value,item) => value + (receiptMoney(receiptLineTotal(item.quantity,item.unitPrice)) || 0), 0);
+  const lineMismatch = draft.items.some(receiptItemMathIssue);
   const mismatch = Boolean(draft.items.length && sum !== total);
   // The printed total is independent evidence, never proof that OCR item prices are correct.
   return { valid: total > 0 && currencies.includes(draft.currency) && validReceiptDate(draft.dateKey, today) && !invalidItem && !lineMismatch && !mismatch, total, sum, mismatch, lineMismatch };
@@ -109,6 +124,6 @@ export function receiptComment(draft,language='ru') {
   return [`🧾 ${draft.merchant.trim()}`, ...draft.items.map(item => {
     const product=receiptProduct(item.name,language,item.productType), original=item.name.trim();
     const label=product.type?`${product.symbol} ${product.title} [${original}]`:original;
-    return `${label} · ${item.quantity}${item.unit === 'kg' ? ' kg' : item.unit === 'l' ? ' l' : ''} × ${moneyText(receiptMoney(item.unitPrice))} = ${moneyText(receiptMoney(item.total))} ${draft.currency}`;
+    return `${label} · ${item.quantity}${item.unit === 'kg' ? ' kg' : item.unit === 'l' ? ' l' : ''} × ${moneyText(receiptMoney(item.unitPrice))} = ${receiptLineTotal(item.quantity,item.unitPrice)} ${draft.currency}`;
   })].join('\n');
 }

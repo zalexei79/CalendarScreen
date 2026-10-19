@@ -14,7 +14,7 @@ test('new readable receipt format round-trips originals, chosen types, weighted 
  const draft={merchant:'Shop',currency:'MDL',items:[{name:'XYZ special 400ml',productType:'shampoo',quantity:'2',unit:'pcs',unitPrice:'10.00',total:'20.00'},{name:'Mere',quantity:'0.125',unit:'kg',unitPrice:'10.20',total:'1.28'}]};
  const comment=receiptComment(draft,'ru');assert.match(comment,/🧾 Shop/);assert.match(comment,/Шампунь/);assert.doesNotMatch(comment,/\{"/);
  const restored=readSavedReceipt(comment,'MDL');assert.equal(restored.items[0].name,'XYZ special 400ml');assert.equal(restored.items[0].productType,'shampoo');assert.equal(restored.items[1].unit,'kg');assert.equal(restored.items[1].quantity,'0.125');assert.equal(receiptFingerprint(restored),receiptFingerprint(draft));
- const legacy=readSavedReceipt(legacyComment,'MDL');assert.equal(receiptFingerprint(readSavedReceipt(receiptComment(legacy),'MDL')),receiptFingerprint(legacy),'duplicate detection survives a format upgrade');
+ const legacy=readSavedReceipt(legacyComment.replace('2 × 23.95 = 39.90','2 × 29.95 = 59.90'),'MDL');assert.equal(receiptFingerprint(readSavedReceipt(receiptComment(legacy),'MDL')),receiptFingerprint(legacy),'duplicate detection survives a valid receipt format upgrade');
  assert.equal(readSavedReceipt(comment,'EUR'),null);
  assert.equal(receiptFromEntry({pnl:-25.50,currency:'MDL',comment:receiptComment({merchant:'Store',items:[],currency:'MDL'})}).total,'25.50');
 });

@@ -34,6 +34,7 @@ const rows = {
   checkTotal: ['Сверить итог','Check total','Verifică totalul','核对总额'],
   readAmount: ['Считано','Read amount','Sumă citită','识别金额'],
   calculated: ['По расчёту','Calculated','Calculat','计算金额'],
+  confirmCalculation: ['Расчёт верен','Calculation is correct','Calculul este corect','计算正确'],
   shortDifference: ['Расхождение','Difference','Diferență','差额'],
   difference: ['Разница с итогом чека','Difference from receipt total','Diferența față de total','与收据总额的差额'],
   original: ['Название на чеке','Name on receipt','Denumirea de pe bon','收据上的名称'],

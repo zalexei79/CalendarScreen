@@ -5,7 +5,7 @@ import { CURRENCIES, MONEY_CATEGORIES } from '../../shared/config/constants';
 import { localDateKey } from '../../shared/lib/voiceEntryReview.js';
 import { checkReceiptAccess } from './receiptAccess.js';
 import { recognizeReceipt } from './receiptOcr.js';
-import { parseReceipt, receiptLineTotal, receiptMoney, moneyText, receiptValidation, validReceiptDate, validReceiptName, receiptProduct, receiptCategory } from './receiptModel.js';
+import { parseReceipt, receiptLineTotal, receiptMoney, moneyText, receiptValidation, receiptItemIssue, receiptItemMathIssue, validReceiptDate, validReceiptName, receiptProduct, receiptCategory } from './receiptModel.js';
 import { receiptCopy } from './receiptCopy.js';
 import {readProductMemory,rememberProductType,recalledProductType} from './productMemory.js';
 import {productTypeById,productLocale} from './productCatalog.js';
@@ -49,7 +49,7 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
       if (row !== index) return item;
       const next = { ...item, [key]: value };
       if (key === 'name') next.productType=recalledProductType(productMemory,value);
-      if (key === 'quantity' || key === 'unitPrice') next.total = receiptLineTotal(next.quantity, next.unitPrice);
+      if (key === 'quantity' || key === 'unitPrice') { next.total = receiptLineTotal(next.quantity, next.unitPrice); next.priceReviewed = true; }
       return next;
     });
     update({ items });
@@ -89,10 +89,7 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
     }
   }
   const validation = draft ? receiptValidation(draft, today, CURRENCIES.map(item => item.code)) : null;
-  const itemIssues = draft ? draft.items.flatMap((item,index) => {
-    const expected = receiptMoney(receiptLineTotal(item.quantity,item.unitPrice)), amount = receiptMoney(item.total);
-    return !validReceiptName(item.name) || !expected || !amount || expected !== amount ? [index] : [];
-  }) : [];
+  const itemIssues = draft ? draft.items.flatMap((item,index) => receiptItemIssue(item) ? [index] : []) : [];
   const needsReview = Boolean(itemIssues.length || validation?.mismatch);
   function focusTotal() {
     const input = dialog.current?.querySelector('.receipt-total input');
@@ -158,19 +155,19 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
               {!omittedItems && <div className="receipt-section-title"><h3>{c.items} <small>{draft.items.length}</small></h3><button type="button" aria-label={c.add} onClick={() => { setEditingIndex(draft.items.length); update({items:[...draft.items,{name:'',quantity:'1',unit:'pcs',unitPrice:'',total:''}]}); }}><Plus size={18}/></button></div>}
               {!draft.items.length && !omittedItems && <p className="receipt-muted">{c.totalOnly}</p>}
               <div className="receipt-items">{draft.items.map((item,index) => {
-                const product = receiptProduct(item.name,language,item.productType), expected = receiptLineTotal(item.quantity,item.unitPrice), mismatch = receiptMoney(expected) !== receiptMoney(item.total), unknown = !validReceiptName(item.name);
+                const product = receiptProduct(item.name,language,item.productType), expected = receiptLineTotal(item.quantity,item.unitPrice), mismatch = receiptItemMathIssue(item), unknown = !validReceiptName(item.name);
                 const unit = c[item.unit] || c.pcs;
                 return <details className="receipt-item" data-issue={mismatch || unknown} key={index} open={editingIndex === index}>
                   <summary className="receipt-item-summary" aria-label={`${c.editItem} ${index+1}`} onClick={event => { event.preventDefault(); setEditingIndex(editingIndex === index ? -1 : index); }}>
                     <span className="receipt-item-icon" aria-hidden="true">{unknown ? <AlertCircle size={19}/> : product.symbol || <ShoppingBag size={18}/>}</span>
                     <span className="receipt-item-description"><strong>{product.title || c.unknownItem}</strong>{product.detail && <span className="receipt-product-size">{product.detail}</span>}<span className="receipt-item-calculation">{String(item.quantity).replace('.',numberLocale.startsWith('en')||numberLocale.startsWith('zh')?'.':',')} {unit} × {displayMoney(item.unitPrice)} {draft.currency}</span>{(unknown || mismatch) && <span className="receipt-item-status"><span aria-hidden="true"/>{unknown ? c.unknownItem : c.refinePrice}</span>}</span>
-                    <span className="receipt-item-amount">{mismatch && <small>{c.readAmount}</small>}<b>{displayMoney(item.total)}</b><small>{draft.currency}</small></span><ChevronDown size={14} className="receipt-item-chevron"/>
+                    <span className="receipt-item-amount"><b>{displayMoney(expected)}</b><small>{draft.currency}</small></span><ChevronDown size={14} className="receipt-item-chevron"/>
                   </summary>
                   <div className="receipt-item-editor">
                     <ProductTypePicker language={language} value={item.productType||product.type} onChange={id=>chooseProductType(index,id)}/>
                     <div className="receipt-item-name"><label className="receipt-field"><span>{c.name} {index+1}</span><input aria-label={`${c.name} ${index+1}`} aria-invalid={unknown || undefined} value={item.name} maxLength={180} onChange={event => updateItem(index,'name',event.target.value)}/></label><button type="button" aria-label={`${c.remove} ${index+1}`} onClick={() => { setEditingIndex(-1); update({items:draft.items.filter((_,row) => row !== index)}); }}><Trash2 size={17}/></button></div>
-                    <div className="receipt-item-numbers">{[['quantity',c.quantity],['unitPrice',c.price],['total',c.lineTotal]].map(([key,label]) => <label className="receipt-field" key={key}><span>{label}</span><input aria-label={`${label} ${index+1}`} aria-invalid={mismatch || undefined} aria-describedby={mismatch ? `receipt-price-check-${index}` : undefined} inputMode="decimal" value={item[key]} onChange={event => updateItem(index,key,event.target.value)}/></label>)}</div>
-                    {mismatch && <div className="receipt-price-check" id={`receipt-price-check-${index}`} role="status"><span>{c.readAmount}<b>{displayMoney(item.total)} <small>{draft.currency}</small></b></span><span aria-hidden="true">≠</span><span>{c.calculated}<b>{displayMoney(expected)} <small>{draft.currency}</small></b></span></div>}
+                    <div className="receipt-item-numbers">{[['quantity',c.quantity],['unitPrice',c.price],['total',c.lineTotal]].map(([key,label]) => <label className="receipt-field" key={key}><span>{label}</span><input aria-label={`${label} ${index+1}`} readOnly={key==='total'} title={key==='total'?c.calculated:undefined} aria-invalid={key!=='total'&&mismatch || undefined} aria-describedby={mismatch ? `receipt-price-check-${index}` : undefined} inputMode="decimal" value={key==='total'?expected:item[key]} onChange={event => {if(key!=='total')updateItem(index,key,event.target.value);}}/></label>)}</div>
+                    {mismatch && <><div className="receipt-price-check" id={`receipt-price-check-${index}`} role="status"><span>{c.readAmount}<b>{displayMoney(item.printedTotal??item.total)} <small>{draft.currency}</small></b></span><span aria-hidden="true">{receiptMoney(item.printedTotal??item.total)===receiptMoney(expected)?'=':'≠'}</span><span>{c.calculated}<b>{displayMoney(expected)} <small>{draft.currency}</small></b></span></div><button type="button" className="receipt-verify-math" disabled={!receiptMoney(expected)} onClick={()=>update({items:draft.items.map((row,number)=>number===index?{...row,total:expected,priceReviewed:true}:row)})}><Check size={14}/>{c.confirmCalculation}</button></>}
                     <label className="receipt-field receipt-unit-field"><span>{c.unit}</span><select aria-label={`${c.unit} ${index+1}`} value={item.unit || 'pcs'} onChange={event => updateItem(index,'unit',event.target.value)}>{['pcs','kg','l'].map(value => <option key={value} value={value}>{c[value]}</option>)}</select></label>
                   </div>
                 </details>;

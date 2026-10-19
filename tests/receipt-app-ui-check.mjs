@@ -39,7 +39,7 @@ try{
  assert.equal(positions.overflow,false);assert.ok(positions.distance<100&&positions.top<10,'photo is beside microphone');
  const png=await page.evaluate(()=>{
   const canvas=document.createElement('canvas');canvas.width=900;canvas.height=1250;const ctx=canvas.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,900,1250);ctx.fillStyle='black';ctx.font='30px monospace';
-  ['MAGAZIN TEST','IDNO: 1234567890123','','PAINE','1 buc x 7.10 = 7.10 A','','BERE','2 buc x 29.95 = 59.90 A','','TOTAL LEI 67.00','NUMERAR LEI 67.00','REST 0.00','','19-10-2026 19:16','BON FISCAL'].forEach((line,index)=>ctx.fillText(line,60,85+index*66));return canvas.toDataURL('image/png').split(',')[1];
+  ['MAGAZIN TEST','IDNO: 1234567890123','','PAINE','1 buc x 7.10 = 7.10 A','','BERE','2 buc x 23.95 = 39.90 A','','TOTAL LEI 67.00','NUMERAR LEI 67.00','REST 0.00','','19-10-2026 19:16','BON FISCAL'].forEach((line,index)=>ctx.fillText(line,60,85+index*66));return canvas.toDataURL('image/png').split(',')[1];
  });
  const choosing=page.waitForEvent('filechooser');await page.locator('.receipt-launch').click();
  await (await choosing).setFiles({name:'bon.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});
@@ -47,16 +47,16 @@ try{
  if(await page.locator('.receipt-warning[role="alert"]').count())throw new Error(await page.locator('.receipt-warning[role="alert"]').innerText());
  assert.equal(await page.getByLabel('Итог чека',{exact:true}).inputValue(),'67.00');assert.equal(await page.getByLabel('Валюта чека',{exact:true}).inputValue(),'MDL');assert.equal(await page.locator('.receipt-item').count(),2);
  assert.equal(writes.length,0,'OCR alone does not write');
- await page.locator('.receipt-item-summary').nth(1).click();await page.getByLabel('Сумма позиции 2',{exact:true}).fill('39.90');
  await page.getByRole('button',{name:'Проверить покупку',exact:true}).click();await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Цена за единицу 2');
  assert.equal(writes.length,0,'the primary correction action cannot save inconsistent values');assert.equal(await page.getByRole('checkbox').count(),0);assert.equal(await page.locator('.receipt-warning').count(),0);
- await page.getByLabel('Сумма позиции 2',{exact:true}).fill('59.90');await page.locator('.receipt-item-summary').nth(1).click();
+ assert.equal(await page.getByLabel('Сумма позиции 2',{exact:true}).evaluate(input=>input.readOnly),true);assert.equal(await page.getByLabel('Сумма позиции 2',{exact:true}).inputValue(),'47.90');
+ await page.getByLabel('Цена за единицу 2',{exact:true}).fill('29.95');assert.equal(await page.getByLabel('Сумма позиции 2',{exact:true}).inputValue(),'59.90');await page.locator('.receipt-item-summary').nth(1).click();
  await page.locator('.receipt-item-summary').first().click();await page.getByLabel('Название 1',{exact:true}).fill('Хлеб');await page.locator('.receipt-item-summary').first().click();await page.getByRole('checkbox').check();
  await page.screenshot({path:'artifacts/receipt-check/full-app-mobile.png'});
  await page.getByRole('button',{name:'Сохранить расход',exact:true}).click();await page.locator('.receipt-success').waitFor();
  assert.equal(writes.length,1);assert.equal(writes[0].pnl,-67);assert.equal(writes[0].currency,'MDL');assert.equal(writes[0].date_key,'2026-10-19');assert.equal(writes[0].user_id,storyUserId);assert.match(writes[0].comment,/Хлеб/);assert.match(writes[0].comment,/2 × 29.95 = 59.90 MDL/);
  await page.getByRole('button',{name:'Готово',exact:true}).click();
- await page.locator('.receipt-file').first().setInputFiles({name:'bon.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});await page.locator('.receipt-fields').waitFor({timeout:120000});await page.locator('.receipt-item-summary').first().click();await page.getByLabel('Название 1',{exact:true}).fill('Хлеб');await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Сохранить расход',exact:true}).click();await page.getByRole('alert').filter({hasText:'Похожий чек'}).waitFor();assert.equal(writes.length,1,'duplicate reimport is blocked');
+ await page.locator('.receipt-file').first().setInputFiles({name:'bon.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});await page.locator('.receipt-fields').waitFor({timeout:120000});await page.locator('.receipt-item-summary').nth(1).click();await page.getByLabel('Цена за единицу 2',{exact:true}).fill('29.95');await page.locator('.receipt-item-summary').first().click();await page.getByLabel('Название 1',{exact:true}).fill('Хлеб');await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Сохранить расход',exact:true}).click();await page.getByRole('alert').filter({hasText:'Похожий чек'}).waitFor();assert.equal(writes.length,1,'duplicate reimport is blocked');
  await page.getByRole('button',{name:'Закрыть чек',exact:true}).click();
  if(process.env.DAYRIS_RECEIPT_SAMPLE){
   await page.locator('.receipt-file').first().setInputFiles(process.env.DAYRIS_RECEIPT_SAMPLE);await page.locator('.receipt-fields').waitFor({timeout:120000});
@@ -72,18 +72,31 @@ try{
    assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).count(),0,'real OCR disagreements cannot be confirmed away');
    assert.equal(await page.getByRole('checkbox').count(),0);
   }
-  // Corrections come from the original photo, never from distributing the grand total.
+  // Every factor and result must now be recognized correctly without manual correction.
   for(const [index,quantity,price,total] of [[0,'2','29.95','59.90'],[1,'1','23.95','23.95'],[2,'1','15.95','15.95'],[3,'1','7.10','7.10'],[4,'1','44.95','44.95']]){
-   await page.locator('.receipt-item-summary').nth(index).click();
-   await page.getByLabel(`Количество ${index+1}`,{exact:true}).fill(quantity);
-   await page.getByLabel(`Цена за единицу ${index+1}`,{exact:true}).fill(price);
-   await page.getByLabel(`Сумма позиции ${index+1}`,{exact:true}).fill(total);
+   assert.equal(await page.getByLabel(`Количество ${index+1}`,{exact:true}).inputValue(),quantity);
+   assert.equal(await page.getByLabel(`Цена за единицу ${index+1}`,{exact:true}).inputValue(),price);
+   assert.equal(await page.getByLabel(`Сумма позиции ${index+1}`,{exact:true}).inputValue(),total);
   }
   assert.equal(await page.getByRole('checkbox').isChecked(),false);await page.getByRole('checkbox').check();
   assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isEnabled(),true);
   await page.getByRole('button',{name:'Сохранить расход',exact:true}).click();await page.locator('.receipt-success').waitFor();
   assert.equal(writes.length,2);assert.equal(writes[1].pnl,-151.85);assert.match(writes[1].comment,/2 × 29.95 = 59.90 MDL/);
-  console.log('REAL SAMPLE CORRECTIONS: five photo-verified rows reconcile to 151.85 MDL, mocked persistence only.');
+  console.log('REAL SAMPLE: all five factors and results recognized correctly without manual corrections; 151.85 MDL, mocked persistence only.');
+  await page.getByRole('button',{name:'Готово',exact:true}).click();
+ }
+ if(process.env.DAYRIS_RECEIPT_CROP){
+  await page.locator('.receipt-file').first().setInputFiles(process.env.DAYRIS_RECEIPT_CROP);await page.locator('.receipt-fields').waitFor({timeout:120000});
+  assert.equal(await page.getByLabel('Итог чека',{exact:true}).inputValue(),'151.85');assert.equal(await page.locator('.receipt-item').count(),5);
+  for(const [index,quantity,price,total] of [[0,'2','29.95','59.90'],[1,'1','23.95','23.95'],[2,'1','15.95','15.95'],[3,'1','7.10','7.10'],[4,'1','44.95','44.95']]){
+   assert.equal(await page.getByLabel(`Количество ${index+1}`,{exact:true}).inputValue(),quantity);assert.equal(await page.getByLabel(`Цена за единицу ${index+1}`,{exact:true}).inputValue(),price);assert.equal(await page.getByLabel(`Сумма позиции ${index+1}`,{exact:true}).inputValue(),total);
+  }
+  assert.equal(await page.locator('.receipt-item[data-issue="true"]').count(),0);
+  // This crop omits the date; metadata still requires explicit user input.
+  await page.getByLabel('Дата чека',{exact:true}).fill('2026-10-19');await page.getByLabel('Валюта чека',{exact:true}).selectOption('MDL');
+  if(await page.locator('.receipt-metadata').evaluate(el=>el.open))await page.locator('.receipt-metadata>summary').click();
+  await page.getByRole('checkbox').check();assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isEnabled(),true);
+  await page.screenshot({path:'artifacts/receipt-check/real-crop-mobile.png'});console.log('REAL CROP: all five factors and results recognized correctly without manual item corrections.');
  }
  await page.setViewportSize({width:1280,height:900});await page.screenshot({path:'artifacts/receipt-check/full-app-desktop.png'});
  assert.equal(requests.some(item=>item.method==='POST' && !item.url.includes('supabase.co') && !item.url.startsWith(origin)),false,'photo is never sent to an OCR service');

@@ -53,6 +53,8 @@ try {
  assert.match(await page.locator('.receipt-item-summary').innerText(),/Уточнить цену/);
  for(const width of [320,390,1280]){await page.setViewportSize({width,height:width===1280?900:844});for(const light of [false,true]){await page.evaluate(value=>setLight(value),light);assert.equal(await page.locator('.receipt-scroll').evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);await page.screenshot({path:`artifacts/receipt-check/arithmetic-block-${width}-${light?'light':'dark'}.png`});}}
  await page.getByRole('button',{name:'Проверить покупку',exact:true}).click();await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Цена за единицу 1');
+ assert.equal(await page.getByLabel('Сумма позиции 1',{exact:true}).evaluate(input=>input.readOnly),true,'the result is calculated, never an independent editable factor');
+ assert.equal(await page.getByLabel('Сумма позиции 1',{exact:true}).inputValue(),'47.90');
  assert.match(await page.locator('.receipt-price-check').innerText(),/Считано\s*39,90 MDL\s*≠\s*По расчёту\s*47,90 MDL/);assert.equal(await page.evaluate(()=>writes.length),1);
  await page.setViewportSize({width:390,height:844});await page.evaluate(()=>setLight(false));await page.screenshot({path:'artifacts/receipt-check/arithmetic-editor-390-dark.png'});
  await page.getByLabel('Цена за единицу 1',{exact:true}).fill('29.95');
@@ -61,7 +63,7 @@ try {
  await page.locator('.receipt-item-summary').click();await page.locator('.receipt-scroll').evaluate(el=>el.scrollTop=0);await page.screenshot({path:'artifacts/receipt-check/reconciliation-390-dark.png'});
  await page.locator('.receipt-footer').getByRole('button',{name:'Сверить итог',exact:true}).click();assert.equal(await page.getByLabel('Итог чека',{exact:true}).evaluate(el=>el===document.activeElement),true);
  await page.getByLabel('Итог чека',{exact:true}).fill('59.90');await page.getByRole('checkbox').check();assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isEnabled(),true);
- await page.locator('.receipt-item-summary').click();await page.getByLabel('Сумма позиции 1',{exact:true}).fill('39.90');
+ await page.getByRole('button',{name:'Закрыть чек',exact:true}).click();await upload();await page.locator('.receipt-fields').waitFor();await page.getByLabel('Итог чека',{exact:true}).fill('59.90');
  await page.getByRole('button',{name:'Только итог',exact:true}).click();assert.equal(await page.locator('.receipt-item').count(),0);assert.equal(await page.getByRole('checkbox').isChecked(),false);
  assert.equal(await page.locator('.receipt-omitted').isVisible(),true);assert.match(await page.locator('.receipt-omitted').innerText(),/Без списка покупок/);
  assert.equal(await page.locator('.receipt-section-title').count(),0);await page.screenshot({path:'artifacts/receipt-check/total-only-390-dark.png'});
@@ -74,7 +76,7 @@ try {
  await page.getByRole('button',{name:'Закрыть чек',exact:true}).click();
  await page.evaluate(()=>{receiptText='SHOP\nIDNO: 123\nPaine\n1 buc x 7.10 = 7.11 A\nBere\n2 buc x 23.95 = 39.90 A\nTOTAL LEI 47.01\n19-10-2026';});
  await upload();await page.locator('.receipt-fields').waitFor();await page.getByRole('button',{name:'Проверить покупки',exact:true}).click();await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Цена за единицу 1');
- await page.getByLabel('Сумма позиции 1',{exact:true}).fill('7.10');await page.getByRole('button',{name:'Проверить покупку',exact:true}).click();await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Цена за единицу 2');
+ await page.getByRole('button',{name:'Расчёт верен',exact:true}).click();await page.getByRole('button',{name:'Проверить покупку',exact:true}).click();await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Цена за единицу 2');
  await page.getByLabel('Цена за единицу 2',{exact:true}).fill('29.95');await page.locator('.receipt-footer').getByRole('button',{name:'Сверить итог',exact:true}).click();await page.getByLabel('Итог чека',{exact:true}).fill('67.00');
  await page.getByRole('checkbox').check();assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isEnabled(),true);assert.equal(await page.evaluate(()=>writes.length),1);
  await page.getByRole('button',{name:'Закрыть чек',exact:true}).click();
