@@ -1,5 +1,6 @@
+import {classifyProduct,presentProduct,normalizeProductText} from './productCatalog.js';
 // Receipt arithmetic uses minor units; OCR output never writes a calendar entry.
-export const normalizeReceiptText = value => String(value || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+export const normalizeReceiptText = normalizeProductText;
 export function receiptMoney(value) {
   const text = String(value ?? '').trim().replace(/[\s\u00a0']/g, '');
   if (!/^\d+(?:[.,]\d{3})*(?:[.,]\d{1,2})?$/.test(text)) return null;
@@ -30,48 +31,15 @@ export function validReceiptName(value) {
   const words = text.replace(/[\d.,=:%+*×х|\\-]/g,' ').split(/\s+/).filter(Boolean);
   return words.some(word => (word.length > 1 || /\p{Script=Han}/u.test(word)) && /[\p{L}]/u.test(word) && !/^(?:buc|duc|бис|pcs|pc|шт|kg|кг|gr|g|ml|l|x|a|b|c)$/i.test(word));
 }
-const productNames = [
-  [/\b(?:bere|beer)\b|пиво|啤酒/iu, ['Пиво','Beer','Bere','啤酒']],
-  [/\b(?:paine|piine|bread)\b|хлеб|батон|面包/iu, ['Хлеб','Bread','Pâine','面包']],
-  [/\b(?:ansoa|anchov\w*)\b|анчоус/iu, ['Анчоусы','Anchovies','Anșoa','凤尾鱼']],
-  [/\b(?:arahide|peanuts?)\b|арахис/iu, ['Арахис','Peanuts','Arahide','花生']],
-  [/\b(?:vobla)\b|вобла/iu, ['Вяленая вобла','Dried roach','Voblă uscată','风干鱼']],
-  [/\b(?:lapte|milk)\b|молоко|牛奶/iu, ['Молоко','Milk','Lapte','牛奶']],
-  [/\b(?:cafea|coffee)\b|кофе|咖啡/iu, ['Кофе','Coffee','Cafea','咖啡']],
-  [/\b(?:oua|eggs?)\b|яйц|鸡蛋/iu, ['Яйца','Eggs','Ouă','鸡蛋']],
-  [/\b(?:branza|cascaval|cheese)\b|сыр|奶酪/iu, ['Сыр','Cheese','Brânză','奶酪']],
-  [/\b(?:apa|water)\b|вода|饮用水/iu, ['Вода','Water','Apă','饮用水']],
-  [/\b(?:orez|rice)\b|\bрис\b|大米/iu, ['Рис','Rice','Orez','大米']],
-  [/\b(?:ciocolata|chocolate)\b|шоколад|巧克力/iu, ['Шоколад','Chocolate','Ciocolată','巧克力']],
-  [/\b(?:zahar|sugar)\b|сахар|白糖/iu, ['Сахар','Sugar','Zahăr','白糖']],
-  [/\b(?:carne|meat)\b|мясо|肉/iu, ['Мясо','Meat','Carne','肉']],
-  [/\b(?:peste|fish)\b|рыба|鱼/iu, ['Рыба','Fish','Pește','鱼']],
-];
-export function receiptProduct(value, language = 'ru') {
-  const original = cleanReceiptName(value), normalized = normalizeReceiptText(original);
-  if (!validReceiptName(original)) return { title:'', detail:'', original };
-  const matched = productNames.find(([pattern]) => pattern.test(normalized));
-  if (!matched) return { title:original, detail:'', original };
-  const locale = String(language).startsWith('zh') ? 3 : ['md','ro'].includes(language) ? 2 : language === 'en' ? 1 : 0;
-  const first = original.split(' ')[0];
-  const brand = /^[\p{L}][\p{L}\d-]{2,23}$/u.test(first) && !matched[0].test(normalizeReceiptText(first)) && !/^(?:snack|fresh|bio)$/i.test(first) ? first : '';
-  // Only show clearly printed pack sizes; do not turn OCR's "900" into "90 g".
-  const size = original.match(/\b\d+(?:[.,]\d+)?\s*(?:kg|кг|ml|мл|g|г|l|л)\b/iu)?.[0] || '';
-  const symbol = ['🍺','🍞','🐟','🥜','🐟','🥛','☕','🥚','🧀','💧','🍚','🍫','🍬','🥩','🐟'][productNames.indexOf(matched)];
-  return { title:[matched[1][locale],brand].filter(Boolean).join(' '), detail:size, original, symbol };
+export function receiptProduct(value, language = 'ru', preferredType = '') {
+  if (!validReceiptName(value)) return {title:'',detail:'',original:cleanReceiptName(value),symbol:'',type:'',category:'Другое'};
+  return presentProduct(value,language,preferredType);
 }
-const vocabulary = {
-  'Продукты': ['paine','piine','хлеб','батон','bread','面包','lapte','молоко','milk','牛奶','oua','яйц','eggs','carne','мясо','meat','peste','рыба','fish','vobla','ansoa','arahide','bere','пиво','beer','啤酒','fruct','овощ','фрукт','legume','apa','вода','water','branza','сыр','cheese','cafea','кофе','coffee','orez','рис','rice','paste','макарон','pasta','zahar','сахар','sugar','ulei','масло','oil','snack','ciocolat','шоколад','chocolate','食品'],
-  'Здоровье': ['medicament','лекарств','medicine','paracetamol','ibuprofen','farmaci','аптек','pharmacy','药'],
-  'Транспорт': ['benzina','motorina','бензин','дизель','diesel','petrol','fuel','汽油'],
-  'Сигареты': ['tigari','tutun','сигарет','табак','cigarette','tobacco','香烟'],
-  'Покупки': ['detergent','sapun','шампун','мыло','soap','shampoo','haine','одежд','clothing','洗发','洗衣'],
-};
-export function receiptCategory(names) {
-  const text = normalizeReceiptText(names);
-  const scores = Object.entries(vocabulary).map(([category, words]) => [category, words.filter(word => text.includes(word)).length]);
-  scores.sort((a, b) => b[1] - a[1]);
-  return scores[0][1] ? scores[0][0] : 'Другое';
+export function receiptCategory(value) {
+  const items=Array.isArray(value)?value:String(value||'').split(/\n/).map(name=>({name}));
+  const scores=new Map();
+  for(const item of items){const type=classifyProduct(item.name,item.productType);if(!type)continue;const weight=Array.isArray(value)?Math.max(1,receiptMoney(item.total)||0):1;scores.set(type.category,(scores.get(type.category)||0)+weight);}
+  return [...scores].sort((a,b)=>b[1]-a[1])[0]?.[0]||'Другое';
 }
 export function validReceiptDate(value, today) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return false;
@@ -126,7 +94,7 @@ export function parseReceipt(rawText) {
     } else if (moneyTokens(line).length) pending = [];
     else if (/[\p{L}]/u.test(line) && !/\d{2}[:/-]\d{2}|^\s*\d{6,}/.test(line)) pending = [...pending.slice(-1), line];
   }
-  return {merchant: lines.find(line => /[\p{L}]/u.test(line))?.slice(0,120) || '', dateKey, currency: explicitCurrencies.length === 1 ? explicitCurrencies[0] : '', total, items, category: receiptCategory(items.map(item => item.name).join(' ')), evidence: total ? candidates.find(item => item.amount === unique[0])?.evidence || '' : '', rawText: String(rawText || '').slice(0,40000), ambiguousTotal: unique.length > 1};
+  return {merchant: lines.find(line => /[\p{L}]/u.test(line))?.slice(0,120) || '', dateKey, currency: explicitCurrencies.length === 1 ? explicitCurrencies[0] : '', total, items, category: receiptCategory(items), evidence: total ? candidates.find(item => item.amount === unique[0])?.evidence || '' : '', rawText: String(rawText || '').slice(0,40000), ambiguousTotal: unique.length > 1};
 }
 export function receiptValidation(draft, today, currencies) {
   const total = receiptMoney(draft.total);
@@ -135,6 +103,10 @@ export function receiptValidation(draft, today, currencies) {
   const lineMismatch = draft.items.some(item => receiptMoney(receiptLineTotal(item.quantity, item.unitPrice)) !== receiptMoney(item.total));
   return { valid: total > 0 && currencies.includes(draft.currency) && validReceiptDate(draft.dateKey, today) && !invalidItem, total, sum, mismatch: Boolean(draft.items.length && sum !== total), lineMismatch };
 }
-export function receiptComment(draft) {
-  return [draft.merchant.trim(), ...draft.items.map(item => `${item.name.trim()} · ${item.quantity}${item.unit === 'kg' ? ' kg' : item.unit === 'l' ? ' l' : ''} × ${moneyText(receiptMoney(item.unitPrice))} = ${moneyText(receiptMoney(item.total))} ${draft.currency}`)].filter(Boolean).join('\n');
+export function receiptComment(draft,language='ru') {
+  return [`🧾 ${draft.merchant.trim()}`, ...draft.items.map(item => {
+    const product=receiptProduct(item.name,language,item.productType), original=item.name.trim();
+    const label=product.type?`${product.symbol} ${product.title} [${original}]`:original;
+    return `${label} · ${item.quantity}${item.unit === 'kg' ? ' kg' : item.unit === 'l' ? ' l' : ''} × ${moneyText(receiptMoney(item.unitPrice))} = ${moneyText(receiptMoney(item.total))} ${draft.currency}`;
+  })].join('\n');
 }

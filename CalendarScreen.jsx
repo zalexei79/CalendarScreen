@@ -96,6 +96,8 @@ import CalendarVoiceButton from './src/shared/ui/CalendarVoiceButton.jsx';
 import ReceiptCapture from './src/features/receipts/ReceiptCapture.jsx';
 import { checkReceiptAccess } from './src/features/receipts/receiptAccess.js';
 import { receiptValidation, receiptComment, moneyText } from './src/features/receipts/receiptModel.js';
+import {receiptFromEntry,readSavedReceipt,receiptFingerprint} from './src/features/receipts/receiptHistory.js';
+import ReceiptHistoryCard from './src/features/receipts/ReceiptHistoryCard.jsx';
 import useVoiceLaunch from './src/shared/ui/useVoiceLaunch.js';
 import AndroidWidgetPairing from './src/shared/ui/AndroidWidgetPairing.jsx';
 import {financialQueryResult, financialRecordKey, resolveFinancialQueryCategory} from './src/shared/lib/financialVoiceQuery.js';
@@ -2854,10 +2856,15 @@ export default function CalendarScreen() {
     if (saveInFlightRef.current) throw new Error(t('saving'));
     const checked = receiptValidation(draft, todayKey, CURRENCIES.map(item => item.code));
     if (!checked.valid || draft.items.length > 200 || !MONEY_CATEGORIES.some(item => item.key === draft.category && item.type !== 'plus')) throw new Error(t('entrySaveFailed'));
-    const comment = receiptComment(draft);
+    const comment = receiptComment(draft,language);
     if (comment.length > 50000) throw new Error(t('entrySaveFailed'));
     const day = receiptOwner.current.trades[draft.dateKey] || [];
-    if (comment && day.some(item => item.comment === comment && item.currency === draft.currency && Number(item.pnl) === -checked.total / 100 && item.platform === 'Manual')) throw new Error('RECEIPT_DUPLICATE');
+    const receiptId=receiptFingerprint(draft);
+    if (day.some(item => {
+      if(item.currency!==draft.currency||Number(item.pnl)!==-checked.total/100||item.platform!=='Manual')return false;
+      const stored=readSavedReceipt(item.comment,item.currency);
+      return item.comment===comment||stored&&receiptFingerprint(stored)===receiptId;
+    })) throw new Error('RECEIPT_DUPLICATE');
     const previousTotal = day.filter(item => !isSavingsTradingRecord(item) && item.currency === draft.currency && Number(item.pnl) < 0).reduce((sum,item) => sum + Math.round(Math.abs(Number(item.pnl)) * 100), 0);
     saveInFlightRef.current = true;
     try {
@@ -5018,7 +5025,9 @@ export default function CalendarScreen() {
 
           {selectedDayTrades.length > 0 ? (
             <div className={`rounded-lg border divide-y ${isLight ? 'border-zinc-300 bg-zinc-50 divide-zinc-200' : 'border-zinc-800 bg-zinc-900 divide-zinc-800'}`}>
-              {selectedDayTrades.map((trade) => (
+              {selectedDayTrades.map((trade) => {
+                const receipt=receiptFromEntry(trade);
+                return receipt?<ReceiptHistoryCard key={trade.id} entry={trade} receipt={receipt} language={language} isLight={isLight} showDate={false} onEdit={demoMode?undefined:()=>openModal(trade)} onDelete={demoMode?undefined:()=>handleDeleteTrade(trade.dateKey,trade.id)}/>:(
                 <div key={trade.id} className="px-4 py-3 group">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-4 min-w-0 flex-wrap">
@@ -5064,7 +5073,7 @@ export default function CalendarScreen() {
                   </div>
                   {trade.comment && <p className={`text-xs mt-1.5 pl-16 leading-relaxed ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{trade.comment}</p>}
                 </div>
-              ))}
+              );})}
             </div>
           ) : plansForDay(selectedKey).length === 0 ? (
             <div className="flex items-center justify-center py-16">
@@ -5725,10 +5734,11 @@ export default function CalendarScreen() {
                     }`}>
                       {historyTrades.map((entry, index) => {
                         const Icon = getHistoryCategoryIcon(entry.instrument);
+                        const receipt=receiptFromEntry(entry);
                         return (
                           <React.Fragment key={entry.id}>
                           {isFinancialPro && (index === 0 || historyTrades[index - 1].dateKey !== entry.dateKey) && <h4 className="financial-record-date">{formatDateLabel(entry.dateKey)}</h4>}
-                          <button
+                          {receipt?<ReceiptHistoryCard entry={entry} receipt={receipt} language={language} isLight={isLight} previewLimit={3} showDate={!isFinancialPro} onEdit={demoMode?undefined:()=>editTradeFromHistory(entry)}/>:<button
                             onClick={() => editTradeFromHistory(entry)}
                             aria-label={demoMode ? `${entry.instrument} · ${entry.comment}` : t('editRecord')}
                             className={`${isFinancialPro ? 'financial-record-row' : ''} group w-full min-h-[64px] px-3.5 py-3 flex items-center gap-3 text-left border-b last:border-b-0 transition-colors ${
@@ -5758,7 +5768,7 @@ export default function CalendarScreen() {
                                 {demoMode ? <ArrowRight className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
                               </span>
                             </span>
-                          </button>
+                          </button>}
                           </React.Fragment>
                         );
                       })}
@@ -6459,7 +6469,9 @@ export default function CalendarScreen() {
                     <div className={`rounded-2xl border overflow-hidden divide-y ${
                       isLight ? 'border-zinc-200 bg-white divide-zinc-100' : 'border-zinc-800 bg-zinc-950 divide-zinc-800/70'
                     }`}>
-                      {historyTrades.map((trade) => (
+                      {historyTrades.map((trade) => {
+                        const receipt=receiptFromEntry(trade);
+                        return receipt?<ReceiptHistoryCard key={trade.id} entry={trade} receipt={receipt} language={language} isLight={isLight} previewLimit={3} onEdit={()=>jumpToTradeDate(trade.dateKey)}/>:(
                         <button
                           key={trade.id}
                           onClick={() => jumpToTradeDate(trade.dateKey)}
@@ -6489,7 +6501,7 @@ export default function CalendarScreen() {
                             {formatPnlDisplay(trade.pnl)}
                           </span>
                         </button>
-                      ))}
+                      );})}
                     </div>
                   ) : (
                     <div className={`rounded-2xl border border-dashed px-6 py-14 text-center ${

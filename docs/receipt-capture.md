@@ -12,6 +12,21 @@ quantity, unit, price and line total. Broken calculation fragments cannot pass a
 product names. Unknown names require correction/removal. Each conflicting row is
 marked; the difference between item sums and the receipt total is shown explicitly.
 
+Product types are separate from accounting categories. The shared catalog contains
+93 stable types with Russian, Romanian, English and Chinese aliases/icons. Unknown
+products retain their name and a generic icon; they never create calendar
+categories. The searchable type picker can correct a match. Exact-name corrections
+are stored for that account on the current device (maximum 1,000 aliases), with an
+option to return to automatic detection. They do not sync between devices.
+
+New comments have a readable receipt header and readable item labels, retaining
+the original recognized names in brackets. There is no hidden JSON payload. Day
+history and global history render receipt cards from these lines and also from
+legacy receipt comments. Ordinary notes remain text. Historic totals are never
+recomputed from OCR rows. A mismatch is displayed without changing ledger values.
+Canonical original-name fingerprints keep duplicate detection working across
+old/new comment formats and display languages. General entry editing is preserved.
+
 Tesseract.js runs locally. Build/dev preparation copies the pinned language
 packages (English, Romanian, Russian, simplified Chinese) and engine from npm
 dependencies into ignored `public/receipt-ocr/v1`. No OCR API key or third-party
@@ -40,9 +55,11 @@ date in that currency, excluding income and trading-platform records.
 
 ```
 node --test tests/receipt-model.test.mjs
+node --test tests/receipt-history.test.mjs
 node tests/receipt-ui-check.mjs
 npm run build
 node tests/receipt-app-ui-check.mjs
+node tests/receipt-history-app-ui-check.mjs
 git diff --check
 ```
 

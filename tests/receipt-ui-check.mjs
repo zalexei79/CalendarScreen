@@ -49,5 +49,11 @@ try {
  await page.evaluate(()=>{delay=false;receiptText='TOTAL 25.50';});await upload();await page.locator('.receipt-fields').waitFor();assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isDisabled(),true);
  await page.getByLabel('Дата чека',{exact:true}).fill('2026-10-19');await page.getByLabel('Валюта чека',{exact:true}).selectOption('MDL');await page.getByRole('checkbox').check();assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isEnabled(),true,'manual total-only fallback');
  for(const [language,title]of[['en','Receipt to calendar'],['ro','Bon în calendar'],['zh-CN','收据记入日历']]){await page.evaluate(value=>setLanguage(value),language);assert.equal(await page.locator('#receipt-title').innerText(),title);}
+ await page.evaluate(()=>setLanguage('ru'));await page.getByRole('button',{name:'Закрыть чек',exact:true}).click();
+ await page.evaluate(()=>{receiptText='SHOP\nIDNO: 123\nXYZ special 400ml\n1 buc x 35.00 = 35.00 A\nTOTAL LEI 35.00\n19-10-2026';});
+ await upload();await page.locator('.receipt-fields').waitFor();await page.locator('.receipt-item-summary').first().click();await page.locator('.receipt-type-picker>summary').click();await page.getByRole('searchbox',{name:'Найти тип товара',exact:true}).fill('шампунь');await page.locator('.receipt-type-options').getByRole('button',{name:/Шампунь/}).click();
+ assert.match(await page.locator('.receipt-item-summary').first().innerText(),/Шампунь/);assert.equal(await page.getByLabel('Категория расхода',{exact:true}).inputValue(),'Покупки');
+ await page.getByRole('button',{name:'Закрыть чек',exact:true}).click();await upload();await page.locator('.receipt-fields').waitFor();assert.match(await page.locator('.receipt-item-summary').first().innerText(),/Шампунь/,'correction is reused');
+ await page.evaluate(()=>setOwner('owner-c'));await upload();await page.locator('.receipt-fields').waitFor();assert.match(await page.locator('.receipt-item-summary').first().innerText(),/XYZ special/,'another account does not inherit the correction');
  assert.deepEqual(errors,[]);console.log('PASS: receipt editing, exact arithmetic, confirmation reset, one save, server revocation, cancellation, account isolation, total-only fallback, four locales and 320/390/1280 light/dark layouts.');
 } finally {await browser.close();}

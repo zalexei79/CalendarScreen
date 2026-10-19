@@ -5,8 +5,11 @@ import { CURRENCIES, MONEY_CATEGORIES } from '../../shared/config/constants';
 import { localDateKey } from '../../shared/lib/voiceEntryReview.js';
 import { checkReceiptAccess } from './receiptAccess.js';
 import { recognizeReceipt } from './receiptOcr.js';
-import { parseReceipt, receiptLineTotal, receiptMoney, moneyText, receiptValidation, validReceiptDate, validReceiptName, receiptProduct } from './receiptModel.js';
+import { parseReceipt, receiptLineTotal, receiptMoney, moneyText, receiptValidation, validReceiptDate, validReceiptName, receiptProduct, receiptCategory } from './receiptModel.js';
 import { receiptCopy } from './receiptCopy.js';
+import {readProductMemory,rememberProductType,recalledProductType} from './productMemory.js';
+import {productTypeById,productLocale} from './productCatalog.js';
+import ProductTypePicker from './ProductTypePicker.jsx';
 import './ReceiptCapture.css';
 
 export default function ReceiptCapture({ userId, proActive, proLoading, language = 'ru', isLight, onUpgrade, onSaveReceipt, checkAccess = checkReceiptAccess, recognize = recognizeReceipt }) {
@@ -14,10 +17,11 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
   const [open, setOpen] = useState(false), [draft, setDraft] = useState(null), [preview, setPreview] = useState('');
   const [phase, setPhase] = useState('idle'), [progress, setProgress] = useState(0), [error, setError] = useState(''), [confirmed, setConfirmed] = useState(false), [saved, setSaved] = useState(null);
   const [editingIndex, setEditingIndex] = useState(-1), [metadataOpen, setMetadataOpen] = useState(false);
+  const [productMemory,setProductMemory]=useState(()=>readProductMemory(userId));
   const gallery = useRef(null), camera = useRef(null), dialog = useRef(null), trigger = useRef(null), generation = useRef(0), abort = useRef(null), busySave = useRef(false), mounted = useRef(false), currentOwner = useRef(userId);
   currentOwner.current = userId;
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; generation.current++; abort.current?.abort(); }; }, []);
-  useEffect(() => { generation.current++; abort.current?.abort(); setOpen(false); setDraft(null); setPreview(''); setSaved(null); setError(''); setPhase('idle'); setConfirmed(false); }, [userId]);
+  useEffect(() => { generation.current++; abort.current?.abort(); setOpen(false); setDraft(null); setPreview(''); setSaved(null); setError(''); setPhase('idle'); setConfirmed(false); setProductMemory(readProductMemory(userId)); }, [userId]);
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
   useEffect(() => {
     if (open && dialog.current && !dialog.current.open) { dialog.current.showModal(); dialog.current.querySelector('#receipt-title')?.focus({preventScroll:true}); }
@@ -33,6 +37,9 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
   function update(next) { setDraft(previous => ({ ...previous, ...next })); setConfirmed(false); setError(''); }
   function review(text) {
     const parsed = parseReceipt(text);
+    const memory=readProductMemory(userId);setProductMemory(memory);
+    parsed.items=parsed.items.map(item=>({...item,productType:recalledProductType(memory,item.name)}));
+    parsed.category=receiptCategory(parsed.items);
     setDraft(parsed); setEditingIndex(-1); setConfirmed(false);
     setMetadataOpen(!validReceiptDate(parsed.dateKey,today) || !CURRENCIES.some(item => item.code === parsed.currency));
   }
@@ -40,10 +47,17 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
     const items = draft.items.map((item, row) => {
       if (row !== index) return item;
       const next = { ...item, [key]: value };
+      if (key === 'name') next.productType=recalledProductType(productMemory,value);
       if (key === 'quantity' || key === 'unitPrice') next.total = receiptLineTotal(next.quantity, next.unitPrice);
       return next;
     });
     update({ items });
+  }
+  function chooseProductType(index,id){
+    const type=productTypeById(id),original=draft.items[index].name;
+    if(validReceiptName(original))setProductMemory(rememberProductType(userId,original,id));
+    const items=draft.items.map((item,row)=>row===index?{...item,productType:type?.id||'',name:validReceiptName(item.name)||!type?item.name:type.labels[productLocale(language)]}:item);
+    update({items,...(draft.category===receiptCategory(draft.items)?{category:receiptCategory(items)}:{})});
   }
   async function selectFile(event) {
     const file = event.target.files?.[0]; event.target.value = '';
@@ -117,7 +131,7 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
               <div className="receipt-section-title"><div><h3>{c.items} <small>{draft.items.length}</small></h3><p>{c.editHint}</p></div><button type="button" aria-label={c.add} onClick={() => { setEditingIndex(draft.items.length); update({items:[...draft.items,{name:'',quantity:'1',unit:'pcs',unitPrice:'',total:''}]}); }}><Plus size={18}/></button></div>
               {!draft.items.length && <p className="receipt-muted">{c.totalOnly}</p>}
               <div className="receipt-items">{draft.items.map((item,index) => {
-                const product = receiptProduct(item.name,language), expected = receiptLineTotal(item.quantity,item.unitPrice), mismatch = receiptMoney(expected) !== receiptMoney(item.total), unknown = !validReceiptName(item.name);
+                const product = receiptProduct(item.name,language,item.productType), expected = receiptLineTotal(item.quantity,item.unitPrice), mismatch = receiptMoney(expected) !== receiptMoney(item.total), unknown = !validReceiptName(item.name);
                 const unit = c[item.unit] || c.pcs;
                 return <details className="receipt-item" data-issue={mismatch || unknown} key={index} open={editingIndex === index}>
                   <summary className="receipt-item-summary" aria-label={`${c.editItem} ${index+1}`} onClick={event => { event.preventDefault(); setEditingIndex(editingIndex === index ? -1 : index); }}>
@@ -126,6 +140,7 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
                     <span className="receipt-item-amount"><b>{displayMoney(item.total)}</b><small>{draft.currency}</small></span><ChevronDown size={14} className="receipt-item-chevron"/>
                   </summary>
                   <div className="receipt-item-editor">
+                    <ProductTypePicker language={language} value={item.productType||product.type} onChange={id=>chooseProductType(index,id)}/>
                     <div className="receipt-item-name"><label className="receipt-field"><span>{c.name} {index+1}</span><input aria-label={`${c.name} ${index+1}`} value={item.name} maxLength={180} onChange={event => updateItem(index,'name',event.target.value)}/></label><button type="button" aria-label={`${c.remove} ${index+1}`} onClick={() => { setEditingIndex(-1); update({items:draft.items.filter((_,row) => row !== index)}); }}><Trash2 size={17}/></button></div>
                     <div className="receipt-item-numbers">{[['quantity',c.quantity],['unitPrice',c.price],['total',c.lineTotal]].map(([key,label]) => <label className="receipt-field" key={key}><span>{label}</span><input aria-label={`${label} ${index+1}`} inputMode="decimal" value={item[key]} onChange={event => updateItem(index,key,event.target.value)}/></label>)}</div>
                     <label className="receipt-field receipt-unit-field"><span>{c.unit}</span><select aria-label={`${c.unit} ${index+1}`} value={item.unit || 'pcs'} onChange={event => updateItem(index,'unit',event.target.value)}>{['pcs','kg','l'].map(value => <option key={value} value={value}>{c[value]}</option>)}</select></label>
