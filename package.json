@@ -4,18 +4,23 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "predev": "node scripts/build-project-catalog.mjs",
+    "predev": "node scripts/build-receipt-ocr.mjs && node scripts/build-project-catalog.mjs",
     "dev": "vite",
-    "build": "node scripts/check-design.mjs && node scripts/check-extensions.mjs && node scripts/build-widget-voice-core.mjs && node scripts/build-project-catalog.mjs && vite build",
+    "build": "node scripts/check-design.mjs && node scripts/check-extensions.mjs && node scripts/build-receipt-ocr.mjs && node scripts/build-widget-voice-core.mjs && node scripts/build-project-catalog.mjs && vite build",
     "project:map": "node scripts/build-project-catalog.mjs",
     "project:desk": "node scripts/project-desk-server.mjs",
     "build:widget-core": "node scripts/build-widget-voice-core.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",
+    "@tesseract.js-data/chi_sim": "1.0.0",
+    "@tesseract.js-data/eng": "1.0.0",
+    "@tesseract.js-data/ron": "1.0.0",
+    "@tesseract.js-data/rus": "1.0.0",
     "lucide-react": "^1.28.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "tesseract.js": "6.0.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",

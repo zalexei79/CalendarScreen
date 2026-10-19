@@ -93,6 +93,9 @@ import CalendarGrid from './CalendarGrid';
 import MonthlyGoal from './MonthlyGoal';
 import AmountKeypad, {AmountInput} from './src/shared/ui/AmountEntry.jsx';
 import CalendarVoiceButton from './src/shared/ui/CalendarVoiceButton.jsx';
+import ReceiptCapture from './src/features/receipts/ReceiptCapture.jsx';
+import { checkReceiptAccess } from './src/features/receipts/receiptAccess.js';
+import { receiptValidation, receiptComment, moneyText } from './src/features/receipts/receiptModel.js';
 import useVoiceLaunch from './src/shared/ui/useVoiceLaunch.js';
 import AndroidWidgetPairing from './src/shared/ui/AndroidWidgetPairing.jsx';
 import {financialQueryResult, financialRecordKey, resolveFinancialQueryCategory} from './src/shared/lib/financialVoiceQuery.js';
@@ -2843,6 +2846,26 @@ export default function CalendarScreen() {
     }
   }
 
+  const receiptOwner = useRef(null);
+  receiptOwner.current = { owner: validUserId, trades: storedManualTrades };
+  async function saveReviewedReceipt(draft, owner) {
+    if (!owner || receiptOwner.current.owner !== owner || !await checkReceiptAccess(owner)) throw new Error('RECEIPT_ACCESS_UNAVAILABLE');
+    if (receiptOwner.current.owner !== owner) throw new Error('RECEIPT_ACCESS_UNAVAILABLE');
+    if (saveInFlightRef.current) throw new Error(t('saving'));
+    const checked = receiptValidation(draft, todayKey, CURRENCIES.map(item => item.code));
+    if (!checked.valid || draft.items.length > 200 || !MONEY_CATEGORIES.some(item => item.key === draft.category && item.type !== 'plus')) throw new Error(t('entrySaveFailed'));
+    const comment = receiptComment(draft);
+    if (comment.length > 50000) throw new Error(t('entrySaveFailed'));
+    const day = receiptOwner.current.trades[draft.dateKey] || [];
+    if (comment && day.some(item => item.comment === comment && item.currency === draft.currency && Number(item.pnl) === -checked.total / 100 && item.platform === 'Manual')) throw new Error('RECEIPT_DUPLICATE');
+    const previousTotal = day.filter(item => !isSavingsTradingRecord(item) && item.currency === draft.currency && Number(item.pnl) < 0).reduce((sum,item) => sum + Math.round(Math.abs(Number(item.pnl)) * 100), 0);
+    saveInFlightRef.current = true;
+    try {
+      await hookSaveTrade({dateKey: draft.dateKey, isEditing: false, time: currentTimeHHMM(), instrument: draft.category.toUpperCase(), direction: 'SHORT', signedPnl: -checked.total / 100, comment, platform: 'Manual', currency: draft.currency, takeProfit: null, stopLoss: null, traderMode: false});
+      return { dayTotal: moneyText(previousTotal + checked.total) };
+    } finally { saveInFlightRef.current = false; }
+  }
+
   async function saveReviewedVoiceEntry(entry, progress) {
     if (saveInFlightRef.current) throw new Error(t('saving'));
     const dateKey = entry.dateKey || todayKey;
@@ -5142,6 +5165,7 @@ export default function CalendarScreen() {
             </span>
           </button>
           <CalendarVoiceButton launchRequest={homeVoiceReady ? homeVoiceLaunch.request : null} onLaunchHandled={homeVoiceLaunch.handled} userId={user?.id} onCreateCategory={voiceCategories.add} onDeleteCategory={removeMoneyCategory} onSaveEntry={saveReviewedVoiceEntry} defaultCurrency={currency} walletAvailable={proAccessActive && !proAccessLoading} language={language} isLight={isLight} traderMode={traderMode} categoryOptions={moneyCategoryNames.map(value => ({value, label: getMoneyCategoryLabel(value, language), type: MONEY_CATEGORIES.find(item=>item.key===value)?.type, icon: getHistoryCategoryIcon(value)}))} onResetConversation={voiceConversation.reset} onConversation={voiceConversation.handle} selectedDate={selectedKey} onCommand={handleCalendarVoiceCommand} />
+          {!traderMode && <ReceiptCapture key={user?.id || 'guest'} userId={user?.id} proActive={proAccessActive} proLoading={proAccessLoading} language={language} isLight={isLight} onUpgrade={openProPresentation} onSaveReceipt={saveReviewedReceipt}/>}
         </div>
       </WorkspaceDock>
 

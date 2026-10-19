@@ -1,4 +1,6 @@
 node_modules
+/public/receipt-ocr/
+/*.traineddata
 .mt5-build/
 .mt5-pyinstaller/
 DAYRIS-MT5.spec
