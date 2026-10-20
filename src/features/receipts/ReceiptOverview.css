@@ -29,3 +29,7 @@
 .receipt-preview[open]>summary>svg{transform:rotate(180deg)}
 .receipt-dialog[data-light="true"] .receipt-context-chip[data-empty="true"]{color:#795b28}
 @media(max-width:360px){.receipt-composer{padding-top:20px}.receipt-composer .receipt-total>label:first-child{font-size:49px;flex-basis:7ch}.receipt-composer .receipt-total{gap:8px}.receipt-context-chip{gap:5px;padding-inline:8px;font-size:10px}.receipt-currency-control{padding-inline:7px;min-width:50px}}
+.receipt-total-options{display:grid;gap:10px;justify-items:center;margin:0 0 18px;font-size:11px;color:var(--receipt-muted)}
+.receipt-total-options>div{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.receipt-dialog .receipt-total-options button{min-height:42px;padding:8px 16px;border:1px solid var(--receipt-line);border-radius:13px;background:transparent;color:var(--receipt-fg);font-variant-numeric:tabular-nums;font-size:15px}
+.receipt-dialog .receipt-total-options button:focus-visible{outline:2px solid #b58a38;outline-offset:2px}

@@ -1,4 +1,7 @@
 const rows = {
+  totalChoice: ['Сверьте итог с фото','Check the total against the photo','Verifică totalul în fotografie','请对照照片核对总额'],
+  useAmount: ['Выбрать сумму','Choose amount','Alege suma','选择金额'],
+  trading: ['Это история сделок. Добавьте результат через торговую запись','This is trading history. Add the result as a trade','Acesta este istoricul tranzacțiilor. Adaugă rezultatul ca tranzacție','这是交易记录，请通过交易条目添加结果'],
   refund: ['Это возврат — расход не создаём','This is a refund — no expense will be added','Acesta este un retur — nu creăm o cheltuială','这是退款，不会添加支出'],
   unpaid: ['Это предварительный счёт. Выберите чек оплаты','This is a preliminary bill. Choose a paid receipt','Acesta este un cont preliminar. Alege bonul de plată','这是预结账单，请选择付款收据'],
   multipleReceipts: ['На фото несколько чеков. Выберите один','Multiple receipts in this photo. Choose one','În fotografie sunt mai multe bonuri. Alege unul','照片中有多张收据，请选择一张'],

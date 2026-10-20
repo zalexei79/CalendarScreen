@@ -43,7 +43,10 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
     const memory=readProductMemory(userId);setProductMemory(memory);
     parsed.items=parsed.items.map(item=>({...item,productType:recalledProductType(memory,item.name)}));
     parsed.category=receiptCategory(parsed.items);
-    setDraft(parsed); setOmittedItems(null); setEditingIndex(-1); setConfirmed(false);
+    const checked=receiptValidation(parsed,today,CURRENCIES.map(item=>item.code));
+    const fallback=parsed.preferTotalOnly&&parsed.items.length&&!parsed.documentIssue&&(checked.mismatch||parsed.items.some(receiptItemIssue));
+    setOmittedItems(fallback?parsed.items:null);
+    setDraft(fallback?{...parsed,items:[]}:parsed);setEditingIndex(-1);setConfirmed(false);
     setMetadataOpen(false);
   }
   function updateItem(index, key, value) {

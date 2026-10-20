@@ -5,14 +5,25 @@ const numeric = value => String(value).trim().match(/^(\d+(?:[.,]\s*\d{1,2})?)$/
 const linesOf = data => (data.blocks||[]).flatMap(block=>(block.paragraphs||[]).flatMap(paragraph=>paragraph.lines||[]));
 export function photoAmount(data) {
   const lines=String(data.text||'').split(/\r?\n/).map(line=>line.trim()).filter(Boolean),numbers=lines.map(numeric).filter(Boolean).map(receiptMoney).filter(value=>value>0);
+  const unknown={total:'',source:'unknown',expression:'',evidence:''};
+  // A calculator or isolated number may supply an amount. Arbitrary receipt,
+  // bank and trading prose cannot authorize selecting a prominent stray number.
+  const expressionLine=line=>/^\d[\d.,\s]*[xх×*][\d.,\s]+(?:=[\d.,\s]+)?$/iu.test(line);
+  const statusLine=line=>/^\s*(?:\d{1,2}:\d{2}\s*)?(?:LTE|Wi-?Fi|[45]G|ED|ow|\s|\d|%)*\s*$/iu.test(line);
+  const prose=lines.filter(line=>/\p{L}/u.test(line)&&!statusLine(line)&&!/^(?:AC|CE|C|MC|MR|M\+|M-|MRC|Ans)$/i.test(line)&&!expressionLine(line));
+  const calculatorNoise=lines.some(expressionLine)&&lines.some(line=>/^\d{1,2}:\d{2}/.test(line))&&prose.length<=2&&prose.every(line=>line.replace(/[^\p{L}]/gu,'').length<=4);
+  if(receiptSignature(data.text)||parseReceipt(data.text).items.some(item=>validReceiptName(item.name))||prose.length&&!calculatorNoise)return unknown;
   const equations=[];
   for(const line of lines){
     const match=line.match(/^(\d+(?:[.,]\s*\d{1,3})?)\s*[×xх*]\s*(\d+(?:[.,]\s*\d{1,3})?)(?:\s*=\s*(\d+(?:[.,]\s*\d{1,2})?))?$/iu);
     if(!match)continue;
-    const a=match[1].replace(/\s/g,''),b=match[2].replace(/\s/g,''),result=receiptLineTotal(b,a)||receiptLineTotal(a,b);
+    const a=match[1].replace(/\s/g,''),b=match[2].replace(/\s/g,'');
+    const cents=value=>/^\d+(?:[.,]\d{1,2})?$/.test(value);
+    const result=(cents(a)?receiptLineTotal(b,a):'')||(cents(b)?receiptLineTotal(a,b):'');
     if(result&&(!match[3]||receiptMoney(match[3])===receiptMoney(result)))equations.push({total:result,expression:`${a} × ${b}`,evidence:line,printedResult:Boolean(match[3])});
   }
   const distinct=[...new Set(equations.map(item=>item.total))];
+  if(distinct.length>1)return unknown;
   if(distinct.length===1){
     if(numbers.length&&!numbers.includes(receiptMoney(distinct[0]))&&!equations.some(item=>item.printedResult))return {total:'',source:'unknown',expression:'',evidence:''};
     return {...equations[0],source:'calculation'};
@@ -32,7 +43,7 @@ export function parseReceiptPhoto(input,{today='',defaultDateKey=today,defaultCu
   if(receipt){
     const candidates=lines.filter(line=>validReceiptName(line)&&!/^\s*\d{1,2}:\d{2}|\b(?:LTE|WiFi|Wi-Fi|4G|5G)\b/iu.test(line)&&!receiptMath(line)&&!receiptTotalLine(line)&&!receiptNonItemLine(line)&&!/\bidno\b|bon\s+fiscal|fiscal\s+receipt|кассовый\s+чек/iu.test(normalizeReceiptText(line)));
     const merchant=candidates.find(line=>/s\.?r\.?l|\bltd\b|\bllc\b|\bООО\b/iu.test(line))||candidates[0]||'';
-    return {...parsed,merchant:merchant.slice(0,120),kind:'receipt',amountSource:'receipt',expression:''};
+    return {...parsed,total:data.totalNeedsReview?'':parsed.total,totalCandidates:data.totalCandidates||[],preferTotalOnly:Boolean(data.totalRecovered||data.totalCandidates?.length),merchant:merchant.slice(0,120),kind:'receipt',amountSource:'receipt',expression:''};
   }
   const amount=photoAmount(data);
   return {...parsed,kind:'amount',merchant:'',items:[],category:'Другое',dateKey:validReceiptDate(defaultDateKey,today)?defaultDateKey:today,currency:parsed.currency||defaultCurrency,total:amount.total,evidence:amount.evidence,amountSource:amount.source,expression:amount.expression};
