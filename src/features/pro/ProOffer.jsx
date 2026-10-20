@@ -1,20 +1,20 @@
-import React, { useEffect, useId, useState } from 'react';
-import { ArrowDownLeft, ArrowRight, ArrowUpRight, ChartCandlestick, ChartNoAxesCombined, Check, Gift, RefreshCw, Wallet, Bitcoin } from 'lucide-react';
+import React, { useId, useState } from 'react';
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, Camera, ChartCandlestick, ChartNoAxesCombined, Check, Gift, ReceiptText, RefreshCw, ScanLine, Wallet, Bitcoin } from 'lucide-react';
 import { getProOfferCopy, XAUUSD_SIGNALS_URL, XAUUSD_SIGNALS_BOT_URL } from './proOfferCopy';
 import './ProPresentation.css';
 
 // Presentation only. All account, referral and checkout actions stay with the caller.
 export default function ProOffer({ language, copy, active, daysRemaining, untilLabel, signedIn, referralLoading, referralCode, referralError, checkoutLoading, checkoutError, onInvite, onCheckout, onInvites, onWallet, onPlatforms }) {
   const [feature, setFeature] = useState('capital');
-  const [demoPaused, setDemoPaused] = useState(false);
   const id = useId();
   const text = getProOfferCopy(language);
-  const features = [ ['capital', Bitcoin, text.capital], ['wallet', Wallet, text.wallet], ['money', ChartNoAxesCombined, text.money], ['trader', ChartCandlestick, text.trader] ];
+  const features = [ ['capital', Bitcoin, text.capital], ['wallet', Wallet, text.wallet], ['money', ChartNoAxesCombined, text.money], ['trader', ChartCandlestick, text.trader], ['receipt', Camera, text.receipt] ];
+  const receiptFlow = [[Camera, text.receiptFlow[0]], [ScanLine, text.receiptFlow[1]], [Check, text.receiptFlow[2]]];
   const index = features.findIndex(([key]) => key === feature);
   const selectWithKeys = (event) => {
     let next;
-    if (event.key === 'ArrowRight') next = (index + 1) % features.length;
-    if (event.key === 'ArrowLeft') next = (index + features.length - 1) % features.length;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') next = (index + 1) % features.length;
+    if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') next = (index + features.length - 1) % features.length;
     if (event.key === 'Home') next = 0;
     if (event.key === 'End') next = features.length - 1;
     if (next === undefined) return;
@@ -23,14 +23,6 @@ export default function ProOffer({ language, copy, active, daysRemaining, untilL
     event.currentTarget.parentElement.children[next]?.focus();
   };
   const inviteLabel = !signedIn ? copy.signIn : referralCode ? text.inviteAction : referralError ? copy.retryInvite : copy.preparing;
-
-  useEffect(() => {
-    if (demoPaused || active) return undefined;
-    const timer = window.setInterval(() => {
-      setFeature(current => features[(features.findIndex(([key]) => key === current) + 1) % features.length][0]);
-    }, 4200);
-    return () => window.clearInterval(timer);
-  }, [active, demoPaused]);
 
   return <div className="pro-offer">
     {active && <section className="pro-membership-status" aria-label={copy.myPro}>
@@ -53,12 +45,12 @@ export default function ProOffer({ language, copy, active, daysRemaining, untilL
       </div>
     </section>
 
-    <section className="pro-explorer" aria-label={text.explore} onMouseEnter={() => setDemoPaused(true)} onMouseLeave={() => setDemoPaused(false)} onFocusCapture={() => setDemoPaused(true)} onBlurCapture={() => setDemoPaused(false)}>
-      <div className="pro-explorer-heading"><span>{text.explore}</span><span className="pro-demo-status"><i /> {demoPaused ? text.previewPause : text.previewLive}</span></div>
-      <div className="pro-feature-tabs" role="tablist" aria-label={text.explore}>
-        {features.map(([key, Icon, label]) => <button key={key} type="button" role="tab" id={`${id}-${key}`} aria-selected={feature === key} aria-controls={`${id}-panel`} tabIndex={feature === key ? 0 : -1} onKeyDown={selectWithKeys} onClick={() => setFeature(key)}><Icon aria-hidden="true" /><span>{label}</span></button>)}
+    <section className="pro-explorer" aria-label={text.explore}>
+      <div className="pro-explorer-heading"><span>{text.explore}</span><span className="pro-demo-status"><i /> {text.featureCount}</span></div>
+      <div className="pro-feature-catalog" role="tablist" aria-orientation="vertical" aria-label={text.explore}>
+        {features.map(([key, Icon, label]) => <button key={key} type="button" role="tab" id={`${id}-${key}`} className="pro-feature-card" aria-selected={feature === key} aria-controls={`${id}-panel`} tabIndex={feature === key ? 0 : -1} onKeyDown={selectWithKeys} onClick={() => setFeature(key)}><span className="pro-feature-card-icon"><Icon aria-hidden="true" /></span><span className="pro-feature-card-copy"><strong>{label}</strong><small>{text[`${key}Teaser`]}</small></span><ArrowRight className="pro-feature-card-arrow" aria-hidden="true" /></button>)}
       </div>
-      <div id={`${id}-panel`} role="tabpanel" aria-labelledby={`${id}-${feature}`} tabIndex={0} className="pro-feature-panel">
+      <div id={`${id}-panel`} role="tabpanel" aria-labelledby={`${id}-${feature}`} tabIndex={-1} className="pro-feature-panel">
         <div key={feature} className="pro-feature-layout">
           <div className="pro-feature-copy">
             <span className="pro-eyebrow">{features[index][2]} · PRO</span>
@@ -77,6 +69,7 @@ export default function ProOffer({ language, copy, active, daysRemaining, untilL
                 <p className="pro-signals-note">{text.signalsNote}</p>
               </div>
             </details>}
+            {feature === 'receipt' && <div className="pro-receipt-flow">{receiptFlow.map(([Icon, label], flowIndex) => <React.Fragment key={label}><span><Icon aria-hidden="true" />{label}</span>{flowIndex < receiptFlow.length - 1 && <ArrowRight aria-hidden="true" />}</React.Fragment>)}</div>}
           </div>
           <div className={`pro-example pro-example-${feature}`}>
             <p className="pro-example-label">{text.example}</p>
@@ -108,6 +101,11 @@ export default function ProOffer({ language, copy, active, daysRemaining, untilL
               <div className="pro-example-categories"><div><div><span>Stocks · Crypto · ETFs</span><b>PRO</b></div><span className="pro-example-bar"><i style={{ width: '72%' }} /></span></div></div>
               <svg className="pro-example-curve" viewBox="0 0 240 60" aria-hidden="true"><path d="M0 49 30 42 60 45 90 27 120 34 150 17 180 25 210 9 240 13" /></svg>
               <p className="pro-example-caption">{text.capitalTitle}</p>
+            </>}
+            {feature === 'receipt' && <>
+              <div className="pro-example-heading"><ReceiptText aria-hidden="true" /><span>DAYRIS RECEIPT</span></div>
+              <div className="pro-receipt-preview" aria-hidden="true"><div className="pro-receipt-paper"><b>SUPERMARKET</b><span>Кофе · Хлеб · Молоко</span><span>3 позиции</span><hr /><strong>ИТОГО <em>€24.80</em></strong></div><div className="pro-receipt-scan"><ScanLine /><span>Сумма распознана</span></div></div>
+              <p className="pro-example-caption">{text.receiptResult}</p>
             </>}
           </div>
         </div>

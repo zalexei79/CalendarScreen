@@ -119,25 +119,33 @@ Object.assign(copy.ro, {
   openPlatforms: 'Deschide platformele de trading',
 });
 Object.assign(copy.ru, {
-  proKicker: 'PRO · всё важное в одном месте', previewLive: 'Живое превью', previewPause: 'Пауза',
+  proKicker: 'PRO · всё важное в одном месте', previewLive: 'Живое превью', previewPause: 'Пауза', featureCount: '5 возможностей',
+  capitalTeaser: 'Акции, крипто и капитал под контролем', walletTeaser: 'Отдельные личные деньги и баланс', moneyTeaser: 'Находи, где можно оставить больше', traderTeaser: 'Сделки, PnL и синхронизация',
+  receipt: 'Фото чеков', receiptTeaser: 'Сфотографируй — сумма и покупки в журнале', receiptTitle: 'Чек превращается в запись за секунды.', receiptBody: 'Сфотографируй чек — DAYRIS распознает итог, товары и категорию. Ты проверяешь данные перед сохранением, а не переносишь всё вручную.', receiptPoints: ['Распознавание суммы и товаров', 'Проверка перед записью', 'История покупок с фото'], receiptFlow: ['1. Сфотографируй', '2. Проверь сумму', '3. Сохрани'], receiptResult: 'Сумма, товары и категория уже собраны.',
   capital:'Инвестиции', capitalTitle:'Инвестиции под контролем.',
   capitalBody:'Следи за акциями, криптовалютами, золотом и другими активами. Смотри стоимость вложений, прибыль и изменения капитала в одном приложении.',
   capitalPoints:['Акции, криптовалюты, ETF и другие активы','Автоматические котировки криптовалют','Аналитика портфеля и история операций'],
 });
 Object.assign(copy.en, {
-  proKicker: 'PRO · your whole picture in one place', previewLive: 'Live preview', previewPause: 'Paused',
+  proKicker: 'PRO · your whole picture in one place', previewLive: 'Live preview', previewPause: 'Paused', featureCount: '5 features',
+  capitalTeaser: 'Stocks, crypto and capital in one view', walletTeaser: 'A separate space for personal money', moneyTeaser: 'Find where you can keep more', traderTeaser: 'Trades, PnL and sync',
+  receipt: 'Receipt photos', receiptTeaser: 'Snap it — amount and items enter your journal', receiptTitle: 'A receipt becomes a journal entry in seconds.', receiptBody: 'Take a photo and DAYRIS reads the total, items and category. You review everything before saving instead of typing it by hand.', receiptPoints: ['Total and item recognition', 'Review before saving', 'Purchase history with the photo'], receiptFlow: ['1. Take a photo', '2. Review the total', '3. Save'], receiptResult: 'Total, items and category are already collected.',
   capital:'Investments', capitalTitle:'Your investments, in one place.',
   capitalBody:'Track stocks, crypto, gold and other assets. See investment value, profit and changes to your capital in one app.',
   capitalPoints:['Stocks, crypto, ETFs and other assets','Automatic crypto quotes','Portfolio analytics and activity history'],
 });
 Object.assign(copy.ro, {
-  proKicker: 'PRO · totul important într-un singur loc', previewLive: 'Previzualizare live', previewPause: 'Pauză',
+  proKicker: 'PRO · totul important într-un singur loc', previewLive: 'Previzualizare live', previewPause: 'Pauză', featureCount: '5 funcții',
+  capitalTeaser: 'Acțiuni, cripto și capital într-un singur loc', walletTeaser: 'Un spațiu separat pentru banii personali', moneyTeaser: 'Descoperă unde poți păstra mai mult', traderTeaser: 'Tranzacții, PnL și sincronizare',
+  receipt: 'Fotografii bonuri', receiptTeaser: 'Fotografiază — suma și produsele intră în jurnal', receiptTitle: 'Bonul devine o înregistrare în câteva secunde.', receiptBody: 'Fotografiază bonul, iar DAYRIS recunoaște totalul, produsele și categoria. Verifici datele înainte de salvare, fără să scrii totul manual.', receiptPoints: ['Recunoașterea totalului și produselor', 'Verificare înainte de salvare', 'Istoric al cumpărăturilor cu fotografia'], receiptFlow: ['1. Fotografiază', '2. Verifică suma', '3. Salvează'], receiptResult: 'Suma, produsele și categoria sunt deja pregătite.',
   capital:'Investiții', capitalTitle:'Investițiile tale, într-un singur loc.',
   capitalBody:'Urmărește acțiuni, cripto, aur și alte active. Vezi valoarea investițiilor, profitul și evoluția capitalului în aceeași aplicație.',
   capitalPoints:['Acțiuni, cripto, ETF și alte active','Cotații automate pentru cripto','Analiza portofoliului și istoricul operațiunilor'],
 });
 Object.assign(copy.zh, {
-  proKicker: 'PRO · 一处掌握全貌', previewLive: '实时预览', previewPause: '已暂停',
+  proKicker: 'PRO · 一处掌握全貌', previewLive: '实时预览', previewPause: '已暂停', featureCount: '5项功能',
+  capitalTeaser: '在一个视图中管理股票、加密货币和资本', walletTeaser: '独立管理个人资金', moneyTeaser: '发现可以留下更多的地方', traderTeaser: '交易、PnL和同步',
+  receipt: '小票照片', receiptTeaser: '拍照即可将金额和商品加入日志', receiptTitle: '几秒钟即可将小票变成记录。', receiptBody: '拍下小票，DAYRIS会识别总额、商品和类别。保存前由您确认，无需手动录入。', receiptPoints: ['识别总额和商品', '保存前检查', '带照片的消费记录'], receiptFlow: ['1. 拍照', '2. 检查金额', '3. 保存'], receiptResult: '金额、商品和类别已经整理好。',
   capital:'投资组合', capitalTitle:'集中管理您的投资。',
   capitalBody:'跟踪股票、加密货币、黄金和其他资产，在一个应用中查看投资价值、盈亏和资金变化。',
   capitalPoints:['股票、加密货币、ETF等资产','自动加密货币行情','投资组合分析与交易记录'],
