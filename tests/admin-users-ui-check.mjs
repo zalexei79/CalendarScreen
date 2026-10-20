@@ -13,6 +13,7 @@ try {
   let mode = 'full', listCalls = 0;
   let entry = { id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',user_id:user.id,date_key:'2026-10-05',time:'12:00:00',instrument:'Тестовая покупка',pnl:-20,currency:'USD',platform:'Manual',direction:'SHORT',comment:'' };
   const audit = [];
+  let proGrants=[{user_id:user.id,source:'admin',starts_at:'2026-10-01T00:00:00Z',ends_at:'2026-10-25T12:00:00Z'}],proWrites=0;
   const dist = path.resolve('dist');
   await context.route('**/*', async route => {
     const url = new URL(route.request().url());
@@ -22,6 +23,11 @@ try {
     if(rpc === 'admin_capabilities') return json({design:true,viewUsers:mode!=='denied',editUsers:mode==='full'});
     if(rpc === 'admin_list_users') { listCalls++; const users=[user,other].filter(item=>`${item.name} ${item.email}`.includes(args.p_search)); return json({users,total:users.length}); }
     if(rpc === 'admin_user_profile') return json({...([user,other].find(item=>item.id===args.p_user_id)),profile:{nickname:args.p_user_id===user.id?'Тестовый пользователь':'Другой пользователь'},providers:['google']});
+    if(rpc === 'admin_pro_state') return json({grants:args.p_user_id===user.id?proGrants:[],subscriptions:[],server_now:'2026-10-15T12:00:00Z'});
+    if(rpc === 'admin_change_pro') {
+      assert.equal(mode,'full');assert.equal(args.p_user_id,user.id);assert.equal(args.p_action,'extend');assert.equal(args.p_amount,90);assert.equal(args.p_unit,'days');assert.deepEqual(args.p_expected,{grants:proGrants,subscriptions:[]});assert.equal(args.p_reason,'Продление из карточки пользователя');
+      proWrites++;proGrants=[...proGrants,{user_id:user.id,source:'admin',starts_at:'2026-10-15T12:00:00Z',ends_at:'2027-01-23T12:00:00Z'}];return json({grants:proGrants,subscriptions:[],server_now:'2026-10-15T12:00:00Z'});
+    }
     if(rpc === 'admin_user_data') {
       const items = args.p_user_id === user.id && args.p_dataset === 'trades' && (!args.p_from||entry.date_key>=args.p_from) && (!args.p_to||entry.date_key<=args.p_to) ? [entry] : [];
       return json({rows:items,total:items.length,available:true});
@@ -47,6 +53,8 @@ try {
   await page.clock.install({time:new Date('2026-10-15T12:00:00Z')});
   await page.goto('http://calendar.test/admin.html');
   assert.equal(await page.locator('link[rel="manifest"]').getAttribute('href'),'/admin.webmanifest');
+  await page.getByRole('button',{name:/Тестовый пользователь user@example.test/}).waitFor();
+  await page.screenshot({path:'tests/admin-people-empty.png',fullPage:true});
   await page.getByRole('button',{name:/Тестовый пользователь user@example.test/}).click();
   await page.locator('.admin-record-heading strong').filter({hasText:'Тестовая покупка'}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Редактировать запись',exact:true}).count(),0);
@@ -61,9 +69,26 @@ try {
   await page.getByText('-35 USD',{exact:true}).first().waitFor();
   assert.equal(entry.pnl,-35);
   await page.screenshot({path:'tests/admin-users-desktop.png',fullPage:true});
+  await page.getByRole('button',{name:'Открыть PRO',exact:true}).click();
+  await page.getByRole('button',{name:'90 дней',exact:true}).click();
+  await page.getByLabel('Причина изменения PRO').fill('Продление из карточки пользователя');
+  await page.getByRole('button',{name:'Продлить PRO',exact:true}).click();
+  const proDialog=page.getByRole('dialog');assert.ok((await proDialog.innerText()).includes(user.email));
+  await proDialog.getByRole('button',{name:'Подтвердить изменение PRO',exact:true}).click();
+  await page.getByText('PRO обновлён. Изменение записано в журнал.',{exact:true}).waitFor();assert.equal(proWrites,1);
+  await page.screenshot({path:'tests/admin-user-pro-desktop.png',fullPage:true});
+  await page.getByRole('group',{name:'Разделы пользователя'}).getByRole('button',{name:'Календарь',exact:true}).click();
+  await page.locator('.people-day-focus').waitFor();
   await page.setViewportSize({width:390,height:844});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.screenshot({path:'tests/admin-users-mobile.png',fullPage:true});
+  for(const width of [1024,736,320]){
+    await page.setViewportSize({width,height:900});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`people workspace overflows at ${width}`);
+    await page.locator('.people-day-focus').getByText('-35 USD',{exact:true}).waitFor();
+    if(width===320)await page.screenshot({path:'tests/admin-users-small-mobile.png',fullPage:true});
+  }
+  await page.setViewportSize({width:390,height:844});
   await page.getByRole('button',{name:'Журнал',exact:true}).click();
   await page.locator('.admin-record').filter({hasText:'Исправление по обращению'}).waitFor();
   await page.getByText('До / после изменения',{exact:true}).click();
@@ -75,6 +100,10 @@ try {
   assert.equal(await page.getByRole('checkbox',{name:'Разрешить редактирование',exact:true}).count(),0);
   await page.getByRole('button',{name:/Другой пользователь other@example.test/}).click();
   await page.getByText('За выбранный период записей нет.',{exact:true}).waitFor();
+  await page.getByText('Базовый доступ',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Открыть PRO',exact:true}).click();
+  await page.getByRole('heading',{name:'PRO не активен',exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'Выдать PRO',exact:true}).count(),0,'read-only role cannot grant inside user card');
   assert.equal(await page.locator('.admin-record-heading strong').filter({hasText:'Тестовая покупка'}).count(),0);
   mode='denied'; const before=listCalls;
   await page.reload(); await page.getByRole('heading',{name:'Нужен доступ к данным пользователей',exact:true}).waitFor();
