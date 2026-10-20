@@ -3,6 +3,7 @@ import {refineReceiptTotals,locateReceiptTotal}from'../src/features/receipts/rec
 import {receiptPaperBounds}from'../src/features/receipts/receiptOcrImage.js';
 import {parseReceiptPhoto,photoAmount}from'../src/features/receipts/receiptPhoto.js';
 import {parseReceipt,receiptValidation}from'../src/features/receipts/receiptModel.js';
+import {recoverReceiptTotal}from'../src/features/receipts/receiptTotalRecovery.js';
 const context={today:'2026-10-20',defaultDateKey:'2026-10-20',defaultCurrency:'MDL'};
 const fixture=(label='Сума',amount='22,90')=>({text:`SHOP\nЧек № 123\n${label} ${amount}\n20-10-2026`,blocks:[{paragraphs:[{lines:[{text:`${label} ${amount}\n`,bbox:{x0:10,y0:200,x1:500,y1:240},words:[{text:label,bbox:{x0:10,y0:200,x1:100,y1:240}},{text:amount,bbox:{x0:300,y0:200,x1:450,y1:240}}]}]}]}]});
 test('two agreeing total-region readings recover digits without relying on item recognition',async()=>{
@@ -82,4 +83,43 @@ test('a large footer number needs a separately recognized total label; conflicti
  const located=await locateReceiptTotal(data,async()=> 'Cuma');assert.ok(located);
  let index=0;const result=await refineReceiptTotals(located,async()=>['635.50','695.50'][index++]);const draft=parseReceiptPhoto(result,context);
  assert.equal(draft.total,'');assert.deepEqual(draft.totalCandidates,['635.50','695.50']);assert.equal(draft.preferTotalOnly,true);
+});
+
+test('an unreadable amount beside a readable total heading cannot stop footer recovery',async()=>{
+ const scans=[{image:'paper',mode:'6'},{image:'footer',mode:'11'}],seen=[];
+ const result=await recoverReceiptTotal(scans,async(image,options)=>{
+  seen.push(image);if(!options.rectangle)return fixture('Сума',image==='paper'?'???':'635.50');
+  return {text:image==='footer'?'695.50':''};
+ });
+ assert.equal(result.input,'footer');assert.equal(parseReceiptPhoto(result.data,context).total,'695.50');assert.ok(seen.includes('paper')&&seen.includes('footer'));
+});
+
+test('recovery keeps conflicting footer values for review and never selects a cash amount',async()=>{
+ let count=0;const result=await recoverReceiptTotal([{image:'footer',mode:'11'}],async(image,options)=>options.rectangle?{text:['635.50','695.50'][count++]}:fixture('Сума','???'));
+ assert.equal(parseReceiptPhoto(result.data,context).total,'');assert.deepEqual(result.data.totalCandidates,['635.50','695.50']);
+ assert.equal(await recoverReceiptTotal([{image:'footer',mode:'11'}],async()=>fixture('CASH','1000.00')),null);
+ assert.equal(await recoverReceiptTotal([{image:'footer',mode:'11'}],async()=>({text:'1000.00',blocks:[]})),null,'a receipt footer number still needs a total label');
+});
+
+test('damaged fiscal identifiers cannot become the store name',()=>{
+ for(const line of['II FTAB23425a3 @H 30002177)','31 PIABZIAZua oH 300217783','ФН 30002177']){
+  assert.equal(parseReceiptPhoto(`${line}\nMilk 20.00\nTOTAL 20.00`,context).merchant,'',line);
+ }
+});
+
+test('a damaged large amount still locates its label and rereads all monetary digits',async()=>{
+ const word=(text,x,y,width,height)=>({text,bbox:{x0:x,x1:x+width,y0:y,y1:y+height}});
+ const first=word('695.',470,415,140,80),last=word('ЭЙ',630,415,70,80);
+ const data={text:'rows\n695. ЭЙ',blocks:[{paragraphs:[{lines:[{text:'rows',bbox:{y1:200},words:[word('45.39',400,100,90,30),word('48.32',400,160,90,30)]},{text:'695. ЭЙ',bbox:{y1:500},words:[first,last]}]}]}]};
+ const located=await locateReceiptTotal(data,async()=> 'Сума');assert.ok(located);assert.match(located.text,/Сума 695\. ЭЙ/);assert.equal(located.totalRequiresDecimal,true);
+ const result=await refineReceiptTotals(located,async rectangle=>{assert.ok(rectangle.left+rectangle.width>last.bbox.x1,'the fractional digits are inside the numeric crop');return '695.50';});assert.equal(parseReceiptPhoto(result,context).total,'695.50');
+ const dropped=await refineReceiptTotals(located,async()=> '69550');assert.equal(parseReceiptPhoto(dropped,context).total,'','a lost decimal separator cannot create a hundredfold expense');
+});
+
+test('folded paper and a merged tax box do not clip the total label or include the tax in its amount',async()=>{
+ const word=(text,x0,y0,x1,y1)=>({text,bbox:{x0,y0,x1,y1}});
+ const data={text:'rows\n635, ЭЙ',blocks:[{paragraphs:[{lines:[{text:'rows',bbox:{y1:200},words:[word('45.39',400,100,490,130),word('48.32',400,160,490,190)]},{text:'635, ЭЙ',bbox:{y1:542},words:[word('635,',467,384,602,542),word('ЭЙ',623,416,692,488),word('115.97',586,498,694,540)]}]}]}]};
+ const located=await locateReceiptTotal(data,async rectangle=>rectangle.top>=410&&rectangle.top<=435&&rectangle.height<150?'[ума':'unreadable');assert.ok(located);
+ let count=0;const result=await refineReceiptTotals(located,async rectangle=>{assert.ok(rectangle.top+rectangle.height<520);assert.ok(rectangle.left+rectangle.width>692);return['635.50','695.50'][count++];});
+ assert.deepEqual(result.totalCandidates,['635.50','695.50']);assert.equal(parseReceiptPhoto(result,context).total,'');
 });

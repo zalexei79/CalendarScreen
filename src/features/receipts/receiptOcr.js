@@ -2,8 +2,9 @@
 import {refineReceiptMath} from './receiptOcrMath.js';
 import {parseReceiptPhoto,photoAmount} from './receiptPhoto.js';
 import {receiptSignature,receiptDocumentIssue,receiptTotalAnchor} from './receiptStructure.js';
-import {refineReceiptTotals,locateReceiptTotal} from './receiptOcrTotal.js';
+import {refineReceiptTotals} from './receiptOcrTotal.js';
 import {receiptPaperImage,receiptFooterImage} from './receiptOcrImage.js';
+import {recoverReceiptTotal} from './receiptTotalRecovery.js';
 async function recoveryImage(file,data){
   let bitmap;
   try{
@@ -52,28 +53,23 @@ export async function recognizeReceipt(file, { language = 'ru', onProgress, sign
       const enlarged=await recoveryImage(file,data);
       const block=await Promise.race([worker.recognize(enlarged,{}, {blocks:true}),failure]);
       const parsed=parseReceiptPhoto(block.data);
-      if(parsed.kind==='receipt'&&receiptSignature(block.data.text)){
+      if(parsed.kind==='receipt'){
         if(initial.kind!=='receipt'||parsed.total||block.data.text.split(/\r?\n/).some(receiptTotalAnchor)){data=block.data;input=enlarged;}
       }
     }
     const incomplete=parseReceiptPhoto(data);
+    let totalRefined=false;
     // A readable heading with unreadable digits still needs image recovery.
     // Item recognition and the mere presence of a total WORD cannot stop it.
-    if(incomplete.kind==='receipt'&&!incomplete.total&&!incomplete.ambiguousTotal&&!incomplete.documentIssue){
-      const paper=await receiptPaperImage(file);
+    if(!incomplete.total&&!incomplete.ambiguousTotal&&!incomplete.documentIssue){
+      const paper=await receiptPaperImage(file,{fallbackToWhole:true});
       if(paper){
-        await worker.setParameters({tessedit_pageseg_mode:'6'});
-        const cropped=await Promise.race([worker.recognize(paper,{}, {blocks:true}),failure]);
-        if(String(cropped.data.text||'').split(/\r?\n/).some(receiptTotalAnchor)){data={...cropped.data,totalRecovered:true};input=paper;}
-        else{
-          const footer=receiptFooterImage(paper);await worker.setParameters({tessedit_pageseg_mode:'11'});
-          const band=await Promise.race([worker.recognize(footer,{}, {blocks:true}),failure]);
-          const located=await locateReceiptTotal(band.data,async(rectangle,mode)=>{
-            await worker.setParameters({tessedit_pageseg_mode:mode,tessedit_char_whitelist:''});
-            const result=await Promise.race([worker.recognize(footer,{rectangle}),failure]);return result.data.text;
-          },{signal});
-          if(located){data=located;input=footer;}
-        }
+        const footer=receiptFooterImage(paper);
+        const recovered=await recoverReceiptTotal([{image:paper,mode:'6'},{image:footer,mode:'11'},{image:footer,mode:'3'},{image:footer,mode:'6'}],async(image,{mode,rectangle,numeric})=>{
+          await worker.setParameters({tessedit_pageseg_mode:mode,tessedit_char_whitelist:numeric?'0123456789., ':''});
+          const result=await Promise.race([worker.recognize(image,rectangle?{rectangle}:{},{blocks:!rectangle}),failure]);return result.data;
+        },{signal,onProgress});
+        if(recovered){data=recovered.data;input=recovered.input;totalRefined=true;}
       }
     }
     if(parseReceiptPhoto(data).kind==='amount'&&!receiptDocumentIssue(String(data.text||'').split(/\r?\n/))){
@@ -84,7 +80,7 @@ export async function recognizeReceipt(file, { language = 'ru', onProgress, sign
       }
       if(parseReceiptPhoto(data).kind==='amount'){onProgress?.(100);return {text:data.text,blocks:data.blocks};}
     }
-    if(!receiptDocumentIssue(String(data.text||'').split(/\r?\n/)))data=await refineReceiptTotals(data,async(rectangle,mode)=>{
+    if(!totalRefined&&!receiptDocumentIssue(String(data.text||'').split(/\r?\n/)))data=await refineReceiptTotals(data,async(rectangle,mode)=>{
       await worker.setParameters({tessedit_pageseg_mode:mode,tessedit_char_whitelist:'0123456789., '});
       const result=await Promise.race([worker.recognize(input,{rectangle}),failure]);return result.data.text;
     },{signal,onProgress});

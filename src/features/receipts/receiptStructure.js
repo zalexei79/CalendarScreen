@@ -31,6 +31,7 @@ export function receiptNonItemLine(value) {
 
 export function receiptMetadataLine(value) {
   const text=normalize(value).replace(/^[\s|]+/u,'');
+  if(/^(?:[i1l|]{1,3}|[з3][1iнh])\s+.*(?:\d[\s-]?){6,}/iu.test(text))return true;
   return /^(?:[з3]н|пн|чн|фн|фп|іпн|рнокпп|каса|касса|касир|кассир|кас[аи]|чек\s*\d|id(?:no|np)?|inr|kkm|ккм|инн|эклз)(?=$|[\s:№#\d])/iu.test(text)||/^(?:mdl|ron|usd|eur|rub|cny|rmb|gbp|chf|uah|pln|jpy|lei|грн|руб)\.?$/iu.test(text);
 }
 

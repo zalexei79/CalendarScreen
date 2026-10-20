@@ -17,13 +17,13 @@ export function receiptPaperBounds({data,width,height}){
   const pad=Math.max(2,Math.round(width*.015)),left=Math.max(0,best.left-pad),right=Math.min(width,best.left+best.width+pad);
   return {left:left/width,width:(right-left)/width};
 }
-export async function receiptPaperImage(file){
+export async function receiptPaperImage(file,{fallbackToWhole=false}={}){
   let bitmap;
   try{
     bitmap=await createImageBitmap(file);
     const sample=document.createElement('canvas'),ratio=Math.min(1,300/bitmap.width);sample.width=Math.round(bitmap.width*ratio);sample.height=Math.round(bitmap.height*ratio);
     const context=sample.getContext('2d',{willReadFrequently:true});context.drawImage(bitmap,0,0,sample.width,sample.height);
-    const bounds=receiptPaperBounds(context.getImageData(0,0,sample.width,sample.height));
+    const bounds=receiptPaperBounds(context.getImageData(0,0,sample.width,sample.height))||(fallbackToWhole?{left:0,width:1}:null);
     if(!bounds)return null;
     const sourceWidth=Math.round(bounds.width*bitmap.width),scale=Math.min(2,1000/sourceWidth,2400/bitmap.height),canvas=document.createElement('canvas');canvas.width=Math.round(sourceWidth*scale);canvas.height=Math.round(bitmap.height*scale);
     const target=canvas.getContext('2d');target.imageSmoothingQuality='high';target.drawImage(bitmap,Math.round(bounds.left*bitmap.width),0,sourceWidth,bitmap.height,0,0,canvas.width,canvas.height);

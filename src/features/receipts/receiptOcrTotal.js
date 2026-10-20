@@ -58,7 +58,7 @@ export async function refineReceiptTotals(data,readLine,{signal,onProgress}={}){
     }
     const height=box.y1-box.y0,pad=Math.max(3,Math.round(height*(data.totalLayout ? .1 : .2)));
     const rectangle={left:Math.max(0,box.x0-pad),top:Math.max(0,box.y0-pad),width:box.x1-box.x0+2*pad,height:height+2*pad};
-    const readings=[],needsDecimal=/[.,]\s*\d{1,2}(?!\d)/.test(anchor.tail);
+    const readings=[],needsDecimal=Boolean(data.totalRequiresDecimal||/[.,]\s*\d{1,2}(?!\d)/.test(anchor.tail));
     for(const mode of ['7','13']){
       if(signal?.aborted)throw new Error('CANCELLED');
       try{const reading=await readLine(rectangle,mode);readings.push(needsDecimal&&!/[.,]\s*\d{1,2}(?!\d)/.test(reading)?null:numericReading(reading));}
@@ -83,15 +83,32 @@ export async function refineReceiptTotals(data,readLine,{signal,onProgress}={}){
 export async function locateReceiptTotal(data,readRegion,{signal}={}){
   const lines=linesOf(data),words=lines.flatMap(line=>line.words||[]),heights=words.filter(word=>/\d/.test(word.text)).map(word=>word.bbox.y1-word.bbox.y0).sort((a,b)=>a-b);
   const typical=heights[Math.floor(heights.length/2)]||0,bottom=Math.max(0,...lines.map(line=>line.bbox?.y1||0));
-  const targets=words.filter(word=>/^\d+[.,]\d{1,2}$/.test(word.text)&&word.bbox.y1-word.bbox.y0>typical*1.4&&word.bbox.y0>bottom*.45&&word.bbox.x0>word.bbox.y1-word.bbox.y0).sort((a,b)=>(b.bbox.y1-b.bbox.y0)-(a.bbox.y1-a.bbox.y0)).slice(0,2);
+  // A damaged numeric token ("695. ЭЙ", "69S.5O") is exactly why we need
+  // another read. Requiring a correct money string here skipped that recovery.
+  const targets=words.filter(word=>/^\d[\d.,\p{L}|]*$/u.test(word.text)&&(word.text.match(/\d/g)||[]).length>=2&&word.bbox.y1-word.bbox.y0>typical*1.4&&word.bbox.y0>bottom*.45&&word.bbox.x0>word.bbox.y1-word.bbox.y0).sort((a,b)=>(b.bbox.y1-b.bbox.y0)-(a.bbox.y1-a.bbox.y0)).slice(0,3);
   for(const word of targets){
     if(signal?.aborted)throw new Error('CANCELLED');
-    const height=word.bbox.y1-word.bbox.y0,rectangle={left:0,top:Math.max(0,word.bbox.y0-Math.round(height*.15)),width:Math.round(word.bbox.x0*.45),height:Math.round(height*1.5)};
-    for(const mode of ['7','13']){
+    let numericWord={...word,bbox:{...word.bbox}},height=word.bbox.y1-word.bbox.y0;
+    // Segmentation may attach a separator/tax row to the first digits, making
+    // their box twice as tall. The adjacent fractional token supplies the font
+    // height; it never supplies or changes the amount itself.
+    const reference=words.filter(next=>next!==word&&next.bbox.x0>=word.bbox.x1&&next.bbox.x0-word.bbox.x1<height&&next.bbox.y1-next.bbox.y0>=height*.3&&next.bbox.y1-next.bbox.y0<height/1.5&&Math.min(next.bbox.y1,word.bbox.y1)-Math.max(next.bbox.y0,word.bbox.y0)>(next.bbox.y1-next.bbox.y0)*.8).sort((a,b)=>a.bbox.x0-b.bbox.x0)[0];
+    if(reference){
+      const size=reference.bbox.y1-reference.bbox.y0;
+      numericWord.bbox.y0=Math.max(word.bbox.y0,reference.bbox.y0-Math.round(size*.12));numericWord.bbox.y1=Math.min(word.bbox.y1,reference.bbox.y1+Math.round(size*.15));height=numericWord.bbox.y1-numericWord.bbox.y0;
+    }
+    const width=Math.round(word.bbox.x0*.45),rectangles=[{left:0,top:Math.max(0,numericWord.bbox.y0+Math.round(height*.15)),width,height:Math.round(height*1.2)},{left:0,top:Math.max(0,numericWord.bbox.y0-Math.round(height*.15)),width,height:Math.round(height*1.8)}];
+    for(const rectangle of rectangles)for(const mode of ['7','13']){
       const label=String(await readRegion(rectangle,mode)).trim(),anchor=receiptTotalAnchor(label);
-      if(!anchor||anchor.tail.trim()||receiptNonItemLine(label))continue;
-      const line={text:`${label} ${word.text}`,bbox:{...word.bbox,x0:0},words:[{text:label,bbox:{...word.bbox,x0:0,x1:rectangle.width}},word]};
-      return {...data,text:`${data.text}\n${line.text}`,blocks:[{paragraphs:[{lines:[line]}]}],totalRecovered:true,totalLayout:true};
+      if(!anchor||!/^[\s.,:：=·•_\-—]*$/.test(anchor.tail)||receiptNonItemLine(label))continue;
+      let amount=numericWord;
+      const following=words.filter(next=>next!==word&&next.bbox.x0>=word.bbox.x1&&Math.abs((next.bbox.y0+next.bbox.y1-numericWord.bbox.y0-numericWord.bbox.y1)/2)<height*.35&&next.bbox.y1-next.bbox.y0>=height*.6).sort((a,b)=>a.bbox.x0-b.bbox.x0);
+      for(const next of following){
+        if(next.bbox.x0-amount.bbox.x1>height*1.2)break;
+        amount={text:`${amount.text} ${next.text}`,bbox:{x0:amount.bbox.x0,x1:next.bbox.x1,y0:Math.min(amount.bbox.y0,next.bbox.y0),y1:Math.max(amount.bbox.y1,next.bbox.y1)}};
+      }
+      const line={text:`${label} ${amount.text}`,bbox:{...amount.bbox,x0:0},words:[{text:label,bbox:{...word.bbox,x0:0,x1:rectangle.width}},amount]};
+      return {...data,text:`${data.text}\n${line.text}`,blocks:[{paragraphs:[{lines:[line]}]}],totalRecovered:true,totalLayout:true,totalRequiresDecimal:/[.,]/.test(amount.text)};
     }
   }
   return null;

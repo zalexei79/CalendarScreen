@@ -71,7 +71,7 @@ try{
  await page.getByRole('button',{name:'Сохранить расход',exact:true}).click();await page.locator('.receipt-success').waitFor();
  assert.equal(writes.length,1);assert.equal(writes[0].pnl,-67);assert.equal(writes[0].currency,'MDL');assert.equal(writes[0].date_key,'2026-10-19');assert.equal(writes[0].user_id,storyUserId);assert.match(writes[0].comment,/Хлеб/);assert.match(writes[0].comment,/2 × 29.95 = 59.90 MDL/);
  await page.getByRole('button',{name:'Готово',exact:true}).click();
- await page.locator('.receipt-file').first().setInputFiles({name:'bon.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});await page.locator('.receipt-fields').waitFor({timeout:120000});await page.getByRole('button',{name:'Проверить позиции',exact:true}).click();await page.locator('.receipt-item-summary').nth(1).click();await page.getByLabel('Цена за единицу 2',{exact:true}).fill('29.95');await page.locator('.receipt-item-summary').first().click();await page.getByLabel('Название 1',{exact:true}).fill('Хлеб');await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Сохранить расход',exact:true}).click();await page.getByRole('alert').filter({hasText:'Похожий чек'}).waitFor();assert.equal(writes.length,1,'duplicate reimport is blocked');
+ await page.locator('.receipt-file').first().setInputFiles({name:'bon.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});await page.locator('.receipt-fields').waitFor({timeout:120000});if(await page.locator('.receipt-warning[role="alert"]').count())throw new Error(await page.locator('.receipt-warning[role="alert"]').innerText());if(await page.locator('.receipt-omitted').count())await page.getByRole('button',{name:'Проверить позиции',exact:true}).click();assert.equal(await page.locator('.receipt-item').count(),2);await page.locator('.receipt-item-summary').nth(1).click();await page.getByLabel('Цена за единицу 2',{exact:true}).fill('29.95');await page.locator('.receipt-item-summary').first().click();await page.getByLabel('Название 1',{exact:true}).fill('Хлеб');await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Сохранить расход',exact:true}).click();await page.getByRole('alert').filter({hasText:'Похожий чек'}).waitFor();assert.equal(writes.length,1,'duplicate reimport is blocked');
  await page.getByRole('button',{name:'Закрыть чек',exact:true}).click();
  if(process.env.DAYRIS_RECEIPT_SAMPLE){
   await page.locator('.receipt-file').first().setInputFiles(process.env.DAYRIS_RECEIPT_SAMPLE);await page.locator('.receipt-fields').waitFor({timeout:120000});
@@ -159,15 +159,37 @@ try{
  if(process.env.DAYRIS_CURVED_SAMPLE){
   if(await page.locator('.receipt-dialog').isVisible())await page.getByRole('button',{name:'Закрыть чек',exact:true}).click();
   await page.locator('.receipt-file').first().setInputFiles(process.env.DAYRIS_CURVED_SAMPLE);await page.locator('.receipt-fields').waitFor({timeout:120000});
-  assert.equal(await page.getByLabel('Итог чека',{exact:true}).inputValue(),'','conflicting OCR cannot set an automatic expense amount');
+  const foundTotal=await page.getByLabel('Итог чека',{exact:true}).inputValue();assert.ok(!foundTotal||foundTotal==='695.50','only the actual total may be selected without conflicting reads');
   assert.equal(await page.getByLabel('Итог чека',{exact:true}).getAttribute('placeholder'),'—');assert.equal(await page.locator('.receipt-sum,.receipt-difference').count(),0);
   assert.equal(await page.getByLabel('Магазин',{exact:true}).inputValue(),'','isolated footer OCR cannot invent a store');
-  await page.getByRole('button',{name:'Выбрать сумму 695,50',exact:true}).waitFor();assert.equal(await page.locator('.receipt-item').count(),0);assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).count(),0);
+  if(!foundTotal)await page.getByRole('button',{name:'Выбрать сумму 695,50',exact:true}).waitFor();assert.equal(await page.locator('.receipt-item').count(),0);assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).count(),0);
   for(const width of[320,390,1280]){await page.setViewportSize({width,height:900});await page.screenshot({path:`artifacts/receipt-check/curved-candidates-${width}.png`});}
-  await page.getByRole('button',{name:'Выбрать сумму 695,50',exact:true}).click();assert.equal(await page.getByLabel('Итог чека',{exact:true}).inputValue(),'695.50');assert.equal(await page.locator('.receipt-total-options').count(),0);
+  if(!foundTotal)await page.getByRole('button',{name:'Выбрать сумму 695,50',exact:true}).click();assert.equal(await page.getByLabel('Итог чека',{exact:true}).inputValue(),'695.50');assert.equal(await page.locator('.receipt-total-options').count(),0);
   assert.equal(await page.getByLabel('Валюта чека',{exact:true}).inputValue(),'','the photo has no explicit currency, so none may be invented');assert.equal(await page.getByRole('checkbox').count(),0,'missing date/currency still require review');
   await page.screenshot({path:'artifacts/receipt-check/curved-verified-total.png'});
   console.log('CURVED RECEIPT: total row located independently of items; conflicting OCR offers 695.50 for explicit photo review, no automatic saving.');
+ }
+ if(process.env.DAYRIS_CURVED_VARIANTS){
+  const source=fs.readFileSync(process.env.DAYRIS_CURVED_VARIANTS).toString('base64');
+  for(const width of[540,360]){
+   if(await page.locator('.receipt-dialog').isVisible())await page.getByRole('button',{name:'Закрыть чек',exact:true}).click();
+   const jpg=await page.evaluate(async({source,width})=>{const img=new Image();img.src='data:image/jpeg;base64,'+source;await img.decode();const canvas=document.createElement('canvas');canvas.width=width;canvas.height=Math.round(img.naturalHeight*width/img.naturalWidth);canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);return canvas.toDataURL('image/jpeg',.8).split(',')[1];},{source,width});
+   await page.locator('.receipt-file').first().setInputFiles({name:`receipt-${width}.jpg`,mimeType:'image/jpeg',buffer:Buffer.from(jpg,'base64')});await page.locator('.receipt-fields').waitFor({timeout:120000});
+   const total=await page.getByLabel('Итог чека',{exact:true}).inputValue(),choices=await page.locator('.receipt-total-options button').allTextContents();
+   console.log('RESIZED RECEIPT',width,JSON.stringify({total,choices,raw:await page.getByLabel('Распознанный текст',{exact:true}).inputValue()}));
+   assert.ok(total==='695.50'||!total&&choices.some(value=>value.replace(/[\s\u00a0]/g,'')==='695,50'),`resized ${width}px photo must recover the actual total, not lose it`);
+   assert.equal(await page.getByLabel('Магазин',{exact:true}).inputValue(),'');await page.screenshot({path:`artifacts/receipt-check/curved-resized-${width}.png`});
+  }
+ }
+ if(process.env.DAYRIS_RECEIPT_VISIBLE_SAMPLE){
+  if(await page.locator('.receipt-dialog').isVisible())await page.getByRole('button',{name:'Закрыть чек',exact:true}).click();
+  // Native pixels of the visible receipt region in the user's 591px screenshot.
+  // Exclude application amounts/buttons: they cannot corroborate the receipt.
+  const source=fs.readFileSync(process.env.DAYRIS_RECEIPT_VISIBLE_SAMPLE).toString('base64');
+  const png=await page.evaluate(async source=>{const img=new Image();img.src='data:image/jpeg;base64,'+source;await img.decode();const canvas=document.createElement('canvas');canvas.width=234;canvas.height=216;canvas.getContext('2d').drawImage(img,179,194,234,216,0,0,234,216);return canvas.toDataURL('image/png').split(',')[1];},source);
+  await page.locator('.receipt-file').first().setInputFiles({name:'visible-receipt.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});await page.locator('.receipt-fields').waitFor({timeout:120000});
+  const total=await page.getByLabel('Итог чека',{exact:true}).inputValue(),choices=await page.locator('.receipt-total-options button').allTextContents();console.log('VISIBLE RECEIPT',JSON.stringify({total,choices,raw:await page.getByLabel('Распознанный текст',{exact:true}).inputValue()}));
+  assert.ok(!total||total==='695.50','a tiny screenshot preview must never silently select a wrong total');assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).count(),0,'missing metadata or unreadable label still require review');await page.screenshot({path:'artifacts/receipt-check/visible-receipt-total.png'});
  }
  await page.setViewportSize({width:1280,height:900});await page.screenshot({path:'artifacts/receipt-check/full-app-desktop.png'});
  assert.equal(requests.some(item=>item.method==='POST' && !item.url.includes('supabase.co') && !item.url.startsWith(origin)),false,'photo is never sent to an OCR service');
