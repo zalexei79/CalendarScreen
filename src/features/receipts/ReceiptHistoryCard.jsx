@@ -1,5 +1,5 @@
 import React,{useState} from 'react';
-import {Pencil,Trash2,ReceiptText,ChevronDown} from 'lucide-react';
+import {Pencil,Trash2,ReceiptText,Camera,ChevronDown} from 'lucide-react';
 import {MONEY_CATEGORIES} from '../../shared/config/constants';
 import {receiptFromEntry} from './receiptHistory.js';
 import {receiptMoney,receiptLineTotal,receiptProduct} from './receiptModel.js';
@@ -16,8 +16,9 @@ export default function ReceiptHistoryCard({entry,receipt:provided,language='ru'
   const category=MONEY_CATEGORIES.find(item=>item.key.toUpperCase()===String(entry.instrument).toUpperCase());
   const categoryText=category?locale===0?category.key:locale===1?category.en:locale===2?category.ro:category['zh-CN']:entry.instrument;
   const visible=expanded?receipt.items:receipt.items.slice(0,previewLimit);
-  return <article className="receipt-history" data-light={isLight} aria-label={`${c.receipt}: ${receipt.merchant||categoryText}`} onClick={event=>event.stopPropagation()}>
-    <header className="receipt-history-header"><span className="receipt-history-mark"><ReceiptText size={19}/></span><div><h4>{receipt.merchant||c.receipt}</h4><p>{[c.receipt,dateText,entry.time].filter(Boolean).join(' · ')}</p></div></header>
+  const kindLabel=receipt.kind==='amount'?c.photoAmount:c.receipt;
+  return <article className="receipt-history" data-light={isLight} aria-label={`${kindLabel}: ${receipt.merchant||categoryText}`} onClick={event=>event.stopPropagation()}>
+    <header className="receipt-history-header"><span className="receipt-history-mark">{receipt.kind==='amount'?<Camera size={19}/>:<ReceiptText size={19}/>}</span><div><h4>{receipt.merchant||c.receipt}</h4><p>{[receipt.kind==='amount'?c.photoAmount:c.receipt,dateText,entry.time].filter(Boolean).join(' · ')}</p></div></header>
     <div className="receipt-history-overview"><span>{categoryText}</span><strong>−{money(receipt.total)} <small>{receipt.currency}</small></strong></div>
     {receipt.items.length>0&&<ul className="receipt-history-items">{visible.map((item,index)=>{
       const product=receiptProduct(item.name,language,item.productType),expected=receiptLineTotal(item.quantity,item.unitPrice),mismatch=receiptMoney(expected)!==receiptMoney(item.total);
@@ -25,6 +26,6 @@ export default function ReceiptHistoryCard({entry,receipt:provided,language='ru'
     })}</ul>}
     {receipt.items.length>previewLimit&&<button type="button" className="receipt-history-expand" aria-expanded={expanded} onClick={()=>setExpanded(!expanded)}>{expanded?c.showLess:`${c.showAll} (${receipt.items.length})`}<ChevronDown size={14}/></button>}
     {receipt.mismatch&&<div className="receipt-history-difference"><span>{c.itemSum}<b>{money(receipt.sum)} {receipt.currency}</b></span><span>{c.difference}<b>{money(receipt.difference)} {receipt.currency}</b></span></div>}
-    {(onEdit||onDelete)&&<footer className="receipt-history-actions"><span>{receipt.items.length?`${c.items}: ${receipt.items.length}`:c.receipt}</span>{onEdit&&<button type="button" onClick={onEdit} aria-label={c.editRecord}><Pencil size={15}/><span>{c.editRecord}</span></button>}{onDelete&&<button type="button" onClick={onDelete} aria-label={c.deleteRecord}><Trash2 size={15}/></button>}</footer>}
+    {(onEdit||onDelete)&&<footer className="receipt-history-actions"><span>{receipt.items.length?`${c.items}: ${receipt.items.length}`:kindLabel}</span>{onEdit&&<button type="button" onClick={onEdit} aria-label={c.editRecord}><Pencil size={15}/><span>{c.editRecord}</span></button>}{onDelete&&<button type="button" onClick={onDelete} aria-label={c.deleteRecord}><Trash2 size={15}/></button>}</footer>}
   </article>;
 }

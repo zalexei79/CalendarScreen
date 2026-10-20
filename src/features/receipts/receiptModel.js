@@ -121,6 +121,11 @@ export function receiptValidation(draft, today, currencies) {
   return { valid: total > 0 && currencies.includes(draft.currency) && validReceiptDate(draft.dateKey, today) && !invalidItem && !lineMismatch && !mismatch, total, sum, mismatch, lineMismatch };
 }
 export function receiptComment(draft,language='ru') {
+  if(draft.kind==='amount'){
+    const label=String(language).startsWith('zh')?'照片中的金额':['ro','md'].includes(language)?'Sumă din fotografie':language==='en'?'Amount from photo':'Сумма с фото';
+    const equation=draft.expression?`${draft.expression} = ${moneyText(receiptMoney(draft.total))}`:'';
+    return [`📷 ${draft.merchant.trim()||label}`,receiptMath(equation)?.consistent?`${equation} ${draft.currency}`:''].filter(Boolean).join('\n');
+  }
   return [`🧾 ${draft.merchant.trim()}`, ...draft.items.map(item => {
     const product=receiptProduct(item.name,language,item.productType), original=item.name.trim();
     const label=product.type?`${product.symbol} ${product.title} [${original}]`:original;

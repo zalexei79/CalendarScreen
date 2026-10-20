@@ -1,5 +1,6 @@
 // Loaded only after photo selection and a successful entitlement check.
 import {refineReceiptMath} from './receiptOcrMath.js';
+import {parseReceiptPhoto,photoAmount} from './receiptPhoto.js';
 export async function recognizeReceipt(file, { language = 'ru', onProgress, signal } = {}) {
   const { createWorker } = await import('tesseract.js');
   const { default: workerPath } = await import('tesseract.js/dist/worker.min.js?url');
@@ -24,15 +25,23 @@ export async function recognizeReceipt(file, { language = 'ru', onProgress, sign
     // Automatic page segmentation retains wrapped rows and dates on skewed
     // receipts; treating the entire camera photo as one text block loses them.
     await worker.setParameters({ tessedit_pageseg_mode: '3' });
-    const { data } = await Promise.race([worker.recognize(file,{}, {blocks:true}), failure]);
+    let { data } = await Promise.race([worker.recognize(file,{}, {blocks:true}), failure]);
     refining = true;
+    if(parseReceiptPhoto(data).kind==='amount'){
+      if(!photoAmount(data).total){
+        await worker.setParameters({tessedit_pageseg_mode:'11'});
+        const sparse=await Promise.race([worker.recognize(file,{}, {blocks:true}),failure]);
+        if(photoAmount(sparse.data).total)data=sparse.data;
+      }
+      onProgress?.(100);return {text:data.text,blocks:data.blocks};
+    }
     const text = await refineReceiptMath(data,async(rectangle,mode)=>{
       await worker.setParameters({tessedit_pageseg_mode:mode,tessedit_char_whitelist:'0123456789.,xXх×*=: '});
       const result=await Promise.race([worker.recognize(file,{rectangle}),failure]);
       return result.data.text;
     },{signal,onProgress});
     onProgress?.(100);
-    return text;
+    return {text,blocks:data.blocks};
   } finally {
     clearTimeout(timeout); clearTimeout(deadline); finished = true;
     signal?.removeEventListener('abort', cancel); signal?.removeEventListener('abort', abortFailure);

@@ -5174,7 +5174,7 @@ export default function CalendarScreen() {
             </span>
           </button>
           <CalendarVoiceButton launchRequest={homeVoiceReady ? homeVoiceLaunch.request : null} onLaunchHandled={homeVoiceLaunch.handled} userId={user?.id} onCreateCategory={voiceCategories.add} onDeleteCategory={removeMoneyCategory} onSaveEntry={saveReviewedVoiceEntry} defaultCurrency={currency} walletAvailable={proAccessActive && !proAccessLoading} language={language} isLight={isLight} traderMode={traderMode} categoryOptions={moneyCategoryNames.map(value => ({value, label: getMoneyCategoryLabel(value, language), type: MONEY_CATEGORIES.find(item=>item.key===value)?.type, icon: getHistoryCategoryIcon(value)}))} onResetConversation={voiceConversation.reset} onConversation={voiceConversation.handle} selectedDate={selectedKey} onCommand={handleCalendarVoiceCommand} />
-          {!traderMode && <ReceiptCapture key={user?.id || 'guest'} userId={user?.id} proActive={proAccessActive} proLoading={proAccessLoading} language={language} isLight={isLight} onUpgrade={openProPresentation} onSaveReceipt={saveReviewedReceipt}/>}
+          {!traderMode && <ReceiptCapture key={user?.id || 'guest'} userId={user?.id} proActive={proAccessActive} proLoading={proAccessLoading} language={language} isLight={isLight} defaultCurrency={currency} defaultDateKey={selectedKey} onUpgrade={openProPresentation} onSaveReceipt={saveReviewedReceipt}/>}
         </div>
       </WorkspaceDock>
 

@@ -60,6 +60,7 @@
 .receipt-field input[aria-invalid="true"]{border-color:#b58a3870}
 .receipt-field input[readonly]{background:transparent;border-color:transparent;padding-inline:0;font-weight:600;cursor:default}
 .receipt-dialog .receipt-verify-math{min-height:36px;border:0;background:none;padding:8px 0;margin-top:7px;color:var(--receipt-muted);font-size:11px}
+.receipt-dialog .receipt-add-empty{min-height:38px;border:0;background:none;padding:8px 0;color:var(--receipt-muted);font-size:11px}
 .receipt-price-check{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:13px;padding:12px 0 2px;border-top:1px solid var(--receipt-line);font-size:10px;color:var(--receipt-muted);font-variant-numeric:tabular-nums}
 .receipt-price-check>span:not(:nth-child(2)){display:flex;flex-direction:column;gap:6px;min-width:0}
 .receipt-price-check>span:last-child{text-align:right}

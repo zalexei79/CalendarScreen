@@ -1,0 +1,31 @@
+.receipt-composer{position:relative;padding:27px 2px 8px;margin:0 0 10px;isolation:isolate}
+.receipt-composer::before{content:"";position:absolute;inset:0 0 25%;z-index:-1;background:radial-gradient(ellipse at 50% 25%,#d0af680b,transparent 70%);pointer-events:none}
+.receipt-composer-origin{display:flex;align-items:center;justify-content:center;gap:7px;color:var(--receipt-muted);font-size:11px;letter-spacing:.025em}
+.receipt-composer-origin svg{color:#b4975f}
+.receipt-composer .receipt-total{display:flex;justify-content:center;align-items:center;gap:12px;border:0;border-radius:0;background:none;padding:0;margin:13px 0 0}
+.receipt-composer .receipt-total>label:first-child{display:flex;min-width:0;flex:0 1 8ch;font-size:56px}
+.receipt-composer .receipt-total input{box-sizing:border-box;width:100%;min-width:0;height:70px;border:0;padding:0;background:transparent;color:var(--receipt-fg);font:inherit;font-weight:550;letter-spacing:-.055em;font-variant-numeric:tabular-nums;text-align:center;outline:none;border-radius:9px}
+.receipt-composer .receipt-total input::placeholder{color:var(--receipt-muted);opacity:.45}
+.receipt-composer .receipt-total input:focus-visible{box-shadow:0 1px 0 #b4975f80}
+.receipt-composer .receipt-total input[data-length="long"]{font-size:35px;letter-spacing:-.04em}
+.receipt-currency-control{display:flex;align-items:center;justify-content:center;position:relative;flex:none;gap:5px;min-width:55px;min-height:38px;padding:7px 9px;border:1px solid var(--receipt-line);border-radius:11px;font-size:11px;color:var(--receipt-muted)}
+.receipt-currency-control select,.receipt-context-chip select,.receipt-context-chip input{position:absolute;inset:0;box-sizing:border-box;width:100%;height:100%;margin:0;opacity:0;cursor:pointer;font-size:16px}
+.receipt-composer .receipt-amount-caption{min-height:18px;line-height:1.5;margin:5px 0 25px;text-align:center;color:var(--receipt-muted);font-size:11px;font-variant-numeric:tabular-nums}
+.receipt-context{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.receipt-context-chip{position:relative;display:flex;align-items:center;gap:7px;min-height:46px;padding:10px 11px;border:1px solid var(--receipt-line);border-radius:13px;color:var(--receipt-muted);font-size:11px;min-width:0;background:var(--receipt-field)}
+.receipt-context-chip>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.receipt-context-chip>svg{flex:none}.receipt-context-chip[data-empty="true"]{color:#bc9e65}
+.receipt-currency-control:focus-within,.receipt-context-chip:focus-within{outline:2px solid #b4975f;outline-offset:2px}
+.receipt-composer .receipt-metadata{border:0;margin-top:7px}
+.receipt-composer .receipt-metadata>summary{justify-content:center;gap:7px;min-height:40px;padding:8px 3px;color:var(--receipt-muted)}
+.receipt-dialog .receipt-composer .receipt-metadata>summary>span{flex:initial;max-width:85%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:0;border-radius:0;padding:0;font-size:11px}
+.receipt-composer .receipt-metadata>summary>svg{flex:none}
+.receipt-composer .receipt-description{margin:8px 0 0}
+.receipt-preview>summary{display:flex;align-items:center;gap:10px;list-style:none!important;min-height:47px!important;text-align:left!important;padding:0 0 9px!important}
+.receipt-preview>summary::-webkit-details-marker{display:none}
+.receipt-preview>summary>img{width:33px;height:38px;object-fit:cover;object-position:top;margin:0;border:1px solid var(--receipt-line);border-radius:8px;flex:none}
+.receipt-preview>summary>span{flex:1;font-size:11px;color:var(--receipt-muted)}
+.receipt-preview>summary>svg{color:var(--receipt-muted);flex:none}
+.receipt-preview[open]>summary>svg{transform:rotate(180deg)}
+.receipt-dialog[data-light="true"] .receipt-context-chip[data-empty="true"]{color:#795b28}
+@media(max-width:360px){.receipt-composer{padding-top:20px}.receipt-composer .receipt-total>label:first-child{font-size:49px;flex-basis:7ch}.receipt-composer .receipt-total{gap:8px}.receipt-context-chip{gap:5px;padding-inline:8px;font-size:10px}.receipt-currency-control{padding-inline:7px;min-width:50px}}

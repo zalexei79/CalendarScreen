@@ -98,6 +98,16 @@ try{
   await page.getByRole('checkbox').check();assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isEnabled(),true);
   await page.screenshot({path:'artifacts/receipt-check/real-crop-mobile.png'});console.log('REAL CROP: all five factors and results recognized correctly without manual item corrections.');
  }
+ if(process.env.DAYRIS_CALCULATOR_SAMPLE){
+  if(await page.locator('.receipt-dialog').isVisible())await page.getByRole('button',{name:'Закрыть чек',exact:true}).click();
+  await page.locator('.receipt-file').first().setInputFiles(process.env.DAYRIS_CALCULATOR_SAMPLE);await page.locator('.receipt-fields').waitFor({timeout:120000});
+  assert.equal(await page.getByLabel('Итог чека',{exact:true}).inputValue(),'59.90');assert.equal(await page.getByLabel('Валюта чека',{exact:true}).inputValue(),'MDL');assert.equal(await page.locator('.receipt-section-title').count(),0);assert.equal(await page.locator('.receipt-warning').count(),0);
+  assert.equal(await page.locator('#receipt-title').innerText(),'Фото в календарь');assert.doesNotMatch(await page.locator('.receipt-composer').innerText(),/22:37|LTE|Укажите дату/);assert.match(await page.locator('.receipt-amount-caption').innerText(),/29,95 × 2/);
+  await page.getByRole('checkbox').check();await page.screenshot({path:'artifacts/receipt-check/real-calculator-mobile.png'});
+  const previousWrites=writes.length;await page.getByRole('button',{name:'Сохранить расход',exact:true}).click();await page.locator('.receipt-success').waitFor();assert.equal(writes.length,previousWrites+1);assert.equal(writes.at(-1).pnl,-59.90);assert.match(writes.at(-1).comment,/^📷/u);assert.doesNotMatch(writes.at(-1).comment,/22:37|LTE/);
+  await page.getByRole('button',{name:'Готово',exact:true}).click();await page.getByRole('button',{name:'История',exact:true}).click();const card=page.locator('.receipt-history').filter({hasText:'Сумма с фото'});await card.waitFor();assert.match(await card.innerText(),/59,90/);assert.equal(await card.locator('.receipt-history-items').count(),0);await card.screenshot({path:'artifacts/receipt-check/photo-amount-history.png'});
+  console.log('CALCULATOR: real screenshot recognized as 59.90 MDL; clean amount card and photo expense history, no store/status-bar pollution.');
+ }
  await page.setViewportSize({width:1280,height:900});await page.screenshot({path:'artifacts/receipt-check/full-app-desktop.png'});
  assert.equal(requests.some(item=>item.method==='POST' && !item.url.includes('supabase.co') && !item.url.startsWith(origin)),false,'photo is never sent to an OCR service');
  assert.equal(requests.some(item=>/cdn\.jsdelivr|unpkg/.test(item.url)),false,'engine/languages are same-origin');

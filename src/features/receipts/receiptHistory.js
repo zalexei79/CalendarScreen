@@ -6,6 +6,11 @@ import {normalizeReceiptText,receiptMoney,moneyText,receiptLineTotal,validReceip
 export function readSavedReceipt(comment,currency='') {
   if(typeof comment!=='string'||comment.length>50000)return null;
   const lines=comment.split(/\r?\n/).map(line=>line.trim()).filter(Boolean),marked=lines[0]?.startsWith('🧾');
+  if(lines[0]?.startsWith('📷')){
+    if(lines.length>2||lines[1]&&!/^\d+(?:[.,]\d{1,3})?\s*×\s*\d+(?:[.,]\d{1,3})?\s*=\s*\d+(?:[.,]\d{1,2})?\s+[A-Z]{3}$/.test(lines[1]))return null;
+    const code=lines[1]?.match(/([A-Z]{3})$/)?.[1];if(currency&&code&&code!==currency)return null;
+    return {kind:'amount',merchant:lines[0].replace(/^📷\s*/u,''),items:[],currency:currency||code||'',marked:true,expression:lines[1]?.split(' = ')[0]||''};
+  }
   const pattern=/^(.+?)\s+·\s+(\d+(?:[.,]\d{1,3})?)\s*(kg|кг|l|л)?\s*[×xх]\s*(\d+(?:[.,]\d{1,2}))\s*=\s*(\d+(?:[.,]\d{1,2}))\s+([A-Z]{3})$/u;
   const rows=[],prefix=[];
   for(const line of lines){
@@ -32,5 +37,6 @@ export function receiptFromEntry(entry) {
   return{...receipt,total:moneyText(total),sum:moneyText(sum),difference:moneyText(Math.abs(total-sum)),mismatch:receipt.items.length>0&&sum!==total,lineMismatch:receipt.items.some(item=>receiptMoney(receiptLineTotal(item.quantity,item.unitPrice))!==receiptMoney(item.total))};
 }
 export function receiptFingerprint(receipt) {
+  if(receipt.kind==='amount')return JSON.stringify(['photo',normalizeReceiptText(receipt.merchant),String(receipt.expression||'').replace(/,/g,'.').replace(/\s/g,'')]);
   return JSON.stringify([normalizeReceiptText(receipt.merchant),receipt.items.map(item=>[normalizeReceiptText(item.name),Number(item.quantity),item.unit||'pcs',receiptMoney(item.unitPrice),receiptMoney(item.total)])]);
 }
