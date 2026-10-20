@@ -19,6 +19,7 @@ import ActivityStreak from './src/shared/ui/ActivityStreak.jsx';
 import AdminCalendarLink from './src/features/admin/AdminCalendarLink.jsx';
 
 function pendingSyncText(count, traderMode, language) {
+  if (language === 'uk') return `${count} ${traderMode ? 'угод' : 'записів'} очікують синхронізації.`;
   if (String(language).startsWith('zh')) return `${count} ${traderMode ? '笔交易' : '条记录'}等待同步。`;
   const locale = language === 'md' ? 'ro' : language;
   if (locale === 'en') return `${count} ${traderMode ? (count === 1 ? 'trade' : 'trades') : (count === 1 ? 'entry' : 'entries')} waiting for sync.`;

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v44-admin-pro-management';
+const CACHE_NAME = 'atj-cache-v45-ukrainian-hryvnia';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

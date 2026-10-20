@@ -33,11 +33,11 @@ export const AmountInput=React.forwardRef(function AmountInput(props,ref) {
 });
 
 export default function AmountKeypad({value,onChange,language='ru',isLight}) {
-  const locale=String(language).startsWith('zh')?'zh':language==='en'?'en':language==='md'||language==='ro'?'ro':'ru';
+  const locale=String(language).startsWith('uk')?'uk':String(language).startsWith('zh')?'zh':language==='en'?'en':language==='md'||language==='ro'?'ro':'ru';
   const speech=window.SpeechRecognition||window.webkitSpeechRecognition;
   const session=useRef(null), timeout=useRef(null);
   const [listening,setListening]=useState(false),[message,setMessage]=useState('');
-  const voice={
+  const voice={uk:{start:'Назвати суму',stop:'Зупинити',listen:'Назвіть лише суму',invalid:'Не вдалося розпізнати суму. Скажіть, наприклад: сто двадцять п’ять.',denied:'Дозвольте доступ до мікрофона в браузері.',error:'Голосове введення недоступне. Уведіть суму вручну.',done:'Суму заповнено — перевірте перед збереженням.',unsupported:'Браузер не підтримує голосове введення.'},
   zh: {start:"说出金额",stop:"停止",listen:"请只说金额",invalid:"未识别金额，请尝试说“一百二十五”。",denied:"请允许浏览器使用麦克风。",error:"语音输入不可用，请手动输入金额。",done:"金额已填入，请在保存前核对。",unsupported:"此浏览器不支持语音输入。"},ru:{start:'Назвать сумму',stop:'Остановить',listen:'Назовите только сумму',invalid:'Не понял сумму. Скажите, например: сто двадцать пять.',denied:'Разрешите доступ к микрофону в браузере.',error:'Голосовой ввод недоступен. Введите сумму вручную.',done:'Сумма заполнена — проверьте перед сохранением.',unsupported:'Браузер не поддерживает голосовой ввод.'},en:{start:'Speak amount',stop:'Stop',listen:'Say only the amount',invalid:'Amount not recognized. Try: one hundred twenty five.',denied:'Allow microphone access in your browser.',error:'Voice input unavailable. Enter the amount manually.',done:'Amount entered — check before saving.',unsupported:'Voice input is not supported by this browser.'},ro:{start:'Spune suma',stop:'Oprește',listen:'Spune doar suma',invalid:'Suma nu a fost recunoscută. Încearcă: o sută douăzeci și cinci.',denied:'Permite accesul la microfon în browser.',error:'Introducerea vocală nu este disponibilă. Introdu suma manual.',done:'Suma a fost introdusă — verifică înainte de salvare.',unsupported:'Browserul nu acceptă introducerea vocală.'}}[locale];
   function cancel() {
     const current=session.current;session.current=null;clearTimeout(timeout.current);
@@ -56,7 +56,7 @@ export default function AmountKeypad({value,onChange,language='ru',isLight}) {
     if(session.current){cancel();setMessage('');return;}
     if(!speech)return;
     const recognition=new speech();session.current=recognition;
-    recognition.lang={
+    recognition.lang={uk:'uk-UA',
   zh: "zh-CN",ru:'ru-RU',en:'en-US',ro:'ro-RO'}[locale];
     recognition.continuous=false;recognition.interimResults=false;recognition.maxAlternatives=1;
     setListening(true);setMessage(voice.listen);
@@ -71,7 +71,7 @@ export default function AmountKeypad({value,onChange,language='ru',isLight}) {
     recognition.onend=()=>{if(session.current!==recognition)return;session.current=null;clearTimeout(timeout.current);setListening(false);setMessage(voice.invalid);};
     try{recognition.start();timeout.current=setTimeout(()=>{if(session.current===recognition){cancel();setMessage(voice.invalid);}},12000);}catch{cancel();setMessage(voice.error);}
   }
-  const copy={
+  const copy={uk:['Уведення суми','Видалити цифру','Очистити','Швидкі суми'],
   zh: ["输入金额","删除数字","清空","快捷金额"],ru:['Ввод суммы','Удалить цифру','Очистить','Быстрые суммы'],en:['Enter amount','Delete digit','Clear','Quick amounts'],ro:['Introdu suma','Șterge cifra','Golește','Sume rapide']}[locale];
   return <div className="amount-keypad" data-light={Boolean(isLight)} role="group" aria-label={copy[0]}>
     <div className="amount-tools"><span>{copy[3]}</span><button type="button" className="amount-mic" disabled={!speech} title={!speech?voice.unsupported:voice.start} aria-label={listening?voice.stop:voice.start} aria-pressed={listening} onClick={startVoice}>{listening?<Square size={14}/>:<Mic size={16}/>}<span>{listening?voice.stop:voice.start}</span></button></div>

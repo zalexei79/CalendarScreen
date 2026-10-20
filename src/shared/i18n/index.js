@@ -1,5 +1,6 @@
 import { APP_NAME, APP_TITLE, PRO_PLAN_NAME, APP_SLOGAN } from '../config/brand.js';
 import zh from './zh.js';
+import uk from './uk.js';
 
 export const MONTHS = [
   'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
@@ -17,6 +18,7 @@ export const MONTHS_MD = [
 ];
 
 export function monthsFor(language) {
+  if (String(language).toLowerCase().split('-')[0] === 'uk') return ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
   if (String(language).toLowerCase().startsWith('zh')) return Array.from({ length: 12 }, (_, i) => `${i + 1}月`);
   if (language === 'en') return MONTHS_EN;
   if (language === 'md' || language === 'ro') return MONTHS_MD;
@@ -841,7 +843,7 @@ Object.assign(TRANSLATIONS.md, {
 });
 
 export function translate(language, key) {
-  const langKey = String(language).toLowerCase().startsWith('zh') ? 'zh-CN' : language === 'ro' ? 'md' : language;
+  const langKey = String(language).toLowerCase().startsWith('uk') ? 'uk' : String(language).toLowerCase().startsWith('zh') ? 'zh-CN' : language === 'ro' ? 'md' : language;
   return (TRANSLATIONS[langKey] && TRANSLATIONS[langKey][key]) || (TRANSLATIONS.en && TRANSLATIONS.en[key]) || TRANSLATIONS.ru[key] || key;
 }
 
@@ -870,3 +872,4 @@ const authCopy = {
   'zh-CN': { signInTelegram: '使用 Telegram 登录', authConnecting: '正在连接…', authLoginFailed: '无法登录。请重试或选择其他登录方式。' },
 };
 for (const [locale, copy] of Object.entries(authCopy)) Object.assign(TRANSLATIONS[locale], copy);
+TRANSLATIONS.uk = uk;

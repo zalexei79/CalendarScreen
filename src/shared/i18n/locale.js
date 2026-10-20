@@ -1,6 +1,7 @@
 // Internal copy bundles use short keys; browser APIs use complete BCP 47 tags.
 export function localeKey(language) {
   const code = String(language || '').toLowerCase().replace(/_/g, '-');
+  if (code === 'uk' || code.startsWith('uk-')) return 'uk';
   if (code.startsWith('zh')) return 'zh';
   if (code === 'md' || code === 'ro' || code.startsWith('ro-')) return 'ro';
   if (code === 'en' || code.startsWith('en-')) return 'en';
@@ -8,7 +9,7 @@ export function localeKey(language) {
 }
 
 export function intlLocale(language) {
-  return { zh: 'zh-CN', ro: 'ro-RO', en: 'en-US', ru: 'ru-RU' }[localeKey(language)];
+  return { uk:'uk-UA', zh: 'zh-CN', ro: 'ro-RO', en: 'en-US', ru: 'ru-RU' }[localeKey(language)];
 }
 
 export function browserLanguage() {

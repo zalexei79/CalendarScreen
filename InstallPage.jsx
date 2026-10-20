@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import ukInstall from './src/shared/i18n/ukInstall.js';
 import BrandIcon from './src/shared/ui/BrandIcon.jsx';
 import {
   ArrowRight,
@@ -14,11 +15,13 @@ import {
 function getLang() {
   try {
     const stored = window.localStorage.getItem('atj_language');
+    if (String(stored).startsWith('uk')) return 'uk';
     if (String(stored).startsWith('zh')) return 'zh';
     if (stored === 'en') return 'en';
     if (stored === 'md' || stored === 'ro') return 'ro';
   } catch { /* ignore */ }
   const nav = String(navigator.language || '').toLowerCase();
+  if (nav.startsWith('uk')) return 'uk';
   if (nav.startsWith('zh')) return 'zh';
   if (nav.startsWith('ro')) return 'ro';
   if (nav.startsWith('en')) return 'en';
@@ -35,6 +38,7 @@ function getInitialLight() {
 }
 
 const COPY = {
+  uk: ukInstall,
   zh: {
     eyebrow: "一键安装",
     title: "将 DAYRIS 添加到主屏幕",

@@ -90,6 +90,7 @@ import { useCurveNotes } from './src/features/day-notes/useCurveNotes';
 import PnlCurve from './src/features/trades-sync/components/PnlCurve';
 import PeriodDynamics from './src/features/trades-sync/components/PeriodDynamics';
 import CalendarGrid from './CalendarGrid';
+import * as ukCalendar from './src/shared/i18n/ukCalendar.js';
 import MonthlyGoal from './MonthlyGoal';
 import AmountKeypad, {AmountInput} from './src/shared/ui/AmountEntry.jsx';
 import CalendarVoiceButton from './src/shared/ui/CalendarVoiceButton.jsx';
@@ -663,7 +664,7 @@ export default function CalendarScreen() {
   const [language, setLanguage] = useState(() => {
     try {
       const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
-      return LANGUAGES.some((l) => l.code === stored) ? stored : String(navigator.language).toLowerCase().startsWith('zh') ? 'zh-CN' : 'ru';
+      return LANGUAGES.some((l) => l.code === stored) ? stored : String(navigator.language).toLowerCase().startsWith('uk') ? 'uk' : String(navigator.language).toLowerCase().startsWith('zh') ? 'zh-CN' : 'ru';
     } catch {
       return 'ru';
     }
@@ -798,6 +799,7 @@ export default function CalendarScreen() {
       ? String(itemOrCode?.label || '').toLowerCase()
       : String(label || '').toLowerCase();
 
+    if (code.startsWith('uk')) return 'uk';
     if (code.startsWith('zh')) return 'zh';
 
     if (code === 'en' || code.startsWith('en-') || name.includes('english') || name.includes('англ')) return 'en';
@@ -813,6 +815,7 @@ export default function CalendarScreen() {
   }
 
   const onboardingCopy = {
+    uk: ukCalendar.onboardingCopy,
   zh: {
       setup: "设置",
       of: "/",
@@ -972,6 +975,7 @@ export default function CalendarScreen() {
   }[onboardingLang];
 
   const historyShareCopy = {
+    uk: ukCalendar.historyShareCopy,
     zh: {
       share: '分享', shareTitle: '分享结果', preview: '预览', myResults: '我的结果',
       period: '时间范围', result: '结果', income: '收入', expense: '支出', records: '记录',
@@ -1078,6 +1082,7 @@ export default function CalendarScreen() {
   }[resolveOnboardingLanguage(language)];
 
   const proAccessCopy = {
+    uk: ukCalendar.proAccessCopy,
   zh: {
       eyebrow: 'PRO',
       title: "轻松掌控财务。",
@@ -1425,6 +1430,7 @@ export default function CalendarScreen() {
   }[resolveOnboardingLanguage(language)];
 
   const referralShareCopy = {
+    uk: ukCalendar.referralShareCopy,
     zh: {
       preview: '专属邀请', shareTitle: '邀请加入 DAYRIS', hero: '加入我，一起记录每一天',
       tagline: t('slogan'), friendBonus: '7 天 PRO', friendBonusHint: '完成第一条记录后即可开始体验',
@@ -1484,7 +1490,7 @@ export default function CalendarScreen() {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '';
 
-    const locale = resolveOnboardingLanguage(language) === 'zh' ? 'zh-CN' : resolveOnboardingLanguage(language) === 'ru'
+    const locale = resolveOnboardingLanguage(language) === 'uk' ? 'uk-UA' : resolveOnboardingLanguage(language) === 'zh' ? 'zh-CN' : resolveOnboardingLanguage(language) === 'ru'
       ? 'ru-RU'
       : resolveOnboardingLanguage(language) === 'ro'
         ? 'ro-RO'
@@ -1502,7 +1508,7 @@ export default function CalendarScreen() {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '';
 
-    const locale = resolveOnboardingLanguage(language) === 'zh' ? 'zh-CN' : resolveOnboardingLanguage(language) === 'ru'
+    const locale = resolveOnboardingLanguage(language) === 'uk' ? 'uk-UA' : resolveOnboardingLanguage(language) === 'zh' ? 'zh-CN' : resolveOnboardingLanguage(language) === 'ru'
       ? 'ru-RU'
       : resolveOnboardingLanguage(language) === 'ro'
         ? 'ro-RO'
@@ -1516,6 +1522,7 @@ export default function CalendarScreen() {
   }
 
   const proHistoryCopy = {
+    uk: ukCalendar.proHistoryCopy,
   zh: {
       overview: "概览",
       analytics: "分析",
@@ -1670,6 +1677,7 @@ export default function CalendarScreen() {
   ]);
 
   const referralNoticeCopy = {
+    uk: ukCalendar.referralNoticeCopy,
   zh: {
       claimedTitle: "邀请已接受",
       claimedBody: "创建第一条真实记录，即可解锁 7 天 PRO。",
@@ -3178,7 +3186,7 @@ export default function CalendarScreen() {
   function getHistorySharePeriodText() {
     if (dateFrom === '0000-01-01' && dateTo === '9999-12-31') return historyShareCopy.allHistory;
 
-    const locale = resolveOnboardingLanguage(language) === 'zh' ? 'zh-CN' : resolveOnboardingLanguage(language) === 'ru'
+    const locale = resolveOnboardingLanguage(language) === 'uk' ? 'uk-UA' : resolveOnboardingLanguage(language) === 'zh' ? 'zh-CN' : resolveOnboardingLanguage(language) === 'ru'
       ? 'ru-RU'
       : resolveOnboardingLanguage(language) === 'ro'
         ? 'ro-RO'
@@ -4054,7 +4062,9 @@ export default function CalendarScreen() {
 
 
   const proEntryLanguage = resolveOnboardingLanguage(language);
-  const proEntryCopy = proEntryLanguage === 'zh' ? {
+  const proEntryCopy = proEntryLanguage === 'uk' ? {
+    newEntry:'Новий запис',editEntry:'Редагувати запис',finance:'Фінанси',trade:'Угода',income:'Дохід',expense:'Витрата',profit:'Прибуток',loss:'Збиток',amount:'Сума',category:'Категорія',instrument:'Інструмент',direction:'Напрямок',customCategory:'Власна категорія',addNote:'Додати нотатку',addDetails:'Додати деталі угоди',hideDetails:'Приховати деталі',detailsHint:'TP, SL, джерело та нотатка',note:'Нотатка',noteFinance:'Наприклад: обід, оренда, місячна зарплата…',noteTrade:'Що сталося в цій угоді?',source:'Джерело',saveFinance:'Зберегти запис',saveTrade:'Зберегти угоду',financeHint:'Доходи та витрати',tradeHint:'Журнал трейдера',time:'Час',quickPick:'Швидкий вибір',chooseType:'Що додати?',chooseTypeHint:'Спочатку виберіть тип запису',reminder:'Нагадування',
+  } : proEntryLanguage === 'zh' ? {
     newEntry:'新增记录',editEntry:'编辑记录',finance:'财务',trade:'交易',income:'收入',expense:'支出',profit:'盈利',loss:'亏损',amount:'金额',category:'类别',instrument:'品种',direction:'方向',customCategory:'自定义类别',addNote:'添加笔记',addDetails:'添加交易详情',hideDetails:'收起详情',detailsHint:'止盈、止损、来源和笔记',note:'笔记',noteFinance:'例如：午餐、房租、月薪…',noteTrade:'这笔交易发生了什么？',source:'来源',saveFinance:'保存记录',saveTrade:'保存交易',financeHint:'收入和支出',tradeHint:'交易日志',time:'时间',quickPick:'快捷选择',chooseType:'添加什么？',chooseTypeHint:'请先选择记录类型',reminder:'提醒',
   } : proEntryLanguage === 'ru'
     ? {

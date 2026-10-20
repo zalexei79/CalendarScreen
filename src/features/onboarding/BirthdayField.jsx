@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 const COPY = {
+  uk: ['День', 'Місяць', 'Рік'],
   ru: ['День', 'Месяц', 'Год'], en: ['Day', 'Month', 'Year'],
   ro: ['Zi', 'Lună', 'An'], zh: ['日', '月', '年'],
 };
@@ -13,7 +14,7 @@ export default function BirthdayField({ value, onChange, lang, label, invalid, d
   useEffect(() => {
     if (value !== emitted.current) { setDraft(parts(value)); emitted.current = value; }
   }, [value]);
-  const locale = lang === 'zh' ? 'zh-CN' : lang === 'ro' ? 'ro-RO' : lang === 'en' ? 'en-US' : 'ru-RU';
+  const locale = lang === 'uk' ? 'uk-UA' : lang === 'zh' ? 'zh-CN' : lang === 'ro' ? 'ro-RO' : lang === 'en' ? 'en-US' : 'ru-RU';
   const copy = COPY[lang];
   const [year, month, day] = draft;
   const today = new Date();

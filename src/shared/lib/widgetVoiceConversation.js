@@ -16,7 +16,7 @@ const copy={
 export function widgetLocale(language){const locale=String(language).toLowerCase().split(/[-_]/u)[0];return ['zh','en','ro'].includes(locale)?locale:'ru';}
 export function widgetSettings(value={}){
  const locale=widgetLocale(value.locale);
- const currency=['MDL','USD','EUR','RUB','CNY'].includes(value.currency)?value.currency:'MDL';
+ const currency=['MDL','USD','EUR','RUB','CNY','UAH'].includes(value.currency)?value.currency:'MDL';
  const categories=Array.isArray(value.categories)?value.categories.slice(0,200).flatMap(item=>{
   if(!item||typeof item.value!=='string'||!item.value.trim()||item.value.length>60)return [];
   return [{value:item.value.trim(),label:typeof item.label==='string'?item.label.slice(0,80):item.value,type:['plus','minus'].includes(item.type)?item.type:undefined}];
@@ -26,7 +26,7 @@ export function widgetSettings(value={}){
 function checkedEntries(entries,todayKey){
  if(!Array.isArray(entries)||!entries.length||entries.length>10)return [];
  return entries.map(entry=>{
-  if(!entry||!Number.isFinite(Number(entry.amount))||Number(entry.amount)<=0||Number(entry.amount)>=1e12||!['plus','minus'].includes(entry.sign)||!['MDL','USD','EUR','RUB','CNY'].includes(entry.currency)||entry.destination!=='main'||!entry.category?.trim()||entry.category.length>60||!/^\d{4}-\d{2}-\d{2}$/.test(entry.dateKey)||entry.dateKey>todayKey)throw new Error('INVALID_ENTRY');
+  if(!entry||!Number.isFinite(Number(entry.amount))||Number(entry.amount)<=0||Number(entry.amount)>=1e12||!['plus','minus'].includes(entry.sign)||!['MDL','USD','EUR','RUB','CNY','UAH'].includes(entry.currency)||entry.destination!=='main'||!entry.category?.trim()||entry.category.length>60||!/^\d{4}-\d{2}-\d{2}$/.test(entry.dateKey)||entry.dateKey>todayKey)throw new Error('INVALID_ENTRY');
   return {amount:String(entry.amount),sign:entry.sign,currency:entry.currency,category:entry.category.trim(),dateKey:entry.dateKey,destination:'main'};
  });
 }

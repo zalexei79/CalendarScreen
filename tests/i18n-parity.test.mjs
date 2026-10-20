@@ -5,7 +5,7 @@ import { TRANSLATIONS, translate, monthsFor } from '../src/shared/i18n/index.js'
 test('all supported locales expose the same interface keys', () => {
   const russianKeys = Object.keys(TRANSLATIONS.ru).sort();
 
-  for (const language of ['en', 'md', 'zh-CN']) {
+  for (const language of ['en', 'md', 'zh-CN', 'uk']) {
     assert.deepEqual(
       Object.keys(TRANSLATIONS[language]).sort(),
       russianKeys,

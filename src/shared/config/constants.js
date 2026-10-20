@@ -88,6 +88,7 @@ export function getMoneyCategoryMeta(category) {
 export function getMoneyCategoryLabel(category, language = 'ru') {
   const meta = getMoneyCategoryMeta(category);
   if (!meta) return category;
+  if (String(language).startsWith('uk')) return ({'Зарплата':'Зарплата','Фриланс':'Фриланс','Инвестиции':'Інвестиції','Возврат':'Повернення','Продукты':'Продукти','Кафе':'Кафе','Жильё':'Житло','Транспорт':'Транспорт','Покупки':'Покупки','Подписки':'Передплати','Здоровье':'Здоров’я','Образование':'Освіта','Путешествия':'Подорожі','Развлечения':'Розваги','Сигареты':'Сигарети','Работа':'Робота','Подарки':'Подарунки','Другое':'Інше'})[meta.key] || meta.key;
   return meta[language === 'md' ? 'ro' : language] || meta.key;
 }
 
@@ -96,6 +97,7 @@ export const LANGUAGES = [
   { code: 'en', label: 'EN' },
   { code: 'md', label: 'MD' },
   { code: 'zh-CN', label: '简体中文' },
+  { code: 'uk', label: 'Українська' },
 ];
 
 export const CURRENCIES = [
@@ -104,6 +106,7 @@ export const CURRENCIES = [
   { code: 'MDL', symbol: 'L', label: 'MDL' },
   { code: 'RUB', symbol: '₽', label: 'RUB' },
   { code: 'CNY', symbol: '¥', label: 'CNY' },
+  { code: 'UAH', symbol: '₴', label: 'UAH' },
 ];
 
 export function getCurrencyMeta(code) {

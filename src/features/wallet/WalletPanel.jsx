@@ -18,6 +18,9 @@ const ONBOARDING_KEY = 'dayris_wallet_onboarding_v2';
 const fieldClass = 'w-full rounded-2xl border border-white/10 bg-white/[.045] px-4 py-3.5 text-base text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-amber-400/65 focus:bg-white/[.065]';
 
 const COPY = {
+  uk: {
+    gestureHint:'Гортай убік або потягни згори вниз, щоб повернутися',gesturePull:'Потягни, щоб повернутися',gestureRelease:'Відпусти, щоб повернутися до календаря',eyebrow:'PRO · ОСОБИСТІ ГРОШІ',title:'Мій гаманець',subtitle:'Баланс за записаними доходами та витратами',balance:'Записаний баланс',account:'Особистий гаманець',loading:'Завантаження операцій…',syncError:'Не вдалося завантажити гаманець. Перевірте з’єднання та спробуйте знову.',setupError:'Синхронізація гаманця поки недоступна. Спробуйте пізніше.',remove:'Видалити операцію',month:'за цей місяць',add:'Додати гроші',withdraw:'Вивести гроші',recent:'Останні операції',empty:'Операцій ще немає',emptyHint:'Додавай гроші, коли вони справді надійшли до гаманця.',howMuch:'Скільки?',source:'Звідки гроші?',destination:'Куди пішли гроші?',comment:'Коментар (необов’язково)',date:'Дата',tradingProfit:'Прибуток від торгівлі',accountTopup:'Поповнення рахунку',otherIncome:'Інший дохід',accountWithdrawal:'Виведено з рахунку',expense:'Витрата',otherExpense:'Інше',cancel:'Скасувати',saveAdd:'Додати',saveWithdraw:'Вивести',saving:'Зберігаємо…',clear:'Очистити історію',clearConfirm:'Видалити всю історію гаманця? Цю дію неможливо скасувати.',introTitle:'Окремий облік особистих грошей',introBody:'У календарі — доходи, витрати й угоди. У гаманці — окремий баланс за операціями, які ти додаєш сам.',introOne:'Додавай гроші лише після фактичного надходження.',introTwo:'Виведення та витрати зменшують фактичний баланс.',introThree:'Торговий PnL ніколи не змінює гаманець автоматично.',introAction:'Зрозуміло, почати',
+  },
   zh: {
     gestureHint: "横向滑动或从顶部下拉返回", gesturePull: "下拉返回", gestureRelease: "松开返回日历",
     eyebrow: "PRO · 个人财务", title: "我的钱包", subtitle: "根据所记录收入和支出计算的余额",
@@ -73,6 +76,7 @@ const COPY = {
 };
 
 function localeOf(language) {
+  if (String(language).startsWith('uk')) return 'uk';
   return String(language).startsWith('zh') ? 'zh' : language === 'en' ? 'en' : language === 'ro' || language === 'md' ? 'ro' : 'ru';
 }
 

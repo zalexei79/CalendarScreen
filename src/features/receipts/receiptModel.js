@@ -79,6 +79,7 @@ export function parseReceipt(rawText) {
   const total = unique.length === 1 ? moneyText(unique[0]) : '';
   const normalized = normalizeReceiptText(rawText);
   const explicitCurrencies = [...new Set([
+    [/\buah\b|грн\.?|гривн|₴/iu, 'UAH'],
     [/\bmdl\b|moldova|moldretail|\bidno\b/i, 'MDL'], [/\busd\b|\bus\$/i, 'USD'],
     [/\beur\b|(?<!\p{L})€(?!\p{L})/iu, 'EUR'], [/\brub\b|₽|руб/i, 'RUB'], [/\bcny\b|\brmb\b|人民币/i, 'CNY'], [/\bron\b/i, 'RON'],
   ].filter(([pattern]) => pattern.test(normalized)).map(([,code]) => code))];

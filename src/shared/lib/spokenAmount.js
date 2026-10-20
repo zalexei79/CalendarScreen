@@ -1,6 +1,7 @@
 import {parseChineseAmount} from './chineseNumber.js';
 import {voiceCurrencyUnits,stripVoiceAmountCurrency} from './voiceMoneyVocabulary.js';
 const words = {
+  нуль:0,одне:1,дві:2,чотири:4,'п’ять':5,'п\'ять':5,шість:6,сім:7,вісім:8,'дев’ять':9,'дев\'ять':9,одинадцять:11,дванадцять:12,тринадцять:13,чотирнадцять:14,'п’ятнадцять':15,'п\'ятнадцять':15,шістнадцять:16,сімнадцять:17,вісімнадцять:18,'дев’ятнадцять':19,'дев\'ятнадцять':19,двадцять:20,тридцять:30,'п’ятдесят':50,'п\'ятдесят':50,шістдесят:60,сімдесят:70,вісімдесят:80,'дев’яносто':90,'дев\'яносто':90,двісті:200,чотириста:400,'п’ятсот':500,'п\'ятсот':500,шістсот:600,сімсот:700,вісімсот:800,'дев’ятсот':900,'дев\'ятсот':900,
   ноль:0,один:1,одна:1,два:2,две:2,три:3,четыре:4,пять:5,шесть:6,семь:7,восемь:8,девять:9,
   десять:10,одиннадцать:11,двенадцать:12,тринадцать:13,четырнадцать:14,пятнадцать:15,шестнадцать:16,семнадцать:17,восемнадцать:18,девятнадцать:19,
   двадцать:20,тридцать:30,сорок:40,пятьдесят:50,шестьдесят:60,семьдесят:70,восемьдесят:80,девяносто:90,
@@ -10,9 +11,10 @@ const words = {
 };
 const scales={тысяча:1000,тысячи:1000,тысяч:1000,тыща:1000,тыщи:1000,тыщ:1000,косарь:1000,косаря:1000,косарей:1000,миллион:1000000,миллиона:1000000,миллионов:1000000,thousand:1000,thousands:1000,million:1000000,millions:1000000,mie:1000,mii:1000,milion:1000000,milioane:1000000};
 const romanianPlain=value=>value.replace(/[șş]/g,'s').replace(/[țţ]/g,'t').replace(/[ăâ]/g,'a').replace(/î/g,'i');
+Object.assign(scales,{тисяча:1000,тисячі:1000,тисяч:1000,мільйон:1000000,мільйони:1000000,мільйонів:1000000});
 const plainWords=Object.fromEntries(Object.entries(words).map(([word,value])=>[romanianPlain(word),value]));
 const units=voiceCurrencyUnits;
-const cents='копейка|копейки|копеек|цент|цента|центов|cent|cents|ban|bani';
+const cents='копійка|копійки|копійок|копейка|копейки|копеек|цент|цента|центов|cent|cents|ban|bani';
 function integer(text) {
   text=text.trim();
   if(!text||/^(and|și|si|de)\b|\b(and|și|si|de)$/.test(text))return null;
@@ -66,7 +68,7 @@ export function parseSpokenAmount(transcript) {
     if(/^\d{1,3}(?:[ \u00a0]\d{3})+(?:[.,]\d{1,2})?$/.test(text))text=text.replace(/[ \u00a0]/g,'');
     if(/^\d+(?:[.,]\d{1,2})?$/.test(text))value=Number(text.replace(',','.'));
     else {
-      const parts=text.split(/\s+(?:точка|запятая|point|comma|virgulă|virgula)\s+/);
+      const parts=text.split(/\s+(?:крапка|кома|точка|запятая|point|comma|virgulă|virgula)\s+/);
       if(parts.length>2)return null;
       const main=integer(parts[0]);if(main===null)return null;
       if(parts.length===1)value=main;

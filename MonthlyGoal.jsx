@@ -5,6 +5,7 @@ import { Check, ChevronDown, Pencil, Sparkles, Target, X } from 'lucide-react';
 const celebratedGoals = new Map();
 
 const COPY = {
+  uk: {title:'Мета місяця',setGoal:'Задати мету',editGoal:'Змінити мету',remaining:'Залишилося',achieved:'Мети досягнуто',progress:'прогресу',save:'Зберегти',cancel:'Скасувати',placeholder:'Наприклад, 30000',invalid:'Уведіть суму понад 0',celebration:'Мети місяця досягнуто!'},
   zh: {
     title: "本月目标",
     setGoal: "设置目标",
@@ -61,6 +62,7 @@ const COPY = {
 
 function resolveLanguage(language) {
   const code = String(language || '').toLowerCase();
+  if (code.startsWith('uk')) return 'uk';
   if (code.startsWith('zh')) return 'zh';
   if (code === 'en' || code.startsWith('en-')) return 'en';
   if (['ro', 'md', 'mo', 'ron', 'rum'].includes(code) || code.startsWith('ro-')) return 'ro';
@@ -68,7 +70,7 @@ function resolveLanguage(language) {
 }
 
 function formatGoalNumber(value, language) {
-  const locale = resolveLanguage(language) === 'zh' ? 'zh-CN' : resolveLanguage(language) === 'ro'
+  const locale = resolveLanguage(language) === 'uk' ? 'uk-UA' : resolveLanguage(language) === 'zh' ? 'zh-CN' : resolveLanguage(language) === 'ro'
     ? 'ro-RO'
     : resolveLanguage(language) === 'en'
       ? 'en-US'

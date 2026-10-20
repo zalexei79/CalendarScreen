@@ -1,7 +1,7 @@
 import React,{useState} from 'react';
 import CategoryPicker from './CategoryPicker.jsx';
 import {localDateKey} from '../lib/voiceEntryReview.js';
-export function isVoiceEntryValid(entry){const today=localDateKey();return Boolean(entry&&Number(entry.amount)>0&&Number(entry.amount)<1e12&&/^\d+(?:[.]\d{1,2})?$/.test(entry.amount)&&entry.dateKey&&entry.dateKey<=today&&['plus','minus'].includes(entry.sign)&&['main','wallet','both'].includes(entry.destination)&&['RUB','EUR','MDL','USD','CNY'].includes(entry.currency)&&(!entry.category||entry.category.trim().length<=60));}
+export function isVoiceEntryValid(entry){const today=localDateKey();return Boolean(entry&&Number(entry.amount)>0&&Number(entry.amount)<1e12&&/^\d+(?:[.]\d{1,2})?$/.test(entry.amount)&&entry.dateKey&&entry.dateKey<=today&&['plus','minus'].includes(entry.sign)&&['main','wallet','both'].includes(entry.destination)&&['RUB','EUR','MDL','USD','CNY','UAH'].includes(entry.currency)&&(!entry.category||entry.category.trim().length<=60));}
 export default function VoiceEntryCard({correction,onManualEdit,entry,locale,categories,walletAvailable,onChange,onSave,onCancel,busy,error,locked=false,listening=false,children,embedded=false,userId,isLight,onCreateCategory,onDeleteCategory}){
  const [editing,setEditing]=useState(false);
  const c={
@@ -19,7 +19,7 @@ export default function VoiceEntryCard({correction,onManualEdit,entry,locale,cat
   {editing&&<fieldset disabled={busy||locked||listening} className="calendar-voice-edit-fields">
    <label>{c.date}<input disabled={entry.mutation} aria-label={c.date} type="date" max={today} value={entry.dateKey} onChange={event=>change('dateKey',event.target.value)}/></label>
    <label>{c.amount}<input aria-label={c.amount} inputMode="decimal" value={entry.amount} onChange={event=>change('amount',event.target.value.replace(',','.'))}/></label>
-   <label>{c.currency}<select disabled={entry.mutation} aria-label={c.currency} value={entry.currency} onChange={event=>change('currency',event.target.value)}>{['MDL','EUR','USD','RUB','CNY'].map(value=><option key={value}>{value}</option>)}</select></label>
+   <label>{c.currency}<select disabled={entry.mutation} aria-label={c.currency} value={entry.currency} onChange={event=>change('currency',event.target.value)}>{['MDL','EUR','USD','RUB','CNY','UAH'].map(value=><option key={value}>{value}</option>)}</select></label>
    <label>{c.kind}<select aria-label={c.kind} value={entry.sign} onChange={event=>change('sign',event.target.value)}><option value="minus">{c.expense}</option><option value="plus">{c.income}</option></select></label>
    <div className="calendar-voice-field-wide" inert={entry.mutation?"":undefined}><span>{c.category}</span><CategoryPicker ariaLabel={c.category} options={categories} value={entry.category||''} onChange={value=>change('category',value)} language={locale} userId={userId} isLight={isLight} allowCreate onCreate={onCreateCategory} onDelete={onDeleteCategory}/></div>
    <label className="calendar-voice-field-wide">{c.destination}<select disabled={entry.mutation} aria-label={c.destination} value={entry.destination} onChange={event=>change('destination',event.target.value)}><option value="main">{c.main}</option>{walletAvailable&&<><option value="wallet">{c.wallet}</option><option value="both">{c.both}</option></>}</select></label>

@@ -8,6 +8,10 @@ import { birthdayStorageKey, lifeWeeks, localDateValue } from './lifeStoryModel'
 import './FirstRunSetup.css';
 
 const COPY = {
+  uk: {
+    productType:'Грошовий календар',productTitle:'Твій грошовий\nкалендар.',productHint:'Записуй доходи та витрати.\nУ календарі видно, куди йдуть гроші.',previewTitle:'Приклад дня',incomeLabel:'Дохід',expenseLabel:'Витрата',
+    steps:['Мова','Твій ритм','Перший день'],next:'Продовжити',back:'Назад',skip:'Оглянуся сам',languageTitle:'Давай твоєю мовою.',languageHint:'Вибери зручну для тебе мову.',currencyTitle:'Налаштуємо під тебе.',currencyHint:'У якій валюті будемо рахувати?',later:'Валюту й оформлення можна змінити в налаштуваннях.',appearance:'Оформлення',light:'Світле',dark:'Темне',purple:'Аметист',emerald:'Смарагдове',introTitle:'Повна картина.\nЗ маленьких записів.',introHint:'Доходи та витрати складаються в історію дня. А дні — у зрозумілий календар.',create:'Мій перший запис',example:'Приклад · без збереження',coffee:'Кава',income:'Підробіток',balance:'Підсумок дня',tagline:'Кожен день\nмає значення.',caption:'Твої гроші. Твої рішення. Твій ритм.',currencies:['Долар США','Євро','Молдовський лей','Російський рубль','Китайський юань','Українська гривня'],finish:'Останній крок — твій перший запис.',
+  },
   zh: {
     productType: '财务日历', productTitle: '你的财务，\n尽在日历。', productHint: '记录每天的收入与支出。\n在日历中看清资金流向。', previewTitle: '一天的示例', incomeLabel: '收入', expenseLabel: '支出',
     steps: ['语言', '你的节奏', '第一天'], next: '继续', back: '返回', skip: '自行探索',
@@ -17,7 +21,7 @@ const COPY = {
     introTitle: '财务全貌。\n从每一条记录开始。', introHint: '收入和支出记录每一天，日历将这些日子汇成清晰的财务全貌。',
     create: '我的第一条记录', example: '示例 · 不会保存', coffee: '咖啡', income: '兼职收入', balance: '当日结余',
     tagline: '每一天\n都重要。', caption: '你的资金，你的选择，你的节奏。',
-    currencies: ['美元', '欧元', '摩尔多瓦列伊', '俄罗斯卢布', '人民币'], finish: '最后一步：添加第一条记录。',
+    currencies: ['美元', '欧元', '摩尔多瓦列伊', '俄罗斯卢布', '人民币', '乌克兰格里夫纳'], finish: '最后一步：添加第一条记录。',
   },
   ru: {
     productType: 'Денежный календарь', productTitle: 'Твой денежный\nкалендарь.', productHint: 'Записывай доходы и расходы.\nВ календаре видно, куда уходят деньги.', previewTitle: 'Пример дня', incomeLabel: 'Доход', expenseLabel: 'Расход',
@@ -28,7 +32,7 @@ const COPY = {
     introTitle: 'Большая картина.\nИз маленьких записей.', introHint: 'Доходы и расходы складываются в историю дня. А дни — в понятный календарь.',
     create: 'Моя первая запись', example: 'Пример · без сохранения', coffee: 'Кофе', income: 'Подработка', balance: 'Итог дня',
     tagline: 'Каждый день\nимеет значение.', caption: 'Твои деньги. Твои решения. Твой ритм.',
-    currencies: ['Доллар США', 'Евро', 'Молдавский лей', 'Российский рубль', 'Китайский юань'],
+    currencies: ['Доллар США', 'Евро', 'Молдавский лей', 'Российский рубль', 'Китайский юань', 'Украинская гривна'],
     finish: 'Последний шаг — твоя первая запись.',
   },
   en: {
@@ -40,7 +44,7 @@ const COPY = {
     introTitle: 'The big picture.\nOne entry at a time.', introHint: 'Income and expenses tell the story of a day. Your calendar brings those days together.',
     create: 'My first entry', example: 'Example · not saved', coffee: 'Coffee', income: 'Side job', balance: 'Daily balance',
     tagline: 'Every day\nmatters.', caption: 'Your money. Your choices. Your rhythm.',
-    currencies: ['US dollar', 'Euro', 'Moldovan leu', 'Russian ruble', 'Chinese yuan'], finish: 'One last step: your first entry.',
+    currencies: ['US dollar', 'Euro', 'Moldovan leu', 'Russian ruble', 'Chinese yuan', 'Ukrainian hryvnia'], finish: 'One last step: your first entry.',
   },
   ro: {
     productType: 'Calendar financiar', productTitle: 'Calendarul tău\nfinanciar.', productHint: 'Notează veniturile și cheltuielile.\nVezi în calendar unde se duc banii.', previewTitle: 'O zi, de exemplu', incomeLabel: 'Venit', expenseLabel: 'Cheltuială',
@@ -51,16 +55,16 @@ const COPY = {
     introTitle: 'Imaginea de ansamblu.\nÎnregistrare cu înregistrare.', introHint: 'Veniturile și cheltuielile spun povestea zilei. Calendarul adună toate aceste zile.',
     create: 'Prima mea înregistrare', example: 'Exemplu · nu se salvează', coffee: 'Cafea', income: 'Venit suplimentar', balance: 'Bilanțul zilei',
     tagline: 'Fiecare zi\ncontează.', caption: 'Banii tăi. Alegerile tale. Ritmul tău.',
-    currencies: ['Dolar american', 'Euro', 'Leu moldovenesc', 'Rublă rusească', 'Yuan chinezesc'], finish: 'Ultimul pas: prima ta înregistrare.',
+    currencies: ['Dolar american', 'Euro', 'Leu moldovenesc', 'Rublă rusească', 'Yuan chinezesc', 'Grivnă ucraineană'], finish: 'Ultimul pas: prima ta înregistrare.',
   },
 };
 const EMPTY_RECORDS = [];
-const LANGUAGES = [{ code: 'ru', name: 'Русский', hint: 'Russian' }, { code: 'en', name: 'English', hint: 'English' }, { code: 'md', name: 'Română', hint: 'Romanian' }, { code: 'zh-CN', name: '简体中文', hint: 'Simplified Chinese' }];
+const LANGUAGES = [{code:'uk',name:'Українська',hint:'Ukrainian'},{ code: 'ru', name: 'Русский', hint: 'Russian' }, { code: 'en', name: 'English', hint: 'English' }, { code: 'md', name: 'Română', hint: 'Romanian' }, { code: 'zh-CN', name: '简体中文', hint: 'Simplified Chinese' }];
 
 function MoneyCalendarPreview({ copy, currency, lang, className = '' }) {
   const today = new Date();
-  const locale = lang === 'zh' ? 'zh-CN' : lang === 'ro' ? 'ro-RO' : lang === 'en' ? 'en-US' : 'ru-RU';
-  const [income, expense] = ({ USD: [120, 4], EUR: [100, 4], MDL: [1800, 45], RUB: [7000, 250], CNY: [800, 25] })[currency] || [120, 4];
+  const locale = lang === 'uk' ? 'uk-UA' : lang === 'zh' ? 'zh-CN' : lang === 'ro' ? 'ro-RO' : lang === 'en' ? 'en-US' : 'ru-RU';
+  const [income, expense] = ({ USD: [120, 4], EUR: [100, 4], MDL: [1800, 45], RUB: [7000, 250], CNY: [800, 25], UAH: [4500, 100] })[currency] || [120, 4];
   const money = amount => `${amount.toLocaleString(locale)} ${currency}`;
   return <figure className={`first-run-money-preview ${className}`} aria-label={`${copy.productType} · ${copy.previewTitle}`}>
     <figcaption><span>{copy.previewTitle}</span><time dateTime={localDateValue(today)}>{today.toLocaleDateString(locale, { day: 'numeric', month: 'long' })}</time></figcaption>
@@ -80,7 +84,7 @@ function MoneyCalendarPreview({ copy, currency, lang, className = '' }) {
 export default function FirstRunSetup({ step, language, currency, theme, calendarRecords = EMPTY_RECORDS, personalStory = false, profileKey = 'guest', onLanguage, onCurrency, onTheme, onStep, onStart, onArrive, onSkip }) {
   const dialogRef = useRef(null);
   const headingRef = useRef(null);
-  const lang = language === 'zh-CN' ? 'zh' : language === 'md' || language === 'ro' ? 'ro' : language === 'en' ? 'en' : 'ru';
+  const lang = language === 'uk' ? 'uk' : language === 'zh-CN' ? 'zh' : language === 'md' || language === 'ro' ? 'ro' : language === 'en' ? 'en' : 'ru';
   const copy = COPY[lang];
   const lifeCopy = LIFE_COPY[lang];
   const [birthday, setBirthday] = useState(() => { try { return localStorage.getItem(birthdayStorageKey(profileKey)) || ''; } catch { return ''; } });

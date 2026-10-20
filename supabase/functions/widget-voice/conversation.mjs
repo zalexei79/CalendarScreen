@@ -126,6 +126,7 @@ function parseChineseAmount(value) {
 
 // src/shared/lib/voiceMoneyVocabulary.js
 var currencyWords = {
+  UAH: "\u0433\u0440\u0438\u0432\u043D\u044F \u0433\u0440\u0438\u0432\u043D\u0456 \u0433\u0440\u0438\u0432\u043D\u044E \u0433\u0440\u0438\u0432\u0435\u043D\u044C \u0433\u0440\u0438\u0432\u043D\u044F\u043C\u0438 \u0433\u0440\u0438\u0432\u043D\u0430 \u0433\u0440\u0438\u0432\u043D\u044B \u0433\u0440\u0438\u0432\u043D\u0443 \u0433\u0440\u0438\u0432\u0435\u043D hryvnia hryvnias uah",
   RUB: "\u0440\u0443\u0431\u043B\u044C \u0440\u0443\u0431\u043B\u044F \u0440\u0443\u0431\u043B\u0435\u0439 \u0440\u0443\u0431\u043B\u0438 \u0440\u0443\u0431\u043B\u044F\u0445 \u0440\u0443\u0431\u043B\u044F\u043C\u0438 \u0440\u0443\u0431\u043B\u0435\u043C \u0440\u0443\u0431 \u0440\u0443\u0431\u043B\u0438\u043A \u0440\u0443\u0431\u043B\u0438\u043A\u0430 \u0440\u0443\u0431\u043B\u0438\u043A\u043E\u0432 \u0440\u0443\u0431\u043B\u0438\u043A\u0438 \u0440\u0443\u0431\u0447\u0438\u043A\u043E\u0432 ruble rubles rouble roubles rubla ruble rub",
   EUR: "\u0435\u0432\u0440\u043E \u0435\u0432\u0440\u0430\u0445 \u0435\u0432\u0440\u0438\u043A \u0435\u0432\u0440\u0438\u043A\u0430 \u0435\u0432\u0440\u0438\u043A\u043E\u0432 \u0435\u0432\u0440\u0438\u043A\u0438 euro euros eur",
   MDL: "\u043B\u0435\u0439 \u043B\u0435\u044F \u043B\u0435\u0435\u0432 \u043B\u0435\u0438 \u043B\u0435\u044F\u0445 \u043B\u0435\u044F\u043C\u0438 \u043B\u044D\u0439 \u043B\u044D\u044F \u043B\u044D\u0435\u0432 lei leu mdl",
@@ -134,17 +135,57 @@ var currencyWords = {
 };
 var plain = (value) => String(value).toLowerCase().replace(/ё/g, "\u0435").replace(/[ăâ]/g, "a").replace(/[șş]/g, "s").replace(/[țţ]/g, "t").replace(/î/g, "i");
 var byWord = new Map(Object.entries(currencyWords).flatMap(([currency, words2]) => words2.split(" ").map((word) => [word, currency])));
-for (const [word, currency] of [["\u20BD", "RUB"], ["\u20AC", "EUR"], ["$", "USD"], ["\xA5", "CNY"]]) byWord.set(word, currency);
+for (const [word, currency] of [["\u20B4", "UAH"], ["\u20BD", "RUB"], ["\u20AC", "EUR"], ["$", "USD"], ["\xA5", "CNY"]]) byWord.set(word, currency);
 var voiceCurrencyFor = (word) => byWord.get(plain(word)) || null;
 var voiceCurrencyUnits = [...byWord.keys()].map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
 function stripVoiceAmountCurrency(value) {
-  return plain(value).replace(/^[₽€$¥]\s*(?=\d)/u, "").replace(new RegExp(`(?:\\s+|(?<=\\d))(?:${voiceCurrencyUnits})$`, "u"), "").trim();
+  return plain(value).replace(/^[₴₽€$¥]\s*(?=\d)/u, "").replace(new RegExp(`(?:\\s+|(?<=\\d))(?:${voiceCurrencyUnits})$`, "u"), "").trim();
 }
 var isVoiceExpense = (word) => /^(?:потратил[аи]?|потрачено|потратить|тратил[аи]?|трачу|расход[ы]?|расходом|расходовал[аи]?|израсходовал[аи]?|израсходовано|затратил[аи]?|заплатил[аи]?|заплачено|оплатил[аи]?|оплачено|платил[аи]?|уплатил[аи]?|уплачено|плата|ушло|списали|списано|списалось|обошлось|обошелся|обошлась|выложил[аи]?|потратилось|spent|spend|paid|expense|expenses|cheltuit|cheltuiala|platit|achitat)$/u.test(plain(word));
 var isVoiceIncome = (word) => /^(?:получил[аи]?|получено|получить|заработал[аи]?|заработано|доход[ы]?|доходом|пришло|поступило|поступили|поступление|зачислили|зачислено|зачислилось|начислили|начислено|вернули|вернулось|received|earned|income|primit|venit|castigat)$/u.test(plain(word));
 
 // src/shared/lib/spokenAmount.js
 var words = {
+  \u043D\u0443\u043B\u044C: 0,
+  \u043E\u0434\u043D\u0435: 1,
+  \u0434\u0432\u0456: 2,
+  \u0447\u043E\u0442\u0438\u0440\u0438: 4,
+  "\u043F\u2019\u044F\u0442\u044C": 5,
+  "\u043F'\u044F\u0442\u044C": 5,
+  \u0448\u0456\u0441\u0442\u044C: 6,
+  \u0441\u0456\u043C: 7,
+  \u0432\u0456\u0441\u0456\u043C: 8,
+  "\u0434\u0435\u0432\u2019\u044F\u0442\u044C": 9,
+  "\u0434\u0435\u0432'\u044F\u0442\u044C": 9,
+  \u043E\u0434\u0438\u043D\u0430\u0434\u0446\u044F\u0442\u044C: 11,
+  \u0434\u0432\u0430\u043D\u0430\u0434\u0446\u044F\u0442\u044C: 12,
+  \u0442\u0440\u0438\u043D\u0430\u0434\u0446\u044F\u0442\u044C: 13,
+  \u0447\u043E\u0442\u0438\u0440\u043D\u0430\u0434\u0446\u044F\u0442\u044C: 14,
+  "\u043F\u2019\u044F\u0442\u043D\u0430\u0434\u0446\u044F\u0442\u044C": 15,
+  "\u043F'\u044F\u0442\u043D\u0430\u0434\u0446\u044F\u0442\u044C": 15,
+  \u0448\u0456\u0441\u0442\u043D\u0430\u0434\u0446\u044F\u0442\u044C: 16,
+  \u0441\u0456\u043C\u043D\u0430\u0434\u0446\u044F\u0442\u044C: 17,
+  \u0432\u0456\u0441\u0456\u043C\u043D\u0430\u0434\u0446\u044F\u0442\u044C: 18,
+  "\u0434\u0435\u0432\u2019\u044F\u0442\u043D\u0430\u0434\u0446\u044F\u0442\u044C": 19,
+  "\u0434\u0435\u0432'\u044F\u0442\u043D\u0430\u0434\u0446\u044F\u0442\u044C": 19,
+  \u0434\u0432\u0430\u0434\u0446\u044F\u0442\u044C: 20,
+  \u0442\u0440\u0438\u0434\u0446\u044F\u0442\u044C: 30,
+  "\u043F\u2019\u044F\u0442\u0434\u0435\u0441\u044F\u0442": 50,
+  "\u043F'\u044F\u0442\u0434\u0435\u0441\u044F\u0442": 50,
+  \u0448\u0456\u0441\u0442\u0434\u0435\u0441\u044F\u0442: 60,
+  \u0441\u0456\u043C\u0434\u0435\u0441\u044F\u0442: 70,
+  \u0432\u0456\u0441\u0456\u043C\u0434\u0435\u0441\u044F\u0442: 80,
+  "\u0434\u0435\u0432\u2019\u044F\u043D\u043E\u0441\u0442\u043E": 90,
+  "\u0434\u0435\u0432'\u044F\u043D\u043E\u0441\u0442\u043E": 90,
+  \u0434\u0432\u0456\u0441\u0442\u0456: 200,
+  \u0447\u043E\u0442\u0438\u0440\u0438\u0441\u0442\u0430: 400,
+  "\u043F\u2019\u044F\u0442\u0441\u043E\u0442": 500,
+  "\u043F'\u044F\u0442\u0441\u043E\u0442": 500,
+  \u0448\u0456\u0441\u0442\u0441\u043E\u0442: 600,
+  \u0441\u0456\u043C\u0441\u043E\u0442: 700,
+  \u0432\u0456\u0441\u0456\u043C\u0441\u043E\u0442: 800,
+  "\u0434\u0435\u0432\u2019\u044F\u0442\u0441\u043E\u0442": 900,
+  "\u0434\u0435\u0432'\u044F\u0442\u0441\u043E\u0442": 900,
   \u043D\u043E\u043B\u044C: 0,
   \u043E\u0434\u0438\u043D: 1,
   \u043E\u0434\u043D\u0430: 1,
@@ -249,9 +290,10 @@ var words = {
 };
 var scales = { \u0442\u044B\u0441\u044F\u0447\u0430: 1e3, \u0442\u044B\u0441\u044F\u0447\u0438: 1e3, \u0442\u044B\u0441\u044F\u0447: 1e3, \u0442\u044B\u0449\u0430: 1e3, \u0442\u044B\u0449\u0438: 1e3, \u0442\u044B\u0449: 1e3, \u043A\u043E\u0441\u0430\u0440\u044C: 1e3, \u043A\u043E\u0441\u0430\u0440\u044F: 1e3, \u043A\u043E\u0441\u0430\u0440\u0435\u0439: 1e3, \u043C\u0438\u043B\u043B\u0438\u043E\u043D: 1e6, \u043C\u0438\u043B\u043B\u0438\u043E\u043D\u0430: 1e6, \u043C\u0438\u043B\u043B\u0438\u043E\u043D\u043E\u0432: 1e6, thousand: 1e3, thousands: 1e3, million: 1e6, millions: 1e6, mie: 1e3, mii: 1e3, milion: 1e6, milioane: 1e6 };
 var romanianPlain = (value) => value.replace(/[șş]/g, "s").replace(/[țţ]/g, "t").replace(/[ăâ]/g, "a").replace(/î/g, "i");
+Object.assign(scales, { \u0442\u0438\u0441\u044F\u0447\u0430: 1e3, \u0442\u0438\u0441\u044F\u0447\u0456: 1e3, \u0442\u0438\u0441\u044F\u0447: 1e3, \u043C\u0456\u043B\u044C\u0439\u043E\u043D: 1e6, \u043C\u0456\u043B\u044C\u0439\u043E\u043D\u0438: 1e6, \u043C\u0456\u043B\u044C\u0439\u043E\u043D\u0456\u0432: 1e6 });
 var plainWords = Object.fromEntries(Object.entries(words).map(([word, value]) => [romanianPlain(word), value]));
 var units = voiceCurrencyUnits;
-var cents = "\u043A\u043E\u043F\u0435\u0439\u043A\u0430|\u043A\u043E\u043F\u0435\u0439\u043A\u0438|\u043A\u043E\u043F\u0435\u0435\u043A|\u0446\u0435\u043D\u0442|\u0446\u0435\u043D\u0442\u0430|\u0446\u0435\u043D\u0442\u043E\u0432|cent|cents|ban|bani";
+var cents = "\u043A\u043E\u043F\u0456\u0439\u043A\u0430|\u043A\u043E\u043F\u0456\u0439\u043A\u0438|\u043A\u043E\u043F\u0456\u0439\u043E\u043A|\u043A\u043E\u043F\u0435\u0439\u043A\u0430|\u043A\u043E\u043F\u0435\u0439\u043A\u0438|\u043A\u043E\u043F\u0435\u0435\u043A|\u0446\u0435\u043D\u0442|\u0446\u0435\u043D\u0442\u0430|\u0446\u0435\u043D\u0442\u043E\u0432|cent|cents|ban|bani";
 function integer2(text) {
   text = text.trim();
   if (!text || /^(and|și|si|de)\b|\b(and|și|si|de)$/.test(text)) return null;
@@ -311,7 +353,7 @@ function parseSpokenAmount(transcript) {
     if (/^\d{1,3}(?:[ \u00a0]\d{3})+(?:[.,]\d{1,2})?$/.test(text)) text = text.replace(/[ \u00a0]/g, "");
     if (/^\d+(?:[.,]\d{1,2})?$/.test(text)) value = Number(text.replace(",", "."));
     else {
-      const parts = text.split(/\s+(?:точка|запятая|point|comma|virgulă|virgula)\s+/);
+      const parts = text.split(/\s+(?:крапка|кома|точка|запятая|point|comma|virgulă|virgula)\s+/);
       if (parts.length > 2) return null;
       const main = integer2(parts[0]);
       if (main === null) return null;
@@ -1057,7 +1099,7 @@ function voiceEntryReview(phrase, draft = null, locale = "ru", categories = [], 
   if (natural?.invalid) return { invalid: true };
   if (natural) {
     const prepared = { ...next, ...natural.patch };
-    if (natural.shorthand && !prepared.currency && ["RUB", "EUR", "MDL", "USD", "CNY"].includes(options.defaultCurrency)) prepared.currency = options.defaultCurrency;
+    if (natural.shorthand && !prepared.currency && ["RUB", "EUR", "MDL", "USD", "CNY", "UAH"].includes(options.defaultCurrency)) prepared.currency = options.defaultCurrency;
     if (natural.patch.category) prepared.categoryConfirmed = true;
     for (const field of natural.ambiguous) prepared[field] = void 0;
     if (natural.ambiguous.length) {
@@ -1212,12 +1254,13 @@ function canAutoSaveVoiceEntry(phrase, dialog, locale, categories = [], options 
 // src/shared/lib/spokenText.js
 function spokenText(value, locale = "ru") {
   const currency = {
+    uk: { USD: "\u0434\u043E\u043B\u0430\u0440\u0456\u0432", EUR: "\u0454\u0432\u0440\u043E", MDL: "\u043B\u0435\u0457\u0432", RUB: "\u0440\u0443\u0431\u043B\u0456\u0432", CNY: "\u044E\u0430\u043D\u0456\u0432", UAH: "\u0433\u0440\u0438\u0432\u0435\u043D\u044C" },
     zh: { USD: "\u7F8E\u5143", EUR: "\u6B27\u5143", MDL: "\u5217\u4F0A", RUB: "\u5362\u5E03", CNY: "\u4EBA\u6C11\u5E01" },
     ru: { USD: "\u0434\u043E\u043B\u043B\u0430\u0440\u043E\u0432", EUR: "\u0435\u0432\u0440\u043E", MDL: "\u043B\u0435\u0435\u0432", RUB: "\u0440\u0443\u0431\u043B\u0435\u0439", CNY: "\u044E\u0430\u043D\u0435\u0439" },
     en: { USD: "dollars", EUR: "euros", MDL: "lei", RUB: "rubles", CNY: "yuan" },
     ro: { USD: "dolari", EUR: "euro", MDL: "lei", RUB: "ruble", CNY: "yuani" }
   }[locale];
-  return String(value).replace(/\\u([0-9a-f]{4})/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16))).replace(/\\[nrt]/g, " ").replace(/[\\/⁄∕／]+/g, ", ").replace(/\b(?:USD|EUR|MDL|RUB|CNY)\b/g, (code) => (currency || {})[code] || code).replace(/[*_`#]/g, "").replace(/(?:\s*,\s*){2,}/g, ", ").replace(/\s+/g, " ").replace(/\s+,/g, ",").replace(/^\s*,\s*|\s*,\s*$/g, "").trim();
+  return String(value).replace(/\\u([0-9a-f]{4})/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16))).replace(/\\[nrt]/g, " ").replace(/[\\/⁄∕／]+/g, ", ").replace(/\b(?:USD|EUR|MDL|RUB|CNY|UAH)\b/g, (code) => (currency || {})[code] || code).replace(/[*_`#]/g, "").replace(/(?:\s*,\s*){2,}/g, ", ").replace(/\s+/g, " ").replace(/\s+,/g, ",").replace(/^\s*,\s*|\s*,\s*$/g, "").trim();
 }
 
 // src/shared/lib/widgetVoiceConversation.js
@@ -1233,7 +1276,7 @@ function widgetLocale(language) {
 }
 function widgetSettings(value = {}) {
   const locale = widgetLocale(value.locale);
-  const currency = ["MDL", "USD", "EUR", "RUB", "CNY"].includes(value.currency) ? value.currency : "MDL";
+  const currency = ["MDL", "USD", "EUR", "RUB", "CNY", "UAH"].includes(value.currency) ? value.currency : "MDL";
   const categories = Array.isArray(value.categories) ? value.categories.slice(0, 200).flatMap((item) => {
     if (!item || typeof item.value !== "string" || !item.value.trim() || item.value.length > 60) return [];
     return [{ value: item.value.trim(), label: typeof item.label === "string" ? item.label.slice(0, 80) : item.value, type: ["plus", "minus"].includes(item.type) ? item.type : void 0 }];
@@ -1243,7 +1286,7 @@ function widgetSettings(value = {}) {
 function checkedEntries(entries, todayKey) {
   if (!Array.isArray(entries) || !entries.length || entries.length > 10) return [];
   return entries.map((entry) => {
-    if (!entry || !Number.isFinite(Number(entry.amount)) || Number(entry.amount) <= 0 || Number(entry.amount) >= 1e12 || !["plus", "minus"].includes(entry.sign) || !["MDL", "USD", "EUR", "RUB", "CNY"].includes(entry.currency) || entry.destination !== "main" || !entry.category?.trim() || entry.category.length > 60 || !/^\d{4}-\d{2}-\d{2}$/.test(entry.dateKey) || entry.dateKey > todayKey) throw new Error("INVALID_ENTRY");
+    if (!entry || !Number.isFinite(Number(entry.amount)) || Number(entry.amount) <= 0 || Number(entry.amount) >= 1e12 || !["plus", "minus"].includes(entry.sign) || !["MDL", "USD", "EUR", "RUB", "CNY", "UAH"].includes(entry.currency) || entry.destination !== "main" || !entry.category?.trim() || entry.category.length > 60 || !/^\d{4}-\d{2}-\d{2}$/.test(entry.dateKey) || entry.dateKey > todayKey) throw new Error("INVALID_ENTRY");
     return { amount: String(entry.amount), sign: entry.sign, currency: entry.currency, category: entry.category.trim(), dateKey: entry.dateKey, destination: "main" };
   });
 }

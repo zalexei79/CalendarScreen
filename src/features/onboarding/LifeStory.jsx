@@ -8,6 +8,9 @@ import BrandIcon from '../../shared/ui/BrandIcon.jsx';
 import './LifeStory.css';
 
 export const LIFE_COPY = {
+  uk: {
+    seeStory:'Побачити мою історію',birthdayTitle:'Коли почалася\nтвоя історія?',birthdayHint:'Укажи дату народження, щоб побачити час у масштабі.',birthdayLabel:'Дата народження',birthdayNote:'Дата залишиться на цьому пристрої.',noDate:'Продовжити без дати',invalid:'Укажи справжню дату народження, не пізніше сьогоднішнього дня.',life:'Це час твого життя.',lifeHint:'Доходи та витрати — частина кожного дня.\nЗаписуй їх у календар — день за днем.',money:'Гроші — частина цієї історії.',moneyHint:'Кожен запис забарвлює день.\nА календар показує повну картину.',today:'А це — сьогодні.',todayHint:'Один день. І місце для нового початку.',ready:'Почни із сьогоднішнього дня.',readyHint:'Нехай твоя фінансова історія стане трохи зрозумілішою.',weeks:'прожитих тижнів',generic:'Кожен тиждень — частина історії',legend:'Одна точка — один тиждень',future:'Історія триває',entry:'Зробити перший запис',empty:'Тут з’явиться твій перший запис',replay:'Подивитися ще раз',back:'Змінити дату',skip:'Перейти до календаря',continue:'Продовжити',week:'Цей тиждень',todayLabel:'Сьогодні',
+  },
   ru: {
     seeStory: 'Увидеть мою историю',
     birthdayTitle: 'Когда началась\nтвоя история?', birthdayHint: 'Укажи дату рождения, чтобы увидеть время в масштабе.', birthdayLabel: 'Дата рождения', birthdayNote: 'Дата останется на этом устройстве.', noDate: 'Продолжить без даты', invalid: 'Укажи настоящую дату рождения, не позднее сегодняшнего дня.',
@@ -88,7 +91,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
   const [stage, setStage] = useState('life');
   const [reduced, setReduced] = useState(false);
   const today = new Date();
-  const locale = lang === 'zh' ? 'zh-CN' : lang === 'ro' ? 'ro-RO' : lang === 'en' ? 'en-US' : 'ru-RU';
+  const locale = lang === 'uk' ? 'uk-UA' : lang === 'zh' ? 'zh-CN' : lang === 'ro' ? 'ro-RO' : lang === 'en' ? 'en-US' : 'ru-RU';
   const monthLabel = today.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
   const stats = lifeWeeks(birthday);
   // Without a birthday, the personal timeline begins with saved history.

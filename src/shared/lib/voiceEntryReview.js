@@ -82,7 +82,7 @@ export function voiceEntryReview(phrase,draft=null,locale='ru',categories=[],opt
  if(natural?.invalid)return {invalid:true};
  if(natural){
   const prepared={...next,...natural.patch};
-  if(natural.shorthand&&!prepared.currency&&['RUB','EUR','MDL','USD','CNY'].includes(options.defaultCurrency))prepared.currency=options.defaultCurrency;
+  if(natural.shorthand&&!prepared.currency&&['RUB','EUR','MDL','USD','CNY','UAH'].includes(options.defaultCurrency))prepared.currency=options.defaultCurrency;
   if(natural.patch.category)prepared.categoryConfirmed=true;
   for(const field of natural.ambiguous)prepared[field]=undefined;
   if(natural.ambiguous.length){

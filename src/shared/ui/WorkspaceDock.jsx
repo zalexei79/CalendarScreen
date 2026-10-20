@@ -11,7 +11,7 @@ export default function WorkspaceDock({ children, proView = false, isLight = fal
     window.addEventListener('dayris-calendar-pull', update);
     return () => window.removeEventListener('dayris-calendar-pull', update);
   }, []);
-  const copy = language === 'zh-CN' ? ['下拉打开投资组合', '松开打开投资组合'] : language === 'en' ? ['Pull down to open Capital', 'Release to open Capital']
+  const copy = language === 'uk' ? ['Потягни вниз, щоб відкрити портфель','Відпусти, щоб відкрити портфель'] : language === 'zh-CN' ? ['下拉打开投资组合', '松开打开投资组合'] : language === 'en' ? ['Pull down to open Capital', 'Release to open Capital']
     : language === 'md' || language === 'ro' ? ['Trage pentru Capital', 'Eliberează pentru Capital']
     : ['Потяните вниз — в Capital', 'Отпустите — открыть Capital'];
   if (hidden && !preserveChildren) return null;
