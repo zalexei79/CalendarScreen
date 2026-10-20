@@ -1,5 +1,5 @@
 import {parseReceipt,receiptLineTotal,receiptMoney,moneyText,receiptMath,validReceiptName,validReceiptDate,normalizeReceiptText} from './receiptModel.js';
-import {receiptSignature,receiptTotalLine,receiptNonItemLine} from './receiptStructure.js';
+import {receiptSignature,receiptTotalLine,receiptNonItemLine,receiptMetadataLine} from './receiptStructure.js';
 
 const numeric = value => String(value).trim().match(/^(\d+(?:[.,]\s*\d{1,2})?)$/)?.[1];
 const linesOf = data => (data.blocks||[]).flatMap(block=>(block.paragraphs||[]).flatMap(paragraph=>paragraph.lines||[]));
@@ -41,9 +41,10 @@ export function parseReceiptPhoto(input,{today='',defaultDateKey=today,defaultCu
   // It must never become an isolated "amount photo" when its total label is lost.
   const receipt=signature||parsed.items.some(item=>validReceiptName(item.name));
   if(receipt){
-    const candidates=lines.filter(line=>validReceiptName(line)&&!/^\s*\d{1,2}:\d{2}|\b(?:LTE|WiFi|Wi-Fi|4G|5G)\b/iu.test(line)&&!receiptMath(line)&&!receiptTotalLine(line)&&!receiptNonItemLine(line)&&!/\bidno\b|bon\s+fiscal|fiscal\s+receipt|кассовый\s+чек/iu.test(normalizeReceiptText(line)));
-    const merchant=candidates.find(line=>/s\.?r\.?l|\bltd\b|\bllc\b|\bООО\b/iu.test(line))||candidates[0]||'';
-    return {...parsed,total:data.totalNeedsReview?'':parsed.total,totalCandidates:data.totalCandidates||[],preferTotalOnly:Boolean(data.totalRecovered||data.totalCandidates?.length),merchant:merchant.slice(0,120),kind:'receipt',amountSource:'receipt',expression:''};
+    const candidates=lines.filter(line=>validReceiptName(line)&&!/^\s*\d{1,2}:\d{2}|\b(?:LTE|WiFi|Wi-Fi|4G|5G)\b/iu.test(line)&&!receiptMath(line)&&!receiptTotalLine(line)&&!receiptNonItemLine(line)&&!receiptMetadataLine(line)&&!/\bidno\b|bon\s+fiscal|fiscal\s+receipt|кассовый\s+чек/iu.test(normalizeReceiptText(line)));
+    const merchantCandidates=candidates.filter(line=>!/[\d][.,]\d{2}(?:\s*[A-ZА-Я])?\s*$/iu.test(line)&&!parsed.items.some(item=>normalizeReceiptText(item.name).includes(normalizeReceiptText(line))));
+    const merchant=merchantCandidates.find(line=>/s\.?r\.?l|\bltd\b|\bllc\b|\bООО\b/iu.test(line))||(!data.totalLayout&&merchantCandidates[0])||'';
+    return {...parsed,total:data.totalNeedsReview?'':parsed.total,totalCandidates:data.totalCandidates||[],preferTotalOnly:Boolean(!parsed.total||data.totalNeedsReview||data.totalRecovered||data.totalCandidates?.length),merchant:merchant.slice(0,120),kind:'receipt',amountSource:'receipt',expression:''};
   }
   const amount=photoAmount(data);
   return {...parsed,kind:'amount',merchant:'',items:[],category:'Другое',dateKey:validReceiptDate(defaultDateKey,today)?defaultDateKey:today,currency:parsed.currency||defaultCurrency,total:amount.total,evidence:amount.evidence,amountSource:amount.source,expression:amount.expression};

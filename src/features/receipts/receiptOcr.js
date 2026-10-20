@@ -57,7 +57,9 @@ export async function recognizeReceipt(file, { language = 'ru', onProgress, sign
       }
     }
     const incomplete=parseReceiptPhoto(data);
-    if(incomplete.kind==='receipt'&&!incomplete.total&&!incomplete.ambiguousTotal&&!incomplete.documentIssue&&!String(data.text||'').split(/\r?\n/).some(receiptTotalAnchor)){
+    // A readable heading with unreadable digits still needs image recovery.
+    // Item recognition and the mere presence of a total WORD cannot stop it.
+    if(incomplete.kind==='receipt'&&!incomplete.total&&!incomplete.ambiguousTotal&&!incomplete.documentIssue){
       const paper=await receiptPaperImage(file);
       if(paper){
         await worker.setParameters({tessedit_pageseg_mode:'6'});
@@ -92,7 +94,7 @@ export async function recognizeReceipt(file, { language = 'ru', onProgress, sign
       return result.data.text;
     },{signal,onProgress});
     onProgress?.(100);
-    return {text,blocks:data.blocks,totalNeedsReview:data.totalNeedsReview,totalRecovered:data.totalRecovered,totalCandidates:data.totalCandidates};
+    return {text,blocks:data.blocks,totalNeedsReview:data.totalNeedsReview,totalRecovered:data.totalRecovered,totalLayout:data.totalLayout,totalCandidates:data.totalCandidates};
   } finally {
     clearTimeout(timeout); clearTimeout(deadline); finished = true;
     signal?.removeEventListener('abort', cancel); signal?.removeEventListener('abort', abortFailure);

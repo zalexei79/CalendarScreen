@@ -1,5 +1,5 @@
 import {classifyProduct,presentProduct,normalizeProductText} from './productCatalog.js';
-import {receiptTotalLine,receiptNonItemLine,receiptDocumentIssue} from './receiptStructure.js';
+import {receiptTotalLine,receiptNonItemLine,receiptMetadataLine,receiptDocumentIssue} from './receiptStructure.js';
 // Receipt arithmetic uses minor units; OCR output never writes a calendar entry.
 export const normalizeReceiptText = normalizeProductText;
 export function receiptMoney(value) {
@@ -41,6 +41,7 @@ export function cleanReceiptName(value) {
 }
 export function validReceiptName(value) {
   const text = normalizeReceiptText(cleanReceiptName(value));
+  if (receiptMetadataLine(text) || receiptNonItemLine(text) || /[=×*]\s*$|\b[xх]\s*\d[\d.,]*\s*=\s*$/iu.test(text)) return false;
   // A broken price row is not a product name. Keep it available in raw OCR,
   // but require a correction instead of presenting it as a purchase.
   const words = text.replace(/[\d.,=:%+*×х|\\-]/g,' ').split(/\s+/).filter(Boolean);
@@ -98,7 +99,7 @@ export function parseReceipt(rawText) {
     let line=lines[index];
     const normalizedLine = normalizeReceiptText(line);
     if (receiptTotalLine(line)||/^(?:всего|итого?)\s*[.,:=]/iu.test(normalizedLine)) break;
-    if (receiptNonItemLine(line)) { pending = []; continue; }
+    if (receiptNonItemLine(line) || receiptMetadataLine(line)) { pending = []; continue; }
     if (/casier|cashier|кассир|idno|idnp|\binr\b|\btva\b|\bvat\b|str\.|s\.r\.l|\bbon\b|\btelefon\b|\btel\b|ккм|инн|эклз|^чек\s*[№#]/i.test(normalizedLine)) { pending = []; continue; }
     // Join only an unfinished printed equation and a numeric continuation.
     // Never borrow a factor or amount from the next named product.
@@ -110,6 +111,9 @@ export function parseReceipt(rawText) {
     const multiplication = receiptMath(line);
     const amounts = moneyTokens(line);
     const last = amounts.at(-1);
+    // A signed discount/adjustment is not a positive purchase, even when OCR
+    // loses its label. Never drop the minus and turn it into an item or refund.
+    if (last && /[-−]\s*$/.test(line.slice(0,last.index))) { pending = []; continue; }
     if (multiplication || last && /^\s*[^\d]{0,12}$/i.test(line.slice(last.index + last[0].length))) {
       let name = multiplication ? line.slice(0, multiplication.index).trim() : line.slice(0, last.index).trim();
       name = cleanReceiptName(name);
@@ -131,7 +135,7 @@ export function receiptValidation(draft, today, currencies) {
   const invalidItem = draft.items.some(receiptItemIssue);
   const sum = draft.items.reduce((value,item) => value + (receiptMoney(receiptLineTotal(item.quantity,item.unitPrice)) || 0), 0);
   const lineMismatch = draft.items.some(receiptItemMathIssue);
-  const mismatch = Boolean(draft.items.length && sum !== total);
+  const mismatch = Boolean(total > 0 && draft.items.length && sum !== total);
   // The printed total is independent evidence, never proof that OCR item prices are correct.
   return { valid: !draft.documentIssue && total > 0 && currencies.includes(draft.currency) && validReceiptDate(draft.dateKey, today) && !invalidItem && !lineMismatch && !mismatch, total, sum, mismatch, lineMismatch };
 }

@@ -60,7 +60,7 @@ try{
  await (await choosing).setFiles({name:'bon.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});
  await page.locator('.receipt-fields').waitFor({timeout:120000});
  if(await page.locator('.receipt-warning[role="alert"]').count())throw new Error(await page.locator('.receipt-warning[role="alert"]').innerText());
- assert.equal(await page.getByLabel('Итог чека',{exact:true}).inputValue(),'67.00');assert.equal(await page.getByLabel('Валюта чека',{exact:true}).inputValue(),'MDL');assert.equal(await page.locator('.receipt-item').count(),2);
+ assert.equal(await page.getByLabel('Итог чека',{exact:true}).inputValue(),'67.00');assert.equal(await page.getByLabel('Валюта чека',{exact:true}).inputValue(),'MDL');assert.equal(await page.locator('.receipt-item').count(),0,'unreliable details default to the independent total');assert.equal(await page.getByRole('checkbox').isChecked(),false);await page.getByRole('button',{name:'Проверить позиции',exact:true}).click();assert.equal(await page.locator('.receipt-item').count(),2);
  assert.equal(writes.length,0,'OCR alone does not write');
  await page.getByRole('button',{name:'Проверить покупку',exact:true}).click();await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Цена за единицу 2');
  assert.equal(writes.length,0,'the primary correction action cannot save inconsistent values');assert.equal(await page.getByRole('checkbox').count(),0);assert.equal(await page.locator('.receipt-warning').count(),0);
@@ -71,7 +71,7 @@ try{
  await page.getByRole('button',{name:'Сохранить расход',exact:true}).click();await page.locator('.receipt-success').waitFor();
  assert.equal(writes.length,1);assert.equal(writes[0].pnl,-67);assert.equal(writes[0].currency,'MDL');assert.equal(writes[0].date_key,'2026-10-19');assert.equal(writes[0].user_id,storyUserId);assert.match(writes[0].comment,/Хлеб/);assert.match(writes[0].comment,/2 × 29.95 = 59.90 MDL/);
  await page.getByRole('button',{name:'Готово',exact:true}).click();
- await page.locator('.receipt-file').first().setInputFiles({name:'bon.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});await page.locator('.receipt-fields').waitFor({timeout:120000});await page.locator('.receipt-item-summary').nth(1).click();await page.getByLabel('Цена за единицу 2',{exact:true}).fill('29.95');await page.locator('.receipt-item-summary').first().click();await page.getByLabel('Название 1',{exact:true}).fill('Хлеб');await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Сохранить расход',exact:true}).click();await page.getByRole('alert').filter({hasText:'Похожий чек'}).waitFor();assert.equal(writes.length,1,'duplicate reimport is blocked');
+ await page.locator('.receipt-file').first().setInputFiles({name:'bon.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});await page.locator('.receipt-fields').waitFor({timeout:120000});await page.getByRole('button',{name:'Проверить позиции',exact:true}).click();await page.locator('.receipt-item-summary').nth(1).click();await page.getByLabel('Цена за единицу 2',{exact:true}).fill('29.95');await page.locator('.receipt-item-summary').first().click();await page.getByLabel('Название 1',{exact:true}).fill('Хлеб');await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Сохранить расход',exact:true}).click();await page.getByRole('alert').filter({hasText:'Похожий чек'}).waitFor();assert.equal(writes.length,1,'duplicate reimport is blocked');
  await page.getByRole('button',{name:'Закрыть чек',exact:true}).click();
  if(process.env.DAYRIS_RECEIPT_SAMPLE){
   await page.locator('.receipt-file').first().setInputFiles(process.env.DAYRIS_RECEIPT_SAMPLE);await page.locator('.receipt-fields').waitFor({timeout:120000});
@@ -150,7 +150,7 @@ try{
    const actual=await page.getByLabel('Итог чека',{exact:true}).inputValue();
    if(actual!==expected){fs.writeFileSync(`artifacts/receipt-check/unusual-failed-${number}.txt`,await page.getByLabel('Распознанный текст',{exact:true}).inputValue());await page.screenshot({path:`artifacts/receipt-check/unusual-failed-${number}.png`});}
    assert.equal(actual,expected,`source ${number}`);
-   if(number<3){assert.equal(await page.locator('#receipt-title').innerText(),'Чек в календарь');assert.equal(await page.getByLabel('Валюта чека',{exact:true}).inputValue(),'','never silently assign MDL');assert.equal(await page.locator('.receipt-item').count(),0,'uncertain products do not obscure the recovered total');if(await page.locator('.receipt-omitted').count())assert.equal(await page.getByRole('button',{name:'Вернуть покупки',exact:true}).isVisible(),true);}
+   if(number<3){assert.equal(await page.locator('#receipt-title').innerText(),'Чек в календарь');assert.equal(await page.getByLabel('Валюта чека',{exact:true}).inputValue(),'','never silently assign MDL');assert.equal(await page.locator('.receipt-item').count(),0,'uncertain products do not obscure the recovered total');if(await page.locator('.receipt-omitted').count())assert.equal(await page.getByRole('button',{name:'Проверить позиции',exact:true}).isVisible(),true);}
    else{assert.match(await page.locator('.receipt-document-status').innerText(),/история сделок/);assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).count(),0);assert.equal(await page.getByRole('checkbox').count(),0);}
    for(const size of[390,1280]){await page.setViewportSize({width:size,height:900});await page.locator('.receipt-scroll').evaluate(el=>el.scrollTop=0);await page.screenshot({path:`artifacts/receipt-check/unusual-source-${number}-${size}.png`});}
    console.log(`UNUSUAL SOURCE ${number}: ${expected||'trading history blocked'}, real local OCR of native-size source region from supplied screenshot.`);
@@ -160,9 +160,13 @@ try{
   if(await page.locator('.receipt-dialog').isVisible())await page.getByRole('button',{name:'Закрыть чек',exact:true}).click();
   await page.locator('.receipt-file').first().setInputFiles(process.env.DAYRIS_CURVED_SAMPLE);await page.locator('.receipt-fields').waitFor({timeout:120000});
   assert.equal(await page.getByLabel('Итог чека',{exact:true}).inputValue(),'','conflicting OCR cannot set an automatic expense amount');
+  assert.equal(await page.getByLabel('Итог чека',{exact:true}).getAttribute('placeholder'),'—');assert.equal(await page.locator('.receipt-sum,.receipt-difference').count(),0);
+  assert.equal(await page.getByLabel('Магазин',{exact:true}).inputValue(),'','isolated footer OCR cannot invent a store');
   await page.getByRole('button',{name:'Выбрать сумму 695,50',exact:true}).waitFor();assert.equal(await page.locator('.receipt-item').count(),0);assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).count(),0);
   for(const width of[320,390,1280]){await page.setViewportSize({width,height:900});await page.screenshot({path:`artifacts/receipt-check/curved-candidates-${width}.png`});}
   await page.getByRole('button',{name:'Выбрать сумму 695,50',exact:true}).click();assert.equal(await page.getByLabel('Итог чека',{exact:true}).inputValue(),'695.50');assert.equal(await page.locator('.receipt-total-options').count(),0);
+  assert.equal(await page.getByLabel('Валюта чека',{exact:true}).inputValue(),'','the photo has no explicit currency, so none may be invented');assert.equal(await page.getByRole('checkbox').count(),0,'missing date/currency still require review');
+  await page.screenshot({path:'artifacts/receipt-check/curved-verified-total.png'});
   console.log('CURVED RECEIPT: total row located independently of items; conflicting OCR offers 695.50 for explicit photo review, no automatic saving.');
  }
  await page.setViewportSize({width:1280,height:900});await page.screenshot({path:'artifacts/receipt-check/full-app-desktop.png'});

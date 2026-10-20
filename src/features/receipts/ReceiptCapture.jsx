@@ -54,7 +54,7 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
     parsed.items=parsed.items.map(item=>({...item,productType:recalledProductType(memory,item.name)}));
     parsed.category=receiptCategory(parsed.items);
     const checked=receiptValidation(parsed,today,CURRENCIES.map(item=>item.code));
-    const fallback=parsed.preferTotalOnly&&parsed.items.length&&!parsed.documentIssue&&(checked.mismatch||parsed.items.some(receiptItemIssue));
+    const fallback=parsed.items.length&&!parsed.documentIssue&&(!parsed.total||checked.mismatch||parsed.items.some(receiptItemIssue));
     setOmittedItems(fallback?parsed.items:null);
     setDraft(fallback?{...parsed,items:[]}:parsed);setEditingIndex(-1);setConfirmed(false);
     setMetadataOpen(false);

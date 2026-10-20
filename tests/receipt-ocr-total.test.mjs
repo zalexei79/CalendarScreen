@@ -10,7 +10,7 @@ test('two agreeing total-region readings recover digits without relying on item 
  assert.equal(parseReceiptPhoto(result,context).total,'532.90');assert.equal(calls.length,2);assert.deepEqual(calls.map(call=>call.mode),['7','13']);assert.ok(calls[0].rect.left>200,'read the amount, not the label/background');
 });
 test('known OCR label confusions require pixels; a fuzzy word alone cannot supply a total',async()=>{
- for(const label of['счма','CYMA','curma','curna','С У М А','T0TAL','Tota1','ИT0Г','И Т О Г']){
+ for(const label of['счма','CYMA','curma','curna','С У М А','T0TAL','Tota1','ИT0Г','И Т О Г','ВСЕГ0','TOTA|']){
   const source=fixture(label,'725,08');assert.equal(parseReceipt(source.text).total,'');assert.equal(parseReceiptPhoto(source,context).kind,'receipt');
   const fixed=await refineReceiptTotals(source,async()=> '725,00');assert.equal(parseReceiptPhoto(fixed,context).total,'725.00',label);
  }

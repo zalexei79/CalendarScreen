@@ -24,3 +24,7 @@ test('prominent amount detection uses layout, never the largest monetary value',
  const data={text:'999.00\n59.90\n1',blocks:[{paragraphs:[{lines:[line('999.00',20),line('59.90',90),line('1',30)]}]}]};
  assert.equal(photoAmount(data).total,'59.90');
 });
+
+test('isolated total recovery does not invent a store from unreadable footer text',()=>{
+ const draft=parseReceiptPhoto({text:'выИ\nTOTAL 695.50',totalRecovered:true,totalLayout:true},context);assert.equal(draft.total,'695.50');assert.equal(draft.merchant,'');
+});
