@@ -2,6 +2,7 @@ import {saveVoiceDestinations} from './src/shared/lib/saveVoiceDestinations.js';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import './src/shared/ui/PurpleTheme.css';
 import './src/shared/ui/EmeraldGlass.css';
+import './src/shared/ui/GoldTheme.css';
 import { useWorkspaceViewport } from './src/shared/ui/useWorkspaceViewport';
 import WorkspaceDock from './src/shared/ui/WorkspaceDock';
 import MetaTraderControl from './src/features/metatrader/MetaTraderControl.jsx';
@@ -691,14 +692,21 @@ export default function CalendarScreen() {
   const [themePreference, setThemePreference] = useState(() => {
     try {
       const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-      return ['light', 'dark', 'purple', 'emerald', 'system'].includes(stored) ? stored : 'dark';
+      return ['light', 'dark', 'purple', 'emerald', 'gold', 'system'].includes(stored) ? stored : 'dark';
     } catch {
       return 'dark';
     }
   });
   const [systemTheme, setSystemTheme] = useState(() => window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-  const theme = themePreference === 'system' ? systemTheme : themePreference;
-  function setTheme(value) { setThemePreference(typeof value === 'function' ? value(theme) : value); }
+  const requestedTheme = themePreference === 'system' ? systemTheme : themePreference;
+  // Never render a paid palette before the current account's server entitlement.
+  const theme = requestedTheme === 'gold' && !proAccessActive ? 'dark' : requestedTheme;
+  function setTheme(value) {
+    const next = typeof value === 'function' ? value(theme) : value;
+    if (!['light', 'dark', 'purple', 'emerald', 'gold', 'system'].includes(next)) return;
+    if (next === 'gold' && !proAccessActive) { if (!proAccessLoading) openProPresentation(); return; }
+    setThemePreference(next);
+  }
   useEffect(() => {
     const query = window.matchMedia('(prefers-color-scheme: light)');
     const update = () => setSystemTheme(query.matches ? 'light' : 'dark');
@@ -752,7 +760,7 @@ export default function CalendarScreen() {
     // Keep browser chrome and the area behind Android gesture controls in
     // the same theme as the calendar, including after returning to the PWA.
     const syncBrowserTheme = () => {
-      const color = theme === 'light' ? '#fafafa' : theme === 'purple' ? '#160f24' : theme === 'emerald' ? '#071c16' : '#09090b';
+      const color = theme === 'light' ? '#fafafa' : theme === 'purple' ? '#160f24' : theme === 'emerald' ? '#071c16' : theme === 'gold' ? '#100e0a' : '#09090b';
       const colorScheme = theme === 'light' ? 'light' : 'dark';
       document.documentElement.dataset.dayrisTheme = theme;
       document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
@@ -7259,6 +7267,7 @@ export default function CalendarScreen() {
           language={language}
           currency={currency}
           theme={theme}
+          proAccessActive={proAccessActive}
           calendarRecords={storyCalendarRecords}
           personalStory={storyReplay}
           profileKey={user?.id || 'guest'}

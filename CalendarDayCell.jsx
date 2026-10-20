@@ -97,7 +97,7 @@ export default function CalendarDayCell({
     <>
       <button
         onPointerMove={(event) => {
-          if (event.pointerType !== 'mouse' || document.documentElement.dataset.dayrisTheme !== 'emerald' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+          if (event.pointerType !== 'mouse' || !['emerald','gold'].includes(document.documentElement.dataset.dayrisTheme) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
           const rect = event.currentTarget.getBoundingClientRect();
           event.currentTarget.style.setProperty('--glass-x', `${((event.clientX - rect.left) / rect.width * 100).toFixed(1)}%`);
           event.currentTarget.style.setProperty('--glass-y', `${((event.clientY - rect.top) / rect.height * 100).toFixed(1)}%`);

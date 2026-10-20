@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 const require = createRequire(path.resolve('package.json'));
 const { build } = require('esbuild');
+const palette=process.env.DAYRIS_TEST_THEME==='gold'?'gold':'emerald';
+const blur=palette==='gold'?24:28;
 const { chromium } = createRequire('C:/Users/aveel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/package.json')('playwright');
 const bundle = await build({ stdin: { resolveDir:process.cwd(), loader:'jsx', contents:`
 import React,{useState} from 'react';import {createRoot} from 'react-dom/client';
@@ -13,12 +15,12 @@ import Planner from './src/features/reminders/FinancePlanComposer.jsx';
 import Voice from './src/shared/ui/VoiceWorkspace.jsx';
 import Capital from './src/features/capital/CapitalPanel.jsx';
 function App(){
- const [screen,setScreen]=useState('first'),[theme,setTheme]=useState('emerald'),[step,setStep]=useState('currency');
+ const [screen,setScreen]=useState('first'),[theme,setTheme]=useState(${JSON.stringify(palette)}),[step,setStep]=useState('currency');
  window.setScreen=setScreen;window.setTheme=setTheme;
  document.documentElement.dataset.dayrisTheme=theme;
  const base={language:'ru',isLight:theme==='light'};
  return <main className="premium-shell" style={{minHeight:'100dvh',padding:16}}>
- {screen==='first'&&<First {...base} step={step} theme={theme} currency="USD" onTheme={setTheme} onLanguage={()=>{}} onCurrency={()=>{}} onStep={setStep} onSkip={()=>setScreen('wallet')}/>}
+ {screen==='first'&&<First {...base} proAccessActive step={step} theme={theme} currency="USD" onTheme={setTheme} onLanguage={()=>{}} onCurrency={()=>{}} onStep={setStep} onSkip={()=>setScreen('wallet')}/>}
  {screen==='wallet'&&<Wallet {...base} currency="USD" transactions={[]} balanceByCurrency={{USD:12500}} onSave={async()=>{}} onDelete={async()=>{}} onBackToCalendar={()=>{}}/>}
  {screen==='planner'&&<Planner {...base} open dateKey="2026-10-15" defaultCurrency="USD" onClose={()=>setScreen('wallet')} onCreate={async()=>{}}/>}
  {screen==='voice'&&<Voice {...base} locale="ru" status="Микрофон на паузе" help={{filtered:true,title:'Например',phrases:[]}} onClose={()=>{}} onCollapse={()=>{}} onListen={()=>{}}/>}
@@ -48,17 +50,17 @@ try {
  for(const width of [390,1280]) {
   await page.setViewportSize({width,height:width===390?844:950});
   const shell=await glass(page.locator('.first-run-shell'));
-  assert.match(shell.blur,/blur\(28px\)/);
+  assert.ok(shell.blur.includes(`blur(${blur}px)`));
   assert.match(shell.image,/linear-gradient/);
   assert.equal(await page.locator('.first-run-dialog').evaluate(el=>el.scrollWidth<=el.clientWidth),true);
-  await page.screenshot({path:`tests/emerald-glass-onboarding-${width}.png`,animations:'disabled'});
+  await page.screenshot({path:`tests/${palette}-glass-onboarding-${width}.png`,animations:'disabled'});
  }
  // Selecting themes immediately updates the native top-layer onboarding dialog.
  await page.getByRole('button',{name:'Светлое',exact:true}).click();
  assert.equal(await page.locator('html').getAttribute('data-dayris-theme'),'light');
- assert.doesNotMatch((await glass(page.locator('.first-run-shell'))).blur,/28px/);
- await page.getByRole('button',{name:'Изумрудное',exact:true}).click();
- assert.match((await glass(page.locator('.first-run-shell'))).blur,/28px/);
+ assert.ok(!(await glass(page.locator('.first-run-shell'))).blur.includes(`${blur}px`));
+ await page.getByRole('button',{name:palette==='gold'?'Золото PRO':'Изумрудное',exact:true}).click();
+ assert.ok((await glass(page.locator('.first-run-shell'))).blur.includes(`${blur}px`));
  await page.getByRole('button',{name:/Доллар США/}).click();
  await page.locator('.life-birthday-card').waitFor();
  assert.match((await glass(page.locator('.life-birthday-card'))).image,/linear-gradient/);
@@ -67,27 +69,27 @@ try {
  await page.locator('.wallet-balance-card').waitFor();
  assert.match((await glass(page.locator('.wallet-balance-card'))).image,/linear-gradient/);
  await page.getByRole('button',{name:'Понятно, начать',exact:true}).click();
- await page.screenshot({path:'tests/emerald-glass-wallet.png',animations:'disabled'});
+ await page.screenshot({path:`tests/${palette}-glass-wallet.png`,animations:'disabled'});
  await page.evaluate(()=>window.setScreen('capital'));
  await page.locator('.capital-panel').waitFor();
- assert.equal(await page.locator('.capital-panel').evaluate(el=>getComputedStyle(el).getPropertyValue('--cap-bg').trim()),'#030e0b');
- await page.screenshot({path:'tests/emerald-glass-capital.png',animations:'disabled'});
+ assert.equal(await page.locator('.capital-panel').evaluate(el=>getComputedStyle(el).getPropertyValue('--cap-bg').trim()),palette==='gold'?'#100e0a':'#030e0b');
+ await page.screenshot({path:`tests/${palette}-glass-capital.png`,animations:'disabled'});
  await page.evaluate(()=>window.setScreen('voice'));
  await page.locator('.voice-workspace').waitFor();
- assert.match((await glass(page.locator('.voice-workspace'))).blur,/28px/);
- await page.screenshot({path:'tests/emerald-glass-voice.png',animations:'disabled'});
+ assert.ok((await glass(page.locator('.voice-workspace'))).blur.includes(`${blur}px`));
+ await page.screenshot({path:`tests/${palette}-glass-voice.png`,animations:'disabled'});
  await page.evaluate(()=>window.setScreen('planner'));
  await page.locator('.plan-dialog').waitFor();
- assert.match((await glass(page.locator('.plan-dialog'))).blur,/28px/);
- await page.screenshot({path:'tests/emerald-glass-planner.png',animations:'disabled'});
+ assert.ok((await glass(page.locator('.plan-dialog'))).blur.includes(`${blur}px`));
+ await page.screenshot({path:`tests/${palette}-glass-planner.png`,animations:'disabled'});
  const session=await page.context().newCDPSession(page);
  await session.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-transparency',value:'reduce'}]});
  assert.equal((await glass(page.locator('.plan-dialog'))).blur,'none');
- assert.equal((await glass(page.locator('.plan-dialog'))).bg,'rgb(12, 38, 30)');
+ assert.equal((await glass(page.locator('.plan-dialog'))).bg,palette==='gold'?'rgb(29, 25, 18)':'rgb(12, 38, 30)');
  await session.send('Emulation.setEmulatedMedia',{features:[]});
  await page.evaluate(()=>window.setScreen('wallet'));
  await page.evaluate(()=>window.setTheme('dark'));
  assert.doesNotMatch((await glass(page.locator('.wallet-balance-card'))).image,/182, 255, 233/);
  assert.deepEqual(errors,[]);
- console.log('PASS: emerald onboarding at phone/desktop sizes, theme switching, birthday, wallet, investments, voice, planner, reduced transparency; no runtime errors.');
+ console.log(`PASS: ${palette} onboarding at phone/desktop sizes, theme switching, birthday, wallet, investments, voice, planner, reduced transparency; no runtime errors.`);
 } finally {await browser.close();}

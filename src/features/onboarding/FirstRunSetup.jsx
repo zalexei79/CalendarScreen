@@ -6,6 +6,7 @@ import BrandIcon from '../../shared/ui/BrandIcon.jsx';
 import LifeStory, { LIFE_COPY } from './LifeStory.jsx';
 import { birthdayStorageKey, lifeWeeks, localDateValue } from './lifeStoryModel';
 import './FirstRunSetup.css';
+import {GOLD_THEME_COPY} from '../../shared/ui/goldThemeCopy.js';
 
 const COPY = {
   uk: {
@@ -81,7 +82,7 @@ function MoneyCalendarPreview({ copy, currency, lang, className = '' }) {
   </figure>;
 }
 
-export default function FirstRunSetup({ step, language, currency, theme, calendarRecords = EMPTY_RECORDS, personalStory = false, profileKey = 'guest', onLanguage, onCurrency, onTheme, onStep, onStart, onArrive, onSkip }) {
+export default function FirstRunSetup({ step, language, currency, theme, proAccessActive = false, calendarRecords = EMPTY_RECORDS, personalStory = false, profileKey = 'guest', onLanguage, onCurrency, onTheme, onStep, onStart, onArrive, onSkip }) {
   const dialogRef = useRef(null);
   const headingRef = useRef(null);
   const lang = language === 'uk' ? 'uk' : language === 'zh-CN' ? 'zh' : language === 'md' || language === 'ro' ? 'ro' : language === 'en' ? 'en' : 'ru';
@@ -171,6 +172,7 @@ export default function FirstRunSetup({ step, language, currency, theme, calenda
                 <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
                   <span className={`text-xs ${muted}`}>{copy.appearance}</span>
                   <div className={`first-run-theme-picker grid w-full grid-cols-2 gap-1 rounded-xl p-1 sm:w-auto ${light ? 'bg-zinc-200/60' : 'bg-black/25'}`}>
+                    {proAccessActive && <button type="button" data-theme-option="gold" className="first-run-gold-choice" aria-pressed={theme==='gold'} onClick={()=>onTheme('gold')}>{GOLD_THEME_COPY[lang].name}<small>PRO</small></button>}
                     {[['light', Sun, copy.light], ['dark', Moon, copy.dark], ['purple', Moon, copy.purple], ['emerald', Moon, copy.emerald]].map(([value, Icon, label]) => <button key={value} type="button" data-theme-option={value} aria-pressed={theme === value} onClick={() => onTheme(value)} className={`flex min-h-9 min-w-0 items-center justify-center gap-1.5 rounded-lg px-1 text-[10px] sm:px-2.5 sm:text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${theme === value ? light ? 'bg-white text-zinc-900 shadow-sm' : 'bg-white/10 text-zinc-100' : muted}`}><Icon className="hidden h-3.5 w-3.5 sm:block" /><span className="theme-option-label">{label}</span></button>)}
                   </div>
                 </div>
