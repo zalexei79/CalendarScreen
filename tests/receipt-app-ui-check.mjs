@@ -12,17 +12,18 @@ const server=http.createServer((request,response)=>{
 });
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const origin=`http://127.0.0.1:${server.address().port}`,writes=[],records=[],requests=[];
+let proActive=true;
 const browser=await createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE||import.meta.url)('playwright').chromium.launch({channel:'msedge',headless:true});
 fs.mkdirSync('artifacts/receipt-check',{recursive:true});
 try{
  const context=await browser.newContext({viewport:{width:390,height:844},timezoneId:'Europe/Bucharest',serviceWorkers:'block'});
- await context.addInitScript(()=>{localStorage.setItem('atj_language','ru');localStorage.setItem('atj_currency','MDL');localStorage.setItem('dayris_onboarding_v2_completed','1');localStorage.setItem('calendar_guide_completed','1');});
+ await context.addInitScript(()=>{localStorage.setItem('atj_language','ru');localStorage.setItem('atj_currency','MDL');if(localStorage.getItem('atj_pro_view')===null)localStorage.setItem('atj_pro_view','1');localStorage.setItem('dayris_onboarding_v2_completed','1');localStorage.setItem('calendar_guide_completed','1');});
  await context.route('**/*',async route=>{
   const request=route.request(),url=new URL(request.url());requests.push({url:url.href,method:request.method()});
   if(url.origin===origin)return route.continue();
   if(url.pathname.startsWith('/rest/v1/')){
    let data=[];
-   if(url.pathname.endsWith('get_my_pro_status'))data={active:true};
+   if(url.pathname.endsWith('get_my_pro_status'))data={active:proActive};
    else if(url.pathname.endsWith('/trades')){
     if(request.method()==='POST'){const body=request.postDataJSON();const record={...body,id:`receipt-${records.length+1}`};writes.push(body);records.push(record);data=record;}
     else data=records;
@@ -35,6 +36,20 @@ try{
  const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
  await page.goto(origin);await page.locator('.calendar-days-grid').waitFor();await page.waitForFunction(()=>!document.getElementById('boot-screen'));
  await page.locator('.receipt-launch:not([disabled])').waitFor();
+ // A paid account in the regular view and a free account with a stale PRO
+ // preference must both omit the camera and its upload inputs altogether.
+ for(const [active,mode] of [[true,'0'],[false,'1']]){
+  proActive=active;await page.evaluate(value=>localStorage.setItem('atj_pro_view',value),mode);
+  const checked=page.waitForResponse(response=>response.url().endsWith('/rpc/get_my_pro_status'));
+  await page.reload();await checked;await page.locator('.calendar-days-grid').waitFor();await page.waitForFunction(()=>!document.getElementById('boot-screen'));
+  assert.equal(await page.locator('.receipt-launch,.receipt-file,.receipt-dialog').count(),0,`camera hidden with access=${active}, PRO view=${mode}`);
+  for(const width of[390,1280]){
+   await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+   await page.screenshot({path:`artifacts/receipt-check/camera-hidden-${active?'regular':'free'}-${width}.png`});
+  }
+ }
+ await page.setViewportSize({width:390,height:844});
+ proActive=true;await page.evaluate(()=>localStorage.setItem('atj_pro_view','1'));await page.reload();await page.locator('.receipt-launch:not([disabled])').waitFor();
  const positions=await page.evaluate(()=>{const mic=document.querySelector('.calendar-voice-button').getBoundingClientRect(),photo=document.querySelector('.receipt-launch').getBoundingClientRect();return{distance:Math.abs(photo.x-mic.x),top:Math.abs(photo.y-mic.y),overflow:document.documentElement.scrollWidth>innerWidth};});
  assert.equal(positions.overflow,false);assert.ok(positions.distance<100&&positions.top<10,'photo is beside microphone');
  const png=await page.evaluate(()=>{

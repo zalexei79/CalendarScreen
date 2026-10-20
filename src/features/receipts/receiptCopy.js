@@ -86,6 +86,7 @@ const rows = {
   reparse: ['Обновить поля из текста','Update fields from text','Actualizează câmpurile din text','根据文本更新字段'],
   error: ['Не удалось распознать фото. Попробуйте более чёткий снимок или заполните поля вручную.','Could not read this photo. Try a clearer photo or enter the fields manually.','Fotografia nu a putut fi citită. Încearcă una mai clară sau completează manual.','无法识别照片，请换一张更清晰的照片或手动填写。'],
   access: ['Не удалось проверить PRO. Проверьте интернет и повторите.','Could not verify PRO. Check your connection and try again.','Nu am putut verifica PRO. Verifică internetul și reîncearcă.','无法验证 PRO，请检查网络后重试。'],
+  retryAccess: ['Повторить проверку','Retry verification','Reîncearcă verificarea','重新验证'],
   file: ['Выберите изображение JPG, PNG или WebP до 20 МБ. HEIC при необходимости экспортируйте в JPG.','Choose a JPG, PNG or WebP image up to 20 MB. Export HEIC to JPG if needed.','Alege JPG, PNG sau WebP de până la 20 MB. Exportă HEIC în JPG dacă este necesar.','请选择不超过 20 MB 的 JPG、PNG 或 WebP 图片，必要时将 HEIC 导出为 JPG。'],
   saveError: ['Не удалось сохранить. Попробуйте ещё раз.','Could not save. Try again.','Nu am putut salva. Reîncearcă.','保存失败，请重试。'],
   duplicate: ['Похожий чек уже есть в календаре. Проверьте историю перед повторным добавлением.','A matching receipt is already in the calendar. Check history before adding it again.','Un bon identic există deja în calendar. Verifică istoricul.','日历中已有相同收据，请先查看记录。'],

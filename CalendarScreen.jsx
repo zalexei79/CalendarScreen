@@ -2851,7 +2851,7 @@ export default function CalendarScreen() {
   const receiptOwner = useRef(null);
   receiptOwner.current = { owner: validUserId, trades: storedManualTrades };
   async function saveReviewedReceipt(draft, owner) {
-    if (!owner || receiptOwner.current.owner !== owner || !await checkReceiptAccess(owner)) throw new Error('RECEIPT_ACCESS_UNAVAILABLE');
+    if (!owner || receiptOwner.current.owner !== owner || !await checkReceiptAccess(owner)) throw new Error('RECEIPT_ACCESS_DENIED');
     if (receiptOwner.current.owner !== owner) throw new Error('RECEIPT_ACCESS_UNAVAILABLE');
     if (saveInFlightRef.current) throw new Error(t('saving'));
     const checked = receiptValidation(draft, todayKey, CURRENCIES.map(item => item.code));
@@ -5174,7 +5174,7 @@ export default function CalendarScreen() {
             </span>
           </button>
           <CalendarVoiceButton launchRequest={homeVoiceReady ? homeVoiceLaunch.request : null} onLaunchHandled={homeVoiceLaunch.handled} userId={user?.id} onCreateCategory={voiceCategories.add} onDeleteCategory={removeMoneyCategory} onSaveEntry={saveReviewedVoiceEntry} defaultCurrency={currency} walletAvailable={proAccessActive && !proAccessLoading} language={language} isLight={isLight} traderMode={traderMode} categoryOptions={moneyCategoryNames.map(value => ({value, label: getMoneyCategoryLabel(value, language), type: MONEY_CATEGORIES.find(item=>item.key===value)?.type, icon: getHistoryCategoryIcon(value)}))} onResetConversation={voiceConversation.reset} onConversation={voiceConversation.handle} selectedDate={selectedKey} onCommand={handleCalendarVoiceCommand} />
-          {!traderMode && <ReceiptCapture key={user?.id || 'guest'} userId={user?.id} proActive={proAccessActive} proLoading={proAccessLoading} language={language} isLight={isLight} defaultCurrency={currency} defaultDateKey={selectedKey} onUpgrade={openProPresentation} onSaveReceipt={saveReviewedReceipt}/>}
+          {isFinancialPro && proAccessActive && !proAccessLoading && validUserId && <ReceiptCapture key={validUserId} userId={validUserId} proActive={proAccessActive} proLoading={proAccessLoading} language={language} isLight={isLight} defaultCurrency={currency} defaultDateKey={selectedKey} onAccessDenied={refreshProAccess} onSaveReceipt={saveReviewedReceipt}/>}
         </div>
       </WorkspaceDock>
 

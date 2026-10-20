@@ -14,12 +14,19 @@ import {productTypeById,productLocale} from './productCatalog.js';
 import ProductTypePicker from './ProductTypePicker.jsx';
 import './ReceiptCapture.css';
 
-export default function ReceiptCapture({ userId, proActive, proLoading, language = 'ru', isLight, defaultCurrency='',defaultDateKey, onUpgrade, onSaveReceipt, checkAccess = checkReceiptAccess, recognize = recognizeReceipt }) {
+export default function ReceiptCapture(props) {
+  if (!props.userId || !props.proActive || props.proLoading) return null;
+  return <ReceiptCaptureSession key={props.userId} {...props}/>;
+}
+
+function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurrency='',defaultDateKey, onAccessDenied, onSaveReceipt, checkAccess = checkReceiptAccess, recognize = recognizeReceipt }) {
   const c = receiptCopy(language), today = localDateKey();
   const [open, setOpen] = useState(false), [draft, setDraft] = useState(null), [preview, setPreview] = useState('');
   const [phase, setPhase] = useState('idle'), [progress, setProgress] = useState(0), [error, setError] = useState(''), [confirmed, setConfirmed] = useState(false), [saved, setSaved] = useState(null);
   const [editingIndex, setEditingIndex] = useState(-1), [metadataOpen, setMetadataOpen] = useState(false);
   const [omittedItems, setOmittedItems] = useState(null);
+  const [accessDenied, setAccessDenied] = useState(false);
+  const selectedFile = useRef(null);
   const [productMemory,setProductMemory]=useState(()=>readProductMemory(userId));
   const gallery = useRef(null), camera = useRef(null), dialog = useRef(null), trigger = useRef(null), generation = useRef(0), abort = useRef(null), busySave = useRef(false), mounted = useRef(false), currentOwner = useRef(userId);
   currentOwner.current = userId;
@@ -31,10 +38,13 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
     if (!open && dialog.current?.open) { dialog.current.close(); trigger.current?.focus(); }
   }, [open]);
   const busy = phase === 'reading' || phase === 'checking' || phase === 'saving';
-  function close() { if (busySave.current) return; generation.current++; abort.current?.abort(); setOpen(false); setDraft(null); setPreview(''); setSaved(null); setError(''); setPhase('idle'); }
+  function close() { if (busySave.current) return; generation.current++; abort.current?.abort(); selectedFile.current = null; setOpen(false); setDraft(null); setPreview(''); setSaved(null); setError(''); setPhase('idle'); }
+  function denyAccess() {
+    generation.current++; abort.current?.abort(); selectedFile.current = null;
+    setAccessDenied(true); setOpen(false); setDraft(null); setPreview('');
+    onAccessDenied?.();
+  }
   function choose() {
-    if (proLoading) return;
-    if (!userId || !proActive) { onUpgrade?.(); return; }
     gallery.current?.click();
   }
   function update(next) { setDraft(previous => ({ ...previous, ...next })); setConfirmed(false); setError(''); }
@@ -72,7 +82,11 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
   }
   async function selectFile(event) {
     const file = event.target.files?.[0]; event.target.value = '';
-    if (!file || busySave.current) return;
+    await readFile(file);
+  }
+  async function readFile(file) {
+    if (!file || busySave.current || accessDenied || !mounted.current) return;
+    selectedFile.current = file;
     const request = ++generation.current, owner = userId;
     abort.current?.abort(); const controller = new AbortController(); abort.current = controller;
     const alive = () => mounted.current && request === generation.current && currentOwner.current === owner;
@@ -80,7 +94,7 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
     if (!/^image\/(?:jpeg|png|webp|bmp)$/i.test(file.type) || file.size > 20 * 1024 * 1024) { setPhase('review'); setError(c.file); return; }
     setPreview(URL.createObjectURL(file)); setPhase('checking');
     try {
-      if (!await checkAccess(owner)) { if (alive()) { close(); onUpgrade?.(); } return; }
+      if (!await checkAccess(owner)) { if (alive()) denyAccess(); return; }
       if (!alive()) return;
       setPhase('reading');
       const text = await recognize(file, { language, signal: controller.signal, onProgress: value => { if (alive()) setProgress(value); } });
@@ -90,7 +104,7 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
       setError(failure.message === 'RECEIPT_ACCESS_UNAVAILABLE' ? c.access : c.error);
       // Access failure must not expose a manually writable receipt form.
       if (failure.message !== 'RECEIPT_ACCESS_UNAVAILABLE') review('');
-      setPhase('review');
+      setPhase(failure.message === 'RECEIPT_ACCESS_UNAVAILABLE' ? 'access-error' : 'review');
     }
   }
   const validation = draft ? receiptValidation(draft, today, CURRENCIES.map(item => item.code)) : null;
@@ -117,26 +131,31 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
     const input=dialog.current?.querySelector(requiredField==='currency'?'.receipt-currency-control select':'.receipt-context input[type="date"]');
     input?.focus({preventScroll:true});input?.scrollIntoView({block:'nearest'});try{input?.showPicker?.();}catch{}
   }
-  const actionLabel = saved ? c.done : phase === 'saving' ? c.saving : documentIssue ? c.gallery : requiredField ? (requiredField==='total'?c.enterAmount:requiredField==='currency'?c.chooseCurrency:c.chooseDate) : itemIssues.length ? (itemIssues.length === 1 ? c.checkPurchase : c.checkPurchases) : validation?.mismatch ? c.checkTotal : c.save;
+  const retryAccess = phase === 'access-error';
+  const actionLabel = saved ? c.done : retryAccess ? c.retryAccess : phase === 'saving' ? c.saving : documentIssue ? c.gallery : requiredField ? (requiredField==='total'?c.enterAmount:requiredField==='currency'?c.chooseCurrency:c.chooseDate) : itemIssues.length ? (itemIssues.length === 1 ? c.checkPurchase : c.checkPurchases) : validation?.mismatch ? c.checkTotal : c.save;
   async function save() {
     if (busySave.current || !confirmed || !validation?.valid) return;
     const owner = userId, request = generation.current;
     busySave.current = true; setPhase('saving'); setError('');
     const snapshot = structuredClone(draft);
     try {
-      if (!await checkAccess(owner)) throw new Error('RECEIPT_ACCESS_UNAVAILABLE');
+      if (!await checkAccess(owner)) { if (currentOwner.current === owner && request === generation.current && mounted.current) denyAccess(); return; }
       if (currentOwner.current !== owner || request !== generation.current || !mounted.current) return;
       const result = await onSaveReceipt(snapshot, owner);
       if (currentOwner.current === owner && request === generation.current && mounted.current) { setSaved({ ...snapshot, ...result }); setPhase('saved'); }
     } catch (failure) {
-      if (currentOwner.current === owner && request === generation.current && mounted.current) { setError(failure.message === 'RECEIPT_DUPLICATE' ? c.duplicate : failure.message === 'RECEIPT_ACCESS_UNAVAILABLE' ? c.access : c.saveError); setPhase('review'); }
+      if (currentOwner.current === owner && request === generation.current && mounted.current) {
+        if (failure.message === 'RECEIPT_ACCESS_DENIED') { denyAccess(); return; }
+        setError(failure.message === 'RECEIPT_DUPLICATE' ? c.duplicate : failure.message === 'RECEIPT_ACCESS_UNAVAILABLE' ? c.access : c.saveError); setPhase('review');
+      }
     } finally { busySave.current = false; }
   }
   const numberLocale = String(language).startsWith('zh') ? 'zh-CN' : ['md','ro'].includes(language) ? 'ro-MD' : language === 'en' ? 'en-US' : 'ru-RU';
   const displayMoney = value => { const minor = receiptMoney(value); return minor === null ? '—' : new Intl.NumberFormat(numberLocale,{minimumFractionDigits:2,maximumFractionDigits:2}).format(minor/100); };
   const photoChoices = <div className="receipt-choose"><button type="button" onClick={() => camera.current?.click()}><Camera size={16}/>{c.camera}</button><button type="button" onClick={() => gallery.current?.click()}>{c.gallery}</button></div>;
+  if (accessDenied) return null;
   return <>
-    <button ref={trigger} type="button" className="receipt-launch" data-light={isLight} aria-label={`${c.photo} · PRO`} title={`${c.photo} · PRO`} disabled={proLoading} onClick={choose}><Camera size={20}/></button>
+    <button ref={trigger} type="button" className="receipt-launch" data-light={isLight} aria-label={`${c.photo} · PRO`} title={`${c.photo} · PRO`} onClick={choose}><Camera size={20}/></button>
     <input ref={gallery} className="receipt-file" type="file" accept="image/*" aria-label={c.gallery} onChange={selectFile}/>
     <input ref={camera} className="receipt-file" type="file" accept="image/*" capture="environment" aria-label={c.camera} onChange={selectFile}/>
     {createPortal(<dialog ref={dialog} className="receipt-dialog" data-light={isLight} aria-labelledby="receipt-title" onCancel={event => { event.preventDefault(); close(); }}>
@@ -176,10 +195,10 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
               <details className="receipt-raw"><summary>{c.raw}</summary>{draft.evidence && <blockquote className="receipt-evidence">{draft.evidence}</blockquote>}<textarea aria-label={c.raw} value={draft.rawText} maxLength={40000} onChange={event => update({rawText:event.target.value})}/><button type="button" onClick={() => review(draft.rawText)}>{c.reparse}</button></details>
               {!documentIssue && !needsReview && !requiredField && <label className="receipt-confirm"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)}/><span>{c.confirm}</span></label>}
             </fieldset>}
-            {!draft && !busy && photoChoices}
+            {!draft && !busy && !retryAccess && photoChoices}
           </>}
         </div>
-        <footer className="receipt-footer"><button type="button" className="receipt-primary" aria-label={actionLabel} disabled={!saved && (busy || (!documentIssue && !requiredField && !needsReview && (!confirmed || !validation?.valid)))} onClick={saved ? close : documentIssue ? () => gallery.current?.click() : requiredField ? focusRequired : needsReview ? focusCorrection : save}><span>{actionLabel}</span>{!saved && draft && !documentIssue && receiptMoney(draft.total)>0 && <b aria-hidden="true">{displayMoney(draft.total)} {draft.currency}</b>}</button></footer>
+        <footer className="receipt-footer"><button type="button" className="receipt-primary" aria-label={actionLabel} disabled={!saved && !retryAccess && (busy || (!documentIssue && !requiredField && !needsReview && (!confirmed || !validation?.valid)))} onClick={saved ? close : retryAccess ? () => readFile(selectedFile.current) : documentIssue ? () => gallery.current?.click() : requiredField ? focusRequired : needsReview ? focusCorrection : save}><span>{actionLabel}</span>{!saved && draft && !documentIssue && receiptMoney(draft.total)>0 && <b aria-hidden="true">{displayMoney(draft.total)} {draft.currency}</b>}</button></footer>
       </div>}
     </dialog>,document.body)}
   </>;
