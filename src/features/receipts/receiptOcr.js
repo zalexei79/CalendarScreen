@@ -27,6 +27,17 @@ export async function recognizeReceipt(file, { language = 'ru', onProgress, sign
     await worker.setParameters({ tessedit_pageseg_mode: '3' });
     let { data } = await Promise.race([worker.recognize(file,{}, {blocks:true}), failure]);
     refining = true;
+    const initial=parseReceiptPhoto(data);
+    // Automatic layout can lose the final line of a dense receipt. Try a single
+    // text block before treating a receipt as an unstructured amount photo.
+    if(!initial.total&&!initial.ambiguousTotal){
+      await worker.setParameters({tessedit_pageseg_mode:'6'});
+      const block=await Promise.race([worker.recognize(file,{}, {blocks:true}),failure]);
+      const parsed=parseReceiptPhoto(block.data);
+      if(parsed.kind==='receipt'){
+        if(initial.kind!=='receipt'||parsed.total)data=block.data;
+      }
+    }
     if(parseReceiptPhoto(data).kind==='amount'){
       if(!photoAmount(data).total){
         await worker.setParameters({tessedit_pageseg_mode:'11'});
@@ -36,7 +47,7 @@ export async function recognizeReceipt(file, { language = 'ru', onProgress, sign
       onProgress?.(100);return {text:data.text,blocks:data.blocks};
     }
     const text = await refineReceiptMath(data,async(rectangle,mode)=>{
-      await worker.setParameters({tessedit_pageseg_mode:mode,tessedit_char_whitelist:'0123456789.,xXх×*=: '});
+      await worker.setParameters({tessedit_pageseg_mode:mode,tessedit_char_whitelist:'0123456789.,xXх×*@=: '});
       const result=await Promise.race([worker.recognize(file,{rectangle}),failure]);
       return result.data.text;
     },{signal,onProgress});

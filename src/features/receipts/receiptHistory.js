@@ -11,7 +11,7 @@ export function readSavedReceipt(comment,currency='') {
     const code=lines[1]?.match(/([A-Z]{3})$/)?.[1];if(currency&&code&&code!==currency)return null;
     return {kind:'amount',merchant:lines[0].replace(/^📷\s*/u,''),items:[],currency:currency||code||'',marked:true,expression:lines[1]?.split(' = ')[0]||''};
   }
-  const pattern=/^(.+?)\s+·\s+(\d+(?:[.,]\d{1,3})?)\s*(kg|кг|l|л)?\s*[×xх]\s*(\d+(?:[.,]\d{1,2}))\s*=\s*(\d+(?:[.,]\d{1,2}))\s+([A-Z]{3})$/u;
+  const pattern=/^(.+?)\s+·\s+(\d+(?:[.,]\d{1,4})?)\s*(kg|кг|l|л)?\s*[×xх]\s*(\d+(?:[.,]\d{1,2}))\s*=\s*(\d+(?:[.,]\d{1,2}))\s+([A-Z]{3})$/u;
   const rows=[],prefix=[];
   for(const line of lines){
     const match=line.match(pattern);

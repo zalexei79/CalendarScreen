@@ -108,6 +108,22 @@ try{
   await page.getByRole('button',{name:'Готово',exact:true}).click();await page.getByRole('button',{name:'История',exact:true}).click();const card=page.locator('.receipt-history').filter({hasText:'Сумма с фото'});await card.waitFor();assert.match(await card.innerText(),/59,90/);assert.equal(await card.locator('.receipt-history-items').count(),0);await card.screenshot({path:'artifacts/receipt-check/photo-amount-history.png'});
   console.log('CALCULATOR: real screenshot recognized as 59.90 MDL; clean amount card and photo expense history, no store/status-bar pollution.');
  }
+ if(process.env.DAYRIS_CONSTRUCTION_SAMPLE){
+  if(await page.locator('.receipt-dialog').isVisible())await page.getByRole('button',{name:'Закрыть чек',exact:true}).click();
+  await page.locator('.receipt-file').first().setInputFiles(process.env.DAYRIS_CONSTRUCTION_SAMPLE);await page.locator('.receipt-fields').waitFor({timeout:120000});
+  assert.equal(await page.locator('#receipt-title').innerText(),'Чек в календарь');
+  assert.equal(await page.getByLabel('Итог чека',{exact:true}).inputValue(),'16628.00','never the final item amount 652.00');
+  assert.equal(await page.getByLabel('Дата чека',{exact:true}).inputValue(),'2007-03-14');
+  assert.equal(await page.getByLabel('Валюта чека',{exact:true}).inputValue(),'','no currency printed: never use the selected calendar currency');
+  assert.equal(await page.locator('.receipt-item').count(),4);
+  for(const [index,quantity,price,total]of[[0,'800','10.22','8176.00'],[1,'1','5400.00','5400.00'],[2,'5','480.00','2400.00'],[3,'4','163.00','652.00']]){
+   assert.equal(await page.getByLabel(`Количество ${index+1}`,{exact:true}).inputValue(),quantity);assert.equal(await page.getByLabel(`Цена за единицу ${index+1}`,{exact:true}).inputValue(),price);assert.equal(await page.getByLabel(`Сумма позиции ${index+1}`,{exact:true}).inputValue(),total);
+  }
+  assert.equal(await page.locator('.receipt-difference').count(),0);assert.equal(await page.getByRole('checkbox').count(),0,'unknown currency cannot be confirmed away');
+  await page.getByLabel('Валюта чека',{exact:true}).selectOption('RUB');await page.getByRole('checkbox').check();assert.equal(await page.getByRole('button',{name:'Сохранить расход',exact:true}).isEnabled(),true);
+  await page.locator('.receipt-scroll').evaluate(el=>el.scrollTop=0);await page.screenshot({path:'artifacts/receipt-check/real-construction-mobile.png'});
+  console.log('CONSTRUCTION: real photo, grand total 16628.00, all four amounts and printed factors correct; missing currency requires explicit choice.');
+ }
  await page.setViewportSize({width:1280,height:900});await page.screenshot({path:'artifacts/receipt-check/full-app-desktop.png'});
  assert.equal(requests.some(item=>item.method==='POST' && !item.url.includes('supabase.co') && !item.url.startsWith(origin)),false,'photo is never sent to an OCR service');
  assert.equal(requests.some(item=>/cdn\.jsdelivr|unpkg/.test(item.url)),false,'engine/languages are same-origin');

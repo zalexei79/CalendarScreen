@@ -1,4 +1,7 @@
 const rows = {
+  refund: ['Это возврат — расход не создаём','This is a refund — no expense will be added','Acesta este un retur — nu creăm o cheltuială','这是退款，不会添加支出'],
+  unpaid: ['Это предварительный счёт. Выберите чек оплаты','This is a preliminary bill. Choose a paid receipt','Acesta este un cont preliminar. Alege bonul de plată','这是预结账单，请选择付款收据'],
+  multipleReceipts: ['На фото несколько чеков. Выберите один','Multiple receipts in this photo. Choose one','În fotografie sunt mai multe bonuri. Alege unul','照片中有多张收据，请选择一张'],
   title: ['Чек в календарь','Receipt to calendar','Bon în calendar','收据记入日历'],
   photoTitle: ['Фото в календарь','Photo to calendar','Fotografie în calendar','照片记入日历'],
   sourcePhoto: ['Исходное фото','Source photo','Fotografia originală','原始照片'],

@@ -1,5 +1,8 @@
 # Receipt capture, first release
 
+See [receipt formats and recognition boundaries](receipt-formats.md) for the
+expanded parser corpus, source research and deliberate manual-review cases.
+
 The finance calendar has a photo button beside the microphone. PRO members can
 choose an image or take a new photo, review/edit recognized items and save one
 expense. Item details are persisted in the calendar entry's comment, not as

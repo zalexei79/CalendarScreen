@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v38-photo-amount';
+const CACHE_NAME = 'atj-cache-v39-receipt-formats';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

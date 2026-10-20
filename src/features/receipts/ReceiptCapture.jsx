@@ -92,6 +92,7 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
   }
   const validation = draft ? receiptValidation(draft, today, CURRENCIES.map(item => item.code)) : null;
   const itemIssues = draft ? draft.items.flatMap((item,index) => receiptItemIssue(item) ? [index] : []) : [];
+  const documentIssue = draft?.documentIssue || '';
   const needsReview = Boolean(itemIssues.length || validation?.mismatch);
   const requiredField = draft ? !(receiptMoney(draft.total)>0)?'total':!CURRENCIES.some(item=>item.code===draft.currency)?'currency':!validReceiptDate(draft.dateKey,today)?'date':'' : '';
   function focusTotal() {
@@ -113,7 +114,7 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
     const input=dialog.current?.querySelector(requiredField==='currency'?'.receipt-currency-control select':'.receipt-context input[type="date"]');
     input?.focus({preventScroll:true});input?.scrollIntoView({block:'nearest'});try{input?.showPicker?.();}catch{}
   }
-  const actionLabel = saved ? c.done : phase === 'saving' ? c.saving : requiredField ? (requiredField==='total'?c.enterAmount:requiredField==='currency'?c.chooseCurrency:c.chooseDate) : itemIssues.length ? (itemIssues.length === 1 ? c.checkPurchase : c.checkPurchases) : validation?.mismatch ? c.checkTotal : c.save;
+  const actionLabel = saved ? c.done : phase === 'saving' ? c.saving : documentIssue ? c.gallery : requiredField ? (requiredField==='total'?c.enterAmount:requiredField==='currency'?c.chooseCurrency:c.chooseDate) : itemIssues.length ? (itemIssues.length === 1 ? c.checkPurchase : c.checkPurchases) : validation?.mismatch ? c.checkTotal : c.save;
   async function save() {
     if (busySave.current || !confirmed || !validation?.valid) return;
     const owner = userId, request = generation.current;
@@ -145,6 +146,7 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
             {error && <p className="receipt-warning" role="alert">{error}</p>}
             {draft && <fieldset disabled={busy} className="receipt-fields"><legend className="receipt-sr-only">{c.review}</legend>
               <ReceiptOverview draft={draft} c={c} today={today} language={language} busy={busy} update={update} metadataOpen={metadataOpen} setMetadataOpen={setMetadataOpen}/>
+              {documentIssue && <p className="receipt-document-status" role="status"><AlertCircle size={16}/><span>{c[documentIssue]}</span></p>}
               {!omittedItems && draft.items.length>0 && <div className="receipt-section-title"><h3>{c.items} <small>{draft.items.length}</small></h3><button type="button" aria-label={c.add} onClick={() => { setEditingIndex(draft.items.length); update({items:[...draft.items,{name:'',quantity:'1',unit:'pcs',unitPrice:'',total:''}]}); }}><Plus size={18}/></button></div>}
               {draft.kind==='receipt'&&!draft.items.length&&!omittedItems&&<button type="button" className="receipt-add-empty" onClick={()=>{setEditingIndex(0);update({items:[{name:'',quantity:'1',unit:'pcs',unitPrice:'',total:''}]});}}><Plus size={14}/>{c.add}</button>}
               <div className="receipt-items">{draft.items.map((item,index) => {
@@ -166,15 +168,15 @@ export default function ReceiptCapture({ userId, proActive, proLoading, language
                 </details>;
               })}</div>
               {draft.items.length > 0 && <div className="receipt-reconciliation"><p className="receipt-sum">{c.itemSum}<b>{displayMoney(moneyText(validation.sum))} {draft.currency}</b></p>{validation.mismatch && <button type="button" className="receipt-difference" aria-label={c.checkTotal} onClick={focusTotal}><AlertCircle size={14}/><span>{c.shortDifference}</span><b>{displayMoney(moneyText(Math.abs((validation.total || 0)-validation.sum)))} {draft.currency}</b><ChevronRight size={14}/></button>}</div>}
-              {needsReview && <button type="button" className="receipt-total-only" aria-label={c.useTotalOnly} onClick={toggleTotalOnly}><ReceiptText size={17}/><span>{c.useTotalOnly}<small>{c.withoutItems}</small></span><ChevronRight size={15}/></button>}
+              {needsReview && !documentIssue && <button type="button" className="receipt-total-only" aria-label={c.useTotalOnly} onClick={toggleTotalOnly}><ReceiptText size={17}/><span>{c.useTotalOnly}<small>{c.withoutItems}</small></span><ChevronRight size={15}/></button>}
               {omittedItems && <div className="receipt-omitted"><ReceiptText size={16}/><span>{c.withoutItems}</span><button type="button" onClick={toggleTotalOnly}>{c.restoreItems}</button></div>}
               <details className="receipt-raw"><summary>{c.raw}</summary>{draft.evidence && <blockquote className="receipt-evidence">{draft.evidence}</blockquote>}<textarea aria-label={c.raw} value={draft.rawText} maxLength={40000} onChange={event => update({rawText:event.target.value})}/><button type="button" onClick={() => review(draft.rawText)}>{c.reparse}</button></details>
-              {!needsReview && !requiredField && <label className="receipt-confirm"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)}/><span>{c.confirm}</span></label>}
+              {!documentIssue && !needsReview && !requiredField && <label className="receipt-confirm"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)}/><span>{c.confirm}</span></label>}
             </fieldset>}
             {!draft && !busy && photoChoices}
           </>}
         </div>
-        <footer className="receipt-footer"><button type="button" className="receipt-primary" aria-label={actionLabel} disabled={!saved && (busy || (!requiredField && !needsReview && (!confirmed || !validation?.valid)))} onClick={saved ? close : requiredField ? focusRequired : needsReview ? focusCorrection : save}><span>{actionLabel}</span>{!saved && draft && receiptMoney(draft.total)>0 && <b aria-hidden="true">{displayMoney(draft.total)} {draft.currency}</b>}</button></footer>
+        <footer className="receipt-footer"><button type="button" className="receipt-primary" aria-label={actionLabel} disabled={!saved && (busy || (!documentIssue && !requiredField && !needsReview && (!confirmed || !validation?.valid)))} onClick={saved ? close : documentIssue ? () => gallery.current?.click() : requiredField ? focusRequired : needsReview ? focusCorrection : save}><span>{actionLabel}</span>{!saved && draft && !documentIssue && receiptMoney(draft.total)>0 && <b aria-hidden="true">{displayMoney(draft.total)} {draft.currency}</b>}</button></footer>
       </div>}
     </dialog>,document.body)}
   </>;

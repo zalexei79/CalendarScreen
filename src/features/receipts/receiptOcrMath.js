@@ -1,11 +1,11 @@
 import {looksLikeReceiptMath,parseReceipt,receiptMath,receiptMoney} from './receiptModel.js';
 
 function numericRectangle(line) {
-  const words=line.words||[],operator=words.findIndex(word=>/^(?:\d+(?:[.,]\d+)?)?[xх×*]/iu.test(word.text));
+  const words=line.words||[],operator=words.findIndex(word=>/^(?:\d+(?:[.,]\d+)?)?[xх×*@]/iu.test(word.text));
   if(operator<0)return null;
   let first=operator;
   for(let index=operator-1;index>=Math.max(0,operator-3);index--){
-    if(/^\d+(?:[.,]\d{1,3})?$/.test(words[index].text)){first=index;break;}
+    if(/^\d+(?:[.,]\d{1,4})?$/.test(words[index].text)){first=index;break;}
   }
   let last=operator;
   for(let index=operator;index<words.length;index++)if(/\d/.test(words[index].text))last=index;
@@ -21,7 +21,7 @@ export async function refineReceiptMath(data,readLine,{signal,onProgress}={}) {
   const parsed=parseReceipt(text),checkedSum=parsed.items.reduce((sum,item)=>sum+(receiptMoney(item.total)||0),0);
   const checkAll=Boolean(parsed.items.length&&receiptMoney(parsed.total)>0&&checkedSum!==receiptMoney(parsed.total));
   const lines=(data.blocks||[]).flatMap(block=>(block.paragraphs||[]).flatMap(paragraph=>paragraph.lines||[]));
-  const targets=lines.filter(line=>looksLikeReceiptMath(line.text)&&(!receiptMath(line.text)?.consistent||checkAll)).slice(0,12);
+  const targets=lines.filter(line=>{const math=receiptMath(line.text);return looksLikeReceiptMath(line.text)&&!math?.unitUncertain&&(!math?.consistent||checkAll);}).slice(0,12);
   for(const [index,line]of targets.entries()){
     if(signal?.aborted)throw new Error('CANCELLED');
     const rectangle=numericRectangle(line);
@@ -42,7 +42,7 @@ export async function refineReceiptMath(data,readLine,{signal,onProgress}={}) {
       if(agreesWithFactors||seen.get(candidateKey)>=2){accepted=candidate;break;}
     }
     if(accepted&&(!original||key(accepted)!==key(original))){
-      const start=String(line.text).match(/\d+(?:[.,]\d{1,3})?\s*([\p{L}]{1,4}\.?)?\s*[xх×*]/iu);
+      const start=String(line.text).match(/\d+(?:[.,]\d{1,4})?\s*([\p{L}]{1,4}\.?)?\s*[xх×*@]/iu);
       if(start){
         const unit=original?.unit||(/^(?:kg|кг)$/i.test(start[1]||'')?'kg':/^(?:l|л)$/i.test(start[1]||'')?'l':'pcs');
         const prefix=line.text.slice(0,start.index),replacement=`${prefix}${accepted.quantity} ${unit} × ${accepted.unitPrice} = ${accepted.printedTotal}`;

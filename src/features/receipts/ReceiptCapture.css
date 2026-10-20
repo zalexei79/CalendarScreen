@@ -69,6 +69,8 @@
 .receipt-price-check b{font-size:15px;font-weight:550;color:var(--receipt-fg);overflow-wrap:anywhere}
 .receipt-price-check small{font-size:10px;font-weight:400;color:var(--receipt-muted)}
 .receipt-reconciliation{margin-top:13px;padding:0 2px}
+.receipt-document-status{display:flex;align-items:center;gap:9px;padding:12px 0;margin:0;font-size:12px;line-height:1.5;color:var(--receipt-muted)}
+.receipt-document-status>svg{flex:none;color:#b58a38}
 .receipt-reconciliation .receipt-sum{margin:0;padding:9px 0;font-size:12px}
 .receipt-dialog .receipt-difference{display:flex;align-items:center;gap:8px;width:100%;min-height:42px;margin:0;padding:9px 0;border:0;border-radius:0;background:none;font-size:11px;color:#d9b76d;text-align:left}
 .receipt-difference>span{flex:1}.receipt-difference>svg{flex:none}

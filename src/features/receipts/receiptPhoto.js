@@ -1,4 +1,5 @@
 import {parseReceipt,receiptLineTotal,receiptMoney,moneyText,receiptMath,validReceiptName,validReceiptDate,normalizeReceiptText} from './receiptModel.js';
+import {receiptSignature,receiptTotalLine,receiptNonItemLine} from './receiptStructure.js';
 
 const numeric = value => String(value).trim().match(/^(\d+(?:[.,]\s*\d{1,2})?)$/)?.[1];
 const linesOf = data => (data.blocks||[]).flatMap(block=>(block.paragraphs||[]).flatMap(paragraph=>paragraph.lines||[]));
@@ -24,10 +25,12 @@ export function photoAmount(data) {
 
 export function parseReceiptPhoto(input,{today='',defaultDateKey=today,defaultCurrency=''}={}) {
   const data=typeof input==='string'?{text:input}:input||{text:''},text=String(data.text||''),parsed=parseReceipt(text),lines=text.split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
-  const signature=/\bidno\b|bon\s+fiscal|\btotal(?:ul)?\b|\bamount\s+due\b|итого|всего|к\s+оплате|合计|总计|应付/iu.test(normalizeReceiptText(text));
-  const receipt=signature||parsed.items.some(item=>validReceiptName(item.name))&&lines.some(line=>receiptMath(line));
+  const signature=receiptSignature(text);
+  // A named priced row is already enough to require a printed receipt total.
+  // It must never become an isolated "amount photo" when its total label is lost.
+  const receipt=signature||parsed.items.some(item=>validReceiptName(item.name));
   if(receipt){
-    const candidates=lines.filter(line=>validReceiptName(line)&&!/^\s*\d{1,2}:\d{2}|\b(?:LTE|WiFi|Wi-Fi|4G|5G)\b/iu.test(line)&&!receiptMath(line)&&!/\btotal|\bidno\b|bon\s+fiscal|итого|всего|к\s+оплате/iu.test(normalizeReceiptText(line)));
+    const candidates=lines.filter(line=>validReceiptName(line)&&!/^\s*\d{1,2}:\d{2}|\b(?:LTE|WiFi|Wi-Fi|4G|5G)\b/iu.test(line)&&!receiptMath(line)&&!receiptTotalLine(line)&&!receiptNonItemLine(line)&&!/\bidno\b|bon\s+fiscal|fiscal\s+receipt|кассовый\s+чек/iu.test(normalizeReceiptText(line)));
     const merchant=candidates.find(line=>/s\.?r\.?l|\bltd\b|\bllc\b|\bООО\b/iu.test(line))||candidates[0]||'';
     return {...parsed,merchant:merchant.slice(0,120),kind:'receipt',amountSource:'receipt',expression:''};
   }
