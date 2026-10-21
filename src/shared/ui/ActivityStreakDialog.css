@@ -45,6 +45,15 @@
 .activity-streak-preview { display:block; width:100%; margin-top:1rem; border:1px solid rgba(255,255,255,.08); border-radius:18px; box-shadow:0 12px 32px rgba(0,0,0,.22); animation:streak-preview-in 340ms 80ms cubic-bezier(.2,0,0,1) both; }
 .activity-streak-hint { margin:.75rem .2rem 0; color:#71717a; font-size:.7rem; line-height:1.4; text-align:center; }
 .activity-streak-error { color:#fca5a5; font-size:.75rem; }
+.activity-streak-error button { border:1px solid currentColor; border-radius:10px; padding:.55rem .8rem; background:transparent; color:inherit; cursor:pointer; }
+.activity-streak-caption { margin-top:1rem; padding:.85rem; border:1px solid rgba(255,255,255,.12); border-radius:14px; }
+.activity-streak-caption > div { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.5rem; }
+.activity-streak-caption strong { font-size:.75rem; }
+.activity-streak-caption button { display:flex; align-items:center; gap:.35rem; min-height:36px; padding:.4rem .6rem; border:0; border-radius:8px; color:#fcd34d; background:rgba(245,185,31,.09); font-size:.7rem; cursor:pointer; }
+.activity-streak-caption-text { margin:.65rem 0; color:#d4d4d8; font-size:.75rem; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; user-select:text; -webkit-user-select:text; }
+.activity-streak-dialog-light .activity-streak-caption { border-color:#e4e4e7; }
+.activity-streak-dialog-light .activity-streak-caption-text { color:#3f3f46; }
+.activity-streak-dialog-light .activity-streak-caption button { color:#92400e; }
 .activity-streak-actions { display:grid; gap:.5rem; padding:.75rem 1rem max(.9rem,env(safe-area-inset-bottom)); border-top:1px solid rgba(255,255,255,.07); background:#0b0d11; }
 .activity-streak-dialog-light .activity-streak-actions { border-color:#e4e4e7; background:#fff; }
 .activity-streak-actions button { display:inline-flex; min-height:3.35rem; align-items:center; justify-content:center; gap:.55rem; border-radius:1rem; padding:0 1rem; font-size:.92rem; font-weight:800; cursor:pointer; transition:transform 150ms ease,background-color 150ms ease; }

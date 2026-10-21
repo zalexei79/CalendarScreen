@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Flame, Pause, Clock3, RotateCcw, RefreshCw, Share2, X } from 'lucide-react';
+import { Flame, Pause, Clock3, RotateCcw, RefreshCw, Share2, Copy, X } from 'lucide-react';
 import SwipeDismissSheet from './SwipeDismissSheet.jsx';
 import { createStreakPoster } from '../lib/streakPoster.js';
 import { streakDayLabel } from '../i18n/streak.js';
+import { streakReferralUrl, streakShareCaption } from '../lib/streakShare.js';
 import './ActivityStreakDialog.css';
 
 function accountName(user) {
@@ -15,14 +16,21 @@ export default function ActivityStreakDialog({
 }) {
   const [busy, setBusy] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
-  const [shareBlob, setShareBlob] = useState(null);
+  const [preparedShare, setPreparedShare] = useState(null);
   const [shareError, setShareError] = useState('');
+  const [shareNotice, setShareNotice] = useState('');
+  const [sharing, setSharing] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const sharingRef = useRef(false);
   const blobUrlRef = useRef('');
 
   const days = Math.max(1, Number(streak?.currentStreak) || 1);
   const account = accountName(user);
   const activeCode = referralCode || '';
-  const [shareCode, setShareCode] = useState(activeCode);
+  const owner = user?.id || user?.email || 'guest';
+  const ready = Boolean(preparedShare && preparedShare.owner === owner && preparedShare.days === days
+    && preparedShare.language === language && preparedShare.paused === Boolean(streak?.paused)
+    && preparedShare.isLight === isLight && (!activeCode || preparedShare.code === activeCode.trim().toUpperCase()));
   const copy = {
     title: t('streakModalTitle'), cardHeadline: t('streakCardHeadline'), proudLine: t('streakProudLine'), account: t('streakAccount'), active: t('streakStatusActive'), paused: t('streakStatusPaused'),
     share: t('streakSharePhoto'), close: t('streakClose'), preparing: t('streakPreparing'),
@@ -30,7 +38,7 @@ export default function ActivityStreakDialog({
     shareText: t('streakShareText'), error: t('streakShareError'),
     runUnit: t('streakRunUnit'), grace: t('streakPosterGrace'), reset: t('streakPosterReset'),
   };
-  const formatCountText = (template) => template.replace('{0}', streakDayLabel(days, language));
+  const caption = ready ? streakShareCaption(copy.shareText, streakDayLabel(days, language), preparedShare.url) : '';
 
   useEffect(() => () => {
     if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
@@ -41,20 +49,27 @@ export default function ActivityStreakDialog({
     let cancelled = false;
     setBusy(true);
     setShareError('');
+    setShareNotice('');
+    setPreparedShare(null);
+    setPreviewUrl('');
 
     async function prepare() {
-      const code = activeCode || await ensureReferralCode?.();
-      if (!cancelled) setShareCode(code || '');
       try {
-        const blob = await createShareBlob({ days, account, paused: Boolean(streak.paused), code, isLight, copy, language });
+        const code = String(activeCode || await ensureReferralCode?.() || '').trim().toUpperCase();
+        if (cancelled) return;
+        const referralUrl = streakReferralUrl(code, window.location.origin);
+        const blob = await createStreakPoster({ days, paused: Boolean(streak.paused), copy, language,
+          inviteUrl: referralUrl, dayLabel: streakDayLabel(days, language) });
         if (cancelled) return;
         if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
         const url = URL.createObjectURL(blob);
         blobUrlRef.current = url;
-        setShareBlob(blob);
+        setPreparedShare({ file: new File([blob], `dayris-streak-${days}.png`, { type: 'image/png' }),
+          url: referralUrl, code, owner, days, language, paused: Boolean(streak.paused), isLight });
         setPreviewUrl(url);
       } catch (error) {
-        if (!cancelled) setShareError(error?.message || copy.error);
+        if (!cancelled) setShareError(error?.message === 'STREAK_REFERRAL_UNAVAILABLE'
+          ? t('streakReferralUnavailable') : copy.error);
       } finally {
         if (!cancelled) setBusy(false);
       }
@@ -63,14 +78,9 @@ export default function ActivityStreakDialog({
     return () => { cancelled = true; };
   // The dialog is intentionally regenerated when the visible streak/account changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, streak, isLight, language]);
+  }, [open, streak, isLight, language, owner, activeCode, ensureReferralCode, retry]);
 
   if (!open) return null;
-
-  function makePhotoFile() {
-    if (!shareBlob) return null;
-    return new File([shareBlob], `dayris-streak-${days}.png`, { type: 'image/png' });
-  }
 
   function isAppleTouchDevice() {
     return /iPad|iPhone|iPod/.test(navigator.userAgent)
@@ -78,36 +88,42 @@ export default function ActivityStreakDialog({
   }
 
   async function share() {
-    if (!shareBlob) return;
-    const file = makePhotoFile();
-    const code = shareCode;
-    const url = new URL('/?install=1', window.location.origin);
-    if (code) url.searchParams.set('ref', code);
-    const shareText = formatCountText(copy.shareText);
-    const caption = `${shareText} ${url.toString()}`;
+    if (!ready || busy || sharingRef.current) return;
+    sharingRef.current = true;
+    setSharing(true);
+    setShareNotice('');
+    const file = preparedShare.file;
+    const url = preparedShare.url;
+    const shareText = copy.shareText.replace('{0}', streakDayLabel(days, language));
     try {
       if (navigator.share && file && isAppleTouchDevice()) {
-        // WebKit can reject a payload containing both `url` and `files`.
-        // Put the URL in the caption so iOS keeps the image and the link together.
-        try {
-          await navigator.share({ title: copy.title, text: caption, files: [file] });
-          return;
-        } catch (error) {
-          if (error?.name === 'AbortError') return;
-          // Fall through to the URL-only fallback if this WebKit build cannot share files.
-        }
-      }
-      if (navigator.share && file && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
-        await navigator.share({ title: copy.title, text: shareText, url: url.toString(), files: [file] });
+        // One iOS request, one text item with the referral URL, one photo.
+        // The receiving extension can still ignore the caption. Do not retry
+        // with another payload or report that the recipient received it.
+        await navigator.share({ text: caption, files: [file] });
+        setShareNotice(t('streakCaptionHint'));
+      } else if (navigator.share && file && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+        await navigator.share({ title: copy.title, text: shareText, url, files: [file] });
       } else if (navigator.share) {
-        await navigator.share({ title: copy.title, text: shareText, url: url.toString() });
+        await navigator.share({ title: copy.title, text: shareText, url });
       } else {
-        try { await navigator.clipboard.writeText(caption); } catch { /* keep the dialog open */ }
+        await copyCaption();
       }
     } catch (error) {
-      if (error?.name !== 'AbortError') {
-        try { await navigator.clipboard.writeText(caption); } catch { /* keep the dialog open */ }
-      }
+      if (error?.name !== 'AbortError') setShareNotice(t('streakShareRetry'));
+    } finally {
+      sharingRef.current = false;
+      setSharing(false);
+    }
+  }
+
+  async function copyCaption() {
+    if (!caption) return;
+    try {
+      await navigator.clipboard.writeText(caption);
+      setShareNotice(t('streakCaptionCopied'));
+    } catch {
+      setShareNotice(t('streakCaptionSelect'));
     }
   }
 
@@ -152,21 +168,21 @@ export default function ActivityStreakDialog({
             <div><strong>{copy.inviteTitle}</strong><p>{copy.inviteBody}</p></div>
           </div>
           {busy && <div className="activity-streak-preparing"><RefreshCw size={16} className="animate-spin" />{copy.preparing}</div>}
-          {shareError && <p className="activity-streak-error">{shareError}</p>}
+          {shareError && <div className="activity-streak-error"><p>{shareError}</p><button type="button" onClick={() => setRetry(value => value + 1)}>{t('streakPrepareRetry')}</button></div>}
           {previewUrl && <img className="activity-streak-preview" src={previewUrl} alt={copy.title} />}
           <p className="activity-streak-hint">{copy.inviteHint}</p>
+          {ready && <div className="activity-streak-caption">
+            <div><strong>{t('streakCaptionTitle')}</strong><button type="button" onClick={copyCaption}><Copy size={14} aria-hidden="true" />{t('streakCaptionCopy')}</button></div>
+            <p className="activity-streak-caption-text">{caption}</p>
+            <p className="activity-streak-hint">{t('streakCaptionHint')}</p>
+          </div>}
+          {shareNotice && <p className="activity-streak-hint" role="status">{shareNotice}</p>}
         </div>
 
         <div className="activity-streak-actions">
-          <button type="button" onClick={share} disabled={busy || !shareBlob} className="activity-streak-primary"><Share2 size={19} />{copy.share}</button>
+          <button type="button" onClick={share} disabled={busy || !ready || sharing} className="activity-streak-primary"><Share2 size={19} />{copy.share}</button>
         </div>
       </SwipeDismissSheet>
     </div>
   );
-}
-
-async function createShareBlob({ days, paused, code, copy, language }) {
-  const inviteUrl = new URL('/?install=1', window.location.origin);
-  if (code) inviteUrl.searchParams.set('ref', code);
-  return createStreakPoster({ days, paused, copy, language, inviteUrl: inviteUrl.toString(), dayLabel: streakDayLabel(days, language) });
 }

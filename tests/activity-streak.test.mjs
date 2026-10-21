@@ -3,6 +3,18 @@ import test from 'node:test';
 import { updateActivityStreak } from '../src/shared/lib/activityStreak.js';
 import { translate } from '../src/shared/i18n/index.js';
 import { streakDayLabel } from '../src/shared/i18n/streak.js';
+import { streakReferralUrl, streakShareCaption } from '../src/shared/lib/streakShare.js';
+
+test('streak share URLs always include the personal referral code', () => {
+  const url = streakReferralUrl(' ab123cd4 ', 'https://dayris.test');
+  assert.equal(url, 'https://dayris.test/?install=1&ref=AB123CD4');
+  const caption = streakShareCaption(translate('ru', 'streakShareText'), '5 дней', url);
+  assert.equal(caption, `Я сохранил огонёк уже 5 дней 🔥\nПопробуй — ${url}`);
+  for (const invalid of ['', null, undefined, 'bad code', 'abc', 'https://dayris.test']) {
+    assert.throws(() => streakReferralUrl(invalid, 'https://dayris.test'), /STREAK_REFERRAL_UNAVAILABLE/);
+  }
+  assert.throws(() => streakShareCaption('caption', '5 days', 'https://dayris.test/'), /STREAK_REFERRAL_UNAVAILABLE/);
+});
 
 test('share captions include the real streak with correct Russian day forms', () => {
   for (const [days, label] of [[1, '1 день'], [2, '2 дня'], [5, '5 дней'], [21, '21 день']]) {
