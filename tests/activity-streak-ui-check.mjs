@@ -48,6 +48,9 @@ try {
       }, configurable: true });
       Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true });
       Object.defineProperty(navigator, 'clipboard', { value: { writeText: async text => { window.copiedCaption = text; } }, configurable: true });
+      // This suite mocks the clipboard transport; real selection-copy and
+      // clipboard contents are covered separately in clipboard-ui-check.mjs.
+      document.execCommand = () => false;
     });
     const page = await context.newPage();
     const errors = []; page.on('pageerror', error => errors.push(error.message));

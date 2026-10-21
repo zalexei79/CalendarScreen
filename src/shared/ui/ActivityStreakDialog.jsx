@@ -4,6 +4,7 @@ import SwipeDismissSheet from './SwipeDismissSheet.jsx';
 import { createStreakPoster } from '../lib/streakPoster.js';
 import { streakDayLabel } from '../i18n/streak.js';
 import { streakReferralUrl, streakShareCaption } from '../lib/streakShare.js';
+import { copyText } from '../lib/copyText.js';
 import './ActivityStreakDialog.css';
 
 function accountName(user) {
@@ -22,6 +23,7 @@ export default function ActivityStreakDialog({
   const [sharing, setSharing] = useState(false);
   const [retry, setRetry] = useState(0);
   const sharingRef = useRef(false);
+  const captionRef = useRef(null);
   const blobUrlRef = useRef('');
 
   const days = Math.max(1, Number(streak?.currentStreak) || 1);
@@ -120,7 +122,7 @@ export default function ActivityStreakDialog({
   async function copyCaption() {
     if (!caption) return;
     try {
-      await navigator.clipboard.writeText(caption);
+      await copyText(caption, { container: captionRef.current || document.body, preferSelection: isAppleTouchDevice() });
       setShareNotice(t('streakCaptionCopied'));
     } catch {
       setShareNotice(t('streakCaptionSelect'));
@@ -171,7 +173,7 @@ export default function ActivityStreakDialog({
           {shareError && <div className="activity-streak-error"><p>{shareError}</p><button type="button" onClick={() => setRetry(value => value + 1)}>{t('streakPrepareRetry')}</button></div>}
           {previewUrl && <img className="activity-streak-preview" src={previewUrl} alt={copy.title} />}
           <p className="activity-streak-hint">{copy.inviteHint}</p>
-          {ready && <div className="activity-streak-caption">
+          {ready && <div className="activity-streak-caption" ref={captionRef}>
             <div><strong>{t('streakCaptionTitle')}</strong><button type="button" onClick={copyCaption}><Copy size={14} aria-hidden="true" />{t('streakCaptionCopy')}</button></div>
             <p className="activity-streak-caption-text">{caption}</p>
             <p className="activity-streak-hint">{t('streakCaptionHint')}</p>
