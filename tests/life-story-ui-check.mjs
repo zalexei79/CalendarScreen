@@ -37,18 +37,22 @@ try {
   await page.goto('http://life.test/story');
   await page.clock.pauseAt(new Date('2026-10-05T13:00:00'));
   await page.setViewportSize({ width: 1440, height: 1000 });
-  const preview = page.locator('[aria-hidden="true"].grid.grid-cols-7 > div');
-  assert.match(await preview.nth(19).getAttribute('class'), /bg-amber-300/);
-  for (let index = 20; index < 28; index++) assert.doesNotMatch(await preview.nth(index).getAttribute('class'), /emerald/);
+  const preview = page.locator('.first-run-money-preview').first().locator('.first-run-preview-week > span');
+  assert.equal(await preview.nth(3).getAttribute('data-today'),'true');
+  for (let index = 4; index < 7; index++) {
+    assert.equal(await preview.nth(index).getAttribute('data-future'),'true');
+    assert.equal(await preview.nth(index).getAttribute('data-tone'),null);
+  }
   await page.setViewportSize({ width: 390, height: 844 });
   const next = () => page.getByRole('button', { name: 'Увидеть мою историю', exact: true }).click();
   const choose = async () => {
     assert.equal(await page.getByRole('button', { name: 'Продолжить', exact: true }).count(), 0);
     assert.equal(await page.locator('[role="group"] button[aria-pressed="true"]').count(), 0, 'Languages do not begin preselected');
     await page.getByRole('button', { name: /Русский/ }).click();
-    assert.equal(await page.getByRole('button', { name: 'Продолжить', exact: true }).count(), 0);
-    assert.equal(await page.locator('[role="group"] button[aria-pressed="true"]').count(), 0, 'Currency awaits an explicit choice');
+    await page.getByRole('heading', { name: 'Твой стиль DAYRIS.', exact: true }).waitFor();
     await page.getByRole('button', { name: 'Тёмное', exact: true }).click();
+    await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
+    assert.equal(await page.locator('[role="group"] button[aria-pressed="true"]').count(), 0, 'Currency awaits an explicit choice');
     await page.getByRole('button', { name: /MDL/ }).click();
   };
   await choose();
@@ -57,16 +61,16 @@ try {
   await selectBirthday(page, '1998-03-14');
   await next();
   await page.clock.runFor(32);
-  await page.clock.fastForward(4700);
-  await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.stage === 'money');
-  assert.match(await page.locator('#first-run-heading').innerText(), /Деньги/);
+  await page.clock.fastForward(6500);
+  await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.stage === 'question');
+  assert.match(await page.locator('#first-run-heading').innerText(), /время твоей жизни/);
   await page.waitForFunction(() => Number(document.querySelector('.life-story-counter strong')?.textContent.replace(/\D/g, '')) > 1200);
   await page.screenshot({ path: 'tests/life-story-weeks.png', animations: 'disabled' });
-  await page.clock.fastForward(5200);
+  await page.clock.fastForward(6500);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.stage === 'zoom');
   await page.waitForFunction(() => Number(document.querySelector('.life-story-paper')?.style.opacity || 1) < .97);
   await page.screenshot({ path: 'tests/life-story-zoom.png', animations: 'disabled' });
-  await page.clock.fastForward(2600);
+  await page.clock.fastForward(1600);
   await page.waitForFunction(() => !document.querySelector('.life-story'));
   const first = page.getByRole('button', { name: 'Добавить первую запись', exact: true });
   await first.waitFor();

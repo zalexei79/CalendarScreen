@@ -1,12 +1,13 @@
 import BirthdayField from './BirthdayField.jsx';
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Sun, Moon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { CURRENCIES } from '../../shared/config/constants';
 import BrandIcon from '../../shared/ui/BrandIcon.jsx';
 import LifeStory, { LIFE_COPY } from './LifeStory.jsx';
 import { birthdayStorageKey, lifeWeeks, localDateValue } from './lifeStoryModel';
 import './FirstRunSetup.css';
-import {GOLD_THEME_COPY} from '../../shared/ui/goldThemeCopy.js';
+import ThemeCollection from '../../shared/ui/ThemeCollection.jsx';
+import {APPEARANCE_COPY,APPEARANCE_SETUP_COPY} from '../../shared/ui/appearanceCopy.js';
 
 const COPY = {
   uk: {
@@ -82,12 +83,15 @@ function MoneyCalendarPreview({ copy, currency, lang, className = '' }) {
   </figure>;
 }
 
-export default function FirstRunSetup({ step, language, currency, theme, proAccessActive = false, calendarRecords = EMPTY_RECORDS, personalStory = false, profileKey = 'guest', onLanguage, onCurrency, onTheme, onStep, onStart, onArrive, onSkip }) {
+export default function FirstRunSetup({ step, language, currency, theme, themePreference = theme, proAccessActive = false, proAccessLoading = false, calendarRecords = EMPTY_RECORDS, personalStory = false, profileKey = 'guest', onLanguage, onCurrency, onTheme, onStep, onStart, onArrive, onSkip }) {
   const dialogRef = useRef(null);
   const headingRef = useRef(null);
   const lang = language === 'uk' ? 'uk' : language === 'zh-CN' ? 'zh' : language === 'md' || language === 'ro' ? 'ro' : language === 'en' ? 'en' : 'ru';
   const copy = COPY[lang];
   const lifeCopy = LIFE_COPY[lang];
+  const appearanceCopy=APPEARANCE_SETUP_COPY[lang];
+  const themeCopy=APPEARANCE_COPY[lang];
+  const choosingAppearance=step==='appearance'||step==='theme';
   const [birthday, setBirthday] = useState(() => { try { return localStorage.getItem(birthdayStorageKey(profileKey)) || ''; } catch { return ''; } });
   const [selectedLanguage, setSelectedLanguage] = useState(null);
   const [selectedCurrency, setSelectedCurrency] = useState(null);
@@ -152,15 +156,15 @@ export default function FirstRunSetup({ step, language, currency, theme, proAcce
               </div>)}
             </nav>
             <div className="flex-1">
-              <h1 id="first-run-heading" ref={headingRef} tabIndex={-1} className={`whitespace-pre-line text-[28px] font-semibold leading-[1.12] tracking-[-0.035em] outline-none sm:text-[34px] ${index === 0 ? 'first-run-product-heading' : ''}`}>{index === 0 ? copy.productTitle : index === 1 ? copy.currencyTitle : lifeCopy.birthdayTitle}</h1>
-              <p className={`mt-3 whitespace-pre-line text-sm leading-relaxed ${muted}`}>{index === 0 ? copy.productHint : index === 1 ? copy.currencyHint : lifeCopy.birthdayHint}</p>
+              <h1 id="first-run-heading" ref={headingRef} tabIndex={-1} className={`whitespace-pre-line text-[28px] font-semibold leading-[1.12] tracking-[-0.035em] outline-none sm:text-[34px] ${index === 0 ? 'first-run-product-heading' : ''}`}>{index === 0 ? copy.productTitle : index === 1 ? choosingAppearance?appearanceCopy.title:copy.currencyTitle : lifeCopy.birthdayTitle}</h1>
+              <p className={`mt-3 whitespace-pre-line text-sm leading-relaxed ${muted}`}>{index === 0 ? copy.productHint : index === 1 ? choosingAppearance?appearanceCopy.hint:copy.currencyHint : lifeCopy.birthdayHint}</p>
               {index === 0 && <MoneyCalendarPreview copy={copy} currency={currency} lang={lang} className="mt-5 md:hidden" />}
 
               {index === 0 && <div className="mt-5 space-y-2" role="group" aria-label={copy.languageHint}>
                 <h2 className="pb-1 text-sm font-medium">{copy.languageTitle}</h2>
                 {LANGUAGES.map((item) => {
                   const active = selectedLanguage === item.code;
-                  return <button key={item.code} type="button" aria-pressed={active} onClick={() => { setSelectedLanguage(item.code); onLanguage(item); onStep('currency'); }} className={`flex w-full items-center gap-4 rounded-2xl border px-4 py-2.5 sm:py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${active ? selected : idle}`}>
+                  return <button key={item.code} type="button" aria-pressed={active} onClick={() => { setSelectedLanguage(item.code); onLanguage(item); onStep('appearance'); }} className={`flex w-full items-center gap-4 rounded-2xl border px-4 py-2.5 sm:py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${active ? selected : idle}`}>
                     <span className={`grid h-8 w-8 place-items-center rounded-xl text-xs font-semibold ${light ? 'bg-black/[0.04]' : 'bg-white/[0.05]'}`}>{item.code === 'md' ? 'RO' : item.code === 'zh-CN' ? 'ZH' : item.code.toUpperCase()}</span>
                     <span className="flex-1"><span lang={item.code === 'md' ? 'ro' : item.code} className="block text-sm font-semibold">{item.name}</span><span className={`mt-0.5 block text-[11px] ${muted}`}>{item.hint}</span></span>
                     {active && <Check className="h-4 w-4 text-amber-500" aria-hidden="true" />}
@@ -169,13 +173,8 @@ export default function FirstRunSetup({ step, language, currency, theme, proAcce
               </div>}
 
               {index === 1 && <>
-                <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-                  <span className={`text-xs ${muted}`}>{copy.appearance}</span>
-                  <div className={`first-run-theme-picker grid w-full grid-cols-2 gap-1 rounded-xl p-1 sm:w-auto ${light ? 'bg-zinc-200/60' : 'bg-black/25'}`}>
-                    {proAccessActive && <button type="button" data-theme-option="gold" className="first-run-gold-choice" aria-pressed={theme==='gold'} onClick={()=>onTheme('gold')}>{GOLD_THEME_COPY[lang].name}<small>PRO</small></button>}
-                    {[['light', Sun, copy.light], ['dark', Moon, copy.dark], ['purple', Moon, copy.purple], ['emerald', Moon, copy.emerald]].map(([value, Icon, label]) => <button key={value} type="button" data-theme-option={value} aria-pressed={theme === value} onClick={() => onTheme(value)} className={`flex min-h-9 min-w-0 items-center justify-center gap-1.5 rounded-lg px-1 text-[10px] sm:px-2.5 sm:text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${theme === value ? light ? 'bg-white text-zinc-900 shadow-sm' : 'bg-white/10 text-zinc-100' : muted}`}><Icon className="hidden h-3.5 w-3.5 sm:block" /><span className="theme-option-label">{label}</span></button>)}
-                  </div>
-                </div>
+                {choosingAppearance?<ThemeCollection language={language} theme={theme} preference={themePreference} active={proAccessActive} loading={proAccessLoading} onSelect={onTheme} context="onboarding"/>:<>
+                <button type="button" className="first-run-appearance-summary" onClick={()=>onStep('appearance')}><span className="first-run-theme-dot" data-material={theme}/><span>{copy.appearance}<strong>{themeCopy[themePreference==='system'?'system':theme]}</strong></span><ArrowRight size={16} aria-hidden="true"/></button>
                 <div className="mt-6 grid grid-cols-2 gap-2.5" role="group" aria-label={copy.currencyHint}>
                   {CURRENCIES.map((item, i) => <button key={item.code} type="button" aria-pressed={selectedCurrency === item.code} onClick={() => { setSelectedCurrency(item.code); onCurrency(item.code); onStep('birthday'); }} className={`relative rounded-2xl border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${selectedCurrency === item.code ? selected : idle}`}>
                     {selectedCurrency === item.code && <Check className="absolute right-3 top-3 h-3.5 w-3.5 text-amber-500" aria-hidden="true" />}
@@ -183,6 +182,7 @@ export default function FirstRunSetup({ step, language, currency, theme, proAcce
                   </button>)}
                 </div>
                 <p className={`mt-4 text-[11px] leading-relaxed ${muted}`}>{copy.later}</p>
+                </>}
               </>}
 
               {index === 2 && <form className="life-birthday-card mt-8" onSubmit={event => { event.preventDefault(); startStory(); }}>
@@ -194,7 +194,8 @@ export default function FirstRunSetup({ step, language, currency, theme, proAcce
             </div>
             <div className={index === 0 ? 'mt-3' : 'mt-8'}>
               <div className="flex gap-2">
-                {index > 0 && <button type="button" onClick={() => onStep(index === 1 ? 'language' : 'currency')} aria-label={copy.back} className={`grid min-h-12 w-12 shrink-0 place-items-center rounded-xl border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${idle}`}><ArrowLeft className="h-4 w-4" /></button>}
+                {index > 0 && <button type="button" onClick={() => onStep(index === 1 ? choosingAppearance?'language':'appearance' : 'currency')} aria-label={copy.back} className={`grid min-h-12 w-12 shrink-0 place-items-center rounded-xl border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${idle}`}><ArrowLeft className="h-4 w-4" /></button>}
+                {index===1&&choosingAppearance&&<button type="button" onClick={()=>onStep('currency')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-amber-300 px-4 py-3 text-sm font-semibold text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500">{copy.next}<ArrowRight className="h-4 w-4"/></button>}
                 {index === 2 && <button type="button" onClick={() => startStory()} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-amber-300 px-4 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2">{lifeCopy.seeStory}<ArrowRight className="h-4 w-4" /></button>}
               </div>
               <button type="button" onClick={onSkip} className={`${index === 0 ? 'mt-1 min-h-9' : 'mt-3 min-h-10'} w-full rounded-xl text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${muted} ${light ? 'hover:bg-zinc-100' : 'hover:bg-white/5'}`}>{copy.skip}</button>

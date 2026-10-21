@@ -700,11 +700,11 @@ export default function CalendarScreen() {
   const [systemTheme, setSystemTheme] = useState(() => window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
   const requestedTheme = themePreference === 'system' ? systemTheme : themePreference;
   // Never render a paid palette before the current account's server entitlement.
-  const theme = requestedTheme === 'gold' && !proAccessActive ? 'dark' : requestedTheme;
+  const theme = ['gold','emerald'].includes(requestedTheme) && !proAccessActive ? 'dark' : requestedTheme;
   function setTheme(value) {
     const next = typeof value === 'function' ? value(theme) : value;
     if (!['light', 'dark', 'purple', 'emerald', 'gold', 'system'].includes(next)) return;
-    if (next === 'gold' && !proAccessActive) { if (!proAccessLoading) openProPresentation(); return; }
+    if (['gold','emerald'].includes(next) && !proAccessActive) { if (!proAccessLoading) openProPresentation(); return; }
     setThemePreference(next);
   }
   useEffect(() => {
@@ -760,7 +760,7 @@ export default function CalendarScreen() {
     // Keep browser chrome and the area behind Android gesture controls in
     // the same theme as the calendar, including after returning to the PWA.
     const syncBrowserTheme = () => {
-      const color = theme === 'light' ? '#fafafa' : theme === 'purple' ? '#160f24' : theme === 'emerald' ? '#071c16' : theme === 'gold' ? '#100e0a' : '#09090b';
+      const color = theme === 'light' ? '#fafafa' : theme === 'purple' ? '#160f24' : theme === 'emerald' ? '#071c16' : theme === 'gold' ? '#0b0b0d' : '#09090b';
       const colorScheme = theme === 'light' ? 'light' : 'dark';
       document.documentElement.dataset.dayrisTheme = theme;
       document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
@@ -7263,11 +7263,13 @@ export default function CalendarScreen() {
 
       {setupStep && !nicknameModalOpen && (
         <FirstRunSetup
-          step={setupStep === 'theme' ? 'currency' : setupStep}
+          step={setupStep === 'theme' ? 'appearance' : setupStep}
           language={language}
           currency={currency}
           theme={theme}
+          themePreference={themePreference}
           proAccessActive={proAccessActive}
+          proAccessLoading={proAccessLoading}
           calendarRecords={storyCalendarRecords}
           personalStory={storyReplay}
           profileKey={user?.id || 'guest'}

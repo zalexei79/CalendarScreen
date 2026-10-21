@@ -15,12 +15,12 @@ import Planner from './src/features/reminders/FinancePlanComposer.jsx';
 import Voice from './src/shared/ui/VoiceWorkspace.jsx';
 import Capital from './src/features/capital/CapitalPanel.jsx';
 function App(){
- const [screen,setScreen]=useState('first'),[theme,setTheme]=useState(${JSON.stringify(palette)}),[step,setStep]=useState('currency');
- window.setScreen=setScreen;window.setTheme=setTheme;
+ const [screen,setScreen]=useState('first'),[theme,setTheme]=useState(${JSON.stringify(palette)}),[step,setStep]=useState('appearance'),[access,setAccess]=useState(true);
+ window.setScreen=setScreen;window.setTheme=setTheme;window.setAccess=setAccess;
  document.documentElement.dataset.dayrisTheme=theme;
  const base={language:'ru',isLight:theme==='light'};
  return <main className="premium-shell" style={{minHeight:'100dvh',padding:16}}>
- {screen==='first'&&<First {...base} proAccessActive step={step} theme={theme} currency="USD" onTheme={setTheme} onLanguage={()=>{}} onCurrency={()=>{}} onStep={setStep} onSkip={()=>setScreen('wallet')}/>}
+ {screen==='first'&&<First {...base} proAccessActive={access} step={step} theme={theme} currency="USD" onTheme={setTheme} onLanguage={()=>{}} onCurrency={()=>{}} onStep={setStep} onSkip={()=>setScreen('wallet')}/>}
  {screen==='wallet'&&<Wallet {...base} currency="USD" transactions={[]} balanceByCurrency={{USD:12500}} onSave={async()=>{}} onDelete={async()=>{}} onBackToCalendar={()=>{}}/>}
  {screen==='planner'&&<Planner {...base} open dateKey="2026-10-15" defaultCurrency="USD" onClose={()=>setScreen('wallet')} onCreate={async()=>{}}/>}
  {screen==='voice'&&<Voice {...base} locale="ru" status="Микрофон на паузе" help={{filtered:true,title:'Например',phrases:[]}} onClose={()=>{}} onCollapse={()=>{}} onListen={()=>{}}/>}
@@ -45,7 +45,7 @@ try {
   return route.fulfill({contentType:'text/html',body:`<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}body{margin:0}</style><div id="root"></div><script>${script.replaceAll('</script>','<\\/script>')}</script>`});
  });
  await page.goto('http://emerald.test');
- await page.getByRole('heading',{name:'Настроим под тебя.'}).waitFor();
+ await page.getByRole('heading',{name:'Твой стиль DAYRIS.'}).waitFor();
  const glass = locator=>locator.evaluate(el=>{const s=getComputedStyle(el);return {image:s.backgroundImage,blur:s.backdropFilter,color:s.color,bg:s.backgroundColor};});
  for(const width of [390,1280]) {
   await page.setViewportSize({width,height:width===390?844:950});
@@ -59,8 +59,25 @@ try {
  await page.getByRole('button',{name:'Светлое',exact:true}).click();
  assert.equal(await page.locator('html').getAttribute('data-dayris-theme'),'light');
  assert.ok(!(await glass(page.locator('.first-run-shell'))).blur.includes(`${blur}px`));
- await page.getByRole('button',{name:palette==='gold'?'Золото PRO':'Изумрудное',exact:true}).click();
+ await page.getByRole('button',{name:palette==='gold'?'Золото':'Изумрудное',exact:true}).click();
  assert.ok((await glass(page.locator('.first-run-shell'))).blur.includes(`${blur}px`));
+ await page.evaluate(()=>{window.setTheme('dark');window.setAccess(false);});
+ for(const name of ['Золото','Изумрудное']) {
+  await page.getByRole('button',{name,exact:true}).click();
+  const preview=page.locator('.theme-preview-dialog');await preview.waitFor();
+  assert.equal(await page.locator('html').getAttribute('data-dayris-theme'),'dark');
+  assert.equal(await page.locator('.first-run-dialog').evaluate(el=>el.open),true,'Preview stays above the native first-run dialog');
+  await page.screenshot({path:`tests/onboarding-locked-${name==='Золото'?'gold':'emerald'}.png`,animations:'disabled'});
+  await page.keyboard.press('Escape');
+  await preview.waitFor({state:'detached'});
+  assert.equal(await page.locator('.first-run-dialog').evaluate(el=>el.open),true,'Escape does not dismiss first run');
+ }
+ await page.evaluate(p=>{window.setAccess(true);window.setTheme(p);},palette);
+ await page.getByRole('button',{name:'Продолжить',exact:true}).click();
+ await page.getByRole('heading',{name:'Настроим под тебя.'}).waitFor();
+ await page.getByRole('button',{name:'Назад',exact:true}).click();
+ await page.getByRole('heading',{name:'Твой стиль DAYRIS.'}).waitFor();
+ await page.getByRole('button',{name:'Продолжить',exact:true}).click();
  await page.getByRole('button',{name:/Доллар США/}).click();
  await page.locator('.life-birthday-card').waitFor();
  assert.match((await glass(page.locator('.life-birthday-card'))).image,/linear-gradient/);
@@ -72,7 +89,7 @@ try {
  await page.screenshot({path:`tests/${palette}-glass-wallet.png`,animations:'disabled'});
  await page.evaluate(()=>window.setScreen('capital'));
  await page.locator('.capital-panel').waitFor();
- assert.equal(await page.locator('.capital-panel').evaluate(el=>getComputedStyle(el).getPropertyValue('--cap-bg').trim()),palette==='gold'?'#100e0a':'#030e0b');
+ assert.equal(await page.locator('.capital-panel').evaluate(el=>getComputedStyle(el).getPropertyValue('--cap-bg').trim()),palette==='gold'?'#0b0b0d':'#030e0b');
  await page.screenshot({path:`tests/${palette}-glass-capital.png`,animations:'disabled'});
  await page.evaluate(()=>window.setScreen('voice'));
  await page.locator('.voice-workspace').waitFor();
@@ -85,7 +102,7 @@ try {
  const session=await page.context().newCDPSession(page);
  await session.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-transparency',value:'reduce'}]});
  assert.equal((await glass(page.locator('.plan-dialog'))).blur,'none');
- assert.equal((await glass(page.locator('.plan-dialog'))).bg,palette==='gold'?'rgb(29, 25, 18)':'rgb(12, 38, 30)');
+ assert.equal((await glass(page.locator('.plan-dialog'))).bg,palette==='gold'?'rgb(23, 22, 19)':'rgb(12, 38, 30)');
  await session.send('Emulation.setEmulatedMedia',{features:[]});
  await page.evaluate(()=>window.setScreen('wallet'));
  await page.evaluate(()=>window.setTheme('dark'));

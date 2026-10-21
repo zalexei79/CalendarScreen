@@ -1,10 +1,10 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronLeft, ChevronRight, Check, Sun, Moon, Monitor, Languages, CircleDollarSign, Mic, Play, Sparkles, User, LogOut, ShieldCheck, Info, RotateCcw, Send, ArrowUpRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Check, Languages, CircleDollarSign, Mic, Play, Sparkles, User, LogOut, ShieldCheck, Info, RotateCcw, Send, ArrowUpRight } from 'lucide-react';
 import SwipeDismissSheet from './SwipeDismissSheet.jsx';
 import VoiceSettings from './VoiceSettings.jsx';
 import BrandIcon from './BrandIcon.jsx';
-import GoldThemeCard from './GoldThemeCard.jsx';
+import ThemeCollection from './ThemeCollection.jsx';
 import LoginButtons from '../../features/auth/LoginButtons.jsx';
 import { CURRENCIES } from '../config/constants.js';
 import './SettingsPanel.css';
@@ -75,7 +75,7 @@ export default function SettingsPanel({ t, language, setLanguage, currency, setC
   }
   function action(callback) { onClose(); callback?.(); }
   const title = page === 'root' ? t('settings') : page === 'pro' ? 'DAYRIS PRO' : copy[page];
-  const choices = page === 'language' ? LANGUAGES.map(item => ({...item, selected: language === item.code, choose: () => setLanguage(item.code)})) : page === 'currency' ? CURRENCIES.map((item,index) => ({code:item.code,label:`${item.code} — ${copy.currencies[index]}`,symbol:item.symbol,selected:currency===item.code,choose:()=>setCurrency(item.code)})) : page === 'theme' ? [{code:'light',label:copy.light,icon:Sun},{code:'system',label:copy.system,icon:Monitor},{code:'dark',label:copy.dark,icon:Moon},{code:'purple',label:copy.purple,icon:Sparkles},{code:'emerald',label:copy.emerald,icon:Sparkles}].map(item => ({...item,selected:themePreference===item.code,choose:()=>setTheme(item.code)})) : [];
+  const choices = page === 'language' ? LANGUAGES.map(item => ({...item, selected: language === item.code, choose: () => setLanguage(item.code)})) : page === 'currency' ? CURRENCIES.map((item,index) => ({code:item.code,label:`${item.code} — ${copy.currencies[index]}`,symbol:item.symbol,selected:currency===item.code,choose:()=>setCurrency(item.code)})) : [];
   return createPortal(<div className={`settings-overlay${visible ? ' is-visible' : ''}`} data-dayris-settings onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
     <SwipeDismissSheet ref={panel} className="dayris-settings-panel settings-surface" style={{'--settings-top':`${position.top}px`,'--settings-right':`${position.right}px`}} isLight={isLight} onDismiss={onClose} disabled={!mobile} handleClassName="settings-drag-handle" role="dialog" aria-modal="true" aria-labelledby="settings-title" onKeyDown={keyboard}>
       <div className="settings-toolbar">{page !== 'root' ? <button type="button" className="settings-back" onClick={()=>navigate(parentPage,true)}><ChevronLeft size={18}/>{parentPage==='help'?copy.help:t('settings')}</button> : <span className="settings-wordmark">DAYRIS</span>}<button type="button" className="settings-close" aria-label={copy.close} onClick={onClose}><X size={19}/></button></div>
@@ -84,8 +84,7 @@ export default function SettingsPanel({ t, language, setLanguage, currency, setC
         {page === 'root' && <>
 
           {user ? <button type="button" className="settings-identity settings-account-card" aria-label={copy.profile} onClick={()=>navigate('profile')}><div className="settings-avatar">{name.charAt(0).toUpperCase()}</div><div><strong>{name}</strong><p>{user.email || copy.profile}</p><span className="settings-membership">{proAccessActive?'DAYRIS PRO':'DAYRIS FREE'}</span></div><ChevronRight size={16} aria-hidden="true"/></button> : <><div className="settings-identity"><div className="settings-avatar"><User size={22}/></div><div><strong>{copy.guest}</strong><p>{copy.guestHint}</p></div></div><div className="settings-auth"><LoginButtons t={t} handleGoogleLogin={handleGoogleLogin} handleTelegramLogin={handleTelegramLogin} loginPending={loginPending} loginError={loginError}/></div></>}
-          <Group title={copy.theme}><div className="settings-theme-gallery" role="group" aria-label={copy.theme}>{['light','system','dark','purple','emerald'].map(code=><button type="button" key={code} data-theme-option={code} className={'settings-theme-tile'+(themePreference===code?' is-selected':'')} aria-label={copy[code]} aria-pressed={themePreference===code} onClick={()=>setTheme(code)}><span className="settings-theme-sample" data-theme={code}><i/><i/><i/><i/>{themePreference===code&&<Check size={12}/>}</span><span>{copy[code]}</span></button>)}</div></Group>
-          <GoldThemeCard locale={locale} selected={theme==='gold'} active={proAccessActive} loading={proAccessLoading} onSelect={()=>setTheme('gold')} onPro={()=>action(onPro)}/>
+          <ThemeCollection language={language} theme={theme} preference={themePreference} active={proAccessActive} loading={proAccessLoading} onSelect={setTheme} onPro={()=>action(onPro)}/>
           <Group title={copy.calendar}><Row icon={CircleDollarSign} label={copy.currency} value={currency} onClick={()=>navigate('currency')}/><Row icon={Languages} label={copy.language} value={LANGUAGES.find(item=>item.code===language)?.label} onClick={()=>navigate('language')}/><Row icon={Mic} label={copy.voice} onClick={()=>navigate('voice')}/></Group>
           {onStory && <button type="button" className="settings-story-card" onClick={()=>action(onStory)}><Play size={18} aria-hidden="true"/><span><strong>{copy.story}</strong><small>{copy.storyHint}</small></span><ChevronRight size={15} aria-hidden="true"/></button>}
           <Row icon={Info} label={copy.help} onClick={()=>navigate('help')}/>
