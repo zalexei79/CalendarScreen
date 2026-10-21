@@ -11,6 +11,9 @@ try {
  await context.addInitScript(id=>{
   for(const [key,value] of Object.entries({atj_theme:'gold',atj_pro_view:'1',atj_trader_mode:'0',atj_language:'ru',atj_currency:'MDL',dayris_onboarding_v2_completed:'1',calendar_guide_completed:'1',dayris_wallet_onboarding_v2:'1'})) if(key!=='atj_theme'||!localStorage.getItem(key))localStorage.setItem(key,value);
   localStorage.setItem(`money_calendar_trades_${id}`,JSON.stringify({
+   '2026-09-29':[{id:'gold-adjacent-income',time:'09:00',pnl:8000,currency:'MDL',instrument:'Зарплата',platform:'Manual'}],
+   '2026-09-30':[{id:'gold-adjacent-expense',time:'10:00',pnl:-120,currency:'MDL',instrument:'Продукты',platform:'Manual'}],
+   ...Object.fromEntries([[1,-3500],[2,-530],[3,-120],[4,-130],[5,-767],[7,-600],[8,-50],[9,-5000],[17,-500],[19,-249],[20,-264]].map(([day,pnl])=>[`2026-10-${String(day).padStart(2,'0')}`,[{id:`gold-expense-${day}`,time:'10:00',pnl,currency:'MDL',instrument:'Расход',platform:'Manual'}]])),
    '2026-10-15':[{id:'gold-income',time:'09:00',pnl:2400,currency:'MDL',instrument:'Зарплата',platform:'Manual'}],
    '2026-10-14':[{id:'gold-expense',time:'10:00',pnl:-650,currency:'MDL',instrument:'Продукты',platform:'Manual'}],
   }));
@@ -48,9 +51,26 @@ try {
    const r=el.getBoundingClientRect(),cell=el.closest('button').getBoundingClientRect();
    return {width:r.width,height:r.height,inside:r.left>=cell.left&&r.right<=cell.right&&r.top>=cell.top&&r.bottom<=cell.bottom};
   }));
-  assert.equal(amounts.length,2);assert.ok(amounts.every(a=>a.width>=24&&a.height>0&&a.inside),'PRO amounts remain visible inside gold cells');
+  assert.equal(amounts.length,15);assert.ok(amounts.every(a=>a.width>=24&&a.height>0&&a.inside),'PRO amounts remain visible inside gold cells');
+  // A previous gold override erased the semantic fill on adjacent-month days.
+  for(const tone of ['profit','loss']) {
+   const fills=await page.locator(`.calendar-day-surface[data-pnl-tone="${tone}"]`).evaluateAll(cells=>cells.map(el=>getComputedStyle(el).backgroundImage));
+   assert.ok(fills.length>=2);assert.ok(fills.every(fill=>fill===fills[0]),`${tone} remains recognizable outside the current month`);
+  }
   await page.screenshot({path:`tests/gold-calendar-${width}.png`,animations:'disabled'});
  }
+ const cdp=await context.newCDPSession(page);
+ await cdp.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-transparency',value:'reduce'}]});
+ assert.equal(await page.locator('.dayris-header').evaluate(el=>getComputedStyle(el).backdropFilter),'none');
+ // Opaque fallback must still distinguish gains/losses and keep readable ink.
+ const semanticContrast=await page.locator('.calendar-day-surface:not([data-pnl-tone="neutral"])').evaluateAll(cells=>{
+  const rgb=s=>s.match(/[\d.]+/g).slice(0,3).map(Number);
+  const luminance=s=>rgb(s).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);
+  return cells.map(el=>{const bg=getComputedStyle(el).backgroundColor,ink=getComputedStyle(el.querySelector('.day-amount')).color;const a=luminance(bg),b=luminance(ink);return {tone:el.dataset.pnlTone,rgb:rgb(bg),contrast:(Math.max(a,b)+.05)/(Math.min(a,b)+.05)};});
+ });
+ assert.ok(semanticContrast.every(s=>s.contrast>=4.5),'Reduced-transparency amounts meet 4.5:1 contrast');
+ assert.ok(semanticContrast.every(s=>s.tone==='profit'?s.rgb[1]>s.rgb[0]*2:s.rgb[0]>s.rgb[1]*2),'Gains stay green and losses red');
+ await cdp.send('Emulation.setEmulatedMedia',{features:[]});
  await page.setViewportSize({width:390,height:844});
  await page.getByRole('button',{name:'Настройки',exact:true}).click();await page.clock.runFor(400);
  const settings=page.locator('[data-dayris-settings]');
@@ -75,7 +95,7 @@ try {
  await page.locator('.workspace-mode-toggle').click();await page.clock.runFor(500);
  await page.getByRole('button',{name:'История',exact:true}).click();await page.clock.runFor(500);
  const history=page.locator('.financial-history-dialog');await history.waitFor();
- assert.equal(await history.evaluate(el=>getComputedStyle(el).getPropertyValue('--fh-gold').trim()),'#ead2a0');
+ assert.equal(await history.evaluate(el=>getComputedStyle(el).getPropertyValue('--fh-gold').trim()),'#f4ca62');
  await page.screenshot({path:'tests/gold-history-390.png',animations:'disabled'});
  await history.getByRole('button',{name:'Закрыть',exact:true}).click();await page.clock.runFor(500);
  // Confirmed revocation must immediately remove the paid palette.
@@ -99,7 +119,6 @@ try {
  assert.equal(await page.evaluate(()=>localStorage.getItem('atj_theme')),'emerald');
  active=true;await page.clock.runFor(120100);
  await page.waitForFunction(()=>document.documentElement.dataset.dayrisTheme==='emerald');
- const cdp=await context.newCDPSession(page);
  await cdp.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-transparency',value:'reduce'}]});
  assert.equal(await page.locator('.dayris-header').evaluate(el=>getComputedStyle(el).backdropFilter),'none');
  await page.emulateMedia({reducedMotion:'reduce'});

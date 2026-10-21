@@ -17,7 +17,7 @@
 .theme-collection-heading > svg { color:#d7c08c; flex:none; }
 .theme-collection-hint { margin:8px 0 13px; color:var(--collection-muted); font:400 11px/1.6 system-ui,sans-serif; max-width:300px; }
 .theme-premium-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:11px; }
-[data-material="gold"] { --preview-bg:#0b0b0d; --preview-ink:#f9e7bd; --preview-line:#ecd49b52; --preview-flare:#f1d28a2e; --preview-metal:linear-gradient(125deg,#99703a,#f9edc8 40%,#c9a15b 64%,#f4dc9b); }
+[data-material="gold"] { --preview-bg:#0b0b0d; --preview-ink:#ffe3a0; --preview-line:#efbf4980; --preview-flare:#f1bc3b38; --preview-metal:var(--gold-ingot); }
 [data-material="emerald"] { --preview-bg:#061c18; --preview-ink:#b9fce2; --preview-line:#96ffcf45; --preview-flare:#25dba146; --preview-metal:linear-gradient(125deg,#1d765a,#b5ffe5 43%,#17966b 70%,#71e6b9); }
 .theme-collection .theme-premium-card[data-material][data-theme-option],.first-run-dialog .theme-collection .theme-premium-card[data-material][data-theme-option] { position:relative; display:flex; flex-direction:column; min-width:0; min-height:0; padding:0; border:1px solid var(--preview-line); border-radius:17px; overflow:hidden; background:var(--preview-bg); color:var(--preview-ink); text-align:left; cursor:pointer; font-family:system-ui,sans-serif; box-shadow:0 6px 18px #0002; }
 .theme-collection .theme-premium-card[data-material][data-theme-option][aria-pressed="true"],.first-run-dialog .theme-collection .theme-premium-card[data-material][data-theme-option][aria-pressed="true"] { border-color:var(--preview-ink); background:var(--preview-bg); box-shadow:0 0 0 1px var(--preview-line),0 0 22px var(--preview-flare); }
@@ -30,6 +30,10 @@
 .theme-art-calendar > [data-tone="income"] { background:linear-gradient(160deg,#82c58d17,#67bc754d); }
 .theme-art-calendar > [data-tone="expense"] { background:linear-gradient(160deg,#be556517,#d14d7059); }
 .theme-art-calendar > [data-today] { border-color:var(--preview-ink); box-shadow:0 0 8px var(--preview-flare); }
+.theme-material-art[data-material="gold"] .theme-art-calendar > i { background:var(--gold-glass); border-color:#efce8275; color:#fff0c9; box-shadow:inset 0 1px #fff0bc5c; font-weight:500; }
+.theme-material-art[data-material="gold"] .theme-art-calendar > [data-tone="income"] { background:var(--gold-profit-material); border-color:#65efb7; color:#e3fff1; }
+.theme-material-art[data-material="gold"] .theme-art-calendar > [data-tone="expense"] { background:var(--gold-loss-material); border-color:#ff879c; color:#fff0f2; }
+.theme-material-art[data-material="gold"] .theme-art-calendar > [data-today] { border-color:#ffe9af; box-shadow:0 0 8px #ffd05738; }
 .theme-art-dock { display:flex; justify-content:space-evenly; align-items:center; gap:3px; width:66%; min-height:13px; margin:9px auto 0; border:1px solid var(--preview-line); border-radius:20px; background:#ffffff08; }
 .theme-art-dock i { width:12%; height:2px; background:var(--preview-ink); opacity:.6; border-radius:2px; }.theme-art-dock i:nth-child(2) { width:29%; }
 .theme-premium-state { position:absolute; right:9px; top:8px; display:grid; place-items:center; width:22px; height:22px; border:1px solid var(--preview-line); border-radius:50%; background:var(--preview-bg); color:var(--preview-ink); }
