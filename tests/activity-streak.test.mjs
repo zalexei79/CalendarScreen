@@ -17,3 +17,13 @@ test('one missed day pauses the streak without resetting it', () => {
 test('two missed days reset the streak on the next visit', () => {
   assert.deepEqual(updateActivityStreak({ currentStreak: 8, lastActiveDate: '2026-10-10', paused: false }, '2026-10-13'), { currentStreak: 1, lastActiveDate: '2026-10-13', paused: false });
 });
+
+test('returning on Wednesday rescues a Monday streak; Thursday after two full missed days restarts it', () => {
+  const monday = { currentStreak: 5, lastActiveDate: '2026-10-19', paused: false };
+  const wednesday = updateActivityStreak(monday, '2026-10-21');
+  assert.equal(wednesday.currentStreak, 5);
+  assert.equal(wednesday.paused, true);
+  assert.deepEqual(updateActivityStreak(wednesday, '2026-10-21'), wednesday);
+  assert.equal(updateActivityStreak(wednesday, '2026-10-22').currentStreak, 6);
+  assert.equal(updateActivityStreak(monday, '2026-10-22').currentStreak, 1);
+});

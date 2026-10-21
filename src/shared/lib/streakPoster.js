@@ -1,4 +1,5 @@
 import { createQrMatrix, drawQrToCanvas } from '../../../qrCode.js';
+import { streakCopy, streakDayLabel } from '../i18n/streak.js';
 
 const backgroundUrl = '/images/streak/momentum-glass-v1.webp';
 let backgroundPromise;
@@ -22,15 +23,28 @@ function fitText(ctx, text, x, y, width, size, family = 'Arial, sans-serif', wei
   ctx.fillText(text, x, y);
 }
 
-const posterCopy = {
-  ru: ['Каждый день имеет значение', '7 дней полного доступа'],
-  en: ['Every day matters', '7 days of full access'],
-  md: ['Fiecare zi contează', '7 zile de acces complet'],
-  'zh-CN': ['每一天都有意义', '7 天完整体验'],
-};
+// Safari's Georgia digits can extend below the alphabetic baseline. Place the
+// actual ink bounds inside a fixed box instead of assuming baseline = bottom.
+function drawTextBox(ctx, text, box, size, family = 'Arial, sans-serif', weight = '500') {
+  let metrics;
+  do {
+    ctx.font = `${weight} ${size}px ${family}`;
+    metrics = ctx.measureText(text);
+    if (metrics.width <= box.width && metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent <= box.height) break;
+    size -= 1;
+  } while (size > 14);
+  const ascent = metrics.actualBoundingBoxAscent;
+  const descent = metrics.actualBoundingBoxDescent;
+  const baseline = box.y + (box.height - ascent - descent) / 2 + ascent;
+  ctx.fillText(text, ctx.textAlign === 'left' ? box.x : box.x + box.width / 2, baseline);
+}
 
 export async function createStreakPoster({ days, paused, copy, language, inviteUrl, dayLabel }) {
   const background = await loadBackground();
+  await document.fonts?.ready;
+  const locale = String(language).startsWith('zh') ? 'zh-CN' : language === 'ro' ? 'md' : language;
+  const labels = { ...(streakCopy[locale] || streakCopy.en) };
+  dayLabel ||= streakDayLabel(days, language);
   const canvas = document.createElement('canvas');
   canvas.width = 1080; canvas.height = 1350;
   const ctx = canvas.getContext('2d');
@@ -40,21 +54,20 @@ export async function createStreakPoster({ days, paused, copy, language, inviteU
   ctx.fillStyle = '#eaf7ff';
   fitText(ctx, 'D A Y R I S', 540, 51, 500, 30);
   ctx.fillStyle = '#ffda91';
-  fitText(ctx, copy.cardHeadline, 540, 426, 700, 30);
+  fitText(ctx, labels.streakCardHeadline, 540, 447, 760, 28);
 
   // Draw the actual count, without padding. Fit even multi-year streaks.
   const number = String(Math.max(1, Number(days) || 1));
-  const gold = ctx.createLinearGradient(300, 460, 760, 740);
+  const gold = ctx.createLinearGradient(300, 500, 760, 710);
   gold.addColorStop(0, '#fff9e6'); gold.addColorStop(.42, '#ffe4a3');
   gold.addColorStop(.72, '#ffc56a'); gold.addColorStop(1, '#a6edff');
-  ctx.fillStyle = gold; ctx.shadowColor = 'rgba(255,176,64,.55)'; ctx.shadowBlur = 24;
-  fitText(ctx, number, 540, 715, 760, 330, 'Georgia, "Times New Roman", serif', '700');
+  ctx.fillStyle = gold; ctx.shadowColor = 'rgba(255,176,64,.32)'; ctx.shadowBlur = 12;
+  drawTextBox(ctx, number, { x: 160, y: 500, width: 760, height: 210 }, 320, 'Georgia, "Times New Roman", serif', '700');
   ctx.shadowBlur = 0;
-  const [motto, trial] = posterCopy[language === 'ro' ? 'md' : language] || posterCopy.en;
   ctx.fillStyle = '#f1f5fb';
-  fitText(ctx, copy.proudLine.replace('{0}', dayLabel), 540, 775, 920, 36);
-  ctx.fillStyle = '#ffda91';
-  fitText(ctx, paused ? copy.paused : motto, 540, 821, 900, 24);
+  drawTextBox(ctx, labels.streakRunUnit.replace('{0}', dayLabel.replace(/^\d+\s*/, '')), { x: 140, y: 740, width: 800, height: 42 }, 38, 'Arial, sans-serif', '700');
+  ctx.fillStyle = '#c5d4e3';
+  drawTextBox(ctx, labels.streakProudLine, { x: 200, y: 796, width: 680, height: 28 }, 27);
 
   // A compact, opaque invitation keeps the QR legible on the textured art.
   ctx.beginPath(); ctx.roundRect(110, 1170, 860, 152, 28);
@@ -63,9 +76,10 @@ export async function createStreakPoster({ days, paused, copy, language, inviteU
   rim.addColorStop(0, '#365c53'); rim.addColorStop(1, '#364351');
   ctx.strokeStyle = rim; ctx.lineWidth = 2; ctx.stroke();
   ctx.textAlign = 'left'; ctx.fillStyle = '#f1f5fb';
-  fitText(ctx, copy.proBadge, 150, 1232, 590, 31, 'Arial, sans-serif', '600');
+  drawTextBox(ctx, copy.proBadge, { x: 150, y: 1197, width: 590, height: 34 }, 31, 'Arial, sans-serif', '600');
   ctx.fillStyle = '#abbecf';
-  fitText(ctx, trial, 150, 1275, 590, 25);
+  drawTextBox(ctx, paused ? labels.streakStatusPaused : labels.streakPosterGrace, { x: 150, y: 1242, width: 590, height: 22 }, 21);
+  drawTextBox(ctx, labels.streakPosterReset, { x: 150, y: 1277, width: 590, height: 22 }, 21);
   drawQrToCanvas(ctx, createQrMatrix(inviteUrl), 798, 1182, 128,
     { foreground: '#09090b', background: '#fff' });
   return new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob)

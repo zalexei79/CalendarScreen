@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v47-expense-haptics';
+const CACHE_NAME = 'atj-cache-v48-streak-explanation';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

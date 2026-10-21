@@ -1,6 +1,7 @@
 import { APP_NAME, APP_TITLE, PRO_PLAN_NAME, APP_SLOGAN } from '../config/brand.js';
 import zh from './zh.js';
 import uk from './uk.js';
+import { streakCopy } from './streak.js';
 
 export const MONTHS = [
   'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
@@ -873,3 +874,4 @@ const authCopy = {
 };
 for (const [locale, copy] of Object.entries(authCopy)) Object.assign(TRANSLATIONS[locale], copy);
 TRANSLATIONS.uk = uk;
+for (const [locale, copy] of Object.entries(streakCopy)) Object.assign(TRANSLATIONS[locale], copy);

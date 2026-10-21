@@ -1,19 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Flame, RefreshCw, Share2, X } from 'lucide-react';
+import { Flame, Pause, Clock3, RotateCcw, RefreshCw, Share2, X } from 'lucide-react';
 import SwipeDismissSheet from './SwipeDismissSheet.jsx';
 import { createStreakPoster } from '../lib/streakPoster.js';
+import { streakDayLabel } from '../i18n/streak.js';
 import './ActivityStreakDialog.css';
-
-function localizedDayCount(days, language) {
-  const value = Number(days);
-  if (String(language).toLowerCase().startsWith('zh')) return `${value} 天`;
-  if (language === 'en') return `${value} ${value === 1 ? 'day' : 'days'}`;
-  if (language === 'md' || language === 'ro') return `${value} ${value === 1 ? 'zi' : 'zile'}`;
-  if (value % 100 >= 11 && value % 100 <= 14) return `${value} дней`;
-  if (value % 10 === 1) return `${value} день`;
-  if (value % 10 >= 2 && value % 10 <= 4) return `${value} дня`;
-  return `${value} дней`;
-}
 
 function accountName(user) {
   return user?.email || user?.user_metadata?.preferred_username || user?.user_metadata?.name
@@ -38,8 +28,9 @@ export default function ActivityStreakDialog({
     share: t('streakSharePhoto'), close: t('streakClose'), preparing: t('streakPreparing'),
     inviteTitle: t('streakInviteTitle'), inviteBody: t('streakInviteBody'), inviteHint: t('streakInviteHint'), proBadge: t('streakProBadge'),
     shareText: t('streakShareText'), error: t('streakShareError'),
+    runUnit: t('streakRunUnit'), grace: t('streakPosterGrace'), reset: t('streakPosterReset'),
   };
-  const formatCountText = (template) => template.replace('{0}', localizedDayCount(days, language));
+  const formatCountText = (template) => template.replace('{0}', streakDayLabel(days, language));
 
   useEffect(() => () => {
     if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
@@ -135,7 +126,8 @@ export default function ActivityStreakDialog({
             <div className="activity-streak-aura" />
             <Flame className="activity-streak-hero-flame" aria-hidden="true" />
             <strong>{days}</strong>
-            <span>{t('streakDaysLong')}</span>
+            <span>{copy.runUnit.replace('{0}', streakDayLabel(days, language).replace(/^\d+\s*/, ''))}</span>
+            <p className="activity-streak-purpose">{copy.proudLine}</p>
           </div>
           <div className="activity-streak-account">
             <span>{copy.account}</span>
@@ -144,6 +136,16 @@ export default function ActivityStreakDialog({
           <p className={`activity-streak-status ${streak.paused ? 'is-paused' : ''}`}>
             <span className="activity-streak-status-dot" />{streak.paused ? copy.paused : copy.active}
           </p>
+          <section className="activity-streak-rules" aria-labelledby="streak-rules-title">
+            <h3 id="streak-rules-title">{t('streakRulesTitle')}</h3>
+            <p>{t('streakRulesIntro')}</p>
+            <ol className="activity-streak-rule-steps">
+              <li><Pause aria-hidden="true" size={18} /><span>{t('streakRulePauseDay')}</span><strong>{t('streakRulePause')}</strong></li>
+              <li><Clock3 aria-hidden="true" size={18} /><span>{t('streakRuleRescueDay')}</span><strong>{t('streakRuleRescue')}</strong></li>
+              <li><RotateCcw aria-hidden="true" size={18} /><span>{t('streakRuleResetDay')}</span><strong>{t('streakRuleReset')}</strong></li>
+            </ol>
+            <p>{t('streakRulesDetail')}</p>
+          </section>
           <div className="activity-streak-invite">
             <div className="activity-streak-invite-flame"><Flame size={17} /></div>
             <div><strong>{copy.inviteTitle}</strong><p>{copy.inviteBody}</p></div>
@@ -165,5 +167,5 @@ export default function ActivityStreakDialog({
 async function createShareBlob({ days, paused, code, copy, language }) {
   const inviteUrl = new URL('/?install=1', window.location.origin);
   if (code) inviteUrl.searchParams.set('ref', code);
-  return createStreakPoster({ days, paused, copy, language, inviteUrl: inviteUrl.toString(), dayLabel: localizedDayCount(days, language) });
+  return createStreakPoster({ days, paused, copy, language, inviteUrl: inviteUrl.toString(), dayLabel: streakDayLabel(days, language) });
 }
