@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v46-admin-people-workspace';
+const CACHE_NAME = 'atj-cache-v47-expense-haptics';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

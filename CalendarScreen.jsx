@@ -2573,9 +2573,9 @@ export default function CalendarScreen() {
       if (newEntryDateKey > todayKey) return;
       setModalDateKey(newEntryDateKey);
       setForm({
-        instrument: traderMode ? (recentInstruments[0] || '') : 'Зарплата',
+        instrument: traderMode ? (recentInstruments[0] || '') : 'Продукты',
         direction: '',
-        sign: 'plus',
+        sign: traderMode ? 'plus' : 'minus',
         pnl: '',
         time: currentTimeHHMM(),
         comment: '',

@@ -9,7 +9,11 @@ import { LANGUAGE_STORAGE_KEY } from './shared/config/constants'
 import { translate } from './shared/i18n'
 import SiteConfigRuntime from './features/admin/SiteConfigRuntime.jsx'
 import ExtensionRuntime from './features/extensions/ExtensionRuntime.jsx'
+import { installInteractionHaptics } from './shared/lib/interactionHaptics.js'
 const AdminPanel = React.lazy(() => import('./features/admin/AdminApp.jsx'))
+
+const removeInteractionHaptics = installInteractionHaptics()
+if (import.meta.hot) import.meta.hot.dispose(removeInteractionHaptics)
 
 function browserLanguage() {
   try { return window.localStorage.getItem(LANGUAGE_STORAGE_KEY) || navigator.language || 'ru' }
