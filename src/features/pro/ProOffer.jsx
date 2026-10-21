@@ -40,7 +40,7 @@ export default function ProOffer({ language, copy, active, daysRemaining, untilL
           {checkoutLoading ? <RefreshCw className="animate-spin" aria-hidden="true" /> : <ArrowRight aria-hidden="true" />}
         </button>
         <button type="button" className="pro-quick-access-secondary" onClick={onInvite} disabled={signedIn && referralLoading} aria-busy={signedIn && referralLoading}>
-          <Gift aria-hidden="true" /><span>{inviteLabel}</span>
+          <Gift aria-hidden="true" /><span><strong>{text.inviteTitle}</strong><small>{inviteLabel === text.inviteAction ? text.inviteReward : inviteLabel}</small></span>
         </button>
       </div>
     </section>

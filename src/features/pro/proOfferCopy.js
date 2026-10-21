@@ -80,6 +80,7 @@ const copy = {
 };
 
 Object.assign(copy.ru, {
+  inviteReward: 'Тебе — 26 дней PRO · другу — 7 дней',
   signalsTitle: 'Автосигналы XAUUSD',
   signalsBody: 'ИИ-анализ рынка, автоматические сигналы по золоту (XAUUSD) и отчёты о результатах — в Gold Scalping. Telegram-бот присылает сигналы: решение о торговле остаётся за вами.',
   signalsBot: 'По желанию к этим же сигналам можно подключить Skalp_XAUUSD — бота автоторговли для cTrader. Установка в терминал или размещение на VPS оформляются отдельно; инструкции и актуальные условия — в канале.',
@@ -94,6 +95,7 @@ Object.assign(copy.ru, {
   openPlatforms: 'Открыть торговые площадки',
 });
 Object.assign(copy.en, {
+  inviteReward: 'You get 26 days PRO · your friend gets 7 days',
   signalsTitle: 'XAUUSD automated signals',
   signalsBody: 'Gold Scalping provides AI market analysis, automated gold (XAUUSD) signals and result reports. The Telegram bot delivers signals; trading decisions remain yours.',
   signalsBot: 'Optionally connect Skalp_XAUUSD, an automated trading bot for cTrader, to the same signals. Terminal installation or VPS hosting is arranged separately. See the channel for instructions and current terms.',
@@ -108,6 +110,7 @@ Object.assign(copy.en, {
   openPlatforms: 'Open trading platforms',
 });
 Object.assign(copy.ro, {
+  inviteReward: 'Tu primești 26 de zile PRO · prietenul 7 zile',
   signalsTitle: 'Semnale automate XAUUSD',
   signalsBody: 'Gold Scalping oferă analiză AI a pieței, semnale automate pentru aur (XAUUSD) și rapoarte de rezultate. Botul Telegram trimite semnalele; decizia de tranzacționare îți aparține.',
   signalsBot: 'Opțional, conectează Skalp_XAUUSD, un bot de tranzacționare automată pentru cTrader, la aceleași semnale. Instalarea în terminal sau găzduirea pe VPS se stabilesc separat. Instrucțiunile și condițiile actuale sunt pe canal.',
@@ -146,6 +149,7 @@ Object.assign(copy.ro, {
   capitalPoints:['Acțiuni, cripto, ETF și alte active','Cotații automate pentru cripto','Analiza portofoliului și istoricul operațiunilor'],
 });
 Object.assign(copy.zh, {
+  inviteReward: '你得26天PRO · 朋友得7天',
   proKicker: 'PRO · 一处掌握全貌', previewLive: '实时预览', previewPause: '已暂停', featureCount: '5项功能',
   capitalTeaser: '在一个视图中管理股票、加密货币和资本', walletTeaser: '独立管理个人资金', moneyTeaser: '发现可以留下更多的地方', traderTeaser: '交易、PnL和同步',
   receipt: '小票照片', receiptTeaser: '拍照即可将金额和商品加入日志', receiptTitle: '几秒钟即可将小票变成记录。', receiptBody: '拍下小票，DAYRIS会识别总额、商品和类别。保存前由您确认，无需手动录入。', receiptPoints: ['识别总额和商品', '保存前检查', '带照片的消费记录'], receiptFlow: ['1. 拍照', '2. 检查金额', '3. 保存'], receiptResult: '金额、商品和类别已经整理好。',
