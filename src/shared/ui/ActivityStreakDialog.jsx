@@ -84,12 +84,13 @@ export default function ActivityStreakDialog({
     const url = new URL('/?install=1', window.location.origin);
     if (code) url.searchParams.set('ref', code);
     const shareText = formatCountText(copy.shareText);
+    const caption = `${shareText} ${url.toString()}`;
     try {
       if (navigator.share && file && isAppleTouchDevice()) {
         // WebKit can reject a payload containing both `url` and `files`.
         // Put the URL in the caption so iOS keeps the image and the link together.
         try {
-          await navigator.share({ title: copy.title, text: `${shareText}\n${url.toString()}`, files: [file] });
+          await navigator.share({ title: copy.title, text: caption, files: [file] });
           return;
         } catch (error) {
           if (error?.name === 'AbortError') return;
@@ -101,11 +102,11 @@ export default function ActivityStreakDialog({
       } else if (navigator.share) {
         await navigator.share({ title: copy.title, text: shareText, url: url.toString() });
       } else {
-        try { await navigator.clipboard.writeText(url.toString()); } catch { /* download remains available */ }
+        try { await navigator.clipboard.writeText(caption); } catch { /* keep the dialog open */ }
       }
     } catch (error) {
       if (error?.name !== 'AbortError') {
-        try { await navigator.clipboard.writeText(url.toString()); } catch { /* keep the dialog open */ }
+        try { await navigator.clipboard.writeText(caption); } catch { /* keep the dialog open */ }
       }
     }
   }

@@ -1,5 +1,6 @@
 export const streakCopy = {
   ru: {
+    streakShareText: 'Я сохранил огонёк уже {0} 🔥\nПопробуй —',
     streakCardHeadline: 'МОЯ СЕРИЯ ВХОДОВ', streakDaysLong: 'серия ежедневных входов',
     streakProudLine: 'Захожу в календарь каждый день', streakRunUnit: '{0} подряд',
     streakRulesTitle: 'Как сохранить огонёк',
@@ -13,6 +14,7 @@ export const streakCopy = {
     streakStatusPaused: 'Серия сохранена после пропуска. Зайди завтра, чтобы продолжить.',
   },
   en: {
+    streakShareText: 'I have kept my flame going for {0} 🔥\nGive it a try —',
     streakCardHeadline: 'MY LOGIN STREAK', streakDaysLong: 'daily calendar visits',
     streakProudLine: 'I open my calendar every day', streakRunUnit: '{0} in a row',
     streakRulesTitle: 'Keep your flame going',
@@ -26,6 +28,7 @@ export const streakCopy = {
     streakStatusPaused: 'Streak saved after a missed day. Return tomorrow to continue.',
   },
   md: {
+    streakShareText: 'Mi-am păstrat flacăra deja de {0} 🔥\nÎncearcă —',
     streakCardHeadline: 'SERIA MEA DE CONECTĂRI', streakDaysLong: 'vizite zilnice în calendar',
     streakProudLine: 'Deschid calendarul în fiecare zi', streakRunUnit: '{0} la rând',
     streakRulesTitle: 'Cum păstrezi flacăra',
@@ -39,6 +42,7 @@ export const streakCopy = {
     streakStatusPaused: 'Seria a fost salvată după o absență. Revino mâine pentru a continua.',
   },
   uk: {
+    streakShareText: 'Я зберіг вогник уже {0} 🔥\nСпробуй —',
     streakCardHeadline: 'МОЯ СЕРІЯ ВІДВІДУВАНЬ', streakDaysLong: 'серія щоденних відвідувань',
     streakProudLine: 'Заходжу в календар щодня', streakRunUnit: '{0} поспіль',
     streakRulesTitle: 'Як зберегти вогник',
@@ -52,6 +56,7 @@ export const streakCopy = {
     streakStatusPaused: 'Серію збережено після пропуску. Зайди завтра, щоб продовжити.',
   },
   'zh-CN': {
+    streakShareText: '我的火焰已经保持了 {0} 🔥\n来试试 —',
     streakCardHeadline: '我的每日登录记录', streakDaysLong: '每日打开日历的连续记录',
     streakProudLine: '我每天都会打开日历', streakRunUnit: '{0}连续登录',
     streakRulesTitle: '如何守护你的火焰',

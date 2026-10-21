@@ -70,7 +70,7 @@ try {
         await page.locator('.activity-streak-primary').click();
         const payload = await page.evaluate(() => ({ text: window.sharedStreak.text, url: window.sharedStreak.url, name: window.sharedStreak.files[0].name, type: window.sharedStreak.files[0].type }));
         assert.equal(payload.name, 'dayris-streak-5.png'); assert.equal(payload.type, 'image/png');
-        assert.ok(payload.text.startsWith('Я сделал огонёк 🔥\nПопробуй и ты'));
+        assert.ok(payload.text.startsWith('Я сохранил огонёк уже 5 дней 🔥\nПопробуй —'));
         assert.ok((payload.url || payload.text).includes('ref=64511641'));
         const bytes = await page.evaluate(async () => Array.from(new Uint8Array(await window.sharedStreak.files[0].arrayBuffer())));
         await writeFile(`artifacts/streak-review/${platform}-5.png`, Buffer.from(bytes));

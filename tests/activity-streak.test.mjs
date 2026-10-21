@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { updateActivityStreak } from '../src/shared/lib/activityStreak.js';
+import { translate } from '../src/shared/i18n/index.js';
+import { streakDayLabel } from '../src/shared/i18n/streak.js';
+
+test('share captions include the real streak with correct Russian day forms', () => {
+  for (const [days, label] of [[1, '1 день'], [2, '2 дня'], [5, '5 дней'], [21, '21 день']]) {
+    assert.equal(translate('ru', 'streakShareText').replace('{0}', streakDayLabel(days, 'ru')),
+      `Я сохранил огонёк уже ${label} 🔥\nПопробуй —`);
+  }
+});
 
 test('starts and increments on consecutive calendar days', () => {
   const first = updateActivityStreak(null, '2026-10-10');
