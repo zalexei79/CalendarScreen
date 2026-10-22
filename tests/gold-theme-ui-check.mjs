@@ -43,6 +43,7 @@ try {
  releaseInitial();
  await page.waitForFunction(()=>document.documentElement.dataset.dayrisTheme==='gold');
  await page.clock.pauseAt(new Date('2026-10-15T13:00:00'));
+ assert.equal(await page.locator('html').getAttribute('data-gold-motion'),'');
  assert.equal(await page.locator('meta[name="theme-color"]').getAttribute('content'),'#0b0b0d');
  for(const width of [320,390,1280]) {
   await page.setViewportSize({width,height:width<640?844:950});await page.clock.runFor(600);
@@ -59,9 +60,30 @@ try {
   }
   await page.screenshot({path:`tests/gold-calendar-${width}.png`,animations:'disabled'});
  }
+ // A touch lights the local material without capturing gestures or changing data.
+ const touchCell=page.locator('.calendar-section:not(.calendar-month-preview) .calendar-day-surface[data-pnl-tone="loss"]').first();
+ const touchBox=await touchCell.boundingBox();
+ await touchCell.dispatchEvent('pointerdown',{pointerId:71,pointerType:'touch',isPrimary:true,clientX:touchBox.x+12,clientY:touchBox.y+18});
+ assert.equal(await touchCell.getAttribute('data-gold-lit'),'');
+ assert.match(await touchCell.evaluate(el=>el.style.getPropertyValue('--gold-pointer-x')),/%$/);
+ await touchCell.dispatchEvent('pointercancel',{pointerId:71,pointerType:'touch',isPrimary:true});
+ await page.clock.runFor(300);
+ assert.equal(await touchCell.getAttribute('data-gold-lit'),null,'Cancelled swipes release the material light');
+ const recordsBefore=await page.evaluate(()=>localStorage.getItem('money_calendar_trades_22222222-2222-4222-8222-222222222222'));
+ await page.getByRole('button',{name:'Следующий месяц',exact:true}).click();await page.clock.runFor(600);
+ await page.getByRole('button',{name:'Предыдущий месяц',exact:true}).click();await page.clock.runFor(600);
+ assert.equal(await page.locator('.pro-calendar-day .day-amount').count(),15,'Month motion preserves the calendar data');
+ assert.equal(await page.evaluate(()=>localStorage.getItem('money_calendar_trades_22222222-2222-4222-8222-222222222222')),recordsBefore);
+ await page.emulateMedia({reducedMotion:'reduce'});
+ await page.locator('html:not([data-gold-motion])').waitFor();
+ assert.equal(await page.locator('html').getAttribute('data-gold-motion'),null);
+ assert.equal(await page.evaluate(()=>document.getAnimations().filter(a=>a.id==='dayris-gold-motion').length),0,'Reduced motion cancels running gold effects');
+ await page.emulateMedia({reducedMotion:'no-preference'});
+ await page.locator('html[data-gold-motion]').waitFor();
  const cdp=await context.newCDPSession(page);
  await cdp.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-transparency',value:'reduce'}]});
  assert.equal(await page.locator('.dayris-header').evaluate(el=>getComputedStyle(el).backdropFilter),'none');
+ await page.screenshot({path:'tests/gold-reduced-transparency.png',animations:'disabled'});
  // Opaque fallback must still distinguish gains/losses and keep readable ink.
  const semanticContrast=await page.locator('.calendar-day-surface:not([data-pnl-tone="neutral"])').evaluateAll(cells=>{
   const rgb=s=>s.match(/[\d.]+/g).slice(0,3).map(Number);
@@ -69,7 +91,7 @@ try {
   return cells.map(el=>{const bg=getComputedStyle(el).backgroundColor,ink=getComputedStyle(el.querySelector('.day-amount')).color;const a=luminance(bg),b=luminance(ink);return {tone:el.dataset.pnlTone,rgb:rgb(bg),contrast:(Math.max(a,b)+.05)/(Math.min(a,b)+.05)};});
  });
  assert.ok(semanticContrast.every(s=>s.contrast>=4.5),'Reduced-transparency amounts meet 4.5:1 contrast');
- assert.ok(semanticContrast.every(s=>s.tone==='profit'?s.rgb[1]>s.rgb[0]*2:s.rgb[0]>s.rgb[1]*2),'Gains stay green and losses red');
+ assert.ok(semanticContrast.every(s=>s.tone==='profit'?s.rgb[1]>s.rgb[0]*2:s.rgb[0]>s.rgb[1]*2),`Gains stay green and losses red: ${JSON.stringify(semanticContrast)}`);
  await cdp.send('Emulation.setEmulatedMedia',{features:[]});
  await page.setViewportSize({width:390,height:844});
  await page.getByRole('button',{name:'Настройки',exact:true}).click();await page.clock.runFor(400);
@@ -82,11 +104,16 @@ try {
  await gold.scrollIntoViewIfNeeded();await page.screenshot({path:'tests/gold-settings-390.png',animations:'disabled'});
  await settings.getByRole('button',{name:'Светлое',exact:true}).click();await page.clock.runFor(600);
  assert.equal(await page.locator('html').getAttribute('data-dayris-theme'),'light');
+ assert.equal(await page.locator('html').getAttribute('data-gold-motion'),null,'Leaving Gold removes its event effects');
+ assert.equal(await page.evaluate(()=>document.getAnimations().filter(a=>a.id==='dayris-gold-motion').length),0);
  await gold.click();await page.clock.runFor(600);
  assert.equal(await page.locator('html').getAttribute('data-dayris-theme'),'gold');
  await emerald.click();await page.clock.runFor(600);
  assert.equal(await page.locator('html').getAttribute('data-dayris-theme'),'emerald');
  await emerald.scrollIntoViewIfNeeded();await page.screenshot({path:'tests/pro-theme-collection-390.png',animations:'disabled'});
+ await settings.getByRole('button',{name:'Закрыть настройки',exact:true}).click();await page.clock.runFor(400);
+ await page.screenshot({path:'tests/emerald-reference-390.png',animations:'disabled'});
+ await page.getByRole('button',{name:'Настройки',exact:true}).click();await page.clock.runFor(400);
  await gold.click();await page.clock.runFor(600);
  await settings.getByRole('button',{name:'Закрыть настройки',exact:true}).click();await page.clock.runFor(400);
  // Same PRO account may select Gold even with the FREE workspace view.
@@ -95,7 +122,7 @@ try {
  await page.locator('.workspace-mode-toggle').click();await page.clock.runFor(500);
  await page.getByRole('button',{name:'История',exact:true}).click();await page.clock.runFor(500);
  const history=page.locator('.financial-history-dialog');await history.waitFor();
- assert.equal(await history.evaluate(el=>getComputedStyle(el).getPropertyValue('--fh-gold').trim()),'#f4ca62');
+ assert.equal(await history.evaluate(el=>getComputedStyle(el).getPropertyValue('--fh-gold').trim()),'#ffe18a');
  await page.screenshot({path:'tests/gold-history-390.png',animations:'disabled'});
  await history.getByRole('button',{name:'Закрыть',exact:true}).click();await page.clock.runFor(500);
  // Confirmed revocation must immediately remove the paid palette.

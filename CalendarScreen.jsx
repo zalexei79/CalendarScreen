@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import './src/shared/ui/PurpleTheme.css';
 import './src/shared/ui/EmeraldGlass.css';
 import './src/shared/ui/GoldTheme.css';
+import useGoldMotion from './src/shared/ui/useGoldMotion.js';
 import { useWorkspaceViewport } from './src/shared/ui/useWorkspaceViewport';
 import WorkspaceDock from './src/shared/ui/WorkspaceDock';
 import MetaTraderControl from './src/features/metatrader/MetaTraderControl.jsx';
@@ -701,6 +702,7 @@ export default function CalendarScreen() {
   const requestedTheme = themePreference === 'system' ? systemTheme : themePreference;
   // Never render a paid palette before the current account's server entitlement.
   const theme = ['gold','emerald'].includes(requestedTheme) && !proAccessActive ? 'dark' : requestedTheme;
+  useGoldMotion(theme);
   function setTheme(value) {
     const next = typeof value === 'function' ? value(theme) : value;
     if (!['light', 'dark', 'purple', 'emerald', 'gold', 'system'].includes(next)) return;
@@ -5176,7 +5178,7 @@ export default function CalendarScreen() {
             onClick={() => openModal()}
             title={t('addAction')}
             aria-label={t('addAction')}
-            className={`group relative flex items-center gap-2 rounded-full px-3 sm:px-5 py-2 sm:py-2.5 font-medium transition-all duration-200 active:scale-[0.97] border ${
+            className={`calendar-dock-add group relative flex items-center gap-2 rounded-full px-3 sm:px-5 py-2 sm:py-2.5 font-medium transition-all duration-200 active:scale-[0.97] border ${
               isLight
                 ? 'border-slate-800 bg-slate-900 text-white hover:bg-slate-800 shadow-sm'
                 : 'border-zinc-700/80 bg-zinc-900 text-zinc-100 hover:border-amber-400/50 hover:bg-zinc-800 shadow-sm'

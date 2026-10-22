@@ -5,7 +5,7 @@ import path from 'node:path';
 const require = createRequire(path.resolve('package.json'));
 const { build } = require('esbuild');
 const palette=process.env.DAYRIS_TEST_THEME==='gold'?'gold':'emerald';
-const blur=palette==='gold'?24:28;
+const blur=28;
 const { chromium } = createRequire('C:/Users/aveel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/package.json')('playwright');
 const bundle = await build({ stdin: { resolveDir:process.cwd(), loader:'jsx', contents:`
 import React,{useState} from 'react';import {createRoot} from 'react-dom/client';
@@ -102,7 +102,7 @@ try {
  const session=await page.context().newCDPSession(page);
  await session.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-transparency',value:'reduce'}]});
  assert.equal((await glass(page.locator('.plan-dialog'))).blur,'none');
- assert.equal((await glass(page.locator('.plan-dialog'))).bg,palette==='gold'?'rgb(23, 22, 19)':'rgb(12, 38, 30)');
+ assert.equal((await glass(page.locator('.plan-dialog'))).bg,palette==='gold'?'rgb(21, 23, 27)':'rgb(12, 38, 30)');
  await session.send('Emulation.setEmulatedMedia',{features:[]});
  await page.evaluate(()=>window.setScreen('wallet'));
  await page.evaluate(()=>window.setTheme('dark'));
