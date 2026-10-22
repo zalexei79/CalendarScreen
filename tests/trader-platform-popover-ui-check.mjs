@@ -9,10 +9,12 @@ const bundle = await build({ stdin: { resolveDir: process.cwd(), loader: 'jsx', 
   import {createRoot} from 'react-dom/client';
   import Panel from './src/features/pro/WorkspaceModePanel.jsx';
   import './src/shared/ui/HeaderCompact.css';
+  import './src/shared/ui/GoldTheme.css';
   import {translate} from './src/shared/i18n';
   function App(){
     const [trader,setTrader]=useState(false),[action,setAction]=useState('');
     const p=new URLSearchParams(location.search), language=p.get('language')||'ru';
+    document.documentElement.dataset.dayrisTheme=p.has('light')?'light':'gold';
     return <><style>{'body{margin:0;padding:12px;box-sizing:border-box}*{box-sizing:border-box}'}</style>
       <header className="dayris-header"><Panel hideSelector proView walletAccess
         traderMode={trader} onTraderChange={()=>setTrader(!trader)} language={language}
@@ -25,7 +27,7 @@ const bundle = await build({ stdin: { resolveDir: process.cwd(), loader: 'jsx', 
 ` }, bundle:true, write:false, outfile:'trader.js', format:'iife', define:{'process.env.NODE_ENV':'"production"'} });
 const js = bundle.outputFiles.find(file=>file.path.endsWith('.js')).text;
 const css = bundle.outputFiles.find(file=>file.path.endsWith('.css')).text;
-const browser = await require('playwright').chromium.launch({channel:'msedge',headless:true});
+const browser = await (process.env.DAYRIS_TEST_WEBKIT ? require('playwright').webkit.launch({headless:true}) : require('playwright').chromium.launch({channel:'msedge',headless:true}));
 try {
   const page = await browser.newPage();
   const errors=[];
@@ -47,8 +49,12 @@ try {
       await trigger.click();
       await assert.doesNotReject(()=>popup.waitFor({state:'visible'}));
       await page.waitForFunction(()=>document.querySelector('.pro-platform-trigger').getAttribute('aria-expanded')==='true');
+      await popup.evaluate(element=>Promise.all(element.getAnimations({subtree:true}).map(animation=>animation.finished)));
       if(width===390 && language==='ru' && !light) await page.screenshot({path:'artifacts/trader-platform-popover-mobile.png'});
       const box=await popup.boundingBox();
+      assert.ok(box.height<=210,`three tools must stay compact, got ${box.height}px`);
+      const tools=await page.locator('.pro-platform-row').boundingBox();
+      assert.ok(box.height<=tools.height+20,'no empty space below tools');
       assert.ok(box.x>=0 && box.x+box.width<=width,'popup stays within phone');
       assert.ok(Math.abs((await header.boundingBox()).height-before.height)<1,'tools do not shift calendar');
       await page.locator('.pro-control-connect').first().click();

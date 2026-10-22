@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v49-trader-platform-popover';
+const CACHE_NAME = 'atj-cache-v50-compact-platform-popover';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

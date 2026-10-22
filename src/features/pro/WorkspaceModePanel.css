@@ -170,13 +170,14 @@
   .pro-platform-reveal.pro-platform-popover {
     position:fixed; inset:var(--platform-popover-top,140px) auto auto var(--platform-popover-left,12px);
     width:min(300px,calc(100vw - 24px)); margin:0; padding:8px; box-sizing:border-box;
+    display:block; height:fit-content; min-height:0;
     max-height:calc(100dvh - var(--platform-popover-top,140px) - 12px); overflow:auto;
     border:1px solid var(--pro-line); border-radius:16px;
     background:var(--pro-bg); color:var(--pro-text); box-shadow:0 12px 36px #0004;
-    grid-template-rows:1fr; opacity:1; visibility:visible; transition:none;
+    grid-template-rows:none; opacity:1; visibility:visible; transition:none;
   }
   .pro-platform-popover:not(:popover-open) { display:none; }
-  .pro-platform-popover .pro-platform-clip { overflow:visible; }
+  .pro-platform-popover .pro-platform-clip { display:block; height:auto; min-height:0; overflow:visible; }
   .dayris-header .pro-platform-popover .pro-platform-row,
   .pro-platform-popover .pro-platform-row {
     grid-template-columns:minmax(0,1fr); margin:0; padding:0; border:0; transform:none;
@@ -184,4 +185,17 @@
   .pro-platform-popover .pro-control-platform { min-height:48px; }
   .pro-platform-popover .pro-platform-label strong { font-size:12px; }
   .pro-platform-popover .pro-platform-label small { font-size:10px; }
+}
+@media(max-width:639px) and (prefers-reduced-motion:no-preference) {
+  .pro-platform-popover:popover-open {
+    transform-origin:top right;
+    animation:platform-popover-enter 220ms cubic-bezier(.2,0,0,1) both;
+  }
+  .pro-platform-popover .pro-control-platform {
+    transform:none; transition:none;
+  }
+  @keyframes platform-popover-enter {
+    from { opacity:0; transform:translateY(-5px) scale(.985); }
+    to { opacity:1; transform:none; }
+  }
 }
