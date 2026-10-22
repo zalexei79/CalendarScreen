@@ -156,3 +156,32 @@
 .workspace-mode-panel .pro-control-trader{grid-column:3}.workspace-mode-panel .workspace-selector{grid-column:4}
 @media(max-width:380px){.workspace-mode-panel{grid-template-columns:1fr 1fr 88px}.workspace-mode-panel .pro-control-trader{grid-column:2}.workspace-mode-panel .workspace-selector{grid-column:3}.workspace-capital-entry{grid-column:1/-1;grid-row:2;min-height:36px;justify-self:start}.workspace-mode-panel .pro-platform-reveal{grid-row:3}}
 @media(min-width:1024px){.workspace-mode-panel.is-pro .pro-platform-reveal{grid-column:1/-1;grid-row:2;grid-template-rows:0fr}.workspace-mode-panel.is-pro .pro-platform-reveal.is-open{grid-template-rows:1fr}.workspace-mode-panel.is-pro .pro-platform-row{margin-top:6px}.wallet-entry-caption{display:none}}
+
+.pro-platform-trigger { display:none; }
+@media(max-width:639px) {
+  .pro-platform-trigger {
+    grid-column:3; grid-row:1; justify-self:end; display:grid; place-items:center;
+    width:32px; min-height:44px; padding:0; border:0; border-radius:9px;
+    background:transparent; color:var(--pro-gold); cursor:pointer;
+  }
+  .pro-platform-trigger svg { width:17px; height:17px; }
+  .pro-platform-trigger[aria-expanded=true] { background:color-mix(in srgb,var(--pro-gold) 12%,transparent); }
+  .pro-platform-trigger:focus-visible { outline:2px solid var(--pro-gold); outline-offset:2px; }
+  .pro-platform-reveal.pro-platform-popover {
+    position:fixed; inset:var(--platform-popover-top,140px) auto auto var(--platform-popover-left,12px);
+    width:min(300px,calc(100vw - 24px)); margin:0; padding:8px; box-sizing:border-box;
+    max-height:calc(100dvh - var(--platform-popover-top,140px) - 12px); overflow:auto;
+    border:1px solid var(--pro-line); border-radius:16px;
+    background:var(--pro-bg); color:var(--pro-text); box-shadow:0 12px 36px #0004;
+    grid-template-rows:1fr; opacity:1; visibility:visible; transition:none;
+  }
+  .pro-platform-popover:not(:popover-open) { display:none; }
+  .pro-platform-popover .pro-platform-clip { overflow:visible; }
+  .dayris-header .pro-platform-popover .pro-platform-row,
+  .pro-platform-popover .pro-platform-row {
+    grid-template-columns:minmax(0,1fr); margin:0; padding:0; border:0; transform:none;
+  }
+  .pro-platform-popover .pro-control-platform { min-height:48px; }
+  .pro-platform-popover .pro-platform-label strong { font-size:12px; }
+  .pro-platform-popover .pro-platform-label small { font-size:10px; }
+}

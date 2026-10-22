@@ -8,7 +8,7 @@ import './WorkspaceModePanel.css';
 
 export default function WorkspaceModePanel({ hideSelector = false, proView, onModeChange, isLight, language, currency, t, traderMode, onTraderChange, onWallet, onCapital, walletAccess = false, walletLoading = false, onConnect, connected, metatrader, reconnect, onOffer }) {
   const text = (r,e,m,z) => platformText(language,r,e,m,z);
-  const financialProActive = proView && !traderMode && walletAccess && !walletLoading;
+  const financialProActive = proView && walletAccess && !walletLoading;
   return <div className={`workspace-mode-group ${isLight ? 'pro-light' : ''}`}>
     <section className={`workspace-mode-panel ${hideSelector ? "compact-tool-rail" : ""} ${proView ? 'is-pro' : 'is-free'} ${traderMode ? 'is-trader' : ''} ${isLight ? 'pro-light' : ''}`} aria-label={text('Режим и инструменты DAYRIS','DAYRIS mode and tools','Mod și instrumente DAYRIS', "DAYRIS 模式和工具")}>
     {financialProActive && <WalletEntry language={language} access onOpen={onWallet} onOffer={onOffer}/>}

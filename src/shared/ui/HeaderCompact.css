@@ -41,3 +41,15 @@
   .dayris-header button,.monthly-goal-bar button,.monthly-goal-bar > .grid,.header-mode-control .workspace-mode-toggle > span { transition:none!important; animation:none!important; }
   .dayris-header button:active,.monthly-goal-bar button:active { transform:none; }
 }
+
+/* Mobile broker tools float above the calendar, keeping destinations in place. */
+@media(max-width:639px) {
+  .dayris-header .workspace-mode-panel.compact-tool-rail {
+    grid-template-columns:auto auto minmax(32px,1fr) auto;
+    column-gap:6px;
+  }
+  .dayris-header .compact-tool-rail .pro-control-trader { grid-column:4; grid-row:1; }
+  .dayris-header .compact-tool-rail .wallet-entry { gap:5px; }
+  .dayris-header .compact-tool-rail .wallet-entry-heading { font-size:11px; }
+  .dayris-header .compact-tool-rail .workspace-capital-entry { gap:4px; }
+}
