@@ -1,4 +1,9 @@
 const rows = {
+  scanHold: ["Чек найден. Не двигайте телефон","Receipt found. Hold steady","Bon găsit. Ține telefonul nemișcat","已检测到收据，请保持稳定"],
+  scanAutoHint: ["Снимем автоматически, когда чек будет неподвижен","Captures automatically when the receipt is steady","Fotografiem automat când bonul este nemișcat","收据稳定后将自动拍摄"],
+  scanAuto: ["Авто","Auto","Auto","自动"],
+  scanAutoOn: ["Вкл.","On","Pornit","开"],
+  scanAutoOff: ["Выкл.","Off","Oprit","关"],
   scanTitle: ["Сканировать чек","Scan receipt","Scanează bonul","扫描收据"],
   scanFrame: ["Поместите чек в рамку","Place receipt inside frame","Încadrează bonul","将收据放入框内"],
   scanTip: ["Весь чек вместе с итогом • Без бликов","Include the total • Avoid glare","Include totalul • Fără reflexii","包含总额 • 避免反光"],
