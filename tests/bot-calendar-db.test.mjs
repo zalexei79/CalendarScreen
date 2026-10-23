@@ -21,6 +21,7 @@ test('public bot snapshot: account pinning, cutoff, atomicity, leases, redaction
       alter table public.ctrader_accounts enable row level security;
       alter table public.trades enable row level security;`);
     await db.exec(await readFile('supabase/migrations/202610230001_bot_calendar.sql','utf8'));
+    await db.exec(await readFile('supabase/migrations/202610230002_bot_calendar_history.sql','utf8'));
     // No source exists yet: never invent successful results.
     let source = (await db.query("select public.claim_bot_calendar('bot') as value")).rows[0].value;
     assert.equal(source,null);
@@ -39,7 +40,7 @@ test('public bot snapshot: account pinning, cutoff, atomicity, leases, redaction
     data = (await db.query("select public.get_bot_calendar('bot','2026-10-01') as value")).rows[0].value;
     assert.equal(data.status,'ready'); assert.equal(data.days.length,1); assert.equal(Number(data.days[0].pnl),12.3);
     assert.equal(data.days[0].count,1);
-    for (const privateKey of ['source_account_id','user_id','lease_token','last_error','access_token','balance']) assert.equal(privateKey in data,false);
+    for (const privateKey of ['source_account_id','user_id','lease_token','last_error','access_token','balance','account_number','is_live','broker','broker_account_id']) assert.equal(privateKey in data,false);
     assert.equal((await db.query("select public.get_bot_calendar('missing','2026-10-01') as value")).rows[0].value,null);
     await assert.rejects(db.query("select public.get_bot_calendar('bot','2026-09-01')"),/MONTH_OUT_OF_RANGE/);
     await assert.rejects(db.query("select public.get_bot_calendar_day('bot','2026-10-04')"),/DAY_OUT_OF_RANGE/);
@@ -71,6 +72,27 @@ test('public bot snapshot: account pinning, cutoff, atomicity, leases, redaction
     await db.query('insert into public.ctrader_accounts values(gen_random_uuid(),$1,$2,false)',[other,'47484897']);
     await db.exec("insert into public.bot_calendars(slug,title,broker_account_id,is_live,start_date) values('ambiguous','Test','47484897',false,'2026-10-05')");
     assert.equal((await db.query("select public.claim_bot_calendar('ambiguous') as value")).rows[0].value,null);
-    assert.equal((await db.query("select public.claim_bot_calendar('bot') as value")).rows[0].value.source_account_id,account);
+    source=(await db.query("select public.claim_bot_calendar('bot') as value")).rows[0].value;
+    assert.equal(source.source_account_id,account);
+    await publish(Array.from({length:105},(_,i)=>({...deal,deal_id:String(i+1),date_key:i<55?'2026-10-05':'2026-10-06',pnl:i<55?'1':'2'})));
+    await db.exec("insert into public.bot_calendar_deals values('ambiguous','999','2026-10-06','12:00','PRIVATE','LONG',9999,'USD')");
+    for(const role of ['anon','authenticated']) {
+      await db.exec(`set role ${role}`);
+      const query=(from=null,to=null,offset=0)=>db.query('select public.get_bot_calendar_history($1,$2,$3,$4) as value',['bot',from,to,offset]);
+      const all=(await query()).rows[0].value;
+      assert.equal(all.total,105);assert.equal(all.all_total,105);assert.equal(Number(all.pnl),155);assert.equal(all.trades.length,100);
+      assert.equal(all.from,'2026-10-05');assert.equal(all.trades[0].date_key,'2026-10-06');
+      const next=(await query(null,null,100)).rows[0].value;
+      assert.equal(next.trades.length,5);assert.equal(next.total,105);assert.equal(Number(next.pnl),155);
+      assert.equal(new Set([...all.trades,...next.trades].map(t=>t.deal_id)).size,105);
+      const filtered=(await query('2026-10-06','2026-10-06')).rows[0].value;
+      assert.equal(filtered.total,50);assert.equal(filtered.all_total,105);assert.equal(Number(filtered.pnl),100);
+      assert.ok(filtered.trades.every(t=>t.date_key==='2026-10-06'&&t.instrument!=='PRIVATE'));
+      for(const [from,to,offset] of [['2026-10-04','2026-10-06',0],['2026-10-06','2026-10-05',0],['2026-10-05','2099-01-01',0],[null,null,-1],[null,null,null]]) await assert.rejects(query(from,to,offset),/PERIOD_OUT_OF_RANGE/);
+      const empty=(await query('2026-10-07','2026-10-07')).rows[0].value;
+      assert.equal(empty.total,0);assert.equal(empty.pnl,0);assert.deepEqual(empty.trades,[]);
+      for(const forbidden of ['account_number','user_id','is_live','broker','source_account_id','access_token']) assert.equal(forbidden in all,false);
+      await db.exec('reset role');
+    }
   } finally { await db.close(); }
 });

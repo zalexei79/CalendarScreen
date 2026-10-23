@@ -28,3 +28,23 @@ export function money(value, currency = 'USD', signed = false) {
 export function dateLabel(key, options = { day: 'numeric', month: 'long', year: 'numeric' }) {
   return new Intl.DateTimeFormat('ru-RU', { ...options, timeZone: 'UTC' }).format(new Date(`${key}T12:00:00Z`));
 }
+
+export function calendarCells(month, today) {
+  const [year, number] = month.split('-').map(Number);
+  const offset = (new Date(year, number - 1, 1).getDay() + 6) % 7;
+  return monthCells(month).map((_, i) => {
+    const date = new Date(year, number - 1, i + 1 - offset, 12);
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return { key, date, inMonth: key.slice(0, 7) === month.slice(0, 7), isToday: key === today };
+  });
+}
+
+export function tradeCount(count) {
+  const n = Number(count), two = n % 100;
+  const unit = two >= 11 && two <= 14 ? 'сделок' : n % 10 === 1 ? 'сделка' : n % 10 >= 2 && n % 10 <= 4 ? 'сделки' : 'сделок';
+  return `${n} ${unit}`;
+}
+
+export function publicCalendarUrl(origin = window.location.origin) {
+  return new URL(BOT_CALENDAR_URL, origin).href;
+}

@@ -2,6 +2,12 @@
 
 Entry: `/?calendar=bot` (also `/bot` on SPA hosts). The PRO Trader panel links
 to it without requiring PRO or sign-in. “Создать свой календарь” returns to `/`.
+The calendar reuses DAYRIS day cells. Its compact menu holds bot parameters,
+history, sharing and the home link. The separate copy icon copies a canonical
+`/?calendar=bot` URL, stripping any unrelated query/hash. Native sharing uses
+the same URL; cancellation never claims success or copies unexpectedly.
+Clipboard uses the synchronous Safari selection fallback and exposes a
+selectable link if copying is denied.
 “Параметры бота” displays the explicit whitelist from the owner-provided
 `work, XAUUSD m1.cbotset`, received 23 October 2026. No arbitrary file is served.
 Settings are a supplied snapshot, not telemetry or a claim about historical settings.
@@ -13,6 +19,8 @@ The displayed current balance is not used as starting capital or fabricated PnL.
 ## Deployment
 
 1. Apply `supabase/migrations/202610230001_bot_calendar.sql` as database owner.
+   Then apply `202610230002_bot_calendar_history.sql` for range history and
+   removal of broker account/environment metadata from the public response.
 2. Apply `supabase/bot-calendar-bind.sql` to pin the unique active administrator's
    connected account. An ambiguous or missing source fails closed. The worker
    independently checks the broker account ID and live/demo environment.
@@ -30,8 +38,12 @@ The displayed current balance is not used as starting capital or fabricated PnL.
 ## Boundaries
 
 Personal `trades`, balances, user IDs, comments and cTrader tokens are never
-public. New tables have RLS and no direct client grants. The two anonymous RPCs
-return only bounded month summaries and pages of 100 deals for one day.
+public. Broker account IDs and environment are private configuration and do not
+appear in the public page or month/history API. New tables have RLS and no direct
+client grants. The month RPC returns bounded summaries. `get_bot_calendar_history`
+supports all history or inclusive dates, returning pages of 100 broker deals,
+the complete filtered count/PnL and the overall publication count. Pagination
+does not change the totals. The original day RPC remains available for compatibility.
 The server loads a complete broker snapshot, filters out pre-cutoff rows, then
 publishes it atomically under a five-minute lease. Failure preserves the last
 complete snapshot; stale data is labelled after 30 hours. Retries do not duplicate
@@ -45,6 +57,7 @@ separate closing deals, consistent with the personal cTrader importer.
 
 `node tests/bot-calendar-ui-check.mjs` checks Chromium and WebKit at phone,
 tablet and desktop widths, read-only controls, cutoff, pending/error/delayed
-states, history pagination, settings and the home CTA.
+states, all/range totals, history pagination, parameters, the home link and
+copy/native sharing success, cancellation and denial.
 
 `npm run build`

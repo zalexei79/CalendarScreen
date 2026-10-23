@@ -21,6 +21,9 @@ export default function CalendarDayCell({
   isLight,
   onSelect,
   formatPnlDisplay,
+  disabled = false,
+  ariaLabel,
+  caption,
 }) {
   const [todayPulse, setTodayPulse] = useState(false);
 
@@ -96,6 +99,7 @@ export default function CalendarDayCell({
   return (
     <>
       <button
+        disabled={disabled}
         onPointerMove={(event) => {
           if (event.pointerType !== 'mouse' || document.documentElement.dataset.dayrisTheme !== 'emerald' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
           const rect = event.currentTarget.getBoundingClientRect();
@@ -110,7 +114,7 @@ export default function CalendarDayCell({
         data-in-month={String(cell.inMonth)}
         data-today-cell={cell.isToday ? 'true' : undefined}
         data-first-entry={cell.isToday && firstEntryLabel ? 'true' : undefined}
-        aria-label={cell.isToday && firstEntryLabel ? firstEntryLabel : undefined}
+        aria-label={ariaLabel || (cell.isToday && firstEntryLabel ? firstEntryLabel : undefined)}
         aria-describedby={cell.isToday && firstEntryLabel ? 'first-calendar-entry-hint' : undefined}
         onClick={onSelect}
         style={{ ...heatmapStyle, ...proStyle }}
@@ -201,6 +205,7 @@ export default function CalendarDayCell({
             )}
           </span>
           )}
+          {caption}
           {hasPlans && (
             <span className={`inline-flex w-fit max-w-full items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] sm:text-[10px] ${isLight ? 'bg-slate-100 text-slate-500' : 'bg-white/[0.04] text-zinc-500'}`} aria-label={`${planLabel}: ${plans.length}`} title={`${planLabel}: ${plans.map((plan) => `${plan.title}${plan.amount == null ? '' : `: ${formatPlanAmount?.(plan) || plan.amount}`}`).join(', ')}`}>
               <Clock3 size={11} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />
