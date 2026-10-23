@@ -6,7 +6,13 @@ Created from the user's supplied `Фото 1.jpg` and the supplied onboarding fi
 - `presenter-angry.webp`: single transparent pointing character, stern expression.
 - `idle-desktop.webp`, `idle-mobile.webp`: background restoration plates. Only masked regions behind the presenter and connector are displayed; the original film retains the rest of the interface.
 
-The waiting scene starts after the film ends. At 15 visible seconds it becomes sad; at 20 it becomes angry and starts a 10-second countdown. At 30 only the restart action remains. The character smiles again and points at restart, with a flowing connector and an ambient calendar behind it. Restart replays the life-to-calendar animation and film without changing the user's setup or entries. Background tabs pause the waiting clock. Reduced motion disables continuous movement and crossfades.
+The waiting scene starts after the film ends. At 15 visible seconds it becomes sad; at 20 it becomes angry and starts a 10-second countdown. At 30 only the restart action remains. The character smiles again and points at restart, with a flowing connector and an ambient calendar behind it. From there, smile, sadness and anger repeat every 10 visible seconds. Restart replays the life-to-calendar animation and film without changing the user's setup or entries. Background tabs pause the waiting clock. Reduced motion disables continuous movement and morph animation.
+
+## Face morph geometry
+
+`presenter-mesh.json` contains 468 face landmarks per expression, the canonical tessellation and face contour. These were prepared locally using MediaPipe Face Landmarker 0.10.14 ([Google documentation](https://developers.google.com/edge/mediapipe/solutions/vision/face_landmarker/web_js)). Neither the detector nor its model is loaded by the app.
+
+The renderer aligns the eye corners, anchors the outer contour to the smiling head, then interpolates facial geometry and texture over 3.2 seconds using a smooth quintic curve. Hair, torso and pointing hand always use the same smiling body. Eye/mouth openings are explicitly filled so the old smile cannot show through closed lips. WebGL renders the small face overlay; Canvas 2D provides the same mesh warp when graphics acceleration is unavailable. Rapid expression changes start from the current blend rather than snapping to a previous image.
 
 ## Generation prompts
 

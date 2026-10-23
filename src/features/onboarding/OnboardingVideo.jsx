@@ -33,9 +33,29 @@ export default function OnboardingVideo({ active, onStart, onSkip, onRestart, th
   const [playBlocked, setPlayBlocked] = useState(false);
   const [idleStarted, setIdleStarted] = useState(false);
   const [idleSeconds, setIdleSeconds] = useState(0);
+  const [restartEmotionIndex, setRestartEmotionIndex] = useState(0);
   const emotion = idleSeconds >= 20 ? 'angry' : idleSeconds >= 15 ? 'sad' : 'smile';
   const countdown = idleSeconds >= 20 ? Math.max(0, 30 - idleSeconds) : null;
   const expired = phase === 'expired';
+
+  useEffect(() => {
+    if (!expired) return;
+    let interval, started = null, elapsed = 0;
+    setRestartEmotionIndex(0);
+    const tick = () => {
+      if (phaseRef.current !== 'expired') { clearInterval(interval); return; }
+      setRestartEmotionIndex(Math.floor((elapsed + (started === null ? 0 : performance.now() - started)) / 10000) % 3);
+    };
+    const visibility = () => {
+      clearInterval(interval);
+      if (started !== null) elapsed += performance.now() - started;
+      started = document.hidden ? null : performance.now();
+      if (started !== null) { tick(); interval = setInterval(tick, 250); }
+    };
+    visibility();
+    document.addEventListener('visibilitychange', visibility);
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', visibility); };
+  }, [expired]);
 
   useEffect(() => {
     if (phase !== 'ready') return;
@@ -188,7 +208,7 @@ export default function OnboardingVideo({ active, onStart, onSkip, onRestart, th
         <div className="onboarding-restart-brand"><BrandIcon />DAYRIS</div>
         <div className="onboarding-restart-calendar">{Array.from({ length: 35 }, (_, index) => <span key={index} style={{ '--cell': index }} />)}</div>
       </div>}
-      <OnboardingIdleScene mobile={mobile} visible={idleStarted} emotion={expired ? 'smile' : emotion} expired={expired} waiting={phase === 'ready' || expired} />
+      <OnboardingIdleScene mobile={mobile} visible={idleStarted} emotion={expired ? ['smile', 'sad', 'angry'][restartEmotionIndex] : emotion} expired={expired} waiting={phase === 'ready' || expired} />
       {entryReady && phase !== 'returning' && !expired && <>
         <button type="button" className="onboarding-video-calendar-action" aria-label="Добавить первую запись в календаре" onClick={() => leave('entry')}><span className="sr-only">Добавить первую запись</span></button>
         <button type="button" className="onboarding-video-speaker-action" onClick={() => leave('entry')}><span>Попробуй сейчас</span><strong>Добавить запись <ArrowRight size={16} /></strong></button>

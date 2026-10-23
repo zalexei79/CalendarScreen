@@ -3,6 +3,7 @@ import desktopPlate from '../../assets/onboarding/idle-desktop.webp';
 import mobilePlate from '../../assets/onboarding/idle-mobile.webp';
 import presenter from '../../assets/onboarding/presenter-emotions.webp';
 import angryPresenter from '../../assets/onboarding/presenter-angry.webp';
+import PresenterFaceMorph from './PresenterFaceMorph.jsx';
 import './OnboardingIdleScene.css';
 
 // Only restore the areas occupied by the baked-in presenter and connector.
@@ -16,10 +17,10 @@ export default function OnboardingIdleScene({ mobile, visible, emotion, expired,
     <img className="onboarding-idle-plate onboarding-idle-person-plate" src={plate} alt="" onLoad={() => markLoaded('plate')} />
     <img className="onboarding-idle-plate onboarding-idle-line-plate" src={plate} alt="" />
     <img className="onboarding-idle-preload" src={presenter} alt="" onLoad={() => markLoaded('presenter')} />
+    <img className="onboarding-idle-preload" src={angryPresenter} alt="" onLoad={() => markLoaded('angry')} />
     <div className="onboarding-idle-presenter">
       <div className="onboarding-idle-face is-smiling" style={{ backgroundImage: `url(${presenter})` }} />
-      <div className="onboarding-idle-face is-sad" style={{ backgroundImage: `url(${presenter})` }} />
-      <img className="onboarding-idle-face is-angry" src={angryPresenter} alt="" onLoad={() => markLoaded('angry')} />
+      <PresenterFaceMorph emotion={emotion} sheet={presenter} angry={angryPresenter} active={Boolean(visible && prepared && waiting)} />
     </div>
     <svg className="onboarding-idle-connector" viewBox="0 0 1000 1000" preserveAspectRatio="none">
       <path className="onboarding-idle-flow" d={expired ? mobile ? 'M 389 855 Q 425 860 460 860' : 'M 341 773 C 439 773 527 825 605 825' : mobile ? 'M 389 855 Q 419 838 453 818' : 'M 341 773 C 425 787 583 935 680 939'} />

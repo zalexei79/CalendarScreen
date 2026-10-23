@@ -8,13 +8,9 @@
 .onboarding-idle-preload { display: none; }
 .onboarding-idle-presenter { position: absolute; left: 2%; bottom: 2.3%; width: 35.5%; aspect-ratio: 972/809; transform-origin: 50% 100%; animation: onboarding-presenter-breathe 4.6s ease-in-out infinite; }
 .is-mobile .onboarding-idle-presenter { left: -7%; bottom: 5.5%; width: 50%; }
-.onboarding-idle-face { position: absolute; inset: 0; display: block; width: 100%; height: 100%; background-repeat: no-repeat; background-size: 200% 100%; transition: opacity 1200ms ease-in-out; }
+.onboarding-idle-face { position: absolute; inset: 0; display: block; width: 100%; height: 100%; background-repeat: no-repeat; background-size: 200% 100%; }
 .onboarding-idle-face.is-smiling { background-position: left center; }
-.onboarding-idle-face.is-sad { background-position: right center; opacity: 0; clip-path: inset(0 0 0 4%); }
-.onboarding-idle-face.is-angry { object-fit: fill; opacity: 0; }
-.onboarding-idle[data-emotion="sad"] .is-smiling, .onboarding-idle[data-emotion="angry"] .is-smiling { opacity: 0; }
-.onboarding-idle[data-emotion="sad"] .is-sad { opacity: 1; }
-.onboarding-idle[data-emotion="angry"] .is-angry { opacity: 1; }
+.onboarding-presenter-morph { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .onboarding-idle-connector { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; animation: onboarding-connector-float 4.6s ease-in-out infinite; }
 .onboarding-idle-flow { fill: none; stroke: #e0d298; stroke-width: 2; stroke-linecap: round; stroke-dasharray: 4 8; vector-effect: non-scaling-stroke; animation: onboarding-connector-flow 1.6s linear infinite; }
 .onboarding-idle-endpoint { fill: #f4e5a2; filter: drop-shadow(0 0 5px #e6d587); }

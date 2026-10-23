@@ -108,14 +108,20 @@ try {
         assert.notEqual(before.flow, after.flow, 'Connector keeps flowing');
         await page.clock.runFor(10000);
         assert.equal(await scene.getAttribute('data-emotion'), 'sad');
+        await page.clock.runFor(1600);
+        const blend = (await page.locator('.onboarding-presenter-morph').getAttribute('data-weights')).split(',').map(Number);
+        assert.ok(blend[0] > .25 && blend[0] < .75 && blend[1] > .25 && blend[1] < .75, 'The face is genuinely intermediate halfway through the morph');
+        await page.screenshot({ path: `tests/onboarding-video-${item.name}-morph.png`, animations: 'disabled' });
+        await page.clock.runFor(1700);
         await page.screenshot({ path: `tests/onboarding-video-${item.name}-sad.png`, animations: 'disabled' });
-        await page.clock.runFor(5000);
+        await page.clock.runFor(1700);
         assert.equal(await scene.getAttribute('data-emotion'), 'angry');
         assert.equal(await page.getByRole('timer').innerText(), '10');
         await page.screenshot({ path: `tests/onboarding-video-${item.name}-angry.png`, animations: 'disabled' });
         for (let value = 9; value >= 1; value--) {
           await page.clock.runFor(1000);
           assert.equal(await page.getByRole('timer').innerText(), String(value));
+          if (value === 6) await page.screenshot({ path: `tests/onboarding-video-${item.name}-angry.png`, animations: 'disabled' });
         }
         await page.clock.runFor(1000);
         await page.locator('.onboarding-video[data-phase="expired"]').waitFor();
@@ -130,7 +136,15 @@ try {
           return { x: frame.left + Number(dot.getAttribute('cx')) / 1000 * frame.width, y: frame.top + Number(dot.getAttribute('cy')) / 1000 * frame.height, button: button.toJSON() };
         });
         assert.ok(pointing.x >= pointing.button.left - 16 && pointing.x <= pointing.button.right + 8 && pointing.y >= pointing.button.top - 10 && pointing.y <= pointing.button.bottom + 10, `The finger connector reaches restart: ${JSON.stringify(pointing)}`);
+        await page.clock.runFor(3300);
         await page.screenshot({ path: `tests/onboarding-video-${item.name}-expired.png`, animations: 'disabled' });
+        await page.clock.runFor(6700);
+        assert.equal(await scene.getAttribute('data-emotion'), 'sad', 'Completed scene changes expression after ten seconds');
+        await page.clock.runFor(10000);
+        assert.equal(await scene.getAttribute('data-emotion'), 'angry');
+        await page.clock.runFor(10000);
+        assert.equal(await scene.getAttribute('data-emotion'), 'smile', 'Completed scene repeats the emotion cycle');
+        assert.equal(await page.locator('.first-run-dialog button').count(), 1);
         await page.keyboard.press('Escape');
         assert.equal(await page.locator('.first-run-dialog').count(), 1, 'Expired introduction offers the requested restart');
         await page.getByRole('button', { name: 'Начать всё сначала', exact: true }).click();

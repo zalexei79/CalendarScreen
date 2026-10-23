@@ -1,0 +1,6 @@
+<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/></head><body style="margin:0;background:#09191a;color:white"><div id="root"></div><script type="module">
+import React,{useState} from 'react';import{createRoot}from'react-dom/client';
+import OnboardingIdleScene from '../src/features/onboarding/OnboardingIdleScene.jsx';
+function App(){const[emotion,setEmotion]=useState('smile');return React.createElement(React.Fragment,null,React.createElement('nav',null,['smile','sad','angry'].map(e=>React.createElement('button',{key:e,onClick:()=>setEmotion(e)},e))),React.createElement('div',{className:'onboarding-video-frame',style:{position:'relative',width:972,height:809}},React.createElement(OnboardingIdleScene,{mobile:false,visible:true,waiting:true,emotion,expired:true})));}
+createRoot(document.getElementById('root')).render(React.createElement(App));
+</script><style>.onboarding-idle-presenter{left:0!important;bottom:0!important;width:100%!important;animation:none!important}.onboarding-idle-connector{display:none}.onboarding-video-frame{transform:none!important;opacity:1!important;left:0!important;top:0!important}nav{height:40px}button{padding:8px 24px}</style></body></html>
