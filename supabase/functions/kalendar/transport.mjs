@@ -85,4 +85,3 @@ async function refresh(db, userId, token, clientId, clientSecret) {
 
 
 export { encodeRequest, connect, refresh };
-
