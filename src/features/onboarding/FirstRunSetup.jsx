@@ -98,6 +98,7 @@ export default function FirstRunSetup({ step, language, currency, theme, themePr
   const [selectedCurrency, setSelectedCurrency] = useState(null);
   const [dateError, setDateError] = useState(false);
   const [videoActive, setVideoActive] = useState(false);
+  const [videoRun, setVideoRun] = useState(0);
   const story = step === 'intro';
   const videoAvailable = story && lang === 'ru' && !personalStory;
   const light = theme === 'light';
@@ -134,12 +135,12 @@ export default function FirstRunSetup({ step, language, currency, theme, themePr
     if (story) dialogRef.current?.querySelector('#first-run-heading')?.focus();
     else headingRef.current?.focus();
     dialogRef.current?.scrollTo(0, 0);
-  }, [step]);
+  }, [step, videoActive]);
 
   return (
     <dialog ref={dialogRef} lang={lang==='zh'?'zh-CN':lang} data-theme={theme} data-story={story || undefined} aria-labelledby="first-run-heading" onCancel={(event) => { event.preventDefault(); if (videoActive) dialogRef.current.querySelector('.onboarding-video-skip')?.click(); else onSkip(); }}
       className={`first-run-dialog fixed inset-0 m-0 h-[100dvh] max-h-none w-full max-w-none overflow-y-auto border-0 bg-transparent p-0 backdrop:bg-black/75 backdrop:backdrop-blur-md ${light ? 'text-zinc-900' : 'text-zinc-100'}`}>
-      {videoAvailable && <OnboardingVideo active={videoActive} theme={theme} onStart={onStart} onSkip={onSkip} />}
+      {videoAvailable && <OnboardingVideo key={videoRun} active={videoActive} theme={theme} onStart={onStart} onSkip={onSkip} onRestart={() => { setVideoActive(false); setVideoRun(value => value + 1); }} />}
       {story ? !videoActive && <LifeStory birthday={birthday} lang={lang} theme={theme} currency={currency} calendarRecords={calendarRecords} personalStory={personalStory} onStart={onStart} onArrive={videoAvailable ? () => setVideoActive(true) : onArrive} onSkip={onSkip} onBack={() => onStep('birthday')} /> : <div className="flex min-h-full items-center justify-center p-3 sm:p-6">
         <div className={`first-run-shell grid w-full max-w-[940px] overflow-hidden rounded-[28px] border shadow-2xl md:grid-cols-[0.85fr_1.15fr] ${light ? 'border-white bg-[#faf9f6]' : 'border-white/10 bg-[#111214]'}`}>
           <div className="first-run-product-panel relative hidden flex-col justify-between overflow-hidden border-r border-white/10 bg-[#111714] p-9 text-white md:flex">

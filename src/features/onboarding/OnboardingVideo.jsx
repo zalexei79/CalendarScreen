@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowRight, Pause, Play, Volume2, VolumeX } from 'lucide-react';
+import { ArrowRight, Pause, Play, RotateCcw, Volume2, VolumeX } from 'lucide-react';
+import OnboardingIdleScene from './OnboardingIdleScene.jsx';
+import BrandIcon from '../../shared/ui/BrandIcon.jsx';
 import desktopVideo from '../../assets/onboarding/ru-desktop.mp4';
 import mobileVideo from '../../assets/onboarding/ru-mobile.mp4';
 import './OnboardingVideo.css';
@@ -8,7 +10,7 @@ import './OnboardingVideo.css';
 const GRID = { desktop: [.475, .456, .464, .433], mobile: [.083, .394, .834, .247] };
 export const VIDEO_ENTRY_CUE = 19;
 
-export default function OnboardingVideo({ active, onStart, onSkip, theme }) {
+export default function OnboardingVideo({ active, onStart, onSkip, onRestart, theme }) {
   const videoRef = useRef(null);
   const frameRef = useRef(null);
   const ghostRef = useRef(null);
@@ -18,6 +20,7 @@ export default function OnboardingVideo({ active, onStart, onSkip, theme }) {
   const gridVisibilityRef = useRef(null);
   const startRef = useRef(onStart);
   const skipRef = useRef(onSkip);
+  const restartButtonRef = useRef(null);
   startRef.current = onStart;
   skipRef.current = onSkip;
   const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches);
@@ -28,6 +31,35 @@ export default function OnboardingVideo({ active, onStart, onSkip, theme }) {
   const [entryReady, setEntryReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [playBlocked, setPlayBlocked] = useState(false);
+  const [idleStarted, setIdleStarted] = useState(false);
+  const [idleSeconds, setIdleSeconds] = useState(0);
+  const emotion = idleSeconds >= 20 ? 'angry' : idleSeconds >= 15 ? 'sad' : 'smile';
+  const countdown = idleSeconds >= 20 ? Math.max(0, 30 - idleSeconds) : null;
+  const expired = phase === 'expired';
+
+  useEffect(() => {
+    if (phase !== 'ready') return;
+    let interval;
+    let elapsed = 0;
+    let started = null;
+    const tick = () => {
+      if (phaseRef.current !== 'ready') { clearInterval(interval); return; }
+      const seconds = Math.min(30, Math.floor((elapsed + (started === null ? 0 : performance.now() - started)) / 1000));
+      setIdleSeconds(seconds);
+      if (seconds === 30) { clearInterval(interval); changePhase('expired'); }
+    };
+    const visibility = () => {
+      clearInterval(interval);
+      if (started !== null) elapsed += performance.now() - started;
+      started = document.hidden ? null : performance.now();
+      if (started !== null) { tick(); interval = setInterval(tick, 250); }
+    };
+    visibility();
+    document.addEventListener('visibilitychange', visibility);
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', visibility); };
+  }, [phase]);
+
+  useEffect(() => { if (expired) restartButtonRef.current?.focus(); }, [expired]);
 
   const changePhase = value => { phaseRef.current = value; setPhase(value); };
   useEffect(() => {
@@ -138,6 +170,7 @@ export default function OnboardingVideo({ active, onStart, onSkip, theme }) {
   const ready = () => {
     if (phaseRef.current === 'returning') return;
     setEntryReady(true);
+    setIdleStarted(true);
     changePhase('ready');
     setPaused(true);
   };
@@ -151,18 +184,25 @@ export default function OnboardingVideo({ active, onStart, onSkip, theme }) {
         onLoadedData={() => { setLoaded(true); setFailed(false); }} onError={() => setFailed(true)}
         onTimeUpdate={event => { if (event.currentTarget.currentTime >= VIDEO_ENTRY_CUE) setEntryReady(true); }}
         onEnded={ready} onPause={() => setPaused(true)} onPlaying={() => { setPaused(false); setPlayBlocked(false); }} />
-      {entryReady && phase !== 'returning' && <>
+      {expired && <div className="onboarding-restart-atmosphere" aria-hidden="true" inert="">
+        <div className="onboarding-restart-brand"><BrandIcon />DAYRIS</div>
+        <div className="onboarding-restart-calendar">{Array.from({ length: 35 }, (_, index) => <span key={index} style={{ '--cell': index }} />)}</div>
+      </div>}
+      <OnboardingIdleScene mobile={mobile} visible={idleStarted} emotion={expired ? 'smile' : emotion} expired={expired} waiting={phase === 'ready' || expired} />
+      {entryReady && phase !== 'returning' && !expired && <>
         <button type="button" className="onboarding-video-calendar-action" aria-label="Добавить первую запись в календаре" onClick={() => leave('entry')}><span className="sr-only">Добавить первую запись</span></button>
         <button type="button" className="onboarding-video-speaker-action" onClick={() => leave('entry')}><span>Попробуй сейчас</span><strong>Добавить запись <ArrowRight size={16} /></strong></button>
       </>}
-      <button type="button" className="onboarding-video-skip" onClick={() => leave('skip')} disabled={phase === 'returning'}>Пропустить <ArrowRight size={13} /></button>
+      {!expired && <button type="button" className="onboarding-video-skip" onClick={() => leave('skip')} disabled={phase === 'returning'}>Пропустить <ArrowRight size={13} /></button>}
+      {phase === 'ready' && countdown !== null && <div className="onboarding-video-countdown"><span>Знакомство завершится через</span><strong role="timer" aria-label={`Осталось ${countdown} секунд`}>{countdown}</strong></div>}
+      {expired && <div className="onboarding-video-expired"><h2>Знакомство завершено</h2><button ref={restartButtonRef} type="button" onClick={onRestart}><RotateCcw size={18} />Начать всё сначала</button></div>}
     </div>
     <div ref={ghostRef} className="onboarding-video-ghost" aria-hidden="true" inert="" />
-    <div className="onboarding-video-controls" hidden={phase === 'returning'}>
+    {!expired && <div className="onboarding-video-controls" hidden={phase === 'returning'}>
       {!failed && phase !== 'ready' && <button type="button" onClick={() => paused ? play() : videoRef.current.pause()} disabled={!loaded} aria-label={paused ? 'Продолжить видео' : 'Пауза'}>{paused ? <Play size={17} /> : <Pause size={17} />}</button>}
       {!failed && phase !== 'ready' && <button type="button" onClick={() => { videoRef.current.muted = !muted; setMuted(!muted); }} aria-label={muted ? 'Включить звук' : 'Выключить звук'}>{muted ? <VolumeX size={17} /> : <Volume2 size={17} />}{muted && <span>Включить звук</span>}</button>}
-    </div>
-    <p className="onboarding-video-status" role="status">{failed ? 'Не удалось загрузить видео. Можно сразу попробовать календарь.' : playBlocked ? 'Нажми ▶, чтобы посмотреть видео' : !loaded ? 'Готовим знакомство…' : phase === 'ready' ? 'Попробуй — добавь свою первую запись' : ''}</p>
-    {failed && <button type="button" className="onboarding-video-fallback" onClick={() => leave('entry')}>Добавить первую запись <ArrowRight size={16} /></button>}
+    </div>}
+    {!expired && <p className="onboarding-video-status" role="status">{failed ? 'Не удалось загрузить видео. Можно сразу попробовать календарь.' : playBlocked ? 'Нажми ▶, чтобы посмотреть видео' : !loaded ? 'Готовим знакомство…' : phase === 'ready' ? 'Попробуй — добавь свою первую запись' : ''}</p>}
+    {failed && !expired && <button type="button" className="onboarding-video-fallback" onClick={() => leave('entry')}>Добавить первую запись <ArrowRight size={16} /></button>}
   </section>;
 }
