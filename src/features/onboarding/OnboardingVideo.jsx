@@ -1,0 +1,168 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { ArrowRight, Pause, Play, Volume2, VolumeX } from 'lucide-react';
+import desktopVideo from '../../assets/onboarding/ru-desktop.mp4';
+import mobileVideo from '../../assets/onboarding/ru-mobile.mp4';
+import './OnboardingVideo.css';
+
+// Coordinates are relative to the supplied films, including their safe margins.
+const GRID = { desktop: [.475, .456, .464, .433], mobile: [.083, .394, .834, .247] };
+export const VIDEO_ENTRY_CUE = 19;
+
+export default function OnboardingVideo({ active, onStart, onSkip, theme }) {
+  const videoRef = useRef(null);
+  const frameRef = useRef(null);
+  const ghostRef = useRef(null);
+  const alive = useRef(true);
+  const phaseRef = useRef('loading');
+  const transitionRef = useRef(null);
+  const gridVisibilityRef = useRef(null);
+  const startRef = useRef(onStart);
+  const skipRef = useRef(onSkip);
+  startRef.current = onStart;
+  skipRef.current = onSkip;
+  const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches);
+  const [loaded, setLoaded] = useState(false);
+  const [phase, setPhase] = useState('loading');
+  const [muted, setMuted] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [entryReady, setEntryReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [playBlocked, setPlayBlocked] = useState(false);
+
+  const changePhase = value => { phaseRef.current = value; setPhase(value); };
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      transitionRef.current?.cancel();
+      videoRef.current?.pause();
+      const saved = gridVisibilityRef.current;
+      if (saved) saved.node.style.visibility = saved.visibility;
+    };
+  }, []);
+  useEffect(() => {
+    if (active) return;
+    const query = window.matchMedia('(max-width: 767px)');
+    const change = () => { setMobile(query.matches); setLoaded(false); setFailed(false); };
+    query.addEventListener('change', change);
+    return () => query.removeEventListener('change', change);
+  }, [active]);
+
+  const play = async () => {
+    const video = videoRef.current;
+    try {
+      await video.play();
+      if (alive.current) { setPaused(false); setPlayBlocked(false); }
+    } catch {
+      if (!alive.current || phaseRef.current === 'returning') return;
+      // Mobile browsers can require a new gesture for sound after the life story.
+      video.muted = true;
+      setMuted(true);
+      try { await video.play(); if (alive.current) { setPaused(false); setPlayBlocked(false); } }
+      catch { if (alive.current) { setPaused(true); setPlayBlocked(true); } }
+    }
+  };
+
+  const animateCalendar = async reverse => {
+    const grid = document.querySelector('.premium-shell .calendar-days-grid');
+    const host = ghostRef.current;
+    const frame = frameRef.current;
+    if (!grid || !host || !frame || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const source = grid.getBoundingClientRect();
+    const bounds = frame.getBoundingClientRect();
+    const [x, y, w, h] = GRID[mobile ? 'mobile' : 'desktop'];
+    const target = { x: bounds.x + x * bounds.width, y: bounds.y + y * bounds.height, width: w * bounds.width, height: h * bounds.height };
+    const shell = document.querySelector('.premium-shell');
+    host.className = `${shell.className} onboarding-video-ghost`;
+    const clone = grid.cloneNode(true);
+    clone.style.visibility = 'visible';
+    for (const node of [clone, ...clone.querySelectorAll('*')]) { node.removeAttribute('id'); node.removeAttribute('aria-describedby'); }
+    const section = grid.parentElement.cloneNode(false);
+    section.removeAttribute('id');
+    Object.assign(section.style, { padding: '0', margin: '0', border: '0', width: '100%', height: '100%', background: 'transparent' });
+    section.append(clone);
+    host.replaceChildren(section);
+    if (!gridVisibilityRef.current) gridVisibilityRef.current = { node: grid, visibility: grid.style.visibility };
+    grid.style.visibility = 'hidden';
+    Object.assign(host.style, { left: `${source.x}px`, top: `${source.y}px`, width: `${source.width}px`, height: `${source.height}px` });
+    const native = 'translate(0,0) scale(1,1)';
+    const embedded = `translate(${target.x - source.x}px,${target.y - source.y}px) scale(${target.width / source.width},${target.height / source.height})`;
+    const frames = reverse
+      ? [{ transform: embedded, opacity: 0 }, { transform: embedded, opacity: 1, offset: .2 }, { transform: native, opacity: 1 }]
+      : [{ transform: native, opacity: 1 }, { transform: embedded, opacity: 1, offset: .78 }, { transform: embedded, opacity: 0 }];
+    const animation = host.animate(frames, { duration: 950, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'both' });
+    transitionRef.current = animation;
+    try { await animation.finished; } catch { /* Unmount cancels the visual bridge. */ }
+    if (transitionRef.current === animation) {
+      animation.cancel();
+      host.replaceChildren();
+      const saved = gridVisibilityRef.current;
+      if (saved) saved.node.style.visibility = saved.visibility;
+      gridVisibilityRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    if (!active || !loaded || phaseRef.current === 'returning') return;
+    let cancelled = false;
+    changePhase('entering');
+    const enter = async () => {
+      await animateCalendar(false);
+      if (cancelled || !alive.current || phaseRef.current === 'returning') return;
+      changePhase('playing');
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setPaused(true); setPlayBlocked(true); return; }
+      await play();
+    };
+    enter();
+    return () => { cancelled = true; transitionRef.current?.cancel(); };
+  }, [active, loaded]);
+
+  useEffect(() => {
+    if (active) frameRef.current?.parentElement.querySelector('h1')?.focus();
+  }, [active]);
+
+  useEffect(() => {
+    if (!active || loaded) return;
+    const timer = setTimeout(() => setFailed(true), 12000);
+    return () => clearTimeout(timer);
+  }, [active, loaded]);
+
+  const leave = async action => {
+    if (phaseRef.current === 'returning') return;
+    videoRef.current.pause();
+    transitionRef.current?.cancel();
+    changePhase('returning');
+    await animateCalendar(true);
+    if (alive.current) (action === 'entry' ? startRef : skipRef).current();
+  };
+  const ready = () => {
+    if (phaseRef.current === 'returning') return;
+    setEntryReady(true);
+    changePhase('ready');
+    setPaused(true);
+  };
+
+  return <section className="onboarding-video" data-active={active} data-phase={phase} data-theme={theme} aria-label="Знакомство с DAYRIS" hidden={!active}>
+    <h1 id={active ? 'first-run-heading' : undefined} className="sr-only" tabIndex={-1}>Твой денежный календарь DAYRIS</h1>
+    <div className="onboarding-video-backdrop" />
+    <div ref={frameRef} className={`onboarding-video-frame ${mobile ? 'is-mobile' : ''}`}>
+      <video ref={videoRef} src={mobile ? mobileVideo : desktopVideo} playsInline preload="auto" muted={muted}
+        aria-label="Видеознакомство: как вести денежный календарь DAYRIS" disablePictureInPicture
+        onLoadedData={() => { setLoaded(true); setFailed(false); }} onError={() => setFailed(true)}
+        onTimeUpdate={event => { if (event.currentTarget.currentTime >= VIDEO_ENTRY_CUE) setEntryReady(true); }}
+        onEnded={ready} onPause={() => setPaused(true)} onPlaying={() => { setPaused(false); setPlayBlocked(false); }} />
+      {entryReady && phase !== 'returning' && <>
+        <button type="button" className="onboarding-video-calendar-action" aria-label="Добавить первую запись в календаре" onClick={() => leave('entry')}><span className="sr-only">Добавить первую запись</span></button>
+        <button type="button" className="onboarding-video-speaker-action" onClick={() => leave('entry')}><span>Попробуй сейчас</span><strong>Добавить запись <ArrowRight size={16} /></strong></button>
+      </>}
+      <button type="button" className="onboarding-video-skip" onClick={() => leave('skip')} disabled={phase === 'returning'}>Пропустить <ArrowRight size={13} /></button>
+    </div>
+    <div ref={ghostRef} className="onboarding-video-ghost" aria-hidden="true" inert="" />
+    <div className="onboarding-video-controls" hidden={phase === 'returning'}>
+      {!failed && phase !== 'ready' && <button type="button" onClick={() => paused ? play() : videoRef.current.pause()} disabled={!loaded} aria-label={paused ? 'Продолжить видео' : 'Пауза'}>{paused ? <Play size={17} /> : <Pause size={17} />}</button>}
+      {!failed && phase !== 'ready' && <button type="button" onClick={() => { videoRef.current.muted = !muted; setMuted(!muted); }} aria-label={muted ? 'Включить звук' : 'Выключить звук'}>{muted ? <VolumeX size={17} /> : <Volume2 size={17} />}{muted && <span>Включить звук</span>}</button>}
+    </div>
+    <p className="onboarding-video-status" role="status">{failed ? 'Не удалось загрузить видео. Можно сразу попробовать календарь.' : playBlocked ? 'Нажми ▶, чтобы посмотреть видео' : !loaded ? 'Готовим знакомство…' : phase === 'ready' ? 'Попробуй — добавь свою первую запись' : ''}</p>
+    {failed && <button type="button" className="onboarding-video-fallback" onClick={() => leave('entry')}>Добавить первую запись <ArrowRight size={16} /></button>}
+  </section>;
+}
