@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v54-classic-bot-calendar';
+const CACHE_NAME = 'atj-cache-v55-receipt-green-detection';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

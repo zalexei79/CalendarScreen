@@ -5,7 +5,7 @@ import {receiptFrameSignal,receiptFrameMotion} from './receiptFrameSignal.js';
 
 export default function ReceiptScanner({c,onClose,onFile,onGallery,onNativeCamera}){
   const video=useRef(null),frame=useRef(null),stream=useRef(null),mounted=useRef(false),captureLock=useRef(false),captureLatest=useRef(null);
-  const [auto,setAuto]=useState(true),[holding,setHolding]=useState(false);
+  const [auto,setAuto]=useState(true),[holding,setHolding]=useState(false),[detected,setDetected]=useState(false);
   const [state,setState]=useState('starting'),[capturing,setCapturing]=useState(false);
   useEffect(()=>{
     let active=true;mounted.current=true;
@@ -42,13 +42,13 @@ export default function ReceiptScanner({c,onClose,onFile,onGallery,onNativeCamer
   }
   captureLatest.current=capture;
   useEffect(()=>{
-    setHolding(false);
-    if(state!=='ready'||!auto||capturing)return;
+    setHolding(false);setDetected(false);
+    if(state!=='ready'||capturing)return;
     let previous=null,stableSince=0;
     const sample=document.createElement('canvas');sample.width=160;sample.height=240;
     const context=sample.getContext('2d',{willReadFrequently:true});
     const timer=setInterval(()=>{
-      if(document.hidden||!video.current?.videoWidth||captureLock.current){previous=null;stableSince=0;setHolding(false);return;}
+      if(document.hidden||!video.current?.videoWidth||captureLock.current){previous=null;stableSince=0;setHolding(false);setDetected(false);return;}
       try{
         const source=video.current,box=source.getBoundingClientRect(),target=frame.current.getBoundingClientRect();
         const scale=Math.max(box.width/source.videoWidth,box.height/source.videoHeight);
@@ -56,17 +56,18 @@ export default function ReceiptScanner({c,onClose,onFile,onGallery,onNativeCamer
         const x=(target.left-box.left+(source.videoWidth*scale-box.width)/2)/scale,y=(target.top-box.top+(source.videoHeight*scale-box.height)/2)/scale;
         context.drawImage(source,x,y,target.width/scale,target.height/scale,0,0,160,240);
         const signal=receiptFrameSignal(context.getImageData(0,0,160,240));
-        const still=receiptFrameMotion(previous,signal.pixels)<4;previous=signal.pixels;
-        if(!signal.document||!still){stableSince=0;setHolding(false);return;}
+        setDetected(signal.document);
+        const still=receiptFrameMotion(previous,signal.pixels)<7;previous=signal.pixels;
+        if(!signal.document||!still||!auto){stableSince=0;setHolding(false);return;}
         setHolding(true);const now=performance.now();if(!stableSince)stableSince=now;
         if(now-stableSince>=1500){clearInterval(timer);captureLatest.current?.();}
-      }catch{previous=null;stableSince=0;setHolding(false);}
+      }catch{previous=null;stableSince=0;setHolding(false);setDetected(false);}
     },250);
     return()=>clearInterval(timer);
   },[state,auto,capturing]);
   return <div className="receipt-scanner">
     <header><div><small>DAYRIS <b>PRO</b></small><h2 id="receipt-title" tabIndex={-1}>{c.scanTitle}</h2></div><button type="button" aria-label={c.close} onClick={onClose}><X size={23}/></button></header>
-    <div className="receipt-viewfinder"><video ref={video} muted playsInline autoPlay aria-label={c.scanTitle}/><div ref={frame} className="receipt-scan-frame" data-holding={holding} aria-hidden="true"><i/><i/><i/><i/></div><div className="receipt-scan-guidance" role="status"><strong>{state==='ready'?(holding?c.scanHold:c.scanFrame):state==='starting'?c.scanStarting:c.scanCameraUnavailable}</strong><span>{auto?c.scanAutoHint:c.scanTip}</span></div></div>
+    <div className="receipt-viewfinder"><video ref={video} muted playsInline autoPlay aria-label={c.scanTitle}/><div ref={frame} className="receipt-scan-frame" data-holding={holding} data-detected={detected} aria-hidden="true"><i/><i/><i/><i/></div><div className="receipt-scan-guidance" role="status"><strong>{state==='ready'?(detected?c.scanHold:c.scanFrame):state==='starting'?c.scanStarting:c.scanCameraUnavailable}</strong><span>{auto?c.scanAutoHint:c.scanTip}</span></div></div>
     <footer><button type="button" className="receipt-scan-gallery" onClick={onGallery}><Images size={23}/><span>{c.gallery}</span></button><button type="button" className="receipt-shutter" disabled={state==='starting'||capturing} aria-label={c.camera} onClick={state==='ready'?capture:onNativeCamera}><Camera size={25}/></button><button type="button" className="receipt-scan-auto" aria-pressed={auto} onClick={()=>setAuto(value=>!value)}>{c.scanAuto}<span>{auto?c.scanAutoOn:c.scanAutoOff}</span></button></footer>
   </div>;
 }
