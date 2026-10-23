@@ -13,6 +13,7 @@ import {readProductMemory,rememberProductType,recalledProductType} from './produ
 import {productTypeById,productLocale} from './productCatalog.js';
 import ProductTypePicker from './ProductTypePicker.jsx';
 import './ReceiptCapture.css';
+import ReceiptScanner from './ReceiptScanner.jsx';
 
 export default function ReceiptCapture(props) {
   if (!props.userId || !props.proActive || props.proLoading) return null;
@@ -26,7 +27,7 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
   const [editingIndex, setEditingIndex] = useState(-1), [metadataOpen, setMetadataOpen] = useState(false);
   const [omittedItems, setOmittedItems] = useState(null);
   const [accessDenied, setAccessDenied] = useState(false);
-  const selectedFile = useRef(null);
+  const selectedFile = useRef(null), attempts=useRef(0);
   const [productMemory,setProductMemory]=useState(()=>readProductMemory(userId));
   const gallery = useRef(null), camera = useRef(null), dialog = useRef(null), trigger = useRef(null), generation = useRef(0), abort = useRef(null), busySave = useRef(false), mounted = useRef(false), currentOwner = useRef(userId);
   currentOwner.current = userId;
@@ -45,8 +46,10 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
     onAccessDenied?.();
   }
   function choose() {
-    gallery.current?.click();
+    attempts.current=0;setDraft(null);setPreview('');setError('');setOpen(true);setPhase('scanner');
   }
+  function rescan(){setDraft(null);setError('');setPhase('scanner');}
+  function manual(){if(!draft)review('');setError('');setPhase('review');requestAnimationFrame(focusTotal);}
   function update(next) { setDraft(previous => ({ ...previous, ...next })); setConfirmed(false); setError(''); }
   function review(text) {
     const parsed = parseReceiptPhoto(text,{today,defaultDateKey:defaultDateKey||today,defaultCurrency:CURRENCIES.some(item=>item.code===defaultCurrency)?defaultCurrency:''});
@@ -58,6 +61,7 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
     setOmittedItems(fallback?parsed.items:null);
     setDraft(fallback?{...parsed,items:[]}:parsed);setEditingIndex(-1);setConfirmed(false);
     setMetadataOpen(false);
+    return parsed;
   }
   function updateItem(index, key, value) {
     const items = draft.items.map((item, row) => {
@@ -96,15 +100,15 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
     try {
       if (!await checkAccess(owner)) { if (alive()) denyAccess(); return; }
       if (!alive()) return;
-      setPhase('reading');
+      setPhase('reading');attempts.current++;
       const text = await recognize(file, { language, signal: controller.signal, onProgress: value => { if (alive()) setProgress(value); } });
-      if (alive()) { review(text); setPhase('review'); }
+      if (alive()) { const parsed=review(text);setPhase(!parsed.total&&!parsed.totalCandidates?.length&&!parsed.documentIssue?'scan-failed':'review'); }
     } catch (failure) {
       if (!alive()) return;
-      setError(failure.message === 'RECEIPT_ACCESS_UNAVAILABLE' ? c.access : c.error);
+      setError(failure.message === 'RECEIPT_ACCESS_UNAVAILABLE' ? c.access : '');
       // Access failure must not expose a manually writable receipt form.
       if (failure.message !== 'RECEIPT_ACCESS_UNAVAILABLE') review('');
-      setPhase(failure.message === 'RECEIPT_ACCESS_UNAVAILABLE' ? 'access-error' : 'review');
+      setPhase(failure.message === 'RECEIPT_ACCESS_UNAVAILABLE' ? 'access-error' : 'scan-failed');
     }
   }
   const validation = draft ? receiptValidation(draft, today, CURRENCIES.map(item => item.code)) : null;
@@ -152,21 +156,22 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
   }
   const numberLocale = String(language).startsWith('zh') ? 'zh-CN' : ['md','ro'].includes(language) ? 'ro-MD' : language === 'en' ? 'en-US' : 'ru-RU';
   const displayMoney = value => { const minor = receiptMoney(value); return minor === null ? '—' : new Intl.NumberFormat(numberLocale,{minimumFractionDigits:2,maximumFractionDigits:2}).format(minor/100); };
-  const photoChoices = <div className="receipt-choose"><button type="button" onClick={() => camera.current?.click()}><Camera size={16}/>{c.camera}</button><button type="button" onClick={() => gallery.current?.click()}>{c.gallery}</button></div>;
+  const photoChoices = <div className="receipt-choose"><button type="button" onClick={rescan}><Camera size={16}/>{c.camera}</button><button type="button" onClick={() => gallery.current?.click()}>{c.gallery}</button></div>;
   if (accessDenied) return null;
   return <>
     <button ref={trigger} type="button" className="receipt-launch" data-light={isLight} aria-label={`${c.photo} · PRO`} title={`${c.photo} · PRO`} onClick={choose}><Camera size={20}/></button>
     <input ref={gallery} className="receipt-file" type="file" accept="image/*" aria-label={c.gallery} onChange={selectFile}/>
     <input ref={camera} className="receipt-file" type="file" accept="image/*" capture="environment" aria-label={c.camera} onChange={selectFile}/>
-    {createPortal(<dialog ref={dialog} className="receipt-dialog" data-light={isLight} aria-labelledby="receipt-title" onCancel={event => { event.preventDefault(); close(); }}>
-      {open && <div className="receipt-shell">
+    {createPortal(<dialog ref={dialog} className="receipt-dialog" data-scanner={phase==='scanner'} data-light={isLight} aria-labelledby="receipt-title" onCancel={event => { event.preventDefault(); close(); }}>
+      {open && (phase==='scanner'?<ReceiptScanner c={c} onClose={close} onFile={readFile} onGallery={()=>gallery.current?.click()} onNativeCamera={()=>camera.current?.click()}/>:<div className="receipt-shell">
         <header className="receipt-heading"><div><small>DAYRIS <b>PRO</b></small><h2 id="receipt-title" tabIndex={-1}>{draft?.kind==='amount'?c.photoTitle:c.title}</h2></div><button type="button" aria-label={c.close} disabled={phase === 'saving'} onClick={close}><X size={20}/></button></header>
         <div className="receipt-scroll">
           {saved ? <div className="receipt-success" role="status"><Check size={32}/><h3>{c.saved}</h3><strong>{moneyText(receiptMoney(saved.total))} {saved.currency}</strong><p>{saved.dateKey}</p>{saved.dayTotal !== undefined && <p>{c.dayTotal}: <b>{saved.dayTotal} {saved.currency}</b></p>}</div> : <>
             {preview && <details className="receipt-preview" open={!draft}><summary><img src={preview} alt=""/><span>{c.sourcePhoto}</span><ChevronDown size={14}/></summary><a href={preview} target="_blank" rel="noreferrer"><img src={preview} alt={c.sourcePhoto}/></a>{draft && !busy && photoChoices}</details>}
             {(phase === 'reading' || phase === 'checking') && <div className="receipt-progress" role="status"><strong>{c.reading} {phase === 'reading' ? `${progress}%` : ''}</strong><progress max="100" value={progress}/><p>{c.loading}</p></div>}
             {error && <p className="receipt-warning" role="alert">{error}</p>}
-            {draft && <fieldset disabled={busy} className="receipt-fields"><legend className="receipt-sr-only">{c.review}</legend>
+            {phase==='scan-failed' && <section className="receipt-scan-failed" role="status"><ReceiptText size={28}/><h3>{attempts.current>1?c.scanFailedAgain:c.scanFailed}</h3><p>{attempts.current>1?c.scanManualHint:c.scanRetryHint}</p><button type="button" className="receipt-primary" onClick={attempts.current>1?manual:rescan}>{attempts.current>1?c.scanManual:c.scanRetry}</button><button type="button" onClick={attempts.current>1?rescan:manual}>{attempts.current>1?c.scanRetry:c.scanManual}</button></section>}
+            {draft && phase!=='scan-failed' && <fieldset disabled={busy} className="receipt-fields"><legend className="receipt-sr-only">{c.review}</legend>
               <ReceiptOverview draft={draft} c={c} today={today} language={language} busy={busy} update={update} metadataOpen={metadataOpen} setMetadataOpen={setMetadataOpen}/>
               {documentIssue && <p className="receipt-document-status" role="status"><AlertCircle size={16}/><span>{c[documentIssue]}</span></p>}
               {!omittedItems && draft.items.length>0 && <div className="receipt-section-title"><h3>{c.items} <small>{draft.items.length}</small></h3><button type="button" aria-label={c.add} onClick={() => { setEditingIndex(draft.items.length); update({items:[...draft.items,{name:'',quantity:'1',unit:'pcs',unitPrice:'',total:''}]}); }}><Plus size={18}/></button></div>}
@@ -195,11 +200,11 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
               <details className="receipt-raw"><summary>{c.raw}</summary>{draft.evidence && <blockquote className="receipt-evidence">{draft.evidence}</blockquote>}<textarea aria-label={c.raw} value={draft.rawText} maxLength={40000} onChange={event => update({rawText:event.target.value})}/><button type="button" onClick={() => review(draft.rawText)}>{c.reparse}</button></details>
               {!documentIssue && !needsReview && !requiredField && <label className="receipt-confirm"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)}/><span>{c.confirm}</span></label>}
             </fieldset>}
-            {!draft && !busy && !retryAccess && photoChoices}
+            {!draft && !busy && !retryAccess && phase!=='scan-failed' && photoChoices}
           </>}
         </div>
-        <footer className="receipt-footer"><button type="button" className="receipt-primary" aria-label={actionLabel} disabled={!saved && !retryAccess && (busy || (!documentIssue && !requiredField && !needsReview && (!confirmed || !validation?.valid)))} onClick={saved ? close : retryAccess ? () => readFile(selectedFile.current) : documentIssue ? () => gallery.current?.click() : requiredField ? focusRequired : needsReview ? focusCorrection : save}><span>{actionLabel}</span>{!saved && draft && !documentIssue && receiptMoney(draft.total)>0 && <b aria-hidden="true">{displayMoney(draft.total)} {draft.currency}</b>}</button></footer>
-      </div>}
+        {phase!=='scan-failed' && <footer className="receipt-footer"><button type="button" className="receipt-primary" aria-label={actionLabel} disabled={!saved && !retryAccess && (busy || (!documentIssue && !requiredField && !needsReview && (!confirmed || !validation?.valid)))} onClick={saved ? close : retryAccess ? () => readFile(selectedFile.current) : documentIssue ? () => gallery.current?.click() : requiredField ? focusRequired : needsReview ? focusCorrection : save}><span>{actionLabel}</span>{!saved && draft && !documentIssue && receiptMoney(draft.total)>0 && <b aria-hidden="true">{displayMoney(draft.total)} {draft.currency}</b>}</button></footer>}
+      </div>)}
     </dialog>,document.body)}
   </>;
 }
