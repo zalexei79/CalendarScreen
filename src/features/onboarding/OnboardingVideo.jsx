@@ -2,15 +2,27 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRight, Pause, Play, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 import OnboardingIdleScene from './OnboardingIdleScene.jsx';
 import BrandIcon from '../../shared/ui/BrandIcon.jsx';
-import desktopVideo from '../../assets/onboarding/ru-desktop.mp4';
-import mobileVideo from '../../assets/onboarding/ru-mobile.mp4';
+import ruDesktop from '../../assets/onboarding/ru-desktop.mp4';
+import ruMobile from '../../assets/onboarding/ru-mobile.mp4';
+import enDesktop from '../../assets/onboarding/en-desktop.mp4';
+import enMobile from '../../assets/onboarding/en-mobile.mp4';
+import roDesktop from '../../assets/onboarding/ro-desktop.mp4';
+import roMobile from '../../assets/onboarding/ro-mobile.mp4';
+import ukDesktop from '../../assets/onboarding/uk-desktop.mp4';
+import ukMobile from '../../assets/onboarding/uk-mobile.mp4';
+import zhDesktop from '../../assets/onboarding/zh-desktop.mp4';
+import zhMobile from '../../assets/onboarding/zh-mobile.mp4';
+import { ONBOARDING_VIDEO_COPY } from './onboardingVideoCopy.js';
 import './OnboardingVideo.css';
 
 // Coordinates are relative to the supplied films, including their safe margins.
 const GRID = { desktop: [.475, .456, .464, .433], mobile: [.083, .394, .834, .247] };
 export const VIDEO_ENTRY_CUE = 19;
+const FILMS = { ru: [ruDesktop, ruMobile], en: [enDesktop, enMobile], ro: [roDesktop, roMobile], uk: [ukDesktop, ukMobile], zh: [zhDesktop, zhMobile] };
 
-export default function OnboardingVideo({ active, onStart, onSkip, onRestart, theme }) {
+export default function OnboardingVideo({ active, onStart, onSkip, onRestart, theme, lang = 'ru' }) {
+  const copy = ONBOARDING_VIDEO_COPY[lang] || ONBOARDING_VIDEO_COPY.ru;
+  const films = FILMS[lang] || FILMS.ru;
   const videoRef = useRef(null);
   const frameRef = useRef(null);
   const ghostRef = useRef(null);
@@ -195,14 +207,14 @@ export default function OnboardingVideo({ active, onStart, onSkip, onRestart, th
     setPaused(true);
   };
 
-  return <section className="onboarding-video" data-active={active} data-phase={phase} data-theme={theme} aria-label="Знакомство с DAYRIS" hidden={!active}>
-    <h1 id={active ? 'first-run-heading' : undefined} className="sr-only" tabIndex={-1}>Твой денежный календарь DAYRIS</h1>
+  return <section className="onboarding-video" data-active={active} data-phase={phase} data-theme={theme} aria-label={copy.intro} hidden={!active}>
+    <h1 id={active ? 'first-run-heading' : undefined} className="sr-only" tabIndex={-1}>{copy.heading}</h1>
     <div className="onboarding-video-backdrop" />
     <div ref={frameRef} className={`onboarding-video-frame ${mobile ? 'is-mobile' : ''}`}>
-      <video ref={videoRef} src={mobile ? mobileVideo : desktopVideo} playsInline preload="auto" muted={muted}
-        aria-label="Видеознакомство: как вести денежный календарь DAYRIS" disablePictureInPicture
+      <video ref={videoRef} src={films[mobile ? 1 : 0]} playsInline preload="auto" muted={muted}
+        aria-label={copy.video} disablePictureInPicture
         onLoadedData={() => { setLoaded(true); setFailed(false); }} onError={() => setFailed(true)}
-        onTimeUpdate={event => { if (event.currentTarget.currentTime >= VIDEO_ENTRY_CUE) setEntryReady(true); }}
+        onTimeUpdate={event => { if (event.currentTarget.currentTime >= Math.min(VIDEO_ENTRY_CUE, event.currentTarget.duration - 1.25)) setEntryReady(true); }}
         onEnded={ready} onPause={() => setPaused(true)} onPlaying={() => { setPaused(false); setPlayBlocked(false); }} />
       {expired && <div className="onboarding-restart-atmosphere" aria-hidden="true" inert="">
         <div className="onboarding-restart-brand"><BrandIcon />DAYRIS</div>
@@ -210,19 +222,19 @@ export default function OnboardingVideo({ active, onStart, onSkip, onRestart, th
       </div>}
       <OnboardingIdleScene mobile={mobile} visible={idleStarted} emotion={expired ? ['smile', 'sad', 'angry'][restartEmotionIndex] : emotion} expired={expired} waiting={phase === 'ready' || expired} />
       {entryReady && phase !== 'returning' && !expired && <>
-        <button type="button" className="onboarding-video-calendar-action" aria-label="Добавить первую запись в календаре" onClick={() => leave('entry')}><span className="sr-only">Добавить первую запись</span></button>
-        <button type="button" className="onboarding-video-speaker-action" onClick={() => leave('entry')}><span>Попробуй сейчас</span><strong>Добавить запись <ArrowRight size={16} /></strong></button>
+        <button type="button" className="onboarding-video-calendar-action" aria-label={copy.calendar} onClick={() => leave('entry')}><span className="sr-only">{copy.first}</span></button>
+        <button type="button" className="onboarding-video-speaker-action" onClick={() => leave('entry')}><span>{copy.try}</span><strong>{copy.add} <ArrowRight size={16} /></strong></button>
       </>}
-      {!expired && <button type="button" className="onboarding-video-skip" onClick={() => leave('skip')} disabled={phase === 'returning'}>Пропустить <ArrowRight size={13} /></button>}
-      {phase === 'ready' && countdown !== null && <div className="onboarding-video-countdown"><span>Знакомство завершится через</span><strong role="timer" aria-label={`Осталось ${countdown} секунд`}>{countdown}</strong></div>}
-      {expired && <div className="onboarding-video-expired"><h2>Знакомство завершено</h2><button ref={restartButtonRef} type="button" onClick={onRestart}><RotateCcw size={18} />Начать всё сначала</button></div>}
+      {!expired && <button type="button" className="onboarding-video-skip" onClick={() => leave('skip')} disabled={phase === 'returning'}>{copy.skip} <ArrowRight size={13} /></button>}
+      {phase === 'ready' && countdown !== null && <div className="onboarding-video-countdown"><span>{copy.ending}</span><strong role="timer" aria-label={copy.remaining.replace('{seconds}', countdown)}>{countdown}</strong></div>}
+      {expired && <div className="onboarding-video-expired"><h2>{copy.ended}</h2><button ref={restartButtonRef} type="button" onClick={onRestart}><RotateCcw size={18} />{copy.restart}</button></div>}
     </div>
     <div ref={ghostRef} className="onboarding-video-ghost" aria-hidden="true" inert="" />
     {!expired && <div className="onboarding-video-controls" hidden={phase === 'returning'}>
-      {!failed && phase !== 'ready' && <button type="button" onClick={() => paused ? play() : videoRef.current.pause()} disabled={!loaded} aria-label={paused ? 'Продолжить видео' : 'Пауза'}>{paused ? <Play size={17} /> : <Pause size={17} />}</button>}
-      {!failed && phase !== 'ready' && <button type="button" onClick={() => { videoRef.current.muted = !muted; setMuted(!muted); }} aria-label={muted ? 'Включить звук' : 'Выключить звук'}>{muted ? <VolumeX size={17} /> : <Volume2 size={17} />}{muted && <span>Включить звук</span>}</button>}
+      {!failed && phase !== 'ready' && <button type="button" onClick={() => paused ? play() : videoRef.current.pause()} disabled={!loaded} aria-label={paused ? copy.resume : copy.pause}>{paused ? <Play size={17} /> : <Pause size={17} />}</button>}
+      {!failed && phase !== 'ready' && <button type="button" onClick={() => { videoRef.current.muted = !muted; setMuted(!muted); }} aria-label={muted ? copy.unmute : copy.mute}>{muted ? <VolumeX size={17} /> : <Volume2 size={17} />}{muted && <span>{copy.unmute}</span>}</button>}
     </div>}
-    {!expired && <p className="onboarding-video-status" role="status">{failed ? 'Не удалось загрузить видео. Можно сразу попробовать календарь.' : playBlocked ? 'Нажми ▶, чтобы посмотреть видео' : !loaded ? 'Готовим знакомство…' : phase === 'ready' ? 'Попробуй — добавь свою первую запись' : ''}</p>}
-    {failed && !expired && <button type="button" className="onboarding-video-fallback" onClick={() => leave('entry')}>Добавить первую запись <ArrowRight size={16} /></button>}
+    {!expired && <p className="onboarding-video-status" role="status">{failed ? copy.failed : playBlocked ? copy.blocked : !loaded ? copy.loading : phase === 'ready' ? copy.ready : ''}</p>}
+    {failed && !expired && <button type="button" className="onboarding-video-fallback" onClick={() => leave('entry')}>{copy.first} <ArrowRight size={16} /></button>}
   </section>;
 }

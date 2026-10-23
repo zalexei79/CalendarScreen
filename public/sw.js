@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v55-receipt-green-detection';
+const CACHE_NAME = 'atj-cache-v56-localized-onboarding-alpha';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

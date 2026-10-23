@@ -31,3 +31,9 @@ Edit target: supplied 1920x1080 DAYRIS screenshot. Remove ONLY the photographed 
 ### Mobile restoration plate
 
 Edit target: supplied 1080x1920 vertical DAYRIS screenshot. Remove ONLY the photographed man in the bottom left, reconstructing the existing dark teal gradient background and very faint diagonal background lines naturally behind him. Preserve absolutely everything else: full portrait canvas framing/aspect ratio, calendar geometry, all Russian text, all dates, brand icons, borders, colors and buttons in their exact positions. No new UI, no redesign, no new character. Output clean background plate of this exact layout with the man removed. Calendar and bottom-right text card must remain untouched.
+
+## Localized films
+
+The original H.264 MP4 exports supplied in the user's video-start folder are included for Russian, English, Romanian, Ukrainian and Simplified Chinese, each in desktop and mobile format. Locale aliases md/ro select Romanian and zh-CN selects Chinese. The character geometry and restoration masks are shared; only background regions without localized text are exposed. Controls, accessibility labels, loading/error states, countdown and restart use the selected language. Entry hotspots start at 19 seconds or 1.25 seconds before the end for shorter films.
+
+The face framebuffer uses premultiplied RGB and alpha consistently. Multiplying the feathered edge RGB by coverage prevents bright facial contour bands when WebKit composites the transparent canvas. The alpha regression checks both Chromium and WebKit at mobile DPR 3.

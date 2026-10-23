@@ -1,7 +1,9 @@
 import { blendPresenterPositions } from './presenterMorphMesh.js';
 
 function webglRenderer(canvas, images, mesh) {
-  const gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: false, depth: false, antialias: true });
+  // Keep framebuffer RGB premultiplied, including feathered/antialiased edges.
+  // WebKit composites the canvas into the page using this alpha convention.
+  const gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true, depth: false, antialias: true });
   if (!gl) return null;
   const shaders = [], buffers = [], textures = [];
   const shader = (type, source) => {
@@ -18,7 +20,7 @@ function webglRenderer(canvas, images, mesh) {
   gl.attachShader(program, shader(gl.FRAGMENT_SHADER, `
     precision mediump float; uniform sampler2D sheet; uniform sampler2D portrait; uniform vec3 weights;
     varying vec2 smile; varying vec2 sad; varying vec2 angry; varying float alpha;
-    void main(){vec3 color=texture2D(sheet,smile).rgb*weights.x+texture2D(sheet,sad).rgb*weights.y+texture2D(portrait,angry).rgb*weights.z;gl_FragColor=vec4(color,alpha);}`));
+    void main(){vec3 color=texture2D(sheet,smile).rgb*weights.x+texture2D(sheet,sad).rgb*weights.y+texture2D(portrait,angry).rgb*weights.z;float coverage=clamp(alpha,0.0,1.0);gl_FragColor=vec4(color*coverage,coverage);}`));
   gl.linkProgram(program);
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw Error('Presenter rendering unavailable');
   gl.useProgram(program);

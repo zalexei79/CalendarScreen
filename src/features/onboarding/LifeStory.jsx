@@ -38,14 +38,16 @@ const ease = (value) => value < .5 ? 4 * value ** 3 : 1 - (-2 * value + 2) ** 3 
 const mix = (a, b, t) => a + (b - a) * t;
 const inverseEase = value => value < .5 ? Math.cbrt(value / 4) : 1 - Math.cbrt((1 - value) / 4);
 const MONEY_LEGEND = {
+  uk: ['Нейтрально', 'Дохід', 'Витрата', 'Приклад'],
   ru: ['Нейтрально', 'Доход', 'Расход', 'Пример'],
   en: ['Neutral', 'Income', 'Expense', 'Example'],
   ro: ['Neutru', 'Venit', 'Cheltuială', 'Exemplu'],
   zh: ['平常', '收入', '支出', '示例'],
 };
-const FIRST_ENTRY = { ru: 'Добавить первую запись', en: 'Add your first entry', ro: 'Adaugă prima înregistrare', zh: '添加第一条记录' };
-const MONEY_EXAMPLES = { ru: 'Примеры отдельных сумм', en: 'Examples of individual amounts', ro: 'Exemple de sume individuale', zh: '单笔收支示例' };
+const FIRST_ENTRY = { uk: 'Додати перший запис', ru: 'Добавить первую запись', en: 'Add your first entry', ro: 'Adaugă prima înregistrare', zh: '添加第一条记录' };
+const MONEY_EXAMPLES = { uk: 'Приклади окремих сум', ru: 'Примеры отдельных сумм', en: 'Examples of individual amounts', ro: 'Exemple de sume individuale', zh: '单笔收支示例' };
 const MONEY_QUESTION = {
+  uk: ['А ти знаєш, де ці гроші зараз?', 'Зроби свій перший запис.', 'Зроби свій перший запис.\nПочни бачити, куди йдуть гроші.', 'Гроші надходили. Гроші витрачалися.'],
   ru: ['А ты знаешь, где эти деньги сейчас?', 'Сделай свою первую запись.', 'Сделай свою первую запись.\nНачни видеть, куда уходят деньги.', 'Деньги приходили. Деньги уходили.'],
   en: ['Do you know where that money is now?', 'Create your first entry.', 'Create your first entry.\nStart seeing where your money goes.', 'Money came in. Money went out.'],
   ro: ['Știi unde sunt acești bani acum?', 'Fă prima ta înregistrare.', 'Fă prima ta înregistrare.\nVezi unde se duc banii tăi.', 'Banii veneau. Banii plecau.'],
@@ -53,6 +55,7 @@ const MONEY_QUESTION = {
 };
 const EMPTY_RECORDS = [];
 const PERSONAL_COPY = {
+  uk: ['Твоя історія в календарі.', 'Твої доходи та витрати — день за днем.', 'Записи з календаря', 'Історія триває.', 'Кожен запис — частина твоєї історії.', 'Поки немає записів'],
   ru: ['Твоя история в календаре.', 'Твои доходы и расходы — день за днём.', 'Записи из календаря', 'История продолжается.', 'Каждая запись — часть твоей истории.', 'Пока нет записей'],
   en: ['Your calendar story.', 'Your income and expenses, day by day.', 'Calendar entries', 'Your story continues.', 'Every entry is part of your story.', 'No entries yet'],
   ro: ['Povestea ta din calendar.', 'Veniturile și cheltuielile tale, zi de zi.', 'Înregistrări din calendar', 'Povestea continuă.', 'Fiecare înregistrare face parte din poveste.', 'Nu există încă înregistrări'],
@@ -164,7 +167,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     const flow = personalStory ? calendarStoryFlow(recorded) : lifeMoneyFlow(moneyEvents, elapsedWeeks, LIFE_COUNT_END);
     const moneyArea = moneyFlowRef.current;
     const moneyCaption = moneyArea.querySelector('.life-money-caption');
-    moneyCaption.textContent = personalStory ? ({ ru:'Краткий обзор ваших записей', en:'A quick overview of your records', ro:'O privire rapidă asupra înregistrărilor tale', zh:'你的记录概览' }[lang]) : MONEY_QUESTION[lang][3];
+    moneyCaption.textContent = personalStory ? ({ uk:'Короткий огляд твоїх записів', ru:'Краткий обзор ваших записей', en:'A quick overview of your records', ro:'O privire rapidă asupra înregistrărilor tale', zh:'你的记录概览' }[lang]) : MONEY_QUESTION[lang][3];
     const moneyAmounts = moneyArea.querySelector('.life-money-amounts');
     const moneyQuestion = moneyArea.querySelector('.life-money-question');
     const moneyNode = moneyArea.querySelector('.life-money-value');
