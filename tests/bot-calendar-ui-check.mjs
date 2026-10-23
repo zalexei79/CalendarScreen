@@ -33,6 +33,11 @@ for (const [engine,options] of [[chromium,{channel:'msedge',headless:true}],[web
       assert.ok(await page.getByRole('button',{name:/^5 октября 2026.*120,40/}).isEnabled());
       assert.ok(await page.getByRole('button',{name:/^24 октября 2026/}).isDisabled());
       assert.equal(await page.locator('.calendar-day-surface').count(),35,'reuse classic DAYRIS cells');
+      const milestone=page.locator('[data-milestone=true]');
+      assert.equal(await milestone.count(),1);
+      assert.match(await milestone.getAttribute('aria-label'),/^5 октября 2026.*Начало учёта/);
+      assert.equal(await milestone.locator('.calendar-day-milestone').textContent(),'Начало учёта');
+      assert.ok(await page.getByRole('link',{name:'Создать свой календарь',exact:true}).isVisible(),'visible invitation without opening menu');
       assert.doesNotMatch(await page.locator('body').innerText(),/47484897|Spotware|Demo|DEMO|демосч[её]т/);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`overflow at ${width}`);
       assert.ok(await page.locator('.bot-shell').evaluate(el=>el.getBoundingClientRect().bottom<=innerHeight+1),'calendar fills viewport');
@@ -41,7 +46,7 @@ for (const [engine,options] of [[chromium,{channel:'msedge',headless:true}],[web
       await page.getByText('Ссылка на календарь скопирована',{exact:true}).waitFor();
       assert.deepEqual(await page.evaluate(()=>window.__copyLog),['http://dayris.test/?calendar=bot']);
       await openMenu();
-      const cta=page.getByRole('link',{name:'Создать свой календарь'});
+      const cta=page.getByRole('navigation',{name:'Функции календаря'}).getByRole('link',{name:'Создать свой календарь'});
       assert.equal(await cta.getAttribute('href'),'/');assert.ok(await cta.isVisible());
       await page.getByRole('button',{name:'Параметры бота',exact:true}).click();
       await page.getByRole('dialog',{name:'Параметры бота'}).waitFor();
@@ -109,6 +114,22 @@ for (const [engine,options] of [[chromium,{channel:'msedge',headless:true}],[web
       assert.deepEqual(await page.evaluate(()=>window.__copyLog),[],'native cancel never copies or claims success');
       if(native==='fail') await page.getByRole('dialog',{name:'Ссылка на календарь'}).waitFor();
       else assert.equal(await page.getByRole('dialog').count(),0);
+    }
+    for(const [width,height] of [[320,568],[390,844],[1440,900]]) {
+      await page.setViewportSize({width,height});
+      await page.goto(`http://dayris.test/?milestone=${width}`);
+      await page.waitForFunction(()=>!document.querySelector('section[aria-busy="true"]'));
+      const geometry=await page.locator('[data-milestone=true]').evaluate(cell=>{
+        const badge=cell.querySelector('.calendar-day-milestone').getBoundingClientRect();
+        const amount=cell.querySelector('.day-amount').getBoundingClientRect();
+        const count=cell.querySelector('.bot-cell-count').getBoundingClientRect();
+        const box=cell.getBoundingClientRect();
+        return {badgeFits:badge.left>=box.left&&badge.right<=box.right&&badge.bottom<=box.bottom,
+          countFits:count.bottom<=box.bottom-2,badgeBeforeAmount:badge.bottom<=amount.top+1,
+          badgeBottom:badge.bottom-box.top,amountTop:amount.top-box.top,cellHeight:box.height};
+      });
+      assert.ok(geometry.badgeFits&&geometry.countFits&&geometry.badgeBeforeAmount,`milestone must not overlap or crop real results at ${width}x${height}: ${JSON.stringify(geometry)}`);
+      await page.screenshot({path:`artifacts/bot-calendar/milestone-${engine.name()}-${width}x${height}.png`,fullPage:true});
     }
     await page.goto('http://dayris.test/?clipboard=denied');
     await page.getByRole('button',{name:'Скопировать ссылку на календарь'}).click();

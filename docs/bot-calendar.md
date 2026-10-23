@@ -11,6 +11,9 @@ selectable link if copying is denied.
 “Параметры бота” displays the explicit whitelist from the owner-provided
 `work, XAUUSD m1.cbotset`, received 23 October 2026. No arbitrary file is served.
 Settings are a supplied snapshot, not telemetry or a claim about historical settings.
+The first published date, 5 October 2026, is marked “Начало учёта” in the grid;
+it is not presented as the bot's unverified original launch date. A visible
+invitation under the calendar opens the personal calendar homepage.
 
 Source: Spotware Demo account `47484897`, closed deals dated **5 October 2026
 onward**, using `Europe/Bucharest`. This cutoff is fixed and history accumulates.

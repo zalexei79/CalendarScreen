@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowRight, Check, ChevronLeft, ChevronRight, Copy, History, Menu, Share2, SlidersHorizontal, X } from 'lucide-react';
+import { ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Copy, History, Menu, Share2, SlidersHorizontal, X } from 'lucide-react';
 import CalendarDayCell from '../../../CalendarDayCell.jsx';
 import BrandIcon from '../../shared/ui/BrandIcon.jsx';
 import { copyText } from '../../shared/lib/copyText.js';
@@ -76,7 +76,7 @@ export default function BotCalendarPage({ client }) {
   const changeMonth = offset => { setSelectedDay(null); setMonth(shiftMonth(month, offset)); };
   const status = data?.status === 'delayed' ? 'Обновление задерживается' : ready ? 'Обновляется ежедневно' : 'Ожидаем первую синхронизацию';
 
-  return <main className="bot-page">
+  return <main className="bot-page" style={{ '--bot-weeks': cells.length / 7 }}>
     <div className="bot-shell">
       <header className="bot-topbar">
         <a href="/" className="bot-brand" aria-label="DAYRIS — главная"><BrandIcon /><span><b>DAYRIS</b><strong>Календарь бота</strong></span></a>
@@ -113,7 +113,8 @@ export default function BotCalendarPage({ client }) {
               const result = byDate.get(cell.key), available = cell.inMonth && cell.key >= start && cell.key <= today && ready && !loading;
               return <CalendarDayCell key={cell.key} cell={cell} cellIndex={i} traderMode proView isLight={false}
                 disabled={!available} isSelected={selectedDay === cell.key} hasTrades={Boolean(result)} pnl={Number(result?.pnl || 0)} monthMaxAbsPnl={maxPnl}
-                ariaLabel={`${dateLabel(cell.key)}${available ? result ? `: ${money(result.pnl, currency, true)}, ${tradeCount(result.count)}` : ': нет закрытых сделок' : ''}`}
+                milestone={cell.inMonth && cell.key === start ? 'Начало учёта' : undefined}
+                ariaLabel={`${dateLabel(cell.key)}${cell.inMonth && cell.key === start ? ', Начало учёта' : ''}${available ? result ? `: ${money(result.pnl, currency, true)}, ${tradeCount(result.count)}` : ': нет закрытых сделок' : ''}`}
                 formatPnlDisplay={(value, compact) => compact ? new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2, notation: Math.abs(value) >= 1000 ? 'compact' : 'standard', signDisplay: 'exceptZero' }).format(value) : money(value, currency, true)} onSelect={() => openHistory(cell.key)}
                 caption={result ? <span className="bot-cell-count">{tradeCount(result.count)}</span> : null} />;
             })}
@@ -122,6 +123,11 @@ export default function BotCalendarPage({ client }) {
           {loading && <p className="bot-pending" role="status">Загружаем историю…</p>}
         </>}
       </section>
+      <aside className="bot-create-invitation" aria-label="Создать свой календарь">
+        <span className="bot-invitation-icon" aria-hidden="true"><CalendarDays /></span>
+        <div><strong>Начни свою историю.</strong><p>Твои деньги, планы и сделки — в одном календаре.</p></div>
+        <a href="/">Создать свой календарь<ArrowRight size={16} aria-hidden="true" /></a>
+      </aside>
       <footer className="bot-calendar-footer"><span>{status}{ready && <> · {new Intl.DateTimeFormat('ru-RU', { timeZone: data.time_zone, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(data.last_sync_at))}</>}</span><span>Europe/Bucharest</span></footer>
     </div>
     {notice && <p className="bot-copy-notice" role="status"><Check size={16} aria-hidden="true" />{notice}</p>}
