@@ -163,6 +163,13 @@ Object.assign(copy.uk, {
   proKicker:'PRO · усе важливе в одному місці',previewLive:'Живий перегляд',previewPause:'Пауза',featureCount:'5 можливостей',capitalTeaser:'Акції, криптовалюта й капітал під контролем',walletTeaser:'Окремі особисті гроші та баланс',moneyTeaser:'Знаходь, де можна залишити більше',traderTeaser:'Угоди, PnL і синхронізація',receipt:'Фото чеків',receiptTeaser:'Сфотографуй — сума й покупки в журналі',receiptTitle:'Чек перетворюється на запис за секунди.',receiptBody:'Сфотографуй чек — DAYRIS розпізнає суму, товари й категорію. Перевір дані перед збереженням без ручного введення всього чека.',receiptPoints:['Розпізнавання суми й товарів','Перевірка перед збереженням','Історія покупок із фото'],receiptFlow:['1. Сфотографуй','2. Перевір суму','3. Збережи'],receiptResult:'Суму, товари й категорію вже підготовлено.',capital:'Інвестиції',capitalTitle:'Твої інвестиції в одному місці.',capitalBody:'Відстежуй акції, криптовалюту, золото та інші активи. Переглядай вартість інвестицій, прибуток і зміни капіталу в одному застосунку.',capitalPoints:['Акції, криптовалюта, ETF та інші активи','Автоматичні котирування криптовалют','Аналіз портфеля та історія операцій'],
 });
 delete copy.uk.signalsRisk;
+for (const [locale, action, description] of [
+  ['ru', 'Посмотреть календарь бота', 'Сделки с 5 октября 2026, результат по дням и параметры бота. Доступно всем.'],
+  ['en', 'View the bot calendar', 'Trades since 5 October 2026, daily results and bot parameters. Open to everyone.'],
+  ['ro', 'Vezi calendarul botului', 'Tranzacții din 5 octombrie 2026, rezultate zilnice și parametrii botului. Acces pentru toți.'],
+  ['uk', 'Переглянути календар бота', 'Угоди з 5 жовтня 2026, результати за днями та параметри бота. Доступно всім.'],
+  ['zh', '查看机器人日历', '2026年10月5日起的交易、每日结果和机器人参数。所有人均可查看。'],
+]) Object.assign(copy[locale], { botCalendarAction: action, botCalendarDescription: description });
 export const XAUUSD_SIGNALS_URL = 'https://t.me/xauusd_scalp_signal';
 export const XAUUSD_SIGNALS_BOT_URL = 'https://t.me/XauusdScalpSignal_bot';
 

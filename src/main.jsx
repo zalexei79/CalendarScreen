@@ -11,6 +11,7 @@ import SiteConfigRuntime from './features/admin/SiteConfigRuntime.jsx'
 import ExtensionRuntime from './features/extensions/ExtensionRuntime.jsx'
 import { installInteractionHaptics } from './shared/lib/interactionHaptics.js'
 const AdminPanel = React.lazy(() => import('./features/admin/AdminApp.jsx'))
+const BotCalendarPage = React.lazy(() => import('./features/bot-calendar/BotCalendarPage.jsx'))
 
 const removeInteractionHaptics = installInteractionHaptics()
 if (import.meta.hot) import.meta.hot.dispose(removeInteractionHaptics)
@@ -108,6 +109,7 @@ if (/^[A-Z0-9]{4,32}$/.test(incomingReferral)) {
 
 const normalizedPath = window.location.pathname.replace(/\/+$/, '') || '/'
 const showInstallPage = params.get('install') === '1' || normalizedPath === '/install'
+const showBotCalendar = params.get('calendar') === 'bot' || normalizedPath === '/bot'
 
 function AppReady({ children }) {
   React.useEffect(() => {
@@ -129,7 +131,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AppReady>
     <AppErrorBoundary>
-      {params.get('admin') === '1' || normalizedPath === '/admin.html' ? <React.Suspense fallback={<div style={{padding:24}}>Загрузка админки…</div>}><AdminPanel /></React.Suspense> : <><SiteConfigRuntime />{showInstallPage ? <InstallPage /> : <><ExtensionRuntime /><CalendarScreen /></>}</>}
+      {showBotCalendar ? <React.Suspense fallback={<div style={{padding:24}}>Загрузка календаря…</div>}><BotCalendarPage client={supabase} /></React.Suspense> : params.get('admin') === '1' || normalizedPath === '/admin.html' ? <React.Suspense fallback={<div style={{padding:24}}>Загрузка админки…</div>}><AdminPanel /></React.Suspense> : <><SiteConfigRuntime />{showInstallPage ? <InstallPage /> : <><ExtensionRuntime /><CalendarScreen /></>}</>}
     </AppErrorBoundary>
     </AppReady>
   </React.StrictMode>

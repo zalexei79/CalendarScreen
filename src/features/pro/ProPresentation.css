@@ -224,3 +224,11 @@
 .pro-membership-status strong { display:block; margin-top:6px; font-size:18px; }
 .pro-membership-status p { margin-top:4px; font-size:12px; opacity:.65; }
 .pro-membership-status > svg { flex-shrink:0; color:var(--pro-gold, #d5bc83); }
+.pro-feature-visual { min-width:0; display:grid; gap:16px; }
+.pro-bot-calendar-card { display:grid; gap:12px; padding:20px; color:var(--pro-text); border:1px solid var(--pro-line); border-radius:17px; background:linear-gradient(145deg,rgba(210,176,106,.07),transparent); text-decoration:none; }
+.pro-bot-calendar-card:hover { border-color:var(--pro-gold); }
+.pro-bot-calendar-kicker { color:var(--pro-muted); font-size:9px; letter-spacing:.12em; }
+.pro-bot-calendar-card strong { display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:15px; line-height:1.45; font-weight:550; color:var(--pro-gold); }
+.pro-bot-calendar-card strong svg { width:18px; height:18px; flex-shrink:0; }
+.pro-bot-calendar-card>span:last-child { color:var(--pro-muted); font-size:11px; line-height:1.7; }
+.pro-bot-calendar-card:focus-visible { outline:2px solid var(--pro-gold); outline-offset:4px; }

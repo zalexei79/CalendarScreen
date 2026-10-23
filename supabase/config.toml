@@ -7,3 +7,7 @@ verify_jwt = false
 # Quote requests are gated by the authenticated user's server-side PRO entitlement.
 # ES256 sessions are validated with auth.getUser() inside the function.
 verify_jwt = false
+
+[functions.bot-calendar-sync]
+# Internal scheduler only; handler verifies the existing private cron secret.
+verify_jwt = false

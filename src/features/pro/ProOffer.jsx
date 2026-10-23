@@ -1,6 +1,7 @@
 import React, { useId, useState } from 'react';
 import { ArrowDownLeft, ArrowRight, ArrowUpRight, Camera, ChartCandlestick, ChartNoAxesCombined, Check, Gift, ReceiptText, RefreshCw, ScanLine, Wallet, Bitcoin } from 'lucide-react';
 import { getProOfferCopy, XAUUSD_SIGNALS_URL, XAUUSD_SIGNALS_BOT_URL } from './proOfferCopy';
+import { BOT_CALENDAR_URL } from '../bot-calendar/botCalendarModel.js';
 import './ProPresentation.css';
 
 // Presentation only. All account, referral and checkout actions stay with the caller.
@@ -71,7 +72,7 @@ export default function ProOffer({ language, copy, active, daysRemaining, untilL
             </details>}
             {feature === 'receipt' && <div className="pro-receipt-flow">{receiptFlow.map(([Icon, label], flowIndex) => <React.Fragment key={label}><span><Icon aria-hidden="true" />{label}</span>{flowIndex < receiptFlow.length - 1 && <ArrowRight aria-hidden="true" />}</React.Fragment>)}</div>}
           </div>
-          <div className={`pro-example pro-example-${feature}`}>
+          <div className="pro-feature-visual"><div className={`pro-example pro-example-${feature}`}>
             <p className="pro-example-label">{text.example}</p>
             {feature === 'wallet' && <>
               <div className="pro-example-heading"><Wallet aria-hidden="true" /><span>DAYRIS WALLET</span></div>
@@ -107,7 +108,11 @@ export default function ProOffer({ language, copy, active, daysRemaining, untilL
               <div className="pro-receipt-preview" aria-hidden="true"><div className="pro-receipt-paper"><b>SUPERMARKET</b><span>Кофе · Хлеб · Молоко</span><span>3 позиции</span><hr /><strong>ИТОГО <em>€24.80</em></strong></div><div className="pro-receipt-scan"><ScanLine /><span>Сумма распознана</span></div></div>
               <p className="pro-example-caption">{text.receiptResult}</p>
             </>}
-          </div>
+          </div>{feature === 'trader' && <a className="pro-bot-calendar-card" href={BOT_CALENDAR_URL}>
+            <span className="pro-bot-calendar-kicker">XAUUSD · M1 · DEMO</span>
+            <strong>{text.botCalendarAction}<ArrowRight aria-hidden="true" /></strong>
+            <span>{text.botCalendarDescription}</span>
+          </a>}</div>
         </div>
       </div>
     </section>
