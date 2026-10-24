@@ -171,12 +171,10 @@ try {
     if (time === 9000) {
       assert.equal(await page.locator('.life-story-scene').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)', 'No colored rectangle behind the projection');
       assert.match(await page.locator('.life-story-orientation').innerText(), /Октябрь.*2026/s);
-      assert.equal(await page.locator('.life-story-grid').evaluate(canvas => {
-        const ctx=canvas.getContext('2d'); return ctx.getImageData(4,4,1,1).data[3];
-      }), 0, 'The enlarged lattice never fills the viewport corners');
-      assert.ok(state.weekWidth/state.cellHeight>1.7, 'The month opens across the screen during the approach, without a narrow vertical stack');
-      assert.ok(state.division>0 && state.division<1, 'Weekly refinement and camera approach overlap continuously');
-      assert.ok(state.contextExit>0 && state.contextExit<1, 'History retreats progressively while the month grows');
+      assert.ok(Math.abs(state.weekWidth-state.cellHeight)<.1 && state.cellHeight>20, 'The approved composition enlarges intact square weeks');
+      assert.equal(state.division,0, 'Weekly squares retain their identity before their seven days open');
+      assert.ok(state.intactWeeks, 'No separate daily grid appears before weekly refinement');
+      assert.ok(state.contextExit>.95, 'The original miniature history retreats behind the week group');
       assert.equal(state.headingOpacity, 0, 'Departing copy has cleared the calendar');
       assert.equal(await page.locator('.life-story-scale-cue').count(), 0, 'No floating scale label covers the cells');
     }

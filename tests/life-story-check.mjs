@@ -69,7 +69,7 @@ assert.ok(new Set(incomeWeeks.slice(1).map((week, index) => week - incomeWeeks[i
 for(let time=0;time<=LIFE_MOTION_END;time+=16){
  const m=lifeCalendarMotion(time);
  assert.ok(m.amountsOpacity===0 || m.questionOpacity===0);
- if(m.zoom>0 && m.zoom<1) assert.ok(m.division>0,'Weekly refinement accompanies the camera instead of waiting for a vertical stack to stop');
+ if(m.division>0) assert.ok(m.zoom>.98,'Day refinement overlaps only the soft landing of the weekly zoom');
  assert.equal(m.neighbors,m.division);
  if(m.handoff>0) assert.ok(m.skin===1 && m.paperOpacity===0);
 }
@@ -83,7 +83,6 @@ for(const width of [320,390,1145,1440]) for(const rows of [4,5,6]) for(const tod
   const m=lifeCalendarMotion(time),f=lifeLatticeFrame(args,m);
   close(f.dayWidth*7+f.gap*6,f.width);assert.ok(f.dayWidth>0);
   if(!m.division)close(f.width,f.height);
-  if(m.zoom>.25 && m.division<1)assert.ok(f.width/f.height>1.7,'The emerging month never becomes a tall narrow needle');
   if(m.zoom===1){close(f.anchorX,width/2);close(f.anchorY,200+((rows-1)*108+100)/2);assert.ok(f.x>=24-1e-6 && f.x+f.width<=width-24+1e-6);}
   if(previous)assert.ok(f.width>=previous.width-1e-6);
   previous=f;
