@@ -25,13 +25,14 @@ export function createLifeStoryFeedback(env = globalThis) {
       if (!Audio) return;
       if (!context || context.state === 'closed') {
         context = new Audio();
-        buffer = context.createBuffer(1, Math.ceil(context.sampleRate * .16), context.sampleRate);
-        const samples = buffer.getChannelData(0); let seed = 72319;
+        buffer = context.createBuffer(1, Math.ceil(context.sampleRate * .2), context.sampleRate);
+        const samples = buffer.getChannelData(0); let seed = 72319, air = 0;
         for (let i = 0; i < samples.length; i++) {
           seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
           const phase = i / (samples.length - 1), noise = seed / 2147483648 - 1;
           // A smooth window removes the impact; there is no pitched bass component.
-          samples[i] = noise * Math.sin(Math.PI * phase) ** 2;
+          air += .2 * (noise - air);
+          samples[i] = 2.5 * air * Math.sin(Math.PI * phase) ** 2;
         }
         // Unlock inside the original click on Safari, without an audible startup beep.
         const unlock = context.createBufferSource(); unlock.buffer = context.createBuffer(1, 1, context.sampleRate);
@@ -47,19 +48,23 @@ export function createLifeStoryFeedback(env = globalThis) {
       if (!armed || doc?.hidden || reduced() || elapsed < 0 || elapsed >= 8000 || value === lastValue) return;
       lastValue = value;
       const now = (env.performance || performance).now();
-      if (!muted && context?.state === 'running' && now - lastClick >= 240) {
+      const progress = Math.min(1, elapsed / 8000);
+      // Follow the counter's slow-fast-slow arc, without queuing missed sounds.
+      const activity = Math.sin(Math.PI * progress) ** 2;
+      const interval = 1000 - 760 * activity;
+      if (!muted && context?.state === 'running' && now - lastClick >= interval) {
         lastClick = now;
         try {
           const source = context.createBufferSource(), gain = context.createGain(), filter = context.createBiquadFilter();
-          const time = context.currentTime, progress = Math.min(1, elapsed / 8000);
+          const time = context.currentTime;
           source.buffer = buffer; source.playbackRate.value = .98 + .04 * progress;
-          filter.type = 'bandpass'; filter.frequency.value = 1850 + 150 * progress; filter.Q.value = .65;
-          gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(.018, time + .035);
-          gain.gain.setValueAtTime(.018, time + .075); gain.gain.linearRampToValueAtTime(0, time + .165);
+          filter.type = 'bandpass'; filter.frequency.value = 1400 + 100 * progress; filter.Q.value = .9;
+          gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(.014, time + .055);
+          gain.gain.setValueAtTime(.014, time + .095); gain.gain.linearRampToValueAtTime(0, time + .205);
           source.connect(filter); filter.connect(gain); gain.connect(context.destination);
           const note = { source, gain, filter }; notes.add(note);
           source.onended = () => { source.disconnect(); gain.disconnect(); filter.disconnect(); notes.delete(note); };
-          source.start(time); source.stop(time + .17);
+          source.start(time); source.stop(time + .215);
         } catch { /* Audio restrictions must not interrupt the animation. */ }
       }
       const touch = nav?.maxTouchPoints > 0 || win.matchMedia?.('(pointer: coarse)').matches;
