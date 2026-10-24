@@ -27,9 +27,10 @@ function App(){
  {screen==='capital'&&<Capital {...base} currency="USD" onBack={()=>{}} onWallet={()=>{}}/>}
  </main>;
 }createRoot(document.getElementById('root')).render(<App/>);
-` },bundle:true,write:false,outfile:'emerald.js',format:'iife',define:{'import.meta.env':JSON.stringify({VITE_SUPABASE_URL:'https://example.supabase.co',VITE_SUPABASE_ANON_KEY:'test'})}});
+` },bundle:true,write:false,outfile:'emerald.js',format:'iife',loader:{'.mp4':'file','.webp':'file'},assetNames:'test-assets/[name]-[hash]',define:{'import.meta.env':JSON.stringify({VITE_SUPABASE_URL:'https://example.supabase.co',VITE_SUPABASE_ANON_KEY:'test'})}});
 const css=fs.readFileSync(path.join('dist/assets',fs.readdirSync('dist/assets').find(f=>f.startsWith('main-')&&f.endsWith('.css'))),'utf8');
 const script=bundle.outputFiles.find(f=>f.path.endsWith('.js')).text;
+const media=new Map(bundle.outputFiles.filter(f=>/\.(mp4|webp)$/.test(f.path)).map(f=>['/'+path.relative(process.cwd(),f.path).split(path.sep).join('/'),f]));
 const browser=await chromium.launch({channel:'msedge',headless:true});
 try {
  const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
@@ -37,6 +38,7 @@ try {
  await page.route('**/*',route=>{
   const url=new URL(route.request().url());
   if(url.origin!=='http://emerald.test') return route.abort();
+  if(media.has(url.pathname)) return route.fulfill({body:media.get(url.pathname).contents,contentType:url.pathname.endsWith('.mp4')?'video/mp4':'image/webp'});
   if(url.pathname!=='/') {
    const file=path.resolve('dist','.'+url.pathname);
    if(file.startsWith(path.resolve('dist')+path.sep)&&fs.existsSync(file)&&fs.statSync(file).isFile()) return route.fulfill({body:fs.readFileSync(file),contentType:file.endsWith('.svg')?'image/svg+xml':file.endsWith('.png')?'image/png':'image/webp'});

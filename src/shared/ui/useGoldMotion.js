@@ -95,7 +95,7 @@ export default function useGoldMotion(theme) {
       if (!current) return;
       release(current.node);
       if (event.type === 'pointercancel' || event.pointerId !== current.id || Math.hypot(event.clientX - current.x, event.clientY - current.y) > 10) return;
-      if (current.button) animate(current.button, [{ scale: '.982' }, { scale: '1' }], 260);
+      if (current.button) animate(current.button, [{ scale: '.992' }, { scale: '1' }], 260);
       const optics = current.node.querySelector('.calendar-glass-optics');
       if (optics) animate(optics, [{ opacity: .3, transform: 'translateX(-8%)' }, { opacity: .9, offset: .3 }, { opacity: .28, transform: 'translateX(6%)' }], 720);
     }

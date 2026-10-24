@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1600" viewBox="0 0 900 1600" fill="none">
+  <defs>
+    <filter id="soft"><feGaussianBlur stdDeviation="20"/></filter>
+    <radialGradient id="room" cx="0" cy="0" r="1" gradientTransform="translate(790 190) rotate(125) scale(1450 920)"><stop stop-color="#49402a"/><stop offset=".44" stop-color="#171719"/><stop offset="1" stop-color="#08090c"/></radialGradient>
+    <linearGradient id="gold" x1="239" y1="-80" x2="841" y2="1510" gradientUnits="userSpaceOnUse"><stop stop-color="#89703a"/><stop offset=".18" stop-color="#f6dc9f"/><stop offset=".28" stop-color="#bf9749"/><stop offset=".43" stop-color="#fff0c1"/><stop offset=".53" stop-color="#d4aa55"/><stop offset=".67" stop-color="#8b682e"/><stop offset=".83" stop-color="#f3d58c"/><stop offset="1" stop-color="#ad8539"/></linearGradient>
+    <linearGradient id="rim" x1="382" y1="80" x2="593" y2="1540" gradientUnits="userSpaceOnUse"><stop stop-color="#fff5d1" stop-opacity=".8"/><stop offset=".28" stop-color="#fff1bd" stop-opacity=".1"/><stop offset=".47" stop-color="#fff2c8" stop-opacity=".8"/><stop offset=".8" stop-color="#e9c476" stop-opacity=".08"/><stop offset="1" stop-color="#fff0c3" stop-opacity=".7"/></linearGradient>
+    <linearGradient id="shadow" x1="678" y1="-60" x2="255" y2="1580" gradientUnits="userSpaceOnUse"><stop stop-color="#080b10"/><stop offset=".44" stop-color="#181c22"/><stop offset="1" stop-color="#07090d"/></linearGradient>
+  </defs>
+  <path fill="url(#room)" d="M0 0h900v1600H0z"/>
+  <g filter="url(#soft)">
+    <path d="M1020-140C480 64 448 172 671 385C912 616 890 783 462 1001C163 1153 200 1394 608 1740L1005 1755C543 1390 531 1259 792 1109C1162 896 1170 665 924 423C701 203 721 103 1227-78Z" fill="url(#gold)"/>
+    <path d="M1020-140C480 64 448 172 671 385C912 616 890 783 462 1001C163 1153 200 1394 608 1740" stroke="url(#rim)" stroke-width="15"/>
+    <path d="M800-110C350 145 360 273 542 479C739 703 697 838 303 1026C22 1160 15 1391 312 1690L486 1720C170 1379 225 1198 517 1038C924 815 883 644 687 443C472 222 514 131 960-99Z" fill="url(#shadow)" fill-opacity=".94"/>
+    <path d="M800-110C350 145 360 273 542 479C739 703 697 838 303 1026C22 1160 15 1391 312 1690" stroke="url(#rim)" stroke-width="1.5" stroke-opacity=".45"/>
+  </g>
+</svg>

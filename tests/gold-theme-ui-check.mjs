@@ -47,19 +47,49 @@ try {
  assert.equal(await page.locator('meta[name="theme-color"]').getAttribute('content'),'#0b0b0d');
  for(const width of [320,390,1280]) {
   await page.setViewportSize({width,height:width<640?844:950});await page.clock.runFor(600);
+  // The virtual clock controls app timers, not the browser's CSS compositor.
+  // Finish entrance transitions before asserting the resting material.
+  await page.screenshot({path:`tests/gold-calendar-${width}.png`,animations:'disabled'});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   const amounts=await page.locator('.pro-calendar-day .day-amount').evaluateAll(elements=>elements.map(el=>{
    const r=el.getBoundingClientRect(),cell=el.closest('button').getBoundingClientRect();
    return {width:r.width,height:r.height,inside:r.left>=cell.left&&r.right<=cell.right&&r.top>=cell.top&&r.bottom<=cell.bottom};
   }));
   assert.equal(amounts.length,15);assert.ok(amounts.every(a=>a.width>=24&&a.height>0&&a.inside),'PRO amounts remain visible inside gold cells');
+  const material=await page.locator('.calendar-section:not(.calendar-month-preview)').evaluate(section=>{
+   const grid=section.querySelector('.calendar-days-grid'),cell=grid.querySelector('button'),dock=document.querySelector('.history-fab');
+   return {bottom:grid.getBoundingClientRect().bottom,dockTop:dock.getBoundingClientRect().top,shadow:getComputedStyle(cell).boxShadow,background:getComputedStyle(document.querySelector('.premium-shell')).backgroundImage};
+  });
+  assert.ok(material.bottom+9<=material.dockTop,'Raised calendar edges clear the floating dock');
+  assert.match(material.shadow,/inset/);assert.match(material.shadow,/0px 4px 1px/,'A visible lower edge gives the glass real depth');
+  assert.match(material.background,/url\(/,'One shared gold environment shines through the glass');
   // A previous gold override erased the semantic fill on adjacent-month days.
   for(const tone of ['profit','loss']) {
    const fills=await page.locator(`.calendar-day-surface[data-pnl-tone="${tone}"]`).evaluateAll(cells=>cells.map(el=>getComputedStyle(el).backgroundImage));
    assert.ok(fills.length>=2);assert.ok(fills.every(fill=>fill===fills[0]),`${tone} remains recognizable outside the current month`);
   }
-  await page.screenshot({path:`tests/gold-calendar-${width}.png`,animations:'disabled'});
  }
+ // Six-week months must also clear the dock, including their raised lower edge.
+ for(const width of [390,1280]) {
+  await page.setViewportSize({width,height:width<640?844:950});await page.clock.runFor(600);
+  await page.getByRole('button',{name:'Следующий месяц',exact:true}).click();await page.clock.runFor(700);
+  const month=page.locator('.calendar-section:not(.calendar-month-preview) .calendar-days-grid');
+  assert.equal(await month.locator('button').count(),42);
+  assert.ok(await month.evaluate(grid=>grid.getBoundingClientRect().bottom+9<=document.querySelector('.history-fab').getBoundingClientRect().top),'All six rows and their shadows fit above the dock');
+  await page.screenshot({path:`tests/gold-six-weeks-${width}.png`,animations:'disabled'});
+  await page.getByRole('button',{name:'Предыдущий месяц',exact:true}).click();await page.clock.runFor(700);
+ }
+ // Real pointer activation lowers only the pressed glass; cancelling it does
+ // not select a day or mutate the account's calendar data.
+ const depthCell=page.locator('.calendar-section:not(.calendar-month-preview) .calendar-day-surface[data-pnl-tone="loss"]').first();
+ await depthCell.hover(); // Wait for the month slide to settle before hit testing.
+ const depthBox=await depthCell.boundingBox();
+ await page.mouse.move(depthBox.x+15,depthBox.y+20);await page.mouse.down();await page.clock.runFor(150);
+ await page.screenshot({path:'tests/gold-button-pressed-1280.png',animations:'disabled'});
+ assert.equal(await depthCell.evaluate(el=>getComputedStyle(el).translate),'0px 2px');
+ await page.mouse.move(5,5);await page.mouse.up();await page.clock.runFor(350);
+ await page.screenshot({path:'tests/gold-button-released-1280.png',animations:'disabled'});
+ assert.equal(await depthCell.evaluate(el=>getComputedStyle(el).translate),'none');
  // A touch lights the local material without capturing gestures or changing data.
  const touchCell=page.locator('.calendar-section:not(.calendar-month-preview) .calendar-day-surface[data-pnl-tone="loss"]').first();
  const touchBox=await touchCell.boundingBox();
@@ -122,7 +152,7 @@ try {
  await page.locator('.workspace-mode-toggle').click();await page.clock.runFor(500);
  await page.getByRole('button',{name:'История',exact:true}).click();await page.clock.runFor(500);
  const history=page.locator('.financial-history-dialog');await history.waitFor();
- assert.equal(await history.evaluate(el=>getComputedStyle(el).getPropertyValue('--fh-gold').trim()),'#ffe18a');
+ assert.equal(await history.evaluate(el=>getComputedStyle(el).getPropertyValue('--fh-gold').trim()),'#f4d58e');
  await page.screenshot({path:'tests/gold-history-390.png',animations:'disabled'});
  await history.getByRole('button',{name:'Закрыть',exact:true}).click();await page.clock.runFor(500);
  // Confirmed revocation must immediately remove the paid palette.

@@ -1,22 +1,25 @@
-/* Emerald's glass construction, translated into yellow gold. Keep the same
-   optical depth, translucent layers and reflected edge light in both themes. */
+/* Gold is light behind tinted glass, not a metal stripe painted on every day.
+   Shared material tokens also render the settings/onboarding sample. */
 html[data-dayris-theme="gold"], [data-material="gold"] {
-  --gold-ingot:linear-gradient(125deg,#c6a83e,#fff3b4 30%,#e0c257 72%,#f9e395);
-  --gold-glass:radial-gradient(ellipse 130% 45% at 20% -10%,#fff8d69c,transparent 75%),linear-gradient(165deg,#f9d367b3 0%,#e1b94499 24%,#252930e6 48%,#7767394d 65%,#f2cc64b3 100%),rgba(21,23,26,.64);
-  --gold-profit-material:radial-gradient(ellipse at 50% 115%,#20ef9d80,transparent 70%),linear-gradient(165deg,#fff1b838,transparent 30%,#14171b22 50%,#e8c45724),linear-gradient(145deg,#fff0bf22,#0c8a5d28 45%,#05251d88);
-  --gold-loss-material:radial-gradient(ellipse at 50% 115%,#ff447b99,transparent 72%),linear-gradient(165deg,#fff1b838,transparent 30%,#14171b22 50%,#e8c45724),linear-gradient(145deg,#ffe5c92b,#b22d5738 45%,#27132499);
-  --gold-bevel:inset 0 1px #fff4cb9c,inset 0 -1px #80592066;
+  --gold-environment:url('../../assets/themes/gold-environment.svg');
+  --gold-ingot:radial-gradient(ellipse at 20% 0%,#fff8db8c,transparent 80%),linear-gradient(145deg,#f6d782b3,#d8b35fa6),#b592404d;
+  --gold-glass:linear-gradient(145deg,#fff0ba24,#f3cf7410 55%,#f7dda01a),rgba(12,15,20,.44);
+  --gold-profit-material:radial-gradient(ellipse at 50% 110%,#20ef9952,transparent 80%),linear-gradient(150deg,#fff6d41f,#1453374d 50%,#0b403952),rgba(9,17,17,.35);
+  --gold-loss-material:radial-gradient(ellipse at 50% 110%,#ed316457,transparent 80%),linear-gradient(150deg,#fff6d41f,#6e19354d 50%,#381d3852),rgba(18,10,19,.35);
+  --gold-bevel:inset 0 1px 1px #fff8d9f2,inset 1px 0 #fff0bd40,inset 0 -2px 2px #59471966;
+  --gold-glass-depth:inset 0 1px 1px #fff9dfc2,inset 1px 0 1px #fff5d62e,inset -1px 0 1px #080a0d70,inset 0 -3px 3px #04050866,0 2px 0 #30291dcc,0 4px 1px #08090c99,0 9px 13px -3px #0009;
 }
 html[data-dayris-theme="gold"] {
   --dayris-canvas:#0b0b0d; --dayris-surface:#181a1e; --dayris-raised:#282b30;
-  --dayris-text:#fffaf0; --dayris-muted:#cec5a6; --dayris-accent:#ffe18a;
-  --dayris-champagne:#ffe18a; --dayris-profit:#9bffcf; --dayris-loss:#ffa9bc;
+  --dayris-text:#fffaf0; --dayris-muted:#c7c0b2; --dayris-accent:#f4d58e;
+  --dayris-champagne:#f4d58e; --dayris-profit:#b4ffe0; --dayris-loss:#ffd1dd;
   --dayris-tint:255,225,138; --dayris-line:rgba(255,237,190,.26);
-  --gold-backdrop:radial-gradient(ellipse 75% 46% at 115% 5%,#f4c9641c,transparent 70%),radial-gradient(ellipse 75% 38% at -20% 63%,#f4c9640c,transparent 70%),#0b0b0d;
-  --gold-pane:radial-gradient(ellipse at 0% 0%,#fff9e720,transparent 48%),linear-gradient(125deg,#fff0d50e,#16181d44 50%,#f9da7212),rgba(19,20,23,.82);
-  --gold-card:radial-gradient(ellipse 80% 90% at 110% -15%,#f6d06c40,transparent 65%),linear-gradient(145deg,#fff6d516,#fff0b804 40%,#0c0e1233 70%,#ffecb70d),rgba(18,20,24,.72);
-  --gold-edge:inset 0 1px 0 #fff8e075,inset 1px 0 0 #fff0c424,inset -1px -1px 0 #ffe09118,inset 0 -3px 6px #0003;
-  --gold-shadow:var(--gold-edge),0 22px 55px #0006,0 0 32px #ffda4d14;
+  --gold-backdrop:linear-gradient(#080a0e0a,#080a0e26),var(--gold-environment) center/cover no-repeat,#080a0e;
+  --gold-control:linear-gradient(135deg,#fff7df38,#ffe5a210 55%,#f8dda026),rgba(18,20,25,.4);
+  --gold-pane:linear-gradient(135deg,#fff7df28,#ffffff05 55%,#f8dda01c),rgba(18,20,25,.66);
+  --gold-card:linear-gradient(145deg,#ffffff15,#ffffff04),rgba(13,16,20,.45);
+  --gold-edge:inset 0 1px 1px #fff9e8b3,inset 1px 0 #fff8e526,inset 0 -2px 2px #08090e5c;
+  --gold-shadow:var(--gold-edge),0 3px 0 #1b1a15a6,0 18px 48px #0006;
   --gold-ease:cubic-bezier(.22,1,.36,1);
   --glass-surface:rgba(19,20,23,.82); --glass-control:rgba(255,238,216,.09);
   --glass-line:var(--dayris-line); --glass-highlight:rgba(255,245,219,.13);
@@ -37,7 +40,7 @@ html[data-dayris-theme="gold"] :is(.text-amber-300,.text-amber-400,.text-amber-5
 html[data-dayris-theme="gold"] button:is(.bg-amber-400,.bg-amber-300),
 html[data-dayris-theme="gold"] :is(.capital-add,.life-story-primary) {
   background:var(--gold-ingot); color:#302008;
-  box-shadow:var(--gold-bevel),0 6px 24px #e4ac3438; border-color:#ffe39b;
+  box-shadow:var(--gold-bevel),0 3px 0 #41351d,0 7px 12px #0005; border-color:#fff2c585;
 }
 /* Every feature resolves its existing palette through the same gold tokens. */
 html[data-dayris-theme="gold"] :is(.capital-panel,.capital-overlay,.capital-sheet) {
@@ -104,76 +107,86 @@ html[data-dayris-theme="gold"] .plan-templates > button {
 }
 /* The cells retain their original text anchor, including the PRO amount dock. */
 html[data-dayris-theme="gold"] .calendar-days-grid > .calendar-day-surface {
-  --gold-day-ink:#fff5d2; --gold-day-edge:#fff2c832;
-  --gold-day-shadow:var(--gold-edge),0 8px 22px #0003;
-  background:var(--gold-glass)!important; border-color:var(--gold-day-edge)!important; border-radius:18px!important;
+  --gold-day-ink:#fff9e9; --gold-amount-ink:#fff2d5; --gold-day-edge:#f8d98d55;
+  --gold-day-shadow:var(--gold-glass-depth);
+  background:var(--gold-glass)!important; border-color:var(--gold-day-edge)!important; border-radius:17px!important;
   box-shadow:var(--gold-day-shadow)!important; color:var(--gold-day-ink);
   backdrop-filter:none; -webkit-backdrop-filter:none;
+  transition:translate 260ms var(--gold-ease),scale 160ms var(--gold-ease),box-shadow 160ms,border-color 200ms;
 }
 html[data-dayris-theme="gold"] .calendar-day-surface::before {
   inset:0; padding:0; border:0; border-radius:inherit;
-  background:radial-gradient(ellipse 110% 65% at 15% -20%,#fffaf328,transparent 75%);
+  background:radial-gradient(ellipse 110% 40% at 20% -8%,#fff7dc29,transparent 80%),linear-gradient(180deg,#ffffff08,transparent 38%,#080a0d26);
   -webkit-mask:none; mask:none;
   box-shadow:none; opacity:1; pointer-events:none;
 }
-html[data-dayris-theme="gold"] .calendar-day-surface[data-in-month="true"][data-pnl-tone="neutral"] { --gold-day-ink:#201c13; }
-html[data-dayris-theme="gold"] .calendar-day-surface[data-in-month="true"][data-pnl-tone="neutral"] > .font-data { text-shadow:0 1px #fff7cf50; }
+html[data-dayris-theme="gold"] .calendar-day-surface[data-in-month="true"][data-pnl-tone="neutral"] { --gold-day-ink:#fff9e9; }
 html[data-dayris-theme="gold"] .calendar-days-grid > .calendar-day-surface[data-pnl-tone="profit"] {
-  --gold-day-ink:#fff1be; --gold-amount-ink:#9bffcf; --gold-day-edge:#ffe7a680;
-  --gold-day-shadow:var(--gold-edge),inset 0 -1px #ffe9a6a6,0 6px 25px #05e99d20;
+  --gold-day-ink:#fff7df; --gold-amount-ink:#b4ffe0; --gold-day-edge:#e7fbd44d;
   background:var(--gold-profit-material)!important;
 }
 html[data-dayris-theme="gold"] .calendar-days-grid > .calendar-day-surface[data-pnl-tone="loss"] {
-  --gold-day-ink:#fff1be; --gold-amount-ink:#ffa9bc; --gold-day-edge:#ffe7a680;
-  --gold-day-shadow:var(--gold-edge),inset 0 -1px #ffe9a6aa,0 6px 26px #ff3d7629;
+  --gold-day-ink:#fff7df; --gold-amount-ink:#ffd1dd; --gold-day-edge:#ffe2ce4d;
   background:var(--gold-loss-material)!important;
 }
 /* Adjacent-month transactions keep their semantic fill, just like this month. */
 html[data-dayris-theme="gold"] .calendar-days-grid > .calendar-day-surface[data-in-month="false"][data-pnl-tone="neutral"] {
-  --gold-day-ink:#b3a370; --gold-day-edge:#f3d78812;
-  --gold-day-shadow:var(--gold-edge),0 8px 22px #0003;
-  background:rgba(17,15,3,.4)!important;
+  --gold-day-ink:#9e9788; --gold-day-edge:#fff4d51a;
+  background:linear-gradient(145deg,#ffffff08,transparent),rgba(10,12,17,.42)!important;
 }
 html[data-dayris-theme="gold"] .calendar-days-grid > .calendar-day-surface.today-calendar-cell {
-  border-color:#fff5d0b8!important; box-shadow:var(--gold-edge),inset 0 0 25px #ffdb8a16,0 0 0 1px #ffedb621,0 0 30px #ffcf5b26!important;
+  border-color:#fff4c2b3!important; box-shadow:var(--gold-day-shadow),0 0 0 1px #ffe7a21a,0 0 22px #f7d37f1f!important;
 }
-html[data-dayris-theme="gold"] .today-calendar-cell::after { background:radial-gradient(ellipse at 50% 0,#ffe9a52b,transparent 68%); animation:none; }
+html[data-dayris-theme="gold"] .today-calendar-cell::after { background:none; animation:none; }
 html[data-dayris-theme="gold"] .today-calendar-cell > .bg-amber-400 { background:#ffe8a7; box-shadow:0 0 12px #ffda7699; z-index:1; }
 html[data-dayris-theme="gold"] .calendar-days-grid > .calendar-day-surface.selected-calendar-cell { border-color:#fff3d0!important; box-shadow:var(--gold-day-shadow),0 0 0 1px #fff3d080,0 0 24px #f1d28a38!important; }
 html[data-dayris-theme="gold"] .calendar-day-surface .day-amount { color:var(--gold-amount-ink,var(--gold-day-ink)); text-shadow:none; }
-html[data-dayris-theme="gold"] .calendar-day-surface:not([data-pnl-tone="neutral"]) .day-amount { text-shadow:0 1px 3px #000,0 0 10px currentColor; }
+html[data-dayris-theme="gold"] .calendar-day-surface:not([data-pnl-tone="neutral"]) .day-amount { text-shadow:0 1px 3px #0009; }
 html[data-dayris-theme="gold"] .calendar-day-surface > .font-data { position:relative; z-index:1; color:var(--gold-day-ink); text-shadow:0 1px 2px #0005; }
 html[data-dayris-theme="gold"] .calendar-day-surface > .mt-auto { z-index:1; }
 html[data-dayris-theme="gold"] .calendar-day-surface.has-calendar-plans .mt-auto > .inline-flex { color:var(--gold-day-ink); background:#0b0b0d12; }
 html[data-dayris-theme="gold"] .first-calendar-entry-target { color:#fff1c4; }
 html[data-dayris-theme="gold"] .calendar-glass-optics {
   display:block; position:absolute; inset:0; pointer-events:none; border-radius:inherit;
-  background:radial-gradient(ellipse 80% 60% at var(--gold-pointer-x,15%) var(--gold-pointer-y,0%),#fff8de2b,transparent 75%),linear-gradient(125deg,transparent 60%,#fff6e808 61%,transparent 80%);
-  opacity:.5; transition:opacity 350ms var(--gold-ease); transform:translateZ(0);
+  background:radial-gradient(ellipse 80% 60% at var(--gold-pointer-x,20%) var(--gold-pointer-y,-10%),#fff9e63b,transparent 75%);
+  opacity:.32; transition:opacity 350ms var(--gold-ease);
 }
-html[data-dayris-theme="gold"] .calendar-motion-light { inset:-80px -20% 0; height:auto; opacity:.7; background:radial-gradient(ellipse 45% 45% at 95% 0,#ffdf2f2e,transparent 80%),radial-gradient(ellipse 45% 50% at 0 75%,#e8c62221,transparent 80%); }
-html[data-dayris-theme="gold"] .calendar-weekdays > div { color:var(--dayris-muted); font-family:inherit; letter-spacing:.08em; }
-html[data-dayris-theme="gold"] .dayris-header { border-color:transparent; border-bottom-color:#fff2cc26; background:var(--gold-pane); box-shadow:inset 0 -1px #fff0d010,0 16px 40px #0002; }
-html[data-dayris-theme="gold"] .dayris-date-navigation { color:#fff0bc; }
+html[data-dayris-theme="gold"] .calendar-motion-light { display:none; }
+html[data-dayris-theme="gold"] .calendar-weekdays > div { color:#e3dac4; font-family:inherit; letter-spacing:.08em; font-size:10px; font-weight:550; }
+html[data-dayris-theme="gold"] .dayris-header { border:0; background:linear-gradient(180deg,#0b0d113d,transparent); box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none; }
+html[data-dayris-theme="gold"] .dayris-brand-row { margin-bottom:12px; }
+html[data-dayris-theme="gold"] .dayris-month-title { gap:7px; }
+html[data-dayris-theme="gold"] .dayris-date-navigation { padding:5px; border:1px solid #fff7e02e; border-radius:999px; background:var(--gold-control); color:#fff0bc; box-shadow:var(--gold-edge),0 2px 0 #19191999,0 9px 22px #0005; backdrop-filter:blur(18px) saturate(1.4); -webkit-backdrop-filter:blur(18px) saturate(1.4); }
 /* The measured label width can be stale after fonts or breakpoints change. */
 html[data-dayris-theme="gold"] .dayris-month-label { min-width:max-content; }
 html[data-dayris-theme="gold"] :is(.dayris-header button.rounded-full,.workspace-mode-toggle.workspace-mode-toggle) {
-  background:radial-gradient(ellipse at var(--gold-pointer-x,25%) var(--gold-pointer-y,0%),#fff1bf38,transparent 75%),linear-gradient(140deg,#fff3ba26,#181b20b3 50%,#efc95b2e),rgba(20,22,26,.64); color:#fff0c2; border-color:rgba(248,225,183,.22); box-shadow:inset 0 1px rgba(255,249,238,.12),0 0 18px rgba(239,206,79,.08);
+  background:radial-gradient(ellipse at var(--gold-pointer-x,25%) var(--gold-pointer-y,0%),#fff7df38,transparent 75%),linear-gradient(145deg,#ffffff0e,#ffffff04),#1a1c2024;
+  color:#fff3d0; border-color:#fff5d944; box-shadow:var(--gold-edge),0 2px 0 #19191999,0 7px 12px #0004;
+  backdrop-filter:blur(16px) saturate(1.3); -webkit-backdrop-filter:blur(16px) saturate(1.3);
 }
+html[data-dayris-theme="gold"] .dayris-date-navigation > button.rounded-full { background:transparent; border-color:transparent; box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none; }
+html[data-dayris-theme="gold"] .dayris-date-navigation button.font-display { font-weight:550; letter-spacing:-.04em; }
 html[data-dayris-theme="gold"] .header-mode-control .workspace-mode-toggle > span:not(.workspace-toggle-thumb) { color:#ffe4a4; text-shadow:0 1px #0005; }
 html[data-dayris-theme="gold"] .calendar-action-dock > .calendar-dock-morph {
-  background:var(--gold-pane);
-  border-color:#fff9e766; box-shadow:var(--gold-edge),0 14px 40px #0008,0 0 35px #ffdc6a28;
+  background:linear-gradient(145deg,#fff9e02b,#ffffff0a 40%,#ffe3a51f),rgba(18,20,25,.4);
+  border-color:#fff6da59; box-shadow:var(--gold-edge),0 3px 0 #1b1a15a6,0 16px 32px #0008;
+  backdrop-filter:blur(22px) saturate(1.55); -webkit-backdrop-filter:blur(22px) saturate(1.55);
 }
-html[data-dayris-theme="gold"] .calendar-dock-actions > div > .calendar-dock-add { background:var(--gold-ingot); color:#292115; border-color:#fff1c66b; box-shadow:inset 0 1px #fff4d48c,0 4px 18px #d2ac4d18; }
+html[data-dayris-theme="gold"] .calendar-dock-actions > div > .calendar-dock-add { background:var(--gold-ingot); color:#261e0d; border-color:#fff2c585; box-shadow:var(--gold-bevel),0 3px 0 #41351d,0 7px 12px #0005; }
 html[data-dayris-theme="gold"] .calendar-dock-add > span:first-child { color:#392a13; background:#8055101a; }
+html[data-dayris-theme="gold"] .calendar-dock-actions > div > button:not(.calendar-dock-add) { color:#fff3d5; }
+html[data-dayris-theme="gold"] .calendar-dock-actions > div > button:not(.calendar-dock-add) svg { color:#fff0be; }
 html[data-dayris-theme="gold"] .calendar-day-surface[data-gold-lit] .calendar-glass-optics { opacity:1; }
 html[data-dayris-theme="gold"] :is(button,.theme-premium-card,.capital-asset,.wallet-balance-card) { transition-timing-function:var(--gold-ease); }
 html[data-dayris-theme="gold"] :is(.dayris-header button,.calendar-action-dock button,.dayris-swipe-sheet button,.financial-history-dialog button,.theme-premium-card,.capital-asset,.wallet-panel-enter button) { transition:scale 160ms var(--gold-ease),translate 260ms var(--gold-ease),background-color 280ms,border-color 280ms,color 220ms,opacity 220ms; }
 html[data-dayris-theme="gold"] :is(.dayris-swipe-sheet button,.financial-history-dialog button,.theme-premium-card):active:not(:disabled) { scale:.985; }
-html[data-dayris-theme="gold"] .calendar-days-grid > .calendar-day-surface:active { scale:.985; transition-duration:90ms; }
+html[data-dayris-theme="gold"] :is(.dayris-header button.rounded-full,.calendar-dock-add):active:not(:disabled) { translate:0 2px; scale:.992; transition-duration:90ms; }
+html[data-dayris-theme="gold"] .calendar-days-grid > .calendar-day-surface:active:not(:disabled) { translate:0 2px; scale:.992; box-shadow:inset 0 1px #fff9df99,inset 0 -1px 2px #04050866,0 1px 0 #191713cc,0 4px 7px #0006!important; transition-duration:90ms; }
 html[data-dayris-theme="gold"] :is(.dayris-swipe-sheet,.financial-history-dialog,.plan-dialog) :is(input,textarea,select):focus { border-color:#e9ce91b3; box-shadow:0 0 0 3px #e7c98512; }
-html[data-dayris-theme="gold"] .calendar-section { border-color:#e9ca871a; }
+html[data-dayris-theme="gold"] .calendar-section { border:0; padding-left:10px; padding-right:10px; }
+html[data-dayris-theme="gold"] .calendar-days-grid { gap:7px!important; }
+html[data-dayris-theme="gold"] .calendar-month-brief { border-color:#fff1cd25; }
+html[data-dayris-theme="gold"] .calendar-month-brief summary { color:#e9e3d7; }
 html[data-dayris-theme="gold"] .calendar-month-brief summary > strong[data-sign="positive"] { color:var(--dayris-profit); }
 html[data-dayris-theme="gold"] .calendar-month-brief summary > strong[data-sign="negative"] { color:var(--dayris-loss); }
 html[data-dayris-theme="gold"] .settings-choice.is-selected { background:#f1d28a12; box-shadow:inset 2px 0 var(--dayris-accent); }
@@ -183,22 +196,38 @@ html[data-dayris-theme="gold"] .first-run-product-panel { background:linear-grad
 html[data-dayris-theme="gold"] .first-run-dialog :is([role="group"] > button,.first-run-theme-picker) { background:var(--gold-card); border-color:var(--dayris-line); box-shadow:var(--gold-edge); }
 html[data-dayris-theme="gold"] .first-run-dialog [aria-pressed="true"] { border-color:var(--dayris-accent); }
 @media(max-width:639px) { html[data-dayris-theme="gold"] .pro-calendar-day:not(.has-calendar-plans) .day-amount { left:5px; right:5px; bottom:9px; font-size:10px; letter-spacing:-.04em; } }
-@media(min-width:640px) { html[data-dayris-theme="gold"] .calendar-days-grid > .calendar-day-surface { border-radius:24px!important; } }
+@media(max-width:639px) {
+  html[data-dayris-theme="gold"] .dayris-date-navigation { display:grid; grid-template-columns:36px minmax(0,1fr) 36px auto; gap:3px; align-items:center; }
+  html[data-dayris-theme="gold"] .dayris-date-navigation > [data-site-element="today"] { grid-column:1/-1; min-height:28px; }
+}
+@media(max-width:359px) {
+  html[data-dayris-theme="gold"] .dayris-month-title { gap:4px; }
+  html[data-dayris-theme="gold"] .dayris-date-navigation button.font-display { font-size:20px; }
+  html[data-dayris-theme="gold"] .calendar-dock-actions > div { gap:4px; padding:5px; }
+  html[data-dayris-theme="gold"] .calendar-dock-actions > div > button { flex-shrink:0; gap:4px; padding-left:6px; padding-right:6px; }
+  html[data-dayris-theme="gold"] .calendar-dock-actions > div > button > span:last-child { white-space:nowrap; overflow-wrap:normal; font-size:11px; }
+}
+@media(min-width:640px) {
+  html[data-dayris-theme="gold"] .calendar-section { padding-left:32px; padding-right:32px; }
+  html[data-dayris-theme="gold"] .calendar-section[data-calendar-fit="true"] .calendar-days-grid { flex:none; grid-auto-rows:var(--calendar-row-height,96px); gap:10px!important; }
+  html[data-dayris-theme="gold"] .calendar-days-grid > .calendar-day-surface { border-radius:22px!important; min-height:56px; }
+}
 @media(hover:hover) and (pointer:fine) {
   html[data-dayris-theme="gold"] .calendar-day-surface:hover .calendar-glass-optics { opacity:1; }
-  html[data-dayris-theme="gold"] .calendar-days-grid > .calendar-day-surface:hover { border-color:#f1d28a!important; }
+  html[data-dayris-theme="gold"] .calendar-days-grid > .calendar-day-surface:hover:not(:active):not(:disabled) { translate:0 -2px; border-color:#f1d28a!important; }
   html[data-dayris-theme="gold"] :is(.theme-premium-card,.capital-asset,.wallet-balance-card):hover { translate:0 -2px; border-color:#e9ce917a; }
 }
 @media(prefers-reduced-motion:reduce) {
   html[data-dayris-theme="gold"] :is(button,.capital-asset,.wallet-balance-card,.calendar-glass-optics) { animation:none!important; transition:none!important; }
   html[data-dayris-theme="gold"] :is(button,.capital-asset,.wallet-balance-card):is(:active,:hover) { scale:1!important; translate:none!important; }
 }
-@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) { html[data-dayris-theme="gold"] { --gold-pane:linear-gradient(125deg,#292113,#17130d); } }
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) { html[data-dayris-theme="gold"] { --gold-pane:linear-gradient(125deg,#292113,#17130d); --gold-control:#25241e; } }
 @media(prefers-reduced-transparency:reduce) {
-  html[data-dayris-theme="gold"] { --gold-pane:#15171b; --gold-card:#15171b; --gold-backdrop:#0b0b0d; }
-  html[data-dayris-theme="gold"] :is(.dayris-header,.dayris-date-menu,.dayris-status-menu,.calendar-currency-menu,.pro-dialog,.capital-sheet,.plan-dialog,.savings-dialog,.lot-calculator,.voice-workspace,.dayris-swipe-sheet,.category-picker-sheet,.entry-login-dialog,.calendar-dock-morph,.first-run-shell,.calendar-day-surface) { backdrop-filter:none!important; -webkit-backdrop-filter:none!important; }
+  html[data-dayris-theme="gold"] { --gold-pane:#15171b; --gold-control:#25241e; --gold-card:#15171b; --gold-backdrop:#0b0b0d; }
+  html[data-dayris-theme="gold"] :is(.dayris-header,.dayris-header button,.dayris-date-navigation,.dayris-date-menu,.dayris-status-menu,.calendar-currency-menu,.pro-dialog,.capital-sheet,.plan-dialog,.savings-dialog,.lot-calculator,.voice-workspace,.dayris-swipe-sheet,.category-picker-sheet,.entry-login-dialog,.calendar-dock-morph,.first-run-shell,.calendar-day-surface) { backdrop-filter:none!important; -webkit-backdrop-filter:none!important; }
   html[data-dayris-theme="gold"] :is(.calendar-glass-optics,.calendar-motion-light) { display:none; }
-  html[data-dayris-theme="gold"] .calendar-days-grid > .calendar-day-surface { background:#c5a958!important; }
+  html[data-dayris-theme="gold"] .calendar-action-dock > .calendar-dock-morph { background:#25241e; }
+  html[data-dayris-theme="gold"] .calendar-days-grid > .calendar-day-surface { background:#26251f!important; }
   html[data-dayris-theme="gold"] .calendar-days-grid > .calendar-day-surface[data-pnl-tone="profit"] { background:#096640!important; }
   html[data-dayris-theme="gold"] .calendar-days-grid > .calendar-day-surface[data-pnl-tone="loss"] { background:#721a30!important; }
 }
