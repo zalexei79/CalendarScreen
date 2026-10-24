@@ -423,18 +423,9 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
         }
         context.restore();
       }
-      // Every selected week stays an intact square until its day seams open.
+      // Seven touching children initially paint one week. The same elements
+      // open their gutters and grow together, without an overlaid weekly bar.
       story.dataset.selectedWeeks = String(monthRows);
-      if (time >= 8000 && motion.division < 1) {
-        context.save(); context.globalAlpha = 1 - motion.division;
-        for(let row=0;row<monthRows;row++) {
-          const source=sourceIndices[row*7],age=time-(weekTimes[source]??Infinity);
-          context.fillStyle=weekColor(source,filled,ease(clamp(age/450)),rhythm,palette,ease(clamp(age/180)),motion.zoom*.75);
-          context.beginPath();context.roundRect(lattice.x,lattice.y+row*lattice.pitchY,lattice.width,lattice.height,targets[0].radius*motion.division);
-          context.fill();
-        }
-        context.restore();
-      }
       targets.forEach((target, index) => {
         const source = sourceIndices[index];
         const isToday = index === todayIndex;
@@ -451,7 +442,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
           const { wrapper, face, week, content, opacity } = target.bridge;
           const scaleX = w / target.width, scaleY = h / target.height;
           wrapper.style.transform = `translate3d(${x}px,${y}px,0) scale(${scaleX},${scaleY})`;
-          wrapper.style.opacity = String(motion.division * (1 - handoff));
+          wrapper.style.opacity = String((time >= 8000 ? 1 : 0) * (1 - handoff));
           wrapper.dataset.sourceWeek = String(source);
           wrapper.dataset.rowArrival = String(rowArrival);
           face.style.borderRadius = `${target.radius}px`;

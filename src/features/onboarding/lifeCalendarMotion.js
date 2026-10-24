@@ -5,8 +5,10 @@ const mix = (from, to, value) => from + (to - from) * value;
 export const LIFE_COUNT_END = 8000;
 export const LIFE_MOTION_END = 14200;
 export function lifeCalendarMotion(time) {
-  const zoom = progress(time, 8300, 1400);
-  const division = progress(time, 9850, 1500);
+  // Translation and seven-day refinement overlap. A separate zoom followed
+  // by a width reveal leaves a tall, motionless stack between the two acts.
+  const zoom = progress(time, 8300, 3050);
+  const division = progress(time, 8300, 3050);
   return {
     zoom, reframe:zoom, division, month:division,
     neighbors:division,
@@ -14,7 +16,7 @@ export function lifeCalendarMotion(time) {
     amountsOpacity:1-progress(time,5500,300), questionOpacity:progress(time,5850,350),
     moneyOpacity:1-progress(time,8000,300), headerOpacity:1-progress(time,8150,500),
     topAperture:progress(time,8400,350), bottomAperture:progress(time,8300,400),
-    contextExit:progress(time,8100,1000), skin:progress(time,10400,650),
+    contextExit:progress(time,8450,1450), skin:progress(time,10400,650),
     planeTilt:0, focus:progress(time,7600,400)*(1-division),
     signal:0, signalOpacity:0,
     titleDock:progress(time,10800,1400), titleReleased:time>=13500,
@@ -33,10 +35,12 @@ export function lifeLatticeFrame({camera,unit,cropCol,cropRow,targets,initialFil
  const first=targets[0],rows=targets.length/7;
  const finalPitchX=targets[1].x-first.x,finalPitchY=targets[7].y-first.y;
  const finalWidth=targets[6].x+targets[6].width-first.x,finalGap=finalPitchX-first.width;
- const size=unit*initialFill, square=Math.min(76,first.height,finalWidth*.22);
- const height=mix(mix(size,square,motion.zoom),first.height,motion.division);
- const pitchY=mix(mix(unit,square+8,motion.zoom),finalPitchY,motion.division);
- const width=mix(mix(size,square,motion.zoom),finalWidth,motion.division);
+ const size=unit*initialFill;
+ // One geometric clock for both axes: no enlarged stack, flat slats, or
+ // second expansion. Each week's seven children retain the parent's bounds.
+ const height=mix(size,first.height,motion.division);
+ const pitchY=mix(unit,finalPitchY,motion.division);
+ const width=mix(size,finalWidth,motion.division);
  const gap=Math.max(0,finalGap)*motion.division;
  const dayWidth=(width-gap*6)/7,dayPitch=dayWidth+gap;
  const anchorX=mix(camera.originX+(cropCol+.5)*unit,first.x+finalWidth/2,motion.zoom);

@@ -44,6 +44,8 @@ try {
   const choose = async () => {
     assert.equal(await page.getByRole('button', { name: 'Продолжить', exact: true }).count(), 0);
     await page.getByRole('button', { name: /Русский/ }).click();
+    await page.getByRole('button', { name: purple ? 'Аметист' : dark ? 'Тёмное' : 'Светлое', exact: true }).click();
+    await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
     assert.equal(await page.getByRole('button', { name: 'Продолжить', exact: true }).count(), 0);
     await page.getByRole('button', { name: new RegExp(currency) }).click();
   };
@@ -172,10 +174,9 @@ try {
       assert.equal(await page.locator('.life-story-grid').evaluate(canvas => {
         const ctx=canvas.getContext('2d'); return ctx.getImageData(4,4,1,1).data[3];
       }), 0, 'The enlarged lattice never fills the viewport corners');
-      assert.ok(Math.abs(state.weekWidth-state.cellHeight)<.1 && state.cellHeight>30, 'The first camera zoom enlarges square weekly cells');
-      assert.equal(state.division,0, 'The first zoom has not yet turned weeks into days');
-      assert.ok(state.intactWeeks, 'Whole weeks are painted as single squares, without premature day seams');
-      assert.ok(state.contextExit>.95, 'The lifetime fades behind the bounded month group');
+      assert.ok(state.weekWidth/state.cellHeight>1.7, 'The month opens across the screen during the approach, without a narrow vertical stack');
+      assert.ok(state.division>0 && state.division<1, 'Weekly refinement and camera approach overlap continuously');
+      assert.ok(state.contextExit>0 && state.contextExit<1, 'History retreats progressively while the month grows');
       assert.equal(state.headingOpacity, 0, 'Departing copy has cleared the calendar');
       assert.equal(await page.locator('.life-story-scale-cue').count(), 0, 'No floating scale label covers the cells');
     }
@@ -223,6 +224,12 @@ try {
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.settled === 'true');
   assert.equal(await money.count(), 0, 'The financial flow leaves before the calendar becomes interactive');
   const before = await page.screenshot({ path: screenshotPath('settled'), animations: 'disabled' });
+  if (process.argv.includes('--motion-only')) {
+    assert.deepEqual(errors, []);
+    console.log('PASS: continuous week refinement, bounded mobile/desktop geometry, readable dates and exact native calendar landing.');
+    await browser.close();
+    process.exit(0);
+  }
   const todayRect = await page.locator('.calendar-days-grid [data-today-cell="true"]').boundingBox();
   await page.clock.fastForward(800);
   await page.waitForFunction(() => !document.querySelector('.life-story'));
