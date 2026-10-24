@@ -31,11 +31,12 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
     let exiting = false;
     let releaseTimer;
     let motionFrame;
+    let surfaceWidth = surface.clientWidth;
     const light = navigation === 'calendar' ? surface.parentElement.querySelector('.calendar-motion-light') : null;
     const updateDepth = (x, settling = false, duration = 220) => {
       if (navigation !== 'calendar') return;
       const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-      const progress = reduced ? 0 : Math.min(Math.abs(x) / surface.clientWidth, 1);
+      const progress = reduced ? 0 : Math.min(Math.abs(x) / surfaceWidth, 1);
       const incoming = x < 0 ? 1 : -1;
       for (const grid of surface.querySelectorAll('.calendar-days-grid')) {
         const page = grid.closest('.calendar-month-preview');
@@ -51,7 +52,7 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
       // Horizontal tracking is a compositor update, not a rerender of three
       // calendars for every touch sample. React handles gesture boundaries.
       if (navigation === 'calendar' && value.axis === 'x' && !value.settling) {
-        setDrag(previous => previous.axis === 'x' && !previous.settling ? previous : value);
+        setDrag(previous => previous.axis === 'x' && !previous.settling && Math.sign(previous.x) === Math.sign(value.x) ? previous : value);
         cancelAnimationFrame(motionFrame);
         motionFrame = requestAnimationFrame(() => {
           surface.style.transform = `translate3d(${value.x}px,0,0)`;
@@ -60,7 +61,7 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
           // resting position before the page swap. Only compositor properties.
           if (light) {
             light.style.transition = 'none';
-            light.style.transform = `translate3d(${Math.sin(value.x / surface.clientWidth * Math.PI) * 8}px,0,0)`;
+            light.style.transform = `translate3d(${Math.sin(value.x / surfaceWidth * Math.PI) * 8}px,0,0)`;
           }
         });
       } else {
@@ -74,7 +75,7 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
         }
         setDrag(value);
       }
-      if (navigation === 'calendar') window.dispatchEvent(new CustomEvent('dayris-calendar-pull', { detail: value.axis === 'y' ? value : IDLE }));
+      if (navigation === 'calendar' && value.axis !== 'x') window.dispatchEvent(new CustomEvent('dayris-calendar-pull', { detail: value.axis === 'y' ? value : IDLE }));
     };
     const reset = () => { gesture = null; updateDrag(IDLE); };
     const acceptsTarget = (target) => {
@@ -104,6 +105,7 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
       if (!acceptsTarget(target)) return;
       if (window.getSelection()?.toString() || (window.visualViewport?.scale || 1) > 1.05) return;
       const touch = event.touches[0];
+      surfaceWidth = surface.clientWidth;
       // Leave the browser's own edge navigation gestures available.
       if (touch.clientX < 24 || touch.clientX > window.innerWidth - 24) return;
       gesture = { id: touch.identifier, x: touch.clientX, y: touch.clientY, dx: 0, dy: 0, atTop: isAtTop(target), axis: null, started: performance.now(), sampled: performance.now(), velocity: 0 };
@@ -133,7 +135,7 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
       const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
       updateDrag({
         axis: gesture.axis,
-        x: reduced || gesture.axis !== 'x' ? 0 : Math.sign(dx) * Math.min(Math.abs(dx) * (navigation === 'calendar' ? 1 : .4), navigation === 'calendar' ? surface.clientWidth * .96 : 70),
+        x: reduced || gesture.axis !== 'x' ? 0 : Math.sign(dx) * Math.min(Math.abs(dx) * (navigation === 'calendar' ? 1 : .4), navigation === 'calendar' ? surfaceWidth * .96 : 70),
         y: reduced || gesture.axis !== 'y' ? 0 : Math.min(Math.max(dy, 0) * .35, 70),
         ready: canExit(gesture, performance.now() - gesture.started, navigation),
       });
@@ -148,12 +150,12 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
         exiting = true;
         // Longer travel gets a longer landing; a decisive flick finishes faster.
         // The final deceleration has no bounce and no second entrance animation.
-        const remaining = Math.max(0, surface.clientWidth - Math.abs(dx));
+        const remaining = Math.max(0, surfaceWidth - Math.abs(dx));
         const recentVelocity = performance.now() - gesture.sampled < 100 ? Math.abs(gesture.velocity) : 0;
         const duration = Math.round(Math.max(260, Math.min(440, 260 + remaining * .35 - recentVelocity * 75)));
         gesture = null;
         const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-        updateDrag({ x: reduced ? 0 : Math.sign(dx) * surface.clientWidth, y: 0, axis: 'x', settling: true, ready: true, duration });
+        updateDrag({ x: reduced ? 0 : Math.sign(dx) * surfaceWidth, y: 0, axis: 'x', settling: true, ready: true, duration });
         releaseTimer = setTimeout(() => {
           if (!config.current.disabled) {
             document.documentElement.setAttribute('data-calendar-swipe-arrival', '');

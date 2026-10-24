@@ -124,7 +124,7 @@ export default function CalendarGrid({
           return <CalendarDayCell key={cell.key} firstEntryLabel={firstEntryLabel} firstEntryDayLabel={firstEntryDayLabel} planLabel={language === 'uk' ? 'Плани' : language === 'en' ? 'Plans' : language === 'ro' || language === 'md' ? 'Planuri' : 'Планы'} hasNote={!!notes[cell.key]} noteLabel={noteLabel} traderMode={traderMode} proView={proView} cell={cell} cellIndex={cellIndex} isSelected={isSelected} hasTrades={hasTrades} plans={plans} formatPlanAmount={formatPlanAmount} pnl={pnl} monthMaxAbsPnl={monthMaxAbsPnl} isLight={isLight} formatPnlDisplay={formatPnlDisplay} onSelect={() => onSelectDay(isSelected ? null : cell.key)} />;
         })}
       </div>
-      {touchDrag.axis === 'x' && adjacentMonths.map(preview => <CalendarMonthPreview key={preview.direction} preview={preview} isLight={isLight} language={language} traderMode={traderMode} proView={proView} selectedKey={selectedKey} notes={notes} noteLabel={noteLabel} tradesForDayFiltered={tradesForDayFiltered} plansForDay={plansForDay} formatPlanAmount={formatPlanAmount} totalPnlForDay={totalPnlForDay} monthMaxAbsPnl={monthMaxAbsPnl} formatPnlDisplay={formatPnlDisplay} />)}
+      {touchDrag.axis === 'x' && adjacentMonths.filter(preview => preview.direction === (touchDrag.x < 0 ? 1 : -1)).map(preview => <CalendarMonthPreview key={preview.direction} preview={preview} isLight={isLight} language={language} traderMode={traderMode} proView={proView} selectedKey={selectedKey} notes={notes} noteLabel={noteLabel} tradesForDayFiltered={tradesForDayFiltered} plansForDay={plansForDay} formatPlanAmount={formatPlanAmount} totalPnlForDay={totalPnlForDay} monthMaxAbsPnl={monthMaxAbsPnl} formatPnlDisplay={formatPnlDisplay} />)}
     </section>
     </div>
   );

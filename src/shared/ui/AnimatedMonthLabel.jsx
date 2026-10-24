@@ -7,6 +7,7 @@ export default function AnimatedMonthLabel({ month, year, label }) {
   const container = useRef(null);
   const current = useRef(null);
   const width = useRef(null);
+  const yearMotion = useRef(null);
   if (frame.index !== index || frame.label !== label) {
     setFrame({ index, label, previous: frame.label, direction: index >= frame.index ? 1 : -1 });
   }
@@ -16,11 +17,17 @@ export default function AnimatedMonthLabel({ month, year, label }) {
     node.getAnimations().forEach(animation => animation.cancel());
     node.style.width = `${nextWidth}px`;
     if (width.current != null && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      node.animate([{ width: `${width.current}px` }, { width: `${nextWidth}px` }], {
-        duration: 420, easing: 'cubic-bezier(.22,1,.36,1)',
-      });
+      // Commit layout once. FLIP the adjacent year instead of animating width,
+      // which reflows the glass header and refits the calendar every frame.
+      const year = node.closest('.dayris-month-title')?.children[1];
+      yearMotion.current?.cancel();
+      yearMotion.current = year?.animate([
+        { transform: `translateX(${width.current - nextWidth}px)` },
+        { transform: 'translateX(0)' },
+      ], { duration: 420, easing: 'cubic-bezier(.22,1,.36,1)' });
     }
     width.current = nextWidth;
+    return () => yearMotion.current?.cancel();
   }, [frame.index, frame.label]);
   return <span ref={container} className="dayris-month-label" style={{ '--label-direction': frame.direction }}>
     {frame.previous && <span key={`old-${frame.index}-${frame.label}`} aria-hidden="true" className="dayris-month-outgoing">{frame.previous}</span>}

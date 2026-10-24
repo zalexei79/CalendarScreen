@@ -198,7 +198,6 @@ html[data-dayris-theme="gold"] .first-run-dialog [aria-pressed="true"] { border-
 @media(max-width:639px) { html[data-dayris-theme="gold"] .pro-calendar-day:not(.has-calendar-plans) .day-amount { left:5px; right:5px; bottom:9px; font-size:10px; letter-spacing:-.04em; } }
 @media(max-width:639px) {
   html[data-dayris-theme="gold"] .dayris-date-navigation { display:grid; grid-template-columns:36px minmax(0,1fr) 36px auto; gap:3px; align-items:center; }
-  html[data-dayris-theme="gold"] .dayris-date-navigation > [data-site-element="today"] { grid-column:1/-1; min-height:28px; }
 }
 @media(max-width:359px) {
   html[data-dayris-theme="gold"] .dayris-month-title { gap:4px; }

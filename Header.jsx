@@ -59,6 +59,14 @@ export default function Header({
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
   const [syncIssueOpen, setSyncIssueOpen] = useState(false);
   const [retryingSync, setRetryingSync] = useState(false);
+  const todayAction = (month !== today.getMonth() || year !== today.getFullYear()) ? (
+    <button type="button" data-site-element="today" className={`dayris-today-action min-h-9 rounded-full px-3 text-xs font-medium ${isLight ? 'text-amber-700 hover:bg-amber-50' : 'text-amber-400 hover:bg-amber-400/10'}`} onClick={() => {
+      const now = new Date();
+      setViewMonth(now.getMonth()); setViewYear(now.getFullYear());
+      setSelectedKey(null); setMonthMenuOpen(false); setYearMenuOpen(false);
+      window.setTimeout(() => window.dispatchEvent(new Event('dk:today-pulse')), 80);
+    }}>{t('today')}</button>
+  ) : null;
 
   async function retrySync() {
     setRetryingSync(true);
@@ -354,28 +362,6 @@ export default function Header({
 
           <CalendarCurrencyPicker currency={currency} onChange={setCurrency} usedCurrencies={usedCurrencies} language={language} isLight={isLight} onOpen={() => { setMonthMenuOpen(false); setYearMenuOpen(false); }}/>
 
-          {(month !== today.getMonth() || year !== today.getFullYear()) && (
-            <button
-              type="button"
-              data-site-element="today"
-              onClick={() => {
-                const now = new Date();
-                setViewMonth(now.getMonth());
-                setViewYear(now.getFullYear());
-                setSelectedKey(null);
-                setMonthMenuOpen(false);
-                setYearMenuOpen(false);
-
-                // Trigger a soft pulse on today's calendar cell after the current month renders.
-                window.setTimeout(() => {
-                  window.dispatchEvent(new Event('dk:today-pulse'));
-                }, 80);
-              }}
-              className={`min-h-9 rounded-full px-3 text-xs font-medium transition-all duration-200 hover:-translate-y-px ${isLight ? 'text-amber-700 hover:bg-amber-50' : 'text-amber-400 hover:bg-amber-400/10'}`}
-            >
-              {t('today')}
-            </button>
-          )}
           </div>
           {/* Account details are also available from Settings. */}
           <div className={`dayris-account-badge hidden items-center rounded-lg border font-data text-[10px] tracking-wide overflow-hidden ${isLight ? 'border-zinc-300 bg-zinc-100' : 'border-zinc-800 bg-zinc-900'}`}>
@@ -400,6 +386,7 @@ export default function Header({
           {/* The workspace selector is separate from server-side PRO entitlement. */}
           <div className="dayris-workspace-slot">
             <WorkspaceModePanel
+              todayAction={todayAction}
               hideSelector proView={proView} onModeChange={() => setProView((value) => !value)} isLight={isLight}
               language={language} currency={currency} t={t} traderMode={traderMode}
               onTraderChange={() => setTraderMode((value) => {

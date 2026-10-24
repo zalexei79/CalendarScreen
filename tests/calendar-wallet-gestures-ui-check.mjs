@@ -84,7 +84,7 @@ try {
   await send('touchStart', 195, 150);
   await send('touchMove', 115, 150);
   await page.locator('.calendar-month-preview').first().waitFor({ state: 'attached' });
-  assert.equal(await page.locator('.calendar-month-preview').count(), 2, 'both adjacent months are available during drag');
+  assert.equal(await page.locator('.calendar-month-preview').count(), 1, 'only the visible incoming month is rendered during drag');
   const readsBeforeTracking = await page.evaluate(() => window.testTradesReads);
   await send('touchMove', 95, 150);
   await page.evaluate(() => new Promise(requestAnimationFrame));
@@ -100,6 +100,11 @@ try {
   assert.ok(incomingDepth > .96 && incomingDepth < 1, 'incoming month unfolds continuously with swipe progress');
   const previewBox = await page.locator('.calendar-month-preview').last().boundingBox();
   assert.ok(previewBox.x < 390 && previewBox.x > 0, 'next month enters the viewport behind the finger');
+  await send('touchMove', 275, 150);
+  await page.waitForFunction(() => document.querySelector('.calendar-month-preview')?.style.left === '-100%');
+  assert.equal(await page.locator('.calendar-month-preview').count(), 1, 'Reversing the finger replaces the preview rather than mounting both months');
+  await send('touchMove', 95, 150);
+  await page.waitForFunction(() => document.querySelector('.calendar-month-preview')?.style.left === '100%');
   await send('touchCancel');
   await page.waitForFunction(() => getComputedStyle(document.querySelector('.calendar-section')).transform === 'none');
   await page.evaluate(() => {
@@ -124,6 +129,8 @@ try {
   await swipe(195, 150, 120, 0); await page.waitForFunction(() => document.querySelector('#month').textContent === '0'); assert.equal(await page.locator('#month').textContent(), '0');
   await page.getByRole('button', { name: 'PRO', exact: true }).click();
   await swipe(195, 150, 0, 180); await remains();
+  // Allow the native vertical gesture to finish before the next touch stream.
+  await page.waitForTimeout(250);
   await swipe(195, 150, -120, 0); await page.waitForFunction(() => document.querySelector('#month').textContent === '1'); assert.equal(await page.locator('#month').textContent(), '1');
   // Ordinary scrolling, taps, overlays, and multiple fingers do not open Capital.
   await fresh(); await page.locator('.calendar-days-grid > button').nth(10).tap();
