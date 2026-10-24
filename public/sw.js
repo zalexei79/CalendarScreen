@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v61-receipt-distance-recovery';
+const CACHE_NAME = 'atj-cache-v62-onboarding-bridge-cleanup';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

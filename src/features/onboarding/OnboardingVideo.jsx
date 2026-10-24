@@ -151,6 +151,8 @@ export default function OnboardingVideo({ active, onStart, onSkip, onRestart, th
     if (!gridVisibilityRef.current) gridVisibilityRef.current = { node: grid, visibility: grid.style.visibility };
     grid.style.visibility = 'hidden';
     Object.assign(host.style, { left: `${source.x}px`, top: `${source.y}px`, width: `${source.width}px`, height: `${source.height}px` });
+    // The cloned shell includes theme utility classes with !important backgrounds.
+    host.style.setProperty('background', 'transparent', 'important');
     const native = 'translate(0,0) scale(1,1)';
     const embedded = `translate(${target.x - source.x}px,${target.y - source.y}px) scale(${target.width / source.width},${target.height / source.height})`;
     const frames = reverse
@@ -162,6 +164,8 @@ export default function OnboardingVideo({ active, onStart, onSkip, onRestart, th
     if (transitionRef.current === animation) {
       animation.cancel();
       host.replaceChildren();
+      host.className = 'onboarding-video-ghost';
+      host.removeAttribute('style');
       const saved = gridVisibilityRef.current;
       if (saved) saved.node.style.visibility = saved.visibility;
       gridVisibilityRef.current = null;

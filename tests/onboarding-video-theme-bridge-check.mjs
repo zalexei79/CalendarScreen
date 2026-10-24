@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';import {createRequire} from 'node:module';import fs from 'node:fs';import path from 'node:path';
+import {installStoryAccount} from './life-story-auth-fixture.mjs';import {selectBirthday} from './birthday-test-helper.mjs';
+const require=createRequire('C:/Users/aveel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/package.json');
+const browser=await require('playwright').chromium.launch({channel:'msedge',headless:true});
+try{for(const [theme,mobile] of [['light',false],['light',true],['dark',false]]){
+ const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:1000},serviceWorkers:'block'}),errors=[];
+ await context.addInitScript(theme=>{localStorage.setItem('atj_theme',theme);localStorage.setItem('atj_theme_preference',theme);localStorage.setItem('atj_language','ru');localStorage.setItem('calendar_guide_completed','1');localStorage.setItem('dayris_voice_feedback','off')},theme);
+ await context.route('**/*',route=>{const u=new URL(route.request().url());if(u.origin!=='http://calendar.test')return route.abort();const f=path.resolve('dist',u.pathname==='/'?'index.html':'.'+u.pathname);if(!f.startsWith(path.resolve('dist')+path.sep)||!fs.existsSync(f))return route.fulfill({status:404,body:''});const type={'.js':'text/javascript','.css':'text/css','.mp4':'video/mp4','.webp':'image/webp','.png':'image/png','.json':'application/json'};return route.fulfill({contentType:type[path.extname(f)]||'text/html',body:fs.readFileSync(f)})});
+ await installStoryAccount(context);const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+ await page.clock.install({time:new Date('2026-10-05T12:00:00')});await page.goto('http://calendar.test/');await page.clock.pauseAt(new Date('2026-10-05T13:00:00'));
+ await page.getByRole('button',{name:/Română/}).click();await page.locator('.first-run-dialog').getByRole('button',{name:'Continuă',exact:true}).click();await page.locator('.first-run-dialog').getByRole('button',{name:/USD/}).click();await selectBirthday(page,'1998-03-14');await page.getByRole('button',{name:'Descoperă povestea mea',exact:true}).click();await page.clock.runFor(32);await page.clock.fastForward(14500);await page.clock.runFor(32);
+ const video=page.locator('.onboarding-video[data-active="true"]');await video.waitFor();assert.equal(await video.getAttribute('data-theme'),theme);
+ await page.waitForFunction(()=>document.querySelector('.onboarding-video video').readyState>=2);await page.clock.runFor(32);await page.locator('.onboarding-video-ghost .calendar-days-grid').waitFor({state:'attached'});
+ const during=await page.locator('.onboarding-video-ghost').evaluate(n=>({background:getComputedStyle(n).backgroundColor,children:n.childElementCount}));assert.ok(during.children>0);assert.equal(during.background,'rgba(0, 0, 0, 0)','Calendar bridge never inherits an opaque theme background');
+ await page.clock.runFor(1100);await page.locator('.onboarding-video[data-phase="playing"]').waitFor();
+ const ghost=await page.locator('.onboarding-video-ghost').evaluate(n=>({display:getComputedStyle(n).display,children:n.childElementCount,classes:n.className,style:n.getAttribute('style')}));
+ assert.equal(ghost.children,0);assert.equal(ghost.display,'none','Empty bridge must never cover the film');assert.equal(ghost.classes,'onboarding-video-ghost');assert.equal(ghost.style,null);
+ await page.screenshot({path:`tests/onboarding-bridge-${theme}-${mobile?'mobile':'desktop'}.png`,animations:'disabled'});
+ await page.locator('.onboarding-video-skip').click();await page.clock.runFor(1100);await page.waitForFunction(()=>!document.querySelector('.first-run-dialog'));assert.equal(await page.locator('.premium-shell .calendar-days-grid').evaluate(n=>getComputedStyle(n).visibility),'visible');assert.deepEqual(errors,[]);console.log(theme,mobile?'mobile':'desktop','transparent bridge, no residual layer and native-calendar restoration passed');await context.close();
+}}finally{await browser.close()}
