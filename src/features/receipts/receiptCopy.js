@@ -1,4 +1,10 @@
 const rows = {
+  ocrLocal: ['Выделяем чек и проверяем сумму на устройстве.','Locating the receipt and checking the amount on your device.','Identificăm bonul și verificăm suma pe dispozitiv.','在本设备上定位收据并核对金额。'],
+  ocrpreparing: ["Готовим фото…","Preparing photo…","Pregătim fotografia…","正在准备照片…"],
+  ocrreading: ["Читаем чек…","Reading receipt…","Citim bonul…","正在识别收据…"],
+  ocrtotal: ["Проверяем итог…","Checking the total…","Verificăm totalul…","正在核对总额…"],
+  ocritems: ["Проверяем покупки…","Checking items…","Verificăm produsele…","正在核对商品…"],
+  ocrTimeout: ["Чтение заняло слишком много времени. Попробуйте снять чек ближе.","Reading took too long. Try a closer photo.","Citirea a durat prea mult. Fotografiază bonul mai aproape.","识别超时，请靠近收据重新拍摄。"],
   scanHold: ["Чек найден. Не двигайте телефон","Receipt found. Hold steady","Bon găsit. Ține telefonul nemișcat","已检测到收据，请保持稳定"],
   scanAutoHint: ["Снимем автоматически, когда чек будет неподвижен","Captures automatically when the receipt is steady","Fotografiem automat când bonul este nemișcat","收据稳定后将自动拍摄"],
   scanAuto: ["Авто","Auto","Auto","自动"],

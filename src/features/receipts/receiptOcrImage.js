@@ -1,3 +1,4 @@
+import {receiptDocumentBounds} from './receiptDocumentRegion.js';
 // A light, mostly neutral paper region can separate a receipt from a patterned
 // table. Bounds are only a recovery hint; an OCR total label is still required.
 export function receiptPaperBounds({data,width,height}){
@@ -23,10 +24,11 @@ export async function receiptPaperImage(file,{fallbackToWhole=false}={}){
     bitmap=await createImageBitmap(file);
     const sample=document.createElement('canvas'),ratio=Math.min(1,300/bitmap.width);sample.width=Math.round(bitmap.width*ratio);sample.height=Math.round(bitmap.height*ratio);
     const context=sample.getContext('2d',{willReadFrequently:true});context.drawImage(bitmap,0,0,sample.width,sample.height);
-    const bounds=receiptPaperBounds(context.getImageData(0,0,sample.width,sample.height))||(fallbackToWhole?{left:0,width:1}:null);
+    const pixels=context.getImageData(0,0,sample.width,sample.height);
+    const bounds=receiptDocumentBounds(pixels)||receiptPaperBounds(pixels)||(fallbackToWhole?{left:0,top:0,width:1,height:1}:null);
     if(!bounds)return null;
-    const sourceWidth=Math.round(bounds.width*bitmap.width),scale=Math.min(2,1000/sourceWidth,2400/bitmap.height),canvas=document.createElement('canvas');canvas.width=Math.round(sourceWidth*scale);canvas.height=Math.round(bitmap.height*scale);
-    const target=canvas.getContext('2d');target.imageSmoothingQuality='high';target.drawImage(bitmap,Math.round(bounds.left*bitmap.width),0,sourceWidth,bitmap.height,0,0,canvas.width,canvas.height);
+    const sourceWidth=Math.round(bounds.width*bitmap.width),sourceHeight=Math.round((bounds.height||1)*bitmap.height),scale=Math.min(3,1600/sourceWidth,3200/sourceHeight),canvas=document.createElement('canvas');canvas.width=Math.round(sourceWidth*scale);canvas.height=Math.round(sourceHeight*scale);
+    const target=canvas.getContext('2d');target.imageSmoothingQuality='high';target.drawImage(bitmap,Math.round(bounds.left*bitmap.width),Math.round((bounds.top||0)*bitmap.height),sourceWidth,sourceHeight,0,0,canvas.width,canvas.height);
     return canvas;
   }catch{return null;}finally{bitmap?.close();}
 }

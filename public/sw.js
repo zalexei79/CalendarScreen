@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v60-onboarding-audio-cadence';
+const CACHE_NAME = 'atj-cache-v61-receipt-distance-recovery';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

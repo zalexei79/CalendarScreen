@@ -31,7 +31,7 @@ export async function refineReceiptMath(data,readLine,{signal,onProgress}={}) {
     for(const mode of ['7','13']){
       if(signal?.aborted)throw new Error('CANCELLED');
       let reading;
-      try{reading=await readLine(rectangle,mode);}catch(error){if(signal?.aborted||error.message==='CANCELLED')throw error;break;}
+      try{reading=await readLine(rectangle,mode);}catch(error){if(signal?.aborted||error.message==='CANCELLED'||error.message==='OCR_TIMEOUT')throw error;break;}
       const candidate=receiptMath(reading);
       if(!candidate?.consistent)continue;
       const candidateKey=key(candidate);

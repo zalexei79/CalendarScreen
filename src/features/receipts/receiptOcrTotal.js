@@ -1,5 +1,5 @@
 import {receiptTotalAnchor,receiptTotalLine,receiptNonItemLine} from './receiptStructure.js';
-import {receiptMoney,moneyText} from './receiptModel.js';
+import {receiptMoney,moneyText,parseReceipt} from './receiptModel.js';
 
 const linesOf=data=>(data.blocks||[]).flatMap(block=>(block.paragraphs||[]).flatMap(paragraph=>paragraph.lines||[]));
 function labelEnd(line){
@@ -62,7 +62,7 @@ export async function refineReceiptTotals(data,readLine,{signal,onProgress}={}){
     for(const mode of ['7','13']){
       if(signal?.aborted)throw new Error('CANCELLED');
       try{const reading=await readLine(rectangle,mode);readings.push(needsDecimal&&!/[.,]\s*\d{1,2}(?!\d)/.test(reading)?null:numericReading(reading));}
-      catch(error){if(signal?.aborted||error.message==='CANCELLED')throw error;readings.push(null);}
+      catch(error){if(signal?.aborted||error.message==='CANCELLED'||error.message==='OCR_TIMEOUT')throw error;readings.push(null);}
     }
     const accepted=readings.length===2&&readings[0]>0&&readings[0]===readings[1];
     if(accepted){
@@ -75,6 +75,9 @@ export async function refineReceiptTotals(data,readLine,{signal,onProgress}={}){
     }
     onProgress?.(82+Math.round((number+1)/targets.length*3));
   }
+  // An exact, independently printed total can still be offered for explicit
+  // photo review when a second pixel reading is inconclusive. Never auto-pick it.
+  if(totalNeedsReview&&!totalCandidates.length){const printed=parseReceipt(data.text||'').total;if(receiptMoney(printed)>0)totalCandidates.push(printed);}
   return {...data,text,totalNeedsReview,totalRecovered,totalCandidates:totalNeedsReview?[...new Set(totalCandidates)].slice(0,3):[]};
 }
 

@@ -123,3 +123,5 @@ test('folded paper and a merged tax box do not clip the total label or include t
  let count=0;const result=await refineReceiptTotals(located,async rectangle=>{assert.ok(rectangle.top+rectangle.height<520);assert.ok(rectangle.left+rectangle.width>692);return['635.50','695.50'][count++];});
  assert.deepEqual(result.totalCandidates,['635.50','695.50']);assert.equal(parseReceiptPhoto(result,context).total,'');
 });
+
+test('a readable labelled total remains a review choice when an independent reread is inconclusive',async()=>{const data={...fixture('TOTAL','151.85'),totalNeedsReview:true};const result=await refineReceiptTotals(data,async()=> '');assert.equal(parseReceiptPhoto(result,context).total,'');assert.deepEqual(result.totalCandidates,['151.85']);});

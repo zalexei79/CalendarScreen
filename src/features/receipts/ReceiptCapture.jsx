@@ -24,6 +24,7 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
   const c = receiptCopy(language), today = localDateKey();
   const [open, setOpen] = useState(false), [draft, setDraft] = useState(null), [preview, setPreview] = useState('');
   const [phase, setPhase] = useState('idle'), [progress, setProgress] = useState(0), [error, setError] = useState(''), [confirmed, setConfirmed] = useState(false), [saved, setSaved] = useState(null);
+  const [ocrStage,setOcrStage]=useState('preparing');
   const [editingIndex, setEditingIndex] = useState(-1), [metadataOpen, setMetadataOpen] = useState(false);
   const [omittedItems, setOmittedItems] = useState(null);
   const [accessDenied, setAccessDenied] = useState(false);
@@ -100,12 +101,12 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
     try {
       if (!await checkAccess(owner)) { if (alive()) denyAccess(); return; }
       if (!alive()) return;
-      setPhase('reading');attempts.current++;
-      const text = await recognize(file, { language, signal: controller.signal, onProgress: value => { if (alive()) setProgress(value); } });
+      setPhase('reading');setOcrStage('preparing');attempts.current++;
+      const text = await recognize(file, { language, signal: controller.signal, onStage: value=>{if(alive())setOcrStage(value);},onProgress: value => { if (alive()) setProgress(previous=>Math.max(previous,value)); } });
       if (alive()) { const parsed=review(text);setPhase(!parsed.total&&!parsed.totalCandidates?.length&&!parsed.documentIssue?'scan-failed':'review'); }
     } catch (failure) {
       if (!alive()) return;
-      setError(failure.message === 'RECEIPT_ACCESS_UNAVAILABLE' ? c.access : '');
+      setError(failure.message === 'RECEIPT_ACCESS_UNAVAILABLE' ? c.access : failure.message==='OCR_TIMEOUT'?c.ocrTimeout:'');
       // Access failure must not expose a manually writable receipt form.
       if (failure.message !== 'RECEIPT_ACCESS_UNAVAILABLE') review('');
       setPhase(failure.message === 'RECEIPT_ACCESS_UNAVAILABLE' ? 'access-error' : 'scan-failed');
@@ -168,7 +169,7 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
         <div className="receipt-scroll">
           {saved ? <div className="receipt-success" role="status"><Check size={32}/><h3>{c.saved}</h3><strong>{moneyText(receiptMoney(saved.total))} {saved.currency}</strong><p>{saved.dateKey}</p>{saved.dayTotal !== undefined && <p>{c.dayTotal}: <b>{saved.dayTotal} {saved.currency}</b></p>}</div> : <>
             {preview && <details className="receipt-preview" open={!draft}><summary><img src={preview} alt=""/><span>{c.sourcePhoto}</span><ChevronDown size={14}/></summary><a href={preview} target="_blank" rel="noreferrer"><img src={preview} alt={c.sourcePhoto}/></a>{draft && !busy && photoChoices}</details>}
-            {(phase === 'reading' || phase === 'checking') && <div className="receipt-progress" role="status"><strong>{c.reading} {phase === 'reading' ? `${progress}%` : ''}</strong><progress max="100" value={progress}/><p>{c.loading}</p></div>}
+            {(phase === 'reading' || phase === 'checking') && <div className="receipt-progress" role="status"><strong>{phase==='reading'?(c['ocr'+ocrStage]||c.reading):c.reading} {phase === 'reading' ? `${progress}%` : ''}</strong><progress max="100" value={progress}/><p>{phase==='checking'||ocrStage==='preparing'?c.loading:c.ocrLocal}</p></div>}
             {error && <p className="receipt-warning" role="alert">{error}</p>}
             {phase==='scan-failed' && <section className="receipt-scan-failed" role="status"><ReceiptText size={28}/><h3>{attempts.current>1?c.scanFailedAgain:c.scanFailed}</h3><p>{attempts.current>1?c.scanManualHint:c.scanRetryHint}</p><button type="button" className="receipt-primary" onClick={attempts.current>1?manual:rescan}>{attempts.current>1?c.scanManual:c.scanRetry}</button><button type="button" onClick={attempts.current>1?rescan:manual}>{attempts.current>1?c.scanRetry:c.scanManual}</button></section>}
             {draft && phase!=='scan-failed' && <fieldset disabled={busy} className="receipt-fields"><legend className="receipt-sr-only">{c.review}</legend>

@@ -1,5 +1,6 @@
+import {receiptDocumentBounds} from './receiptDocumentRegion.js';
 // Preview-only document hint. Reading and confirming the total happens after capture.
-export function receiptFrameSignal({data,width,height}){
+export function receiptFrameSignal({data,width,height},{allowRegion=true}={}){
   const pixels=new Uint8Array(width*height),histogram=new Uint32Array(256);
   const left=Math.ceil(width*.08),right=Math.floor(width*.92),top=Math.ceil(height*.04),bottom=Math.floor(height*.96);
   let count=0;
@@ -22,7 +23,14 @@ export function receiptFrameSignal({data,width,height}){
   }
   let groups=0,last=-3;for(const y of rows){if(y-last>1)groups++;last=y;}
   const ink=dark/count;
-  const document=background>=100&&paper/count>.4&&ink>.018&&ink<.4&&edges/count>.012&&rows.length>=8&&groups>=4&&rows.at(-1)-rows[0]>height*.35;
+  let document=background>=100&&paper/count>.4&&ink>.018&&ink<.4&&edges/count>.012&&rows.length>=8&&groups>=4&&rows.at(-1)-rows[0]>height*.35;
+  if(!document&&allowRegion){
+    const bounds=receiptDocumentBounds({data,width,height});
+    if(bounds){const w=Math.round(bounds.width*width),h=Math.round(bounds.height*height),x0=Math.floor(bounds.left*width),y0=Math.floor(bounds.top*height),region=new Uint8ClampedArray(w*h*4);
+      for(let y=0;y<h;y++)for(let x=0;x<w;x++){const source=((y0+y)*width+x0+x)*4;region.set(data.subarray(source,source+4),(y*w+x)*4);}
+      document=receiptFrameSignal({data:region,width:w,height:h},{allowRegion:false}).document;
+    }
+  }
   return {document,pixels};
 }
 export function receiptFrameMotion(previous,current){
