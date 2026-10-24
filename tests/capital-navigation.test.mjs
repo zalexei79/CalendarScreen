@@ -59,9 +59,11 @@ test('Capital layout has a mobile breakpoint and respects reduced motion', () =>
   assert.match(css, /capital-quote-mobile/);
   assert.match(css, /capital-assets\{grid-template-columns:repeat\(auto-fit/);
   assert.match(css, /grid-template-areas:"icon main value" "icon qty quote"/);
-  assert.match(panel, /capital-asset-context/);
-  assert.match(panel, /capital-asset-invested/);
-  assert.match(panel, /\{t\.currentUnitPrice\}: \{price===null/);
+  // Holdings now live in their own component and the three section screens.
+  assert.match(panel, /<CapitalHoldingCard/);
+  assert.match(panel, /partitionHoldings\(portfolio\.assets\)/);
+  assert.match(panel, /capital-section-nav/);
+  assert.match(panel, /<CapitalActivity/);
   assert.match(panel, /capital-category-filters/);
   assert.match(panel, /categoryFilter==='all'\|\|a\.category===categoryFilter/);
   assert.match(panel, /<CapitalDashboard/);

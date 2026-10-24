@@ -28,6 +28,9 @@ import { purchaseCopy } from './purchaseCopy.js';
 import { salePreview } from './salePreview.js';
 import { saleCopy } from './saleCopy.js';
 import CapitalDashboard from './CapitalDashboard.jsx';
+import CapitalActivity from './CapitalActivity.jsx';
+import {partitionHoldings,sectionCopy} from './portfolioSections.js';
+import './portfolioSections.css';
 import CapitalAssetHistoryChart from './CapitalAssetHistoryChart.jsx';
 import CapitalQuoteHistoryChart from './CapitalQuoteHistoryChart.jsx';
 import { fetchUsEquityQuotes, isUsEquityAsset, isUsEquityQuoteFresh } from './usEquityQuotes.js';
@@ -183,7 +186,9 @@ function storedBaseCurrency(fallback, user) {
 
 export default function CapitalPanel({ language='ru', isLight=false, currency='USD', user, onBack, onWallet, onSettled }) {
   const locale = String(language).toLowerCase().startsWith('zh') ? 'zh' : String(language).toLowerCase().startsWith('en') ? 'en' : String(language).toLowerCase().startsWith('ro') || language === 'md' ? 'ro' : 'ru';
-  const t = copy[locale], stats = statCopy[locale];
+  const t = copy[locale], stats = statCopy[locale], sections=sectionCopy[locale];
+  const [screen,setScreen]=useWorkspacePreference(user?.id,'capital-screen','overview',['overview','assets','history']);
+  const [holdingsView,setHoldingsView]=useState('current');
   const [purchaseDraft]=useState(()=>{
     const saved=readWorkspace(user?.id,'capital-purchase');
     if(saved?.form&&saved.auto!==false&&saved.form.quoteSource!=='manual')saved.form={...saved.form,purchasePrice:'',price:'',nativePrice:undefined,nativeValuation:undefined};
@@ -452,9 +457,11 @@ export default function CapitalPanel({ language='ru', isLight=false, currency='U
     const performance=calculateBasePortfolioResult(portfolio.assets,activeFxSeries,baseCurrency,new Date(now).toISOString().slice(0,10),priceFor);
     return {value:converted&&!missing.length&&!unpriced.length?value:null,missing,unpriced,excludedUsdt,latestFxDate,pnl:performance.complete&&performance.excludedUsdt===null?performance.pnl:null,realized:performance.realized,unrealized:performance.unrealized,incomplete:performance.incomplete};
   },[metrics,activeFxSeries,baseCurrency,now,portfolio.assets,quotes]);
-  const filteredAssets = portfolio.assets.filter(a=>(categoryFilter==='all'||a.category===categoryFilter)&&`${a.name} ${a.symbol} ${a.category}`.toLowerCase().includes(filter.toLowerCase()));
+  const holdings=partitionHoldings(portfolio.assets);
+  const scopeAssets=holdings[holdingsView];
+  const filteredAssets = scopeAssets.filter(a=>(categoryFilter==='all'||a.category===categoryFilter)&&`${a.name} ${a.symbol} ${a.category}`.toLowerCase().includes(filter.toLowerCase()));
   const visible = filter||assetsExpanded||categoryFilter!=='all'?filteredAssets:filteredAssets.slice(0,4);
-  const categoryOptions = ['all',...new Set(portfolio.assets.map(asset=>asset.category))];
+  const categoryOptions = ['all',...new Set(scopeAssets.map(asset=>asset.category))];
   const hasBinanceAssets = pairs.length > 0;
   const hasGoldApiAssets = metalSymbols.length > 0;
   const hasMoexAssets = moexListings.length > 0;
@@ -594,20 +601,26 @@ zh: {buy:'平均买入成本',sell:'最新单价',result:'卖出剩余持仓的�
   const base=isLight?'capital-panel capital-light':'capital-panel';
   return <main ref={surfaceRef} className={base}>
     <header className="capital-top"><button className="capital-back" onClick={onBack}><ArrowLeft size={17}/><span>{t.back}</span></button><div className="capital-brand"><span>DAYRIS</span><b>CAPITAL</b><i>PRO</i></div><button className="capital-wallet" onClick={onWallet}><Wallet size={16}/><span>{t.wallet}</span></button></header>
-    <div className="capital-content"><CapitalAlerts alerts={alerts} assets={portfolio.assets} locale={locale} userId={user?.id}/><div className="capital-heading"><div><p className="capital-kicker">{t.portfolioEyebrow}</p><h1>{t.title}</h1><p>{t.subtitle}</p></div></div>
+    <div className="capital-content">{screen==='overview'&&<CapitalAlerts alerts={alerts} assets={portfolio.assets} locale={locale} userId={user?.id}/>}<div className="capital-heading"><div><p className="capital-kicker">{t.portfolioEyebrow}</p><h1>{t.title}</h1><p>{t.subtitle}</p></div></div>
       {saleSuccess&&<p className="capital-notice" role="status">{saleText.saved}</p>}
       <div className="capital-sync-status" role="status" aria-live="polite"><span data-offline={!online||Boolean(portfolio.error)}/>{!online?({ru:'Нет сети · показываем последние данные',en:'Offline · showing last available data',ro:'Offline · afișăm ultimele date',zh:'离线，显示最近数据'}[locale]):portfolio.error?({ru:'Обновление не удалось · последние данные сохранены',en:'Update failed · last data retained',ro:'Actualizarea a eșuat · ultimele date păstrate',zh:'更新失败，保留最近数据'}[locale]):portfolio.refreshing&&!portfolio.loading?({ru:'Обновляем портфель',en:'Updating portfolio',ro:'Actualizăm portofoliul',zh:'正在更新投资组合'}[locale]):portfolio.lastSynced?({ru:'Синхронизировано',en:'Synced',ro:'Sincronizat',zh:'已同步'}[locale])+` · ${new Date(portfolio.lastSynced).toLocaleTimeString(locale,{hour:'2-digit',minute:'2-digit'})}`:null}</div>
-      <CapitalDashboard workspaceOwner={user?.id} assets={portfolio.assets} operations={portfolio.operations} snapshots={portfolio.snapshots} metrics={metrics} priceFor={priceFor} fxSeries={activeFxSeries} baseCurrency={baseCurrency} onCurrencyChange={setBaseCurrency} currencies={CAPITAL_BASE_CURRENCIES} range={historyRange} onRangeChange={setHistoryRange} locale={locale} t={t} stats={stats} quoteSummary={quoteSummary} quoteCoverage={marketQuotedAssets.length?t.quoteCoverage(freshQuoteCount,marketQuotedAssets.length,manualAssetCount):t.quoteNone} online={online} fxLoading={fxLoading} fxError={fxError} fxDate={globalValue.latestFxDate} onAdd={()=>setComposer(true)} onSelect={asset=>{setOperationEditor(false);setSelected(asset);}}/>
+      <nav className="capital-section-nav" aria-label={sections.nav}>{['overview','assets','history'].map(key=><button type="button" key={key} aria-pressed={screen===key} onClick={()=>setScreen(key)}>{sections[key]}{key==='assets'&&<small>{holdings.current.length}</small>}</button>)}</nav>
+      <div className="capital-screen" data-capital-screen={screen}>
+      {screen==='overview'&&<CapitalDashboard workspaceOwner={user?.id} assets={portfolio.assets} operations={portfolio.operations} snapshots={portfolio.snapshots} metrics={metrics} priceFor={priceFor} fxSeries={activeFxSeries} baseCurrency={baseCurrency} onCurrencyChange={setBaseCurrency} currencies={CAPITAL_BASE_CURRENCIES} range={historyRange} onRangeChange={setHistoryRange} locale={locale} t={t} stats={stats} quoteSummary={quoteSummary} quoteCoverage={marketQuotedAssets.length?t.quoteCoverage(freshQuoteCount,marketQuotedAssets.length,manualAssetCount):t.quoteNone} online={online} fxLoading={fxLoading} fxError={fxError} fxDate={globalValue.latestFxDate} onAdd={()=>setComposer(true)} onSelect={asset=>{setOperationEditor(false);setSelected(asset);}}/>}
       {!user && <div className="capital-notice"><LockIcon/> {t.signIn}</div>}
       {portfolio.error&&!composer&&<div role="alert" className="capital-notice">{friendlyCapitalError(portfolio.error,locale,t)}</div>}
-      <section className="capital-holdings-panel">
-        <div className="capital-section-title"><h2>{t.myAssets} <span>{filteredAssets.length}{categoryFilter!=='all'||filter?` / ${portfolio.assets.length}`:''}</span></h2><div className="capital-holdings-actions">{portfolio.assets.length>4&&!filter&&categoryFilter==='all'&&<button type="button" className="capital-show-all" onClick={()=>setAssetsExpanded(value=>!value)}>{assetsExpanded?t.showLess:t.allAssets}<ArrowRight size={14}/></button>}<button type="button" className="capital-search-toggle" aria-label={t.search} aria-expanded={searchVisible} onClick={()=>{setSearchVisible(value=>!value);if(searchVisible)setFilter('');}}><Search size={16}/></button></div></div>
+      {screen==='assets'&&<section className="capital-holdings-panel">
+        <div className="capital-position-switch" role="group" aria-label={sections.assets}>{['current','closed'].map(key=><button type="button" key={key} aria-pressed={holdingsView===key} onClick={()=>{setHoldingsView(key);setCategoryFilter('all');setFilter('');setAssetsExpanded(false);}}>{sections[key]} <small>{holdings[key].length}</small></button>)}</div>
+        {holdingsView==='closed'&&<p className="capital-section-note">{sections.closedHint}</p>}
+        <div className="capital-section-title"><h2>{holdingsView==='closed'?sections.closed:t.myAssets} <span>{filteredAssets.length}{categoryFilter!=='all'||filter?` / ${scopeAssets.length}`:''}</span></h2><div className="capital-holdings-actions">{scopeAssets.length>4&&!filter&&categoryFilter==='all'&&<button type="button" className="capital-show-all" onClick={()=>setAssetsExpanded(value=>!value)}>{assetsExpanded?t.showLess:t.allAssets}<ArrowRight size={14}/></button>}<button type="button" className="capital-search-toggle" aria-label={t.search} aria-expanded={searchVisible} onClick={()=>{setSearchVisible(value=>!value);if(searchVisible)setFilter('');}}><Search size={16}/></button></div></div>
         {categoryOptions.length>2&&<div className="capital-category-filters" role="group" aria-label={t.category}>{categoryOptions.map(category=><button type="button" key={category} className={categoryFilter===category?'is-active':''} aria-pressed={categoryFilter===category} onClick={()=>{setCategoryFilter(category);setAssetsExpanded(false);}}>{category==='all'?t.allAssets:t.categories[t.cats.indexOf(category)]}</button>)}</div>}
         {searchVisible&&<label className="capital-search"><Search size={15}/><input autoFocus value={filter} onChange={e=>setFilter(e.target.value)} placeholder={t.search}/></label>}
-        {portfolio.loading?<div className="capital-empty"><RefreshCw className="capital-spin"/>{t.updated}…</div>:!visible.length?(portfolio.assets.length>0&&(filter||categoryFilter!=='all')?<div className="capital-filter-empty"><Search size={17}/><span>{t.noAssetsFound}</span></div>:<div className="capital-empty"><div className="capital-empty-icon"><ChartNoAxesCombined/></div><strong>{t.empty}</strong><span>{t.emptyHint}</span><button className="capital-add" onClick={()=>setComposer(true)}><Plus size={16}/>{t.add}</button></div>):<div className="capital-assets">{visible.map(asset=>{const Icon=icons[t.cats.indexOf(asset.category)]||BriefcaseBusiness;return <CapitalHoldingCard key={asset.id} asset={asset} price={priceFor(asset)} quote={quotes[asset.symbol]} now={now} online={online} locale={locale} t={t} Icon={Icon} unitLabel={priceUnit(asset)} formatQuantity={formatQuantity} formatPercent={formatPercent} onSelect={asset=>{setOperationEditor(false);setSelected(asset);}}/>;})}</div>}
-        {portfolio.assets.length>0&&<><CapitalHoldingExplanation locale={locale}/><button className="capital-add capital-add-operation" onClick={()=>setComposer(true)}><Plus size={18}/>{t.addOperation}</button></>}
-      </section>
-      <p className="capital-disclaimer">{t.quoteDisclaimer}{lastQuote?` ${t.updated}: ${displayTime(lastQuote)}.`:''}</p>
+        {portfolio.loading?<div className="capital-empty"><RefreshCw className="capital-spin"/>{t.updated}…</div>:!visible.length?(scopeAssets.length>0&&(filter||categoryFilter!=='all')?<div className="capital-filter-empty"><Search size={17}/><span>{t.noAssetsFound}</span></div>:<div className="capital-empty"><div className="capital-empty-icon"><ChartNoAxesCombined/></div><strong>{holdingsView==='closed'?sections.closedEmpty:sections.currentEmpty}</strong><span>{holdingsView==='closed'?sections.closedHint:sections.currentHint}</span>{holdingsView==='current'&&holdings.closed.length>0&&<button type="button" className="capital-show-all" onClick={()=>setHoldingsView('closed')}>{sections.closedAction}</button>}<button className="capital-add" onClick={()=>setComposer(true)}><Plus size={16}/>{t.add}</button></div>):<div className="capital-assets">{visible.map(asset=>{const Icon=icons[t.cats.indexOf(asset.category)]||BriefcaseBusiness;return <CapitalHoldingCard key={asset.id} asset={asset} price={priceFor(asset)} quote={quotes[asset.symbol]} now={now} online={online} locale={locale} t={t} Icon={Icon} unitLabel={priceUnit(asset)} formatQuantity={formatQuantity} formatPercent={formatPercent} onSelect={asset=>{setOperationEditor(false);setSelected(asset);}}/>;})}</div>}
+        {scopeAssets.length>0&&<><CapitalHoldingExplanation locale={locale}/><button className="capital-add capital-add-operation" onClick={()=>setComposer(true)}><Plus size={18}/>{t.addOperation}</button></>}
+      </section>}
+      {screen==='history'&&<CapitalActivity loading={portfolio.loading} assets={portfolio.assets} operations={portfolio.operations} locale={locale} t={t} onSelect={asset=>{setOperationEditor(false);setSelected(asset);}}/>}
+      </div>
+      <details className="capital-disclaimer capital-source-disclosure"><summary>{t.quoteSource}</summary><p>{t.quoteDisclaimer}{lastQuote?` ${t.updated}: ${displayTime(lastQuote)}.`:''}</p></details>
     </div>
     {(composer||selected)&&createPortal(<div className={`${base} capital-overlay`} onMouseDown={e=>{if(e.target===e.currentTarget)closeSheet();}}><SwipeDismissSheet as="form" onDismiss={closeSheet} handleClassName="-mt-3 mb-2" isLight={isLight} className="capital-sheet" onSubmit={composer?submit:saveOperation}>
       <div className="capital-sheet-head"><div><span className="capital-kicker">DAYRIS CAPITAL</span><h2>{composer?purchaseText.title:selected?.name||''}</h2></div><SheetCloseButton language={language} disabled={saving} onClick={closeSheet}/></div>
