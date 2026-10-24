@@ -37,3 +37,7 @@ Edit target: supplied 1080x1920 vertical DAYRIS screenshot. Remove ONLY the phot
 The original H.264 MP4 exports supplied in the user's video-start folder are included for Russian, English, Romanian, Ukrainian and Simplified Chinese, each in desktop and mobile format. Locale aliases md/ro select Romanian and zh-CN selects Chinese. The character geometry and restoration masks are shared; only background regions without localized text are exposed. Controls, accessibility labels, loading/error states, countdown and restart use the selected language. Entry hotspots start at 19 seconds or 1.25 seconds before the end for shorter films.
 
 The face framebuffer uses premultiplied RGB and alpha consistently. Multiplying the feathered edge RGB by coverage prevents bright facial contour bands when WebKit composites the transparent canvas. The alpha regression checks both Chromium and WebKit at mobile DPR 3.
+
+## Scene continuity
+
+The live presenter's initial rectangle is fitted to eye landmarks in the supplied final film frames: desktop left 2.591%, width 30.95%, bottom 6.806%; portrait left -5.088%, width 45.152%, bottom 8.514%. The replacement dissolves over 1.4 seconds. Restart expands the stage to the viewport over one second, retaining the character while the film and restoration plates fade. The connector follows the rendered fingertip and actual action button through resizing. The duplicate ready caption remains an accessible announcement without covering Skip.

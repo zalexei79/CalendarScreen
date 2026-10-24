@@ -234,7 +234,7 @@ export default function OnboardingVideo({ active, onStart, onSkip, onRestart, th
       {!failed && phase !== 'ready' && <button type="button" onClick={() => paused ? play() : videoRef.current.pause()} disabled={!loaded} aria-label={paused ? copy.resume : copy.pause}>{paused ? <Play size={17} /> : <Pause size={17} />}</button>}
       {!failed && phase !== 'ready' && <button type="button" onClick={() => { videoRef.current.muted = !muted; setMuted(!muted); }} aria-label={muted ? copy.unmute : copy.mute}>{muted ? <VolumeX size={17} /> : <Volume2 size={17} />}{muted && <span>{copy.unmute}</span>}</button>}
     </div>}
-    {!expired && <p className="onboarding-video-status" role="status">{failed ? copy.failed : playBlocked ? copy.blocked : !loaded ? copy.loading : phase === 'ready' ? copy.ready : ''}</p>}
+    {!expired && <p className="onboarding-video-status" data-announcement-only={phase === 'ready'} role="status">{failed ? copy.failed : playBlocked ? copy.blocked : !loaded ? copy.loading : phase === 'ready' ? copy.ready : ''}</p>}
     {failed && !expired && <button type="button" className="onboarding-video-fallback" onClick={() => leave('entry')}>{copy.first} <ArrowRight size={16} /></button>}
   </section>;
 }

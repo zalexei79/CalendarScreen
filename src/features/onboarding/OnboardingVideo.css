@@ -1,7 +1,7 @@
 .onboarding-video { position: fixed; inset: 0; overflow: hidden; color: #f0fbf8; isolation: isolate; }
 .onboarding-video[hidden] { display: none; }
 .onboarding-video-backdrop { position: absolute; inset: 0; background: #071216; opacity: 0; }
-.onboarding-video-frame { position: absolute; left: 50%; top: 50%; width: min(100vw, 177.7778dvh); height: min(56.25vw, 100dvh); transform: translate(-50%,-50%); opacity: 0; }
+.onboarding-video-frame { position: absolute; left: 50%; top: 50%; width: min(100vw, 177.7778dvh); height: min(56.25vw, 100dvh); transform: translate(-50%,-50%); opacity: 0; transition: width 1000ms cubic-bezier(.4,0,.2,1),height 1000ms cubic-bezier(.4,0,.2,1); }
 .onboarding-video-frame.is-mobile { width: min(100vw, 56.25dvh); height: min(177.7778vw, 100dvh); }
 .onboarding-video video { display: block; width: 100%; height: 100%; object-fit: contain; }
 .onboarding-video[data-phase="loading"] .onboarding-video-frame { opacity: 1; }
@@ -34,3 +34,8 @@
 @keyframes onboarding-action-glow { 50% { box-shadow: 0 0 0 5px #59dfb818,0 0 24px #59dfb85c; } }
 @media (max-width: 767px) { .onboarding-video-controls { bottom: max(9px,env(safe-area-inset-bottom)); right: 8px; } .onboarding-video-controls button { padding: 0 10px; } .onboarding-video-status { bottom: max(52px,env(safe-area-inset-bottom)); font-size: 11px; } }
 @media (prefers-reduced-motion: reduce) { .onboarding-video *, .onboarding-video[data-phase] .onboarding-video-frame, .onboarding-video[data-phase] .onboarding-video-backdrop { animation-duration: 1ms !important; animation-iteration-count: 1 !important; } }
+
+/* The entry card already carries this instruction; keep the announcement accessible without covering skip. */
+.onboarding-video-status[data-announcement-only="true"] { position: absolute; width: 1px; height: 1px; max-width: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+@media (prefers-reduced-motion: reduce) { .onboarding-video-frame, .onboarding-video video { transition: none !important; } }

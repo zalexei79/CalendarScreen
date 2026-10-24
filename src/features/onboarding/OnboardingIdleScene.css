@@ -1,4 +1,4 @@
-.onboarding-idle { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 650ms cubic-bezier(.4,0,.2,1); }
+.onboarding-idle { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 1400ms cubic-bezier(.4,0,.2,1); }
 .onboarding-idle[data-visible="true"] { opacity: 1; }
 .onboarding-idle-plate { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; }
 .onboarding-idle-person-plate { mask-image: linear-gradient(to right,#000 0 42%,transparent 44.8%),linear-gradient(to bottom,transparent 44%,#000 47%); mask-composite: intersect; }
@@ -6,8 +6,8 @@
 .is-mobile .onboarding-idle-person-plate { mask-image: linear-gradient(to right,#000 0 42%,transparent 44.4%),linear-gradient(to bottom,transparent 68.8%,#000 70.4% 95%,transparent 97%); }
 .is-mobile .onboarding-idle-line-plate { clip-path: polygon(32% 83%,48% 79%,48% 84%,32% 88%); }
 .onboarding-idle-preload { display: none; }
-.onboarding-idle-presenter { position: absolute; left: 2%; bottom: 2.3%; width: 35.5%; aspect-ratio: 972/809; transform-origin: 50% 100%; animation: onboarding-presenter-breathe 4.6s ease-in-out infinite; }
-.is-mobile .onboarding-idle-presenter { left: -7%; bottom: 5.5%; width: 50%; }
+.onboarding-idle-presenter { position: absolute; left: 2.591%; bottom: 6.806%; width: 30.95%; aspect-ratio: 972/809; transform-origin: 50% 100%; animation: onboarding-presenter-breathe 4.6s ease-in-out infinite; transition: left 1000ms cubic-bezier(.4,0,.2,1),bottom 1000ms cubic-bezier(.4,0,.2,1),width 1000ms cubic-bezier(.4,0,.2,1); }
+.is-mobile .onboarding-idle-presenter { left: -5.088%; bottom: 8.514%; width: 45.152%; }
 .onboarding-idle-face { position: absolute; inset: 0; display: block; width: 100%; height: 100%; background-repeat: no-repeat; background-size: 200% 100%; }
 .onboarding-idle-face.is-smiling { background-position: left center; }
 .onboarding-presenter-morph { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
@@ -15,31 +15,39 @@
 .onboarding-idle-flow { fill: none; stroke: #e0d298; stroke-width: 2; stroke-linecap: round; stroke-dasharray: 4 8; vector-effect: non-scaling-stroke; animation: onboarding-connector-flow 1.6s linear infinite; }
 .onboarding-idle-endpoint { fill: #f4e5a2; filter: drop-shadow(0 0 5px #e6d587); }
 .onboarding-idle[data-waiting="false"] *, .onboarding-idle[data-visible="false"] * { animation-play-state: paused; }
-.onboarding-idle[data-expired="true"] .onboarding-idle-plate { visibility: hidden; }
+.onboarding-idle-plate { transition: opacity 900ms cubic-bezier(.4,0,.2,1); }
+.onboarding-idle[data-expired="true"] .onboarding-idle-plate { opacity: 0; }
+.onboarding-idle[data-expired="true"] .onboarding-idle-presenter { left: 3%; bottom: 0; width: min(39%,96dvh); }
+.is-mobile .onboarding-idle[data-expired="true"] .onboarding-idle-presenter { left: -8%; bottom: env(safe-area-inset-bottom,0px); width: min(60%,96dvh); }
 .onboarding-video[data-phase="expired"] .onboarding-video-frame, .onboarding-video[data-phase="expired"] .onboarding-video-backdrop { opacity: 1; }
-.onboarding-video[data-phase="expired"] video { visibility: hidden; }
+.onboarding-video video { transition: opacity 900ms cubic-bezier(.4,0,.2,1); }
+.onboarding-video[data-phase="expired"] video { opacity: 0; }
+.onboarding-video[data-phase="expired"] .onboarding-video-frame { width: 100vw; height: 100dvh; }
 .onboarding-video-countdown { position: absolute; left: 50%; top: 1.5%; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 7px 16px; border: 1px solid #efb18d70; border-radius: 24px; background: #2b1e1eeb; color: #f4d3b9; font-size: 12px; white-space: nowrap; }
 .onboarding-video-countdown strong { display: grid; place-items: center; min-width: 30px; font-size: 22px; font-variant-numeric: tabular-nums; color: #ffdeac; }
 .is-mobile .onboarding-video-countdown { top: 1%; gap: 8px; min-height: 36px; padding: 4px 12px; font-size: 10px; }
 .is-mobile .onboarding-video-countdown strong { font-size: 18px; }
-.onboarding-video-expired { position: absolute; left: 45%; right: 8%; top: 71%; display: flex; align-items: center; flex-direction: column; gap: 18px; text-align: center; }
+.onboarding-video-expired { position: absolute; left: 45%; right: 8%; bottom: 12%; display: flex; align-items: center; flex-direction: column; gap: 18px; text-align: center; }
 .onboarding-video-expired h2 { font-size: clamp(20px,3vw,40px); font-weight: 600; color: #eff8f3; }
 .onboarding-video-expired button { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 48px; padding: 12px 22px; background: #174139; border: 1px solid #76d5b8; border-radius: 18px; color: #effff6; font-size: 15px; }
-.is-mobile .onboarding-video-expired { left: 45%; right: 4%; top: 77%; gap: 10px; }
+.is-mobile .onboarding-video-expired { left: 45%; right: 5%; bottom: calc(env(safe-area-inset-bottom,0px) + 40px); gap: 10px; }
 .is-mobile .onboarding-video-expired h2 { font-size: clamp(12px,1.75dvh,16px); line-height: 1.3; }
 .is-mobile .onboarding-video-expired button { width: 100%; gap: 5px; min-height: 44px; padding: 8px; border-radius: 14px; font-size: clamp(10px,1.45dvh,12px); white-space: nowrap; }
 .is-mobile .onboarding-video-expired button svg { width: 16px; height: 16px; flex: none; }
-.onboarding-restart-atmosphere { position: absolute; inset: 0; background: radial-gradient(ellipse at 65% 40%,#1c594c57,transparent 65%),linear-gradient(155deg,#09171b,#071216 70%); }
+.onboarding-restart-atmosphere { position: absolute; inset: 0; animation: onboarding-restart-in 1000ms cubic-bezier(.4,0,.2,1) both; background: radial-gradient(ellipse at 65% 40%,#1c594c57,transparent 65%),linear-gradient(155deg,#09171b,#071216 70%); }
 .onboarding-restart-brand { position: absolute; left: 50%; top: 12%; display: flex; align-items: center; gap: 12px; font-weight: 600; letter-spacing: .12em; color: #b9d8cd; font-size: clamp(12px,1.6vw,22px); }
 .onboarding-restart-brand svg, .onboarding-restart-brand img { width: 32px; height: 32px; }
 .onboarding-restart-calendar { position: absolute; left: 50%; top: 23%; width: 37%; height: 36%; display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); grid-template-rows: repeat(5,minmax(0,1fr)); gap: 8px; transform: perspective(800px) rotateX(7deg) rotateZ(-2deg); }
 .onboarding-restart-calendar span { border: 1px solid #7bd9b851; border-radius: 12px; background: linear-gradient(140deg,#70d5b432,#163e3322); opacity: .22; animation: onboarding-calendar-wave 6s ease-in-out infinite; animation-delay: calc(var(--cell) * -160ms); }
 .onboarding-restart-calendar span:nth-child(9n) { border-color: #d7a08455; background: #d7a0841a; }
-.is-mobile .onboarding-restart-brand { left: 8%; top: 12%; font-size: 16px; gap: 10px; }
-.is-mobile .onboarding-restart-calendar { left: 8%; top: 22%; width: 84%; height: 37%; gap: 6px; }
+.is-mobile .onboarding-restart-brand { left: 8%; top: max(28px,calc(env(safe-area-inset-top,0px) + 14px)); font-size: 16px; gap: 10px; }
+.is-mobile .onboarding-restart-calendar { left: 8%; top: 14%; width: 84%; height: 49%; gap: 6px; }
 .is-mobile .onboarding-restart-calendar span { border-radius: 9px; }
+@keyframes onboarding-restart-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes onboarding-presenter-breathe { 0%,100% { transform: translateY(0) rotate(-.3deg); } 50% { transform: translateY(-3px) rotate(.3deg); } }
 @keyframes onboarding-connector-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
 @keyframes onboarding-connector-flow { to { stroke-dashoffset: -24; } }
 @keyframes onboarding-calendar-wave { 0%,12%,100% { opacity: .22; transform: translateY(0); } 4% { opacity: .75; transform: translateY(-3px); } }
 @media (prefers-reduced-motion: reduce) { .onboarding-idle, .onboarding-idle *, .onboarding-restart-atmosphere * { animation: none !important; transition: none !important; } }
+
+@media (orientation: landscape) and (max-height: 500px) { .is-mobile .onboarding-restart-brand { left: 50%; top: max(18px,env(safe-area-inset-top,0px)); } .is-mobile .onboarding-restart-calendar { left: 50%; top: 20%; width: 43%; height: 39%; } }
