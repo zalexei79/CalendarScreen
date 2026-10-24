@@ -20,7 +20,7 @@ const GRID = { desktop: [.475, .456, .464, .433], mobile: [.083, .394, .834, .24
 export const VIDEO_ENTRY_CUE = 19;
 const FILMS = { ru: [ruDesktop, ruMobile], en: [enDesktop, enMobile], ro: [roDesktop, roMobile], uk: [ukDesktop, ukMobile], zh: [zhDesktop, zhMobile] };
 
-export default function OnboardingVideo({ active, onStart, onSkip, onRestart, theme, lang = 'ru' }) {
+export default function OnboardingVideo({ active, onStart, onSkip, onRestart, theme, lang = 'ru', initialMuted = false, onSoundChange }) {
   const copy = ONBOARDING_VIDEO_COPY[lang] || ONBOARDING_VIDEO_COPY.ru;
   const films = FILMS[lang] || FILMS.ru;
   const videoRef = useRef(null);
@@ -38,7 +38,7 @@ export default function OnboardingVideo({ active, onStart, onSkip, onRestart, th
   const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches);
   const [loaded, setLoaded] = useState(false);
   const [phase, setPhase] = useState('loading');
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(initialMuted);
   const [paused, setPaused] = useState(false);
   const [entryReady, setEntryReady] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -48,6 +48,7 @@ export default function OnboardingVideo({ active, onStart, onSkip, onRestart, th
   const [restartEmotionIndex, setRestartEmotionIndex] = useState(0);
   const emotion = idleSeconds >= 20 ? 'angry' : idleSeconds >= 15 ? 'sad' : 'smile';
   const countdown = idleSeconds >= 20 ? Math.max(0, 30 - idleSeconds) : null;
+  useEffect(() => { setMuted(initialMuted); }, [initialMuted]);
   const expired = phase === 'expired';
 
   useEffect(() => {
@@ -122,6 +123,7 @@ export default function OnboardingVideo({ active, onStart, onSkip, onRestart, th
       // Mobile browsers can require a new gesture for sound after the life story.
       video.muted = true;
       setMuted(true);
+      onSoundChange?.(true);
       try { await video.play(); if (alive.current) { setPaused(false); setPlayBlocked(false); } }
       catch { if (alive.current) { setPaused(true); setPlayBlocked(true); } }
     }
@@ -232,7 +234,7 @@ export default function OnboardingVideo({ active, onStart, onSkip, onRestart, th
     <div ref={ghostRef} className="onboarding-video-ghost" aria-hidden="true" inert="" />
     {!expired && <div className="onboarding-video-controls" hidden={phase === 'returning'}>
       {!failed && phase !== 'ready' && <button type="button" onClick={() => paused ? play() : videoRef.current.pause()} disabled={!loaded} aria-label={paused ? copy.resume : copy.pause}>{paused ? <Play size={17} /> : <Pause size={17} />}</button>}
-      {!failed && phase !== 'ready' && <button type="button" onClick={() => { videoRef.current.muted = !muted; setMuted(!muted); }} aria-label={muted ? copy.unmute : copy.mute}>{muted ? <VolumeX size={17} /> : <Volume2 size={17} />}{muted && <span>{copy.unmute}</span>}</button>}
+      {!failed && phase !== 'ready' && <button type="button" onClick={() => { videoRef.current.muted = !muted; setMuted(!muted); onSoundChange?.(!muted); }} aria-label={muted ? copy.unmute : copy.mute}>{muted ? <VolumeX size={17} /> : <Volume2 size={17} />}{muted && <span>{copy.unmute}</span>}</button>}
     </div>}
     {!expired && <p className="onboarding-video-status" data-announcement-only={phase === 'ready'} role="status">{failed ? copy.failed : playBlocked ? copy.blocked : !loaded ? copy.loading : phase === 'ready' ? copy.ready : ''}</p>}
     {failed && !expired && <button type="button" className="onboarding-video-fallback" onClick={() => leave('entry')}>{copy.first} <ArrowRight size={16} /></button>}

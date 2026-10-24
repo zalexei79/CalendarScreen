@@ -118,3 +118,6 @@ html:not([data-life-motion]) .first-calendar-entry-target { animation: life-copy
 .life-story-orientation { position: fixed; left:0; top:0; z-index:3; opacity:0; color:var(--ink); pointer-events:none; transform-origin:0 0; white-space:nowrap; will-change:transform; }
 .life-story-orientation strong { display: block; font-size: 17px; font-weight: 500; line-height: 24px; }
 .life-story-orientation span { display:block; margin:0; font-size:12px; line-height:18px; color:var(--muted); }
+
+.life-story-top-actions { display: flex; align-items: center; gap: 10px; }
+.life-story-top .life-story-sound { width: 44px; flex: none; border: 1px solid currentColor; border-radius: 50%; opacity: .8; }

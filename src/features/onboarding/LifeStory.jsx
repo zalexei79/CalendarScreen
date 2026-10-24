@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ArrowRight, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 import { lifeWeeks, lifeWeekRhythm, lifeMoneyEvents, lifeMoneyFlow, reserveLifePresent, calendarMoneyEvents, calendarStoryFlow } from './lifeStoryModel';
 import { createCalendarBridge } from './lifeCalendarBridge';
 import { lifeWeekHierarchy, calendarWeekOffset } from './lifeWeekHierarchy';
 import { lifeCalendarMotion, lifeCameraFrame, lifeLatticeFrame, lifeCellMaterialization, lifeRowArrival, LIFE_COUNT_END, LIFE_MOTION_END } from './lifeCalendarMotion';
 import BrandIcon from '../../shared/ui/BrandIcon.jsx';
 import './LifeStory.css';
+import { ONBOARDING_VIDEO_COPY } from './onboardingVideoCopy.js';
 
 export const LIFE_COPY = {
   uk: {
@@ -76,7 +77,7 @@ function weekColor(index, filled, financial, rhythm, palette, arrival = 1, highl
 }
 
 /** Select the month weeks, open seven days per row, then reveal the UI. */
-export default function LifeStory({ birthday, lang, theme = 'light', currency = 'USD', calendarRecords = EMPTY_RECORDS, personalStory = false, onStart, onArrive, onSkip, onBack }) {
+export default function LifeStory({ birthday, lang, theme = 'light', currency = 'USD', calendarRecords = EMPTY_RECORDS, personalStory = false, onStart, onArrive, onSkip, onBack, feedback, soundMuted = false, onSoundChange }) {
   const copy = LIFE_COPY[lang];
   const palette = PALETTES[theme] || PALETTES.dark;
   const canvasRef = useRef(null);
@@ -102,6 +103,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
   const elapsedWeeks = stats?.weeks ?? historyWeeks;
 
   useEffect(() => {
+    feedback?.stop();
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
     const story = canvas.closest('.life-story');
@@ -269,6 +271,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
       const nextStage = time < 5500 ? 'life' : time < 8200 ? 'question' : time < 9200 ? 'today' : !motion.ready ? 'zoom' : 'ready';
       if (nextStage !== previousStage) { previousStage = nextStage; setStage(nextStage); }
       const filled = Math.floor(elapsedWeeks * ease(clamp(time / LIFE_COUNT_END)));
+      if (!reduceMotion && stats) feedback?.tick(filled, time);
       if (counterRef.current && filled !== previousFilled) {
         counterRef.current.textContent = stats ? filled.toLocaleString(locale) : '—';
         previousFilled = filled;
@@ -527,8 +530,8 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     const onMotionChange = () => { reduceMotion = media.matches; setReduced(reduceMotion); cancelAnimationFrame(frame); frame = requestAnimationFrame(tick); };
     media.addEventListener('change', onMotionChange);
     frame = requestAnimationFrame(tick);
-    return () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); media.removeEventListener('change', onMotionChange); if (calendarGrid) calendarGrid.style.opacity = originalGridOpacity; if (appShell) appShell.style.transform = originalShellTransform; if (monthTitle) monthTitle.style.opacity = originalTitleOpacity; interfaceParts.forEach(({ node, transform, transition }) => { node.style.transform = transform; node.style.transition = transition; }); layer.replaceChildren(); root.removeAttribute('data-life-motion'); };
-  }, [birthday, elapsedWeeks, lang, theme, currency, calendarRecords, personalStory, run]);
+    return () => { feedback?.stop(); disposed = true; cancelAnimationFrame(frame); observer.disconnect(); media.removeEventListener('change', onMotionChange); if (calendarGrid) calendarGrid.style.opacity = originalGridOpacity; if (appShell) appShell.style.transform = originalShellTransform; if (monthTitle) monthTitle.style.opacity = originalTitleOpacity; interfaceParts.forEach(({ node, transform, transition }) => { node.style.transform = transform; node.style.transition = transition; }); layer.replaceChildren(); root.removeAttribute('data-life-motion'); };
+  }, [birthday, elapsedWeeks, lang, theme, currency, calendarRecords, personalStory, run, feedback]);
 
   const ready = stage === 'ready';
   const zoom = stage === 'zoom' || ready;
@@ -538,7 +541,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
 
   return <div className={`life-story ${reduced ? 'life-story--reduced' : ''}`} data-theme={theme} data-stage={stage} data-personal={personalStory}>
     <div ref={paperRef} className="life-story-paper" aria-hidden="true" />
-    <header className="life-story-top"><span className="life-story-brand"><BrandIcon className="h-7 w-7" /> DAYRIS</span><button type="button" onClick={onSkip}>{copy.skip}<ArrowRight size={14} /></button></header>
+    <header className="life-story-top"><span className="life-story-brand"><BrandIcon className="h-7 w-7" /> DAYRIS</span><div className="life-story-top-actions">{feedback && <button type="button" className="life-story-sound" aria-label={soundMuted ? ONBOARDING_VIDEO_COPY[lang].unmute : ONBOARDING_VIDEO_COPY[lang].mute} aria-pressed={!soundMuted} onClick={() => onSoundChange?.(!soundMuted)}>{soundMuted ? <VolumeX size={17} /> : <Volume2 size={17} />}</button>}<button type="button" onClick={onSkip} aria-label={copy.skip}>{feedback ? ONBOARDING_VIDEO_COPY[lang].skip : copy.skip}<ArrowRight size={14} /></button></div></header>
     <div className="life-story-heading" aria-live="polite" aria-atomic="true">
       <p className="life-story-eyebrow">{copy.future}</p>
       <h1 key={title} id="first-run-heading" tabIndex={-1}>{title}</h1>
@@ -568,7 +571,7 @@ export default function LifeStory({ birthday, lang, theme = 'light', currency = 
     </div>
     <footer className={`life-story-footer ${ready ? 'is-ready' : ''}`}>
       <button type="button" className="life-story-primary" onClick={onStart} disabled={!ready}>{FIRST_ENTRY[lang]}<ArrowRight size={14} /></button>
-      <div className="life-story-tools"><button type="button" onClick={onBack}><ArrowLeft size={14} />{copy.back}</button><button type="button" onClick={() => { setStage('life'); setRun(value => value + 1); }}><RotateCcw size={14} />{copy.replay}</button></div>
+      <div className="life-story-tools"><button type="button" onClick={onBack}><ArrowLeft size={14} />{copy.back}</button><button type="button" onClick={() => { feedback?.prepare(); setStage('life'); setRun(value => value + 1); }}><RotateCcw size={14} />{copy.replay}</button></div>
     </footer>
   </div>;
 }

@@ -41,3 +41,7 @@ The face framebuffer uses premultiplied RGB and alpha consistently. Multiplying 
 ## Scene continuity
 
 The live presenter's initial rectangle is fitted to eye landmarks in the supplied final film frames: desktop left 2.591%, width 30.95%, bottom 6.806%; portrait left -5.088%, width 45.152%, bottom 8.514%. The replacement dissolves over 1.4 seconds. Restart expands the stage to the viewport over one second, retaining the character while the film and restoration plates fade. The connector follows the rendered fingertip and actual action button through resizing. The duplicate ready caption remains an accessible announcement without covering Skip.
+
+## Counter sound and haptics
+
+First-run counter feedback is synthesized locally as a filtered 40ms wood/paper click with a 0.055 peak gain, at most once per 150ms while the displayed week count changes. Compatible touch devices receive a separate 4ms pulse at most once per 450ms. Sound is unlocked synchronously by the start/replay click. The localized header mute control also determines the initial video mute state, including restart. Feedback stops when hidden, leaving the scene or enabling reduced motion; settings history replay remains silent. Safari/iPhone has no Vibration API, so sound works independently of vibration.
