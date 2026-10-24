@@ -164,11 +164,11 @@ Object.assign(copy.uk, {
 });
 delete copy.uk.signalsRisk;
 for (const [locale, action, description] of [
-  ['ru', 'Посмотреть календарь бота', 'Сделки с 5 октября 2026, результат по дням и параметры бота. Доступно всем.'],
-  ['en', 'View the bot calendar', 'Trades since 5 October 2026, daily results and bot parameters. Open to everyone.'],
-  ['ro', 'Vezi calendarul botului', 'Tranzacții din 5 octombrie 2026, rezultate zilnice și parametrii botului. Acces pentru toți.'],
-  ['uk', 'Переглянути календар бота', 'Угоди з 5 жовтня 2026, результати за днями та параметри бота. Доступно всім.'],
-  ['zh', '查看机器人日历', '2026年10月5日起的交易、每日结果和机器人参数。所有人均可查看。'],
+  ['ru', 'Посмотреть календарь бота', 'Сделки с 5 октября 2026, результат по дням и торговая аналитика. Доступно всем.'],
+  ['en', 'View the bot calendar', 'Trades since 5 October 2026, daily results and performance analytics. Open to everyone.'],
+  ['ro', 'Vezi calendarul botului', 'Tranzacții din 5 octombrie 2026, rezultate zilnice și analiza performanței. Acces pentru toți.'],
+  ['uk', 'Переглянути календар бота', 'Угоди з 5 жовтня 2026, результати за днями та торгова аналітика. Доступно всім.'],
+  ['zh', '查看机器人日历', '2026年10月5日起的交易、每日结果和交易表现分析。所有人均可查看。'],
 ]) Object.assign(copy[locale], { botCalendarAction: action, botCalendarDescription: description });
 export const XAUUSD_SIGNALS_URL = 'https://t.me/xauusd_scalp_signal';
 export const XAUUSD_SIGNALS_BOT_URL = 'https://t.me/XauusdScalpSignal_bot';

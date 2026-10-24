@@ -35,7 +35,7 @@ test('only closed broker deals from local 5 October are published; private data 
   ]});
   const result=await collectSnapshot(source,{access_token:'secret'},f.deps);
   assert.equal(result.currency,'USD');assert.equal(result.deals.length,2);
-  assert.deepEqual(result.deals[0],{deal_id:deal.dealId,date_key:'2026-10-05',time:'13:00',instrument:'XAUUSD',direction:'LONG',pnl:'120.40',currency:'USD'});
+  assert.deepEqual(result.deals[0],{deal_id:deal.dealId,date_key:'2026-10-05',time:'13:00',instrument:'XAUUSD',direction:'LONG',pnl:'120.40',currency:'USD',executed_at:'2026-10-05T10:00:00.000Z'});
   assert.equal(result.deals[1].time,'00:00');assert.equal(f.closes,1);
   assert.equal(f.requests.some(r=>![2149,2102,2121,2112,2114,2133].includes(r.type)),false,'no trading commands');
 });

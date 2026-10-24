@@ -22,6 +22,8 @@ test('public bot snapshot: account pinning, cutoff, atomicity, leases, redaction
       alter table public.trades enable row level security;`);
     await db.exec(await readFile('supabase/migrations/202610230001_bot_calendar.sql','utf8'));
     await db.exec(await readFile('supabase/migrations/202610230002_bot_calendar_history.sql','utf8'));
+    await db.exec(await readFile('supabase/migrations/202610240001_bot_calendar_analytics.sql','utf8'));
+    await db.exec(await readFile('supabase/migrations/202610240002_bot_deal_timestamps.sql','utf8'));
     // No source exists yet: never invent successful results.
     let source = (await db.query("select public.claim_bot_calendar('bot') as value")).rows[0].value;
     assert.equal(source,null);
@@ -75,7 +77,7 @@ test('public bot snapshot: account pinning, cutoff, atomicity, leases, redaction
     source=(await db.query("select public.claim_bot_calendar('bot') as value")).rows[0].value;
     assert.equal(source.source_account_id,account);
     await publish(Array.from({length:105},(_,i)=>({...deal,deal_id:String(i+1),date_key:i<55?'2026-10-05':'2026-10-06',pnl:i<55?'1':'2'})));
-    await db.exec("insert into public.bot_calendar_deals values('ambiguous','999','2026-10-06','12:00','PRIVATE','LONG',9999,'USD')");
+    await db.exec("insert into public.bot_calendar_deals(calendar_slug,deal_id,date_key,time,instrument,direction,pnl,currency) values('ambiguous','999','2026-10-06','12:00','PRIVATE','LONG',9999,'USD')");
     for(const role of ['anon','authenticated']) {
       await db.exec(`set role ${role}`);
       const query=(from=null,to=null,offset=0)=>db.query('select public.get_bot_calendar_history($1,$2,$3,$4) as value',['bot',from,to,offset]);
@@ -94,5 +96,44 @@ test('public bot snapshot: account pinning, cutoff, atomicity, leases, redaction
       for(const forbidden of ['account_number','user_id','is_live','broker','source_account_id','access_token']) assert.equal(forbidden in all,false);
       await db.exec('reset role');
     }
+    // Analytics must use every closing deal, including intraday peaks, rather
+    // than the first page or only the end-of-day curve.
+    source=(await db.query("select public.claim_bot_calendar('bot') as value")).rows[0].value;
+    if(!source) {
+      await db.exec("update public.bot_calendars set lease_until=now()-interval '1 second' where slug='bot'");
+      source=(await db.query("select public.claim_bot_calendar('bot') as value")).rows[0].value;
+    }
+    await publish([
+      {...deal,deal_id:'1001',date_key:'2026-10-05',time:'10:00',pnl:'100'},
+      {...deal,deal_id:'1002',date_key:'2026-10-05',time:'11:00',pnl:'-60'},
+      {...deal,deal_id:'1003',date_key:'2026-10-06',time:'10:00',pnl:'-50'},
+      {...deal,deal_id:'1004',date_key:'2026-10-06',time:'11:00',pnl:'30'},
+    ]);
+    for(const role of ['anon','authenticated']) {
+      await db.exec(`set role ${role}`);
+      const analytics=async(from=null,to=null)=>(await db.query('select public.get_bot_calendar_analytics($1,$2,$3) as value',['bot',from,to])).rows[0].value;
+      const a=await analytics('2026-10-05','2026-10-07');
+      assert.equal(a.stats.total,4);assert.equal(a.stats.wins,2);assert.equal(a.stats.losses,2);
+      assert.equal(a.stats.pnl,20);assert.equal(a.stats.max_drawdown,110);assert.equal(a.stats.win_rate,50);
+      assert.equal(a.stats.gross_profit,130);assert.equal(a.stats.gross_loss,110);assert.equal(a.stats.avg_trade,5);
+      assert.ok(Math.abs(Number(a.stats.profit_factor)-130/110)<1e-10);
+      assert.equal(a.stats.active_days,2);assert.equal(a.stats.positive_days,1);
+      assert.deepEqual(a.curve.map(p=>p.total),[40,20,20]);
+      assert.deepEqual(a.curve.map(p=>p.drawdown),[60,110,80]);
+      assert.equal(a.curve[2].trades,0,'inactive calendar days are flat, not fabricated trades');
+      const filtered=await analytics('2026-10-06','2026-10-06');
+      assert.equal(filtered.stats.total,2);assert.equal(filtered.stats.pnl,-20);assert.equal(filtered.stats.max_drawdown,50,'selected period starts at zero');
+      const empty=await analytics('2026-10-07','2026-10-07');
+      assert.equal(empty.stats.total,0);assert.equal(empty.stats.win_rate,null);assert.equal(empty.stats.profit_factor,null);assert.equal(empty.curve[0].total,0);
+      await assert.rejects(analytics('2026-10-04','2026-10-06'),/PERIOD_OUT_OF_RANGE/);
+      await assert.rejects(analytics('2026-10-06','2026-10-05'),/PERIOD_OUT_OF_RANGE/);
+      for(const forbidden of ['user_id','account_id','account_number','is_live','parameters','Label','RiskPercent'])assert.equal(JSON.stringify(a).includes(`"${forbidden}"`),false);
+      await db.exec('reset role');
+    }
+    source=(await db.query("select public.claim_bot_calendar('bot') as value")).rows[0].value;
+    await publish([['9000','100','100'],['10','-60','200'],['8000','-50','300'],['20','30','400']].map(([deal_id,pnl,ms])=>({...deal,deal_id,pnl,time:'13:00',executed_at:`2026-10-05T10:00:00.${ms}Z`})));
+    const exact=(await db.query("select public.get_bot_calendar_analytics('bot','2026-10-05','2026-10-05') as value")).rows[0].value;
+    assert.equal(exact.timestamp_precision,'execution');assert.equal(exact.stats.max_drawdown,110,'broker instants must override lexicographic and numeric deal-ID order within a minute');
+    assert.equal(exact.stats.pnl,20);
   } finally { await db.close(); }
 });

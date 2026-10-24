@@ -9,6 +9,7 @@ const js=bundle.outputFiles.find(x=>x.path.endsWith('.js')).text;
 const css=bundle.outputFiles.find(x=>x.path.endsWith('.css')).text;
 const projectRequire=createRequire(path.resolve('package.json'));
 const utilities=(await projectRequire('postcss')([projectRequire('tailwindcss')({content:['CalendarDayCell.jsx'],corePlugins:{preflight:false}})]).process('@tailwind utilities;',{from:undefined})).css;
+assert.doesNotMatch(js,/XAU_IMPULSE_SCALPER|RiskPercent|FastPeriod|StopAtrMultiplier|Параметры бота/,'strategy configuration must not ship in the browser bundle');
 fs.mkdirSync('artifacts/bot-calendar',{recursive:true});
 for (const [engine,options] of [[chromium,{channel:'msedge',headless:true}],[webkit,{headless:true}]]) {
   const browser=await engine.launch(options);
@@ -40,7 +41,7 @@ for (const [engine,options] of [[chromium,{channel:'msedge',headless:true}],[web
       assert.ok(await page.getByRole('link',{name:'Создать свой календарь',exact:true}).isVisible(),'visible invitation without opening menu');
       assert.doesNotMatch(await page.locator('body').innerText(),/47484897|Spotware|Demo|DEMO|демосч[её]т/);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`overflow at ${width}`);
-      assert.ok(await page.locator('.bot-shell').evaluate(el=>el.getBoundingClientRect().bottom<=innerHeight+1),'calendar fills viewport');
+      assert.ok(await page.locator('.bot-top-create').evaluate(el=>el.getBoundingClientRect().top<150),'create-calendar action belongs in the header');
       await page.screenshot({path:`artifacts/bot-calendar/classic-${engine.name()}-${width}.png`,fullPage:true});
       await page.getByRole('button',{name:'Скопировать ссылку на календарь'}).click();
       await page.getByText('Ссылка на календарь скопирована',{exact:true}).waitFor();
@@ -48,12 +49,28 @@ for (const [engine,options] of [[chromium,{channel:'msedge',headless:true}],[web
       await openMenu();
       const cta=page.getByRole('navigation',{name:'Функции календаря'}).getByRole('link',{name:'Создать свой календарь'});
       assert.equal(await cta.getAttribute('href'),'/');assert.ok(await cta.isVisible());
-      await page.getByRole('button',{name:'Параметры бота',exact:true}).click();
-      await page.getByRole('dialog',{name:'Параметры бота'}).waitFor();
-      await page.getByText('XAU_IMPULSE_SCALPER',{exact:true}).waitFor();
-      assert.equal(await page.locator('.bot-settings-group dt').count(),14);
-      assert.doesNotMatch(await page.getByRole('dialog').innerText(),/47484897|Demo|DEMO/);
-      await page.getByRole('button',{name:'Закрыть параметры'}).click();
+      assert.equal(await page.getByRole('button',{name:'Параметры бота',exact:true}).count(),0);
+      await page.keyboard.press('Escape');
+      await page.getByRole('button',{name:'Открыть аналитику бота'}).click();
+      const analytics=page.getByRole('dialog',{name:'Аналитика бота'});
+      await analytics.waitFor();
+      await analytics.getByText('Недостаточно данных для оценки',{exact:true}).waitFor();
+      assert.equal(await analytics.getByRole('button',{name:'Вся история',exact:true}).getAttribute('aria-pressed'),'true');
+      assert.equal(await analytics.locator('.bot-analytics-metrics article').count(),8);
+      await analytics.getByRole('button',{name:'Просадка',exact:true}).click();
+      await analytics.getByRole('img',{name:'Просадка по закрытым сделкам'}).waitFor();
+      await analytics.getByRole('button',{name:'По дням',exact:true}).click();
+      await analytics.getByRole('img',{name:'Результат по дням'}).waitFor();
+      await analytics.getByRole('slider',{name:'День графика'}).press('Home');
+      await analytics.getByText('Начало периода',{exact:true}).waitFor();
+      await analytics.getByRole('button',{name:'Период',exact:true}).click();
+      await analytics.getByLabel('Начало периода аналитики').fill('2026-10-06');
+      await analytics.getByLabel('Конец периода аналитики').fill('2026-10-06');
+      await analytics.getByRole('button',{name:'Применить',exact:true}).click();
+      await analytics.locator('.bot-analytics-period').filter({hasText:/6 октября 2026 г.*1 сделка/}).waitFor();
+      assert.ok((await analytics.locator('.bot-chart-title').innerText()).includes('24,35'));
+      await page.screenshot({path:`artifacts/bot-calendar/analytics-${engine.name()}-${width}.png`,fullPage:true});
+      await analytics.getByRole('button',{name:'Закрыть аналитику'}).click();
       await page.getByRole('button',{name:/^5 октября 2026.*120,40/}).click();
       await page.locator('.bot-trades article').first().waitFor();
       assert.equal(await page.locator('.bot-trades article').count(),2);
@@ -96,7 +113,7 @@ for (const [engine,options] of [[chromium,{channel:'msedge',headless:true}],[web
       assert.equal(await page.getByLabel('Конец периода').inputValue(),'2026-10-23');
       await page.getByRole('button',{name:'Закрыть историю'}).click();
       assert.equal(await page.getByRole('button',{name:/Удалить|Добавить|Редактировать|Настройки/}).count(),0);
-      assert.ok((await page.evaluate(()=>window.__botRequests)).every(r=>['get_bot_calendar','get_bot_calendar_history'].includes(r.name)));
+      assert.ok((await page.evaluate(()=>window.__botRequests)).every(r=>['get_bot_calendar','get_bot_calendar_history','get_bot_calendar_analytics'].includes(r.name)));
     }
     for(const state of ['pending','delayed','error']) {
       await page.goto(`http://dayris.test/?state=${state}`);
@@ -131,6 +148,21 @@ for (const [engine,options] of [[chromium,{channel:'msedge',headless:true}],[web
       assert.ok(geometry.badgeFits&&geometry.countFits&&geometry.badgeBeforeAmount,`milestone must not overlap or crop real results at ${width}x${height}: ${JSON.stringify(geometry)}`);
       await page.screenshot({path:`artifacts/bot-calendar/milestone-${engine.name()}-${width}x${height}.png`,fullPage:true});
     }
+    await page.goto('http://dayris.test/?qualified=1');
+    await page.getByRole('button',{name:'Открыть аналитику бота'}).click();
+    await page.getByRole('dialog',{name:'Аналитика бота'}).waitFor();
+    assert.match(await page.locator('.bot-score-ring strong').textContent(),/^\d+$/);
+    await page.getByText('Как считается скор',{exact:true}).click();
+    assert.equal(await page.locator('.bot-score-explanation>div').count(),4);
+    await page.keyboard.press('Escape');
+    await page.goto('http://dayris.test/?analytics_error=1');
+    await page.getByRole('button',{name:'Повторить аналитику'}).click();
+    await page.getByRole('button',{name:'Открыть аналитику бота'}).waitFor();
+    await page.goto('http://dayris.test/?analytics_empty=1');
+    await page.getByRole('button',{name:'Открыть аналитику бота'}).click();
+    await page.getByText('В выбранном периоде нет закрытых сделок.').waitFor();
+    assert.equal(await page.locator('.bot-score-ring strong').textContent(),'—');
+    await page.keyboard.press('Escape');
     await page.goto('http://dayris.test/?clipboard=denied');
     await page.getByRole('button',{name:'Скопировать ссылку на календарь'}).click();
     await page.getByRole('dialog',{name:'Ссылка на календарь'}).waitFor();

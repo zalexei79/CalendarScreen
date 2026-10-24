@@ -45,7 +45,8 @@ export async function collectSnapshot(source, token, { connect, refresh, now = D
         currency, symbols, timeZone: source.time_zone });
       if (!row || row.date_key < source.start_date) continue;
       rows.set(row.ctrader_deal_id, { deal_id: row.ctrader_deal_id, date_key: row.date_key,
-        time: row.time, instrument: row.instrument, direction: row.direction, pnl: row.pnl, currency });
+        time: row.time, instrument: row.instrument, direction: row.direction, pnl: row.pnl, currency,
+        executed_at: new Date(Number(deal.executionTimestamp)).toISOString() });
     }
     return { currency, deals: [...rows.values()] };
   } finally { socket?.close(); }

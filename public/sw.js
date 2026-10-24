@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v62-onboarding-bridge-cleanup';
+const CACHE_NAME = 'atj-cache-v63-private-bot-analytics';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

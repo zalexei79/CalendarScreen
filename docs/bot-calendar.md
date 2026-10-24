@@ -2,18 +2,19 @@
 
 Entry: `/?calendar=bot` (also `/bot` on SPA hosts). The PRO Trader panel links
 to it without requiring PRO or sign-in. “Создать свой календарь” returns to `/`.
-The calendar reuses DAYRIS day cells. Its compact menu holds bot parameters,
-history, sharing and the home link. The separate copy icon copies a canonical
+The calendar reuses DAYRIS day cells. The create-calendar action is in the header.
+History and a cumulative result preview sit below the grid. The compact menu
+holds analytics, history, sharing and the home link. The copy icon copies a canonical
 `/?calendar=bot` URL, stripping any unrelated query/hash. Native sharing uses
 the same URL; cancellation never claims success or copies unexpectedly.
 Clipboard uses the synchronous Safari selection fallback and exposes a
 selectable link if copying is denied.
-“Параметры бота” displays the explicit whitelist from the owner-provided
-`work, XAUUSD m1.cbotset`, received 23 October 2026. No arbitrary file is served.
-Settings are a supplied snapshot, not telemetry or a claim about historical settings.
+Strategy parameters are private: their source module, import and dialog have been
+removed. Current public assets contain no cbotset values. Neither public RPCs nor
+analytics publish strategy settings, account identity, trade comments or tokens.
 The first published date, 5 October 2026, is marked “Начало учёта” in the grid;
 it is not presented as the bot's unverified original launch date. A visible
-invitation under the calendar opens the personal calendar homepage.
+create-calendar link in the header opens the personal calendar homepage.
 
 Source: Spotware Demo account `47484897`, closed deals dated **5 October 2026
 onward**, using `Europe/Bucharest`. This cutoff is fixed and history accumulates.
@@ -24,6 +25,10 @@ The displayed current balance is not used as starting capital or fabricated PnL.
 1. Apply `supabase/migrations/202610230001_bot_calendar.sql` as database owner.
    Then apply `202610230002_bot_calendar_history.sql` for range history and
    removal of broker account/environment metadata from the public response.
+   Apply `202610240001_bot_calendar_analytics.sql` for complete-range statistics.
+   Apply `202610240002_bot_deal_timestamps.sql`, deploy the updated sync worker
+   and run a full sync to populate exact broker execution instants for existing
+   rows. Analytics disclose minute precision until these timestamps are loaded.
 2. Apply `supabase/bot-calendar-bind.sql` to pin the unique active administrator's
    connected account. An ambiguous or missing source fails closed. The worker
    independently checks the broker account ID and live/demo environment.
@@ -56,11 +61,27 @@ separate closing deals, consistent with the personal cTrader importer.
 
 ## Verification
 
+Analytics use every closing deal in the selected inclusive range. The curve
+starts from zero and shows realized end-of-day PnL, not balance/equity or returns
+on an invented deposit. Maximum drawdown uses each closed deal, including intraday
+peaks. Daily drawdown is the worst closed-deal drawdown that day; inactive days
+carry the last realized drawdown. Profit factor is undefined without losses.
+All trading costs already included by the broker importer remain included.
+
+The descriptive score requires 30 deals and five active days. Components:
+`min(PF/2,1)*35 + positiveDays/activeDays*25 + clamp(recovery/3,0,1)*25 + winRate/100*15`.
+Positive results with no losses or no drawdown receive the relevant maximum
+component. The formula is disclosed in the panel and is not a forecast or rating
+of strategy reliability. Empty and insufficient samples never get a fabricated score.
+
+`node --test tests/bot-analytics.test.mjs tests/bot-calendar-db.test.mjs`
+
 `node --test tests/bot-calendar-db.test.mjs supabase/functions/bot-calendar-sync/sync.test.mjs`
 
 `node tests/bot-calendar-ui-check.mjs` checks Chromium and WebKit at phone,
 tablet and desktop widths, read-only controls, cutoff, pending/error/delayed
-states, all/range totals, history pagination, parameters, the home link and
+states, all/range totals, history pagination, private parameter exclusion, analytics,
+score sample thresholds, the header home link and
 copy/native sharing success, cancellation and denial.
 
 `npm run build`

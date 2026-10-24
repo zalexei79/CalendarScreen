@@ -22,7 +22,7 @@ try {
     await page.getByRole('tab').nth(3).click();
     const card=page.getByRole('link',{name:/Посмотреть календарь бота/});
     assert.equal(await card.getAttribute('href'),'/?calendar=bot');assert.ok(await card.isVisible());
-    assert.ok(await page.getByText('XAUUSD · M1',{exact:true}).isVisible());
+    assert.ok(await page.getByText('XAUUSD',{exact:true}).isVisible());
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
     await page.locator('.pro-signals-guide summary').click();
     await page.screenshot({path:`artifacts/bot-calendar/pro-entry-${width}-${light?'light':'dark'}.png`,fullPage:true});

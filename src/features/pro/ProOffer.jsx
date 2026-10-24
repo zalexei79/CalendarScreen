@@ -109,7 +109,7 @@ export default function ProOffer({ language, copy, active, daysRemaining, untilL
               <p className="pro-example-caption">{text.receiptResult}</p>
             </>}
           </div>{feature === 'trader' && <a className="pro-bot-calendar-card" href={BOT_CALENDAR_URL}>
-            <span className="pro-bot-calendar-kicker">XAUUSD · M1</span>
+            <span className="pro-bot-calendar-kicker">XAUUSD</span>
             <strong>{text.botCalendarAction}<ArrowRight aria-hidden="true" /></strong>
             <span>{text.botCalendarDescription}</span>
           </a>}</div>
