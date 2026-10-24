@@ -1,4 +1,4 @@
-// Local, quiet wood/paper clicks. No audio download or timer runs independently of the counter.
+// Local, soft brushed-noise swells. No audio download or timer runs independently of the counter.
 export function createLifeStoryFeedback(env = globalThis) {
   const win = env.window || env, doc = env.document, nav = env.navigator;
   let context, buffer, armed = false, muted = false, listening = false;
@@ -25,12 +25,13 @@ export function createLifeStoryFeedback(env = globalThis) {
       if (!Audio) return;
       if (!context || context.state === 'closed') {
         context = new Audio();
-        buffer = context.createBuffer(1, Math.ceil(context.sampleRate * .04), context.sampleRate);
+        buffer = context.createBuffer(1, Math.ceil(context.sampleRate * .16), context.sampleRate);
         const samples = buffer.getChannelData(0); let seed = 72319;
         for (let i = 0; i < samples.length; i++) {
           seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-          const t = i / context.sampleRate, noise = seed / 2147483648 - 1;
-          samples[i] = (.55 * Math.sin(2 * Math.PI * 235 * t) + .45 * noise) * Math.exp(-90 * t);
+          const phase = i / (samples.length - 1), noise = seed / 2147483648 - 1;
+          // A smooth window removes the impact; there is no pitched bass component.
+          samples[i] = noise * Math.sin(Math.PI * phase) ** 2;
         }
         // Unlock inside the original click on Safari, without an audible startup beep.
         const unlock = context.createBufferSource(); unlock.buffer = context.createBuffer(1, 1, context.sampleRate);
@@ -46,19 +47,19 @@ export function createLifeStoryFeedback(env = globalThis) {
       if (!armed || doc?.hidden || reduced() || elapsed < 0 || elapsed >= 8000 || value === lastValue) return;
       lastValue = value;
       const now = (env.performance || performance).now();
-      if (!muted && context?.state === 'running' && now - lastClick >= 150) {
+      if (!muted && context?.state === 'running' && now - lastClick >= 240) {
         lastClick = now;
         try {
           const source = context.createBufferSource(), gain = context.createGain(), filter = context.createBiquadFilter();
           const time = context.currentTime, progress = Math.min(1, elapsed / 8000);
-          source.buffer = buffer; source.playbackRate.value = .97 + .06 * progress;
-          filter.type = 'lowpass'; filter.frequency.value = 1450 + 350 * progress; filter.Q.value = .5;
-          gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(.055, time + .002);
-          gain.gain.exponentialRampToValueAtTime(.0001, time + .034); gain.gain.linearRampToValueAtTime(0, time + .04);
+          source.buffer = buffer; source.playbackRate.value = .98 + .04 * progress;
+          filter.type = 'bandpass'; filter.frequency.value = 1850 + 150 * progress; filter.Q.value = .65;
+          gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(.018, time + .035);
+          gain.gain.setValueAtTime(.018, time + .075); gain.gain.linearRampToValueAtTime(0, time + .165);
           source.connect(filter); filter.connect(gain); gain.connect(context.destination);
           const note = { source, gain, filter }; notes.add(note);
           source.onended = () => { source.disconnect(); gain.disconnect(); filter.disconnect(); notes.delete(note); };
-          source.start(time); source.stop(time + .042);
+          source.start(time); source.stop(time + .17);
         } catch { /* Audio restrictions must not interrupt the animation. */ }
       }
       const touch = nav?.maxTouchPoints > 0 || win.matchMedia?.('(pointer: coarse)').matches;

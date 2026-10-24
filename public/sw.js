@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v58-onboarding-soft-feedback';
+const CACHE_NAME = 'atj-cache-v59-onboarding-brushed-audio';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
