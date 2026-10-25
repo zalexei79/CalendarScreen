@@ -21,6 +21,19 @@
 .dayris-header .compact-tool-rail .pro-platform-reveal { grid-column:1/-1; grid-row:2; }
 .dayris-header .dayris-command-row { gap:0; }
 .dayris-header .dayris-date-navigation { margin-bottom:0; }
+.dayris-header .dayris-date-navigation.is-free { flex-wrap:nowrap; }
+.dayris-header .dayris-date-navigation.is-free > .dayris-today-action {
+  margin-left:auto; padding-inline:8px; min-height:44px; font-size:11px; white-space:nowrap;
+}
+@media(max-width:639px) {
+  .dayris-header .dayris-date-navigation.is-free { gap:3px; }
+  .dayris-header .dayris-date-navigation.is-free .dayris-month-title { gap:2px; }
+  .dayris-header .dayris-date-navigation.is-free .dayris-month-title button { font-size:clamp(15px,4.5vw,22px); }
+}
+@media(max-width:359px) {
+  .dayris-header .dayris-date-navigation.is-free > button:not(.dayris-today-action) { width:28px; }
+  .dayris-header .dayris-date-navigation.is-free > .dayris-today-action { padding-inline:4px; }
+}
 .monthly-goal-bar { border-top:0; border-bottom:0; padding-top:0; padding-bottom:0; margin-top:0; margin-bottom:4px; }
 .monthly-goal-bar > div:first-child { min-height:38px; }
 .monthly-goal-bar > div:first-child > div { background:transparent; width:18px; height:18px; }

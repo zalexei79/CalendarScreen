@@ -283,7 +283,7 @@ export default function Header({
       <div className="relative">
       <div>
         <div className="dayris-command-row">
-          <div className="dayris-date-navigation">
+          <div className={`dayris-date-navigation${proView ? '' : ' is-free'}`}>
           <button
             data-site-element="previous"
             onClick={goToPrevMonth}
@@ -359,6 +359,7 @@ export default function Header({
           </button>
 
           <CalendarCurrencyPicker currency={currency} onChange={setCurrency} usedCurrencies={usedCurrencies} language={language} isLight={isLight} onOpen={() => { setMonthMenuOpen(false); setYearMenuOpen(false); }}/>
+          {!proView && todayAction}
 
           </div>
           {/* Account details are also available from Settings. */}
@@ -382,7 +383,7 @@ export default function Header({
           </div>
 
           {/* The workspace selector is separate from server-side PRO entitlement. */}
-          <div className="dayris-workspace-slot">
+          {proView && <div className="dayris-workspace-slot">
             <WorkspaceModePanel
               todayAction={todayAction}
               hideSelector proView={proView} onModeChange={() => setProView((value) => !value)} isLight={isLight}
@@ -398,7 +399,7 @@ export default function Header({
               metatrader={metaTraderState} reconnect={ctraderReconnect}
               onOffer={openProPresentation}
             />
-          </div>
+          </div>}
         </div>
       </div>
 
