@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v73-explicit-entry-drafts';
+const CACHE_NAME = 'atj-cache-v74-life-weeks-audio';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

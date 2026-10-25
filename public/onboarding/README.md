@@ -5,3 +5,7 @@
 With the currently supplied Russian film, the first manual microphone entry in the Russian interface for each account opens the introduction. A microphone hotspot appears over the film's final calendar microphone; after the film ends it grows into the real call to action. Recognition starts only from an explicit Try click, after pausing and muting the film, before awaiting the transition to the live voice workspace. Dismissal records the introduction as seen without starting recognition. Widget/deep-link launches and ongoing conversations keep their existing direct behavior. Playback is paused while the page is hidden.
 
 Other interface languages retain their direct voice-entry flow until matching films are supplied. The player controls are prepared for RU, EN, RO, UK and Simplified Chinese.
+
+## Week counter audio
+
+life-weeks-cue.mp3 is the original user-supplied 8-second_elegant_mic_#3-1792837663200.mp3, copied without transcoding. Its eight seconds follow the first-run week counter in every interface language. Playback respects mute, counter timing, visibility and reduced motion.
