@@ -47,6 +47,28 @@
 }
 
 /* Mobile broker tools float above the calendar, keeping destinations in place. */
+@media(min-width:640px) {
+  .dayris-header .workspace-mode-panel.compact-tool-rail {
+    grid-template-columns:auto auto minmax(0,1fr) auto auto;
+    column-gap:10px;
+  }
+  .dayris-header .compact-tool-rail .pro-control-trader { grid-column:5; grid-row:1; }
+  .dayris-header .compact-tool-rail > .dayris-today-action { grid-column:4; }
+  .dayris-header .compact-tool-rail .pro-platform-reveal {
+    grid-column:3; grid-row:1; display:block; min-width:0;
+    visibility:hidden; opacity:0;
+  }
+  .dayris-header .compact-tool-rail .pro-platform-reveal.is-open { visibility:visible; opacity:1; }
+  .dayris-header .compact-tool-rail .pro-platform-row {
+    display:flex; align-items:center; justify-content:flex-start;
+    gap:4px; margin:0; padding:0; border:0;
+  }
+  .dayris-header .compact-tool-rail .pro-control-platform { width:auto; flex:0 1 auto; gap:5px; padding-inline:5px; }
+  .dayris-header .compact-tool-rail .pro-platform-label small { display:none; }
+}
+@media(min-width:960px) and (max-width:1199px) {
+  .dayris-header .dayris-command-row { grid-template-columns:minmax(0,1fr); }
+}
 @media(max-width:639px) {
   .dayris-header .workspace-mode-panel.compact-tool-rail {
     grid-template-columns:auto auto minmax(32px,1fr) auto;
