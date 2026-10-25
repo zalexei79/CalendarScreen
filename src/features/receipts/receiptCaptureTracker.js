@@ -18,7 +18,7 @@ export function createReceiptCaptureTracker(){
       lastSeen=now;samples=samples.filter(sample=>now-sample.now<=2000);samples.push({now,still:motion<12});
       const stable=samples.filter(sample=>sample.still).length,elapsed=now-samples[0].now;
       // A rolling majority tolerates a dropped detection or a single hand shake.
-      const holding=stable>=2,capture=elapsed>=1000&&samples.length>=5&&stable>=Math.ceil(samples.length*.65);
+      const holding=stable>=2,capture=motion<12&&elapsed>=1000&&samples.length>=5&&stable>=Math.ceil(samples.length*.65);
       return{capture,reset:false,holding};
     },
   };
