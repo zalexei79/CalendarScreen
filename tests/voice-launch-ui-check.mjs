@@ -7,7 +7,7 @@ const browser=await createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE||import.
 try{
  const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true}),errors=[];
  page.on('pageerror',error=>errors.push(error.message));
- await page.addInitScript(()=>{
+ await page.addInitScript(()=>{/* Existing-user voice scenarios. */for(const owner of ['a','b','test-user'])localStorage.setItem('dayris_voice_intro_v1:'+owner,'seen');
   localStorage.setItem('dayris_voice_feedback','off');window.saved=[];window.starts=0;
   const nativeTimeout=window.setTimeout.bind(window);window.setTimeout=(cb,ms,...args)=>[900,1900,2400,8000,20000].includes(ms)?nativeTimeout(()=>{},60000):nativeTimeout(cb,ms,...args);
   window.SpeechRecognition=class{constructor(){window.voice=this;}start(){starts++;if(window.denyStart){this.onerror?.({error:'not-allowed'});return;}this.onstart?.();}abort(){this.aborted=true;}};

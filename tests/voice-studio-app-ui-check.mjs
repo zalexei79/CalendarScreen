@@ -9,7 +9,7 @@ const require=createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE||'C:/Users/ave
 const browser=await require('playwright').chromium.launch({channel:'msedge',headless:true});
 try {
  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,serviceWorkers:'block'});
- await context.addInitScript(()=>{
+ await context.addInitScript(()=>{localStorage.setItem('dayris_voice_intro_v1:22222222-2222-4222-8222-222222222222','seen');
   for(const [key,value] of Object.entries({atj_pro_view:'0',atj_trader_mode:'0',atj_language:'ru',atj_theme:'emerald',atj_currency:'USD',dayris_onboarding_v2_completed:'1',calendar_guide_completed:'1'}))localStorage.setItem(key,value);
   window.SpeechRecognition=class {constructor(){window.recognizer=this;}start(){this.onstart?.();}abort(){this.aborted=true;}};
  });

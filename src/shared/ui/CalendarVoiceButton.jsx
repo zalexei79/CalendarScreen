@@ -23,6 +23,8 @@ import useVoiceRecognitionRelease from './useVoiceRecognitionRelease.js';
 import {prepareConversationEntry,parseVoiceConversation} from '../lib/voiceConversation.js';
 import {isVoiceHelpRequest,voiceCapabilities} from '../lib/voiceCapabilities.js';
 import {followupVoiceEntry} from '../lib/voiceQuickEntry.js';
+import VoiceIntro from '../../features/onboarding/VoiceIntro.jsx';
+import {needsVoiceIntro, rememberVoiceIntro, voiceIntroKey} from '../lib/voiceIntro.js';
 
 export default function CalendarVoiceButton({launchRequest,onLaunchHandled,onResetConversation,onConversation,selectedDate,onCreateCategory,onDeleteCategory,userId,language='ru',isLight,traderMode=false,categoryOptions=[],defaultCurrency,askDestination=false,walletAvailable=false,onCommand,onSaveEntry}){
  const locale=String(language).startsWith('zh')?'zh':language==='en'?'en':language==='ro'||language==='md'?'ro':'ru';
@@ -37,7 +39,9 @@ export default function CalendarVoiceButton({launchRequest,onLaunchHandled,onRes
  const widgetActive=useRef(false);
  const conversationContext=useRef(null),pendingPhrase=useRef(''),recognitionEvidence=useRef(null),requestGeneration=useRef(0),handlers=useRef(null);
  handlers.current={onCommand,onConversation,onSaveEntry,onResetConversation,selectedDate,userId};
- const lifecycle=useRef(null);lifecycle.current={start,finish,handlePhrase:processPhrase,saveEntry,respond};
+ const [intro,setIntro]=useState(null),introSeen=useRef(new Set());
+ const lifecycle=useRef(null);lifecycle.current={start,open:openVoice,finish,handlePhrase:processPhrase,saveEntry,respond};
+ useEffect(()=>{setIntro(null)},[userId,language]);
  const launchSeen=useRef(null),launchHandled=useRef(onLaunchHandled);launchHandled.current=onLaunchHandled;
  useEffect(()=>{
   if(!launchRequest||launchSeen.current===launchRequest.id)return;
@@ -107,7 +111,7 @@ export default function CalendarVoiceButton({launchRequest,onLaunchHandled,onRes
   document.addEventListener('visibilitychange',cancel);
   return ()=>{mounted.current=false;cue.current?.close().catch(()=>{});cue.current=null;document.removeEventListener('visibilitychange',cancel);clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);clearTimeout(startupTimer.current);clearTimeout(silenceTimer.current);clearTimeout(audioTimer.current);clearTimeout(releaseTimer.current);if(utterance.current){utterance.current.onstart=null;utterance.current.onend=null;utterance.current.onerror=null;utterance.current=null;window.speechSynthesis?.cancel();}clearTimeout(timer.current);clearTimeout(messageTimer.current);const current=session.current;session.current=null;if(current){current.onspeechstart=null;current.onspeechend=null;current.onsoundstart=null;current.onsoundend=null;current.onstart=null;current.onresult=null;current.onerror=null;current.onend=null;current.abort();}};
  },[]);
- useEffect(()=>{const begin=()=>lifecycle.current.start();window.addEventListener('dayris-start-voice',begin);return()=>window.removeEventListener('dayris-start-voice',begin);},[]);
+ useEffect(()=>{const begin=()=>lifecycle.current.open();window.addEventListener('dayris-start-voice',begin);return()=>window.removeEventListener('dayris-start-voice',begin);},[]);
  useEffect(()=>{requestGeneration.current++;turnFeedback.cancel();conversationContext.current=null;lastSavedEntry.current=null;setShowCapabilities(false);setHeard('');setChoices([]);setNextHelp(null);setContextLabel('');if(saveBusy.current||voiceBatchHasProgress(saveProgress.current))return;entryDraft.current=null;batchDraft.current=null;setBatch(null);setReview(null);setQuestionField(null);entryPrompt.current='';stop();stopSpeaking();setActive(false);setMessage('');setAnswer('');setAnswerAction(null);clearTimeout(messageTimer.current);},[locale,userId]);
  function cancelDraft(){if(saveBusy.current)return;turnFeedback.cancel();setCorrection(null);handlers.current.onResetConversation?.();requestGeneration.current++;conversationContext.current=null;lastSavedEntry.current=null;setShowCapabilities(false);setHeard('');setNextHelp(null);setChoices([]);setContextLabel('');setCompact(false);entryDraft.current=null;batchDraft.current=null;setBatch(null);setReview(null);setQuestionField(null);entryPrompt.current='';setSaveError('');setSaveLocked(false);saveProgress.current={};stop();stopSpeaking();setActive(false);setAnswer('');setAnswerAction(null);setMessage('');}
  function changeReview(entry){if(saveBusy.current||saveLocked)return;setCorrection(null);if(batchDraft.current){const next={...batchDraft.current,states:batchDraft.current.states.map((state,index)=>index===batchDraft.current.activeIndex?{entry}:state)};batchDraft.current=next;setBatch(next);}entryDraft.current=entry;setReview(entry);setSaveError('');}
@@ -226,6 +230,15 @@ export default function CalendarVoiceButton({launchRequest,onLaunchHandled,onRes
   });
  }
  function submitReply(value){if(!value.trim())return;stop();stopSpeaking();setTranscript('');processPhrase(value);}
+ function openVoice(){
+  if(intro)return;
+  const key=voiceIntroKey(userId);
+  if(Speech&&!active&&!review&&!answer&&!message&&!session.current&&!introSeen.current.has(key)&&needsVoiceIntro(userId,language)){
+   setIntro({key});return;
+  }
+  start();
+ }
+ function acknowledgeIntro(){if(!intro||intro.key!==voiceIntroKey(userId))return false;introSeen.current.add(intro.key);rememberVoiceIntro(intro.key);return true;}
  function start(automatic=false,retry=0){
   if(turnFeedback.active()){if(automatic===true)turnFeedback.defer(()=>lifecycle.current.start(true,retry),false);return;}
   if(saveBusy.current||saveLocked)return;
@@ -275,7 +288,8 @@ export default function CalendarVoiceButton({launchRequest,onLaunchHandled,onRes
  const speakingStatus={ru:'Отвечаю…',en:'Speaking…',ro:'Răspund…',zh:'正在回答…'}[locale];
  const voiceBusy=processing||saving||phase==='processing',displayPhase=processing?'processing':speaking?'speaking':phase;
  return <div className="calendar-voice-control" data-light={Boolean(isLight)} data-active={active} data-phase={displayPhase}>
-  <button type="button" className="calendar-voice-button" disabled={voiceBusy||saveLocked} onClick={start} aria-pressed={listening} aria-label={listening?ui.done:text.start} title={text.start}><span className="calendar-voice-glyph" data-talking={talking&&phase==='listening'} aria-hidden="true"><span className="calendar-voice-equalizer"><i/><i/><i/></span>{voiceBusy?<Square size={15}/>:<Mic size={18}/>}<span className="calendar-voice-equalizer"><i/><i/><i/></span></span> {active&&<span>{listening?(phase==='processing'?ui.processing:phase==='starting'?ui.opening:ui.done):speaking?({
+  {intro&&<VoiceIntro language={language} onTry={()=>{if(!acknowledgeIntro())return false;start();return true}} onDismiss={()=>{acknowledgeIntro();setIntro(null)}} onComplete={()=>setIntro(null)}/>}
+  <button type="button" className="calendar-voice-button" disabled={voiceBusy||saveLocked} onClick={openVoice} aria-pressed={listening} aria-label={listening?ui.done:text.start} title={text.start}><span className="calendar-voice-glyph" data-talking={talking&&phase==='listening'} aria-hidden="true"><span className="calendar-voice-equalizer"><i/><i/><i/></span>{voiceBusy?<Square size={15}/>:<Mic size={18}/>}<span className="calendar-voice-equalizer"><i/><i/><i/></span></span> {active&&<span>{listening?(phase==='processing'?ui.processing:phase==='starting'?ui.opening:ui.done):speaking?({
   zh: "正在播放",ru:'Отвечаю',en:'Speaking',ro:'Răspund'}[locale]):text.start}</span>}</button>
 
   {(active||review||answer||message)&&<VoiceWorkspace onWidgetChange={value=>{widgetActive.current=value;}} locale={locale} isLight={isLight} phrase={transcript||heard}

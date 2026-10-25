@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v68-free-today-navigation';
+const CACHE_NAME = 'atj-cache-v70-first-microphone-intro';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

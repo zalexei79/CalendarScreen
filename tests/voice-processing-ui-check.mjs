@@ -6,7 +6,7 @@ const bundle=await require('esbuild').build({stdin:{resolveDir:process.cwd(),loa
 const browser=await createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE||import.meta.url)('playwright').chromium.launch({channel:'msedge',headless:true});
 try{
  const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true}),errors=[];page.on('pageerror',error=>errors.push(error.message));
- await page.addInitScript(()=>{
+ await page.addInitScript(()=>{/* Existing-user voice scenarios. */for(const owner of ['a','b','test-user'])localStorage.setItem('dayris_voice_intro_v1:'+owner,'seen');
   localStorage.setItem('dayris_voice_feedback','off');window.starts=0;
   const timeout=window.setTimeout.bind(window),clear=window.clearTimeout.bind(window),pauses=new Map();
   window.setTimeout=(callback,ms,...args)=>{const pause=[900,1900,2400].includes(ms),id=timeout(callback,pause||[8000,20000].includes(ms)?60000:ms,...args);if(pause)pauses.set(id,callback);return id;};

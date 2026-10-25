@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {needsVoiceIntro,voiceIntroKey,rememberVoiceIntro} from '../src/shared/lib/voiceIntro.js';
+const data=new Map(),storage={getItem:key=>data.get(key)||null,setItem:(key,value)=>data.set(key,value)};
+assert.equal(needsVoiceIntro('alice','ru',storage),true);assert.equal(needsVoiceIntro('alice','ru-RU',storage),true);
+for(const lang of ['en','ro','md','uk','zh-CN'])assert.equal(needsVoiceIntro('alice',lang,storage),false,'A Russian-only clip is not forced into another language');
+assert.equal(needsVoiceIntro(null,'ru',storage),false);
+rememberVoiceIntro(voiceIntroKey('alice'),storage);assert.equal(needsVoiceIntro('alice','ru',storage),false);assert.equal(needsVoiceIntro('bob','ru',storage),true,'Seen state belongs to the account');
+const blocked={getItem(){throw Error('storage blocked')},setItem(){throw Error('storage blocked')}};
+assert.equal(needsVoiceIntro('alice','ru',blocked),false);assert.doesNotThrow(()=>rememberVoiceIntro(voiceIntroKey('alice'),blocked));
+console.log('Voice introduction: first use, once per account, locale eligibility and blocked storage passed.');
