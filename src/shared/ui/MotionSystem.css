@@ -17,6 +17,7 @@
 .dayris-settings-panel { transition-property:opacity,transform; transition-duration:280ms; transition-timing-function:var(--motion-ease); }
 .dayris-settings-panel.opacity-0 { transition-duration:150ms; transition-timing-function:var(--motion-exit); }
 .dayris-month-label { display:inline-block; position:relative; vertical-align:bottom; white-space:nowrap; }
+.dayris-month-label > span:not(.dayris-month-outgoing) { display:inline-block; }
 .dayris-month-incoming { display:inline-block; animation:dayris-month-enter 420ms var(--motion-ease) both; }
 .dayris-month-outgoing { position:absolute; left:0; top:0; pointer-events:none; animation:dayris-month-leave 300ms var(--motion-ease) both; }
 @keyframes dayris-month-enter {
