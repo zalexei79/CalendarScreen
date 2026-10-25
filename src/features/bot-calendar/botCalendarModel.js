@@ -1,6 +1,12 @@
 export const BOT_START_DATE = '2026-10-05';
 export const BOT_TIME_ZONE = 'Europe/Bucharest';
 export const BOT_CALENDAR_URL = '/?calendar=bot';
+// Owner-confirmed operational notes. They are calendar labels, never trades.
+export const BOT_DAY_NOTES = Object.freeze({
+  '2026-10-13': 'Технические работы',
+  '2026-10-14': 'Технические работы',
+  '2026-10-15': 'Технические работы',
+});
 
 export function dateKey(date = new Date()) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: BOT_TIME_ZONE,

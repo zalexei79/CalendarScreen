@@ -7,6 +7,7 @@ const days = [
   { date_key:'2026-10-22',pnl:361.8,count:102 },
 ];
 const params = new URLSearchParams(location.search);
+if(params.has('maintenance_trade'))days.push({date_key:'2026-10-14',pnl:12.5,count:1});
 window.__copyLog=[];window.__shareLog=[];
 document.execCommand=()=>{if(params.get('clipboard')==='denied')return false;window.__copyLog.push(document.querySelector('[data-clipboard-temporary]')?.value);return true;};
 Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{if(params.get('clipboard')==='denied')throw new Error('denied');window.__copyLog.push(text);}}});

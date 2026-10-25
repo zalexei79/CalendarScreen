@@ -25,6 +25,8 @@ export default function CalendarDayCell({
   ariaLabel,
   caption,
   milestone,
+  annotation,
+  annotationLabel,
 }) {
   const [todayPulse, setTodayPulse] = useState(false);
 
@@ -114,6 +116,7 @@ export default function CalendarDayCell({
         data-pnl-tone={hasTrades ? pnlTone : 'neutral'}
         data-in-month={String(cell.inMonth)}
         data-milestone={milestone ? 'true' : undefined}
+        data-calendar-notice={annotation ? 'true' : undefined}
         data-today-cell={cell.isToday ? 'true' : undefined}
         data-first-entry={cell.isToday && firstEntryLabel ? 'true' : undefined}
         aria-label={ariaLabel || (cell.isToday && firstEntryLabel ? firstEntryLabel : undefined)}
@@ -180,6 +183,7 @@ export default function CalendarDayCell({
           {cell.date.getDate()}
         </span>
         {milestone && <span className="calendar-day-milestone">{milestone}</span>}
+        {annotation && <span className="calendar-day-annotation" title={annotationLabel}>{annotation}</span>}
 
         {(hasTrades || hasPlans) && (
           <div className="mt-auto min-w-0 space-y-1">

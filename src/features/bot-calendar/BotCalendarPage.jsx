@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowRight, ArrowUpRight, ChartNoAxesCombined, Check, ChevronLeft, ChevronRight, Copy, History, Menu, Share2, X } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, ChartNoAxesCombined, Check, ChevronLeft, ChevronRight, Copy, History, Menu, PartyPopper, Share2, Wrench, X } from 'lucide-react';
 import CalendarDayCell from '../../../CalendarDayCell.jsx';
 import BrandIcon from '../../shared/ui/BrandIcon.jsx';
 import { copyText } from '../../shared/lib/copyText.js';
-import { BOT_START_DATE, calendarCells, dateKey, dateLabel, money, publicCalendarUrl, shiftMonth, tradeCount } from './botCalendarModel.js';
+import { BOT_DAY_NOTES, BOT_START_DATE, calendarCells, dateKey, dateLabel, money, publicCalendarUrl, shiftMonth, tradeCount } from './botCalendarModel.js';
 import BotCalendarHistory from './BotCalendarHistory.jsx';
 import BotAnalyticsDialog from './BotAnalyticsDialog.jsx';
 import BotPerformanceChart from './BotPerformanceChart.jsx';
@@ -120,10 +120,13 @@ export default function BotCalendarPage({ client }) {
           <div className="bot-grid" style={{ gridTemplateRows: `repeat(${cells.length / 7},minmax(0,1fr))` }}>
             {cells.map((cell, i) => {
               const result = byDate.get(cell.key), available = cell.inMonth && cell.key >= start && cell.key <= today && ready && !loading;
+              const dayNote = cell.inMonth ? BOT_DAY_NOTES[cell.key] : null;
               return <CalendarDayCell key={cell.key} cell={cell} cellIndex={i} traderMode proView isLight={false}
                 disabled={!available} isSelected={selectedDay === cell.key} hasTrades={Boolean(result)} pnl={Number(result?.pnl || 0)} monthMaxAbsPnl={maxPnl}
-                milestone={cell.inMonth && cell.key === start ? 'Начало учёта' : undefined}
-                ariaLabel={`${dateLabel(cell.key)}${cell.inMonth && cell.key === start ? ', Начало учёта' : ''}${available ? result ? `: ${money(result.pnl, currency, true)}, ${tradeCount(result.count)}` : ': нет закрытых сделок' : ''}`}
+                milestone={cell.inMonth && cell.key === start ? <span className="bot-launch-mark"><PartyPopper className="bot-launch-icon" aria-hidden="true"/><span>Старт учёта</span><i aria-hidden="true"/></span> : undefined}
+                annotation={dayNote ? <><Wrench aria-hidden="true"/><span className="bot-note-full">{dayNote}</span><span className="bot-note-short" aria-hidden="true">Тех.<br/>работы</span></> : undefined}
+                annotationLabel={dayNote || undefined}
+                ariaLabel={`${dateLabel(cell.key)}${cell.inMonth && cell.key === start ? ', Старт учёта' : ''}${dayNote ? `, ${dayNote}` : ''}${available ? result ? `: ${money(result.pnl, currency, true)}, ${tradeCount(result.count)}` : ': нет закрытых сделок' : ''}`}
                 formatPnlDisplay={(value, compact) => compact ? new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2, notation: Math.abs(value) >= 1000 ? 'compact' : 'standard', signDisplay: 'exceptZero' }).format(value) : money(value, currency, true)} onSelect={() => openHistory(cell.key)}
                 caption={result ? <span className="bot-cell-count">{tradeCount(result.count)}</span> : null} />;
             })}

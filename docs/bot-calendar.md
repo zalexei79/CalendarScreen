@@ -12,9 +12,11 @@ selectable link if copying is denied.
 Strategy parameters are private: their source module, import and dialog have been
 removed. Current public assets contain no cbotset values. Neither public RPCs nor
 analytics publish strategy settings, account identity, trade comments or tokens.
-The first published date, 5 October 2026, is marked “Начало учёта” in the grid;
+The first published date, 5 October 2026, is marked “Старт учёта” in the grid;
 it is not presented as the bot's unverified original launch date. A visible
 create-calendar link in the header opens the personal calendar homepage.
+Owner-confirmed technical work on 13–15 October 2026 is shown as calendar
+annotations. These labels do not create trades or change PnL, counts or analytics.
 
 Source: Spotware Demo account `47484897`, closed deals dated **5 October 2026
 onward**, using `Europe/Bucharest`. This cutoff is fixed and history accumulates.

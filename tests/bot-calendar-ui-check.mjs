@@ -36,8 +36,15 @@ for (const [engine,options] of [[chromium,{channel:'msedge',headless:true}],[web
       assert.equal(await page.locator('.calendar-day-surface').count(),35,'reuse classic DAYRIS cells');
       const milestone=page.locator('[data-milestone=true]');
       assert.equal(await milestone.count(),1);
-      assert.match(await milestone.getAttribute('aria-label'),/^5 октября 2026.*Начало учёта/);
-      assert.equal(await milestone.locator('.calendar-day-milestone').textContent(),'Начало учёта');
+      assert.match(await milestone.getAttribute('aria-label'),/^5 октября 2026.*Старт учёта/);
+      assert.equal(await milestone.locator('.calendar-day-milestone').textContent(),'Старт учёта');
+      assert.equal(await milestone.locator('.bot-launch-icon').count(),1);
+      assert.equal(await page.locator('[data-calendar-notice=true]').count(),3);
+      for(const day of [13,14,15]) {
+        const maintenance=page.getByRole('button',{name:new RegExp(`^${day} октября 2026.*Технические работы`)});
+        assert.ok(await maintenance.isEnabled());
+        assert.equal(await maintenance.locator('.calendar-day-annotation').getAttribute('title'),'Технические работы');
+      }
       assert.ok(await page.getByRole('link',{name:'Создать свой календарь',exact:true}).isVisible(),'visible invitation without opening menu');
       assert.doesNotMatch(await page.locator('body').innerText(),/47484897|Spotware|Demo|DEMO|демосч[её]т/);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`overflow at ${width}`);
@@ -163,6 +170,15 @@ for (const [engine,options] of [[chromium,{channel:'msedge',headless:true}],[web
     await page.getByText('В выбранном периоде нет закрытых сделок.').waitFor();
     assert.equal(await page.locator('.bot-score-ring strong').textContent(),'—');
     await page.keyboard.press('Escape');
+    await page.setViewportSize({width:320,height:568});
+    await page.goto('http://dayris.test/?maintenance_trade=1');
+    await page.waitForFunction(()=>!document.querySelector('section[aria-busy="true"]'));
+    const labelledTrade=page.getByRole('button',{name:/^14 октября 2026.*Технические работы.*12,50/});
+    assert.ok(await labelledTrade.isEnabled());
+    const noteGeometry=await labelledTrade.evaluate(cell=>{
+      const note=cell.querySelector('.calendar-day-annotation').getBoundingClientRect(),pnl=cell.querySelector('.day-amount').getBoundingClientRect(),box=cell.getBoundingClientRect();
+      return {separate:note.bottom<=pnl.top+1,pnlFits:pnl.bottom<box.bottom};
+    });assert.ok(noteGeometry.separate&&noteGeometry.pnlFits,'operational labels must never cover a real trade result');
     await page.goto('http://dayris.test/?clipboard=denied');
     await page.getByRole('button',{name:'Скопировать ссылку на календарь'}).click();
     await page.getByRole('dialog',{name:'Ссылка на календарь'}).waitFor();
