@@ -1,0 +1,10 @@
+import{openReceiptGallery}from'../src/features/receipts/receiptGallery.js';
+import test from 'node:test';import assert from 'node:assert/strict';
+import{receiptFrameStructure,createReceiptCaptureTracker}from'../src/features/receipts/receiptCaptureTracker.js';
+import{receiptFrameMotion}from'../src/features/receipts/receiptFrameSignal.js';
+test('exposure flicker no longer looks like document movement',()=>{const a=Uint8Array.from({length:160*240},(_,i)=>80+i%100),b=Uint8Array.from(a,v=>v+35);assert.ok(receiptFrameMotion(a,b)>7);assert.ok(receiptFrameMotion(receiptFrameStructure(a,160,240),receiptFrameStructure(b,160,240))<.01);});
+test('a brief detection gap and one shake do not endlessly restart the capture',()=>{const tracker=createReceiptCaptureTracker();let result;for(const [now,motion,detected]of [[0,Infinity,true],[250,2,true],[500,2,true],[750,20,true],[1000,2,false],[1250,2,true],[1500,2,true]])result=tracker.observe({now,motion,detected});assert.equal(result.capture,true);});
+test('blank, fleeting documents and substantial continuous movement never auto-capture',()=>{for(const scenario of ['blank','fleeting','moving']){const tracker=createReceiptCaptureTracker();for(let now=0;now<=4000;now+=250)assert.equal(tracker.observe({now,detected:scenario==='moving'||scenario==='fleeting'&&now<500,motion:scenario==='moving'?30:1}).capture,false);}});
+test('removing the receipt discards the previous capture window',()=>{const tracker=createReceiptCaptureTracker();tracker.observe({now:0,detected:true,motion:1});tracker.observe({now:250,detected:true,motion:1});assert.equal(tracker.observe({now:1500,detected:false}).reset,true);assert.equal(tracker.observe({now:1750,detected:true,motion:1}).capture,false);});
+
+test('gallery selection and cancellation release the capture pause',async()=>{for(const type of ['change','cancel']){const input=new EventTarget();let clicked=0;input.click=()=>clicked++;let closed=false;const promise=openReceiptGallery(input).then(()=>closed=true);await Promise.resolve();assert.equal(clicked,1);assert.equal(closed,false);input.dispatchEvent(new Event(type));await promise;assert.equal(closed,true);}});

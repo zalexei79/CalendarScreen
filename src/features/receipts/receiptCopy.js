@@ -1,4 +1,6 @@
 const rows = {
+  scanGallery: ['Галерея','Gallery','Galerie','相册'],
+  scanCaptured: ['Снимок готов. Читаем чек…','Photo captured. Reading receipt…','Fotografie capturată. Citim bonul…','已拍摄，正在识别收据…'],
   ocrLocal: ['Выделяем чек и проверяем сумму на устройстве.','Locating the receipt and checking the amount on your device.','Identificăm bonul și verificăm suma pe dispozitiv.','在本设备上定位收据并核对金额。'],
   ocrpreparing: ["Готовим фото…","Preparing photo…","Pregătim fotografia…","正在准备照片…"],
   ocrreading: ["Читаем чек…","Reading receipt…","Citim bonul…","正在识别收据…"],

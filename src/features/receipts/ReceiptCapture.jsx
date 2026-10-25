@@ -14,6 +14,7 @@ import {productTypeById,productLocale} from './productCatalog.js';
 import ProductTypePicker from './ProductTypePicker.jsx';
 import './ReceiptCapture.css';
 import ReceiptScanner from './ReceiptScanner.jsx';
+import {openReceiptGallery} from './receiptGallery.js';
 
 export default function ReceiptCapture(props) {
   if (!props.userId || !props.proActive || props.proLoading) return null;
@@ -164,7 +165,7 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
     <input ref={gallery} className="receipt-file" type="file" accept="image/*" aria-label={c.gallery} onChange={selectFile}/>
     <input ref={camera} className="receipt-file" type="file" accept="image/*" capture="environment" aria-label={c.camera} onChange={selectFile}/>
     {createPortal(<dialog ref={dialog} className="receipt-dialog" data-scanner={phase==='scanner'} data-light={isLight} aria-labelledby="receipt-title" onCancel={event => { event.preventDefault(); close(); }}>
-      {open && (phase==='scanner'?<ReceiptScanner c={c} onClose={close} onFile={readFile} onGallery={()=>gallery.current?.click()} onNativeCamera={()=>camera.current?.click()}/>:<div className="receipt-shell">
+      {open && (phase==='scanner'?<ReceiptScanner c={c} onClose={close} onFile={readFile} onGallery={()=>openReceiptGallery(gallery.current)} onNativeCamera={()=>camera.current?.click()}/>:<div className="receipt-shell">
         <header className="receipt-heading"><div><small>DAYRIS <b>PRO</b></small><h2 id="receipt-title" tabIndex={-1}>{draft?.kind==='amount'?c.photoTitle:c.title}</h2></div><button type="button" aria-label={c.close} disabled={phase === 'saving'} onClick={close}><X size={20}/></button></header>
         <div className="receipt-scroll">
           {saved ? <div className="receipt-success" role="status"><Check size={32}/><h3>{c.saved}</h3><strong>{moneyText(receiptMoney(saved.total))} {saved.currency}</strong><p>{saved.dateKey}</p>{saved.dayTotal !== undefined && <p>{c.dayTotal}: <b>{saved.dayTotal} {saved.currency}</b></p>}</div> : <>

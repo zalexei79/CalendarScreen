@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v63-private-bot-analytics';
+const CACHE_NAME = 'atj-cache-v64-receipt-auto-freeze';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
