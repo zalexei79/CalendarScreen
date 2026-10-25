@@ -141,6 +141,16 @@
 .pro-receipt-paper em { color: #9b7732; font-size: 13px; font-style: normal; }
 .pro-receipt-scan { position: absolute; right: 8%; bottom: 13px; display: inline-flex; align-items: center; gap: 5px; padding: 6px 8px; border: 1px solid rgba(97,199,169,.35); border-radius: 999px; color: #8ce0c2; background: rgba(5,28,24,.88); font-size: 8px; box-shadow: 0 5px 16px rgba(0,0,0,.22); }
 .pro-receipt-scan svg { width: 12px; height: 12px; }
+.pro-analysis-metrics { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 6px; margin-top: 15px; }
+.pro-analysis-metrics > div { display: grid; gap: 4px; min-width: 0; padding: 9px 8px; border: 1px solid var(--pro-line); border-radius: 10px; background: rgba(255,255,255,.025); }
+.pro-analysis-metrics strong { color: #61c7a9; font-size: 14px; font-weight: 600; letter-spacing: -.03em; }
+.pro-analysis-metrics span { overflow: hidden; color: var(--pro-muted); font-size: 8px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.pro-theme-preview { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 15px; }
+.pro-theme-preview > div { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; min-height: 80px; padding: 9px; border: 1px solid var(--preview-line); border-radius: 12px; background: linear-gradient(145deg,#ffffff12,transparent 50%), var(--preview-bg); color: var(--preview-ink); }
+.pro-theme-preview > div > span { grid-column: 1/-1; font-size: 8px; font-weight: 700; letter-spacing: .12em; }
+.pro-theme-preview > div > i { display: block; min-height: 37px; border: 1px solid var(--preview-line); border-radius: 5px; background: var(--preview-flare); box-shadow: inset 0 1px #fff2; }
+.pro-theme-preview > div[data-material="gold"] { --preview-bg:#0b0b0d; --preview-ink:#fff0b2; --preview-line:#f1d57570; --preview-flare:#f7d55c2e; }
+.pro-theme-preview > div[data-material="emerald"] { --preview-bg:#061c18; --preview-ink:#b9fce2; --preview-line:#96ffcf45; --preview-flare:#25dba146; }
 .pro-offer-access { margin-top: 24px; }
 .pro-offer-section-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
 .pro-offer-section-heading h3 { font-size: 13px; font-weight: 600; margin: 0; }

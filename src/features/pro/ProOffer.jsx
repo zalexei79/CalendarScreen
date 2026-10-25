@@ -1,5 +1,5 @@
 import React, { useId, useState } from 'react';
-import { ArrowDownLeft, ArrowRight, ArrowUpRight, Camera, ChartCandlestick, ChartNoAxesCombined, Check, Gift, ReceiptText, RefreshCw, ScanLine, Wallet, Bitcoin } from 'lucide-react';
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, Camera, ChartCandlestick, ChartNoAxesCombined, Check, Gift, Gem, ReceiptText, RefreshCw, ScanLine, Wallet, Bitcoin } from 'lucide-react';
 import { getProOfferCopy, XAUUSD_SIGNALS_URL, XAUUSD_SIGNALS_BOT_URL } from './proOfferCopy';
 import { BOT_CALENDAR_URL } from '../bot-calendar/botCalendarModel.js';
 import './ProPresentation.css';
@@ -9,7 +9,7 @@ export default function ProOffer({ language, copy, active, daysRemaining, untilL
   const [feature, setFeature] = useState('capital');
   const id = useId();
   const text = getProOfferCopy(language);
-  const features = [ ['capital', Bitcoin, text.capital], ['wallet', Wallet, text.wallet], ['money', ChartNoAxesCombined, text.money], ['trader', ChartCandlestick, text.trader], ['receipt', Camera, text.receipt] ];
+  const features = [ ['capital', Bitcoin, text.capital], ['wallet', Wallet, text.wallet], ['money', ChartNoAxesCombined, text.money], ['analysis', ChartNoAxesCombined, text.analysis], ['trader', ChartCandlestick, text.trader], ['receipt', Camera, text.receipt], ['themes', Gem, text.themes] ];
   const receiptFlow = [[Camera, text.receiptFlow[0]], [ScanLine, text.receiptFlow[1]], [Check, text.receiptFlow[2]]];
   const index = features.findIndex(([key]) => key === feature);
   const selectWithKeys = (event) => {
@@ -103,10 +103,23 @@ export default function ProOffer({ language, copy, active, daysRemaining, untilL
               <svg className="pro-example-curve" viewBox="0 0 240 60" aria-hidden="true"><path d="M0 49 30 42 60 45 90 27 120 34 150 17 180 25 210 9 240 13" /></svg>
               <p className="pro-example-caption">{text.capitalTitle}</p>
             </>}
+            {feature === 'analysis' && <>
+              <div className="pro-example-heading"><ChartNoAxesCombined aria-hidden="true" /><span>DAYRIS INSIGHTS</span></div>
+              <p className="pro-example-caption">{text.analysisExample}</p>
+              <div className="pro-analysis-metrics"><div><strong>+18%</strong><span>{text.analysisMetricOne}</span></div><div><strong>−12%</strong><span>{text.analysisMetricTwo}</span></div><div><strong>82</strong><span>{text.analysisMetricThree}</span></div></div>
+              <svg className="pro-example-curve" viewBox="0 0 240 60" aria-hidden="true"><path d="M0 47 30 43 60 46 90 31 120 34 150 22 180 27 210 12 240 16" /></svg>
+              <p className="pro-example-caption">{text.analysisExampleCaption}</p>
+            </>}
             {feature === 'receipt' && <>
               <div className="pro-example-heading"><ReceiptText aria-hidden="true" /><span>DAYRIS RECEIPT</span></div>
               <div className="pro-receipt-preview" aria-hidden="true"><div className="pro-receipt-paper"><b>SUPERMARKET</b><span>Кофе · Хлеб · Молоко</span><span>3 позиции</span><hr /><strong>ИТОГО <em>€24.80</em></strong></div><div className="pro-receipt-scan"><ScanLine /><span>Сумма распознана</span></div></div>
               <p className="pro-example-caption">{text.receiptResult}</p>
+            </>}
+            {feature === 'themes' && <>
+              <div className="pro-example-heading"><Gem aria-hidden="true" /><span>DAYRIS MATERIALS</span></div>
+              <p className="pro-example-caption">{text.themesExample}</p>
+              <div className="pro-theme-preview"><div data-material="gold"><span>GOLD</span><i /><i /><i /></div><div data-material="emerald"><span>EMERALD</span><i /><i /><i /></div></div>
+              <p className="pro-example-caption">{text.themesExampleCaption}</p>
             </>}
           </div>{feature === 'trader' && <a className="pro-bot-calendar-card" href={BOT_CALENDAR_URL}>
             <span className="pro-bot-calendar-kicker">XAUUSD</span>
