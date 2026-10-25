@@ -31,7 +31,7 @@ try{
  await page.goto(origin);await ready();assert.equal((await cache()).length,1);
  await page.getByRole('button',{name:'Добавить',exact:true}).click();
  await page.getByRole('button',{name:'Расходы',exact:true}).click();
- await page.getByRole('button',{name:'50',exact:true}).click();await page.getByRole('button',{name:'Категория',exact:true}).click();
+ await page.getByRole('button',{name:'+50',exact:true}).click();await page.getByRole('button',{name:'Категория',exact:true}).click();
  await page.getByRole('textbox',{name:'Найти раздел'}).fill('аквариум');
  await page.getByRole('button',{name:'Закрепить АКВАРИУМ',exact:true}).click();
  await page.getByRole('button',{name:'АКВАРИУМ',exact:true}).click();await page.getByRole('dialog',{name:'Разделы'}).waitFor({state:'detached'});

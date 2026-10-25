@@ -31,7 +31,8 @@ try{
  await page.getByRole('button',{name:'Добавить',exact:true}).click();
  assert.match(await page.getByRole('button',{name:'Расходы',exact:true}).getAttribute('class'),/bg-red-500/);
  assert.ok((await page.evaluate(()=>window.hapticPulses)).includes(10),'trusted button clicks pulse');
- await page.getByRole('button',{name:'50',exact:true}).click();
+ await page.locator('.amount-digits').getByRole('button',{name:'5',exact:true}).click();
+ await page.getByRole('button',{name:'0',exact:true}).click();
  await page.getByRole('button',{name:'Категория',exact:true}).click();console.log('Category picker');
  await page.getByRole('textbox',{name:'Найти раздел'}).fill('Транспорт');
  const transport=page.getByRole('button',{name:'Транспорт',exact:true});
@@ -44,7 +45,8 @@ try{
  await page.getByRole('button',{name:'Сохранить запись',exact:true}).waitFor({state:'detached'});
  await page.getByRole('button',{name:'Добавить',exact:true}).click();
  await page.getByRole('button',{name:'Доходы',exact:true}).click();
- await page.getByRole('button',{name:'50',exact:true}).click();
+ await page.locator('.amount-digits').getByRole('button',{name:'5',exact:true}).click();
+ await page.getByRole('button',{name:'0',exact:true}).click();
  await page.getByRole('button',{name:'Сохранить запись',exact:true}).click();
  await page.waitForFunction(()=>Object.values(JSON.parse(localStorage.getItem('money_calendar_trades_22222222-2222-4222-8222-222222222222')||'{}')).flat().length===3);
  assert.ok((await cache()).some(record=>record.instrument==='ЗАРПЛАТА'&&record.pnl===50),'explicit income remains positive');

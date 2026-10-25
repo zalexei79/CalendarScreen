@@ -19,13 +19,16 @@ for(const mobile of [true,false]) {
  assert.equal(await page.locator('input').evaluate(el=>document.activeElement===el),false,'opening does not focus amount');
  if(mobile){
   assert.equal(await page.locator('input').getAttribute('inputmode'),'none');
-  await page.getByRole('button',{name:'50',exact:true}).click();
+  await page.getByRole('button',{name:'+50',exact:true}).click();
   assert.equal(await page.locator('input').inputValue(),'50');
   for(const key of ['.','2','5','.'])await page.getByRole('button',{name:key,exact:true}).click();
   assert.equal(await page.locator('input').inputValue(),'50.25');
   await page.getByRole('button',{name:'Удалить цифру'}).click();assert.equal(await page.locator('input').inputValue(),'50.2');
+  await page.getByRole('button',{name:'+500',exact:true}).click();
+  await page.getByRole('button',{name:'+500',exact:true}).click();
+  assert.equal(await page.locator('input').inputValue(),'1050.2','presets accumulate and preserve decimals');
   assert.equal(await page.locator('output').textContent(),'','keypad does not submit');
-  await page.getByRole('button',{name:'Сохранить'}).click();assert.equal(await page.locator('output').textContent(),'50.2');
+  await page.getByRole('button',{name:'Сохранить'}).click();assert.equal(await page.locator('output').textContent(),'1050.2');
   const box=await page.locator('.amount-keypad').boundingBox();assert.ok(box.height<320);
   await page.getByRole('button',{name:'Очистить'}).click();assert.equal(await page.locator('input').inputValue(),'');
   await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await page.locator('.amount-keypad').evaluate(el=>getComputedStyle(el).animationName),'none');

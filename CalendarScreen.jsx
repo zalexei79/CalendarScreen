@@ -2596,7 +2596,7 @@ export default function CalendarScreen() {
     setFormError('');
     // Categories open in the compact picker. PRO opens extra details only when
     // the saved record contains a note, trade limits or a connected source.
-    setDetailsOpen(!traderMode || Boolean(traderMode && tradeToEdit && (tradeToEdit.comment || tradeToEdit.take_profit != null || tradeToEdit.stop_loss != null || (tradeToEdit.platform && tradeToEdit.platform !== 'Manual'))));
+    setDetailsOpen(Boolean(tradeToEdit && (tradeToEdit.comment || (traderMode && (tradeToEdit.take_profit != null || tradeToEdit.stop_loss != null || (tradeToEdit.platform && tradeToEdit.platform !== 'Manual'))))));
     setModalOpen(true);
     requestAnimationFrame(() => setModalVisible(true));
   }
@@ -6588,7 +6588,7 @@ export default function CalendarScreen() {
             onDismiss={closeModal}
             disabled={isSaving}
             isLight={isLight}
-            className={`relative my-auto w-full max-w-[360px] max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain rounded-2xl border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl transition-all duration-300 ease-[cubic-bezier(.22,1,.36,1)] will-change-transform sm:flex sm:max-h-[calc(100vh-3rem)] sm:flex-col sm:overflow-hidden sm:px-5 sm:py-5 ${
+            className={`${!traderMode ? 'quick-money-composer' : ''} relative my-auto w-full max-w-[360px] max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain rounded-2xl border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl transition-all duration-300 ease-[cubic-bezier(.22,1,.36,1)] will-change-transform sm:flex sm:max-h-[calc(100vh-3rem)] sm:flex-col sm:overflow-hidden sm:px-5 sm:py-5 ${
               traderMode ? 'sm:max-w-[620px]' : 'sm:max-w-[560px]'
             } ${
               modalVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-[0.97] sm:translate-y-2'
@@ -6610,7 +6610,7 @@ export default function CalendarScreen() {
               <X className="h-4 w-4" />
             </button>
 
-            <div className="flex items-center justify-between pr-8">
+            <div className="quick-money-header flex items-center justify-between pr-8">
               <div>
                 <p className={`font-data text-[10px] tracking-[0.18em] uppercase ${traderMode ? (proEntryMode === 'finance' ? 'text-amber-400' : 'text-emerald-400') : 'text-amber-400'}`}>
                   {traderMode
@@ -6618,8 +6618,11 @@ export default function CalendarScreen() {
                     : (editingTrade ? t('editRecord') : t('addRecord'))}
                 </p>
                 {calendarDraftRestored&&<p className="text-xs opacity-60 mt-1">{language==='ru'?'Черновик восстановлен · ещё не сохранён':language==='en'?'Draft restored · not saved yet':['ro','md'].includes(language)?'Ciornă restaurată · încă nesalvată':'草稿已恢复，尚未保存'}</p>}{form.voiceDestination && <label className="mt-1 block text-xs text-amber-500">{language === 'zh-CN' ? "保存位置" : (language === 'ru' ? 'Место записи' : language === 'en' ? 'Save to' : 'Salvare în')}<select aria-label={language === 'zh-CN' ? "保存位置" : (language === 'ru' ? 'Место записи' : language === 'en' ? 'Save to' : 'Salvare în')} value={form.voiceDestination} onChange={event=>setForm(current=>({...current,voiceDestination:event.target.value}))} className="ml-2 rounded-lg border border-amber-400/20 bg-zinc-900 p-1 text-zinc-200"><option value="main">{language === 'zh-CN' ? "日历" : (language === 'ru' ? 'Календарь' : 'Calendar')}</option>{proAccessActive&&<><option value="wallet">{language === 'zh-CN' ? "钱包" : (language === 'ru' ? 'Кошелёк' : language === 'en' ? 'Wallet' : 'Portofel')}</option><option value="both">{language === 'zh-CN' ? "日历 + 钱包" : (language === 'ru' ? 'Календарь и кошелёк' : language === 'en' ? 'Calendar + Wallet' : 'Calendar + Portofel')}</option></>}</select></label>}<div className="mt-1 flex items-center gap-1.5">
-                  <input
+                  <label className={!traderMode ? 'quick-money-date' : ''}>
+                    {!traderMode && <><Calendar className="h-3.5 w-3.5" /><span>{new Intl.DateTimeFormat(language === 'md' ? 'ro' : language, {day:'numeric',month:'short',year:'numeric'}).format(new Date((modalDateKey || targetDateKey) + 'T12:00:00'))}</span><ChevronDown className="h-3 w-3" /></>}
+                    <input
                     type="date"
+                    aria-label={t('date')}
                     max={todayKey}
                     value={modalDateKey || targetDateKey}
                     onChange={(e) => {
@@ -6633,6 +6636,7 @@ export default function CalendarScreen() {
                         : `${traderMode ? 'border-white/[0.08] bg-black/25 text-zinc-300 hover:border-emerald-400/30 focus:border-emerald-400/40' : 'border-zinc-800 bg-zinc-900 text-zinc-200 hover:border-amber-400/50 focus:border-amber-400'}`
                     }`}
                   />
+                  </label>
                   {traderMode && (
                     <input
                       type="time"
@@ -6651,12 +6655,12 @@ export default function CalendarScreen() {
             </div>
 
             {traderMode ? (proEntryChoiceOpen ? renderProEntryChoice() : renderProTradeComposer()) : (
-            <div className="mt-4 sm:min-h-0 sm:overflow-y-auto sm:overscroll-contain sm:pr-1">
+            <div className="quick-money-body mt-4 sm:min-h-0 sm:overflow-y-auto sm:overscroll-contain sm:pr-1">
               {firstRunGuideStep === 2 && !editingTrade && <p className="first-entry-form-hint" data-light={isLight}>{onboardingCopy.guideSaveHint}</p>}
             {/* Income / expense: the first and fastest decision */}
               <div className={traderMode
                 ? `grid grid-cols-2 gap-1 rounded-2xl border p-1.5 ${isLight ? 'border-zinc-200 bg-zinc-100/80' : 'border-white/[0.08] bg-black/35 shadow-inner'}`
-                : `grid grid-cols-2 gap-1 rounded-xl p-1 ${isLight ? 'bg-zinc-100/70' : 'bg-zinc-950/70'}`
+                : `quick-money-kind grid grid-cols-2 gap-1 rounded-xl p-1 ${isLight ? 'bg-zinc-100/70' : 'bg-zinc-950/70'}`
               }>
                 <button
                   type="button"
@@ -6693,15 +6697,15 @@ export default function CalendarScreen() {
               </div>
 
               {/* Amount is the visual focus */}
-              <div className={`relative mt-3 transition-all duration-200 ${
+              <div className={`quick-money-amount relative mt-3 transition-all duration-200 ${
                 traderMode
                   ? `rounded-2xl border px-4 py-4 sm:px-5 sm:py-5 focus-within:border-emerald-400/35 focus-within:ring-2 focus-within:ring-emerald-400/[0.06] ${isLight ? 'border-zinc-200 bg-zinc-50 shadow-sm' : 'border-white/[0.08] bg-black/30 shadow-inner'}`
                   : `rounded-2xl border px-10 py-4 focus-within:-translate-y-0.5 focus-within:border-amber-400/70 focus-within:ring-2 focus-within:ring-amber-400/10 ${isLight ? 'border-zinc-200 bg-zinc-50/70 shadow-sm' : 'border-zinc-800 bg-black/20 shadow-inner'}`
               }`}>
                 {!traderMode && (
-                  <span className={`pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 font-data text-sm font-semibold ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
-                    {CURRENCIES.find((c) => c.code === form.currency)?.symbol || form.currency}
-                  </span>
+                  <select className="quick-money-currency" aria-label={t('currency')} value={form.currency} onChange={event => setForm(current => ({...current, currency: event.target.value}))}>
+                    {CURRENCIES.map(currency => <option key={currency.code} value={currency.code}>{currency.code}</option>)}
+                  </select>
                 )}
                 <div className={traderMode ? 'flex items-center gap-3' : ''}>
                   {traderMode && (
@@ -6752,61 +6756,29 @@ export default function CalendarScreen() {
                 </div>
               </div>
 
-              {!traderMode && (
-                <div className="mt-2 flex items-center justify-center gap-1">
-                  {CURRENCIES.map((c) => (
-                    <button
-                      key={c.code}
-                      type="button"
-                      onClick={() => setForm((f) => ({ ...f, currency: c.code }))}
-                      title={c.code}
-                      aria-label={`${t('currency')} ${c.code}`}
-                          aria-pressed={form.currency === c.code}
-                      className={[
-                        'min-w-10 rounded-lg border px-3 py-1.5 font-data text-xs transition-all duration-200',
-                        form.currency === c.code
-                          ? 'border-amber-400/55 bg-amber-400/10 text-amber-600 shadow-sm'
-                          : isLight
-                          ? 'border-transparent bg-transparent text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700'
-                          : 'border-transparent bg-transparent text-zinc-600 hover:bg-zinc-800/70 hover:text-zinc-300',
-                      ].join(' ')}
-                    >
-                      {c.symbol}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <AmountKeypad value={form.pnl} language={language} isLight={isLight} onChange={(pnl) => { setForm((current) => ({ ...current, pnl })); setFormError(''); }} />
-              {/* Time is available, but deliberately quiet */}
-              <div className={`mt-2 flex ${traderMode ? 'justify-end' : 'justify-center'}`}>
-                <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] transition-colors ${
-                  isLight ? 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700' : 'text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-400'
-                }`}>
-                  <span>◷</span>
-                  <span>{form.time || currentTimeHHMM()}</span>
-                  <input
-                    type="time"
-                    value={form.time}
-                    onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* not supported */ } }}
-                    onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
-                    className="sr-only"
-                    aria-label={proEntryCopy.time}
-                  />
-                </label>
-              </div>
+              {!traderMode && (<div className="quick-money-category">
+                      <label className={`mb-1.5 block font-data text-[10px] tracking-widest uppercase ${isLight ? 'text-zinc-600' : 'text-zinc-600'}`}>
+                        {t('category')}
+                      </label>
+                      <CategoryPicker options={moneyCategoriesWithIcons.map(category => ({value: category.key, label: getMoneyCategoryLabel(category.key, language), icon: category.icon}))}
+                        onCreate={voiceCategories.add} onDelete={removeMoneyCategory}
+                        managementOptions={moneyCategoryNames.map(value=>({value,label:getMoneyCategoryLabel(value,language),icon:getHistoryCategoryIcon(value)}))}
+                        value={form.instrument} onChange={instrument => {setForm(current => ({...current, instrument}));setFormError('');}}
+                        userId={user?.id} language={language} isLight={isLight} allowCreate ariaLabel={t('category')}/>
+                    </div>)}
 
               {/* Money mode keeps quick details collapsed; PRO journal is intentionally composed as one flow. */}
               {!traderMode && (
                 <button
                   type="button"
+                  aria-expanded={detailsOpen}
                   onClick={() => setDetailsOpen((v) => !v)}
-                  className={`mx-auto mt-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                  className={`quick-money-note mx-auto mt-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ${
                     isLight ? 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'
                   }`}
                 >
                   <MoreHorizontal className="h-3.5 w-3.5" />
-                  {detailsOpen ? t('hideDetails') : t('moreDetails')}
+                  {detailsOpen ? t('hideDetails') : proEntryCopy.addNote}
                   <ChevronDown className={`h-3 w-3 transition-transform ${detailsOpen ? 'rotate-180' : ''}`} />
                 </button>
               )}
@@ -6925,17 +6897,26 @@ export default function CalendarScreen() {
                       </div>
                     </>
                   ) : (
-                    <div>
-                      <label className={`mb-1.5 block font-data text-[10px] tracking-widest uppercase ${isLight ? 'text-zinc-600' : 'text-zinc-600'}`}>
-                        {t('category')}
-                      </label>
-                      <CategoryPicker options={moneyCategoriesWithIcons.map(category => ({value: category.key, label: getMoneyCategoryLabel(category.key, language), icon: category.icon}))}
-                        onCreate={voiceCategories.add} onDelete={removeMoneyCategory}
-                        managementOptions={moneyCategoryNames.map(value=>({value,label:getMoneyCategoryLabel(value,language),icon:getHistoryCategoryIcon(value)}))}
-                        value={form.instrument} onChange={instrument => {setForm(current => ({...current, instrument}));setFormError('');}}
-                        userId={user?.id} language={language} isLight={isLight} allowCreate ariaLabel={t('category')}/>
-                    </div>
+                    null
                   )}
+
+              {/* Time is available, but deliberately quiet */}
+              <div className={`mt-2 flex ${traderMode ? 'justify-end' : 'justify-center'}`}>
+                <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] transition-colors ${
+                  isLight ? 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700' : 'text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-400'
+                }`}>
+                  <span>◷</span>
+                  <span>{form.time || currentTimeHHMM()}</span>
+                  <input
+                    type="time"
+                    value={form.time}
+                    onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* not supported */ } }}
+                    onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
+                    className="sr-only"
+                    aria-label={proEntryCopy.time}
+                  />
+                </label>
+              </div>
 
                   <textarea
                     ref={guideCommentRef}
@@ -6953,6 +6934,8 @@ export default function CalendarScreen() {
                 </div>
               )}
 
+              <AmountKeypad compact value={form.pnl} language={language} isLight={isLight} onChange={(pnl) => { setForm((current) => ({ ...current, pnl })); setFormError(''); }} />
+
               {formError && <p className="mt-2 text-center text-xs text-red-600">{formError}</p>}
 
               {renderSavingsNudge()}
@@ -6961,7 +6944,7 @@ export default function CalendarScreen() {
                 disabled={isSaving}
                 className={traderMode
                   ? 'sticky bottom-0 mt-3 block w-full rounded-2xl border border-emerald-300/20 bg-emerald-500 px-4 py-3.5 text-base font-bold text-emerald-950 shadow-[0_12px_36px_rgba(16,185,129,0.20)] transition-all duration-200 hover:bg-emerald-400 hover:shadow-[0_14px_42px_rgba(16,185,129,0.28)] active:scale-[0.995] disabled:opacity-60'
-                  : 'sticky bottom-0 mt-3 block w-full rounded-xl bg-amber-400 px-4 py-3 text-base font-bold text-zinc-950 hover:bg-amber-300 transition-colors shadow-lg shadow-amber-500/20 disabled:opacity-60'
+                  : 'quick-money-save sticky bottom-0 mt-3 block w-full rounded-xl bg-amber-400 px-4 py-3 text-base font-bold text-zinc-950 hover:bg-amber-300 transition-colors shadow-lg shadow-amber-500/20 disabled:opacity-60'
                 }
               >
                 {isSaving ? t('saving') : (editingTrade ? t('saveChanges') : (traderMode ? t('saveTrade') : t('saveRecord')))}

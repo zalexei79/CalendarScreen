@@ -13,6 +13,15 @@ export function editAmount(value, key) {
   return current==='0' ? key : current+key;
 }
 
+export function addQuickAmount(value, amount) {
+  const current=String(value || '').replace(',', '.');
+  if(!/^\d*(?:\.\d*)?$/.test(current)) return current;
+  const [whole,fraction]=current.split('.');
+  const nextWhole=String(BigInt(whole || '0')+BigInt(amount));
+  const next=fraction===undefined ? nextWhole : `${nextWhole}.${fraction}`;
+  return next.replace('.','').length>14 ? current : next;
+}
+
 export const AmountInput=React.forwardRef(function AmountInput(props,ref) {
   const input=useRef(null),previous=useRef(props.value);
   useImperativeHandle(ref,()=>input.current,[]);
@@ -32,7 +41,7 @@ export const AmountInput=React.forwardRef(function AmountInput(props,ref) {
   return <input {...props} ref={input} autoFocus={false} readOnly={touch} inputMode={touch ? 'none' : 'decimal'}/>;
 });
 
-export default function AmountKeypad({value,onChange,language='ru',isLight}) {
+export default function AmountKeypad({value,onChange,language='ru',isLight,compact=false}) {
   const locale=String(language).startsWith('uk')?'uk':String(language).startsWith('zh')?'zh':language==='en'?'en':language==='md'||language==='ro'?'ro':'ru';
   const speech=window.SpeechRecognition||window.webkitSpeechRecognition;
   const session=useRef(null), timeout=useRef(null);
@@ -73,12 +82,12 @@ export default function AmountKeypad({value,onChange,language='ru',isLight}) {
   }
   const copy={uk:['Уведення суми','Видалити цифру','Очистити','Швидкі суми'],
   zh: ["输入金额","删除数字","清空","快捷金额"],ru:['Ввод суммы','Удалить цифру','Очистить','Быстрые суммы'],en:['Enter amount','Delete digit','Clear','Quick amounts'],ro:['Introdu suma','Șterge cifra','Golește','Sume rapide']}[locale];
-  return <div className="amount-keypad" data-light={Boolean(isLight)} role="group" aria-label={copy[0]}>
-    <div className="amount-tools"><span>{copy[3]}</span><button type="button" className="amount-mic" disabled={!speech} title={!speech?voice.unsupported:voice.start} aria-label={listening?voice.stop:voice.start} aria-pressed={listening} onClick={startVoice}>{listening?<Square size={14}/>:<Mic size={16}/>}<span>{listening?voice.stop:voice.start}</span></button></div>
+  return <div className="amount-keypad" data-compact={compact} data-light={Boolean(isLight)} role="group" aria-label={copy[0]}>
+    <div className="amount-tools">{compact ? <button type="button" className="amount-clear" disabled={!value} onClick={()=>change('')}>{copy[2]}</button> : <span>{copy[3]}</span>}<button type="button" className="amount-mic" disabled={!speech} title={!speech?voice.unsupported:voice.start} aria-label={listening?voice.stop:voice.start} aria-pressed={listening} onClick={startVoice}>{listening?<Square size={14}/>:<Mic size={16}/>}<span>{listening?voice.stop:voice.start}</span></button></div>
     <div className="amount-voice-status" role="status" aria-live="polite" data-active={Boolean(message)}>{message}</div>
     <div className="amount-presets" role="group" aria-label={copy[3]}>
-      {[10,50,100,500].map(amount=><button type="button" key={amount} onClick={()=>change(String(amount))} data-selected={value===String(amount)}>{amount}</button>)}
-      <button type="button" onClick={()=>change('')} disabled={!value}>{copy[2]}</button>
+      {[10,50,100,500].map(amount=><button type="button" key={amount} onClick={()=>change(addQuickAmount(value,amount))}>+{amount}</button>)}
+      {!compact && <button type="button" onClick={()=>change('')} disabled={!value}>{copy[2]}</button>}
     </div>
     <div className="amount-digits">
       {['1','2','3','4','5','6','7','8','9','.','0','delete'].map(key=><button type="button" key={key} aria-label={key==='delete'?copy[1]:key} onClick={()=>change(editAmount(value,key))}>{key==='delete'?<Delete size={18}/>:key==='.'?',':key}</button>)}
