@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v71-quick-money-presets';
+const CACHE_NAME = 'atj-cache-v73-explicit-entry-drafts';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

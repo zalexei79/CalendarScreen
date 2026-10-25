@@ -18,11 +18,22 @@ try {
   const context=await browser.newContext({viewport:{width,height},isMobile:mobile,hasTouch:mobile,serviceWorkers:'block'});
   await context.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
   await installStoryAccount(context);
-  await context.addInitScript(theme=>{localStorage.setItem('dayris_onboarding_v2_completed','1');localStorage.setItem('calendar_guide_completed','1');localStorage.setItem('atj_language','ru');localStorage.setItem('atj_theme',theme);localStorage.setItem('atj_trader_mode','0');},theme);
+  await context.addInitScript(theme=>{localStorage.setItem('dayris_onboarding_v2_completed','1');localStorage.setItem('calendar_guide_completed','1');localStorage.setItem('atj_language','ru');localStorage.setItem('atj_theme',theme);localStorage.setItem('atj_trader_mode','0');
+   const d=new Date(),dateKey=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+   sessionStorage.setItem('dayris_workspace_v1:22222222-2222-4222-8222-222222222222:calendar-finance-'+dateKey,JSON.stringify({at:Date.now(),value:{kind:'finance',form:{pnl:'2',currency:'USD',sign:'minus',instrument:'Продукты',direction:'',time:'10:15',comment:'',platform:'Manual',takeProfit:'',stopLoss:''}}}));},theme);
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(origin);await page.locator('.calendar-days-grid').waitFor();await page.waitForFunction(()=>!document.getElementById('boot-screen'));
   await page.getByRole('button',{name:'Добавить',exact:true}).click();
   const composer=page.locator('.quick-money-composer');await composer.waitFor();await page.waitForTimeout(450);
+  assert.equal(await composer.getByRole('textbox',{name:'Сумма',exact:true}).inputValue(),'','opening never auto-restores the stale 2');
+  await composer.getByRole('button',{name:'Вернуть черновик',exact:true}).click();
+  assert.equal(await composer.getByRole('textbox',{name:'Сумма',exact:true}).inputValue(),'2','draft is still available on explicit request');
+  assert.ok(await composer.locator('.entry-draft-status').isVisible());
+  await composer.getByRole('button',{name:'Закрыть',exact:true}).click();
+  await composer.waitFor({state:'detached'});
+  await page.getByRole('button',{name:'Добавить',exact:true}).click();await composer.waitFor();await page.waitForTimeout(450);
+  assert.equal(await composer.getByRole('textbox',{name:'Сумма',exact:true}).inputValue(),'','reopening starts a fresh record again');
+  assert.equal(await composer.locator('.entry-draft-status').count(),0);
   await page.getByRole('button',{name:'Добавить заметку',exact:true}).waitFor();
   assert.equal(await composer.locator('textarea').count(),0,'new entry hides optional details');
   assert.equal(await composer.getByRole('button',{name:'Категория',exact:true}).isVisible(),true);
@@ -50,6 +61,10 @@ try {
   await composer.getByRole('button',{name:'Скрыть детали',exact:true}).click();
   await composer.getByRole('button',{name:'Сохранить запись',exact:true}).click();
   await page.waitForFunction(()=>Object.values(JSON.parse(localStorage.getItem('money_calendar_trades_22222222-2222-4222-8222-222222222222')||'{}')).flat().some(x=>x.pnl===-88&&x.currency==='EUR'&&x.comment==='Покупки на неделю'));
+  await composer.waitFor({state:'detached'});
+  await page.getByRole('button',{name:'Добавить',exact:true}).click();await composer.waitFor();
+  assert.equal(await composer.getByRole('textbox',{name:'Сумма',exact:true}).inputValue(),'','saving also leaves the next entry empty');
+  assert.equal(await composer.getByRole('button',{name:'Вернуть черновик',exact:true}).count(),0,'saved draft is cleared');
   assert.deepEqual(errors,[]);await context.close();console.log('PASS',width,height,theme,JSON.stringify(layout));
  }
 } finally {await browser.close();await new Promise(resolve=>server.close(resolve));}

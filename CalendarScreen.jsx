@@ -2536,6 +2536,14 @@ export default function CalendarScreen() {
   const saveInFlightRef = useRef(false);
   const voiceSaveProgress = useRef({});
   const [calendarDraftRestored,setCalendarDraftRestored]=useState(false);
+  const [availableCalendarDraft,setAvailableCalendarDraft]=useState(null);
+  const calendarDraftCopy = {
+    ru: {restore:'Вернуть черновик',restored:'Черновик восстановлен · ещё не сохранён'},
+    en: {restore:'Restore draft',restored:'Draft restored · not saved yet'},
+    uk: {restore:'Повернути чернетку',restored:'Чернетку відновлено · ще не збережено'},
+    ro: {restore:'Restabilește ciorna',restored:'Ciornă restaurată · încă nesalvată'},
+    'zh-CN': {restore:'恢复草稿',restored:'草稿已恢复，尚未保存'},
+  }[language === 'md' ? 'ro' : language] || {restore:'Restore draft',restored:'Draft restored · not saved yet'};
   const calendarDraftKey=`calendar-${traderMode?'trading':'finance'}-${modalDateKey}`;
   useEffect(()=>{
     if(modalOpen&&!editingTrade&&!isSaving&&(form.pnl||form.comment))writeWorkspace(validUserId,calendarDraftKey,{form,kind:proEntryMode});
@@ -2545,6 +2553,7 @@ export default function CalendarScreen() {
     if (!validUserId) { requestLogin(tradeToEdit ? null : dateKeyOverride || targetDateKey); return; }
     voiceSaveProgress.current = {};
     setCalendarDraftRestored(false);
+    setAvailableCalendarDraft(null);
     if (tradeToEdit) {
       setEditingTrade({ id: tradeToEdit.id, dateKey: tradeToEdit.dateKey || modalDateKey || targetDateKey });
       setModalDateKey(tradeToEdit.dateKey || modalDateKey || targetDateKey);
@@ -2588,9 +2597,7 @@ export default function CalendarScreen() {
       });
       const saved=readWorkspace(validUserId,`calendar-${traderMode?'trading':'finance'}-${newEntryDateKey}`);
       if(saved?.form&&typeof saved.form.pnl==='string'&&typeof saved.form.currency==='string'&&['plus','minus'].includes(saved.form.sign)){
-        setForm(saved.form);setCalendarDraftRestored(true);
-        if(['trade','finance'].includes(saved.kind))setProEntryMode(saved.kind);
-        setProEntryChoiceOpen(false);
+        setAvailableCalendarDraft({...saved,dateKey:newEntryDateKey});
       }
     }
     setFormError('');
@@ -2599,6 +2606,18 @@ export default function CalendarScreen() {
     setDetailsOpen(Boolean(tradeToEdit && (tradeToEdit.comment || (traderMode && (tradeToEdit.take_profit != null || tradeToEdit.stop_loss != null || (tradeToEdit.platform && tradeToEdit.platform !== 'Manual'))))));
     setModalOpen(true);
     requestAnimationFrame(() => setModalVisible(true));
+  }
+
+  function restoreCalendarDraft() {
+    if(!availableCalendarDraft || availableCalendarDraft.dateKey !== modalDateKey || form.pnl || form.comment) return;
+    const saved=availableCalendarDraft;
+    setForm(saved.form);
+    if(['trade','finance'].includes(saved.kind)) setProEntryMode(saved.kind);
+    setProEntryChoiceOpen(false);
+    setDetailsOpen(Boolean(saved.form.comment || (traderMode && (saved.form.takeProfit || saved.form.stopLoss))));
+    setCalendarDraftRestored(true);
+    setAvailableCalendarDraft(null);
+    setFormError('');
   }
 
   function closeModal({ immediate = false } = {}) {
@@ -6617,7 +6636,7 @@ export default function CalendarScreen() {
                     ? (editingTrade ? proEntryCopy.editEntry : proEntryCopy.newEntry)
                     : (editingTrade ? t('editRecord') : t('addRecord'))}
                 </p>
-                {calendarDraftRestored&&<p className="text-xs opacity-60 mt-1">{language==='ru'?'Черновик восстановлен · ещё не сохранён':language==='en'?'Draft restored · not saved yet':['ro','md'].includes(language)?'Ciornă restaurată · încă nesalvată':'草稿已恢复，尚未保存'}</p>}{form.voiceDestination && <label className="mt-1 block text-xs text-amber-500">{language === 'zh-CN' ? "保存位置" : (language === 'ru' ? 'Место записи' : language === 'en' ? 'Save to' : 'Salvare în')}<select aria-label={language === 'zh-CN' ? "保存位置" : (language === 'ru' ? 'Место записи' : language === 'en' ? 'Save to' : 'Salvare în')} value={form.voiceDestination} onChange={event=>setForm(current=>({...current,voiceDestination:event.target.value}))} className="ml-2 rounded-lg border border-amber-400/20 bg-zinc-900 p-1 text-zinc-200"><option value="main">{language === 'zh-CN' ? "日历" : (language === 'ru' ? 'Календарь' : 'Calendar')}</option>{proAccessActive&&<><option value="wallet">{language === 'zh-CN' ? "钱包" : (language === 'ru' ? 'Кошелёк' : language === 'en' ? 'Wallet' : 'Portofel')}</option><option value="both">{language === 'zh-CN' ? "日历 + 钱包" : (language === 'ru' ? 'Календарь и кошелёк' : language === 'en' ? 'Calendar + Wallet' : 'Calendar + Portofel')}</option></>}</select></label>}<div className="mt-1 flex items-center gap-1.5">
+                {form.voiceDestination && <label className="mt-1 block text-xs text-amber-500">{language === 'zh-CN' ? "保存位置" : (language === 'ru' ? 'Место записи' : language === 'en' ? 'Save to' : 'Salvare în')}<select aria-label={language === 'zh-CN' ? "保存位置" : (language === 'ru' ? 'Место записи' : language === 'en' ? 'Save to' : 'Salvare în')} value={form.voiceDestination} onChange={event=>setForm(current=>({...current,voiceDestination:event.target.value}))} className="ml-2 rounded-lg border border-amber-400/20 bg-zinc-900 p-1 text-zinc-200"><option value="main">{language === 'zh-CN' ? "日历" : (language === 'ru' ? 'Календарь' : 'Calendar')}</option>{proAccessActive&&<><option value="wallet">{language === 'zh-CN' ? "钱包" : (language === 'ru' ? 'Кошелёк' : language === 'en' ? 'Wallet' : 'Portofel')}</option><option value="both">{language === 'zh-CN' ? "日历 + 钱包" : (language === 'ru' ? 'Календарь и кошелёк' : language === 'en' ? 'Calendar + Wallet' : 'Calendar + Portofel')}</option></>}</select></label>}<div className="mt-1 flex items-center gap-1.5">
                   <label className={!traderMode ? 'quick-money-date' : ''}>
                     {!traderMode && <><Calendar className="h-3.5 w-3.5" /><span>{new Intl.DateTimeFormat(language === 'md' ? 'ro' : language, {day:'numeric',month:'short',year:'numeric'}).format(new Date((modalDateKey || targetDateKey) + 'T12:00:00'))}</span><ChevronDown className="h-3 w-3" /></>}
                     <input
@@ -6653,6 +6672,11 @@ export default function CalendarScreen() {
                 </div>
               </div>
             </div>
+
+            {availableCalendarDraft?.dateKey === modalDateKey && !form.pnl && !form.comment && (
+              <button type="button" className="entry-draft-action" onClick={restoreCalendarDraft}>{calendarDraftCopy.restore}</button>
+            )}
+            {calendarDraftRestored && <p className="entry-draft-status" role="status">{calendarDraftCopy.restored}</p>}
 
             {traderMode ? (proEntryChoiceOpen ? renderProEntryChoice() : renderProTradeComposer()) : (
             <div className="quick-money-body mt-4 sm:min-h-0 sm:overflow-y-auto sm:overscroll-contain sm:pr-1">
