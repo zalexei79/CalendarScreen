@@ -6,6 +6,7 @@ import VoiceSettings from './VoiceSettings.jsx';
 import BrandIcon from './BrandIcon.jsx';
 import ThemeCollection from './ThemeCollection.jsx';
 import LoginButtons from '../../features/auth/LoginButtons.jsx';
+import AdminCalendarLink from '../../features/admin/AdminCalendarLink.jsx';
 import { CURRENCIES } from '../config/constants.js';
 import './SettingsPanel.css';
 
@@ -88,6 +89,7 @@ export default function SettingsPanel({ t, language, setLanguage, currency, setC
           <Group title={copy.calendar}><Row icon={CircleDollarSign} label={copy.currency} value={currency} onClick={()=>navigate('currency')}/><Row icon={Languages} label={copy.language} value={LANGUAGES.find(item=>item.code===language)?.label} onClick={()=>navigate('language')}/><Row icon={Mic} label={copy.voice} onClick={()=>navigate('voice')}/></Group>
           {onStory && <button type="button" className="settings-story-card" onClick={()=>action(onStory)}><Play size={18} aria-hidden="true"/><span><strong>{copy.story}</strong><small>{copy.storyHint}</small></span><ChevronRight size={15} aria-hidden="true"/></button>}
           <Row icon={Info} label={copy.help} onClick={()=>navigate('help')}/>
+          <AdminCalendarLink user={user} language={language}/>
           <CreatorContact locale={locale}/>
           {!user && <Row icon={Sparkles} label="DAYRIS PRO" value={copy.learn} onClick={()=>action(onPro)}/>}
         </>}

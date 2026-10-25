@@ -21,7 +21,7 @@ const bundle = await build({ stdin: { resolveDir: process.cwd(), loader: 'jsx', 
         traderMode={trader} onTraderChange={()=>setTrader(!trader)} language={language}
         isLight={p.has('light')} t={key=>translate(language,key)} currency="USD"
         onWallet={()=>setAction('wallet')} onCapital={()=>setAction('capital')}
-        onConnect={setAction} onOffer={()=>{}} /></div></div></header>
+        onConnect={value=>{window.handoffs=window.handoffs||[];window.handoffs.push({value,popupOpen:Boolean(document.querySelector(':popover-open'))});setAction(value);}} onOffer={()=>{}} /></div></div></header>
       <button id="outside" style={{marginTop:220}} onClick={()=>{}}>Outside</button><output>{action}</output></>;
   }
   createRoot(document.getElementById('root')).render(<App/>);
@@ -59,9 +59,9 @@ try {
       assert.ok(box.x>=0 && box.x+box.width<=width,'popup stays within phone');
       assert.ok(Math.abs((await header.boundingBox()).height-before.height)<1,'tools do not shift calendar');
       await page.locator('.pro-control-connect').first().click();
-      assert.equal(await page.locator('output').textContent(),'ctrader');
-      await page.keyboard.press('Escape');
       await popup.waitFor({state:'hidden'});
+      await page.waitForFunction(()=>document.querySelector('output').textContent==='ctrader');
+      assert.equal(await page.evaluate(()=>handoffs.at(-1).popupOpen),false,'close platform list before opening platform');
       await trigger.click();
       await page.locator('#outside').click();
       await popup.waitFor({state:'hidden'});
@@ -88,6 +88,25 @@ try {
     }
     await trader.click();
     assert.equal(await page.locator('.pro-platform-trigger').count(),0);
+  }
+  await page.setViewportSize({width:390,height:844});
+  for(const reducedMotion of ['no-preference','reduce']) {
+    await page.emulateMedia({reducedMotion});
+    await page.goto('http://dayris.test/?language=en');
+    await page.locator('.pro-control-trader').click();
+    const popup=page.locator('.pro-platform-popover'),trigger=page.locator('.pro-platform-trigger');
+    await popup.waitFor({state:'visible'});
+    await page.locator('.pro-control-connect').nth(1).click();
+    await popup.waitFor({state:'hidden'});
+    await page.waitForFunction(()=>document.querySelector('output').textContent==='mt5');
+    assert.deepEqual(await page.evaluate(()=>handoffs),[{value:'mt5',popupOpen:false}]);
+    await trigger.click();await page.locator('.pro-control-lot').click();
+    await page.locator('.lot-calculator').waitFor({state:'visible'});
+    assert.equal(await popup.isVisible(),false,'calculator never stacks on the platform list');
+    await page.getByRole('button',{name:'Close calculator',exact:true}).click();
+    await page.locator('.lot-calculator').waitFor({state:'hidden'});
+    assert.equal(await popup.isVisible(),false,'closing calculator does not reopen the list');
+    assert.equal(await trigger.evaluate(el=>el===document.activeElement),true,'focus returns to visible platform trigger');
   }
   assert.deepEqual(errors,[]);
   console.log('Trader destinations, inline desktop tools and mobile popup: 64 viewport/language/theme combinations passed.');

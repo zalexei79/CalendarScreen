@@ -7,7 +7,7 @@ import './LotCalculator.css';
 
 const initial = { balance: '', risk: '1', stop: '', tickValue: '', minimum: '0.01', step: '0.01', maximum: '100', commission: '0' };
 
-export default function LotCalculator({ enabled, language, isLight, currency = 'USD' }) {
+export default function LotCalculator({ enabled, language, isLight, currency = 'USD', onRequestOpen, returnFocusRef }) {
   const t = (r, e, m, z) => platformText(language, r, e, m, z);
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState(initial);
@@ -27,7 +27,8 @@ export default function LotCalculator({ enabled, language, isLight, currency = '
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = previous;
-      if (trigger.current?.isConnected && !trigger.current.disabled) trigger.current.focus();
+      const target = returnFocusRef?.current || trigger.current;
+      if (target?.isConnected && !target.disabled) target.focus();
     };
   }, [open]);
   const set = (key, value) => setValues(current => ({ ...current, [key]: value }));
@@ -35,7 +36,7 @@ export default function LotCalculator({ enabled, language, isLight, currency = '
     return <label className="lot-field" htmlFor={`${id}-${key}`}><span id={`${id}-${key}-label`}>{label}</span><input aria-labelledby={`${id}-${key}-label`} aria-describedby={hint ? `${id}-${key}-hint` : undefined} id={`${id}-${key}`} value={values[key]} onChange={event => set(key, event.target.value)} type="text" inputMode="decimal" autoComplete="off" spellCheck={false} placeholder={key === 'balance' ? '10000' : key === 'stop' ? '20' : key === 'tickValue' ? '10' : undefined} />{hint && <small id={`${id}-${key}-hint`}>{hint}</small>}</label>;
   }
   return <>
-    <button ref={trigger} type="button" disabled={!enabled} className="pro-control pro-control-platform pro-control-lot" onClick={() => setOpen(true)} aria-label={title} aria-haspopup="dialog"><Calculator aria-hidden="true"/><span className="pro-platform-label"><strong>{t('Лот', 'Lot', 'Lot', '手数')}</strong><small>{t('Калькулятор', 'Calculator', 'Calculator', '计算器')}</small></span></button>
+    <button ref={trigger} type="button" disabled={!enabled} className="pro-control pro-control-platform pro-control-lot" onClick={() => onRequestOpen ? onRequestOpen(() => setOpen(true)) : setOpen(true)} aria-label={title} aria-haspopup="dialog"><Calculator aria-hidden="true"/><span className="pro-platform-label"><strong>{t('Лот', 'Lot', 'Lot', '手数')}</strong><small>{t('Калькулятор', 'Calculator', 'Calculator', '计算器')}</small></span></button>
     {open && createPortal(<dialog ref={dialog} className="lot-calculator" data-light={isLight} aria-labelledby={`${id}-title`} onCancel={event => { event.preventDefault(); setOpen(false); }} onClick={event => { if (event.target !== event.currentTarget) return; const box = dialog.current.getBoundingClientRect(); if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) setOpen(false); }}>
       <header><div><span className="lot-eyebrow">DAYRIS · TRADER</span><h2 id={`${id}-title`}>{title}</h2></div><button type="button" onClick={() => setOpen(false)} aria-label={t('Закрыть калькулятор', 'Close calculator', 'Închide calculatorul', '关闭计算器')}><X size={20}/></button></header>
       <p className="lot-intro">{t('Размер позиции по твоему риску и стоп-лоссу.', 'Position size from your risk and stop-loss.', 'Mărimea poziției după risc și stop-loss.', '根据风险和止损计算仓位。')}</p>

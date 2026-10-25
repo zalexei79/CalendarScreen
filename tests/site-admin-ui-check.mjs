@@ -148,6 +148,8 @@ try {
   assert.equal(new URL(publicPage.url()).pathname,'/privacy.html');
   await publicPage.goto('http://calendar.test/');
   const adminLink = publicPage.getByRole('link',{name:'Админ-панель',exact:true});
+  assert.equal(await publicPage.locator('.dayris-header a[href="/admin.html"]').count(),0,'admin entry is absent from the calendar header');
+  await publicPage.locator('[data-site-element="settings"]').click();
   await adminLink.waitFor();
   assert.equal(await adminLink.getAttribute('href'),'/admin.html');
   assert.equal(await adminLink.getAttribute('target'),null,'calendar entry must reuse the current session in the same tab');
@@ -196,6 +198,8 @@ try {
   await page.goto('http://calendar.test/');
   await page.locator('.dayris-header').waitFor();
   await page.waitForFunction(()=>document.querySelector('style[data-dayris-site-config]'));
+  await page.locator('[data-site-element="settings"]').click();
+  await page.locator('.dayris-settings-panel').waitFor();
   assert.equal(await page.getByRole('link',{name:'Админ-панель',exact:true}).count(),0,'ordinary users do not see the admin entry');
   assert.deepEqual(errors, []);
   console.log('PASS: real iframe preview, independent device configuration, cloud draft/publish protocol and public runtime (mock backend), non-admin controls, mobile layout; no page errors.');
