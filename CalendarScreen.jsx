@@ -4748,6 +4748,7 @@ export default function CalendarScreen() {
       {accountMode !== 'capital' && <Header
         accountMode={accountMode} setAccountMode={setAccountMode} onOpenCapital={openCapitalFromCalendarGesture}
         monthSummary={monthSummary}
+        showMonthBrief={showFirstEntryGuide}
         isLight={isLight} traderMode={traderMode} t={t} theme={theme} setTheme={setTheme}
         settingsRef={settingsRef} settingsOpen={settingsOpen} closeSettings={closeSettings}
         openSettings={openSettings} settingsVisible={settingsVisible} language={language}
@@ -4796,6 +4797,9 @@ export default function CalendarScreen() {
           currency={currency}
           currencySymbol={currencySymbol}
           currentPnl={monthSummary.total}
+          monthSummary={monthSummary}
+          traderMode={traderMode}
+          filtered={platformFilter !== 'ALL' || calendarTypeFilter !== 'all'}
           language={language}
           isLight={isLight}
           userId={validUserId}

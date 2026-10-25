@@ -5,14 +5,14 @@ import path from 'node:path';
 const require = createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE || import.meta.url);
 const { build } = createRequire(path.resolve('package.json'))('esbuild');
 const bundle = await build({ entryPoints: ['tests/monthly-goal-ui.jsx'], bundle: true,
-  write: false, format: 'iife', define: { 'process.env.NODE_ENV': '"development"' } });
+  write: false, outfile: 'goal.js', format: 'iife', define: { 'process.env.NODE_ENV': '"development"' } });
 const browser = await require('playwright').chromium.launch({ channel: 'msedge', headless: true });
 try {
   const page = await browser.newPage();
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.route('http://goal.test/**', route => route.fulfill({ contentType: 'text/html',
-    body: `<html><div id="root"></div><script>${bundle.outputFiles[0].text}</script></html>` }));
+    body: `<html><div id="root"></div><script>${bundle.outputFiles.find(file=>file.path.endsWith('.js')).text}</script></html>` }));
   await page.goto('http://goal.test/');
   const panel = page.locator('.monthly-goal-bar');
   async function save(amount) {

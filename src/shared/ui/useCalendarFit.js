@@ -29,7 +29,7 @@ export function useCalendarFit(surfaceRef, cellCount) {
     };
     const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(update); };
     const observer = new ResizeObserver(schedule);
-    for (const element of document.querySelectorAll('.dayris-header, .monthly-goal-bar, .history-fab, .premium-shell')) observer.observe(element);
+    for (const element of document.querySelectorAll('.dayris-header, .calendar-month-overview, .monthly-goal-bar, .history-fab, .premium-shell')) observer.observe(element);
     // New status strips, dock mounting, and goal details also change the space.
     const mutations = new MutationObserver(schedule);
     mutations.observe(document.body, { childList: true, subtree: true });

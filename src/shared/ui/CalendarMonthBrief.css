@@ -16,4 +16,23 @@
 .month-brief-details p { margin:4px 0 12px; }
 .calendar-month-brief[open] summary>svg { transform:rotate(180deg); }
 .calendar-month-brief summary:focus-visible { outline:2px solid #c9ad72; outline-offset:2px; border-radius:8px; }
+.calendar-month-overview { margin-top:0; border-top:0; }
+.calendar-month-overview > summary { position:relative; min-height:44px; padding:0 1px 3px; }
+.calendar-month-overview > summary > .month-brief-title { flex:0 0 auto; font-size:11px; }
+.calendar-month-overview > summary > strong { flex:1; min-width:0; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.calendar-month-overview > summary > .month-overview-goal {
+  display:inline-flex; align-items:center; gap:4px; flex:0 1 auto; min-width:0;
+  max-width:120px; padding-left:8px; border-left:1px solid var(--glass-line,#ffffff14);
+  color:var(--dayris-accent,#c9ad72); font-size:10px;
+}
+.month-overview-goal > svg { flex:none; }
+.month-overview-goal > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.calendar-month-overview > summary > .month-overview-progress {
+  position:absolute; inset:auto 0 0; height:2px; background:var(--glass-line,#ffffff0d);
+}
+.month-overview-progress > i { display:block; height:100%; background:var(--dayris-accent,#c9ad72); }
+.calendar-month-overview .monthly-goal-bar { margin:0; }
+.calendar-month-overview .monthly-goal-bar > div:nth-child(2) { display:none; }
+.calendar-month-overview[open] { padding-bottom:6px; }
+@media(max-width:359px) { .calendar-month-overview > summary > .month-brief-title { display:none; } }
 @media(prefers-reduced-motion:no-preference) { .calendar-month-brief summary>svg { transition:transform 180ms ease; } .calendar-month-brief[open] .month-brief-details { animation:month-brief-enter 220ms ease-out; } @keyframes month-brief-enter { from {opacity:0;transform:translateY(-4px)} to {opacity:1;transform:none} } }

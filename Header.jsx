@@ -48,7 +48,7 @@ export default function Header({
   failedSyncCount = 0, retryFailedSync = () => {},
   platformFilter, platformOptions = [], calendarTypeFilter, setCalendarTypeFilter,
   periodStats, periodTrades = [], currencySymbol = '$', formatMoney,
-  monthSummary,
+  monthSummary, showMonthBrief = true,
   proAccessActive = false, proAccessLoading = false, proAccessUntil = null,
   proView = false, setProView = () => {},
   openReferralHub = () => {}, openProPresentation = () => {}, invitedCount = 0, referralLabel = 'Invites',
@@ -405,7 +405,7 @@ export default function Header({
       </div>
 
       {/* Trader Mode tools slide out only after the separate Trader Mode switch is enabled. */}
-      {monthSummary && <CalendarMonthBrief summary={monthSummary} currency={currency} language={language} traderMode={traderMode} isLight={isLight} filtered={platformFilter!=='ALL'||calendarTypeFilter!=='all'}/>}
+      {showMonthBrief && monthSummary && <CalendarMonthBrief summary={monthSummary} currency={currency} language={language} traderMode={traderMode} isLight={isLight} filtered={platformFilter!=='ALL'||calendarTypeFilter!=='all'}/>}
       <div className="hidden" aria-hidden="true">
         <div className={`min-h-0 ${traderMode && accountMode === 'main' ? 'overflow-visible' : 'overflow-hidden'}`}>
           {/* Mobile keeps PRO useful without pushing the calendar below the fold. */}

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Pencil, Sparkles, Target, X } from 'lucide-react';
+import CalendarMonthBrief from './src/shared/ui/CalendarMonthBrief.jsx';
 
 // Also guard remounts when browser storage is temporarily unavailable.
 const celebratedGoals = new Map();
@@ -98,6 +99,9 @@ function MonthlyGoalForMonth({
   language,
   isLight,
   userId,
+  monthSummary,
+  traderMode = false,
+  filtered = false,
 }) {
   const copy = COPY[resolveLanguage(language)];
   const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
@@ -116,7 +120,7 @@ function MonthlyGoalForMonth({
 
   const [goal, setGoal] = useState(readGoal);
   const [editing, setEditing] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(Boolean(monthSummary));
   const [draft, setDraft] = useState(goal ? String(goal) : '');
   const [error, setError] = useState('');
   const [celebrating, setCelebrating] = useState(false);
@@ -252,8 +256,7 @@ function MonthlyGoalForMonth({
   const mutedClass = isLight ? 'text-slate-500' : 'text-zinc-500';
   const trackClass = isLight ? 'bg-slate-100' : 'bg-white/[0.07]';
 
-  return (
-    <>
+  const goalPanel = (
       <section className={`monthly-goal-bar relative mx-auto mt-1 mb-1.5 overflow-hidden rounded-none border-x-0 border-y px-1 py-2 transition-all duration-500 sm:px-1.5 sm:py-2.5 ${panelClass}`}>
         <div className="flex min-w-0 items-center gap-2">
           <div className={`grid h-6 w-6 sm:h-7 sm:w-7 shrink-0 place-items-center rounded-lg ${
@@ -264,7 +267,7 @@ function MonthlyGoalForMonth({
 
           <button
             type="button"
-            onClick={() => setDetailsOpen((value) => !value)}
+            onClick={() => monthSummary ? startEditing() : setDetailsOpen((value) => !value)}
             className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2 text-left"
             aria-expanded={detailsOpen}
             aria-label={`${copy.title}: ${goal > 0 ? `${formatGoalNumber(netPnl, language)} / ${formatGoalNumber(goal, language)} ${currency}` : copy.setGoal}`}
@@ -279,9 +282,9 @@ function MonthlyGoalForMonth({
               <span className={`min-w-0 truncate text-[11px] ${mutedClass}`}>{copy.setGoal}</span>
             )}
 
-            <ChevronDown
+            {!monthSummary && <ChevronDown
               className={`ml-auto h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0 transition-transform duration-200 ${mutedClass} ${detailsOpen ? 'rotate-180' : ''}`}
-            />
+            />}
           </button>
         </div>
 
@@ -382,6 +385,16 @@ function MonthlyGoalForMonth({
           </div>
         </div>
       </section>
+  );
+
+  return (
+    <>
+      {monthSummary ? <CalendarMonthBrief summary={monthSummary} currency={currency} language={language} traderMode={traderMode} filtered={filtered} isLight={isLight}
+        goalProgress={displayProgress}
+        goalSummary={<span className="month-overview-goal" title={`${copy.title}: ${goal > 0 ? `${Math.round(progress)}% · ${formatGoalNumber(goal, language)} ${currency}` : copy.setGoal}`}>
+          {achieved ? <Check size={13} aria-hidden="true"/> : <Target size={13} aria-hidden="true"/>}
+          <span>{goal > 0 ? `${Math.round(progress)}%` : copy.setGoal}</span>
+        </span>}>{goalPanel}</CalendarMonthBrief> : goalPanel}
 
       {celebrating && (
         <div className="pointer-events-none fixed inset-0 z-[260] overflow-hidden" aria-hidden="true">
