@@ -28,11 +28,14 @@
 .month-overview-goal > svg { flex:none; }
 .month-overview-goal > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .calendar-month-overview > summary > .month-overview-progress {
-  position:absolute; inset:auto 0 0; height:2px; background:var(--glass-line,#ffffff0d);
+  position:absolute; inset:auto 0 0; height:3px; border-radius:999px; overflow:hidden;
+  background:rgba(148,163,184,.24);
 }
-.month-overview-progress > i { display:block; height:100%; background:var(--dayris-accent,#c9ad72); }
+.month-overview-progress > i { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#d89d35,#f4d485); }
+.calendar-month-overview[data-goal-achieved=true] > summary > .month-overview-goal { color:var(--dayris-profit,#10b981); }
+.calendar-month-overview[data-goal-achieved=true] .month-overview-progress > i { background:linear-gradient(90deg,#10b981,#34d399,#fbbf24); }
 .calendar-month-overview .monthly-goal-bar { margin:0; }
-.calendar-month-overview .monthly-goal-bar > div:nth-child(2) { display:none; }
+.calendar-month-overview .monthly-goal-bar .goal-progress-track { height:4px; margin-top:4px; background:rgba(148,163,184,.24); }
 .calendar-month-overview[open] { padding-bottom:6px; }
 @media(max-width:359px) { .calendar-month-overview > summary > .month-brief-title { display:none; } }
 @media(prefers-reduced-motion:no-preference) { .calendar-month-brief summary>svg { transition:transform 180ms ease; } .calendar-month-brief[open] .month-brief-details { animation:month-brief-enter 220ms ease-out; } @keyframes month-brief-enter { from {opacity:0;transform:translateY(-4px)} to {opacity:1;transform:none} } }

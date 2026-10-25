@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v65-month-overview';
+const CACHE_NAME = 'atj-cache-v66-month-goal-progress';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

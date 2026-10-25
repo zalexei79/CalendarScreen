@@ -288,7 +288,7 @@ function MonthlyGoalForMonth({
           </button>
         </div>
 
-        <div className={`relative mt-1.5 h-[3px] sm:h-1 overflow-hidden rounded-full ${trackClass}`}>
+        <div className={`goal-progress-track relative mt-1.5 h-[3px] sm:h-1 overflow-hidden rounded-full ${trackClass}`}>
           <div
             className={`absolute inset-y-0 left-0 rounded-full transition-[width,filter] duration-1000 ease-[cubic-bezier(.22,1,.36,1)] ${
               achieved
@@ -391,9 +391,10 @@ function MonthlyGoalForMonth({
     <>
       {monthSummary ? <CalendarMonthBrief summary={monthSummary} currency={currency} language={language} traderMode={traderMode} filtered={filtered} isLight={isLight}
         goalProgress={displayProgress}
+        goalAchieved={achieved}
         goalSummary={<span className="month-overview-goal" title={`${copy.title}: ${goal > 0 ? `${Math.round(progress)}% · ${formatGoalNumber(goal, language)} ${currency}` : copy.setGoal}`}>
           {achieved ? <Check size={13} aria-hidden="true"/> : <Target size={13} aria-hidden="true"/>}
-          <span>{goal > 0 ? `${Math.round(progress)}%` : copy.setGoal}</span>
+          <span>{achieved ? copy.achieved : goal > 0 ? `${Math.round(progress)}%` : copy.setGoal}</span>
         </span>}>{goalPanel}</CalendarMonthBrief> : goalPanel}
 
       {celebrating && (

@@ -21,11 +21,11 @@ const copy={
  zh:{title:'本月概览',income:'收入',expense:'支出',net:'净收入',profit:'盈利交易',loss:'亏损交易',result:'交易结果',empty:'暂无记录',records:'记录',scope:'记录货币',filtered:'已应用筛选',incomplete:'部分金额无法读取'},
 };
 const compactTitles={ru:['Месяц','Трейды'],en:['Month','Trades'],ro:['Luna','Trading'],zh:['本月','交易'],uk:['Місяць','Трейди']};
-export default function CalendarMonthBrief({summary,currency,language,traderMode,filtered=false,isLight,goalSummary,goalProgress,children}){
+export default function CalendarMonthBrief({summary,currency,language,traderMode,filtered=false,isLight,goalSummary,goalProgress,goalAchieved=false,children}){
   const locale=String(language).startsWith('uk')?'uk':String(language).startsWith('zh')?'zh':['ro','md'].includes(language)?'ro':language==='en'?'en':'ru';
   const c=copy[locale],stats=useMemo(()=>summarizeCalendarEntries(summary?.entries||[]),[summary]);
   const money=value=>formatMoney(value,currency,locale),result=stats.invalid?'—':`${stats.net>0n?'+':''}${money(stats.net)}`;
-  return <details className={`calendar-month-brief ${goalSummary?'calendar-month-overview':''}`} data-light={Boolean(isLight)} key={`${currency}:${traderMode}`}>
+  return <details className={`calendar-month-brief ${goalSummary?'calendar-month-overview':''}`} data-light={Boolean(isLight)} data-goal-achieved={goalAchieved} key={`${currency}:${traderMode}`}>
     <summary title={traderMode?c.result:c.title}><span className="month-brief-title">{goalSummary?compactTitles[locale][traderMode?1:0]:traderMode?c.result:c.title}</span><strong data-sign={stats.net>0n?'positive':stats.net<0n?'negative':'neutral'}>{stats.count?result:c.empty}</strong>{goalSummary}<ChevronDown size={14} aria-hidden="true"/>{goalSummary&&<span className="month-overview-progress" aria-hidden="true"><i style={{width:`${goalProgress||0}%`}}/></span>}</summary>
     <div className="month-brief-details"><div className="month-brief-grid">
       <div><span>{traderMode?c.profit:c.income}</span><b>{traderMode?stats.wins:money(stats.income)}</b></div>

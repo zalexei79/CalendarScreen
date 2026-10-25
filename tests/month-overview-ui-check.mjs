@@ -6,9 +6,9 @@ const require=createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE||'C:/Users/ave
 const bundle=await createRequire(path.resolve('package.json'))('esbuild').build({stdin:{resolveDir:process.cwd(),loader:'jsx',contents:`
 import React,{useState} from 'react';import {createRoot} from 'react-dom/client';
 import Goal from './MonthlyGoal.jsx';
-function App(){const p=new URLSearchParams(location.search);const [currency,setCurrency]=useState('USD'),[month,setMonth]=useState(9),[user,setUser]=useState('alice');window.changeCurrency=setCurrency;window.changeMonth=setMonth;window.changeUser=setUser;
+function App(){const p=new URLSearchParams(location.search);const [currency,setCurrency]=useState('USD'),[month,setMonth]=useState(9),[user,setUser]=useState('alice'),[pnl,setPnl]=useState(42);window.changeCurrency=setCurrency;window.changeMonth=setMonth;window.changeUser=setUser;window.changePnl=setPnl;
 const language=p.get('language')||'ru',light=p.has('light');document.documentElement.dataset.dayrisTheme=light?'light':'dark';
-return <main style={{padding:12}}><Goal year={2026} month={month} userId={user} currency={currency} currentPnl={42} monthSummary={{total:42,entries:[{pnl:100},{pnl:-58}]}} language={language} isLight={light} traderMode={p.has('trader')}/><div id="calendar">Calendar</div></main>;}
+return <main style={{padding:12}}><Goal year={2026} month={month} userId={user} currency={currency} currentPnl={pnl} monthSummary={{total:pnl,entries:[{pnl:pnl+58},{pnl:-58}]}} language={language} isLight={light} traderMode={p.has('trader')}/><div id="calendar">Calendar</div></main>;}
 createRoot(document.getElementById('root')).render(<App/>);
 `},bundle:true,write:false,outfile:'overview.js',define:{'process.env.NODE_ENV':'"production"'}});
 const js=bundle.outputFiles.find(f=>f.path.endsWith('.js')).text;
@@ -29,6 +29,8 @@ try{
   const values=await summary.locator('strong,.month-overview-goal,svg').all();
   for(const value of values){const b=await value.boundingBox();assert.ok(b.x>=0 && b.x+b.width<=width,'summary items stay within viewport');}
   await summary.click();assert.equal(await page.locator('.month-brief-grid > div').count(),3);assert.equal(await page.locator('.monthly-goal-bar').isVisible(),true);
+  assert.ok((await page.locator('.goal-progress-track').boundingBox()).height>=3,'expanded goal keeps a visible progress bar');
+  assert.ok((await page.locator('.month-overview-progress').boundingBox()).height>=3,'compact summary keeps a visible progress track');
   if(width===390&&language==='uk'&&!light){await summary.click();await page.screenshot({path:'artifacts/month-overview-mobile.png'});await summary.click();}
   await summary.click();assert.ok((await overview.boundingBox()).height<=48);
  }
@@ -40,6 +42,15 @@ try{
  await page.evaluate(()=>changeCurrency('EUR'));await waitProgress(false);await page.evaluate(()=>changeCurrency('USD'));await waitProgress(true);
  await page.evaluate(()=>changeMonth(8));await waitProgress(false);await page.evaluate(()=>changeMonth(9));await waitProgress(true);
  await page.evaluate(()=>changeUser('bob'));await waitProgress(false);await page.evaluate(()=>changeUser('alice'));await waitProgress(true);
+ await page.setViewportSize({width:390,height:844});
+ await page.evaluate(()=>changePnl(200));await page.waitForFunction(()=>document.querySelector('.month-overview-goal').textContent.includes('Goal achieved') && document.querySelector('.month-overview-progress > i').style.width==='100%');
+ assert.equal(await overview.getAttribute('data-goal-achieved'),'true');
+ assert.equal(await summary.locator('.month-overview-progress > i').evaluate(el=>el.style.width),'100%');
+ await summary.click();assert.ok((await page.locator('.goal-progress-track').boundingBox()).height>=3);
+ await page.screenshot({path:'artifacts/month-overview-achieved-mobile.png'});
+ await page.evaluate(()=>changePnl(-50));await page.waitForFunction(()=>document.querySelector('.month-overview-goal').textContent.includes('0%') && document.querySelector('.month-overview-progress > i').style.width==='0%');
+ assert.equal(await overview.getAttribute('data-goal-achieved'),'false');
+ assert.equal(await summary.locator('.month-overview-progress > i').evaluate(el=>el.style.width),'0%');
  await page.goto('http://overview.test/?language=uk&trader');await summary.click();assert.match(await page.locator('.month-brief-details').innerText(),/Прибуткові угоди/);
  assert.deepEqual(errors,[]);console.log('Combined month overview: 48 layouts, disclosure, goal editing/persistence, scope isolation and Ukrainian trading copy passed.');
 }finally{await browser.close();}
