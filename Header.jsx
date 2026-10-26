@@ -16,6 +16,7 @@ import './src/shared/ui/HeaderCompact.css';
 import CalendarMonthBrief from './src/shared/ui/CalendarMonthBrief.jsx';
 import LoginButtons from './src/features/auth/LoginButtons.jsx';
 import ActivityStreak from './src/shared/ui/ActivityStreak.jsx';
+import { getValidUserId } from './src/shared/lib/formatters.js';
 
 function pendingSyncText(count, traderMode, language) {
   if (language === 'uk') return `${count} ${traderMode ? 'угод' : 'записів'} очікують синхронізації.`;
@@ -54,6 +55,7 @@ export default function Header({
   accountMode = 'main', setAccountMode = () => {}, onOpenCapital,
   onReplayLifeStory, onRestartOnboarding,
   onOpenActivityStreak = () => {},
+  onActivityStreakChange,
 }) {
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
   const [syncIssueOpen, setSyncIssueOpen] = useState(false);
@@ -131,7 +133,7 @@ export default function Header({
               {t('titleMoney')}
             </p>
           </div>
-          <ActivityStreak ownerId={user?.id} isLight={isLight} t={t} onOpen={onOpenActivityStreak} />
+          <ActivityStreak ownerId={getValidUserId(user)} isLight={isLight} t={t} onOpen={onOpenActivityStreak} onChange={onActivityStreakChange} />
         </div>
 
         {/* Action controls: [ Download ] [ Theme ] [ Settings ] */}

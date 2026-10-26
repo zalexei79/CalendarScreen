@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v76-calendar-reliability';
+const CACHE_NAME = 'atj-cache-v77-account-streak';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

@@ -2935,6 +2935,7 @@ export default function CalendarScreen() {
   const [referralShareUrl, setReferralShareUrl] = useState('');
   const referralShareBlobRef = useRef(null);
   const [activityStreak, setActivityStreak] = useState(null);
+  useEffect(() => { setActivityStreak(null); }, [user?.id]);
 
   // Keyboard navigation for PC (ArrowLeft / ArrowRight to switch months)
   useEffect(() => {
@@ -4711,6 +4712,7 @@ export default function CalendarScreen() {
         proAccessActive={proAccessActive} proAccessLoading={proAccessLoading} proAccessUntil={proAccessUntil}
         openReferralHub={openReferralHub} openProPresentation={openProPresentation} invitedCount={invitedCount} referralLabel={proAccessCopy.invitesTab}
         onOpenActivityStreak={setActivityStreak}
+        onActivityStreakChange={next => setActivityStreak(current => current?.ownerId === next.ownerId ? next : current)}
         periodStats={periodStats} periodTrades={periodTrades} currencySymbol={currencySymbol} formatMoney={formatMoney}
       />}
 
@@ -7680,7 +7682,7 @@ export default function CalendarScreen() {
       )}
 
       <ActivityStreakDialog
-        open={Boolean(activityStreak)}
+        open={Boolean(activityStreak) && activityStreak.ownerId === (getValidUserId(user) || 'guest')}
         streak={activityStreak}
         user={user}
         isLight={isLight}
