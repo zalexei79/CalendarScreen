@@ -1,3 +1,4 @@
+import { intlLocale } from '../i18n/locale.js';
 /**
  * Pure date utility functions for DAYRIS.
  * Ensures consistent local date manipulation without UTC day-shifting.
@@ -36,8 +37,8 @@ export function startOfWeekMonday(d) {
   return addDays(d, -day);
 }
 
-export function formatDateLabel(dateKey) {
-  return parseDateKeyLocal(dateKey).toLocaleDateString('ru-RU', {
+export function formatDateLabel(dateKey, language = 'ru') {
+  return parseDateKeyLocal(dateKey).toLocaleDateString(intlLocale(language), {
     day: 'numeric',
     month: 'short',
   });

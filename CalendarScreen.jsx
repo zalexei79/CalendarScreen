@@ -92,6 +92,13 @@ import { useCurveNotes } from './src/features/day-notes/useCurveNotes';
 import PnlCurve from './src/features/trades-sync/components/PnlCurve';
 import PeriodDynamics from './src/features/trades-sync/components/PeriodDynamics';
 import CalendarGrid from './CalendarGrid';
+import { useLocalToday } from './src/shared/ui/useLocalToday.js';
+import { useCalendarDayHistory } from './src/shared/ui/useCalendarDayHistory.js';
+import { projectPlansForDay } from './src/features/reminders/financePlanModel.js';
+import { previousPeriod } from './src/features/trades-sync/lib/periodComparison.mjs';
+import { selectCalendarExport, calendarExportRows } from './src/features/trades-sync/lib/calendarExport.js';
+import { intlLocale } from './src/shared/i18n/locale.js';
+import { calendarActions } from './src/shared/i18n/calendarActions.js';
 import * as ukCalendar from './src/shared/i18n/ukCalendar.js';
 import MonthlyGoal from './MonthlyGoal';
 import AmountKeypad, {AmountInput} from './src/shared/ui/AmountEntry.jsx';
@@ -135,18 +142,7 @@ export default function CalendarScreen() {
   useWorkspaceViewport();
   const [accountMode, setAccountMode] = useState(() => { try { return localStorage.getItem('dayris_account_mode') || 'main'; } catch { return 'main'; } });
   useEffect(() => { try { localStorage.setItem('dayris_account_mode', accountMode); } catch {} }, [accountMode]);
-  const [today, setToday] = useState(() => new Date());
-  useEffect(() => {
-    function refreshToday() {
-      if (document.visibilityState === 'visible') setToday(new Date());
-    }
-    window.addEventListener('focus', refreshToday);
-    document.addEventListener('visibilitychange', refreshToday);
-    return () => {
-      window.removeEventListener('focus', refreshToday);
-      document.removeEventListener('visibilitychange', refreshToday);
-    };
-  }, []);
+  const today = useLocalToday();
 
   // Auth via useAuth hook
   const {
@@ -1842,26 +1838,7 @@ export default function CalendarScreen() {
     return `${amount >= 0 ? '+' : '−'}${symbol}${value}`;
   }
 
-  const suppressNextHistoryPush = useRef(false);
-
-  // native "back" support: opening a day pushes a history entry, so the
-  // system back button/swipe closes the day first instead of leaving the site
-  useEffect(() => {
-    if (selectedKey && !suppressNextHistoryPush.current) {
-      try { window.history.pushState({ calendarDay: selectedKey }, ''); } catch {}
-    }
-    suppressNextHistoryPush.current = false;
-  }, [selectedKey]);
-
-  useEffect(() => {
-    function onPopState() {
-      suppressNextHistoryPush.current = true;
-      setSelectedKey(null);
-    }
-  }, []);
-
-
-
+  useCalendarDayHistory(selectedKey, setSelectedKey);
 
   // Trades data management via useTrades hook
   const {
@@ -1910,7 +1887,9 @@ export default function CalendarScreen() {
 
   const {
     plans,
-    plansByDate,
+    loading: plansLoading,
+    error: plansLoadError,
+    refreshPlans,
     createPlan,
     updatePlan,
     resolvePlan,
@@ -1951,58 +1930,7 @@ export default function CalendarScreen() {
   }, [plans]);
 
   function plansForDay(dateKey) {
-    const directPlans = plansByDate[dateKey] || [];
-    const visible = [...directPlans];
-    const directIds = new Set(directPlans.map((plan) => plan.id));
-
-    function occurrenceIndex(plan, targetKey) {
-      const baseKey = planDateKey(plan);
-      const [baseYear, baseMonth, baseDay] = baseKey.split('-').map(Number);
-      const [targetYear, targetMonth, targetDay] = targetKey.split('-').map(Number);
-      if (plan.repeat_rule === 'weekly') {
-        const days = Math.round((Date.UTC(targetYear, targetMonth - 1, targetDay) - Date.UTC(baseYear, baseMonth - 1, baseDay)) / 86400000);
-        return Math.floor(days / 7) + 1;
-      }
-      if (plan.repeat_rule === 'monthly') return (targetYear - baseYear) * 12 + (targetMonth - baseMonth) + 1;
-      if (plan.repeat_rule === 'yearly') return targetYear - baseYear + 1;
-      return plan.repeat_index || 1;
-    }
-
-    for (const plan of plans) {
-      if (plan.status !== 'active' || plan.outcome !== 'planned' || plan.repeat_rule === 'none') continue;
-      const baseKey = planDateKey(plan);
-      if (!baseKey || dateKey < baseKey || directIds.has(plan.id)) continue;
-      if (plan.repeat_until && dateKey > plan.repeat_until) continue;
-
-      const [baseYear, baseMonth, baseDay] = baseKey.split('-').map(Number);
-      const [targetYear, targetMonth, targetDay] = dateKey.split('-').map(Number);
-      let occurrence = false;
-
-      if (plan.repeat_rule === 'weekly') {
-        const baseUtc = Date.UTC(baseYear, baseMonth - 1, baseDay);
-        const targetUtc = Date.UTC(targetYear, targetMonth - 1, targetDay);
-        const days = Math.round((targetUtc - baseUtc) / 86400000);
-        occurrence = days >= 0 && days % 7 === 0;
-      } else if (plan.repeat_rule === 'monthly') {
-        const lastDay = new Date(Date.UTC(targetYear, targetMonth, 0)).getUTCDate();
-        occurrence = targetDay === Math.min(baseDay, lastDay);
-      } else if (plan.repeat_rule === 'yearly') {
-        occurrence = targetMonth === baseMonth && targetDay === baseDay;
-      }
-
-      if (occurrence) {
-        visible.push({
-          ...plan,
-          id: `${plan.id}:${dateKey}`,
-          local_at: `${dateKey} ${planTime(plan)}:00`,
-          repeat_index: occurrenceIndex(plan, dateKey),
-          sourcePlan: plan,
-          virtualOccurrence: true,
-        });
-      }
-    }
-
-    return visible.sort((a, b) => planTime(a).localeCompare(planTime(b)));
+    return projectPlansForDay(plans, dateKey);
   }
 
   function activePlansForDay(dateKey) {
@@ -2523,7 +2451,7 @@ export default function CalendarScreen() {
   const targetDateKey = selectedCell ? selectedCell.key : keyFromDate(today);
   const todayKey = keyFromDate(today);
   const isFutureSelected = targetDateKey > todayKey;
-  const targetDateLabel = parseDateKeyLocal(targetDateKey).toLocaleDateString(language === 'zh-CN' ? 'zh-CN' : language === 'en' ? 'en-US' : language === 'ro' || language === 'md' ? 'ro-RO' : 'ru-RU', {
+  const targetDateLabel = parseDateKeyLocal(targetDateKey).toLocaleDateString(intlLocale(language), {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -2994,6 +2922,8 @@ export default function CalendarScreen() {
   const [freeTimelineOffset, setFreeTimelineOffset] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
   const [exportPeriodPreset, setExportPeriodPreset] = useState('currentPeriod');
+  const [exportScope, setExportScope] = useState('selection');
+  const calendarCopy = calendarActions(language);
   const [confirmingClear, setConfirmingClear] = useState(false);
   const [historyShareOpen, setHistoryShareOpen] = useState(false);
   const [historyShareBusy, setHistoryShareBusy] = useState(false);
@@ -3856,15 +3786,12 @@ export default function CalendarScreen() {
       const [year, month, day] = String(key || '').split('-').map(Number);
       return new Date(year, month - 1, day);
     };
-    const keyFor = (date) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
     const finitePeriod = dateFrom !== '0000-01-01' && dateTo !== '9999-12-31';
     const start = finitePeriod ? parseKey(dateFrom) : null;
     const end = finitePeriod ? parseKey(dateTo) : null;
-    const periodDays = start && end ? Math.max(1, Math.round((end - start) / 86400000) + 1) : 0;
-    const previousStart = start ? new Date(start.getTime() - periodDays * 86400000) : null;
-    const previousEnd = start ? new Date(start.getTime() - 86400000) : null;
-    const previousTrades = previousStart && previousEnd
-      ? historyFilteredTrades.filter((item) => item.dateKey >= keyFor(previousStart) && item.dateKey <= keyFor(previousEnd))
+    const previous = previousPeriod(dateFrom, dateTo);
+    const previousTrades = previous
+      ? historyFilteredTrades.filter(item => item.dateKey >= previous.from && item.dateKey <= previous.to)
       : [];
     const sum = (items, positive) => items.reduce((total, item) => total + (positive ? (item.pnl > 0 ? item.pnl : 0) : (item.pnl < 0 ? Math.abs(item.pnl) : 0)), 0);
     const previousIncome = sum(previousTrades, true);
@@ -4000,30 +3927,24 @@ export default function CalendarScreen() {
     const range = (exportPeriodPreset === 'currentPeriod' || exportPeriodPreset === 'Текущий период')
       ? { from: dateFrom, to: dateTo }
       : getPresetRange(exportPeriodPreset, today);
-    return Object.entries(manualTrades)
-      .flatMap(([dateKey, arr]) => (arr || []).map((item) => ({ ...item, dateKey })))
-      .filter((item) => item.dateKey >= range.from && item.dateKey <= range.to)
-      .filter((item) => historyCurrency === 'ALL' || (item.currency || 'USD') === historyCurrency)
-      .filter((item) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? item.pnl >= 0 : item.pnl < 0));
-  }, [manualTrades, exportPeriodPreset, dateFrom, dateTo, today, historyCurrency, historyWinLoss]);
+    return selectCalendarExport({ records: manualTrades, filteredRecords: historyFilteredTrades, scope: exportScope,
+      from: range.from, to: range.to });
+  }, [manualTrades, historyFilteredTrades, exportScope, exportPeriodPreset, dateFrom, dateTo, today]);
 
   function handleExportCsv() {
     const range = (exportPeriodPreset === 'currentPeriod' || exportPeriodPreset === 'Текущий период')
       ? { from: dateFrom, to: dateTo }
       : getPresetRange(exportPeriodPreset, today);
-    const title = `${t('appName')} — ${t('csvPeriodTitle')}`;
-    const periodLabel = `${formatDateLabel(range.from)} — ${formatDateLabel(range.to)}`;
-    const rows = exportTrades.map((item) => [
-      formatDateLabel(item.dateKey),
-      item.time || '',
-      item.instrument || (traderMode ? 'Trade' : t('catOther')),
-      item.pnl >= 0 ? (traderMode ? t('profitTrade') : t('income')) : (traderMode ? t('lossTrade') : t('expense')),
-      formatAmountInCurrency(item.pnl, item.currency || 'USD'),
-      item.comment || '',
-    ]);
+    const title = `${t('appName')} — ${exportScope === 'all' ? calendarCopy.all : calendarCopy.selection}`;
+    const periodLabel = range.from === '0000-01-01' && range.to === '9999-12-31' ? t('allHistory') : `${range.from} — ${range.to}`;
+    const rows = calendarExportRows(exportTrades, {
+      fallbackCategory: traderMode ? 'Trade' : t('catOther'),
+      type: item => item.pnl >= 0 ? (traderMode ? t('profitTrade') : t('income')) : (traderMode ? t('lossTrade') : t('expense')),
+    });
     const totalIncome = exportTrades.reduce((sum, item) => sum + (item.pnl > 0 ? item.pnl : 0), 0);
     const totalExpense = exportTrades.reduce((sum, item) => sum + (item.pnl < 0 ? Math.abs(item.pnl) : 0), 0);
-    const currencyMeta = historyCurrency === 'ALL' ? null : getCurrencyMeta(historyCurrency);
+    const exportCurrencies = [...new Set(exportTrades.map(item => item.currency || 'USD'))];
+    const currencyMeta = exportCurrencies.length === 1 ? getCurrencyMeta(exportCurrencies[0]) : null;
     const summary = currencyMeta ? [
       [],
       [t('csvPeriodSummary')],
@@ -4035,7 +3956,7 @@ export default function CalendarScreen() {
       [title],
       [`${t('currentPeriod')}: ${periodLabel}`],
       [],
-      [t('csvDate'), t('csvTime'), t('csvCategory'), t('csvType'), t('csvAmount'), t('csvComment')],
+      [t('csvDate'), t('csvTime'), t('csvCategory'), t('csvType'), t('csvAmount'), t('currency'), t('csvComment')],
       ...rows,
       ...summary
     ];
@@ -4528,7 +4449,7 @@ export default function CalendarScreen() {
                 setProHistoryTab('trades');
               };
               voiceConversation.rememberQuery(command,result,showRecords);
-            const contextLabel = `${category ? getMoneyCategoryLabel(category,language) : command.categories ? command.categories.join(', ') : t('myMoney')} · ${result.range.from === '0000-01-01' ? t('allHistory') : `${formatDateLabel(result.range.from)} — ${formatDateLabel(result.range.to)}`}`;
+            const contextLabel = `${category ? getMoneyCategoryLabel(category,language) : command.categories ? command.categories.join(', ') : t('myMoney')} · ${result.range.from === '0000-01-01' ? t('allHistory') : `${formatDateLabel(result.range.from, language)} — ${formatDateLabel(result.range.to, language)}`}`;
             if ((command.mode === 'search'||command.openRecords) && result.items.length) showRecords();
               return {text: result.text, context:command, contextLabel, compact:command.mode==='search', actionLabel: result.actionLabel, onAction: result.items.length ? showRecords : undefined, help:command.mode==='day-review'?['Обед забыл — добавь 120','Покажи эти записи','Вернись в календарь']:['А за прошлую неделю?','А на транспорт?','Покажи эти записи','Открой последнюю']};
             }
@@ -4536,7 +4457,7 @@ export default function CalendarScreen() {
               setSlideDirection(command.year * 12 + command.month >= year * 12 + month ? 'next' : 'prev');
               setAnimKey((value) => value + 1);
               jumpToTradeDate(command.dateKey);
-              voiceConversation.reset();return {text:voiceCopy(`Открыт день ${formatDateLabel(command.dateKey)}. Можно добавить запись голосом.`,`Opened ${formatDateLabel(command.dateKey)}. You can add an entry by voice.`,`Deschis ${formatDateLabel(command.dateKey)}. Poți adăuga o înregistrare vocal.`,`已打开 ${formatDateLabel(command.dateKey)}。可以语音添加记录。`),context:null,contextLabel:formatDateLabel(command.dateKey),compact:true,help:voiceCopy(['Потратил 250 лей на продукты','Вернись в календарь'],['Spent 250 MDL on groceries','Open calendar'],['Cheltuit 250 lei pe alimente','Deschide calendarul'],['支出250列伊用于食品','打开日历'])};
+              voiceConversation.reset();return {text:voiceCopy(`Открыт день ${formatDateLabel(command.dateKey, language)}. Можно добавить запись голосом.`,`Opened ${formatDateLabel(command.dateKey, language)}. You can add an entry by voice.`,`Deschis ${formatDateLabel(command.dateKey, language)}. Poți adăuga o înregistrare vocal.`,`已打开 ${formatDateLabel(command.dateKey, language)}。可以语音添加记录。`),context:null,contextLabel:formatDateLabel(command.dateKey, language),compact:true,help:voiceCopy(['Потратил 250 лей на продукты','Вернись в календарь'],['Spent 250 MDL on groceries','Open calendar'],['Cheltuit 250 lei pe alimente','Deschide calendarul'],['支出250列伊用于食品','打开日历'])};
             }
             openModal(null, todayKey);
             if (traderMode) {
@@ -4825,6 +4746,11 @@ export default function CalendarScreen() {
         />}
 
       </div>
+
+      {validUserId && (plansLoadError || (plansLoading && !plans.length)) && <div className="mx-3 my-1 flex items-center justify-between gap-3 rounded-xl border border-amber-500/20 px-3 py-2 text-xs text-amber-600 sm:mx-8" role={plansLoadError ? 'alert' : 'status'} data-calendar-plans-status="true">
+        <span>{plansLoadError || calendarCopy.loading}</span>
+        {plansLoadError && <button type="button" disabled={plansLoading} className="shrink-0 rounded-lg px-2 py-1 font-semibold disabled:opacity-50" onClick={() => refreshPlans().catch(() => {})}>{calendarCopy.retry}</button>}
+      </div>}
 
       {/* PRO controls live in Header: one clean control center, no floating duplicate block. */}
       <CalendarGrid
@@ -5690,12 +5616,12 @@ export default function CalendarScreen() {
                       {periodPreset === 'custom' && <div className="grid grid-cols-2 gap-2 mb-3">
                         <label className={`relative rounded-xl border px-3 py-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
                           <span className="block text-[9px] font-data uppercase tracking-wider text-zinc-500">{t('fromDate')}</span>
-                          <span className={`mt-1 block text-sm font-data font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-100'}`}>{formatDateLabel(dateFrom)}</span>
+                          <span className={`mt-1 block text-sm font-data font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-100'}`}>{formatDateLabel(dateFrom, language)}</span>
                           <input aria-label={t('fromDate')} type="date" value={dateFrom} onChange={(e) => handleDateFromChange(e.target.value)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
                         </label>
                         <label className={`relative rounded-xl border px-3 py-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-black/20'}`}>
                           <span className="block text-[9px] font-data uppercase tracking-wider text-zinc-500">{t('toDate')}</span>
-                          <span className={`mt-1 block text-sm font-data font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-100'}`}>{formatDateLabel(dateTo)}</span>
+                          <span className={`mt-1 block text-sm font-data font-semibold ${isLight ? 'text-zinc-800' : 'text-zinc-100'}`}>{formatDateLabel(dateTo, language)}</span>
                           <input aria-label={t('toDate')} type="date" value={dateTo} onChange={(e) => handleDateToChange(e.target.value)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
                         </label>
                       </div>}
@@ -5780,7 +5706,7 @@ export default function CalendarScreen() {
                         const receipt=receiptFromEntry(entry);
                         return (
                           <React.Fragment key={entry.id}>
-                          {isFinancialPro && (index === 0 || historyTrades[index - 1].dateKey !== entry.dateKey) && <h4 className="financial-record-date">{formatDateLabel(entry.dateKey)}</h4>}
+                          {isFinancialPro && (index === 0 || historyTrades[index - 1].dateKey !== entry.dateKey) && <h4 className="financial-record-date">{formatDateLabel(entry.dateKey, language)}</h4>}
                           {receipt?<ReceiptHistoryCard entry={entry} receipt={receipt} language={language} isLight={isLight} previewLimit={3} showDate={!isFinancialPro} onEdit={demoMode?undefined:()=>editTradeFromHistory(entry)}/>:<button
                             onClick={() => editTradeFromHistory(entry)}
                             aria-label={demoMode ? `${entry.instrument} · ${entry.comment}` : t('editRecord')}
@@ -5799,7 +5725,7 @@ export default function CalendarScreen() {
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className={`block text-sm font-medium truncate ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{entry.instrument || t('catOther')}</span>
-                              <span className={`block text-[11px] mt-0.5 truncate ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{isFinancialPro ? entry.time : `${formatDateLabel(entry.dateKey)} · ${entry.time}`}{entry.comment ? ` · ${entry.comment}` : ''}</span>
+                              <span className={`block text-[11px] mt-0.5 truncate ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{isFinancialPro ? entry.time : `${formatDateLabel(entry.dateKey, language)} · ${entry.time}`}{entry.comment ? ` · ${entry.comment}` : ''}</span>
                             </span>
                             <span className="flex shrink-0 items-center gap-2">
                               <span className={`font-data text-sm font-medium tabular-nums whitespace-nowrap ${entry.pnl >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -6185,13 +6111,13 @@ export default function CalendarScreen() {
                             <TrendingUp className="absolute -right-2 -bottom-2 h-14 w-14 text-emerald-500/10" />
                             <p className="relative text-[9px] uppercase tracking-wider text-emerald-600/80 mb-1.5">{t('bestDay')}</p>
                             <p className="relative font-display text-xl font-bold text-emerald-500 tabular-nums">{formatSignedShort(bestDay[1])}</p>
-                            <p className="relative mt-1 text-[10px] text-zinc-500">{formatDateLabel(bestDay[0])}</p>
+                            <p className="relative mt-1 text-[10px] text-zinc-500">{formatDateLabel(bestDay[0], language)}</p>
                           </div>
                           <div className={`relative overflow-hidden rounded-2xl p-4 bg-gradient-to-br ${isLight ? 'from-red-50 to-white' : 'from-red-500/[0.09] to-transparent'}`}>
                             <TrendingDown className="absolute -right-2 -bottom-2 h-14 w-14 text-red-500/10" />
                             <p className="relative text-[9px] uppercase tracking-wider text-red-500/80 mb-1.5">{t('worstDay')}</p>
                             <p className="relative font-display text-xl font-bold text-red-500 tabular-nums">{formatSignedShort(worstDay[1])}</p>
-                            <p className="relative mt-1 text-[10px] text-zinc-500">{formatDateLabel(worstDay[0])}</p>
+                            <p className="relative mt-1 text-[10px] text-zinc-500">{formatDateLabel(worstDay[0], language)}</p>
                           </div>
                         </div>
 
@@ -6535,7 +6461,7 @@ export default function CalendarScreen() {
                                 {traderMode ? trade.instrument : getMoneyCategoryLabel(trade.instrument, language)}
                               </span>
                               <span className={`block text-[11px] mt-0.5 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>
-                                {formatDateLabel(trade.dateKey)} · {trade.time}
+                                {formatDateLabel(trade.dateKey, language)} · {trade.time}
                                 {trade.platform && trade.platform !== 'Manual' ? ` · ${trade.platform}` : ''}
                               </span>
                             </span>
@@ -6996,7 +6922,10 @@ export default function CalendarScreen() {
             </div>
             <div className="p-5">
               <p className="text-sm font-medium">{t('allRecordsForPeriod')}</p>
-              <p className="mt-1 text-xs text-zinc-500">{t('exportNotice')}</p>
+              <p className="mt-1 text-xs text-zinc-500">{calendarCopy.notice}</p>
+              <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label={calendarCopy.scope}>
+                {[['selection', calendarCopy.selection], ['all', calendarCopy.all]].map(([value, label]) => <button key={value} type="button" aria-pressed={exportScope === value} onClick={() => setExportScope(value)} className={`rounded-lg border px-3 py-2 text-xs ${exportScope === value ? 'border-amber-400/50 bg-amber-400/10 text-amber-600' : isLight ? 'border-zinc-200 text-zinc-600' : 'border-zinc-800 text-zinc-400'}`}>{label}</button>)}
+              </div>
               <div className="mt-4 grid grid-cols-2 gap-2">
                 {[
                   { key: 'currentPeriod', label: t('currentPeriod') },
@@ -7024,7 +6953,7 @@ export default function CalendarScreen() {
               </div>
               <div className={`mt-4 rounded-xl border p-3 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/40'}`}>
                 <p className="text-[10px] uppercase tracking-wider text-zinc-500">{t('inReport')}</p>
-                <p className="mt-1 text-sm font-medium">{t('inReportDetails')}</p>
+                <p className="mt-1 text-sm font-medium">{calendarCopy.columns}</p>
                 <p className="mt-1 text-xs text-zinc-500">{exportTrades.length} {t('recordsWithFilter')}</p>
               </div>
               <button
@@ -7212,13 +7141,13 @@ export default function CalendarScreen() {
                     <TrendingUp className="absolute -right-2 -bottom-2 h-14 w-14 text-emerald-500/10" />
                     <p className="relative text-[9px] uppercase tracking-wider text-emerald-600/80 mb-1.5">{t('bestDay')}</p>
                     <p className="relative font-display text-xl font-bold text-emerald-500 tabular-nums">{formatSignedShort(basicAnalysis.bestDay[1])}</p>
-                    <p className="relative mt-1 text-[10px] text-zinc-500">{formatDateLabel(basicAnalysis.bestDay[0])}</p>
+                    <p className="relative mt-1 text-[10px] text-zinc-500">{formatDateLabel(basicAnalysis.bestDay[0], language)}</p>
                   </div>
                   <div className={`relative overflow-hidden rounded-2xl p-4 bg-gradient-to-br ${isLight ? 'from-red-50 to-white' : 'from-red-500/[0.09] to-transparent'}`}>
                     <TrendingDown className="absolute -right-2 -bottom-2 h-14 w-14 text-red-500/10" />
                     <p className="relative text-[9px] uppercase tracking-wider text-red-500/80 mb-1.5">{t('worstDay')}</p>
                     <p className="relative font-display text-xl font-bold text-red-500 tabular-nums">{formatSignedShort(basicAnalysis.worstDay[1])}</p>
-                    <p className="relative mt-1 text-[10px] text-zinc-500">{formatDateLabel(basicAnalysis.worstDay[0])}</p>
+                    <p className="relative mt-1 text-[10px] text-zinc-500">{formatDateLabel(basicAnalysis.worstDay[0], language)}</p>
                   </div>
                 </div>
 

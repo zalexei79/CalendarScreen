@@ -6,6 +6,9 @@ import './src/features/wallet/WalletGestures.css';
 import './src/shared/ui/CalendarMotion.css';
 import './src/shared/ui/MotionSystem.css';
 import { useCalendarFit } from './src/shared/ui/useCalendarFit';
+import { localeKey } from './src/shared/i18n/locale.js';
+
+const planLabelFor = language => ({ ru: 'Планы', uk: 'Плани', en: 'Plans', ro: 'Planuri', zh: '计划' }[localeKey(language)]);
 
 const CalendarMonthPreview = React.memo(function CalendarMonthPreview({ preview, isLight, language, traderMode, proView, selectedKey, notes, noteLabel, tradesForDayFiltered, plansForDay, formatPlanAmount, totalPnlForDay, monthMaxAbsPnl, formatPnlDisplay }) {
   // Match the target month's heatmap before it becomes the active page.
@@ -14,7 +17,7 @@ const CalendarMonthPreview = React.memo(function CalendarMonthPreview({ preview,
   return <div className="calendar-month-preview" aria-hidden="true" inert="" style={{ left: `${preview.direction * 100}%` }}>
     <div className="calendar-weekdays grid grid-cols-7 gap-1 sm:gap-2 mb-3">{weekdaysFor(language).map(day => <div key={day} className={`font-data text-[11px] sm:text-xs font-semibold tracking-wider text-center uppercase pb-1 ${isLight ? 'text-slate-600' : 'text-zinc-500'}`}>{day}</div>)}</div>
     <div className="calendar-days-grid calendar-preview-days grid grid-cols-7 gap-1 sm:gap-2" style={{ flex: 1, minHeight: 0, gridAutoRows: 'auto', gridTemplateRows: `repeat(${preview.cells.length / 7},minmax(0,1fr))` }}>
-      {preview.cells.map((cell, index) => <CalendarDayCell key={cell.key} cell={cell} cellIndex={index} traderMode={traderMode} proView={proView} isLight={isLight} isSelected={cell.key === selectedKey} hasNote={!!notes[cell.key]} noteLabel={noteLabel} hasTrades={tradesForDayFiltered(cell.key).length > 0} plans={plansForDay?.(cell.key) || []} formatPlanAmount={formatPlanAmount} pnl={totalPnlForDay(cell.key)} monthMaxAbsPnl={monthMaxAbsPnl} formatPnlDisplay={formatPnlDisplay} onSelect={() => {}} />)}
+      {preview.cells.map((cell, index) => <CalendarDayCell key={cell.key} cell={cell} cellIndex={index} traderMode={traderMode} proView={proView} isLight={isLight} isSelected={cell.key === selectedKey} hasNote={!!notes[cell.key]} noteLabel={noteLabel} hasTrades={tradesForDayFiltered(cell.key).length > 0} plans={plansForDay?.(cell.key) || []} planLabel={planLabelFor(language)} formatPlanAmount={formatPlanAmount} pnl={totalPnlForDay(cell.key)} monthMaxAbsPnl={monthMaxAbsPnl} formatPnlDisplay={formatPnlDisplay} onSelect={() => {}} />)}
     </div>
   </div>;
 });
@@ -121,7 +124,7 @@ export default function CalendarGrid({
           const hasTrades = tradesForDayFiltered(cell.key).length > 0;
           const plans = plansForDay?.(cell.key) || [];
           const pnl = totalPnlForDay(cell.key);
-          return <CalendarDayCell key={cell.key} firstEntryLabel={firstEntryLabel} firstEntryDayLabel={firstEntryDayLabel} planLabel={language === 'uk' ? 'Плани' : language === 'en' ? 'Plans' : language === 'ro' || language === 'md' ? 'Planuri' : 'Планы'} hasNote={!!notes[cell.key]} noteLabel={noteLabel} traderMode={traderMode} proView={proView} cell={cell} cellIndex={cellIndex} isSelected={isSelected} hasTrades={hasTrades} plans={plans} formatPlanAmount={formatPlanAmount} pnl={pnl} monthMaxAbsPnl={monthMaxAbsPnl} isLight={isLight} formatPnlDisplay={formatPnlDisplay} onSelect={() => onSelectDay(isSelected ? null : cell.key)} />;
+          return <CalendarDayCell key={cell.key} firstEntryLabel={firstEntryLabel} firstEntryDayLabel={firstEntryDayLabel} planLabel={planLabelFor(language)} hasNote={!!notes[cell.key]} noteLabel={noteLabel} traderMode={traderMode} proView={proView} cell={cell} cellIndex={cellIndex} isSelected={isSelected} hasTrades={hasTrades} plans={plans} formatPlanAmount={formatPlanAmount} pnl={pnl} monthMaxAbsPnl={monthMaxAbsPnl} isLight={isLight} formatPnlDisplay={formatPnlDisplay} onSelect={() => onSelectDay(isSelected ? null : cell.key)} />;
         })}
       </div>
       {touchDrag.axis === 'x' && adjacentMonths.filter(preview => preview.direction === (touchDrag.x < 0 ? 1 : -1)).map(preview => <CalendarMonthPreview key={preview.direction} preview={preview} isLight={isLight} language={language} traderMode={traderMode} proView={proView} selectedKey={selectedKey} notes={notes} noteLabel={noteLabel} tradesForDayFiltered={tradesForDayFiltered} plansForDay={plansForDay} formatPlanAmount={formatPlanAmount} totalPnlForDay={totalPnlForDay} monthMaxAbsPnl={monthMaxAbsPnl} formatPnlDisplay={formatPnlDisplay} />)}

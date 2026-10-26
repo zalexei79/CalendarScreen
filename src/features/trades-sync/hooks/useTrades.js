@@ -43,6 +43,12 @@ export function useTrades({ user, readOnly = false }) {
   const cloudUserId = getValidUserId(user);
   const owner = cloudUserId || 'guest';
   const currentOwnerRef = useRef(owner);
+  const mutationVersions = useRef(new Map());
+  const ownerEpoch = useRef(0);
+  if (currentOwnerRef.current !== owner) {
+    ownerEpoch.current++;
+    mutationVersions.current.clear();
+  }
   currentOwnerRef.current = owner;
 
   const readCachedTrades = useCallback((userId) => {
@@ -176,9 +182,16 @@ export function useTrades({ user, readOnly = false }) {
   }, [cloudUserId, refreshFromCloud]);
 
   const saveTrade = useCallback(async (args) => {
+    if (currentOwnerRef.current !== owner || loadedOwner !== owner) throw new Error('Дождитесь загрузки записей.');
     const { dateKey, isEditing, editingTradeId, time, instrument, direction, signedPnl, comment, platform, currency, takeProfit, stopLoss, traderMode } = args;
     const generatedId = globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const localId = `local-${generatedId}`;
+    const epoch = ownerEpoch.current;
+    const mutationKey = `${dateKey}:${isEditing ? editingTradeId : localId}`;
+    const mutationId = Symbol();
+    mutationVersions.current.set(mutationKey, mutationId);
+    const isCurrent = () => currentOwnerRef.current === owner && ownerEpoch.current === epoch && mutationVersions.current.get(mutationKey) === mutationId;
+    const previousTrade = (manualTradesRef.current[dateKey] || []).find(t => String(t.id) === String(editingTradeId));
     let savedId = localId;
     const localTrade = {
       id: isEditing ? editingTradeId : localId,
@@ -187,12 +200,14 @@ export function useTrades({ user, readOnly = false }) {
       ...(traderMode ? { take_profit: takeProfit, stop_loss: stopLoss } : {}),
       pending: Boolean(cloudUserId),
     };
+    const optimisticTrade = { ...previousTrade, ...localTrade };
 
     setManualTrades((prev) => {
+      if (!isCurrent()) return prev;
       const day = [...(prev[dateKey] || [])];
       const index = isEditing ? day.findIndex((t) => String(t.id) === String(editingTradeId)) : -1;
-      if (index >= 0) day[index] = { ...day[index], ...localTrade };
-      else day.push(localTrade);
+      if (index >= 0) day[index] = optimisticTrade;
+      else day.push(optimisticTrade);
       const next = { ...prev, [dateKey]: day };
       manualTradesRef.current = next;
       cacheTradesLocally(next, cloudUserId);
@@ -219,9 +234,10 @@ export function useTrades({ user, readOnly = false }) {
         // Targeted update: just clear pending flag — don't call refreshFromCloud which
         // can race and overwrite the already-correct optimistic state (fixes sign-change bug)
         setManualTrades((prev) => {
+          if (!isCurrent()) return prev;
           const day = [...(prev[dateKey] || [])];
           const index = day.findIndex((t) => String(t.id) === String(editingTradeId));
-          if (index >= 0) day[index] = { ...day[index], ...localTrade, pending: false };
+          if (index >= 0 && day[index] === optimisticTrade) day[index] = { ...day[index], pending: false };
           const next = { ...prev, [dateKey]: day };
           manualTradesRef.current = next;
           cacheTradesLocally(next, cloudUserId);
@@ -232,6 +248,7 @@ export function useTrades({ user, readOnly = false }) {
         if (error) throw error;
         savedId = data.id;
         setManualTrades((prev) => {
+          if (!isCurrent()) return prev;
           const next = {
             ...prev,
             [dateKey]: (prev[dateKey] || []).map((t) => String(t.id) === String(localId) ? { ...t, id: data.id, pending: false } : t),
@@ -240,30 +257,28 @@ export function useTrades({ user, readOnly = false }) {
           cacheTradesLocally(next, cloudUserId);
           return next;
         });
-        await refreshFromCloud();
+        if (isCurrent()) await refreshFromCloud();
       }
     } catch (error) {
       console.warn('[cloud-sync] save deferred:', error?.message || error);
       if (isRetryableNetworkError(error)) enqueueOperation(operation);
       else {
-        // The optimistic row was never accepted by the database. Remove it so
-        // retries cannot look like successfully saved duplicate entries.
-        if (!isEditing) {
-          setManualTrades((prev) => {
-            const next = {
-              ...prev,
-              [dateKey]: (prev[dateKey] || []).filter((trade) => String(trade.id) !== String(localId)),
-            };
-            manualTradesRef.current = next;
-            cacheTradesLocally(next, cloudUserId);
-            return next;
-          });
-        }
+        // Roll back only this optimistic version, preserving newer edits and
+        // cloud refreshes that may have arrived while the request was pending.
+        setManualTrades((prev) => {
+          if (!isCurrent()) return prev;
+          const day = prev[dateKey] || [];
+          if (!day.includes(optimisticTrade)) return prev;
+          const next = { ...prev, [dateKey]: day.flatMap(trade => trade !== optimisticTrade ? [trade] : previousTrade ? [previousTrade] : []) };
+          manualTradesRef.current = next;
+          cacheTradesLocally(next, cloudUserId);
+          return next;
+        });
         throw error;
       }
     }
     return {...localTrade, id:isEditing ? editingTradeId : savedId};
-  }, [cloudUserId, cacheTradesLocally, enqueueOperation, amendPendingInsert, refreshFromCloud]);
+  }, [owner, loadedOwner, cloudUserId, cacheTradesLocally, enqueueOperation, amendPendingInsert, refreshFromCloud]);
 
   // Voice edits/removals commit one explicit field or row. A reviewed snapshot
   // cannot overwrite a record that changed while the user was speaking.
@@ -316,7 +331,17 @@ export function useTrades({ user, readOnly = false }) {
   }, [owner, loadedOwner, cloudUserId, enqueueOperation, getPendingInstrumentUpdates, cacheTradesLocally, flushOfflineQueue]);
 
   const deleteTrade = useCallback(async (dateKey, tradeId) => {
+    if (currentOwnerRef.current !== owner || loadedOwner !== owner) throw new Error('Дождитесь загрузки записей.');
+    const epoch = ownerEpoch.current;
+    const mutationKey = `${dateKey}:${tradeId}`;
+    const mutationId = Symbol();
+    mutationVersions.current.set(mutationKey, mutationId);
+    const isCurrent = () => currentOwnerRef.current === owner && ownerEpoch.current === epoch && mutationVersions.current.get(mutationKey) === mutationId;
+    const previousDay = manualTradesRef.current[dateKey] || [];
+    const previousIndex = previousDay.findIndex(t => String(t.id) === String(tradeId));
+    const previousTrade = previousDay[previousIndex];
     setManualTrades((prev) => {
+      if (!isCurrent()) return prev;
       const next = { ...prev, [dateKey]: (prev[dateKey] || []).filter((t) => String(t.id) !== String(tradeId)) };
       manualTradesRef.current = next;
       cacheTradesLocally(next, cloudUserId);
@@ -328,13 +353,24 @@ export function useTrades({ user, readOnly = false }) {
     try {
       const { error } = await supabase.from('trades').delete().eq('id', tradeId).eq('user_id', cloudUserId);
       if (error) throw error;
-      await refreshFromCloud();
+      if (isCurrent()) await refreshFromCloud();
     } catch (error) {
       console.warn('[cloud-sync] delete deferred:', error?.message || error);
       if (isRetryableNetworkError(error)) enqueueOperation(operation);
-      else throw error;
+      else {
+        setManualTrades(prev => {
+          if (!isCurrent() || !previousTrade || (prev[dateKey] || []).some(t => String(t.id) === String(tradeId))) return prev;
+          const day = [...(prev[dateKey] || [])];
+          day.splice(Math.min(previousIndex, day.length), 0, previousTrade);
+          const next = { ...prev, [dateKey]: day };
+          manualTradesRef.current = next;
+          cacheTradesLocally(next, cloudUserId);
+          return next;
+        });
+        throw error;
+      }
     }
-  }, [cloudUserId, cacheTradesLocally, enqueueOperation, refreshFromCloud]);
+  }, [owner, loadedOwner, cloudUserId, cacheTradesLocally, enqueueOperation, refreshFromCloud]);
 
   const clearAllTrades = useCallback(async () => {
     if (!cloudUserId) { setManualTrades({}); return; }

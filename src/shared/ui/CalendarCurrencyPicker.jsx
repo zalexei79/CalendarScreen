@@ -2,8 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import { CURRENCIES } from '../config/constants.js';
 import './CalendarCurrencyPicker.css';
+import { localeKey } from '../i18n/locale.js';
 
 const LABELS = {
+  uk: ['Валюта календаря', 'У ваших записах', 'Інші валюти'],
   ru: ['Валюта календаря', 'В ваших записях', 'Другие валюты'],
   en: ['Calendar currency', 'In your records', 'Other currencies'],
   ro: ['Moneda calendarului', 'În înregistrările tale', 'Alte monede'],
@@ -11,7 +13,7 @@ const LABELS = {
 };
 
 export default function CalendarCurrencyPicker({ currency, onChange, usedCurrencies = [], language = 'ru', isLight = false, onOpen }) {
-  const locale = language.startsWith('zh') ? 'zh' : ['md', 'ro'].includes(language) ? 'ro' : language === 'en' ? 'en' : 'ru';
+  const locale = localeKey(language);
   const copy = LABELS[locale];
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);

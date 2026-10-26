@@ -1,57 +1,77 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import { translate } from '../../shared/i18n';
-
-export function planDateKey(plan) {
-  return String(plan?.local_at || '').slice(0, 10);
-}
-
-export function planTime(plan) {
-  const value = String(plan?.local_at || '');
-  const match = value.match(/(?:T|\s)(\d{2}:\d{2})/);
-  return match?.[1] || '09:00';
-}
+import { loadFinancePlans, planDateKey } from './financePlanModel.js';
+export { planDateKey, planTime } from './financePlanModel.js';
 
 export function useFinancePlans({ user, language = 'ru' }) {
   const t = (key) => translate(language, key);
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const owner = user?.id || null;
+  const currentOwner = useRef(owner);
+  const version = useRef(0);
+  if (currentOwner.current !== owner) {
+    currentOwner.current = owner;
+    version.current++;
+  }
+  const [loadedOwner, setLoadedOwner] = useState(owner);
 
   const refreshPlans = useCallback(async () => {
-    if (!user?.id) {
+    const requestVersion = ++version.current;
+    if (!owner) {
       setPlans([]);
+      setLoadedOwner(null);
+      setError('');
+      setLoading(false);
       return [];
     }
     setLoading(true);
-    const { data, error: queryError } = await supabase
-      .from('reminders')
-      .select('id,title,amount,currency,kind,local_at,scheduled_at,status,outcome,resolved_at,repeat_rule,remind_offset,repeat_until,repeat_total,repeat_index,created_at')
-      .eq('user_id', user.id)
-      .order('local_at', { ascending: true })
-      .limit(100);
-    setLoading(false);
-    if (queryError) {
-      setError(t('planLoadFailed'));
+    try {
+      const next = await loadFinancePlans(supabase, owner);
+      if (currentOwner.current !== owner || version.current !== requestVersion) return [];
+      setError('');
+      setPlans(next);
+      setLoadedOwner(owner);
+      return next;
+    } catch (queryError) {
+      if (currentOwner.current === owner && version.current === requestVersion) setError({ owner, key: 'planLoadFailed' });
       throw queryError;
+    } finally {
+      if (currentOwner.current === owner && version.current === requestVersion) setLoading(false);
     }
-    setError('');
-    const next = data || [];
-    setPlans(next);
-    return next;
-  }, [user?.id, language]);
+  }, [owner]);
 
   useEffect(() => {
     refreshPlans().catch(() => {});
-  }, [refreshPlans]);
+    if (!owner) return;
+    const refresh = () => { refreshPlans().catch(() => {}); };
+    const onVisibility = () => { if (document.visibilityState === 'visible') refresh(); };
+    window.addEventListener('online', refresh);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onVisibility);
+    const channel = supabase.channel(`finance-plans-${owner}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reminders', filter: `user_id=eq.${owner}` }, refresh)
+      .subscribe();
+    return () => {
+      version.current++;
+      window.removeEventListener('online', refresh);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onVisibility);
+      supabase.removeChannel(channel);
+    };
+  }, [owner, refreshPlans]);
+
+  const visiblePlans = loadedOwner === owner ? plans : [];
 
   const plansByDate = useMemo(() => {
-    return plans.reduce((result, plan) => {
+    return visiblePlans.reduce((result, plan) => {
       const key = planDateKey(plan);
       if (key) (result[key] ||= []).push(plan);
       return result;
     }, {});
-  }, [plans]);
+  }, [plans, loadedOwner, owner]);
 
   const createPlan = useCallback(async ({ id, title, amount, currency, kind, dateKey, time, timezone, repeatRule = 'none', remindOffset = 'at_time', repeatUntil = null, repeatTotal = null }) => {
     const localAt = `${dateKey} ${time}:00`;
@@ -74,7 +94,7 @@ export function useFinancePlans({ user, language = 'ru' }) {
       p_repeat_total: repeatTotal || null,
     });
     if (createError) throw createError;
-    await refreshPlans();
+    await refreshPlans().catch(() => {});
     return data;
   }, [refreshPlans, language]);
 
@@ -99,14 +119,14 @@ export function useFinancePlans({ user, language = 'ru' }) {
       p_repeat_total: repeatTotal || null,
     });
     if (updateError) throw updateError;
-    await refreshPlans();
+    await refreshPlans().catch(() => {});
     return data;
   }, [refreshPlans, language]);
 
   const resolvePlan = useCallback(async (id, outcome) => {
     const { error: resolveError } = await supabase.rpc('dayris_resolve_reminder', { p_id: id, p_outcome: outcome });
     if (resolveError) throw resolveError;
-    await refreshPlans();
+    await refreshPlans().catch(() => {});
   }, [refreshPlans]);
 
   const deletePlan = useCallback(async (id) => {
@@ -114,8 +134,8 @@ export function useFinancePlans({ user, language = 'ru' }) {
     const { data, error: deleteError } = await supabase.rpc('dayris_delete_finance_plan', { p_id: id });
     if (deleteError) throw deleteError;
     if (data !== true) throw new Error('PLAN_NOT_FOUND');
-    await refreshPlans();
+    await refreshPlans().catch(() => {});
   }, [refreshPlans]);
 
-  return { plans, plansByDate, loading, error, refreshPlans, createPlan, updatePlan, resolvePlan, deletePlan };
+  return { plans: visiblePlans, plansByDate, loading, error: error?.owner === owner ? t(error.key) : '', refreshPlans, createPlan, updatePlan, resolvePlan, deletePlan };
 }

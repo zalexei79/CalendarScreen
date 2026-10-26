@@ -60,7 +60,7 @@ try {
   }),true,'Amount stays inside its calendar cell');
   await assertAmountFits();
   await page.getByRole('button',{name:'Валюта календаря: USD',exact:true}).click();
-  assert.deepEqual(await page.locator('.calendar-currency-option').allTextContents(),['$USD','€EUR','LMDL','₽RUB','¥CNY']);
+  assert.deepEqual(await page.locator('.calendar-currency-option').allTextContents(),['$USD','€EUR','LMDL','₽RUB','¥CNY','₴UAH']);
   await page.locator('.calendar-currency-option').filter({hasText:'EUR'}).click();await page.clock.runFor(400);
   assert.equal(await page.evaluate(()=>localStorage.getItem('atj_currency')),'EUR');
   assert.equal(await page.evaluate(()=>localStorage.getItem('atj_entry_currency')),'USD');
@@ -74,7 +74,7 @@ try {
   assert.equal(await page.evaluate(()=>localStorage.getItem('atj_currency')),'EUR');
   await page.getByRole('button',{name:'Закрыть настройки',exact:true}).click();await page.clock.runFor(400);
   await page.getByRole('button',{name:'Добавить',exact:true}).click();await page.clock.runFor(400);
-  assert.equal(await page.getByRole('button',{name:/MDL$/,pressed:true}).count(),1,'New entry uses its own default currency');
+  assert.equal(await page.getByRole('combobox',{name:'Валюта',exact:true}).inputValue(),'MDL','New entry uses its own default currency');
   await page.keyboard.press('Escape');await page.clock.runFor(400);
   for(const width of [320,390,768,1440]){
     await page.setViewportSize({width,height:900});await page.clock.runFor(32);

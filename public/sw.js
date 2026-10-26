@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v75-month-label-first-load';
+const CACHE_NAME = 'atj-cache-v76-calendar-reliability';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
