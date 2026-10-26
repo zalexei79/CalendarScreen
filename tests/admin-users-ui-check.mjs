@@ -10,7 +10,7 @@ const user = { id:'33333333-3333-4333-8333-333333333333',name:'Тестовый 
 const other = { ...user,id:'44444444-4444-4444-8444-444444444444',name:'Другой пользователь',email:'other@example.test' };
 try {
   const context = await browser.newContext({ viewport:{width:1440,height:1000}, serviceWorkers:'block' });
-  let mode = 'full', listCalls = 0;
+  let mode = 'full', listCalls = 0,many=false;
   let entry = { id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',user_id:user.id,date_key:'2026-10-05',time:'12:00:00',instrument:'Тестовая покупка',pnl:-20,currency:'USD',platform:'Manual',direction:'SHORT',comment:'' };
   const audit = [];
   let proGrants=[{user_id:user.id,source:'admin',starts_at:'2026-10-01T00:00:00Z',ends_at:'2026-10-25T12:00:00Z'}],proWrites=0;
@@ -21,7 +21,7 @@ try {
     const args = url.pathname.includes('/rpc/') ? route.request().postDataJSON() || {} : {};
     const rpc = url.pathname.split('/rpc/')[1];
     if(rpc === 'admin_capabilities') return json({design:true,viewUsers:mode!=='denied',editUsers:mode==='full'});
-    if(rpc === 'admin_list_users_activity') { listCalls++; assert.ok([0,1,7,30,-1].includes(args.p_days)); const users=[user,other].filter(item=>`${item.name} ${item.email}`.includes(args.p_search)).filter(item=>args.p_days===-1?item.id===other.id:args.p_days>0?item.id===user.id:true).map(item=>({...item,entry_count:item.id===user.id?1:0,last_entry_at:item.id===user.id?'2026-10-15T11:00:00Z':null})); return json({users,total:users.length}); }
+    if(rpc === 'admin_list_users_activity') { listCalls++; assert.ok([0,1,7,30,-1].includes(args.p_days)); const extra=many?Array.from({length:35},(_,i)=>({...other,id:'55555555-5555-4555-8555-'+String(i+1).padStart(12,'0'),name:i===0?'ДлинноеИмяБезПробелов'.repeat(10):`Пользователь ${i+1}`})):[];const users=[user,other,...extra].filter(item=>`${item.name} ${item.email}`.includes(args.p_search)).filter(item=>args.p_days===-1?item.id===other.id:args.p_days>0?item.id===user.id:true).map(item=>({...item,entry_count:item.id===user.id?1:0,last_entry_at:item.id===user.id?'2026-10-15T11:00:00Z':null})); return json({users:users.slice(args.p_offset,args.p_offset+args.p_limit),total:users.length}); }
     if(rpc === 'admin_recent_entries') return json({rows:args.p_user_id===other.id?[]:[{...entry,record_key:entry.id,user_id:user.id,name:user.name,email:user.email,dataset:'trades',event_at:'2026-10-15T11:00:00Z',record_date:entry.date_key,title:entry.instrument,amount:entry.pnl}],total:args.p_user_id===other.id?0:1});
     if(rpc === 'admin_user_profile') return json({...([user,other].find(item=>item.id===args.p_user_id)),profile:{nickname:args.p_user_id===user.id?'Тестовый пользователь':'Другой пользователь'},providers:['google']});
     if(rpc === 'admin_pro_state') return json({grants:args.p_user_id===user.id?proGrants:[],subscriptions:[],server_now:'2026-10-15T12:00:00Z'});
@@ -56,20 +56,35 @@ try {
   assert.equal(await page.locator('link[rel="manifest"]').getAttribute('href'),'/admin.webmanifest');
   await page.getByRole('button',{name:/Тестовый пользователь user@example.test/}).waitFor();
   await page.getByRole('heading',{name:'Последние записи',exact:true}).waitFor();
+  await page.locator('.people-directory-settings>summary').click();
   await page.getByLabel('Активность пользователей',{exact:true}).selectOption('7');
   await page.waitForFunction(()=>document.querySelectorAll('.admin-user-card').length===1);
   await page.getByLabel('Активность пользователей',{exact:true}).selectOption('0');
   await page.getByLabel('Сортировка пользователей',{exact:true}).selectOption('login');
+  await page.locator('.people-directory-settings>summary').click();
   await page.getByLabel('Период ленты',{exact:true}).selectOption('7');
   await page.getByLabel('Тип записи',{exact:true}).selectOption('trades');
   await page.screenshot({path:'tests/admin-people-empty.png',fullPage:true});
-  for(const width of [390,320]){await page.setViewportSize({width,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);}
+  for(const width of [390,320]){await page.setViewportSize({width,height:844});await page.screenshot({path:`tests/admin-workspace-list-${width}.png`,fullPage:true});const overflow=await page.evaluate(()=>[...document.querySelectorAll('body *')].filter(n=>{const r=n.getBoundingClientRect();return getComputedStyle(n).display!=='none'&&r.width>0&&r.right>innerWidth+1;}).map(n=>n.className).slice(0,18));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,JSON.stringify(overflow));}
+  await page.getByRole('navigation',{name:'Экраны пользователей'}).getByRole('button',{name:'Общая лента',exact:true}).click();
+  await page.getByRole('heading',{name:'Последние записи',exact:true}).waitFor();
   await page.screenshot({path:'tests/admin-activity-mobile.png',fullPage:true});
   await page.setViewportSize({width:1440,height:1000});
+  await page.getByLabel('Поиск пользователя',{exact:true}).fill('Неизвестный аккаунт');
+  await page.getByRole('button',{name:'Найти пользователя',exact:true}).click();
+  await page.getByRole('button',{name:'Сбросить поиск',exact:true}).click();
   await page.getByRole('button',{name:/Тестовый пользователь user@example.test/}).click();
+  await page.locator('.people-overview-grid').waitFor();
+  await page.locator('.people-activity-compact .admin-record-heading strong').filter({hasText:'Тестовая покупка'}).waitFor();
+  await page.getByText('PRO активен',{exact:true}).waitFor();
+  await page.waitForFunction(()=>!document.querySelector('.people-workbench [role="status"]'));
+  await page.screenshot({path:'tests/admin-users-overview-desktop.png',fullPage:true});
+  await page.getByRole('button',{name:'Открыть запись',exact:true}).click();
+  assert.equal(await page.getByLabel('Месяц календаря').inputValue(),'2026-10','feed entry must navigate to its real calendar month');
   await page.locator('.admin-record-heading strong').filter({hasText:'Тестовая покупка'}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Редактировать запись',exact:true}).count(),0);
-  await page.getByRole('button',{name:'Открыть день 2026-10-05',exact:true}).click();
+  assert.equal(await page.getByRole('button',{name:'Открыть день 2026-10-05',exact:true}).getAttribute('aria-pressed'),'true');
+  await page.locator('.people-record-highlight').waitFor();
   await page.getByRole('checkbox',{name:'Разрешить редактирование',exact:true}).check();
   await page.getByRole('button',{name:'Редактировать запись',exact:true}).click();
   const dialog=page.getByRole('dialog');
@@ -110,8 +125,10 @@ try {
   mode='readonly';
   await page.reload();
   await page.getByRole('button',{name:/Тестовый пользователь user@example.test/}).click();
+  await page.getByRole('group',{name:'Разделы пользователя'}).getByRole('button',{name:'Календарь',exact:true}).click();
   await page.locator('.admin-record-heading strong').filter({hasText:'Тестовая покупка'}).waitFor();
   assert.equal(await page.getByRole('checkbox',{name:'Разрешить редактирование',exact:true}).count(),0);
+  await page.getByRole('button',{name:'К списку пользователей',exact:true}).click();
   await page.getByRole('button',{name:/Другой пользователь other@example.test/}).click();
   await page.getByText('За выбранный период записей нет.',{exact:true}).waitFor();
   await page.getByText('Базовый доступ',{exact:true}).waitFor();
@@ -119,6 +136,13 @@ try {
   await page.getByRole('heading',{name:'PRO не активен',exact:true}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Выдать PRO',exact:true}).count(),0,'read-only role cannot grant inside user card');
   assert.equal(await page.locator('.admin-record-heading strong').filter({hasText:'Тестовая покупка'}).count(),0);
+  many=true;mode='full';await page.setViewportSize({width:1440,height:1000});await page.reload();
+  await page.waitForFunction(()=>document.querySelectorAll('.admin-user-card').length===30);
+  assert.equal(await page.locator('.people-directory-results').evaluate(n=>n.scrollHeight>n.clientHeight),true,'directory scrolls without pushing user details out of view');
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'long account names must wrap');
+  await page.locator('.people-directory').getByRole('button',{name:'Далее',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelectorAll('.admin-user-card').length===7);
+  await page.setViewportSize({width:320,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   mode='denied'; const before=listCalls;
   await page.reload(); await page.getByRole('heading',{name:'Нужен доступ к данным пользователей',exact:true}).waitFor();
   assert.equal(listCalls,before,'denied role never loads user list');
