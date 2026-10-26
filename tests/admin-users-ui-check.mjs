@@ -21,7 +21,8 @@ try {
     const args = url.pathname.includes('/rpc/') ? route.request().postDataJSON() || {} : {};
     const rpc = url.pathname.split('/rpc/')[1];
     if(rpc === 'admin_capabilities') return json({design:true,viewUsers:mode!=='denied',editUsers:mode==='full'});
-    if(rpc === 'admin_list_users') { listCalls++; const users=[user,other].filter(item=>`${item.name} ${item.email}`.includes(args.p_search)); return json({users,total:users.length}); }
+    if(rpc === 'admin_list_users_activity') { listCalls++; assert.ok([0,1,7,30,-1].includes(args.p_days)); const users=[user,other].filter(item=>`${item.name} ${item.email}`.includes(args.p_search)).filter(item=>args.p_days===-1?item.id===other.id:args.p_days>0?item.id===user.id:true).map(item=>({...item,entry_count:item.id===user.id?1:0,last_entry_at:item.id===user.id?'2026-10-15T11:00:00Z':null})); return json({users,total:users.length}); }
+    if(rpc === 'admin_recent_entries') return json({rows:args.p_user_id===other.id?[]:[{...entry,record_key:entry.id,user_id:user.id,name:user.name,email:user.email,dataset:'trades',event_at:'2026-10-15T11:00:00Z',record_date:entry.date_key,title:entry.instrument,amount:entry.pnl}],total:args.p_user_id===other.id?0:1});
     if(rpc === 'admin_user_profile') return json({...([user,other].find(item=>item.id===args.p_user_id)),profile:{nickname:args.p_user_id===user.id?'Тестовый пользователь':'Другой пользователь'},providers:['google']});
     if(rpc === 'admin_pro_state') return json({grants:args.p_user_id===user.id?proGrants:[],subscriptions:[],server_now:'2026-10-15T12:00:00Z'});
     if(rpc === 'admin_change_pro') {
@@ -54,7 +55,17 @@ try {
   await page.goto('http://calendar.test/admin.html');
   assert.equal(await page.locator('link[rel="manifest"]').getAttribute('href'),'/admin.webmanifest');
   await page.getByRole('button',{name:/Тестовый пользователь user@example.test/}).waitFor();
+  await page.getByRole('heading',{name:'Последние записи',exact:true}).waitFor();
+  await page.getByLabel('Активность пользователей',{exact:true}).selectOption('7');
+  await page.waitForFunction(()=>document.querySelectorAll('.admin-user-card').length===1);
+  await page.getByLabel('Активность пользователей',{exact:true}).selectOption('0');
+  await page.getByLabel('Сортировка пользователей',{exact:true}).selectOption('login');
+  await page.getByLabel('Период ленты',{exact:true}).selectOption('7');
+  await page.getByLabel('Тип записи',{exact:true}).selectOption('trades');
   await page.screenshot({path:'tests/admin-people-empty.png',fullPage:true});
+  for(const width of [390,320]){await page.setViewportSize({width,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);}
+  await page.screenshot({path:'tests/admin-activity-mobile.png',fullPage:true});
+  await page.setViewportSize({width:1440,height:1000});
   await page.getByRole('button',{name:/Тестовый пользователь user@example.test/}).click();
   await page.locator('.admin-record-heading strong').filter({hasText:'Тестовая покупка'}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Редактировать запись',exact:true}).count(),0);
@@ -69,6 +80,9 @@ try {
   await page.getByText('-35 USD',{exact:true}).first().waitFor();
   assert.equal(entry.pnl,-35);
   await page.screenshot({path:'tests/admin-users-desktop.png',fullPage:true});
+  await page.getByRole('group',{name:'Разделы пользователя'}).getByRole('button',{name:'Последние записи',exact:true}).click();
+  await page.getByRole('heading',{name:'Последние записи пользователя',exact:true}).waitFor();
+  await page.getByRole('group',{name:'Разделы пользователя'}).getByRole('button',{name:'Календарь',exact:true}).click();
   await page.getByRole('button',{name:'Открыть PRO',exact:true}).click();
   await page.getByRole('button',{name:'90 дней',exact:true}).click();
   await page.getByLabel('Причина изменения PRO').fill('Продление из карточки пользователя');

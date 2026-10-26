@@ -3,6 +3,7 @@ import { supabase } from '../../supabaseClient';
 import useAdminQuery from './useAdminQuery.js';
 import { adminError, calendarTotals, changesFor, DATASETS, editableFields, monthBounds, monthCells, moveMonth, recordKey } from './adminUsersModel.js';
 import AdminAudit from './AdminAudit.jsx';
+import AdminActivity from './AdminActivity.jsx';
 import {Pagination,QueryStatus} from './AdminQueryUI.jsx';
 import ProDetail from './ProDetail.jsx';
 import {PeopleHero,PersonAvatar,PeopleEmpty,UserProSummary} from './AdminPeopleVisuals.jsx';
@@ -22,16 +23,17 @@ export default function AdminUsers({ canEdit }) {
   const [offset, setOffset] = useState(0);
   const [user, setUser] = useState(null);
   const [revision, setRevision] = useState(0);
+  const [activityDays,setActivityDays]=useState('0'),[activitySort,setActivitySort]=useState('records');
   const detail = useRef(null);
   useEffect(() => { if (user && matchMedia('(max-width:760px)').matches) detail.current?.scrollIntoView({ block:'start' }); },[user?.id]);
-  const list = useAdminQuery('admin_list_users', { p_search: query, p_limit: 30, p_offset: offset }, true, revision);
+  const list = useAdminQuery('admin_list_users_activity', { p_search: query, p_days:Number(activityDays),p_sort:activitySort,p_limit: 30, p_offset: offset }, true, revision);
   return <main className="admin-page people-page">
     <PeopleHero total={list.data?.total} loading={list.loading} canEdit={canEdit} onRefresh={()=>setRevision(n=>n+1)}/>
-    <div className="admin-users-layout"><aside className="admin-user-list" id="people-user-list"><div className="people-list-heading"><strong>Все аккаунты</strong><span>{list.data?.total??"—"}</span></div><form onSubmit={event => { event.preventDefault(); setOffset(0); setQuery(search.trim()); }}><label className="admin-field"><span>Поиск пользователя</span><input value={search} maxLength={200} placeholder="Имя, email или UUID" onChange={event => setSearch(event.target.value)}/></label><button type="submit">Найти</button></form><QueryStatus query={list}/>
-      <div className="admin-user-cards">{(list.data?.users || []).map(item => <button className="admin-user-card" key={item.id} aria-pressed={user?.id === item.id} onClick={() => setUser(item)}><PersonAvatar name={item.name}/><span className="people-card-body"><strong>{item.name}</strong><span>{item.email || item.id}</span><small>{item.last_sign_in_at ? `Вход: ${new Date(item.last_sign_in_at).toLocaleString('ru')}` : 'Ещё не входил'}</small></span></button>)}</div>
+    <div className="admin-data-toolbar"><label className="admin-field"><span>Активность пользователей</span><select aria-label="Активность пользователей" value={activityDays} onChange={e=>{setActivityDays(e.target.value);setOffset(0);}}><option value="0">Все пользователи</option><option value="1">Есть записи за 24 часа</option><option value="7">Есть записи за 7 дней</option><option value="30">Есть записи за 30 дней</option><option value="-1">Без записей</option></select></label><label className="admin-field"><span>Сортировка пользователей</span><select aria-label="Сортировка пользователей" value={activitySort} onChange={e=>{setActivitySort(e.target.value);setOffset(0);}}><option value="records">Сначала последние записи</option><option value="login">Сначала последний вход</option><option value="registered">Сначала новые аккаунты</option></select></label><button onClick={()=>setUser(null)}>Лента всех пользователей</button></div><div className="admin-users-layout"><aside className="admin-user-list" id="people-user-list"><div className="people-list-heading"><strong>Все аккаунты</strong><span>{list.data?.total??"—"}</span></div><form onSubmit={event => { event.preventDefault(); setOffset(0); setQuery(search.trim()); }}><label className="admin-field"><span>Поиск пользователя</span><input value={search} maxLength={200} placeholder="Имя, email или UUID" onChange={event => setSearch(event.target.value)}/></label><button type="submit">Найти</button></form><QueryStatus query={list}/>
+      <div className="admin-user-cards">{(list.data?.users || []).map(item => <button className="admin-user-card" key={item.id} aria-pressed={user?.id === item.id} onClick={() => setUser(item)}><PersonAvatar name={item.name}/><span className="people-card-body"><strong>{item.name}</strong><span>{item.email || item.id}</span><small>{item.last_sign_in_at ? `Вход: ${new Date(item.last_sign_in_at).toLocaleString('ru')}` : 'Ещё не входил'}</small><small>{item.last_entry_at?`Запись: ${new Date(item.last_entry_at).toLocaleString('ru')}`:Number(item.entry_count)>0?'Время сохранения не указано':'Нет синхронизированных записей'}</small></span></button>)}</div>
       {!list.loading && !list.error && !list.data?.users?.length && <p>Пользователи не найдены.</p>}
       <Pagination offset={offset} limit={30} total={list.data?.total || 0} disabled={list.loading} onChange={setOffset}/>
-    </aside><section ref={detail} className="admin-user-detail" aria-label="Карточка пользователя">{user ? <UserDetail key={user.id} user={user} canEdit={canEdit} externalRevision={revision}/> : <PeopleEmpty/>}</section></div>
+    </aside><section ref={detail} className="admin-user-detail" aria-label="Карточка пользователя">{user ? <UserDetail key={user.id} user={user} canEdit={canEdit} externalRevision={revision}/> : <AdminActivity revision={revision} onSelect={setUser}/>}</section></div>
   </main>;
 }
 
@@ -52,7 +54,7 @@ function UserDetail({ user, canEdit, externalRevision }) {
   const data = useAdminQuery('admin_user_data', {
     p_user_id: user.id, p_dataset: dataset, p_from: allDates || !currentDataset.dated ? null : selectedDay || period.from,
     p_to: allDates || !currentDataset.dated ? null : selectedDay || period.to, p_limit: 50, p_offset: offset,
-  }, section !== 'profile' && section !== 'audit' && section !== 'pro', `${externalRevision}:${revision}`);
+  }, section !== 'profile' && section !== 'audit' && section !== 'pro' && section !== 'activity', `${externalRevision}:${revision}`);
   const calendar = useAdminQuery('admin_user_calendar', { p_user_id: user.id, p_month: period.from }, section === 'calendar', `${externalRevision}:${revision}`);
   const calendarRows = Array.isArray(calendar.data) ? calendar.data : [];
   const rows = Array.isArray(data.data?.rows) ? data.data.rows : [];
@@ -67,9 +69,9 @@ function UserDetail({ user, canEdit, externalRevision }) {
   }
   return <>
     <button className="people-back-list" onClick={()=>document.getElementById("people-user-list")?.scrollIntoView({block:"start"})}>← К списку пользователей</button><div className="admin-subject"><div className="people-subject-top"><PersonAvatar name={user.name} large/><div><h2>{user.name}</h2><p>{user.email || "Аккаунт без email"}</p></div></div><div className="people-subject-meta"><span>{editMode && canEdit ? "Редактирование включено" : "Безопасный просмотр"}</span><details><summary>ID аккаунта</summary><code>{user.id}</code></details><span>{user.last_sign_in_at?`Последний вход: ${new Date(user.last_sign_in_at).toLocaleDateString("ru")}`:"Дата входа не указана"}</span></div></div>{section!=='pro'&&<UserProSummary userId={user.id} revision={`${externalRevision}:${revision}`} onOpen={()=>setSection("pro")}/>}
-    <div className="admin-detail-tabs" role="group" aria-label="Разделы пользователя">{[['calendar','Календарь'],['data','Все данные'],['profile','Профиль'],['pro','PRO'],['audit','История действий']].map(([id,label]) => <button aria-pressed={section === id} key={id} onClick={() => setSection(id)}>{label}</button>)}</div>
+    <div className="admin-detail-tabs" role="group" aria-label="Разделы пользователя">{[['calendar','Календарь'],['activity','Последние записи'],['data','Все данные'],['profile','Профиль'],['pro','PRO'],['audit','История действий']].map(([id,label]) => <button aria-pressed={section === id} key={id} onClick={() => setSection(id)}>{label}</button>)}</div>
     {notice && <p role="status" className="admin-notice">{notice}</p>}
-    {section === 'pro' ? <ProDetail embedded user={user} canEdit={canEdit} revision={`${externalRevision}:${revision}`} onChanged={()=>setRevision(n=>n+1)}/> : section === 'profile' ? <><QueryStatus query={profile}/>{profile.data && <DataFields value={profile.data}/>}<p className="admin-hint">В панели доступны облачные данные. Изменения, которые ещё не синхронизировались с устройства пользователя, здесь не отображаются.</p></> : section === 'audit' ? <AdminAudit userId={user.id} compact/> : <>
+    {section === 'activity' ? <AdminActivity userId={user.id} revision={`${externalRevision}:${revision}`}/> : section === 'pro' ? <ProDetail embedded user={user} canEdit={canEdit} revision={`${externalRevision}:${revision}`} onChanged={()=>setRevision(n=>n+1)}/> : section === 'profile' ? <><QueryStatus query={profile}/>{profile.data && <DataFields value={profile.data}/>}<p className="admin-hint">В панели доступны облачные данные. Изменения, которые ещё не синхронизировались с устройства пользователя, здесь не отображаются.</p></> : section === 'audit' ? <AdminAudit userId={user.id} compact/> : <>
       <div className="admin-data-toolbar"><label className="admin-field"><span>Раздел данных</span><select value={dataset} onChange={event => switchDataset(event.target.value)}>{DATASETS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label><label className="admin-field"><span>Месяц</span><input aria-label="Месяц календаря" type="month" min="1900-01" max="2200-12" value={month} onChange={event => changeMonth(event.target.value)}/></label><button onClick={() => { setRevision(value => value + 1); setNotice(''); }}>Обновить данные</button></div>
       {section === 'calendar' && <>
         <div className="admin-calendar-nav"><button aria-label="Предыдущий месяц пользователя" disabled={month === '1900-01'} onClick={() => changeMonth(moveMonth(month,-1))}>←</button><strong>{new Date(`${month}-01T12:00:00`).toLocaleDateString('ru',{ month:'long', year:'numeric' })}</strong><button aria-label="Следующий месяц пользователя" disabled={month === '2200-12'} onClick={() => changeMonth(moveMonth(month,1))}>→</button></div>

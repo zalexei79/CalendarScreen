@@ -19,7 +19,7 @@ test('PRO RPC permissions, exact 77 years, additive extension, conflict, all-sou
    alter table public.pro_entitlements enable row level security;
    create table public.pro_subscriptions(id uuid primary key default gen_random_uuid(),user_id uuid,provider text,status text,ends_at timestamptz,trial_ends_at timestamptz,renews_at timestamptz,updated_at timestamptz default now());
   `);
-  for(const file of ['202610150001_site_admin.sql','202610150002_admin_user_management.sql','202610150003_admin_google_access.sql','202610200001_admin_pro_management.sql'])await db.exec(await fs.readFile('supabase/migrations/'+file,'utf8'));
+  for(const file of ['202610150001_site_admin.sql','202610150002_admin_user_management.sql','202610150003_admin_google_access.sql','202610200001_admin_pro_management.sql','202610260002_admin_user_activity.sql'])await db.exec(await fs.readFile('supabase/migrations/'+file,'utf8'));
   await db.query("insert into auth.users(id,email) values($1,'owner@test'),($2,'reader@test'),($3,null)",[owner,reader,user]);
   await db.exec("insert into auth.identities select id,'google',jsonb_build_object('email',email) from auth.users where email is not null");
   await db.query('insert into public.site_admins(user_id,can_view_users,can_edit_users) values($1,true,true),($2,true,false)',[owner,reader]);
@@ -55,6 +55,10 @@ test('PRO RPC permissions, exact 77 years, additive extension, conflict, all-sou
   await call('select public.admin_change_pro($1,$2,$3,$4,$5,$6) as data',[reader,'revoke',30,'days',JSON.stringify({grants:paidState.grants,subscriptions:paidState.subscriptions}),'Отключение доступа по запросу']);
   assert.equal((await call("select public.admin_list_pro('','active',30,0) as data")).total,0);
   assert.equal((await call('select public.admin_pro_state($1) as data',[reader])).subscriptions[0].status,'expired');
+  const optionalSnapshot=await state();
+  await call('select public.admin_change_pro($1,$2,$3,$4,$5,$6) as data',[user,'extend',1,'days',JSON.stringify(optionalSnapshot),'']);
+  const optionalAudit=await call('select public.admin_audit_log($1,100,0) as data',[user]);assert.equal(optionalAudit.rows.find(r=>r.action==='pro.extend').reason,null);
+  await assert.rejects(call('select public.admin_change_pro($1,$2,$3,$4,$5,$6) as data',[user,'revoke',1,'days',JSON.stringify(await state()),'']),/Invalid action/);
   await asUser(reader);await assert.rejects(db.query("insert into public.pro_entitlements(user_id,source,starts_at,ends_at) values($1,'admin',now(),now()+interval '1 day')",[user]),/permission denied/);
   await db.exec('reset role;set role anon');await assert.rejects(state(),/permission denied/);
  }finally{await db.close();}

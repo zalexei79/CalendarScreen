@@ -37,6 +37,7 @@ for (const idType of ['uuid','bigint']) test(`admin PostgreSQL (${idType} record
     for (const file of ['202609240001_wallet_transactions.sql','202609240002_wallet_transfers.sql','202609110001_trading_day_notes.sql','202609210001_reminders_poc.sql']) await db.exec(await fs.readFile(`supabase/migrations/${file}`,'utf8'));
     await db.exec("alter table public.reminders add column outcome text not null default 'planned';");
     for (const file of ['202610150001_site_admin.sql','202610150002_admin_user_management.sql','202610150003_admin_google_access.sql']) await db.exec(await fs.readFile(`supabase/migrations/${file}`,'utf8'));
+    await db.exec(await fs.readFile('supabase/migrations/202610260002_admin_user_activity.sql','utf8'));
     await db.query('insert into auth.users(id,email,raw_user_meta_data) values($1,$2,$3),($4,$5,$6),($7,$8,$9),($10,$11,$12)',[owner,'owner@test.local','{"nickname":"Owner"}',reader,'reader@test.local','{}',user,'user@test.local','{"nickname":"Тест"}',other,'other@test.local','{}']);
     await db.query('insert into public.site_admins(user_id,can_view_users,can_edit_users) values($1,true,true),($2,true,false)',[owner,reader]);
     await db.exec("update auth.users set email_confirmed_at=now(),raw_app_meta_data='{\"provider\":\"google\",\"providers\":[\"google\"]}';insert into auth.identities select id,'google',jsonb_build_object('email',email) from auth.users;");
@@ -55,12 +56,20 @@ for (const idType of ['uuid','bigint']) test(`admin PostgreSQL (${idType} record
     const update = (dataset,row,changes,expected=row,id=user) => call('select public.admin_update_user_record($1,$2,$3,$4,$5,$6) as data',[id,dataset,String(dataset==='trading_day_notes'?row.date_key:row.id),JSON.stringify(expected),JSON.stringify(changes),'Исправление по запросу']);
     await asUser(user);
     assert.equal((await call('select public.admin_capabilities() as data')).viewUsers,false);
+    await assert.rejects(call('select public.admin_recent_entries() as data'),/permission required/);
+    await assert.rejects(call('select public.admin_list_users_activity() as data'),/permission required/);
     for (const sql of ['select public.admin_list_users()',`select public.admin_user_profile('${other}')`,`select public.admin_user_calendar('${other}','2026-10-01')`,`select public.admin_audit_log()`]) await assert.rejects(db.query(sql),/permission required/);
     await assert.rejects(db.query('select * from public.site_admin_audit'),/permission denied/);
     await assert.rejects(db.query(`update public.site_admins set can_edit_users=true where user_id='${user}'`),/permission denied/);
     assert.equal((await db.query('select count(*)::int as count from public.trades')).rows[0].count,3);
 
     await asUser(reader);
+    const activeUsers=await call("select public.admin_list_users_activity('',7,'records',100,0) as data");assert.ok(activeUsers.users.some(u=>u.id===user));
+    const inactiveUsers=await call("select public.admin_list_users_activity('',-1,'records',100,0) as data");assert.ok(!inactiveUsers.users.some(u=>u.id===user));
+    const recent=await call('select public.admin_recent_entries($1,0,$2,100,0) as data',[user,'all']);assert.ok(recent.rows.length>=5);assert.ok(recent.rows.every(r=>r.user_id===user));assert.ok(!JSON.stringify(recent).includes('secret-'));
+    const one=await call('select public.admin_recent_entries($1,0,$2,1,0) as data',[user,'wallet_transactions']);assert.equal(one.rows.length,1);assert.equal(Number(one.rows[0].amount),-8);
+    await assert.rejects(call("select public.admin_list_users_activity('',2,'records',30,0) as data"),/Invalid activity/);
+    await assert.rejects(db.query('select * from public.site_admin_activity_rows()'),/permission denied/);
     const list = await call("select public.admin_list_users('Тест',30,0) as data");
     assert.equal(list.total,1); assert.equal(list.users[0].id,user);
     assert.ok(!JSON.stringify(await call('select public.admin_user_profile($1) as data',[user])).includes('never-return'));

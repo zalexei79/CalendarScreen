@@ -14,11 +14,12 @@ try{
   const json=data=>route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
   const args=rpc?route.request().postDataJSON()||{}:{};
   if(rpc==='admin_capabilities')return json({viewUsers:mode!=='denied',editUsers:mode==='full',design:true});
-  if(rpc==='admin_list_users')return json({users:[],total:0});
+  if(rpc==='admin_list_users_activity')return json({users:[],total:0});
+  if(rpc==='admin_recent_entries')return json({rows:[],total:0});
   if(rpc==='admin_list_pro'){filter=args.p_filter;const users=filter==='all'||grants.length?[{...user,active_until:grants.at(-1)?.ends_at}]:[];return json({users,total:users.length,server_now:new Date().toISOString()});}
   if(rpc==='admin_pro_state')return json({grants,subscriptions:[],server_now:new Date().toISOString()});
   if(rpc==='admin_change_pro'){
-   assert.equal(mode,'full');assert.equal(args.p_user_id,user.id);assert.deepEqual(args.p_expected,{grants,subscriptions:[]});assert.equal(args.p_reason,'Подарок Telegram пользователю');writes++;
+   assert.equal(mode,'full');assert.equal(args.p_user_id,user.id);assert.deepEqual(args.p_expected,{grants,subscriptions:[]});assert.equal(args.p_reason,args.p_action==='extend'?'':'Подарок Telegram пользователю');writes++;
    if(args.p_action==='extend'){assert.equal(args.p_amount,77);assert.equal(args.p_unit,'years');grants=[{user_id:user.id,source:'admin',starts_at:new Date().toISOString(),ends_at:'2103-10-20T12:00:00Z'}];}else grants=[];
    return json({grants,server_now:new Date().toISOString()});
   }
@@ -34,7 +35,6 @@ try{
  await page.getByLabel('Поиск PRO-пользователя').fill(user.id);await page.getByRole('button',{name:'Найти',exact:true}).click();
  await page.getByRole('button',{name:/Telegram test/}).click();
  await page.getByRole('button',{name:'77 лет',exact:true}).click();
- await page.getByLabel('Причина изменения PRO').fill('Подарок Telegram пользователю');
  await page.getByRole('button',{name:'Выдать PRO',exact:true}).click();
  const dialog=page.getByRole('dialog');await dialog.getByRole('button',{name:'Отмена',exact:true}).click();assert.equal(writes,0);
  await page.getByRole('button',{name:'Выдать PRO',exact:true}).click();await dialog.getByRole('button',{name:'Подтвердить изменение PRO'}).click();
@@ -42,6 +42,7 @@ try{
  await page.screenshot({path:'tests/admin-pro-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await page.screenshot({path:'tests/admin-pro-mobile.png',fullPage:true});
+ await page.getByLabel('Причина изменения PRO').fill('Подарок Telegram пользователю');
  await page.getByRole('button',{name:'Отключить PRO',exact:true}).click();await dialog.getByText(/Возврат денег/).waitFor();await dialog.getByRole('button',{name:'Подтвердить изменение PRO'}).click();
  await page.getByRole('button',{name:'Выдать PRO',exact:true}).waitFor();assert.equal(writes,2);
  mode='reader';await page.reload();await page.getByRole('button',{name:'PRO',exact:true}).click();await page.getByLabel('Показать',{exact:true}).selectOption('all');await page.getByRole('button',{name:/Telegram test/}).click();await page.getByRole('heading',{name:'PRO не активен',exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Выдать PRO',exact:true}).count(),0);
