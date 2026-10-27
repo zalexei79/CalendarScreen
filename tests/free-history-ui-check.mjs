@@ -54,11 +54,13 @@ try {
       if (pro) {
         const dialog = page.locator('.financial-history-dialog'); await dialog.waitFor();
         assert.equal(await page.locator('.free-history-card').count(), 0);
-        assert.equal(await dialog.locator('.financial-record-row').count(), 9, 'PRO is not paginated by FREE controls');
+        assert.equal(await dialog.locator('.financial-record-row').count(), 3, 'PRO inherits the compact list and keeps all entries reachable');
+        await dialog.locator('.premium-history-more').filter({hasText:/9|6/}).click();
+        assert.equal(await dialog.locator('.financial-record-row').count(), 9);
         assert.match(compact(await dialog.locator('.financial-amount').innerText()), /33.*867/);
         await dialog.getByRole('button', { name: translate(language, 'income'), exact: true }).click();
         assert.equal(await dialog.locator('.financial-record-row').count(), 3);
-        assert.match(compact(await dialog.locator('.financial-amount').innerText()), /42.*500/);
+        assert.match(compact(await dialog.locator('.financial-amount').innerText()), /33.*867/, 'row scope does not redefine the overall result');
         assert.deepEqual(errors, []); console.log('PASS PRO boundary', width, theme, language); continue;
       }
       const dialog = page.locator('.free-history-dialog');

@@ -10,7 +10,8 @@ import WorkspaceDock from './src/shared/ui/WorkspaceDock';
 import MetaTraderControl from './src/features/metatrader/MetaTraderControl.jsx';
 import PlatformConnections, { PlatformHistoryActions } from './src/features/platforms/PlatformConnections.jsx';
 import WealthPlan from './src/features/pro/WealthPlan.jsx';
-import FinancialHistoryOverview from './src/features/pro/FinancialHistoryOverview.jsx';
+import PremiumHistoryWorkspace from './src/features/history/PremiumHistoryWorkspace.jsx';
+import {premiumHistoryModel} from './src/features/history/premiumHistoryModel.mjs';
 import FreeHistoryOverview from './src/features/history/FreeHistoryOverview.jsx';
 import { summarizeFreeHistory } from './src/features/history/freeHistoryModel.js';
 import { freeHistoryCopy } from './src/features/history/freeHistoryCopy.js';
@@ -99,7 +100,6 @@ import CalendarGrid from './CalendarGrid';
 import { useLocalToday } from './src/shared/ui/useLocalToday.js';
 import { useCalendarDayHistory } from './src/shared/ui/useCalendarDayHistory.js';
 import { projectPlansForDay } from './src/features/reminders/financePlanModel.js';
-import { previousPeriod } from './src/features/trades-sync/lib/periodComparison.mjs';
 import { selectCalendarExport, calendarExportRows } from './src/features/trades-sync/lib/calendarExport.js';
 import { intlLocale } from './src/shared/i18n/locale.js';
 import { calendarActions } from './src/shared/i18n/calendarActions.js';
@@ -2895,6 +2895,7 @@ export default function CalendarScreen() {
   const historyScrollRef = useRef(null);
   const [historyAtDeals, setHistoryAtDeals] = useState(false);
   const [proHistoryTab, setProHistoryTab] = useState('overview');
+  const [premiumMoneyHistoryTab, setPremiumMoneyHistoryTab] = useState('records');
   useEffect(() => { setHistoryAtDeals(false); }, [historyOpen]);
 
   function handleHistoryScroll(event) {
@@ -3003,7 +3004,7 @@ export default function CalendarScreen() {
       .filter((t) => !voiceHistoryKeys || voiceHistoryKeys.has(financialRecordKey(t)))
       .filter((t) => historyCurrency === 'ALL' || (t.currency || 'USD') === historyCurrency)
       .filter((t) => !historyNameFilter || String(t.instrument || '').trim().toUpperCase() === historyNameFilter.trim().toUpperCase())
-      .filter((t) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? (Number(t.pnl) || 0) >= 0 : (Number(t.pnl) || 0) < 0))
+      .filter((t) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? (traderMode && historyScope !== 'money' ? Number(t.pnl) > 0 : (Number(t.pnl) || 0) >= 0) : (Number(t.pnl) || 0) < 0))
       .sort((a, b) => (a.dateKey === b.dateKey ? (b.time || '').localeCompare(a.time || '') : (b.dateKey || '').localeCompare(a.dateKey || '')));
   }, [manualTrades, platformFilter, historyWinLoss, historyCurrency, historyNameFilter, traderMode, historyScope, voiceHistoryKeys]);
   const historyTrades = useMemo(() => historyFilteredTrades.filter(t => t.dateKey >= dateFrom && t.dateKey <= dateTo), [historyFilteredTrades, dateFrom, dateTo]);
@@ -3014,6 +3015,14 @@ export default function CalendarScreen() {
     .filter(item => platformFilter === 'ALL' || item.platform === platformFilter),
   [manualTrades, dateFrom, dateTo, historyCurrency, platformFilter]);
   const freeHistorySummary = useMemo(() => summarizeFreeHistory(wealthPlanTrades, historyCurrency), [wealthPlanTrades, historyCurrency]);
+  const premiumHistorySource = useMemo(() => isFreeMoneyHistory ? [] : Object.entries(manualTrades || {})
+    .flatMap(([dateKey, items]) => (Array.isArray(items) ? items : []).map(item => ({...item,dateKey})))
+    .filter(item => !traderMode || (historyScope === 'money' ? !isTradingHistoryRecord(item) : isTradingHistoryRecord(item)))
+    .filter(item => platformFilter === 'ALL' || item.platform === platformFilter)
+    .filter(item => !voiceHistoryKeys || voiceHistoryKeys.has(financialRecordKey(item))),
+  [manualTrades,traderMode,historyScope,platformFilter,voiceHistoryKeys,voiceCategories.categories,isFreeMoneyHistory]);
+  const premiumHistory = useMemo(() => premiumHistoryModel(premiumHistorySource, {currency:historyCurrency,from:dateFrom,to:dateTo,today:todayKey,isTrading:isTradingHistoryRecord}),
+    [premiumHistorySource,historyCurrency,dateFrom,dateTo,todayKey,voiceCategories.categories]);
 
   function isTradingInstrumentName(value) {
     const normalized = String(value || '').trim().toUpperCase();
@@ -3790,51 +3799,6 @@ export default function CalendarScreen() {
     };
   }, [historyTrades]);
 
-  const historyPremiumInsights = useMemo(() => {
-    const parseKey = (key) => {
-      const [year, month, day] = String(key || '').split('-').map(Number);
-      return new Date(year, month - 1, day);
-    };
-    const finitePeriod = dateFrom !== '0000-01-01' && dateTo !== '9999-12-31';
-    const start = finitePeriod ? parseKey(dateFrom) : null;
-    const end = finitePeriod ? parseKey(dateTo) : null;
-    const previous = previousPeriod(dateFrom, dateTo);
-    const previousTrades = previous
-      ? historyFilteredTrades.filter(item => item.dateKey >= previous.from && item.dateKey <= previous.to)
-      : [];
-    const sum = (items, positive) => items.reduce((total, item) => total + (positive ? (item.pnl > 0 ? item.pnl : 0) : (item.pnl < 0 ? Math.abs(item.pnl) : 0)), 0);
-    const previousIncome = sum(previousTrades, true);
-    const previousExpense = sum(previousTrades, false);
-    const change = (current, previous) => previous ? Math.round(((current - previous) / previous) * 100) : null;
-    const smallGroups = {};
-    historyTrades.filter((item) => item.pnl < 0 && !isTradingHistoryRecord(item) && !isTradingInstrumentName(item.instrument) && Math.abs(item.pnl) <= historyExpense * 0.02).forEach((item) => {
-      const name = item.instrument || 'Другое';
-      const group = smallGroups[name] || { count: 0, amount: 0 };
-      group.count += 1;
-      group.amount += Math.abs(item.pnl);
-      smallGroups[name] = group;
-    });
-    const recurring = Object.entries(smallGroups)
-      .filter(([, value]) => value.count >= 3)
-      .sort((a, b) => b[1].count - a[1].count || b[1].amount - a[1].amount)[0];
-    const latestKey = historyTrades.reduce((latest, item) => item.dateKey > latest ? item.dateKey : latest, '0000-00-00');
-    const currentDate = latestKey !== '0000-00-00' ? parseKey(latestKey) : null;
-    const forecastEnd = end && currentDate && end > currentDate ? end : null;
-    const elapsedDays = start && currentDate ? Math.max(1, Math.round((Math.min(currentDate, end || currentDate) - start) / 86400000) + 1) : 0;
-    const remainingDays = forecastEnd ? Math.max(0, Math.round((forecastEnd - currentDate) / 86400000)) : 0;
-    const projectedExpense = forecastEnd && elapsedDays ? historyExpense + (historyExpense / elapsedDays) * remainingDays : null;
-    return {
-      previousAvailable: previousTrades.length > 0,
-      previousIncome,
-      previousExpense,
-      incomeChange: change(historyIncome, previousIncome),
-      expenseChange: change(historyExpense, previousExpense),
-      recurring,
-      projectedExpense,
-      remainingDays,
-    };
-  }, [dateFrom, dateTo, historyFilteredTrades, historyTrades, historyIncome, historyExpense]);
-
   const historyTimeline = useMemo(() => {
     // Anchor to the last real operation. For "Вся история" dateTo can be 9999-12-31.
     const latestTradeKey = historyTrades.length
@@ -3886,7 +3850,7 @@ export default function CalendarScreen() {
 
   function openHistory() {
     if (demoMode) setHistoryCurrency(currency);
-    if (isFreeMoneyHistory) {
+    if (!traderMode) {
       handlePresetChange('Вся история');
       setHistoryCurrency(currency);
       setPlatformFilter('ALL');
@@ -3899,6 +3863,7 @@ export default function CalendarScreen() {
     setHistoryFiltersOpen(false);
     setProFiltersOpen(false);
     setProHistoryTab('overview');
+    setPremiumMoneyHistoryTab('records');
     setConfirmingClear(false);
     setFreeHistoryPanel(null);
     setFreeTimelineSelected(null);
@@ -5185,24 +5150,22 @@ export default function CalendarScreen() {
           <SwipeDismissSheet
             onDismiss={closeHistory}
             isLight={isLight}
-            className={`${isFinancialPro ? `financial-history-dialog ${isLight ? 'is-light' : ''}` : isFreeMoneyHistory ? `free-history-dialog ${isLight ? 'is-light' : ''}` : ''} relative w-full ${traderMode || isFinancialPro ? 'sm:max-w-5xl' : 'sm:max-w-lg'} flex flex-col overflow-hidden rounded-t-[28px] border shadow-2xl transition-all duration-300 ease-out sm:rounded-[24px] ${
+            className={`${isFreeMoneyHistory ? 'free-history-dialog' : `premium-history-dialog ${!traderMode || historyScope === 'money' ? 'financial-history-dialog' : ''}`} ${isLight ? 'is-light' : ''} relative w-full ${traderMode || isFinancialPro ? 'sm:max-w-5xl' : 'sm:max-w-lg'} flex flex-col overflow-hidden rounded-t-[28px] border shadow-2xl transition-all duration-300 ease-out sm:rounded-[24px] ${
               historyVisible
                 ? 'opacity-100 translate-y-0 sm:scale-100'
                 : 'opacity-0 translate-y-6 sm:translate-y-2 sm:scale-[0.985]'
             } ${
-              isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-900'
+              isLight ? `border-zinc-300 ${isFreeMoneyHistory ? 'bg-white' : ''}` : 'border-zinc-800 bg-zinc-900'
             }`}
             style={{ maxHeight: 'min(92dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 8px))' }}
           >
             <div className={`history-modal-header flex items-center justify-between px-5 sm:px-6 pt-3.5 sm:pt-5 pb-4 border-b ${isLight ? 'border-zinc-200' : 'border-zinc-800/80'}`}>
               <div>
                 <p className="font-data text-[10px] tracking-[0.22em] text-amber-400 uppercase mb-1">
-                  {isFreeMoneyHistory ? 'DAYRIS · FREE' : traderMode ? t('tradesHistory') : t('myMoney')}
+                  {isFreeMoneyHistory ? 'DAYRIS · FREE' : traderMode ? 'DAYRIS · TRADER' : 'DAYRIS · PRO'}
                 </p>
                 <h2 className={`font-display text-xl font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>
-                  {isFreeMoneyHistory ? t('history') : traderMode && historyScope !== 'money'
-                    ? (periodPreset === 'Вся история' ? t('allHistory') : dateFrom === dateTo ? dateFrom : `${dateFrom} — ${dateTo}`)
-                    : (isFinancialPro ? (language === 'zh-CN' ? '财务分析' : language === 'ru' ? 'Финансовый разбор' : language === 'ro' || language === 'md' ? 'Analiză financiară' : 'Financial breakdown') : t('financialHistory'))}
+                  {t('history')}
                 </h2>
               </div>
               <div className="flex items-center gap-2">
@@ -5235,115 +5198,10 @@ export default function CalendarScreen() {
               </div>
             </div>
 
-            <div hidden={isFreeMoneyHistory} className={`shrink-0 border-b px-4 py-2.5 sm:px-6 ${isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-zinc-950'}`}>
-              <div className={`grid ${traderMode ? 'grid-cols-2' : 'grid-cols-3'} rounded-xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-white/[0.045]'}`}>
-                {(traderMode
-                  ? [['trades', t('historyTrading')], ['money', t('historyMoney')]]
-                  : [['all', t('historyAll')], ['income', t('income')], ['expense', t('expense')]]
-                ).map(([key, label]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => {
-                      setHistoryScope(key);
-                      setVoiceHistoryKeys(null);
-                      setHistoryFiltersOpen(false);
-                      setProFiltersOpen(false);
-                      if (key === 'money' || !traderMode) {
-                        setPlatformFilter('ALL');
-                        setHistoryWinLoss('all');
-                        setHistoryNameFilter('');
-                      }
-                    }}
-                    className={`min-h-9 rounded-lg px-2 text-xs font-semibold transition-all ${historyScope === key ? (isLight ? 'bg-white text-zinc-900 shadow-sm' : 'bg-zinc-800 text-zinc-100 shadow-sm') : (isLight ? 'text-zinc-500 hover:text-zinc-900' : 'text-zinc-500 hover:text-zinc-200')}`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {traderMode && historyScope === 'trades' && (
-              <div className={`shrink-0 border-b px-4 py-3 sm:px-6 ${
-                isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-zinc-950'
-              }`}>
-                <div className={`grid grid-cols-3 rounded-xl p-1 ${
-                  isLight ? 'bg-slate-100' : 'bg-white/[0.045]'
-                }`}>
-                  {[
-                    ['overview', proHistoryCopy.overview],
-                    ['analytics', proHistoryCopy.analytics],
-                    ['trades', proHistoryCopy.trades],
-                  ].map(([key, label]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setProHistoryTab(key)}
-                      className={`min-h-10 rounded-lg px-2 text-xs font-semibold transition-all duration-200 ${
-                        proHistoryTab === key
-                          ? isLight
-                            ? 'bg-white text-slate-950 shadow-sm ring-1 ring-slate-200'
-                            : 'bg-zinc-800 text-white shadow-sm ring-1 ring-white/[0.06]'
-                          : isLight
-                            ? 'text-slate-500 hover:text-slate-900'
-                            : 'text-zinc-500 hover:text-zinc-200'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${
-                    isLight ? 'text-slate-500' : 'text-zinc-500'
-                  }`}>
-                    {proAccessCopy.currencyTitle}
-                  </p>
-                  <p className={`mt-0.5 text-[10px] leading-4 ${
-                    isLight ? 'text-slate-500' : 'text-zinc-600'
-                  }`}>
-                    {historyCurrency === 'ALL' && historyByCurrency.length > 1
-                      ? proAccessCopy.mixedCurrencyHint
-                      : proAccessCopy.currencyHint}
-                  </p>
-                </div>
-
-                <div className={`inline-flex shrink-0 gap-1 rounded-xl border p-1 ${
-                  isLight
-                    ? 'border-slate-200 bg-slate-100'
-                    : 'border-white/[0.07] bg-white/[0.035]'
-                }`}>
-                  {[{ code: 'ALL', symbol: t('all'), label: t('allCurrencies') }, ...CURRENCIES].map((c) => (
-                    <button
-                      key={c.code}
-                      type="button"
-                      onClick={() => setHistoryCurrency(c.code)}
-                      title={c.label || c.code}
-                      className={`rounded-lg px-2.5 py-1.5 text-[10px] font-data transition-all ${
-                        historyCurrency === c.code
-                          ? isLight
-                            ? 'bg-white text-amber-700 shadow-sm ring-1 ring-amber-300/70'
-                            : 'bg-amber-400/15 text-amber-400 ring-1 ring-amber-400/20'
-                          : isLight
-                            ? 'text-slate-600 hover:bg-white hover:text-slate-950'
-                            : 'text-zinc-500 hover:text-zinc-200'
-                      }`}
-                    >
-                      {c.symbol}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            )}
-
             <div
               ref={historyScrollRef}
               onScroll={handleHistoryScroll}
-              className={`${isFreeMoneyHistory ? 'free-history-scroll' : ''} overflow-y-auto px-4 py-5 sm:px-7 sm:py-6 flex-1 min-h-0 ${
-                traderMode || isFinancialPro ? 'pro-history-premium' : ''
-              } ${isLight ? 'bg-[#f5f7fa]' : ''}`}
+              className={`${isFreeMoneyHistory ? 'free-history-scroll' : 'premium-history-scroll'} overflow-y-auto px-4 py-5 sm:px-7 sm:py-6 flex-1 min-h-0 ${isLight ? 'bg-[#f5f7fa]' : ''}`}
               style={{ overscrollBehavior: 'contain' }}
             >
               {isFreeMoneyHistory && <FreeHistoryOverview summary={freeHistorySummary} language={language}
@@ -5355,7 +5213,37 @@ export default function CalendarScreen() {
                 onScope={value => { setHistoryScope(value); setVoiceHistoryKeys(null); setHistoryFiltersOpen(false); setPlatformFilter('ALL'); setHistoryWinLoss('all'); setHistoryNameFilter(''); }}
                 onPanel={value => { setFreeHistoryPanel(value); if (value) { setHistoryScope('all'); setHistoryFiltersOpen(false); } }}
                 onFilters={() => { setFreeHistoryPanel(null); setHistoryFiltersOpen(value => !value); }}/>}
-              {/* Keep the existing FREE dynamics, analysis and record actions. */}
+              {!isFreeMoneyHistory && voiceHistoryKeys && <div className="voice-history-filter-note"><span>{language === 'ru' ? 'Результаты голосового поиска' : language === 'uk' ? 'Результати голосового пошуку' : language === 'zh-CN' ? '语音搜索结果' : language === 'ro' || language === 'md' ? 'Rezultatele căutării vocale' : 'Voice search results'}</span><button type="button" onClick={()=>{setVoiceHistoryKeys(null);setHistoryNameFilter('');setHistoryWinLoss('all');}}>{language === 'ru' ? 'Сбросить поиск' : language === 'uk' ? 'Скинути пошук' : language === 'zh-CN' ? '清除搜索' : language === 'ro' || language === 'md' ? 'Resetează căutarea' : 'Clear search'}</button></div>}
+              {!isFreeMoneyHistory && <PremiumHistoryWorkspace
+                model={premiumHistory} records={historyTrades} language={language} traderMode={traderMode} trading={traderMode && historyScope !== 'money'}
+                tab={traderMode && historyScope !== 'money' ? proHistoryTab : premiumMoneyHistoryTab}
+                onTab={traderMode && historyScope !== 'money' ? setProHistoryTab : setPremiumMoneyHistoryTab}
+                onContext={value => {setHistoryScope(value ? 'trades' : 'money');setHistoryWinLoss('all');setHistoryNameFilter('');setPlatformFilter('ALL');setVoiceHistoryKeys(null);setHistoryFiltersOpen(false);setProHistoryTab('overview');setPremiumMoneyHistoryTab('records');}}
+                period={periodPreset} periodLabel={periodPreset === 'Вся история' ? freeHistoryCopy(language).allTime : periodPreset === 'custom' ? `${formatDateLabel(dateFrom,language)} — ${formatDateLabel(dateTo,language)}` : periodButtonLabel}
+                periodOptions={[...PERIOD_PRESETS.map(value=>({value,label:value === 'Вся история' ? freeHistoryCopy(language).allTime : periodLabel(value)})),{value:'custom',label:t('customPeriod')}]}
+                onPeriod={value=>{if(value==='custom'){setSelectedKey(null);setPeriodPreset('custom');setHistoryFiltersOpen(true);}else handlePresetChange(value);}}
+                currency={historyCurrency} currencies={CURRENCIES} onCurrency={setHistoryCurrency} platform={platformFilter} onPlatform={setPlatformFilter}
+                scope={historyWinLoss} onScope={setHistoryWinLoss} category={historyNameFilter}
+                onCategory={(name,direction)=>{setHistoryNameFilter(name);setHistoryWinLoss(direction==='income'?'win':'loss');setPremiumMoneyHistoryTab('records');setHistoryFiltersOpen(false);}}
+                onClearCategory={()=>{setHistoryNameFilter('');setHistoryWinLoss('all');}}
+                filtersOpen={historyFiltersOpen} onFilters={()=>setHistoryFiltersOpen(value=>!value)} categoryPicker={renderHistoryCategoryPicker()}
+                dateFrom={dateFrom} dateTo={dateTo} onDateFrom={handleDateFromChange} onDateTo={handleDateToChange}
+                onRecord={editTradeFromHistory} getIcon={getHistoryCategoryIcon}
+                renderReceipt={entry=>{const receipt=receiptFromEntry(entry);return receipt?<ReceiptHistoryCard entry={entry} receipt={receipt} language={language} isLight={isLight} previewLimit={3} showDate={false} onEdit={demoMode?undefined:()=>editTradeFromHistory(entry)}/>:null;}}
+                dynamics={traderMode && historyScope !== 'money'
+                  ? <PnlCurve key={validUserId || 'guest'} userId={validUserId} trades={premiumHistory.rows} comparisonTrades={premiumHistorySource} dateFrom={periodPreset === 'Вся история' ? null : dateFrom} dateTo={dateTo} accounts={ctraderAccounts} language={language} isLight={isLight}/>
+                  : <HistoryChart entries={premiumHistory.dailyEntries} isLight={isLight} t={t} formatAmount={amount=>formatAmountInCurrency(amount,premiumHistory.summary.currency)}/>}
+                plan={<>
+                  {savingsReview && <SavingsReview trades={premiumHistory.rows} currency={historyCurrency} period={periodPreset === 'Вся история' ? t('allHistory') : `${dateFrom} — ${dateTo}`} savedPlan={savings.plan} onSave={savings.save}
+                    isTrading={isSavingsTradingRecord} symbol={historyCurrencySymbol} formatMoney={formatMoney} language={language} isLight={isLight} onClose={()=>setSavingsReview(null)}/>}
+                  <WealthPlan trades={premiumHistory.rows} plan={savings.plan} onClear={savings.clear} onStartReview={()=>setSavingsReview({})} isTrading={isSavingsTradingRecord}
+                    currency={historyCurrency} symbol={historyCurrencySymbol} formatMoney={formatMoney} language={language} isLight={isLight}/>
+                </>}
+              >
+                <div className="premium-history-actions"><button type="button" onClick={()=>setExportOpen(true)} disabled={!historyTrades.length}><Download size={14}/>{t('downloadReport')}</button><button type="button" onClick={handleClearHistory} data-confirm={confirmingClear}>{confirmingClear?t('confirmClearHistory'):t('clearHistory')}</button></div>
+              </PremiumHistoryWorkspace>}
+              {/* FREE keeps its approved layout; the existing detailed trader analytics remains available. */}
+              {(isFreeMoneyHistory || (traderMode && historyScope === 'trades' && proHistoryTab === 'analytics' && !premiumHistory.summary.mixed)) && <div className={isFreeMoneyHistory ? undefined : 'pro-history-premium premium-history-advanced'}>
               {(!isFinancialPro && (!traderMode || historyScope === 'money')) && (
                 <section className="free-history-details mb-4" hidden={isFreeMoneyHistory && !freeHistoryPanel}>
                   {!isFreeMoneyHistory && <div className={`grid grid-cols-2 gap-2 rounded-2xl border p-1.5 ${
@@ -5689,23 +5577,7 @@ export default function CalendarScreen() {
                     </div>
                   )}
 
-                  {isFinancialPro && <FinancialHistoryOverview
-                    income={historyIncome} expense={historyExpense} total={historyTotal} count={historyTrades.length}
-                    currency={historyCurrency} symbol={historyCurrencySymbol} formatMoney={formatMoney}
-                    analysis={historyAnalysis} insights={historyPremiumInsights} language={language} isLight={isLight} scope={historyScope}
-                    hasTrading={historyTrades.some(item => item.platform === 'cTrader' || isTradingInstrumentName(item.instrument) || (!getMoneyCategoryMeta(item.instrument) && isTradingHistoryRecord(item)))}
-                    onCategory={(name, scope) => {
-                      setHistoryNameFilter(name); setHistoryScope(scope); setHistoryWinLoss('all');
-                      requestAnimationFrame(() => historyDealsRef.current?.scrollIntoView({behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start'}));
-                    }}
-                  >
-                    {savingsReview && <SavingsReview trades={wealthPlanTrades} currency={historyCurrency} period={periodPreset === 'Вся история' ? t('allHistory') : `${dateFrom} — ${dateTo}`} savedPlan={savings.plan} onSave={savings.save}
-                      isTrading={isSavingsTradingRecord} symbol={historyCurrencySymbol} formatMoney={formatMoney} language={language} isLight={isLight} onClose={() => setSavingsReview(null)} />}
-                    <WealthPlan trades={wealthPlanTrades} plan={savings.plan} onClear={savings.clear} onStartReview={() => setSavingsReview({})}
-                      isTrading={isSavingsTradingRecord}
-                      currency={historyCurrency} symbol={historyCurrencySymbol} formatMoney={formatMoney} language={language} isLight={isLight}
-                      onReview={(name, scope) => { setHistoryNameFilter(name); setHistoryScope(scope); setHistoryWinLoss('all'); requestAnimationFrame(() => historyDealsRef.current?.scrollIntoView({behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start'})); }} />
-                  </FinancialHistoryOverview>}
+
 
                   <div ref={historyDealsRef} tabIndex={-1} className={`${isFreeMoneyHistory ? 'free-history-legacy-heading' : ''} ${isFinancialPro ? 'financial-history-record-heading' : ''} mb-2 flex scroll-mt-4 items-center justify-between gap-2 outline-none ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
                     <div className="min-w-0">
@@ -5952,8 +5824,8 @@ export default function CalendarScreen() {
                   {/* ── Luxury Donut + Stats Header ─────────────────────── */}
                   {(() => {
                     const hTrades = historyTrades;
-                    const hWin = hTrades.filter(t => t.pnl >= 0).length;
-                    const hLoss = hTrades.length - hWin;
+                    const hWin = hTrades.filter(t => t.pnl > 0).length;
+                    const hLoss = hTrades.filter(t => t.pnl < 0).length;
                     const hWinrate = hTrades.length > 0 ? Math.round((hWin / hTrades.length) * 100) : 0;
                     const hTotal = hTrades.reduce((s, t) => s + t.pnl, 0);
                     const r = 38;
@@ -6050,7 +5922,7 @@ export default function CalendarScreen() {
                   {/* ── PRO Scorecard — profit factor, payoff, best/worst day, streaks. Always visible, just scroll. ── */}
                   {historyTrades.length > 0 && (() => {
                     const trades = historyTrades;
-                    const wins = trades.filter((tr) => tr.pnl >= 0);
+                    const wins = trades.filter((tr) => tr.pnl > 0);
                     const losses = trades.filter((tr) => tr.pnl < 0);
                     const grossProfit = wins.reduce((s, tr) => s + tr.pnl, 0);
                     const grossLoss = Math.abs(losses.reduce((s, tr) => s + tr.pnl, 0));
@@ -6550,6 +6422,7 @@ export default function CalendarScreen() {
                   )}
                 </>
               )}
+              </div>}
             </div>
           </SwipeDismissSheet>
         </div>
