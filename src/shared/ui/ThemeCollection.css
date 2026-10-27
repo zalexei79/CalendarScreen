@@ -44,6 +44,18 @@
 .theme-premium-info > span { display:block; margin-top:3px; font-size:8px; line-height:1.6; opacity:.65; }
 .theme-premium-info small { margin-top:8px; font-size:8px; line-height:1.3; letter-spacing:.06em; opacity:.85; }
 .theme-collection-access { margin:10px 0 0; color:var(--collection-muted); font-size:9px; line-height:1.6; }
+.glass-parallax-control { margin-top:16px; padding:12px; border:1px solid var(--collection-line); border-radius:16px; background:var(--glass-control-bg); box-shadow:var(--glass-control-edge); }
+.glass-parallax-control > button { display:flex; align-items:center; gap:10px; width:100%; min-height:44px; padding:0; border:0; background:transparent; color:var(--collection-ink); text-align:left; font:500 12px/1.4 system-ui,sans-serif; cursor:pointer; }
+.glass-parallax-control > button > svg { flex:none; color:var(--dayris-accent); }
+.glass-parallax-control > button > span:first-of-type { flex:1; }
+.glass-parallax-control > button:disabled { cursor:default; opacity:.65; }
+.glass-parallax-control > p { margin:7px 0 0; font:400 10px/1.65 system-ui,sans-serif; color:var(--collection-muted); }
+.glass-parallax-switch { display:block; flex:none; width:40px; height:24px; padding:3px; border:1px solid #fff2cd33; border-radius:999px; background:#080a0d66; }
+.glass-parallax-switch > i { display:block; width:16px; height:16px; border-radius:50%; background:#e5e0d3; box-shadow:0 1px 3px #0005; transition:translate 240ms cubic-bezier(.4,0,.2,1),background-color 200ms; }
+[aria-checked="true"] > .glass-parallax-switch { background:#e9c77455; border-color:#ffe7b080; }
+[aria-checked="true"] > .glass-parallax-switch > i { translate:14px 0; background:#fff0bc; }
+.glass-parallax-control > button:focus-visible { outline:2px solid var(--dayris-accent); outline-offset:4px; border-radius:8px; }
+@media(prefers-reduced-motion:reduce) { .glass-parallax-switch > i { transition:none; } }
 .theme-collection :is(.theme-basic-option,.theme-premium-card):focus-visible { outline:2px solid var(--dayris-accent,#d3c090); outline-offset:3px; }
 .theme-collection-onboarding { margin-top:24px; }.theme-collection-onboarding .theme-collection-heading { margin-top:18px; padding-top:16px; }
 .first-run-dialog .theme-collection .theme-basics > .theme-basic-option { padding:0; border:0; background:transparent; box-shadow:none; }

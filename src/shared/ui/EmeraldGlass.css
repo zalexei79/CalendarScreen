@@ -14,6 +14,7 @@ html[data-dayris-theme="emerald"] {
   --emerald-card:linear-gradient(145deg,#e2fff316,#b8ffeb04 40%,#07181a33 70%,#b7ffe40d),rgba(8,25,23,.56);
   --emerald-edge:inset 0 1px 0 #f0fff975,inset 1px 0 0 #d9ffed24,inset -1px -1px 0 #91ffcc18,inset 0 -3px 6px #0003;
   --emerald-shadow:var(--emerald-edge),0 22px 55px #0006,0 0 32px #4dffbe14;
+  --emerald-day-depth:var(--emerald-edge),inset 0 -2px 2px #01090766,0 2px 0 #08251ecc,0 4px 1px #020d0acc,0 12px 18px -3px #000b;
   --glass-surface:rgba(6,23,21,.8);
   --glass-control:rgba(216,255,238,.09);
   --glass-line:var(--dayris-line);
@@ -104,11 +105,12 @@ html[data-dayris-theme="emerald"] :is(.wallet-balance-card,.wallet-activity-list
 html[data-dayris-theme="emerald"] .calendar-day-surface {
   background:var(--emerald-card)!important;
   border-color:#ddfff332!important;
-  box-shadow:var(--emerald-edge),0 8px 22px #0003!important;
+  box-shadow:var(--emerald-day-depth)!important;
 }
 html[data-dayris-theme="emerald"] .calendar-days-grid > .calendar-day-surface { border-radius:18px!important; }
 @media(min-width:640px) {
-  html[data-dayris-theme="emerald"] .calendar-days-grid > .calendar-day-surface { border-radius:24px!important; }
+  html[data-dayris-theme="emerald"] .calendar-section[data-calendar-fit="true"] .calendar-days-grid { flex:none; grid-auto-rows:var(--calendar-row-height,96px); }
+  html[data-dayris-theme="emerald"] .calendar-days-grid > .calendar-day-surface { border-radius:24px!important; min-height:56px; }
 }
 html[data-dayris-theme="emerald"] .calendar-day-surface::before {
   background:radial-gradient(ellipse 110% 65% at 15% -20%,#f3fffb28,transparent 75%);
@@ -120,16 +122,16 @@ html[data-dayris-theme="emerald"] .calendar-day-surface[data-in-month="false"] {
 html[data-dayris-theme="emerald"] .calendar-day-surface[data-pnl-tone="profit"] {
   background:radial-gradient(ellipse at 50% 115%,#20ef9d80,transparent 70%),linear-gradient(145deg,#caffed22,#0c8a5d28 45%,#05251d88)!important;
   border-color:#8bffd580!important;
-  box-shadow:var(--emerald-edge),inset 0 -1px #8affd0a6,0 6px 25px #05e99d20!important;
+  box-shadow:var(--emerald-day-depth),inset 0 -1px #8affd0a6,0 6px 25px #05e99d20!important;
 }
 html[data-dayris-theme="emerald"] .calendar-day-surface[data-pnl-tone="loss"] {
   background:radial-gradient(ellipse at 50% 115%,#ff447b99,transparent 72%),linear-gradient(145deg,#ffd0e42b,#b22d5738 45%,#27132499)!important;
   border-color:#ffb4d180!important;
-  box-shadow:var(--emerald-edge),inset 0 -1px #ff99c0aa,0 6px 26px #ff3d7629!important;
+  box-shadow:var(--emerald-day-depth),inset 0 -1px #ff99c0aa,0 6px 26px #ff3d7629!important;
 }
 html[data-dayris-theme="emerald"] .calendar-day-surface.today-calendar-cell {
   border-color:#edffeeb8!important;
-  box-shadow:var(--emerald-edge),inset 0 0 25px #8affc616,0 0 0 1px #b6ffe421,0 0 30px #5bffbf26!important;
+  box-shadow:var(--emerald-day-depth),inset 0 0 25px #8affc616,0 0 0 1px #b6ffe421,0 0 30px #5bffbf26!important;
 }
 html[data-dayris-theme="emerald"] .today-calendar-cell::after {
   background:radial-gradient(ellipse at 50% 0%,#a5ffd92b,transparent 68%);

@@ -12,9 +12,9 @@ export function useCalendarFit(surfaceRef, cellCount) {
     const mobile = window.matchMedia('(max-width: 639px)');
     let frame;
     const update = () => {
-      // Gold has raised cells on desktop too: reserve the real dock position
+      // Glass themes have raised cells on desktop too: reserve the real dock
       // instead of letting a six-week month grow behind its floating glass.
-      if ((!mobile.matches && document.documentElement.dataset.dayrisTheme !== 'gold') || viewport?.scale > 1.05) return;
+      if ((!mobile.matches && !['gold','emerald'].includes(document.documentElement.dataset.dayrisTheme)) || viewport?.scale > 1.05) return;
       let top = 0;
       for (let node = grid; node; node = node.offsetParent) top += node.offsetTop;
       const dock = document.querySelector('.history-fab');

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import useGlassParallax from './useGlassParallax.js';
 
 const SURFACES = '.calendar-day-surface,.dayris-header button,.calendar-dock-morph,.wallet-balance-card,.capital-asset,.theme-premium-card,.dayris-settings-panel,.financial-history-dialog,.plan-dialog,.voice-workspace';
 const SCENES = '.dayris-swipe-sheet,.financial-history-dialog,.plan-dialog,.pro-dialog,.savings-dialog,.lot-calculator,.category-picker-sheet,.entry-login-dialog,.first-run-shell,.wallet-balance-card,.capital-overview,.voice-workspace,.premium-shell [role="dialog"]';
@@ -6,8 +7,10 @@ const REVEALS = `${SCENES},.calendar-motion-light`;
 const EASE = 'cubic-bezier(.22,1,.36,1)';
 
 // Decorative enhancement only. One pointer surface and one scheduled frame;
-// no React updates, gesture interception, perpetual RAF, or device sensors.
+// no React updates, gesture interception or perpetual RAF. Optional sensor
+// permission and decorative background depth live in useGlassParallax.
 export default function useGoldMotion(theme) {
+  useGlassParallax(theme);
   useEffect(() => {
     if (theme !== 'gold') return undefined;
     const root = document.documentElement;

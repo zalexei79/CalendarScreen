@@ -2,6 +2,7 @@ import React,{useEffect,useId,useRef,useState} from 'react';
 import {Check,Crown,Gem,LockKeyhole,X,ArrowUpRight} from 'lucide-react';
 import {APPEARANCE_COPY} from './appearanceCopy.js';
 import './ThemeCollection.css';
+import GlassParallaxControl from './GlassParallaxControl.jsx';
 
 function MaterialPreview({code}) {
   return <span className="theme-material-art" data-material={code} aria-hidden="true">
@@ -40,6 +41,7 @@ export default function ThemeCollection({language,theme,preference=theme,active=
       </button>)}
     </div>
     <p className="theme-collection-access" role={loading?'status':undefined}>{loading?copy.loading:active?copy.included:copy.exclusive}</p>
+    {['gold','emerald'].includes(theme)&&active&&!loading&&<GlassParallaxControl language={language} theme={theme}/>}
     {preview&&<dialog ref={dialog} className="theme-preview-dialog" data-material={preview} aria-labelledby={`${id}-preview-title`} onCancel={event=>{event.preventDefault();event.stopPropagation();setPreview(null);}} onKeyDown={event=>event.stopPropagation()}>
       <div className="theme-preview-toolbar"><span>DAYRIS · PRO</span><button type="button" aria-label={copy.close} onClick={()=>setPreview(null)}><X size={20}/></button></div>
       <MaterialPreview code={preview}/>

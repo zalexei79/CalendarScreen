@@ -7,7 +7,7 @@ html[data-dayris-theme="gold"], [data-material="gold"] {
   --gold-profit-material:radial-gradient(ellipse at 50% 110%,#20ef9952,transparent 80%),linear-gradient(150deg,#fff6d41f,#1453374d 50%,#0b403952),rgba(9,17,17,.35);
   --gold-loss-material:radial-gradient(ellipse at 50% 110%,#ed316457,transparent 80%),linear-gradient(150deg,#fff6d41f,#6e19354d 50%,#381d3852),rgba(18,10,19,.35);
   --gold-bevel:inset 0 1px 1px #fff8d9f2,inset 1px 0 #fff0bd40,inset 0 -2px 2px #59471966;
-  --gold-glass-depth:inset 0 1px 1px #fff9dfc2,inset 1px 0 1px #fff5d62e,inset -1px 0 1px #080a0d70,inset 0 -3px 3px #04050866,0 2px 0 #30291dcc,0 4px 1px #08090c99,0 9px 13px -3px #0009;
+  --gold-glass-depth:inset 0 1px 1px #fff9dfc2,inset 1px 0 1px #fff5d62e,inset -1px 0 1px #080a0d70,inset 0 -3px 3px #04050880,0 2px 0 #30291dcc,0 4px 1px #08090ccc,0 12px 18px -3px #000b,0 0 0 1px #f3cf7d0f;
 }
 html[data-dayris-theme="gold"] {
   --dayris-canvas:#0b0b0d; --dayris-surface:#181a1e; --dayris-raised:#282b30;

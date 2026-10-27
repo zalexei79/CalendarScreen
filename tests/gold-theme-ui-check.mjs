@@ -58,7 +58,8 @@ try {
   assert.equal(amounts.length,15);assert.ok(amounts.every(a=>a.width>=24&&a.height>0&&a.inside),'PRO amounts remain visible inside gold cells');
   const material=await page.locator('.calendar-section:not(.calendar-month-preview)').evaluate(section=>{
    const grid=section.querySelector('.calendar-days-grid'),cell=grid.querySelector('button'),dock=document.querySelector('.history-fab');
-   return {bottom:grid.getBoundingClientRect().bottom,dockTop:dock.getBoundingClientRect().top,shadow:getComputedStyle(cell).boxShadow,background:getComputedStyle(document.querySelector('.premium-shell')).backgroundImage};
+   const environment=document.querySelector('html[data-glass-parallax] .dayris-glass-parallax')||document.querySelector('.premium-shell');
+   return {bottom:grid.getBoundingClientRect().bottom,dockTop:dock.getBoundingClientRect().top,shadow:getComputedStyle(cell).boxShadow,background:getComputedStyle(environment).backgroundImage};
   });
   assert.ok(material.bottom+9<=material.dockTop,'Raised calendar edges clear the floating dock');
   assert.match(material.shadow,/inset/);assert.match(material.shadow,/0px 4px 1px/,'A visible lower edge gives the glass real depth');

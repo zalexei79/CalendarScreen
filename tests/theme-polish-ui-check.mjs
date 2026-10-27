@@ -38,7 +38,16 @@ try {
   for(const [theme,label,bg] of [['purple','Аметист','rgb(22, 15, 36)'],...(pro?[['emerald','Изумрудное','rgb(3, 14, 11)']]:[])]) {
     await page.getByRole('button',{name:'Настройки',exact:true}).click(); await page.clock.runFor(500);
     await page.getByRole('button',{name:label,exact:true}).click(); await page.clock.runFor(800);
-    await page.waitForFunction(color=>getComputedStyle(document.querySelector('.premium-shell')).backgroundColor===color,bg);
+    await page.screenshot({path:`tests/theme-${theme}-settings.png`,animations:'disabled'});
+    await page.waitForFunction(fallback=>{
+      const canvas=getComputedStyle(document.documentElement).getPropertyValue('--dayris-canvas').trim();
+      const color=/^#[\da-f]{6}$/i.test(canvas)?`rgb(${[1,3,5].map(index=>parseInt(canvas.slice(index,index+2),16)).join(', ')})`:fallback;
+      if(document.documentElement.hasAttribute('data-glass-parallax')) {
+        const layer=document.querySelector('.dayris-glass-parallax');
+        return color===fallback&&layer&&getComputedStyle(layer).backgroundImage.includes('gradient')&&getComputedStyle(document.querySelector('.premium-shell')).backgroundColor==='rgba(0, 0, 0, 0)';
+      }
+      return getComputedStyle(document.querySelector('.premium-shell')).backgroundColor===color;
+    },bg);
     await page.screenshot({path:`tests/theme-${theme}-settings.png`,animations:'disabled'});
     await page.getByRole('button',{name:'Закрыть настройки',exact:true}).click(); await page.clock.runFor(500);
     for(const width of [1880,390]) {

@@ -1,0 +1,25 @@
+/* Keep both approved palettes: only the existing atmosphere moves. Isolating
+   BODY preserves all portal ordering without transforming the application. */
+html[data-dayris-theme="gold"] { --glass-atmosphere:var(--gold-backdrop); --glass-depth-light:#fff1b50a; --glass-control-bg:var(--gold-card); --glass-control-edge:var(--gold-edge); }
+html[data-dayris-theme="emerald"] { --glass-atmosphere:var(--emerald-atmosphere); --glass-depth-light:#b0ffdf0a; --glass-control-bg:var(--emerald-card); --glass-control-edge:var(--emerald-edge); }
+html:is([data-dayris-theme="gold"],[data-dayris-theme="emerald"])[data-glass-parallax] body { isolation:isolate; }
+.dayris-glass-parallax { display:none; }
+html[data-glass-parallax] .dayris-glass-parallax {
+  display:block; position:fixed; inset:-24px; z-index:-1; pointer-events:none;
+  background:var(--glass-atmosphere); contain:strict;
+  transform:translate3d(var(--glass-depth-x,0px),var(--glass-depth-y,0px),0);
+  transition:transform 180ms cubic-bezier(.4,0,.2,1);
+}
+html[data-glass-parallax] .dayris-glass-parallax::after {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(ellipse 52% 40% at 75% 22%,var(--glass-depth-light),transparent 75%);
+  transform:translate3d(calc(var(--glass-depth-x,0px) * -.45),calc(var(--glass-depth-y,0px) * -.45),0);
+  transition:transform 240ms cubic-bezier(.4,0,.2,1);
+}
+html:is([data-dayris-theme="gold"],[data-dayris-theme="emerald"])[data-glass-parallax] :is(.premium-shell,.wallet-panel-enter,.capital-panel,.entry-welcome,.life-story[data-theme],.first-run-dialog[data-theme]) { background:transparent; }
+html:is([data-dayris-theme="gold"],[data-dayris-theme="emerald"])[data-glass-parallax] .calendar-glass-optics {
+  translate:var(--glass-sheen-x,0px) var(--glass-sheen-y,0px);
+  transition:opacity 350ms cubic-bezier(.4,0,.2,1),translate 180ms cubic-bezier(.4,0,.2,1);
+}
+html[data-dayris-theme="gold"][data-glass-parallax] .calendar-days-grid > .calendar-day-surface[data-glass-hover]:not(.selected-calendar-cell):not(:active) { box-shadow:var(--gold-day-shadow),var(--glass-shadow-x,0px) 14px 22px -6px #0009!important; }
+html[data-dayris-theme="emerald"][data-glass-parallax] .calendar-days-grid > .calendar-day-surface[data-glass-hover]:not(.selected-calendar-cell):not(:active) { box-shadow:var(--emerald-day-depth),var(--glass-shadow-x,0px) 14px 22px -6px #0009!important; }
