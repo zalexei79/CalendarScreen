@@ -43,12 +43,17 @@ export async function enableGlassTilt() {
 
 // Relative to the user's comfortable holding angle, not an assumed flat phone.
 // No compass/magnetometer data is needed or retained.
-export function glassTiltVector(reading, neutral, angle = 0) {
+export function glassDepthProfile(theme) {
+  return theme === 'emerald' ? { x:44,y:32,plane:7,rotation:2.8 } : { x:32,y:24,plane:5,rotation:2.2 };
+}
+
+export function glassTiltVector(reading, neutral, angle = 0, theme = 'gold') {
   if (![reading?.beta,reading?.gamma,neutral?.beta,neutral?.gamma,angle].every(Number.isFinite)) return null;
   const delta = (a,b) => ((a - b + 540) % 360) - 180;
   const beta = delta(reading.beta,neutral.beta), gamma = delta(reading.gamma,neutral.gamma);
   const radians = angle * Math.PI / 180;
-  const limit = value => Math.max(-1,Math.min(1,value / 18));
-  return { x:-limit(gamma * Math.cos(radians) + beta * Math.sin(radians)) * 10,
-    y:-limit(beta * Math.cos(radians) - gamma * Math.sin(radians)) * 8 };
+  const limit = value => Math.max(-1,Math.min(1,value / 12));
+  const depth = glassDepthProfile(theme);
+  return { x:-limit(gamma * Math.cos(radians) + beta * Math.sin(radians)) * depth.x,
+    y:-limit(beta * Math.cos(radians) - gamma * Math.sin(radians)) * depth.y };
 }

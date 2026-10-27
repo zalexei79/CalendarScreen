@@ -55,7 +55,7 @@ try {
    const r=el.getBoundingClientRect(),cell=el.closest('button').getBoundingClientRect();
    return {width:r.width,height:r.height,inside:r.left>=cell.left&&r.right<=cell.right&&r.top>=cell.top&&r.bottom<=cell.bottom};
   }));
-  assert.equal(amounts.length,15);assert.ok(amounts.every(a=>a.width>=24&&a.height>0&&a.inside),'PRO amounts remain visible inside gold cells');
+  assert.equal(amounts.length,15);assert.ok(amounts.every(a=>a.width>=24&&a.height>0&&a.inside),JSON.stringify({width,amounts}));
   const material=await page.locator('.calendar-section:not(.calendar-month-preview)').evaluate(section=>{
    const grid=section.querySelector('.calendar-days-grid'),cell=grid.querySelector('button'),dock=document.querySelector('.history-fab');
    const environment=document.querySelector('html[data-glass-parallax] .dayris-glass-parallax')||document.querySelector('.premium-shell');

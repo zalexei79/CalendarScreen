@@ -23,7 +23,10 @@ export function useCalendarFit(surfaceRef, cellCount) {
       const bottom = Number.isFinite(dockTop) ? dockTop : (viewport?.height || window.innerHeight) - reservedSpace + 12;
       const rows = Math.max(1, Math.ceil(cellCount / 7));
       const gap = parseFloat(getComputedStyle(grid).rowGap) || 0;
-      const rowHeight = Math.max(56, (bottom - top - 12 - gap * (rows - 1)) / rows);
+      // Leave room for the raised plane at its maximum rotation and shadow.
+      const glass = ['gold','emerald'].includes(document.documentElement.dataset.dayrisTheme);
+      const clearance = glass ? 44 : 12;
+      const rowHeight = Math.max(56, (bottom - top - clearance - gap * (rows - 1)) / rows);
       const value = `${rowHeight}px`;
       if (surface.style.getPropertyValue('--calendar-row-height') !== value) surface.style.setProperty('--calendar-row-height', value);
     };

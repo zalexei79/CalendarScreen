@@ -7,6 +7,7 @@ import {pathToFileURL} from 'node:url';
 // subscription cleanup and PRO enforcement are from the production bundle.
 const engine=process.env.DAYRIS_TEST_ENGINE==='webkit'?'webkit':'chromium';
 const palette=process.env.DAYRIS_TEST_THEME==='emerald'?'emerald':'gold';
+const depthX=palette==='emerald'?44:32,depthY=palette==='emerald'?32:24;
 const source=fs.readFileSync('tests/gold-theme-ui-check.mjs','utf8');
 let setup=source.slice(0,source.indexOf(' for(const width of [320,390,1280])'))
  .replace("'./life-story-auth-fixture.mjs'",JSON.stringify(pathToFileURL(path.resolve('tests/life-story-auth-fixture.mjs')).href))
@@ -27,6 +28,8 @@ const sensors=`
   if(mode!=='legacy') Object.defineProperty(api,'requestPermission',{configurable:true,value:()=>{
    window.__tiltCalls++;
    if(window.__tiltPermission==='reject')return Promise.reject(new Error('OS denied'));
+   // A permission sheet can blur the window without a matching focus event.
+   if(window.__tiltPermission==='granted')window.dispatchEvent(new Event('blur'));
    return Promise.resolve(window.__tiltPermission);
   }});
   else Object.defineProperty(api,'requestPermission',{configurable:true,value:undefined});
@@ -40,6 +43,7 @@ const sensors=`
 setup=setup.replace(' const page=await context.newPage()',sensors+' const page=await context.newPage()');
 const finish=`
  await page.clock.resume();
+ console.log('${palette} ${engine}: initial pointer');
  fs.mkdirSync('artifacts/glass-parallax',{recursive:true});
  const shots='artifacts/glass-parallax/${palette}-${engine}';
  const currentTheme=page.locator('html[data-dayris-theme="${palette}"]');
@@ -50,7 +54,7 @@ const finish=`
  assert.equal(await page.evaluate(()=>window.__tiltListeners()),0,'Never attach sensors before opt-in');
  await page.setViewportSize({width:1280,height:950});
  await page.mouse.move(1270,20);
- await page.waitForFunction(()=>parseFloat(document.querySelector('.dayris-glass-parallax').style.getPropertyValue('--glass-depth-x'))<-9);
+ await page.waitForFunction(()=>parseFloat(document.querySelector('.dayris-glass-parallax').style.getPropertyValue('--glass-depth-x'))<-${depthX}*.9);
  await page.screenshot({path:shots+'-pointer-1280.png',animations:'disabled'});
  assert.equal(await page.locator('.premium-shell').evaluate(el=>getComputedStyle(el).transform),'none');
  assert.equal(await layer.evaluate(el=>getComputedStyle(el).pointerEvents),'none');
@@ -71,6 +75,7 @@ const finish=`
  const chooseTheme=async(name)=>{const button=page.getByRole('button',{name,exact:true});await button.scrollIntoViewIfNeeded();await button.click();await page.waitForTimeout(450);};
  const toggle=page.getByRole('switch',{name:'Глубина при наклоне',exact:true});
  await openSettings();
+ console.log('${palette} ${engine}: permission flow');
  assert.equal(await toggle.getAttribute('aria-checked'),'false');
  await page.evaluate(()=>window.__tiltPermission='denied');await toggle.click();
  await page.getByText(/Доступ не получен/).waitFor();assert.equal(await toggle.getAttribute('aria-checked'),'false');
@@ -83,16 +88,38 @@ const finish=`
  assert.equal(await page.evaluate(()=>window.__tiltListeners()),1);
  await page.evaluate(()=>window.__tiltReading(45,-5));
  await page.evaluate(()=>window.__tiltReading(63,13));
- await page.waitForFunction(()=>document.querySelector('.dayris-glass-parallax').style.getPropertyValue('--glass-depth-x')==='-10.0px');
+ await page.waitForFunction(()=>document.querySelector('.dayris-glass-parallax').style.getPropertyValue('--glass-depth-x')==='-${depthX}.0px');
  await page.screenshot({path:shots+'-settings-enabled.png',animations:'disabled'});
  await closeSettings();
  await page.screenshot({path:shots+'-tilted-390.png',animations:'disabled'});
- assert.deepEqual(await geometry(),before,'Parallax never moves the readable amounts or their hit targets');
+ assert.notDeepEqual(await geometry(),before,'The foreground plane visibly separates from the distant atmosphere');
+ const readable=await page.locator('.calendar-day-surface .day-amount').evaluateAll(els=>els.every(el=>{const r=el.getBoundingClientRect(),c=el.closest('button').getBoundingClientRect();return r.width>=20&&r.height>0&&r.left>=c.left-1&&r.right<=c.right+1&&r.top>=c.top-1&&r.bottom<=c.bottom+1;}));
+ assert.equal(readable,true,'Amounts stay readable inside their projected glass surfaces');
+ assert.ok(await page.locator('.calendar-days-grid').evaluate(grid=>grid.getBoundingClientRect().bottom+9<=document.querySelector('.history-fab').getBoundingClientRect().top),'Tilted foreground clears the fixed dock');
+ const hits=await page.locator('.calendar-section:not(.calendar-month-preview) .calendar-day-surface').evaluateAll(cells=>cells.every(cell=>{const r=cell.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('.calendar-day-surface')===cell;}));
+ assert.ok(hits,'Projected day centers remain directly tappable');
+ const onScreen=await page.locator('.calendar-section:not(.calendar-month-preview) .calendar-day-surface').evaluateAll(cells=>cells.every(cell=>{const r=cell.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;}));
+ assert.ok(onScreen,'Maximum tilt keeps the glass edges inside the phone viewport');
  assert.equal(await page.locator('.day-amount').count(),15);
  assert.equal(await page.evaluate(()=>localStorage.getItem('money_calendar_trades_22222222-2222-4222-8222-222222222222')),records);
+ for(const width of [320,390]) {
+  console.log('${palette} ${engine}: projection at '+width);
+  await page.setViewportSize({width,height:844});
+  for(const [beta,gamma] of [[57,7],[57,-17],[33,7],[33,-17]]) {
+   await page.evaluate(([b,g])=>window.__tiltReading(b,g),[beta,gamma]);
+   await page.waitForTimeout(220);
+   await page.screenshot({path:shots+'-extreme-'+width+'-'+beta+'-'+gamma+'.png',animations:'disabled'});
+   const bounds=await page.locator('.calendar-section:not(.calendar-month-preview) .calendar-day-surface').evaluateAll(cells=>cells.map(cell=>{const r=cell.getBoundingClientRect();return {left:r.left,right:r.right,bottom:r.bottom};}));
+   assert.ok(bounds.every(r=>r.left>=0&&r.right<=width),JSON.stringify({width,beta,gamma,bounds}));
+   const dockTop=await page.locator('.history-fab').evaluate(el=>el.getBoundingClientRect().top);
+   assert.ok(bounds.every(r=>r.bottom+9<=dockTop),'Projected rows and shadows clear the fixed dock');
+  }
+ }
+ await page.setViewportSize({width:390,height:844});
+ console.log('${palette} ${engine}: motion and visibility preferences');
  await page.evaluate(()=>{window.__tiltReading(999,-999);window.__tiltReading(null,NaN);});
  await page.waitForTimeout(60);
- assert.ok(await layer.evaluate(el=>Math.abs(parseFloat(el.style.getPropertyValue('--glass-depth-x')))<=10&&Math.abs(parseFloat(el.style.getPropertyValue('--glass-depth-y')))<=8));
+ assert.ok(await layer.evaluate((el,limits)=>Math.abs(parseFloat(el.style.getPropertyValue('--glass-depth-x')))<=limits.x&&Math.abs(parseFloat(el.style.getPropertyValue('--glass-depth-y')))<=limits.y,{x:${depthX},y:${depthY}}));
  await page.evaluate(()=>window.dispatchEvent(new Event('orientationchange')));
  await page.evaluate(()=>window.__tiltReading(80,30));
  await page.waitForFunction(()=>document.querySelector('.dayris-glass-parallax').style.getPropertyValue('--glass-depth-x')==='0.0px');
@@ -109,6 +136,7 @@ const finish=`
  await page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});
  assert.equal(await page.evaluate(()=>window.__tiltListeners()),1);
  await openSettings();
+ console.log('${palette} ${engine}: theme reentry');
  await chooseTheme(${JSON.stringify(palette==='gold'?'Изумрудное':'Золото')});
  await page.locator('html[data-dayris-theme="${palette==='gold'?'emerald':'gold'}"]').waitFor();
  assert.equal(await page.evaluate(()=>window.__tiltListeners()),1,'Tilt permission is shared by the two glass materials');
@@ -118,16 +146,18 @@ const finish=`
  assert.equal(await layer.count(),0);assert.equal(await page.evaluate(()=>window.__tiltListeners()),0);
  await chooseTheme(${JSON.stringify(palette==='gold'?'Золото':'Изумрудное')});await layer.waitFor();
  assert.equal(await page.evaluate(()=>window.__tiltCalls),3,'Theme reentry does not prompt again in the same session');
+ await toggle.scrollIntoViewIfNeeded();
  await toggle.click();assert.equal(await page.evaluate(()=>window.__tiltListeners()),0);
  await toggle.click();assert.equal(await page.evaluate(()=>window.__tiltCalls),4);
  // Saved intent on iOS cannot silently re-grant this session's permission.
+ console.log('${palette} ${engine}: reload and unavailable fallbacks');
  await page.reload();await currentTheme.waitFor();await openSettings();
  assert.equal(await page.evaluate(()=>window.__tiltCalls),0);assert.equal(await page.evaluate(()=>window.__tiltListeners()),0);
  assert.equal(await toggle.getAttribute('aria-checked'),'false');await page.getByText(/снова разрешить наклон/).waitFor();
  await toggle.click();await page.clock.fastForward(5100);await page.getByText(/не передаёт данные/).waitFor();
  assert.equal(await toggle.getAttribute('aria-checked'),'true');
  await page.mouse.move(380,20);
- await page.waitForFunction(()=>parseFloat(document.querySelector('.dayris-glass-parallax').style.getPropertyValue('--glass-depth-x'))<-9);
+ await page.waitForFunction(()=>parseFloat(document.querySelector('.dayris-glass-parallax').style.getPropertyValue('--glass-depth-x'))<-${depthX}*.9);
  await page.evaluate(()=>localStorage.setItem('gold_test_sensor_mode','unavailable'));await page.reload();
  await currentTheme.waitFor();await openSettings();
  assert.equal(await toggle.isDisabled(),true);assert.equal(await page.evaluate(()=>window.__tiltCalls),0);
