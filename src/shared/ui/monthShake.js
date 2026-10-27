@@ -1,4 +1,5 @@
 const KEY = 'dayris_month_shake_v1';
+const SENSITIVITY_KEY = 'dayris_month_shake_sensitivity_v1';
 const subscribers = new Set();
 let state, request = 0;
 export function supportsMonthShake() {
@@ -7,15 +8,21 @@ export function supportsMonthShake() {
 }
 function remembered() { try { return localStorage.getItem(KEY) === 'on'; } catch { return false; } }
 function save(enabled) { try { localStorage.setItem(KEY,enabled?'on':'off'); } catch { /* Optional device preference. */ } }
+function savedSensitivity() { try { return localStorage.getItem(SENSITIVITY_KEY)==='high'?'high':'normal'; } catch { return 'normal'; } }
 export function getMonthShakeState() {
   if (!state) {
     const resume = supportsMonthShake() && remembered() && typeof window.DeviceMotionEvent.requestPermission !== 'function';
-    state = {enabled:resume,status:resume?'waiting':remembered()?'resume':'off'};
+    state = {enabled:resume,status:resume?'waiting':remembered()?'resume':'off',sensitivity:savedSensitivity()};
   }
   return state;
 }
 export function subscribeMonthShake(listener) { subscribers.add(listener); return () => subscribers.delete(listener); }
-function update(next) { state = next; subscribers.forEach(listener => listener()); }
+function update(next) { state = {...getMonthShakeState(),...next}; subscribers.forEach(listener => listener()); }
+export function setMonthShakeSensitivity(value) {
+  if (!['normal','high'].includes(value)) return;
+  try { localStorage.setItem(SENSITIVITY_KEY,value); } catch { /* Optional preference. */ }
+  update({sensitivity:value});
+}
 export function reportMonthShake(status) {
   if (getMonthShakeState().enabled && state.status !== status) update({enabled:true,status});
 }

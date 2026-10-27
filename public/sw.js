@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v90-month-motion';
+const CACHE_NAME = 'atj-cache-v91-iphone-month-gestures';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
