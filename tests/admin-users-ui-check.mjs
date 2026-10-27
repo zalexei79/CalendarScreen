@@ -54,6 +54,8 @@ try {
   await page.clock.install({time:new Date('2026-10-15T12:00:00Z')});
   await page.goto('http://calendar.test/admin.html');
   assert.equal(await page.locator('link[rel="manifest"]').getAttribute('href'),'/admin.webmanifest');
+  const calendarReturn=page.getByRole('link',{name:'← В календарь',exact:true});
+  await calendarReturn.waitFor();assert.equal(await calendarReturn.getAttribute('href'),'/');assert.equal(await calendarReturn.getAttribute('target'),null,'return stays in the same window');
   await page.getByRole('button',{name:/Тестовый пользователь user@example.test/}).waitFor();
   await page.getByRole('heading',{name:'Последние записи',exact:true}).waitFor();
   await page.locator('.people-directory-settings>summary').click();
@@ -163,6 +165,10 @@ try {
   assert.equal(await loginPage.getByRole('button',{name:'Опубликовать',exact:true}).count(),0);
   assert.equal(await loginPage.locator('iframe').count(),0,'unauthenticated visitors cannot open design preview');
   await anonymous.close();
+  let loggedOut=false;page.on('request',request=>{if(new URL(request.url()).pathname==='/auth/v1/logout')loggedOut=true;});
+  await context.route('http://calendar.test/',route=>route.fulfill({contentType:'text/html; charset=utf-8',body:'<!doctype html><meta charset="utf-8"><h1>Календарь пользователя</h1>'}));
+  await page.getByRole('link',{name:'← В календарь',exact:true}).click();
+  await page.waitForURL('http://calendar.test/');await page.getByRole('heading',{name:'Календарь пользователя',exact:true}).waitFor();assert.equal(loggedOut,false,'return must not sign out the account');
   assert.deepEqual(errors,[]);
   console.log('PASS: admin app entry/manifest, user calendar, explicit edit mode, target-bound patch and reason, audit before/after, read-only role, owner switching, denied-role requests, desktop/mobile layout (mock API).');
 } finally { await browser.close(); }

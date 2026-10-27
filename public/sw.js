@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v79-people-console';
+const CACHE_NAME = 'atj-cache-v80-admin-calendar-return';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
