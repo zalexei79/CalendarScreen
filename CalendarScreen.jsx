@@ -10,6 +10,9 @@ import MetaTraderControl from './src/features/metatrader/MetaTraderControl.jsx';
 import PlatformConnections, { PlatformHistoryActions } from './src/features/platforms/PlatformConnections.jsx';
 import WealthPlan from './src/features/pro/WealthPlan.jsx';
 import FinancialHistoryOverview from './src/features/pro/FinancialHistoryOverview.jsx';
+import FreeHistoryOverview from './src/features/history/FreeHistoryOverview.jsx';
+import { summarizeFreeHistory } from './src/features/history/freeHistoryModel.js';
+import { freeHistoryCopy } from './src/features/history/freeHistoryCopy.js';
 import useVoiceConversation from './src/shared/ui/useVoiceConversation.js';
 import SavingsReview from './src/features/pro/SavingsReview.jsx';
 import useSavingsPlan from './src/features/pro/useSavingsPlan.js';
@@ -505,6 +508,7 @@ export default function CalendarScreen() {
   const [traderMode, setTraderModeInternal] = useState(false);
   const traderModePreferenceReady = useRef(false);
   const isFinancialPro = proView && !traderMode;
+  const isFreeMoneyHistory = !proView && !traderMode;
   useEffect(() => {
     if (!authReady) return;
     if (!proAccessLoading && (!proAccessActive || (proViewPreferenceReady.current && !proView))) {
@@ -2917,6 +2921,8 @@ export default function CalendarScreen() {
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
   const [instrumentBreakdownOpen, setInstrumentBreakdownOpen] = useState(false);
   const [freeHistoryPanel, setFreeHistoryPanel] = useState(null); // null | 'dynamics' | 'analysis'
+  const [freeHistoryExpanded, setFreeHistoryExpanded] = useState(false);
+  useEffect(() => { setFreeHistoryExpanded(false); }, [historyOpen, historyScope, historyCurrency, historyNameFilter, dateFrom, dateTo]);
   const [freeTimelineSelected, setFreeTimelineSelected] = useState(null);
   // 0 = latest week, 1 = previous week, etc.
   const [freeTimelineOffset, setFreeTimelineOffset] = useState(0);
@@ -3006,6 +3012,7 @@ export default function CalendarScreen() {
     .filter(item => historyCurrency === 'ALL' || (item.currency || 'USD') === historyCurrency)
     .filter(item => platformFilter === 'ALL' || item.platform === platformFilter),
   [manualTrades, dateFrom, dateTo, historyCurrency, platformFilter]);
+  const freeHistorySummary = useMemo(() => summarizeFreeHistory(wealthPlanTrades, historyCurrency), [wealthPlanTrades, historyCurrency]);
 
   function isTradingInstrumentName(value) {
     const normalized = String(value || '').trim().toUpperCase();
@@ -3878,6 +3885,13 @@ export default function CalendarScreen() {
 
   function openHistory() {
     if (demoMode) setHistoryCurrency(currency);
+    if (isFreeMoneyHistory) {
+      handlePresetChange('Вся история');
+      setHistoryCurrency(currency);
+      setPlatformFilter('ALL');
+      setHistoryNameFilter('');
+      setHistoryWinLoss('all');
+    }
     setVoiceHistoryKeys(null);
     setHistoryOpen(true);
     setHistoryVisible(true);
@@ -5161,7 +5175,7 @@ export default function CalendarScreen() {
           <SwipeDismissSheet
             onDismiss={closeHistory}
             isLight={isLight}
-            className={`${isFinancialPro ? `financial-history-dialog ${isLight ? 'is-light' : ''}` : ''} relative w-full ${traderMode || isFinancialPro ? 'sm:max-w-5xl' : 'sm:max-w-lg'} flex flex-col overflow-hidden rounded-t-[28px] border shadow-2xl transition-all duration-300 ease-out sm:rounded-[24px] ${
+            className={`${isFinancialPro ? `financial-history-dialog ${isLight ? 'is-light' : ''}` : isFreeMoneyHistory ? `free-history-dialog ${isLight ? 'is-light' : ''}` : ''} relative w-full ${traderMode || isFinancialPro ? 'sm:max-w-5xl' : 'sm:max-w-lg'} flex flex-col overflow-hidden rounded-t-[28px] border shadow-2xl transition-all duration-300 ease-out sm:rounded-[24px] ${
               historyVisible
                 ? 'opacity-100 translate-y-0 sm:scale-100'
                 : 'opacity-0 translate-y-6 sm:translate-y-2 sm:scale-[0.985]'
@@ -5170,13 +5184,13 @@ export default function CalendarScreen() {
             }`}
             style={{ maxHeight: 'min(92dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 8px))' }}
           >
-            <div className={`flex items-center justify-between px-5 sm:px-6 pt-3.5 sm:pt-5 pb-4 border-b ${isLight ? 'border-zinc-200' : 'border-zinc-800/80'}`}>
+            <div className={`history-modal-header flex items-center justify-between px-5 sm:px-6 pt-3.5 sm:pt-5 pb-4 border-b ${isLight ? 'border-zinc-200' : 'border-zinc-800/80'}`}>
               <div>
                 <p className="font-data text-[10px] tracking-[0.22em] text-amber-400 uppercase mb-1">
-                  {traderMode ? t('tradesHistory') : t('myMoney')}
+                  {isFreeMoneyHistory ? 'DAYRIS · FREE' : traderMode ? t('tradesHistory') : t('myMoney')}
                 </p>
                 <h2 className={`font-display text-xl font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-50'}`}>
-                  {traderMode && historyScope !== 'money'
+                  {isFreeMoneyHistory ? t('history') : traderMode && historyScope !== 'money'
                     ? (periodPreset === 'Вся история' ? t('allHistory') : dateFrom === dateTo ? dateFrom : `${dateFrom} — ${dateTo}`)
                     : (isFinancialPro ? (language === 'zh-CN' ? '财务分析' : language === 'ru' ? 'Финансовый разбор' : language === 'ro' || language === 'md' ? 'Analiză financiară' : 'Financial breakdown') : t('financialHistory'))}
                 </h2>
@@ -5211,7 +5225,7 @@ export default function CalendarScreen() {
               </div>
             </div>
 
-            <div className={`shrink-0 border-b px-4 py-2.5 sm:px-6 ${isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-zinc-950'}`}>
+            <div hidden={isFreeMoneyHistory} className={`shrink-0 border-b px-4 py-2.5 sm:px-6 ${isLight ? 'border-zinc-200 bg-white' : 'border-white/[0.06] bg-zinc-950'}`}>
               <div className={`grid ${traderMode ? 'grid-cols-2' : 'grid-cols-3'} rounded-xl p-1 ${isLight ? 'bg-zinc-100' : 'bg-white/[0.045]'}`}>
                 {(traderMode
                   ? [['trades', t('historyTrading')], ['money', t('historyMoney')]]
@@ -5317,15 +5331,24 @@ export default function CalendarScreen() {
             <div
               ref={historyScrollRef}
               onScroll={handleHistoryScroll}
-              className={`overflow-y-auto px-4 py-5 sm:px-7 sm:py-6 flex-1 min-h-0 ${
+              className={`${isFreeMoneyHistory ? 'free-history-scroll' : ''} overflow-y-auto px-4 py-5 sm:px-7 sm:py-6 flex-1 min-h-0 ${
                 traderMode || isFinancialPro ? 'pro-history-premium' : ''
               } ${isLight ? 'bg-[#f5f7fa]' : ''}`}
               style={{ overscrollBehavior: 'contain' }}
             >
-              {/* FREE stays exactly as it was; the PRO money view has its own focused overview above. */}
+              {isFreeMoneyHistory && <FreeHistoryOverview summary={freeHistorySummary} language={language}
+                period={periodPreset} periodLabel={periodPreset === 'custom' ? `${formatDateLabel(dateFrom, language)} — ${formatDateLabel(dateTo, language)}` : periodButtonLabel}
+                periodOptions={[...PERIOD_PRESETS.map(value => ({value, label: periodLabel(value)})), {value: 'custom', label: t('customPeriod')}]}
+                currency={historyCurrency} currencies={CURRENCIES} scope={historyScope} panel={freeHistoryPanel} visibleCount={historyTrades.length} filtersOpen={historyFiltersOpen}
+                onCurrency={setHistoryCurrency}
+                onPeriod={value => { setHistoryPeriodMenuOpen(false); if (value === 'custom') { setSelectedKey(null); setPeriodPreset('custom'); setFreeHistoryPanel(null); setHistoryFiltersOpen(true); } else handlePresetChange(value); }}
+                onScope={value => { setHistoryScope(value); setVoiceHistoryKeys(null); setHistoryFiltersOpen(false); setPlatformFilter('ALL'); setHistoryWinLoss('all'); setHistoryNameFilter(''); }}
+                onPanel={value => { setFreeHistoryPanel(value); if (value) { setHistoryScope('all'); setHistoryFiltersOpen(false); } }}
+                onFilters={() => { setFreeHistoryPanel(null); setHistoryFiltersOpen(value => !value); }}/>}
+              {/* Keep the existing FREE dynamics, analysis and record actions. */}
               {(!isFinancialPro && (!traderMode || historyScope === 'money')) && (
-                <section className="mb-4">
-                  <div className={`grid grid-cols-2 gap-2 rounded-2xl border p-1.5 ${
+                <section className="free-history-details mb-4" hidden={isFreeMoneyHistory && !freeHistoryPanel}>
+                  {!isFreeMoneyHistory && <div className={`grid grid-cols-2 gap-2 rounded-2xl border p-1.5 ${
                     isLight ? 'border-zinc-200 bg-zinc-100/70' : 'border-zinc-800 bg-black/20'
                   }`}>
                     <button
@@ -5388,7 +5411,7 @@ export default function CalendarScreen() {
                         {historyTrades.length} {t('records')}
                       </span>
                     </button>
-                  </div>
+                  </div>}
 
                   {freeHistoryPanel === 'dynamics' && (
                     <div className={`mt-2 overflow-hidden rounded-2xl border p-3.5 sm:p-5 ${
@@ -5577,10 +5600,10 @@ export default function CalendarScreen() {
               )}
 
               {(!traderMode || historyScope === 'money') ? (
-                <>
+                <div className={isFreeMoneyHistory ? 'free-history-records' : undefined} hidden={isFreeMoneyHistory && Boolean(freeHistoryPanel)}>
                   {voiceHistoryKeys && <div className="voice-history-filter-note"><span>{language === 'ru' ? 'Результаты голосового поиска' : language === 'zh-CN' ? '语音搜索结果' : language === 'ro' || language === 'md' ? 'Rezultatele căutării vocale' : 'Voice search results'}</span><button type="button" onClick={() => {setVoiceHistoryKeys(null);setHistoryCurrency('ALL');setPlatformFilter('ALL');setHistoryNameFilter('');setHistoryWinLoss('all');setHistoryScope(traderMode ? 'money' : 'all');setPeriodPreset('Вся история');setDateFrom('0000-01-01');setDateTo('9999-12-31');}}>{language === 'ru' ? 'Сбросить поиск' : language === 'zh-CN' ? '清除搜索' : language === 'ro' || language === 'md' ? 'Resetează căutarea' : 'Clear search'}</button></div>}
                   {/* Compact period selector */}
-                  <div className={`relative flex items-center gap-2 mb-3 ${isFinancialPro ? 'financial-history-controls' : ''}`}>
+                  <div className={`free-history-legacy-toolbar relative flex items-center gap-2 mb-3 ${isFinancialPro ? 'financial-history-controls' : ''}`}>
                     <button
                       onClick={() => setHistoryPeriodMenuOpen((v) => !v)}
                       className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs transition-colors ${isLight ? 'border-zinc-300 bg-white text-zinc-700 hover:border-amber-400/40' : 'border-zinc-700 bg-zinc-950 text-zinc-300 hover:border-amber-400/30'}`}
@@ -5674,7 +5697,7 @@ export default function CalendarScreen() {
                       onReview={(name, scope) => { setHistoryNameFilter(name); setHistoryScope(scope); setHistoryWinLoss('all'); requestAnimationFrame(() => historyDealsRef.current?.scrollIntoView({behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start'})); }} />
                   </FinancialHistoryOverview>}
 
-                  <div ref={historyDealsRef} tabIndex={-1} className={`${isFinancialPro ? 'financial-history-record-heading' : ''} mb-2 flex scroll-mt-4 items-center justify-between gap-2 outline-none ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                  <div ref={historyDealsRef} tabIndex={-1} className={`${isFreeMoneyHistory ? 'free-history-legacy-heading' : ''} ${isFinancialPro ? 'financial-history-record-heading' : ''} mb-2 flex scroll-mt-4 items-center justify-between gap-2 outline-none ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>
                     <div className="min-w-0">
                       <p className="truncate text-xs">{historyTrades.length} {t('records')}{historyNameFilter ? ` · ${historyNameFilter}` : ''}</p>
                       {periodPreset !== 'Вся история' && (
@@ -5700,19 +5723,19 @@ export default function CalendarScreen() {
                   </div>
 
                   {historyTrades.length > 0 ? (
-                    <div className={`${isFinancialPro ? 'financial-record-list' : ''} rounded-2xl border overflow-hidden ${
+                    <div className={isFreeMoneyHistory ? 'free-history-record-list' : `${isFinancialPro ? 'financial-record-list' : ''} rounded-2xl border overflow-hidden ${
                       isLight ? 'bg-white border-zinc-300' : 'bg-zinc-950 border-zinc-800'
                     }`}>
-                      {historyTrades.map((entry, index) => {
+                      {(isFreeMoneyHistory && !freeHistoryExpanded ? historyTrades.slice(0, 3) : historyTrades).map((entry, index) => {
                         const Icon = getHistoryCategoryIcon(entry.instrument);
                         const receipt=receiptFromEntry(entry);
                         return (
                           <React.Fragment key={entry.id}>
-                          {isFinancialPro && (index === 0 || historyTrades[index - 1].dateKey !== entry.dateKey) && <h4 className="financial-record-date">{formatDateLabel(entry.dateKey, language)}</h4>}
+                          {(isFinancialPro || isFreeMoneyHistory) && (index === 0 || historyTrades[index - 1].dateKey !== entry.dateKey) && <h4 className={isFreeMoneyHistory ? 'free-history-record-date' : 'financial-record-date'}>{formatDateLabel(entry.dateKey, language)}</h4>}
                           {receipt?<ReceiptHistoryCard entry={entry} receipt={receipt} language={language} isLight={isLight} previewLimit={3} showDate={!isFinancialPro} onEdit={demoMode?undefined:()=>editTradeFromHistory(entry)}/>:<button
                             onClick={() => editTradeFromHistory(entry)}
                             aria-label={demoMode ? `${entry.instrument} · ${entry.comment}` : t('editRecord')}
-                            className={`${isFinancialPro ? 'financial-record-row' : ''} group w-full min-h-[64px] px-3.5 py-3 flex items-center gap-3 text-left border-b last:border-b-0 transition-colors ${
+                            className={`${isFreeMoneyHistory ? 'free-history-record-row' : ''} ${isFinancialPro ? 'financial-record-row' : ''} group w-full min-h-[64px] px-3.5 py-3 flex items-center gap-3 text-left border-b last:border-b-0 transition-colors ${
                               isLight
                                 ? 'border-zinc-200 hover:bg-zinc-50 active:bg-zinc-100 text-zinc-800'
                                 : 'border-zinc-800/80 hover:bg-zinc-900 active:bg-zinc-800/80 text-zinc-100'
@@ -5727,7 +5750,7 @@ export default function CalendarScreen() {
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className={`block text-sm font-medium truncate ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{entry.instrument || t('catOther')}</span>
-                              <span className={`block text-[11px] mt-0.5 truncate ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{isFinancialPro ? entry.time : `${formatDateLabel(entry.dateKey, language)} · ${entry.time}`}{entry.comment ? ` · ${entry.comment}` : ''}</span>
+                              <span className={`block text-[11px] mt-0.5 truncate ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{isFinancialPro || isFreeMoneyHistory ? entry.time : `${formatDateLabel(entry.dateKey, language)} · ${entry.time}`}{entry.comment ? ` · ${entry.comment}` : ''}</span>
                             </span>
                             <span className="flex shrink-0 items-center gap-2">
                               <span className={`font-data text-sm font-medium tabular-nums whitespace-nowrap ${entry.pnl >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -5754,7 +5777,8 @@ export default function CalendarScreen() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-2 mt-4">
+                  {isFreeMoneyHistory && historyTrades.length > 3 && <button type="button" className="free-history-more" aria-expanded={freeHistoryExpanded} onClick={() => setFreeHistoryExpanded(value => !value)}>{freeHistoryExpanded ? freeHistoryCopy(language).less : `${freeHistoryCopy(language).more} ${historyTrades.length - 3}`}</button>}
+                  <div className={`${isFreeMoneyHistory ? 'free-history-tools' : ''} grid grid-cols-2 gap-2 mt-4`}>
                     <div>
                       <button
                       onClick={() => setExportOpen(true)}
@@ -5784,7 +5808,7 @@ export default function CalendarScreen() {
                       {confirmingClear ? t('confirmClearHistory') : t('clearHistory')}
                     </button>
                   </div>
-                </>
+                </div>
               ) : (
                 <>
                   {/* PRO HISTORY — premium, sectioned experience. */}
