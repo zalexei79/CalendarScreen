@@ -52,6 +52,14 @@ try {
    assert.equal(await toggle.evaluate(el=>getComputedStyle(el).backgroundImage),'none','premium theme does not add a second background behind the pass');
   }
  }
+ await page.emulateMedia({reducedMotion:'no-preference'});
+ await page.goto('http://pass.test/header?preview&mode=free&language=ru');await pass.waitFor();
+ await pass.hover({position:{x:12,y:12}});const firstReflection=await pass.evaluate(el=>el.style.getPropertyValue('--pass-light-x'));
+ assert.notEqual(firstReflection,'','mouse movement positions the metal reflection');
+ await pass.hover({position:{x:90,y:12}});assert.notEqual(await pass.evaluate(el=>el.style.getPropertyValue('--pass-light-x')),firstReflection);
+ await page.mouse.move(5,120);assert.equal(await pass.evaluate(el=>el.style.getPropertyValue('--pass-light-x')),'','reflection settles when the pointer leaves');
+ await page.emulateMedia({reducedMotion:'reduce'});await pass.hover({position:{x:12,y:12}});
+ assert.equal(await pass.evaluate(el=>el.style.getPropertyValue('--pass-light-x')),'','reduced motion disables pointer-following light');
  await page.setViewportSize({width:390,height:844});await page.goto('http://pass.test/header?preview&mode=free&language=ru');await pass.waitFor();
  await page.locator('.activity-streak-value').evaluate(el=>el.textContent='10 дн.');
  await page.locator('.dayris-brand-row').screenshot({path:'artifacts/orbit-pass-free-header.png'});

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useId, useRef, useState } from 'react';
 import { Info, ChartNoAxesCombined } from 'lucide-react';
 import ProWorkspaceActions from './ProWorkspaceActions';
 import WalletEntry from './WalletEntry';
@@ -24,9 +24,29 @@ export default function WorkspaceModePanel({ todayAction, hideSelector = false, 
 export function WorkspaceModeSelector({proView, onModeChange, language, t, onOffer}) {
   const text = (r,e,m,z) => platformText(language,r,e,m,z);
   const [hasSwitched, setHasSwitched] = useState(false);
-  return (<div className={`workspace-selector workspace-pass ${proView ? 'is-pro' : 'is-free'}${hasSwitched ? ' has-switched' : ''}`} role="group" aria-label={text('Режим DAYRIS','DAYRIS mode','Mod DAYRIS', "DAYRIS 模式")}>
+  const orbitId = `pass-orbit-${useId().replace(/:/g, '')}`;
+  const pointerBounds = useRef(null);
+  function enterPass(event) {
+    if (event.pointerType !== 'mouse' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    pointerBounds.current = event.currentTarget.getBoundingClientRect();
+  }
+  function reflectPointer(event) {
+    const bounds = pointerBounds.current;
+    if (!bounds || event.pointerType !== 'mouse') return;
+    const clamp = value => Math.max(0, Math.min(100, value));
+    event.currentTarget.style.setProperty('--pass-light-x', `${clamp((event.clientX - bounds.left) / bounds.width * 100)}%`);
+    event.currentTarget.style.setProperty('--pass-light-y', `${clamp((event.clientY - bounds.top) / bounds.height * 100)}%`);
+  }
+  function leavePass(event) {
+    pointerBounds.current = null;
+    event.currentTarget.style.removeProperty('--pass-light-x');
+    event.currentTarget.style.removeProperty('--pass-light-y');
+  }
+  return (<div className={`workspace-selector workspace-pass ${proView ? 'is-pro' : 'is-free'}${hasSwitched ? ' has-switched' : ''}`} role="group" aria-label={text('Режим DAYRIS','DAYRIS mode','Mod DAYRIS', "DAYRIS 模式")} onPointerEnter={enterPass} onPointerMove={reflectPointer} onPointerLeave={leavePass}>
       <svg className="workspace-pass-orbit" viewBox="0 0 104 44" fill="none" aria-hidden="true">
-        <ellipse cx="50" cy="22" rx="47" ry="17" transform="rotate(-10 50 22)"/>
+        <defs><linearGradient id={orbitId} x1="8" y1="35" x2="96" y2="8" gradientUnits="userSpaceOnUse"><stop stopColor="var(--pass-metal)" stopOpacity=".12"/><stop offset=".25" stopColor="var(--pass-metal)" stopOpacity=".7"/><stop offset=".45" stopColor="var(--pass-metal)" stopOpacity=".18"/><stop offset=".75" stopColor="var(--pass-metal)"/><stop offset="1" stopColor="var(--pass-metal)" stopOpacity=".25"/></linearGradient></defs>
+        <ellipse className="workspace-orbit-shadow" cx="50" cy="22.7" rx="47" ry="17" transform="rotate(-10 50 22.7)"/>
+        <ellipse className="workspace-orbit-metal" cx="50" cy="22" rx="47" ry="17" transform="rotate(-10 50 22)" stroke={`url(#${orbitId})`}/>
         <path d="M 18 37 C 44 48 94 34 98 15"/>
       </svg>
       <button className="workspace-mode-toggle" type="button" role="switch" aria-checked={proView} aria-label={text('Режим PRO','PRO mode','Mod PRO', "PRO 模式")} onClick={() => { setHasSwitched(true); onModeChange(); }}>
