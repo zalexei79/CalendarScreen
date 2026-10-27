@@ -1,4 +1,4 @@
-import React, { useId, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Info, ChartNoAxesCombined } from 'lucide-react';
 import ProWorkspaceActions from './ProWorkspaceActions';
 import WalletEntry from './WalletEntry';
@@ -24,7 +24,6 @@ export default function WorkspaceModePanel({ todayAction, hideSelector = false, 
 export function WorkspaceModeSelector({proView, onModeChange, language, t, onOffer}) {
   const text = (r,e,m,z) => platformText(language,r,e,m,z);
   const [hasSwitched, setHasSwitched] = useState(false);
-  const orbitId = `pass-orbit-${useId().replace(/:/g, '')}`;
   const pointerBounds = useRef(null);
   function enterPass(event) {
     if (event.pointerType !== 'mouse' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -43,15 +42,9 @@ export function WorkspaceModeSelector({proView, onModeChange, language, t, onOff
     event.currentTarget.style.removeProperty('--pass-light-y');
   }
   return (<div className={`workspace-selector workspace-pass ${proView ? 'is-pro' : 'is-free'}${hasSwitched ? ' has-switched' : ''}`} role="group" aria-label={text('Режим DAYRIS','DAYRIS mode','Mod DAYRIS', "DAYRIS 模式")} onPointerEnter={enterPass} onPointerMove={reflectPointer} onPointerLeave={leavePass}>
-      <svg className="workspace-pass-orbit" viewBox="0 0 104 44" fill="none" aria-hidden="true">
-        <defs><linearGradient id={orbitId} x1="8" y1="35" x2="96" y2="8" gradientUnits="userSpaceOnUse"><stop stopColor="var(--pass-metal)" stopOpacity=".12"/><stop offset=".25" stopColor="var(--pass-metal)" stopOpacity=".7"/><stop offset=".45" stopColor="var(--pass-metal)" stopOpacity=".18"/><stop offset=".75" stopColor="var(--pass-metal)"/><stop offset="1" stopColor="var(--pass-metal)" stopOpacity=".25"/></linearGradient></defs>
-        <ellipse className="workspace-orbit-shadow" cx="50" cy="22.7" rx="47" ry="17" transform="rotate(-10 50 22.7)"/>
-        <ellipse className="workspace-orbit-metal" cx="50" cy="22" rx="47" ry="17" transform="rotate(-10 50 22)" stroke={`url(#${orbitId})`}/>
-        <path d="M 18 37 C 44 48 94 34 98 15"/>
-      </svg>
+      <span className="workspace-pass-orbit" aria-hidden="true"/>
       <button className="workspace-mode-toggle" type="button" role="switch" aria-checked={proView} aria-label={text('Режим PRO','PRO mode','Mod PRO', "PRO 模式")} onClick={() => { setHasSwitched(true); onModeChange(); }}>
-        <span className="workspace-pass-face" aria-hidden="true">{hasSwitched && <span key={proView ? 'pro' : 'free'} className="workspace-pass-sheen"/>}</span>
-        <svg className="workspace-pass-facet" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m8 1.5 5 3v7l-5 3-5-3v-7z"/><path d="m3 4.5 5 3 5-3M8 7.5v7M8 1.5v6"/></svg>
+        <span className="workspace-pass-face" aria-hidden="true"/>
         <span key={proView ? 'pro-label' : 'free-label'} className="workspace-pass-label">{proView ? 'PRO' : 'FREE'}</span>
       </button>
       <button className="workspace-pro-info" type="button" onClick={onOffer} aria-label={t('proInfoAction')} title={t('proInfoAction')}><Info aria-hidden="true" /></button>

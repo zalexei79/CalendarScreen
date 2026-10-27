@@ -8,6 +8,9 @@ const bundle=await createRequire(path.resolve('package.json'))('esbuild').build(
 const js=bundle.outputFiles.find(f=>f.path.endsWith('.js')).text;
 const css=fs.readFileSync(path.join('dist/assets',fs.readdirSync('dist/assets').find(f=>/^main-.*\.css$/.test(f))),'utf8');
 const browser=await (process.env.DAYRIS_TEST_WEBKIT?require('playwright').webkit.launch({headless:true}):require('playwright').chromium.launch({channel:'msedge',headless:true}));
+const rgb=value=>value.startsWith('#') ? (value.slice(1).length===8 ? value.slice(1).match(/../g).map((n,i)=>parseInt(n,16)/(i===3?255:1)) : value.slice(1).match(/../g).map(n=>parseInt(n,16))) : value.match(/[\d.]+/g).map(Number);
+const luminance=color=>rgb(color).slice(0,3).map(n=>n/255).map(n=>n<=.04045?n/12.92:((n+.055)/1.055)**2.4).reduce((sum,n,i)=>sum+n*[.2126,.7152,.0722][i],0);
+const contrast=(a,b)=>{const values=[luminance(a),luminance(b)].sort((a,b)=>b-a);return (values[0]+.05)/(values[1]+.05);};
 try {
  const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.route('http://pass.test/**',route=>{
@@ -38,19 +41,51 @@ try {
   await page.emulateMedia({reducedMotion});await page.goto('http://pass.test/header?preview&mode=free&language=ru');await pass.waitFor();
   await toggle.focus();await page.keyboard.press('Space');await page.keyboard.press('Space');await page.keyboard.press('Space');
   await page.waitForFunction(()=>document.querySelector('.workspace-mode-toggle').getAttribute('aria-checked')==='true');await settle();
-  const active=await info.boundingBox();await info.focus();await page.keyboard.press('Enter');await page.waitForFunction(()=>document.querySelector('#state').textContent==='main/true/true');
+  const active=await info.locator('svg').boundingBox(),activeTarget=await info.boundingBox();await info.focus();await page.keyboard.press('Enter');await page.waitForFunction(()=>document.querySelector('#state').textContent==='main/true/true');
   await toggle.click();await page.waitForFunction(()=>document.querySelector('.workspace-mode-toggle').getAttribute('aria-checked')==='false');await settle();
-  const inactive=await info.boundingBox();assert.ok(active.y<inactive.y-8,'satellite moves along its orbit between modes');
+  const inactive=await info.locator('svg').boundingBox(),inactiveTarget=await info.boundingBox();assert.ok(active.y<inactive.y-8,'satellite moves along its orbit between modes');
+  assert.deepEqual(activeTarget,inactiveTarget,'the visible satellite moves inside a fixed touch target');
   if(reducedMotion==='reduce')assert.equal(await pass.evaluate(el=>el.getAnimations({subtree:true}).filter(a=>a.playState==='running').length),0);
  }
- for(const theme of ['gold','emerald','purple']){
-  await page.setViewportSize({width:390,height:844});await page.goto('http://pass.test/header?preview&mode=free&language=ru');await pass.waitFor();
+ const materials=new Set();
+ for(const width of [320,390,1280])for(const theme of ['dark','light','gold','emerald','purple']){
+  await page.setViewportSize({width,height:844});await page.goto(`http://pass.test/header?preview&mode=free&language=ru${theme==='light'?'&light':''}`);await pass.waitFor();
   await page.evaluate(theme=>document.documentElement.dataset.dayrisTheme=theme,theme);
+  await page.locator('.activity-streak-value').evaluate(el=>el.textContent='10 дн.');
+  let freeMaterial;
   for(const active of [false,true]){
    if(active){await toggle.click();await settle();}
+   const palette=await pass.evaluate(el=>{
+    const face=getComputedStyle(el.querySelector('.workspace-pass-face'));
+    return {fill:face.backgroundColor,image:face.backgroundImage,ink:getComputedStyle(el.querySelector('.workspace-pass-label')).color,highlight:getComputedStyle(el).getPropertyValue('--pass-highlight').trim()};
+   });
+   const key=`${theme}/${active?'PRO':'FREE'}/${width}`;
+   assert.ok(contrast(palette.ink,palette.fill)>=4.5,`readable label on the plate: ${key}`);
+   const [r,g,b,a=1]=rgb(palette.highlight),base=rgb(palette.fill);
+   const highlight=`rgb(${[r,g,b].map((n,i)=>Math.round(n*a+base[i]*(1-a))).join(',')})`;
+   assert.ok(contrast(palette.ink,highlight)>=4.5,`readable label under the brightest reflection: ${key}`);
+   if(!active)freeMaterial=palette.fill;else assert.notEqual(palette.fill,freeMaterial,`material identifies mode: ${key}`);
+   if(active&&width===390)materials.add(palette.fill);
+   if(theme==='gold'){const [r,g,b]=rgb(palette.fill);assert.ok(r>g&&g>b,'gold uses a warm metal in both modes');}
+   if(theme==='emerald'){const [r,g,b]=rgb(palette.fill);assert.ok(g>r&&g>b,'emerald uses green glass in both modes');}
    assert.equal(await pass.locator('.workspace-pass-label').evaluate(el=>getComputedStyle(el).color),await pass.evaluate(el=>getComputedStyle(el).color),'premium themes preserve readable FREE/PRO text');
    assert.equal(await toggle.evaluate(el=>getComputedStyle(el).backgroundImage),'none','premium theme does not add a second background behind the pass');
+   const modeTarget=await toggle.boundingBox(),infoTarget=await info.boundingBox();
+   assert.ok(modeTarget.width>=44&&modeTarget.height>=44&&infoTarget.width>=44&&infoTarget.height>=44,'independent touch targets are at least 44px');
+   assert.ok(modeTarget.x+modeTarget.width<=infoTarget.x+.1,'mode and information targets do not overlap');
+   const settings=await page.locator('[data-site-element="settings"]').boundingBox();
+   assert.ok(infoTarget.x+infoTarget.width<=settings.x,'information target does not overlap Settings');
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`no overflow: ${key}`);
+   if(width!==320)await page.locator('.dayris-header').screenshot({path:`artifacts/quiet-orbit-${theme}-${active?'pro':'free'}-${width}.png`});
   }
+ }
+ assert.equal(materials.size,5,'every theme has its own PRO material');
+ // A live theme change updates the existing pass without resetting the selected mode.
+ for(const theme of ['gold','emerald','purple','dark']){
+  await page.evaluate(theme=>document.documentElement.dataset.dayrisTheme=theme,theme);await settle();
+  assert.equal(await toggle.getAttribute('aria-checked'),'true');
+  const palette=await pass.evaluate(el=>({actual:getComputedStyle(el.querySelector('.workspace-pass-face')).backgroundColor,expected:getComputedStyle(el).getPropertyValue('--pass-pro-fill').trim()}));
+  assert.equal(luminance(palette.actual),luminance(palette.expected),'runtime theme changes repaint the pass');
  }
  await page.emulateMedia({reducedMotion:'no-preference'});
  await page.goto('http://pass.test/header?preview&mode=free&language=ru');await pass.waitFor();
@@ -63,5 +98,5 @@ try {
  await page.setViewportSize({width:390,height:844});await page.goto('http://pass.test/header?preview&mode=free&language=ru');await pass.waitFor();
  await page.locator('.activity-streak-value').evaluate(el=>el.textContent='10 дн.');
  await page.locator('.dayris-brand-row').screenshot({path:'artifacts/orbit-pass-free-header.png'});
- assert.deepEqual(errors,[]);console.log('Orbit pass: 30 header layouts, independent features action, material change, stable size, interrupted keyboard switching and reduced motion passed.');
+ assert.deepEqual(errors,[]);console.log('Quiet orbit: 30 localized header layouts and 30 theme/mode layouts, reflected-text contrast, fixed 44px targets, live theme changes, independent features, keyboard switching and reduced motion passed.');
 } finally {await browser.close();}

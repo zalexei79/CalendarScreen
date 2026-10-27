@@ -1,82 +1,142 @@
-/* One compact pass, with independent mode and information actions. */
+/* Quiet orbit: theme-owned materials and two independent, fixed touch targets. */
 .workspace-selector.workspace-pass {
-  --pass-ink:#dbe3ed;
-  --pass-metal:#b5c3d5;
-  --pass-edge:#d5e3f25c;
-  --pass-text-light:#0009;
-  --pass-plate:radial-gradient(ellipse at var(--pass-light-x,24%) var(--pass-light-y,0%),#dceaff45,transparent 66%),linear-gradient(140deg,#5d6d8230,transparent 45%,#02070e7a),repeating-linear-gradient(92deg,#ffffff03 0 1px,transparent 1px 3px),linear-gradient(145deg,#344154,#18212e 48%,#0a101b);
-  --orbit-distance:0%;
-  position:relative; display:block; flex:none; width:104px; height:44px;
-  min-width:104px; color:var(--pass-ink); isolation:isolate;
+  --pass-free-fill:#282c34;
+  --pass-free-ink:#d5dbe5;
+  --pass-free-metal:#8893a4;
+  --pass-free-edge:#858e9c70;
+  --pass-free-highlight:#dce5f02e;
+  --pass-pro-fill:#c4b9a7;
+  --pass-pro-ink:#38332c;
+  --pass-pro-metal:#d8d1c5;
+  --pass-pro-edge:#fff9edc2;
+  --pass-pro-highlight:#fffcf0b3;
+  --pass-shadow:#0004;
+  --pass-ink:var(--pass-free-ink);
+  --pass-fill:var(--pass-free-fill);
+  --pass-metal:var(--pass-free-metal);
+  --pass-edge:var(--pass-free-edge);
+  --pass-highlight:var(--pass-free-highlight);
+  --pass-satellite-shift:6px;
+  --pass-ease:cubic-bezier(.22,1,.36,1);
+  position:relative; display:block; flex:none; width:104px; min-width:104px; height:44px;
+  color:var(--pass-ink); isolation:isolate;
 }
-.workspace-pass.is-pro {
-  --pass-ink:#382a12;
-  --pass-metal:#e7c98a;
-  --pass-edge:#fff1c7bb;
-  --pass-text-light:#fff7d18c;
-  --pass-plate:radial-gradient(ellipse at var(--pass-light-x,24%) var(--pass-light-y,0%),#fffcedb3,transparent 64%),linear-gradient(125deg,transparent 12%,#fff8db45 28%,transparent 47%,#79582424 72%,#ffecad38),repeating-linear-gradient(92deg,#ffffff05 0 1px,transparent 1px 3px),linear-gradient(135deg,#f3dfab,#c3a16b 34%,#dfc590 57%,#a38452);
-  --orbit-distance:100%;
+:is(.pro-light,.theme-light) .workspace-selector.workspace-pass {
+  --pass-free-fill:#e3e5e9;
+  --pass-free-ink:#5b616c;
+  --pass-free-metal:#969da9;
+  --pass-free-edge:#ffffffd9;
+  --pass-free-highlight:#ffffff9c;
+  --pass-pro-fill:#d9d1c3;
+  --pass-pro-ink:#40382e;
+  --pass-pro-metal:#aaa091;
+  --pass-pro-edge:#fffffff0;
+  --pass-pro-highlight:#ffffffd9;
+  --pass-shadow:#28263726;
 }
-.workspace-pass-orbit { position:absolute; inset:0; width:104px; height:44px; pointer-events:none; color:var(--pass-metal); }
-.workspace-orbit-shadow { stroke:#000; stroke-width:1.8; opacity:.3; }
-.workspace-orbit-metal { stroke-width:.7; opacity:.72; transition:opacity 480ms ease; }
-.workspace-pass-orbit > path { stroke:currentColor; stroke-width:.65; opacity:.27; }
-.workspace-pass.is-pro .workspace-orbit-metal { opacity:.94; }
+html[data-dayris-theme="gold"] .workspace-selector.workspace-pass {
+  --pass-free-fill:#30291e;
+  --pass-free-ink:#e5ce9f;
+  --pass-free-metal:#b99e67;
+  --pass-free-edge:#e8d2a44d;
+  --pass-free-highlight:#fff0bd29;
+  --pass-pro-fill:#d7b674;
+  --pass-pro-ink:#453118;
+  --pass-pro-metal:#edcd8b;
+  --pass-pro-edge:#fff3c8d9;
+  --pass-pro-highlight:#fff5c7b3;
+}
+html[data-dayris-theme="emerald"] .workspace-selector.workspace-pass {
+  --pass-free-fill:#172f26;
+  --pass-free-ink:#bddaca;
+  --pass-free-metal:#6ba88b;
+  --pass-free-edge:#b4efca4d;
+  --pass-free-highlight:#bdedcf24;
+  --pass-pro-fill:#164b38;
+  --pass-pro-ink:#e4fff0;
+  --pass-pro-metal:#a3ddbc;
+  --pass-pro-edge:#d2ffe3a6;
+  --pass-pro-highlight:#c8ffde33;
+}
+html[data-dayris-theme="purple"] .workspace-selector.workspace-pass {
+  --pass-free-fill:#30263e;
+  --pass-free-ink:#d9cbe6;
+  --pass-free-metal:#a38dbb;
+  --pass-free-edge:#dac5f15c;
+  --pass-free-highlight:#e9d2ff26;
+  --pass-pro-fill:#c1b3d4;
+  --pass-pro-ink:#342a42;
+  --pass-pro-metal:#cbb6e2;
+  --pass-pro-edge:#f7edffcc;
+  --pass-pro-highlight:#faf2ffc2;
+}
+.workspace-selector.workspace-pass.is-pro {
+  --pass-ink:var(--pass-pro-ink);
+  --pass-fill:var(--pass-pro-fill);
+  --pass-metal:var(--pass-pro-metal);
+  --pass-edge:var(--pass-pro-edge);
+  --pass-highlight:var(--pass-pro-highlight);
+  --pass-satellite-shift:-6px;
+}
+.workspace-pass-orbit {
+  position:absolute; left:0; top:8px; width:101px; height:29px; border-radius:50%;
+  border:.7px solid color-mix(in srgb,var(--pass-metal) 68%,transparent);
+  transform:rotate(-13deg); pointer-events:none;
+  box-shadow:0 .5px 1px var(--pass-shadow);
+  transition:border-color 460ms ease;
+}
 .workspace-selector.workspace-pass .workspace-mode-toggle[aria-checked] {
-  position:absolute; z-index:1; left:6px; top:0; display:flex; align-items:center; justify-content:center; isolation:isolate;
-  gap:5px; width:68px; height:44px; min-height:44px; margin:0; padding:0 5px;
+  position:absolute; z-index:1; left:0; top:0; display:grid; place-items:center; isolation:isolate;
+  width:60px; height:44px; min-height:44px; margin:0; padding:0;
   border:0; border-radius:12px; background:transparent; box-shadow:none;
   color:var(--pass-ink); cursor:pointer; -webkit-tap-highlight-color:transparent;
   backdrop-filter:none; -webkit-backdrop-filter:none;
 }
 .workspace-pass .workspace-mode-toggle > .workspace-pass-face {
-  position:absolute; z-index:-1; inset:6px 0; overflow:hidden; border-radius:10px;
-  border:1px solid var(--pass-edge); background:var(--pass-plate);
-  box-shadow:inset 0 1px 0 #ffffff52,inset 0 -1px 0 #000b,inset 1px 0 0 #ffffff1a,inset -1px 0 0 #0005,0 2px 0 #080b10,0 5px 8px #0006,0 9px 16px #0002;
-  transition:border-color 440ms,box-shadow 440ms;
+  position:absolute; z-index:-1; inset:6px 0; overflow:hidden; border-radius:11px;
+  border:.7px solid var(--pass-edge); background-color:var(--pass-fill);
+  background-image:radial-gradient(ellipse at var(--pass-light-x,28%) var(--pass-light-y,0%),var(--pass-highlight),transparent 68%),linear-gradient(135deg,#ffffff0d,transparent 48%,#0000000d);
+  box-shadow:inset 0 1px 1px #ffffff26,inset 0 -1px 1px #00000026,0 3px 7px var(--pass-shadow);
+  transition:background-color 460ms ease,border-color 460ms ease,box-shadow 460ms ease,transform 150ms var(--pass-ease);
 }
-.workspace-pass-face::before { content:''; position:absolute; left:4px; top:8px; bottom:8px; width:1px; background:linear-gradient(transparent,currentColor 30%,currentColor 70%,transparent); opacity:.3; }
-.workspace-pass-face::after { content:''; position:absolute; inset:2px; border:1px solid; border-color:#ffffff2b #ffffff08 #0004 #ffffff14; border-radius:7px; pointer-events:none; }
-.workspace-pass.is-pro .workspace-pass-face { box-shadow:inset 0 1px 0 #fff9dfdc,inset 0 -1px 0 #59401dcc,inset 1px 0 0 #fff7d17a,inset -1px 0 0 #704e2644,0 2px 0 #0b0b0e,0 5px 8px #0006,0 8px 18px #d6b46c0d; }
-.workspace-pass.is-pro .workspace-pass-face::after { border-color:#fff7d888 #7653221c #69491d4d #fff1b34d; }
-.workspace-pass-facet { position:relative; width:12px; height:16px; flex:none; stroke:currentColor; stroke-width:1; stroke-linejoin:round; opacity:.84; }
-.workspace-pass.is-pro .workspace-pass-facet { fill:#62441d12; opacity:.95; }
-.workspace-selector.workspace-pass .workspace-mode-toggle[aria-checked] > .workspace-pass-label { position:relative; font:700 10px/1 system-ui,sans-serif; letter-spacing:.14em; color:var(--pass-ink); text-shadow:0 1px var(--pass-text-light); }
+.workspace-pass-face::after { content:''; position:absolute; inset:1px; border:1px solid #ffffff12; border-radius:inherit; pointer-events:none; }
+.workspace-selector.workspace-pass .workspace-mode-toggle[aria-checked] > .workspace-pass-label {
+  position:relative; font:650 10px/1 system-ui,sans-serif; letter-spacing:.15em; padding-left:.15em;
+  color:var(--pass-ink); text-shadow:none;
+}
+.workspace-pass .workspace-mode-toggle:active .workspace-pass-face { transform:scale(.97); }
 .workspace-pass .workspace-mode-toggle:hover .workspace-pass-face { border-color:var(--pass-metal); }
 .workspace-pass .workspace-mode-toggle:focus-visible,.workspace-pass .workspace-pro-info:focus-visible { outline:2px solid var(--pass-metal); outline-offset:2px; }
 .workspace-selector.workspace-pass .workspace-pro-info {
-  position:absolute; z-index:2; left:80px; top:30px; transform:translate(-50%,-50%);
-  display:grid; place-items:center; width:28px; height:28px; min-height:28px;
-  margin:0; padding:0; border:0; border-radius:50%; background:transparent;
-  color:var(--pass-ink); box-shadow:none; cursor:pointer; animation:none;
-  transition:left 460ms cubic-bezier(.22,1,.36,1),top 460ms cubic-bezier(.22,1,.36,1);
+  position:absolute; z-index:2; left:60px; top:0; display:grid; place-items:center; isolation:isolate;
+  width:44px; height:44px; min-height:44px; margin:0; padding:0;
+  border:0; border-radius:50%; background:transparent; color:var(--pass-ink);
+  box-shadow:none; cursor:pointer; animation:none; -webkit-tap-highlight-color:transparent;
 }
-.workspace-selector.workspace-pass.is-pro .workspace-pro-info { left:88px; top:14px; }
-.workspace-pass .workspace-pro-info::before { content:''; position:absolute; z-index:-1; inset:4px; border:1px solid var(--pass-edge); border-radius:50%; background:var(--pass-plate); box-shadow:inset 0 1px #ffffff8c,inset 0 -1px #0006,0 2px 1px #07090dcc,0 4px 7px #0005; }
-.workspace-pass .workspace-pro-info::after { content:''; position:absolute; inset:2px; border:.5px solid color-mix(in srgb,var(--pass-metal) 40%,transparent); border-radius:50%; pointer-events:none; }
-.workspace-pass .workspace-pro-info svg { width:12px; height:12px; }
+.workspace-pass .workspace-pro-info::before {
+  content:''; position:absolute; z-index:-1; inset:12px; border:.7px solid var(--pass-edge); border-radius:50%;
+  background-color:var(--pass-fill); background-image:linear-gradient(135deg,var(--pass-highlight),#0000000d);
+  box-shadow:inset 0 1px 1px #ffffff30,inset 0 -1px 1px #00000026,0 2px 4px var(--pass-shadow);
+  transform:translateY(var(--pass-satellite-shift));
+  transition:transform 460ms var(--pass-ease),background-color 460ms ease,border-color 460ms ease;
+}
+.workspace-pass .workspace-pro-info svg {
+  width:12px; height:12px; stroke-width:1.5; transform:translateY(var(--pass-satellite-shift));
+  transition:transform 460ms var(--pass-ease),color 460ms ease;
+}
 .workspace-pass .workspace-pro-info:hover::before { border-color:var(--pass-metal); }
 .workspace-selector.workspace-pass .workspace-pro-info:hover { background:transparent; box-shadow:none; }
-@supports (offset-path:path('M 80 30 Q 94 30 88 14')) {
-  .workspace-selector.workspace-pass .workspace-pro-info {
-    left:0; top:0; transform:none;
-    offset-path:path('M 80 30 Q 94 30 88 14'); offset-rotate:0deg;
-    offset-anchor:center; offset-distance:var(--orbit-distance);
-    transition:offset-distance 540ms cubic-bezier(.22,1,.36,1);
-  }
-  .workspace-selector.workspace-pass.is-pro .workspace-pro-info { left:0; top:0; }
-}
 @media(prefers-reduced-motion:no-preference) {
-  .workspace-pass.has-switched .workspace-mode-toggle { animation:pass-card-free 460ms cubic-bezier(.22,1,.36,1); }
-  .workspace-pass.has-switched.is-pro .workspace-mode-toggle { animation:pass-card-pro 520ms cubic-bezier(.22,1,.36,1); }
-  .workspace-pass.has-switched .workspace-pass-label { animation:pass-label-enter 280ms cubic-bezier(.22,1,.36,1); }
-  .workspace-pass-sheen { position:absolute; inset:-10px -25px; background:linear-gradient(110deg,transparent 42%,#fffbea59 49%,#fffefb80 50%,transparent 57%); animation:pass-sheen 760ms 60ms cubic-bezier(.22,1,.36,1) both; pointer-events:none; }
-  @keyframes pass-card-pro { 0%,100% {transform:perspective(240px) rotateY(0deg)} 38% {transform:perspective(240px) rotateY(-8deg) scale(.987)} }
-  @keyframes pass-card-free { 0%,100% {transform:perspective(240px) rotateY(0deg)} 38% {transform:perspective(240px) rotateY(8deg) scale(.987)} }
-  @keyframes pass-label-enter { from {opacity:.35;transform:translateY(2px)} to {opacity:1;transform:translateY(0)} }
-  @keyframes pass-sheen { from {opacity:0;transform:translateX(-90%)} 30% {opacity:.5} to {opacity:0;transform:translateX(90%)} }
+  .workspace-pass.has-switched .workspace-pass-face { animation:pass-settle-free 460ms var(--pass-ease); }
+  .workspace-pass.has-switched.is-pro .workspace-pass-face { animation:pass-settle-pro 460ms var(--pass-ease); }
+  .workspace-pass.has-switched .workspace-pass-label { animation:pass-label-enter 220ms var(--pass-ease); }
+  @keyframes pass-settle-pro { from {transform:scale(.97)} to {transform:scale(1)} }
+  @keyframes pass-settle-free { from {transform:scale(.97)} to {transform:scale(1)} }
+  @keyframes pass-label-enter { from {opacity:.3;transform:translateY(2px)} to {opacity:1;transform:translateY(0)} }
 }
 @media(prefers-reduced-motion:reduce) {
-  .workspace-pass *,.workspace-pass-orbit ellipse { transition:none!important; animation:none!important; }
-  .workspace-pass-sheen { display:none; }
+  .workspace-pass *,.workspace-pass *::before { transition:none!important; animation:none!important; }
+}
+@media(forced-colors:active) {
+  .workspace-selector.workspace-pass { --pass-ink:ButtonText; --pass-metal:ButtonText; --pass-fill:ButtonFace; --pass-edge:ButtonText; --pass-highlight:transparent; }
 }
