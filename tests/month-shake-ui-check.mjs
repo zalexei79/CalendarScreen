@@ -1,0 +1,108 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
+const engine=process.env.DAYRIS_SHAKE_ENGINE==='webkit'?'webkit':'chromium';
+const source=fs.readFileSync('tests/gold-theme-ui-check.mjs','utf8');
+let setup=source.slice(0,source.indexOf(' for(const width of [320,390,1280])'))
+ .replace("'./life-story-auth-fixture.mjs'",JSON.stringify(pathToFileURL(path.resolve('tests/life-story-auth-fixture.mjs')).href))
+ .replaceAll('http://gold.test','https://gold.test')
+ .replace("serviceWorkers:'block'","serviceWorkers:'block',isMobile:true,hasTouch:true")
+ .replace('page.setDefaultTimeout(10000)','page.setDefaultTimeout(30000)');
+if(engine==='webkit')setup=setup.replace('const {chromium}=','const {webkit}=').replace("chromium.launch({channel:'msedge',headless:true})",'webkit.launch({headless:true})');
+setup=setup.replace(' const page=await context.newPage()',`
+ await context.route('**/rest/v1/reminders**',route=>route.fulfill({contentType:'application/json',body:'[]'}));
+ await context.addInitScript(()=>{
+  const api=DeviceMotionEvent,mode=localStorage.getItem('shake_test_mode');
+  Object.defineProperty(window,'DeviceMotionEvent',{configurable:true,value:mode==='unavailable'?undefined:api});
+  window.__motionCalls=0;window.__motionPermission='granted';
+  Object.defineProperty(api,'requestPermission',{configurable:true,value:mode==='legacy'?undefined:()=>{
+   window.__motionCalls++;if(window.__motionPermission==='error')return Promise.reject(new Error('denied'));
+   return Promise.resolve(window.__motionPermission);
+  }});
+  const listeners=new Set(),add=window.addEventListener.bind(window),remove=window.removeEventListener.bind(window);
+  window.addEventListener=(name,fn,options)=>{if(name==='devicemotion')listeners.add(fn);return add(name,fn,options);};
+  window.removeEventListener=(name,fn,options)=>{if(name==='devicemotion')listeners.delete(fn);return remove(name,fn,options);};
+  window.__motionListeners=()=>listeners.size;
+  window.__motion=(x=0,y=0,z=0)=>{
+   const angle=window.screen.orientation?.angle??(Number.isFinite(window.orientation)?window.orientation:0),r=angle*Math.PI/180;
+   const e=new Event('devicemotion');Object.defineProperty(e,'acceleration',{value:{x:x*Math.cos(r)+y*Math.sin(r),y:-x*Math.sin(r)+y*Math.cos(r),z}});window.dispatchEvent(e);
+  };
+  window.__flick=async(sign)=>{
+   const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+   for(let i=0;i<14;i++){window.__motion();await pause(25);}
+   for(const [x,delay] of [[3,20],[6,20],[12,30],[8,20],[0,25],[-9,20]]){window.__motion(x*sign);await pause(delay);}
+  };
+ });
+ const page=await context.newPage()`);
+const finish=`
+ await page.clock.resume();fs.mkdirSync('artifacts/month-shake',{recursive:true});
+ const shots='artifacts/month-shake/${engine}';
+ const openSettings=async()=>{await page.getByRole('button',{name:'Настройки',exact:true}).click();await page.locator('.month-shake-control').waitFor();};
+ const closeSettings=async()=>{await page.getByRole('button',{name:'Закрыть настройки',exact:true}).click();await page.getByRole('button',{name:'История',exact:true}).waitFor();await page.waitForTimeout(250);};
+ const toggle=page.getByRole('switch',{name:'Месяцы движением телефона',exact:true});
+ const flick=sign=>page.evaluate(s=>window.__flick(s),sign);
+ const month=async name=>page.getByRole('button',{name,exact:true}).waitFor();
+ const records=await page.evaluate(()=>localStorage.getItem('money_calendar_trades_22222222-2222-4222-8222-222222222222'));
+ assert.equal(await page.evaluate(()=>window.__motionCalls),0);assert.equal(await page.evaluate(()=>window.__motionListeners()),0);
+ await flick(1);await month('Октябрь');
+ await openSettings();assert.equal(await toggle.getAttribute('aria-checked'),'false');
+ for(const permission of ['denied','error']) {
+  await page.evaluate(value=>window.__motionPermission=value,permission);await toggle.click();
+  await page.locator('.month-shake-control').getByText(/Доступ не получен/).waitFor();
+  assert.equal(await toggle.getAttribute('aria-checked'),'false');assert.equal(await page.evaluate(()=>window.__motionListeners()),0);
+ }
+ await page.evaluate(()=>window.__motionPermission='granted');await toggle.click();
+ assert.equal(await toggle.getAttribute('aria-checked'),'true');assert.equal(await page.evaluate(()=>window.__motionCalls),3);
+ assert.equal(await page.getByRole('switch',{name:'Глубина при наклоне',exact:true}).getAttribute('aria-checked'),'false','Independent from decorative tilt');
+ await toggle.scrollIntoViewIfNeeded();await page.screenshot({path:shots+'-settings-390.png',animations:'disabled'});
+ await flick(1);await month('Октябрь');assert.equal(await page.evaluate(()=>window.__motionListeners()),0,'Never switch beneath settings');
+ await closeSettings();assert.equal(await page.evaluate(()=>window.__motionListeners()),1);
+ console.log('${engine} sensor angle:',await page.evaluate(()=>window.screen.orientation?.angle??window.orientation??0));
+ console.log('${engine}: grant, denial, settings guard');
+ await flick(1);await month('Ноябрь');
+ await page.screenshot({path:shots+'-next-390.png',animations:'disabled'});
+ await flick(1);await month('Ноябрь'); // Rebound/cooldown cannot skip months.
+ await page.waitForTimeout(1300);await flick(-1);await month('Октябрь');
+ console.log('${engine}: direction and cooldown');
+ // Walking has substantial vertical acceleration, but no lateral gesture.
+ await page.evaluate(async()=>{for(let i=0;i<35;i++){window.__motion(1,8*Math.cos(i),3);await new Promise(resolve=>setTimeout(resolve,20));}});
+ await month('Октябрь');
+ await page.getByRole('button',{name:'Следующий месяц',exact:true}).click();await month('Ноябрь');
+ await page.getByRole('button',{name:'Следующий месяц',exact:true}).click();await month('Декабрь');
+ await page.waitForTimeout(1300);await flick(1);await month('Январь');await month('2027');
+ await page.waitForTimeout(1300);await flick(-1);await month('Декабрь');await month('2026');
+ console.log('${engine}: noise rejection and year boundaries');
+ await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
+ assert.equal(await page.evaluate(()=>window.__motionListeners()),0);await flick(1);await month('Декабрь');
+ await page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});
+ assert.equal(await page.evaluate(()=>window.__motionListeners()),1);
+ await page.emulateMedia({reducedMotion:'reduce'});await page.waitForTimeout(1300);await flick(1);await month('Январь');
+ await page.emulateMedia({reducedMotion:'no-preference'});
+ // An untracked native modal still blocks the gesture, even if main state is idle.
+ await page.evaluate(()=>{const d=document.createElement('dialog');d.id='shake-test-dialog';d.textContent='Modal';document.body.append(d);d.showModal();});
+ await page.waitForTimeout(1300);await flick(1);await month('Январь');
+ await page.evaluate(()=>{const d=document.getElementById('shake-test-dialog');d.close();d.remove();});
+ await openSettings();await page.getByRole('button',{name:'Изумрудное',exact:true}).click();
+ assert.equal(await toggle.getAttribute('aria-checked'),'true');await closeSettings();
+ await page.waitForTimeout(1300);await flick(-1);await month('Декабрь');
+ await openSettings();await page.getByRole('button',{name:'Светлое',exact:true}).click();await closeSettings();
+ await page.waitForTimeout(1300);await flick(1);await month('Январь');
+ assert.equal(await page.evaluate(()=>localStorage.getItem('money_calendar_trades_22222222-2222-4222-8222-222222222222')),records);
+ console.log('${engine}: modal, visibility, reduced motion and themes');
+ await openSettings();await toggle.click();await closeSettings();assert.equal(await page.evaluate(()=>window.__motionListeners()),0);
+ await flick(-1);await month('Январь');
+ await openSettings();await toggle.click();await closeSettings();
+ await page.waitForTimeout(5100);await openSettings();await page.locator('.month-shake-control').getByText(/не передаёт данные/).waitFor();
+ await page.reload();await page.locator('html[data-dayris-theme="light"]').waitFor();await openSettings();
+ assert.equal(await toggle.getAttribute('aria-checked'),'false');assert.equal(await page.evaluate(()=>window.__motionCalls),0);
+ await page.locator('.month-shake-control').getByText(/снова разрешить/).waitFor();
+ await page.evaluate(()=>localStorage.setItem('shake_test_mode','unavailable'));await page.reload();await page.locator('html[data-dayris-theme="light"]').waitFor();await openSettings();
+ assert.equal(await toggle.isDisabled(),true);
+ await page.evaluate(()=>localStorage.setItem('shake_test_mode','legacy'));await page.reload();await page.locator('html[data-dayris-theme="light"]').waitFor();await openSettings();
+ assert.equal(await toggle.getAttribute('aria-checked'),'true');assert.equal(await page.evaluate(()=>window.__motionCalls),0);
+ await page.setViewportSize({width:1280,height:950});await toggle.scrollIntoViewIfNeeded();await page.screenshot({path:shots+'-settings-1280.png',animations:'disabled'});
+ assert.deepEqual(errors,[]);
+ console.log('PASS ${engine}: optional left/right motion, permissions, year boundaries, no accidental repeats, paused overlays, unchanged data, all themes, reload and unavailable/legacy behavior.');
+} finally {await browser.close();}
+`;
+await import('data:text/javascript;base64,'+Buffer.from(setup+finish).toString('base64')).catch(error=>{console.error(error.message);process.exitCode=1;});

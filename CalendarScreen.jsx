@@ -4,6 +4,7 @@ import './src/shared/ui/PurpleTheme.css';
 import './src/shared/ui/EmeraldGlass.css';
 import './src/shared/ui/GoldTheme.css';
 import useGoldMotion from './src/shared/ui/useGoldMotion.js';
+import useMonthShake from './src/shared/ui/useMonthShake.js';
 import { useWorkspaceViewport } from './src/shared/ui/useWorkspaceViewport';
 import WorkspaceDock from './src/shared/ui/WorkspaceDock';
 import MetaTraderControl from './src/features/metatrader/MetaTraderControl.jsx';
@@ -4486,6 +4487,15 @@ export default function CalendarScreen() {
               setDetailsOpen(true);
             }
   }
+
+  useMonthShake({
+    active:authReady && Boolean(validUserId || demoMode) && accountMode === 'main' && !(
+      setupStep || nicknameModalOpen || selectedKey || settingsOpen || modalOpen || historyOpen || monthMenuOpen || yearMenuOpen ||
+      planComposerOpen || planConfirm || planDeleteConfirm || connectOpen || metaTraderOpen ||
+      analysisOpen || exportOpen || installInfoOpen || proAccessPromptOpen || referralShareOpen || historyShareOpen
+    ),
+    onPrevious:goToPrevMonth,onNext:goToNextMonth,
+  });
 
   return (
     !authReady ? <main className="entry-welcome" data-theme={theme} aria-busy="true">{getEntryCopy(language).loading}</main> : !validUserId && !demoChosen ? <WelcomeScreen language={language} currency={currency} theme={theme} handleGoogleLogin={handleGoogleLogin} handleTelegramLogin={handleTelegramLogin} loginPending={loginPending} loginError={loginError} onExplore={() => {
