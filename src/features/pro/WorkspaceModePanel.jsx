@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, ChartNoAxesCombined } from 'lucide-react';
+import { Info, ChartNoAxesCombined } from 'lucide-react';
 import ProWorkspaceActions from './ProWorkspaceActions';
 import WalletEntry from './WalletEntry';
 import { platformText } from '../platforms/PlatformConnections';
@@ -22,11 +22,12 @@ export default function WorkspaceModePanel({ todayAction, hideSelector = false, 
 
 export function WorkspaceModeSelector({proView, onModeChange, language, t, onOffer}) {
   const text = (r,e,m,z) => platformText(language,r,e,m,z);
+  const infoLabel = String(language).startsWith('uk') ? 'Можливості' : text('Возможности','Features','Funcții','功能');
   return (<div className="workspace-selector" role="group" aria-label={text('Режим DAYRIS','DAYRIS mode','Mod DAYRIS', "DAYRIS 模式")}>
       <button className="workspace-mode-toggle" type="button" role="switch" aria-checked={proView} aria-label={text('Режим PRO','PRO mode','Mod PRO', "PRO 模式")} onClick={onModeChange}>
         <span className="workspace-toggle-thumb" aria-hidden="true" />
         <span>FREE</span><span>PRO</span>
       </button>
-      {proView && <button className="workspace-pro-info" type="button" onClick={onOffer} aria-label={text('Мой PRO: срок и возможности','My PRO: access and features','PRO-ul meu: acces și funcții', "我的 PRO：权限和功能")} title={t('proInfoAction')}><Sparkles aria-hidden="true" /></button>}
+      {proView && <button className="workspace-pro-info" type="button" onClick={onOffer} aria-label={t('proInfoAction')} title={t('proInfoAction')}><Info aria-hidden="true" /><span className="workspace-pro-info-label">{infoLabel}</span></button>}
     </div>);
 }

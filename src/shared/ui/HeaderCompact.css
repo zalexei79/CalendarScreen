@@ -5,7 +5,7 @@
 .dayris-brand-row p { display:none; }
 .dayris-brand-row img { width:28px; height:28px; }
 .header-mode-control.workspace-mode-group { width:auto; }
-.header-mode-control .workspace-selector { width:auto; gap:2px; }
+.header-mode-control .workspace-selector { width:auto; gap:6px; }
 .header-mode-control .workspace-mode-toggle { flex-basis:54px; width:54px; height:32px; border-radius:10px; }
 .header-mode-control .workspace-toggle-thumb { display:none; }
 .header-mode-control .workspace-mode-toggle > span:not(.workspace-toggle-thumb) { font-size:10px; letter-spacing:.06em; }
@@ -13,6 +13,10 @@
 .header-mode-control .workspace-mode-toggle[aria-checked=false] > span:last-child { display:none; }
 .header-mode-control .workspace-mode-toggle[aria-checked=true] > span:last-child { color:var(--pro-gold); }
 .header-mode-control .workspace-mode-toggle[aria-checked=true] { border-color:color-mix(in srgb,var(--pro-gold) 30%,transparent); }
+@media(min-width:640px) {
+  .header-mode-control .workspace-pro-info { width:auto; gap:6px; padding-inline:9px; }
+  .header-mode-control .workspace-pro-info-label { display:inline; font-size:11px; font-weight:550; white-space:nowrap; }
+}
 .dayris-header .workspace-mode-panel.compact-tool-rail { grid-template-columns:auto auto auto minmax(0,1fr); column-gap:16px; }
 .dayris-header .compact-tool-rail .workspace-capital-entry { grid-column:2; grid-row:1; min-height:44px; }
 .dayris-header .compact-tool-rail .trader-control { grid-column:3; grid-row:1; justify-self:start; }
