@@ -13,10 +13,10 @@
 .header-mode-control .workspace-mode-toggle[aria-checked=false] > span:last-child { display:none; }
 .header-mode-control .workspace-mode-toggle[aria-checked=true] > span:last-child { color:var(--pro-gold); }
 .header-mode-control .workspace-mode-toggle[aria-checked=true] { border-color:color-mix(in srgb,var(--pro-gold) 30%,transparent); }
-.dayris-header .workspace-mode-panel.compact-tool-rail { grid-template-columns:auto auto minmax(0,1fr) auto; column-gap:16px; }
+.dayris-header .workspace-mode-panel.compact-tool-rail { grid-template-columns:auto auto auto minmax(0,1fr); column-gap:16px; }
 .dayris-header .compact-tool-rail .workspace-capital-entry { grid-column:2; grid-row:1; min-height:44px; }
-.dayris-header .compact-tool-rail .pro-control-trader { grid-column:4; justify-self:end; }
-.dayris-header .compact-tool-rail > .dayris-today-action { grid-column:3; grid-row:1; justify-self:center; min-width:0; padding-inline:6px; font-size:11px; white-space:nowrap; }
+.dayris-header .compact-tool-rail .trader-control { grid-column:3; grid-row:1; justify-self:start; }
+.dayris-header .compact-tool-rail > .dayris-today-action { grid-column:4; grid-row:1; justify-self:end; min-width:0; padding-inline:6px; font-size:11px; white-space:nowrap; }
 .dayris-header .compact-tool-rail .wallet-entry-badge { display:none; }
 .dayris-header .compact-tool-rail .pro-platform-reveal { grid-column:1/-1; grid-row:2; }
 .dayris-header .dayris-command-row { gap:0; }
@@ -52,31 +52,32 @@
 @media(min-width:1024px) { .dayris-header .dayris-command-row { column-gap:32px; } }
 @media(max-width:359px) {
   .dayris-header .workspace-mode-panel.compact-tool-rail { column-gap:4px; }
-  .dayris-header .compact-tool-rail .pro-control-trader > span:not(.pro-control-toggle) { display:none; }
+  .dayris-header .compact-tool-rail:has(> .dayris-today-action) .trader-switch-label { display:none; }
 }
 @media(prefers-reduced-motion:reduce) {
   .dayris-header button,.monthly-goal-bar button,.monthly-goal-bar > .grid,.header-mode-control .workspace-mode-toggle > span { transition:none!important; animation:none!important; }
   .dayris-header button:active,.monthly-goal-bar button:active { transform:none; }
 }
 
-/* Mobile broker tools float above the calendar, keeping destinations in place. */
+/* Destinations lead directly into the Trader switch and its tools. */
 @media(min-width:640px) {
   .dayris-header .workspace-mode-panel.compact-tool-rail {
-    grid-template-columns:auto auto minmax(0,1fr) auto auto;
-    column-gap:10px;
+    grid-template-columns:auto auto auto minmax(0,1fr) auto;
+    column-gap:12px;
   }
-  .dayris-header .compact-tool-rail .pro-control-trader { grid-column:5; grid-row:1; }
-  .dayris-header .compact-tool-rail > .dayris-today-action { grid-column:4; }
+  .dayris-header .compact-tool-rail > .dayris-today-action { grid-column:5; }
   .dayris-header .compact-tool-rail .pro-platform-reveal {
-    grid-column:3; grid-row:1; display:block; min-width:0;
-    visibility:hidden; opacity:0;
+    grid-column:4; grid-row:1; display:block; min-width:0;
+    visibility:hidden; opacity:0; transform:translateX(-8px);
+    transition:transform 160ms cubic-bezier(.3,0,1,1),opacity 140ms ease-in,visibility 0s 160ms;
   }
-  .dayris-header .compact-tool-rail .pro-platform-reveal.is-open { visibility:visible; opacity:1; }
+  .dayris-header .compact-tool-rail .pro-platform-reveal.is-open { visibility:visible; opacity:1; transform:none; transition:transform 280ms cubic-bezier(.2,0,0,1),opacity 180ms ease-out,visibility 0s; }
   .dayris-header .compact-tool-rail .pro-platform-row {
     display:flex; align-items:center; justify-content:flex-start;
-    gap:4px; margin:0; padding:0; border:0;
+    gap:4px; margin:0; padding:0 0 0 8px; border:0; border-left:1px solid var(--pro-line); transform:none;
   }
-  .dayris-header .compact-tool-rail .pro-control-platform { width:auto; flex:0 1 auto; gap:5px; padding-inline:5px; }
+  .dayris-header .compact-tool-rail .pro-control-platform { width:auto; flex:0 1 auto; gap:5px; padding-inline:5px; transform:none; }
+  .dayris-header .compact-tool-rail .wallet-entry-heading,.dayris-header .compact-tool-rail .workspace-capital-entry,.dayris-header .compact-tool-rail .trader-switch-label { font-size:13px; font-weight:550; }
   .dayris-header .compact-tool-rail .pro-platform-label small { display:none; }
 }
 @media(min-width:960px) and (max-width:1199px) {
@@ -84,11 +85,11 @@
 }
 @media(max-width:639px) {
   .dayris-header .workspace-mode-panel.compact-tool-rail {
-    grid-template-columns:auto auto minmax(32px,1fr) auto;
+    grid-template-columns:auto auto auto minmax(0,1fr);
     column-gap:6px;
   }
-  .dayris-header .compact-tool-rail .pro-control-trader { grid-column:4; grid-row:1; }
   .dayris-header .compact-tool-rail .wallet-entry { gap:5px; }
   .dayris-header .compact-tool-rail .wallet-entry-heading { font-size:11px; }
   .dayris-header .compact-tool-rail .workspace-capital-entry { gap:4px; }
+  .dayris-header .compact-tool-rail .trader-switch-label { font-size:11px; }
 }

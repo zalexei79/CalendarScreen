@@ -14,8 +14,8 @@ const bundle = await build({ stdin: { resolveDir: process.cwd(), loader: 'jsx', 
   function App(){
     const [trader,setTrader]=useState(false),[action,setAction]=useState('');
     const p=new URLSearchParams(location.search), language=p.get('language')||'ru';
-    document.documentElement.dataset.dayrisTheme=p.has('light')?'light':'gold';
-    return <><style>{'body{margin:0;padding:12px;box-sizing:border-box}*{box-sizing:border-box}'}</style>
+    document.documentElement.dataset.dayrisTheme=p.get('theme')||(p.has('light')?'light':'dark');
+    return <><style>{'body{margin:0;padding:12px;box-sizing:border-box}*{box-sizing:border-box}html[data-dayris-theme="dark"] body{background:#0b0c10;color:#f1f2f4}html[data-dayris-theme="light"] body{background:#f4f5f7;color:#242730}'}</style>
       <header className="dayris-header"><div className="dayris-command-row"><div className="dayris-date-navigation"><span style={{width:340,maxWidth:'100%'}}>Октябрь 2026 · USD</span></div><div className="dayris-workspace-slot"><Panel hideSelector proView walletAccess
         todayAction={innerWidth>=640 ? <button className="dayris-today-action">{translate(language,'today')}</button> : null}
         traderMode={trader} onTraderChange={()=>setTrader(!trader)} language={language}
@@ -34,11 +34,16 @@ try {
   const errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   await page.route('http://dayris.test/**',route=>route.fulfill({contentType:'text/html',body:`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style><div id="root"></div><script>${js}</script>`}));
-  for(const width of [320,390,430,640,960,1024,1280,1440]) for(const language of ['ru','en','ro','zh']) for(const light of [false,true]) {
+  for(const width of [320,360,390,430,640,960,1024,1200,1280,1440]) for(const language of ['ru','en','ro','zh']) for(const light of [false,true]) {
     await page.setViewportSize({width,height:844});
     await page.goto(`http://dayris.test/?language=${language}${light?'&light':''}`);
     const header=page.locator('header'), trader=page.locator('.pro-control-trader');
     const before=await header.boundingBox();
+    const initialTrader=await trader.boundingBox(),initialInvestment=await page.locator('.workspace-capital-entry').boundingBox();
+    assert.ok(initialTrader.x>=initialInvestment.x+initialInvestment.width && initialTrader.x-initialInvestment.x-initialInvestment.width<=20,'Trader is immediately after Investments, not at the far edge');
+    assert.equal(await trader.locator('.trader-switch-mark svg').isVisible(),true,'Trader has a visible icon like the other destinations');
+    assert.equal(await trader.locator('.pro-control-toggle').count(),0,'the standard slider has been replaced');
+    if(width===1280 && language==='ru' && !light) await page.locator('.dayris-workspace-slot').screenshot({path:'artifacts/trader-control-desktop-off.png'});
     await trader.click();
     if(width<640) await page.locator('.pro-platform-popover').waitFor({state:'visible'});
     await page.locator('.wallet-entry').click();
@@ -80,15 +85,28 @@ try {
       for(const tool of await page.locator('.pro-control-platform').all()) {
         const box=await tool.boundingBox();
         assert.ok(Math.abs(box.y-wallet.y)<2,'tools align with primary destinations');
-        assert.ok(box.x>=investment.x+investment.width && box.x+box.width<=toggle.x,'tools fit between investments and Trader');
+        const today=await page.locator('.dayris-today-action').boundingBox();
+        assert.ok(box.x>=toggle.x+toggle.width && box.x+box.width<=today.x,'platforms emerge to the right of Trader');
       }
       await page.locator('.pro-control-connect').first().click();
       assert.equal(await page.locator('output').textContent(),'ctrader');
-      if(width===1280 && language==='ru' && !light) await page.screenshot({path:'artifacts/trader-platform-inline-desktop.png'});
+      if(width===1280 && language==='ru' && !light) {
+        await page.screenshot({path:'artifacts/trader-platform-inline-desktop.png'});
+        await page.locator('.dayris-workspace-slot').screenshot({path:'artifacts/trader-control-desktop-on.png'});
+      }
     }
     await trader.click();
     assert.equal(await page.locator('.pro-platform-trigger').count(),0);
   }
+  await page.setViewportSize({width:1440,height:844});
+  await page.goto('http://dayris.test/?language=ru&theme=gold');
+  const keyboardTrader=page.locator('.pro-control-trader');
+  await keyboardTrader.focus();await page.keyboard.press('Space');
+  await page.waitForFunction(()=>document.querySelector('.pro-control-trader').getAttribute('aria-checked')==='true');
+  await page.locator('.pro-platform-reveal').evaluate(element=>Promise.all(element.getAnimations({subtree:true}).map(animation=>animation.finished)));
+  await page.screenshot({path:'artifacts/trader-control-gold-desktop.png'});
+  await page.keyboard.press('Space');
+  await page.waitForFunction(()=>document.querySelector('.pro-control-trader').getAttribute('aria-checked')==='false');
   await page.setViewportSize({width:390,height:844});
   for(const reducedMotion of ['no-preference','reduce']) {
     await page.emulateMedia({reducedMotion});
@@ -109,5 +127,5 @@ try {
     assert.equal(await trigger.evaluate(el=>el===document.activeElement),true,'focus returns to visible platform trigger');
   }
   assert.deepEqual(errors,[]);
-  console.log('Trader destinations, inline desktop tools and mobile popup: 64 viewport/language/theme combinations passed.');
+  console.log('Trader control: 80 layouts, inline order, keyboard toggle, Gold theme and mobile platform handoff passed.');
 } finally { await browser.close(); }
