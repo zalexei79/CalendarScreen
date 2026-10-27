@@ -7,44 +7,42 @@ html:is([data-dayris-theme="gold"],[data-dayris-theme="emerald"])[data-glass-par
 html[data-glass-parallax] .dayris-glass-parallax {
   display:block; position:fixed; inset:-64px; z-index:-1; pointer-events:none;
   background:var(--glass-atmosphere); contain:strict;
-  transform:translate3d(var(--glass-depth-x,0px),var(--glass-depth-y,0px),0);
-  transition:transform 130ms cubic-bezier(.2,.7,.3,1);
+  will-change:translate;
+  transition:translate 130ms cubic-bezier(.2,.7,.3,1);
 }
-html[data-glass-parallax] .dayris-glass-parallax::before {
-  content:''; position:absolute; inset:0; pointer-events:none;
+html[data-glass-parallax] .dayris-glass-caustic {
+  position:absolute; inset:0; pointer-events:none; will-change:translate;
   background:radial-gradient(ellipse 28% 42% at 18% 68%,var(--glass-caustic),transparent 75%),linear-gradient(118deg,transparent 34%,var(--glass-caustic) 46%,transparent 57%);
-  transform:translate3d(calc(var(--glass-depth-x,0px) * -.8),calc(var(--glass-depth-y,0px) * -.8),0);
-  transition:transform 180ms cubic-bezier(.2,.7,.3,1);
+  transition:translate 180ms cubic-bezier(.2,.7,.3,1);
 }
-html[data-glass-parallax] .dayris-glass-parallax::after {
-  content:''; position:absolute; inset:0; pointer-events:none;
+html[data-glass-parallax] .dayris-glass-light {
+  position:absolute; inset:0; pointer-events:none; will-change:translate;
   background:radial-gradient(ellipse 52% 40% at 75% 22%,var(--glass-depth-light),transparent 75%);
-  transform:translate3d(calc(var(--glass-depth-x,0px) * -.5),calc(var(--glass-depth-y,0px) * -.5),0);
-  transition:transform 220ms cubic-bezier(.2,.7,.3,1);
+  transition:translate 220ms cubic-bezier(.2,.7,.3,1);
 }
 html:is([data-dayris-theme="gold"],[data-dayris-theme="emerald"])[data-glass-parallax] :is(.premium-shell,.wallet-panel-enter,.capital-panel,.entry-welcome,.life-story[data-theme],.first-run-dialog[data-theme]) { background:transparent; }
 html:is([data-dayris-theme="gold"],[data-dayris-theme="emerald"])[data-glass-parallax] .calendar-glass-optics {
-  translate:calc(var(--glass-sheen-x,0px) + var(--glass-global-sheen-x,0px)) calc(var(--glass-sheen-y,0px) + var(--glass-global-sheen-y,0px));
   transition:opacity 350ms cubic-bezier(.4,0,.2,1),translate 180ms cubic-bezier(.4,0,.2,1);
 }
-html[data-dayris-theme="gold"][data-glass-parallax] .calendar-days-grid > .calendar-day-surface[data-glass-hover]:not(.selected-calendar-cell):not(:active) { box-shadow:var(--gold-day-shadow),var(--glass-shadow-x,0px) 14px 22px -6px #0009!important; }
-html[data-dayris-theme="emerald"][data-glass-parallax] .calendar-days-grid > .calendar-day-surface[data-glass-hover]:not(.selected-calendar-cell):not(:active) { box-shadow:var(--emerald-day-depth),var(--glass-shadow-x,0px) 14px 22px -6px #0009!important; }
+html[data-glass-parallax] .calendar-day-surface[data-glass-hover] .calendar-glass-optics { will-change:translate; }
+html[data-dayris-theme="gold"][data-glass-parallax] .calendar-days-grid > .calendar-day-surface[data-glass-hover]:not(.selected-calendar-cell):not(:active) { box-shadow:var(--gold-day-shadow),0 14px 22px -6px #0009!important; }
+html[data-dayris-theme="emerald"][data-glass-parallax] .calendar-days-grid > .calendar-day-surface[data-glass-hover]:not(.selected-calendar-cell):not(:active) { box-shadow:var(--emerald-day-depth),0 14px 22px -6px #0009!important; }
 /* Rotate is independent of the month-swipe transform. Fixed navigation and
    sheets stay in their existing coordinate system; no whole-app transform. */
 html[data-glass-parallax] .calendar-section { perspective:max(1000px,150vw); }
 html[data-glass-parallax] .calendar-section:not(.calendar-month-preview) .calendar-days-grid {
-  rotate:var(--glass-scene-axis-x,0) var(--glass-scene-axis-y,1) 0 var(--glass-scene-angle,0deg);
-  translate:var(--glass-scene-x,0px) var(--glass-scene-y,0px);
-  filter:drop-shadow(0 14px 12px #0005);
+  /* Existing cell bevels/shadows supply depth. A full-grid drop-shadow forced
+     an additional large offscreen render of the entire moving calendar. */
+  will-change:rotate,translate;
   transition:rotate 160ms cubic-bezier(.2,.7,.3,1),translate 160ms cubic-bezier(.2,.7,.3,1);
 }
-html[data-glass-parallax] .calendar-section:is([data-dragging="true"],[data-settling="true"]) .calendar-days-grid { rotate:none; translate:none; transition:none; }
+html[data-glass-parallax] .calendar-section:is([data-dragging="true"],[data-settling="true"]) .calendar-days-grid { rotate:none!important; translate:none!important; transition:none; }
 @media(max-width:639px) {
   /* Reserve the projected side edge before moving the glass toward the viewer. */
   html[data-glass-parallax] .calendar-section :is(.calendar-days-grid,.calendar-weekdays) { margin-inline:8px; }
   html[data-dayris-theme="gold"][data-glass-parallax] .calendar-section :is(.calendar-days-grid,.calendar-weekdays) { margin-inline:2px; }
 }
 @media(prefers-reduced-motion:reduce) {
-  .dayris-glass-parallax,.dayris-glass-parallax::before,.dayris-glass-parallax::after { transition:none!important; }
+  .dayris-glass-parallax,.dayris-glass-caustic,.dayris-glass-light { transition:none!important; }
   html[data-glass-parallax] .calendar-days-grid { rotate:none!important; translate:none!important; transition:none!important; }
 }

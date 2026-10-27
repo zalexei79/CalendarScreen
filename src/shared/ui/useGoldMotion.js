@@ -67,7 +67,10 @@ export default function useGoldMotion(theme) {
 
     function move(event) {
       if (event.pointerType !== 'mouse' || reduced.matches || document.hidden) return;
-      const node = surface(event.target);
+      const candidate = surface(event.target);
+      // Calendar hover is already handled by the shared glass controller.
+      // Do not repaint its radial gradient from a second pointer RAF.
+      const node = candidate?.matches('.calendar-day-surface') ? null : candidate;
       if (node !== hovered) {
         release(hovered);
         hovered = node;

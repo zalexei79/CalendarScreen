@@ -8,17 +8,19 @@ export default function useGlassParallax(theme) {
   useEffect(() => {
     if (!['gold','emerald'].includes(theme)) return undefined;
     const root = document.documentElement;
-    const body = document.body, depth = glassDepthProfile(theme);
-    const sceneProperties = ['--glass-scene-x','--glass-scene-y','--glass-scene-axis-x','--glass-scene-axis-y','--glass-scene-angle','--glass-global-sheen-x','--glass-global-sheen-y','--gold-pointer-x','--gold-pointer-y','--glass-x','--glass-y'];
+    const depth = glassDepthProfile(theme);
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     const opaque = matchMedia('(prefers-reduced-transparency: reduce)');
     const layer = document.createElement('div');
     layer.className = 'dayris-glass-parallax';
     layer.setAttribute('aria-hidden','true'); layer.inert = true;
+    const caustic = document.createElement('div'), light = document.createElement('div');
+    caustic.className = 'dayris-glass-caustic'; light.className = 'dayris-glass-light';
+    layer.append(caustic,light);
     document.body.prepend(layer);
     let frame = 0, target = { x:0,y:0 }, previous = '', neutral = null;
     let listening = false, hasSignal = false, signalTimer = 0;
-    let hovered = null, hoverRect = null, hoverPoint = null;
+    let grid = null, hovered = null, optics = null, hoverRect = null, hoverPoint = null;
     const screenAngle = () => window.screen.orientation?.angle ?? (Number.isFinite(window.orientation) ? window.orientation : 0);
     // Window blur is not page visibility: iOS permission sheets can blur a
     // still-visible page and never send focus back. Do not latch sensors off.
@@ -29,31 +31,23 @@ export default function useGlassParallax(theme) {
       const value = `${target.x.toFixed(1)}px ${target.y.toFixed(1)}px`;
       if (value !== previous) {
         previous = value;
-        layer.style.setProperty('--glass-depth-x',`${target.x.toFixed(1)}px`);
-        layer.style.setProperty('--glass-depth-y',`${target.y.toFixed(1)}px`);
+        // Only non-inherited compositor properties change. Inherited variables
+        // on BODY used to restyle every day, panel and control on every sample.
+        layer.style.translate = value;
+        caustic.style.translate = `${(-target.x*.8).toFixed(1)}px ${(-target.y*.8).toFixed(1)}px`;
+        light.style.translate = `${(-target.x*.5).toFixed(1)}px ${(-target.y*.5).toFixed(1)}px`;
         const x=target.x/depth.x, y=target.y/depth.y;
-        const properties = {
-          '--glass-scene-x':`${(-x*depth.plane).toFixed(2)}px`,
-          '--glass-scene-y':`${(-y*depth.plane*.7).toFixed(2)}px`,
-          '--glass-scene-axis-x':Math.abs(y)<.001?'0':y.toFixed(3),
-          '--glass-scene-axis-y':Math.abs(x)+Math.abs(y)<.001?'1':(-x).toFixed(3),
-          '--glass-scene-angle':`${Math.min(3.2,Math.hypot(x,y)*depth.rotation).toFixed(2)}deg`,
-          '--glass-global-sheen-x':`${(-x*4).toFixed(2)}px`,
-          '--glass-global-sheen-y':`${(-y*3).toFixed(2)}px`,
-          '--gold-pointer-x':`${50-x*35}%`,'--gold-pointer-y':`${35-y*30}%`,
-          '--glass-x':`${50-x*35}%`,'--glass-y':`${35-y*30}%`,
-        };
-        // Body variables do not trigger the root-style calendar fit observer.
-        for (const [name,setting] of Object.entries(properties)) body.style.setProperty(name,setting);
+        if (!grid?.isConnected) grid = document.querySelector('.calendar-section:not(.calendar-month-preview) .calendar-days-grid');
+        if (grid) {
+          grid.style.translate = `${(-x*depth.plane).toFixed(2)}px ${(-y*depth.plane*.7).toFixed(2)}px`;
+          grid.style.rotate = `${Math.abs(y)<.001?'0':y.toFixed(3)} ${Math.abs(x)+Math.abs(y)<.001?'1':(-x).toFixed(3)} 0 ${Math.min(3.2,Math.hypot(x,y)*depth.rotation).toFixed(2)}deg`;
+        }
       }
       if (hovered?.isConnected && hoverRect && hoverPoint) {
         const limit = n => Math.max(-1,Math.min(1,n));
         const x = limit((hoverPoint.x-hoverRect.left)/Math.max(1,hoverRect.width)*2-1);
         const y = limit((hoverPoint.y-hoverRect.top)/Math.max(1,hoverRect.height)*2-1);
-        hovered.style.setProperty('--glass-shadow-x',`${(-x*9).toFixed(1)}px`);
-        hovered.style.setProperty('--glass-sheen-x',`${(x*5).toFixed(1)}px`);
-        hovered.style.setProperty('--glass-sheen-y',`${(y*4).toFixed(1)}px`);
-        hovered.setAttribute('data-glass-hover','');
+        if (optics) optics.style.translate = `${(x*5).toFixed(1)}px ${(y*4).toFixed(1)}px`;
       }
     }
     function moveTo(x,y) {
@@ -64,16 +58,19 @@ export default function useGlassParallax(theme) {
     function recenter() {
       neutral = null; hasSignal = false; target = { x:0,y:0 }; previous = '';
       cancelAnimationFrame(frame); frame = 0;
-      layer.style.removeProperty('--glass-depth-x'); layer.style.removeProperty('--glass-depth-y');
-      for (const name of sceneProperties) body.style.removeProperty(name);
+      layer.style.removeProperty('translate'); caustic.style.removeProperty('translate'); light.style.removeProperty('translate');
+      resetGrid();
       clearHover();
+    }
+    function resetGrid() {
+      if (grid) { grid.style.removeProperty('rotate'); grid.style.removeProperty('translate'); }
     }
     function clearHover() {
       if (hovered) {
-        for (const name of ['--glass-shadow-x','--glass-sheen-x','--glass-sheen-y']) hovered.style.removeProperty(name);
+        optics?.style.removeProperty('translate');
         hovered.removeAttribute('data-glass-hover');
       }
-      hovered = hoverRect = hoverPoint = null;
+      hovered = optics = hoverRect = hoverPoint = null;
     }
     function orientation(event) {
       if (!allowed() || !Number.isFinite(event.beta) || !Number.isFinite(event.gamma)) return;
@@ -98,7 +95,11 @@ export default function useGlassParallax(theme) {
     function pointer(event) {
       if (event.pointerType !== 'mouse' || !allowed() || (listening && hasSignal)) return;
       const cell = event.target instanceof Element ? event.target.closest('.calendar-day-surface:not(:disabled)') : null;
-      if (cell !== hovered) { clearHover(); hovered = cell; hoverRect = cell?.getBoundingClientRect() || null; }
+      if (cell !== hovered) {
+        clearHover(); hovered = cell; hoverRect = cell?.getBoundingClientRect() || null;
+        optics = cell?.querySelector('.calendar-glass-optics') || null;
+        hovered?.setAttribute('data-glass-hover','');
+      }
       hoverPoint = { x:event.clientX,y:event.clientY };
       moveTo(-(event.clientX / Math.max(innerWidth,1) - .5) * depth.x*2,-(event.clientY / Math.max(innerHeight,1) - .5) * depth.y*2);
     }
@@ -119,7 +120,7 @@ export default function useGlassParallax(theme) {
     return () => {
       unsubscribe(); cancelAnimationFrame(frame); clearTimeout(signalTimer);
       clearHover();
-      for (const name of sceneProperties) body.style.removeProperty(name);
+      resetGrid();
       window.removeEventListener('deviceorientation',orientation);
       document.removeEventListener('pointermove',pointer); root.removeEventListener('pointerleave',leave);
       document.removeEventListener('visibilitychange',sync);

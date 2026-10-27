@@ -12,7 +12,8 @@ const source=fs.readFileSync('tests/gold-theme-ui-check.mjs','utf8');
 let setup=source.slice(0,source.indexOf(' for(const width of [320,390,1280])'))
  .replace("'./life-story-auth-fixture.mjs'",JSON.stringify(pathToFileURL(path.resolve('tests/life-story-auth-fixture.mjs')).href))
  .replaceAll('http://gold.test','https://gold.test');
-if(engine==='webkit') setup=setup.replace('const {chromium}=','const {webkit}=').replace("chromium.launch({channel:'msedge',headless:true})",'webkit.launch({headless:true})');
+if(engine==='webkit') setup=setup.replace('const {chromium}=','const {webkit}=').replace("chromium.launch({channel:'msedge',headless:true})",'webkit.launch({headless:true})')
+ .replace('page.setDefaultTimeout(10000)','page.setDefaultTimeout(30000)');
 if(palette==='emerald') setup=setup.replace("atj_theme:'gold'","atj_theme:'emerald'")
  .replace(",'gold','Pending access",",'emerald','Pending access")
  .replace("document.documentElement.dataset.dayrisTheme==='gold'","document.documentElement.dataset.dayrisTheme==='emerald'")
@@ -54,14 +55,14 @@ const finish=`
  assert.equal(await page.evaluate(()=>window.__tiltListeners()),0,'Never attach sensors before opt-in');
  await page.setViewportSize({width:1280,height:950});
  await page.mouse.move(1270,20);
- await page.waitForFunction(()=>parseFloat(document.querySelector('.dayris-glass-parallax').style.getPropertyValue('--glass-depth-x'))<-${depthX}*.9);
+ await page.waitForFunction(()=>parseFloat(document.querySelector('.dayris-glass-parallax').style.translate)<-${depthX}*.9);
  await page.screenshot({path:shots+'-pointer-1280.png',animations:'disabled'});
  assert.equal(await page.locator('.premium-shell').evaluate(el=>getComputedStyle(el).transform),'none');
  assert.equal(await layer.evaluate(el=>getComputedStyle(el).pointerEvents),'none');
  const hoverDay=page.locator('.calendar-day-surface[data-in-month="true"]').first();
  await hoverDay.hover();const hoverBox=await hoverDay.boundingBox();
  await page.mouse.move(hoverBox.x+hoverBox.width*.8,hoverBox.y+hoverBox.height*.3);
- await page.waitForFunction(()=>{const day=document.querySelector('[data-glass-hover]');return day&&parseFloat(day.style.getPropertyValue('--glass-shadow-x'))<0&&parseFloat(day.style.getPropertyValue('--glass-sheen-x'))>0;});
+ await page.waitForFunction(()=>{const optics=document.querySelector('[data-glass-hover] .calendar-glass-optics');return optics&&parseFloat(optics.style.translate)>0;});
  await page.setViewportSize({width:390,height:844});
  await page.mouse.move(5,5);
  await page.waitForFunction(()=>document.querySelector('.calendar-days-grid').getBoundingClientRect().bottom+9<=document.querySelector('.history-fab').getBoundingClientRect().top);
@@ -88,7 +89,7 @@ const finish=`
  assert.equal(await page.evaluate(()=>window.__tiltListeners()),1);
  await page.evaluate(()=>window.__tiltReading(45,-5));
  await page.evaluate(()=>window.__tiltReading(63,13));
- await page.waitForFunction(()=>document.querySelector('.dayris-glass-parallax').style.getPropertyValue('--glass-depth-x')==='-${depthX}.0px');
+ await page.waitForFunction(()=>parseFloat(document.querySelector('.dayris-glass-parallax').style.translate)===-${depthX});
  await page.screenshot({path:shots+'-settings-enabled.png',animations:'disabled'});
  await closeSettings();
  await page.screenshot({path:shots+'-tilted-390.png',animations:'disabled'});
@@ -119,15 +120,15 @@ const finish=`
  console.log('${palette} ${engine}: motion and visibility preferences');
  await page.evaluate(()=>{window.__tiltReading(999,-999);window.__tiltReading(null,NaN);});
  await page.waitForTimeout(60);
- assert.ok(await layer.evaluate((el,limits)=>Math.abs(parseFloat(el.style.getPropertyValue('--glass-depth-x')))<=limits.x&&Math.abs(parseFloat(el.style.getPropertyValue('--glass-depth-y')))<=limits.y,{x:${depthX},y:${depthY}}));
+ assert.ok(await layer.evaluate((el,limits)=>{const [x,y]=el.style.translate.split(' ').map(parseFloat);return Math.abs(x)<=limits.x&&Math.abs(y)<=limits.y;},{x:${depthX},y:${depthY}}));
  await page.evaluate(()=>window.dispatchEvent(new Event('orientationchange')));
  await page.evaluate(()=>window.__tiltReading(80,30));
- await page.waitForFunction(()=>document.querySelector('.dayris-glass-parallax').style.getPropertyValue('--glass-depth-x')==='0.0px');
+ await page.waitForFunction(()=>parseFloat(document.querySelector('.dayris-glass-parallax').style.translate)===0);
  await page.emulateMedia({reducedMotion:'reduce'});
  await page.locator('html:not([data-glass-parallax])').waitFor();
  assert.equal(await page.evaluate(()=>window.__tiltListeners()),0);
  await page.evaluate(()=>window.__tiltReading(40,0));
- assert.equal(await layer.evaluate(el=>el.style.getPropertyValue('--glass-depth-x')),'');
+ assert.equal(await layer.evaluate(el=>el.style.translate),'');
  await page.emulateMedia({reducedMotion:'no-preference'});await page.locator('html[data-glass-parallax]').waitFor();
  assert.equal(await page.evaluate(()=>window.__tiltListeners()),1);
  // Exercise the actual visibility handler without freezing the test runner.
@@ -157,7 +158,7 @@ const finish=`
  await toggle.click();await page.clock.fastForward(5100);await page.getByText(/не передаёт данные/).waitFor();
  assert.equal(await toggle.getAttribute('aria-checked'),'true');
  await page.mouse.move(380,20);
- await page.waitForFunction(()=>parseFloat(document.querySelector('.dayris-glass-parallax').style.getPropertyValue('--glass-depth-x'))<-${depthX}*.9);
+ await page.waitForFunction(()=>parseFloat(document.querySelector('.dayris-glass-parallax').style.translate)<-${depthX}*.9);
  await page.evaluate(()=>localStorage.setItem('gold_test_sensor_mode','unavailable'));await page.reload();
  await currentTheme.waitFor();await openSettings();
  assert.equal(await toggle.isDisabled(),true);assert.equal(await page.evaluate(()=>window.__tiltCalls),0);

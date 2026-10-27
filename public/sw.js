@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v88-free-history-glass';
+const CACHE_NAME = 'atj-cache-v89-glass-performance';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
