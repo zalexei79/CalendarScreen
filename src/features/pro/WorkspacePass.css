@@ -1,0 +1,74 @@
+/* One compact pass, with independent mode and information actions. */
+.workspace-selector.workspace-pass {
+  --pass-ink:#cbd2dd;
+  --pass-edge:#d4dbe533;
+  --pass-plate:linear-gradient(145deg,#414854,#252b35 48%,#171c24);
+  --orbit-distance:0%;
+  position:relative; display:block; flex:none; width:104px; height:44px;
+  min-width:104px; color:var(--pass-ink); isolation:isolate;
+}
+.workspace-pass.is-pro {
+  --pass-ink:#f5dda3;
+  --pass-edge:#e4c47c88;
+  --pass-plate:linear-gradient(145deg,#71603c,#443823 43%,#242017);
+  --orbit-distance:100%;
+}
+.workspace-pass-orbit { position:absolute; inset:0; width:104px; height:44px; pointer-events:none; color:var(--pass-ink); }
+.workspace-pass-orbit ellipse { stroke:currentColor; stroke-width:.7; opacity:.36; transition:opacity 360ms ease; }
+.workspace-pass-orbit path { stroke:currentColor; stroke-width:.8; opacity:.18; }
+.workspace-pass.is-pro .workspace-pass-orbit ellipse { opacity:.7; }
+.workspace-selector.workspace-pass .workspace-mode-toggle[aria-checked] {
+  position:absolute; z-index:1; left:6px; top:0; display:flex; align-items:center; justify-content:center; isolation:isolate;
+  gap:5px; width:68px; height:44px; min-height:44px; margin:0; padding:0 5px;
+  border:0; border-radius:12px; background:transparent; box-shadow:none;
+  color:var(--pass-ink); cursor:pointer; -webkit-tap-highlight-color:transparent;
+  backdrop-filter:none; -webkit-backdrop-filter:none;
+}
+.workspace-pass .workspace-mode-toggle > .workspace-pass-face {
+  position:absolute; z-index:-1; inset:6px 0; overflow:hidden; border-radius:10px;
+  border:1px solid var(--pass-edge); background:var(--pass-plate);
+  box-shadow:inset 0 1px 0 #ffffff26,inset 0 -1px 0 #0005,0 4px 10px #0003;
+  transition:background 360ms,border-color 360ms,box-shadow 360ms;
+}
+.workspace-pass-face::before { content:''; position:absolute; left:4px; top:8px; bottom:8px; width:1px; background:currentColor; opacity:.35; }
+.workspace-pass.is-pro .workspace-pass-face { box-shadow:inset 0 1px 0 #fff1c344,inset 0 -1px 0 #0005,0 0 14px #e4c47c15; }
+.workspace-pass-facet { position:relative; width:12px; height:16px; flex:none; stroke:currentColor; stroke-width:1; stroke-linejoin:round; opacity:.84; }
+.workspace-pass.is-pro .workspace-pass-facet { fill:#f5dda310; opacity:1; }
+.workspace-selector.workspace-pass .workspace-mode-toggle[aria-checked] > .workspace-pass-label { position:relative; font:650 10px/1 system-ui,sans-serif; letter-spacing:.12em; color:var(--pass-ink); text-shadow:none; }
+.workspace-pass .workspace-mode-toggle:hover .workspace-pass-face { border-color:var(--pass-ink); }
+.workspace-pass .workspace-mode-toggle:focus-visible,.workspace-pass .workspace-pro-info:focus-visible { outline:2px solid var(--pass-ink); outline-offset:2px; }
+.workspace-selector.workspace-pass .workspace-pro-info {
+  position:absolute; z-index:2; left:80px; top:30px; transform:translate(-50%,-50%);
+  display:grid; place-items:center; width:28px; height:28px; min-height:28px;
+  margin:0; padding:0; border:0; border-radius:50%; background:transparent;
+  color:var(--pass-ink); box-shadow:none; cursor:pointer; animation:none;
+  transition:left 420ms cubic-bezier(.2,0,0,1),top 420ms cubic-bezier(.2,0,0,1);
+}
+.workspace-selector.workspace-pass.is-pro .workspace-pro-info { left:88px; top:14px; }
+.workspace-pass .workspace-pro-info::before { content:''; position:absolute; z-index:-1; inset:4px; border:1px solid var(--pass-edge); border-radius:50%; background:var(--pass-plate); box-shadow:inset 0 1px #ffffff24,0 2px 6px #0005; }
+.workspace-pass .workspace-pro-info svg { width:12px; height:12px; }
+.workspace-pass .workspace-pro-info:hover::before { border-color:var(--pass-ink); box-shadow:0 0 10px #e4c47c33; }
+.workspace-selector.workspace-pass .workspace-pro-info:hover { background:transparent; box-shadow:none; }
+@supports (offset-path:path('M 80 30 Q 94 30 88 14')) {
+  .workspace-selector.workspace-pass .workspace-pro-info {
+    left:0; top:0; transform:none;
+    offset-path:path('M 80 30 Q 94 30 88 14'); offset-rotate:0deg;
+    offset-anchor:center; offset-distance:var(--orbit-distance);
+    transition:offset-distance 440ms cubic-bezier(.2,0,0,1);
+  }
+  .workspace-selector.workspace-pass.is-pro .workspace-pro-info { left:0; top:0; }
+}
+@media(prefers-reduced-motion:no-preference) {
+  .workspace-pass.has-switched .workspace-mode-toggle { animation:pass-card-free 420ms cubic-bezier(.2,0,0,1); }
+  .workspace-pass.has-switched.is-pro .workspace-mode-toggle { animation-name:pass-card-pro; }
+  .workspace-pass.has-switched .workspace-pass-label { animation:pass-label-enter 260ms cubic-bezier(.2,0,0,1); }
+  .workspace-pass-sheen { position:absolute; inset:-10px -25px; background:linear-gradient(110deg,transparent 37%,#fff5ce66 49%,transparent 61%); animation:pass-sheen 620ms cubic-bezier(.2,0,0,1) both; pointer-events:none; }
+  @keyframes pass-card-pro { 0%,100% {transform:perspective(220px) rotateY(0deg)} 38% {transform:perspective(220px) rotateY(-12deg) scale(.98)} }
+  @keyframes pass-card-free { 0%,100% {transform:perspective(220px) rotateY(0deg)} 38% {transform:perspective(220px) rotateY(12deg) scale(.98)} }
+  @keyframes pass-label-enter { from {opacity:.25;transform:translateY(3px)} to {opacity:1;transform:translateY(0)} }
+  @keyframes pass-sheen { from {opacity:0;transform:translateX(-90%)} 25% {opacity:.65} to {opacity:0;transform:translateX(90%)} }
+}
+@media(prefers-reduced-motion:reduce) {
+  .workspace-pass *,.workspace-pass-orbit ellipse { transition:none!important; animation:none!important; }
+  .workspace-pass-sheen { display:none; }
+}

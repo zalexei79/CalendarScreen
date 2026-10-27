@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v82-pro-info-button';
+const CACHE_NAME = 'atj-cache-v83-orbit-pass';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

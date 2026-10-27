@@ -47,21 +47,8 @@
 .wallet-entry-caption { display:none; font-size:10px; line-height:1.4; color:var(--pro-muted); }
 .wallet-entry-action { display:none; }
 
-/* One sliding switch, with a separate quiet entry to the membership menu. */
-.workspace-selector { grid-column:3; grid-row:1; display:flex; align-items:center; gap:2px; width:88px; height:44px; }
-.workspace-mode-toggle { position:relative; display:flex; align-items:center; justify-content:space-around; flex:0 0 58px; width:58px; height:30px; padding:2px; border:1px solid var(--pro-line); border-radius:999px; background:color-mix(in srgb,var(--pro-text) 5%,transparent); color:var(--pro-muted); cursor:pointer; }
-.workspace-mode-toggle > span:not(.workspace-toggle-thumb) { position:relative; z-index:1; font-size:7px; font-weight:650; }
-.workspace-toggle-thumb { position:absolute; left:2px; top:2px; bottom:2px; width:26px; border-radius:999px; background:color-mix(in srgb,var(--pro-text) 14%,var(--pro-bg)); box-shadow:0 2px 5px #0003,inset 0 1px 0 #ffffff20; transition:transform .3s cubic-bezier(.22,1,.36,1),background .3s; }
-.workspace-mode-toggle[aria-checked="true"] .workspace-toggle-thumb { transform:translateX(26px); background:var(--pro-gold); }
-.workspace-mode-toggle[aria-checked="true"] > span:last-child { color:var(--pro-bg); }
-.workspace-mode-toggle[aria-checked="false"] > span:nth-child(2) { color:var(--pro-text); }
-.workspace-pro-info { display:flex; align-items:center; justify-content:center; flex:none; width:32px; min-height:32px; padding:0; border:1px solid color-mix(in srgb,var(--pro-gold) 30%,transparent); border-radius:10px; background:color-mix(in srgb,var(--pro-gold) 7%,transparent); color:var(--pro-gold); cursor:pointer; animation:pro-info-appear .25s ease-out; }
-.workspace-pro-info svg { width:16px; height:16px; }
-.workspace-pro-info-label { display:none; }
-.workspace-pro-info:hover { border-color:var(--pro-gold); background:color-mix(in srgb,var(--pro-gold) 14%,transparent); }
-.workspace-pro-info:focus-visible { outline:2px solid var(--pro-gold); outline-offset:3px; }
-@keyframes pro-info-appear { from { opacity:0; transform:scale(.8); } to { opacity:1; transform:scale(1); } }
-@media(prefers-reduced-motion:reduce) { .workspace-toggle-thumb { transition:none; } .workspace-pro-info { animation:none; } }
+/* The pass owns its visuals; the panel only assigns its grid position. */
+.workspace-selector { grid-column:3; grid-row:1; }
 .pro-actions-reveal { display:block; min-width:0; width:100%; opacity:1; visibility:visible; transition:none; }
 .pro-actions-reveal .pro-actions {
   display:grid; grid-template-columns:44px minmax(0,1fr) 44px; gap:0 8px;
