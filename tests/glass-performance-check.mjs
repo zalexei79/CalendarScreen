@@ -8,6 +8,7 @@ const source=fs.readFileSync('tests/gold-theme-ui-check.mjs','utf8');
 const setup=source.slice(0,source.indexOf(' for(const width of [320,390,1280])'))
  .replace("'./life-story-auth-fixture.mjs'",JSON.stringify(pathToFileURL(path.resolve('tests/life-story-auth-fixture.mjs')).href))
  .replaceAll('http://gold.test','https://gold.test')
+ .replace("serviceWorkers:'block'","serviceWorkers:'block',hasTouch:true")
  .replace(' const page=await context.newPage()',` await context.route('**/rest/v1/reminders**',route=>route.fulfill({contentType:'application/json',body:'[]'}));
  await context.addInitScript(()=>{
   Object.defineProperty(DeviceOrientationEvent,'requestPermission',{configurable:true,value:()=>Promise.resolve('granted')});

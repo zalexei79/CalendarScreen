@@ -12,7 +12,7 @@ function MaterialPreview({code}) {
   </span>;
 }
 
-export default function ThemeCollection({language,theme,preference=theme,active=false,loading=false,onSelect,onPro,context='settings'}) {
+export default function ThemeCollection({language,theme,preference=theme,active=false,loading=false,onSelect,onPro,context='settings',children}) {
   const locale=language==='uk'?'uk':language?.startsWith('zh')?'zh':['ro','md'].includes(language)?'ro':language==='ru'?'ru':'en';
   const copy=APPEARANCE_COPY[locale];
   const basicPreference=['gold','emerald'].includes(preference)&&!active?theme:preference;
@@ -41,7 +41,8 @@ export default function ThemeCollection({language,theme,preference=theme,active=
       </button>)}
     </div>
     <p className="theme-collection-access" role={loading?'status':undefined}>{loading?copy.loading:active?copy.included:copy.exclusive}</p>
-    {['gold','emerald'].includes(theme)&&active&&!loading&&<GlassParallaxControl language={language} theme={theme}/>}
+    {context!=='settings'&&['gold','emerald'].includes(theme)&&active&&!loading&&<GlassParallaxControl language={language} theme={theme}/>}
+    {children}
     {preview&&<dialog ref={dialog} className="theme-preview-dialog" data-material={preview} aria-labelledby={`${id}-preview-title`} onCancel={event=>{event.preventDefault();event.stopPropagation();setPreview(null);}} onKeyDown={event=>event.stopPropagation()}>
       <div className="theme-preview-toolbar"><span>DAYRIS · PRO</span><button type="button" aria-label={copy.close} onClick={()=>setPreview(null)}><X size={20}/></button></div>
       <MaterialPreview code={preview}/>

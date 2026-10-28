@@ -11,7 +11,8 @@ const depthX=palette==='emerald'?44:32,depthY=palette==='emerald'?32:24;
 const source=fs.readFileSync('tests/gold-theme-ui-check.mjs','utf8');
 let setup=source.slice(0,source.indexOf(' for(const width of [320,390,1280])'))
  .replace("'./life-story-auth-fixture.mjs'",JSON.stringify(pathToFileURL(path.resolve('tests/life-story-auth-fixture.mjs')).href))
- .replaceAll('http://gold.test','https://gold.test');
+ .replaceAll('http://gold.test','https://gold.test')
+ .replace("serviceWorkers:'block'","serviceWorkers:'block',hasTouch:true"); // Sensor fixture also emulates the phone's touch input.
 if(engine==='webkit') setup=setup.replace('const {chromium}=','const {webkit}=').replace("chromium.launch({channel:'msedge',headless:true})",'webkit.launch({headless:true})')
  .replace('page.setDefaultTimeout(10000)','page.setDefaultTimeout(30000)');
 if(palette==='emerald') setup=setup.replace("atj_theme:'gold'","atj_theme:'emerald'")

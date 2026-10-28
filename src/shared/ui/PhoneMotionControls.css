@@ -1,0 +1,7 @@
+.settings-phone-motion { margin-top:16px; padding:10px 12px; border:1px solid var(--collection-line); border-radius:16px; background:var(--settings-hover); }
+.settings-phone-motion > .glass-parallax-control { margin:0; padding:0; border:0; border-radius:0; background:none; box-shadow:none; }
+.settings-phone-motion > .glass-parallax-control + .month-shake-control { margin-top:12px; padding-top:8px; border-top:1px solid var(--collection-line); }
+.settings-phone-motion .month-shake-control > .settings-row { min-height:44px; padding:0; gap:10px; color:var(--collection-ink); font:500 12px/1.4 system-ui,sans-serif; }
+.settings-phone-motion .month-shake-control > .settings-row > svg { color:var(--dayris-accent,var(--collection-muted)); }
+.settings-phone-motion .month-shake-control > p,.settings-phone-motion .glass-parallax-control > p { margin:7px 0 0; padding:0; color:var(--collection-muted); font:400 11px/1.65 system-ui,sans-serif; }
+.settings-phone-motion .month-shake-tools { padding:10px 0 0; }
