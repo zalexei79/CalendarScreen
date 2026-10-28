@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v91-iphone-month-gestures';
+const CACHE_NAME = 'atj-cache-v92-premium-history-glass';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
