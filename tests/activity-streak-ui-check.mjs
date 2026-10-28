@@ -79,8 +79,17 @@ try {
       assert.deepEqual(bounds.pathOverlays, [], `${platform} ${language} ${days}: no text over the glass path`);
       assert.ok(bounds.width <= 390, 'dialog fits phone width');
       if (language === 'ru' && days === 5) {
-        await page.getByRole('heading', { name: 'Как сохранить огонёк' }).waitFor();
+        const rules = page.locator('.activity-streak-rules');
+        const summary = rules.locator('summary', { hasText: 'Как сохранить огонёк' });
+        await summary.waitFor();
+        assert.equal(await rules.getAttribute('open'), null, 'rules start collapsed');
+        assert.ok((await rules.boundingBox()).height <= 48, 'collapsed help takes just one row');
+        assert.equal(await page.locator('.activity-streak-rules-content').isVisible(), false);
+        await summary.click();
+        assert.equal(await page.locator('.activity-streak-rules-content').isVisible(), true);
         assert.equal(await page.locator('.activity-streak-rule-steps li').count(), 3);
+        await summary.press('Enter');
+        assert.equal(await page.locator('.activity-streak-rules-content').isVisible(), false, 'keyboard can collapse the help');
         await page.locator('.activity-streak-primary').click();
         const payload = await page.evaluate(() => ({ text: window.sharedStreak.text, url: window.sharedStreak.url, name: window.sharedStreak.files[0].name, type: window.sharedStreak.files[0].type }));
         assert.equal(payload.name, 'dayris-streak-5.png'); assert.equal(payload.type, 'image/png');

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Flame, Pause, Clock3, RotateCcw, RefreshCw, Share2, Copy, X } from 'lucide-react';
+import { Flame, Pause, Clock3, RotateCcw, RefreshCw, Share2, Copy, ChevronDown, X } from 'lucide-react';
 import SwipeDismissSheet from './SwipeDismissSheet.jsx';
 import { createStreakPoster } from '../lib/streakPoster.js';
 import { streakDayLabel } from '../i18n/streak.js';
@@ -155,16 +155,18 @@ export default function ActivityStreakDialog({
           <p className={`activity-streak-status ${streak.paused ? 'is-paused' : ''}`}>
             <span className="activity-streak-status-dot" />{streak.paused ? copy.paused : copy.active}
           </p>
-          <section className="activity-streak-rules" aria-labelledby="streak-rules-title">
-            <h3 id="streak-rules-title">{t('streakRulesTitle')}</h3>
-            <p>{t('streakRulesIntro')}</p>
-            <ol className="activity-streak-rule-steps">
-              <li><Pause aria-hidden="true" size={18} /><span>{t('streakRulePauseDay')}</span><strong>{t('streakRulePause')}</strong></li>
-              <li><Clock3 aria-hidden="true" size={18} /><span>{t('streakRuleRescueDay')}</span><strong>{t('streakRuleRescue')}</strong></li>
-              <li><RotateCcw aria-hidden="true" size={18} /><span>{t('streakRuleResetDay')}</span><strong>{t('streakRuleReset')}</strong></li>
-            </ol>
-            <p>{t('streakRulesDetail')}</p>
-          </section>
+          <details className="activity-streak-rules">
+            <summary><span>{t('streakRulesTitle')}</span><ChevronDown size={15} aria-hidden="true" /></summary>
+            <div className="activity-streak-rules-content">
+              <p>{t('streakRulesIntro')}</p>
+              <ol className="activity-streak-rule-steps">
+                <li><Pause aria-hidden="true" size={18} /><span>{t('streakRulePauseDay')}</span><strong>{t('streakRulePause')}</strong></li>
+                <li><Clock3 aria-hidden="true" size={18} /><span>{t('streakRuleRescueDay')}</span><strong>{t('streakRuleRescue')}</strong></li>
+                <li><RotateCcw aria-hidden="true" size={18} /><span>{t('streakRuleResetDay')}</span><strong>{t('streakRuleReset')}</strong></li>
+              </ol>
+              <p>{t('streakRulesDetail')}</p>
+            </div>
+          </details>
           <div className="activity-streak-invite">
             <div className="activity-streak-invite-flame"><Flame size={17} /></div>
             <div><strong>{copy.inviteTitle}</strong><p>{copy.inviteBody}</p></div>
