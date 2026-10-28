@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v93-premium-history-shake-motion';
+const CACHE_NAME = 'atj-cache-v94-complete-history-analytics';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

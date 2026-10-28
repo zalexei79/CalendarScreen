@@ -7,7 +7,7 @@ const copy = {
   md: ['Dinamica perioadei', '10 zile până la ultima tranzacție selectată', 'Profit', 'Pierderi', 'Fără tranzacții', 'zile de tranzacționare', 'tranzacții', 'Apasă o zi pentru sumele exacte de mai jos', 'Rezultat', 'Valută', 'Conform filtrelor selectate'],
 };
 
-export default function PeriodDynamics({ trades, language, isLight }) {
+export default function PeriodDynamics({ trades, language, isLight, appearance }) {
   const locale = language === 'md' || language === 'ro' ? 'ro' : language || 'en';
   const c = copy[locale.startsWith('zh') ? 'zh' : locale === 'ro' ? 'md' : locale] || copy.en;
   const [currencyChoice, setCurrencyChoice] = useState('');
@@ -38,7 +38,7 @@ export default function PeriodDynamics({ trades, language, isLight }) {
   const max = Math.max(1, ...days.flatMap(day => [day.profit, day.loss]));
   const money = value => `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(value)} ${currency}`;
   const dateLabel = (date, full = false) => new Intl.DateTimeFormat(locale, { day: 'numeric', month: full ? 'long' : 'short', ...(full ? { year: 'numeric' } : {}), timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`));
-  return <section className={`mb-4 rounded-2xl border p-3 sm:p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}>
+  return <section data-analytics="period-dynamics" className={appearance === 'glass' ? 'premium-analytics-card premium-analytics-dynamics' : `mb-4 rounded-2xl border p-3 sm:p-4 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}>
     <div className="flex items-start justify-between gap-3">
       <div><h3 className="text-sm font-semibold">{c[0]}</h3><p className="mt-1 text-[10px] text-zinc-500">{c[1]} · {c[10]}</p></div>
       {currencies.length > 1 && <select aria-label={c[9]} value={currency} onChange={e => { setCurrencyChoice(e.target.value); setSelectedDate(''); }} className={`rounded-lg border p-2 text-xs ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-700 bg-zinc-900'}`}>{currencies.map(code => <option key={code}>{code}</option>)}</select>}

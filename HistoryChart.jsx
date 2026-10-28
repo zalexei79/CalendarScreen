@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function HistoryChart({ entries, isLight, t, formatAmount }) {
+export default function HistoryChart({ entries, isLight, t, formatAmount, appearance }) {
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState(null);
   const end = Math.max(1, entries.length - Math.min(offset, Math.max(0, entries.length - 1)));
@@ -10,7 +10,7 @@ export default function HistoryChart({ entries, isLight, t, formatAmount }) {
   const max = Math.max(1, ...points.flatMap(([, v]) => [v.income, v.expense]));
   const x = (i) => 20 + i * 360 / Math.max(1, points.length - 1);
   const y = (value) => 150 - value / max * 120;
-  return <div className={`rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}>
+  return <div data-analytics="money-dynamics" className={appearance === 'glass' ? 'premium-analytics-card' : `rounded-2xl border p-3 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-black/20'}`}>
     <div className="flex items-center justify-between gap-2 text-xs">
       <button type="button" disabled={end <= 10} onClick={() => setOffset(v => v + 10)} className="rounded-lg p-2 text-zinc-500 disabled:opacity-30">{t('earlier')}</button>
       <span className="font-data text-amber-500">{active[0]}</span>

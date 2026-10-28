@@ -16,7 +16,7 @@ const copy = {
   en: ['Performance curve', 'Cumulative PnL', 'Max drawdown', 'Recovery', 'Not recovered yet', 'days', 'No trades in this period', 'End-of-day realized PnL, starting at zero. Selected filters apply; not account equity or intraday drawdown.', 'Day', 'Manual entries', 'Account and currency', 'Period start'],
   md: ['Curba rezultatului', 'PnL cumulat', 'Declin maxim', 'Recuperare', 'Încă nerecuperat', 'zile', 'Nu există tranzacții în această perioadă', 'PnL realizat la sfârșitul zilei, pornind de la zero. Cu filtrele selectate; nu reprezintă soldul sau declinul intrazilnic.', 'Zi', 'Înregistrări manuale', 'Cont și valută', 'Începutul perioadei'],
 };
-export default function PnlCurve({ trades, comparisonTrades = [], dateFrom, dateTo, userId, accounts = [], language, isLight }) {
+export default function PnlCurve({ trades, comparisonTrades = [], dateFrom, dateTo, userId, accounts = [], language, isLight, appearance }) {
   const c = copy[language === 'ro' ? 'md' : language] || copy.en;
   const d = detailsCopy[language === 'ro' ? 'md' : language] || detailsCopy.en;
   const [selection, setSelection] = useState('');
@@ -48,7 +48,7 @@ export default function PnlCurve({ trades, comparisonTrades = [], dateFrom, date
   const y = total => 18 + (high - total) / span * 126;
   const line = points.map((p, i) => `${x(i)},${y(p.total)}`).join(' ');
   const dd = points.map((p, i) => `${x(i)},${173 + p.drawdown / (curve.maxDrawdown || 1) * 42}`).join(' ');
-  return <section className={`my-4 rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/60'}`}>
+  return <section data-analytics="curve" className={appearance === 'glass' ? 'premium-analytics-card premium-analytics-curve' : `my-4 rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-950/60'}`}>
     <h3 className="text-sm font-semibold">{c[0]}</h3>
     {!curve.points.length ? <p className="mt-3 text-xs opacity-60">{c[6]}</p> : <>
       <select aria-label={c[10]} value={group[0]} onChange={e => { setSelection(e.target.value); setCursor(null); }} className={`mt-3 w-full min-w-0 rounded-xl border p-2 text-xs ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900'}`}>

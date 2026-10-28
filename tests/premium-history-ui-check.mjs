@@ -34,7 +34,15 @@ try{for(const [width,theme,language,trader]of scenarios){
   ],[key(prev)]:[row('home','Дом',-200,'18:00')]}));
  },{theme,language,trader});
  const page=await context.newPage(),errors=[];page.setDefaultTimeout(webkit?30000:10000);page.on('pageerror',e=>errors.push(e.message));
- await page.route('**/*',route=>new URL(route.request().url()).hostname==='premium.test'?route.fulfill({contentType:'text/html',body:`<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}body{margin:0}</style><div id="root"></div><script>${script}</script>`}):route.abort());
+ await page.route('**/*',route=>{
+  const url=new URL(route.request().url());
+  if(url.hostname==='local-fixture.supabase.co'&&url.pathname==='/rest/v1/trading_day_notes'){
+   const now=new Date(),date_key=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+   const headers={'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'GET, OPTIONS'};
+   return route.fulfill({status:route.request().method()==='OPTIONS'?204:200,headers,contentType:'application/json',body:route.request().method()==='OPTIONS'?'':JSON.stringify([{date_key,note:'Fixture: followed the plan',tags:['plan']}])});
+  }
+  return url.hostname==='premium.test'?route.fulfill({contentType:'text/html',body:`<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}body{margin:0}</style><div id="root"></div><script>${script}</script>`}):route.abort();
+ });
  try{
   await page.goto('http://premium.test');await page.getByRole('button',{name:new RegExp('^'+translate(language,'history'))}).first().click();
   const dialog=page.locator('.premium-history-dialog'),workspace=dialog.locator('.premium-history-workspace');await dialog.waitFor();
@@ -46,6 +54,14 @@ try{for(const [width,theme,language,trader]of scenarios){
    assert.equal(compact(await amount.innerText()),display(10));
    assert.equal(await workspace.locator('.premium-history-trade').count(),3);
    assert.match(await workspace.locator('.premium-history-metrics').innerText(),/25%/);
+   assert.equal(await workspace.locator('[data-analytics="scorecard"]').count(),1,'full scorecard stays in the overview');
+   assert.equal(await workspace.locator('[data-analytics="curve"]').count(),1,'account curve and recovery remain in the overview');
+   assert.match(await workspace.locator('[data-analytics="trade-average"]').innerText(),/2[.,]50/);
+   const scorecard=workspace.locator('[data-analytics="scorecard"]');
+   assert(await scorecard.getByText('42',{exact:true}).isVisible(),'existing score formula is preserved');
+   for(const key of ['payoff','avgWin','avgLoss','bestDay','worstDay','topInstrument','statsObservation'])assert((await scorecard.innerText()).toLocaleLowerCase().includes(translate(language,key).toLocaleLowerCase()),key+' is preserved');
+   await workspace.locator('[data-analytics="instruments-toggle"]').click();assert.equal(await workspace.locator('[data-analytics="instruments-toggle"]').getAttribute('aria-expanded'),'true');
+   assert.match(await workspace.locator('#history-instrument-breakdown').innerText(),/XAUUSD/);
    await workspace.locator('.premium-history-trade').first().click();await workspace.locator('.premium-history-ticket').waitFor();
    assert.match(await workspace.locator('.premium-history-prices').innerText(),/—/,'unknown prices must not be fabricated');
    await workspace.locator('.premium-history-back').click();
@@ -58,6 +74,11 @@ try{for(const [width,theme,language,trader]of scenarios){
    await workspace.getByLabel(copy.platform,{exact:true}).selectOption('ALL');
    await workspace.getByRole('button',{name:copy.dynamics,exact:true}).click();assert(await workspace.locator('.premium-history-panel').innerText().then(t=>t.length>0));
    await workspace.getByRole('button',{name:copy.advanced,exact:true}).click();await dialog.locator('.premium-history-advanced').waitFor();
+   assert.equal(await workspace.locator('[data-analytics="scorecard"]').count(),1,'analytics renders one complete copy');
+   assert.equal(await workspace.locator('[data-analytics="notes"]').count(),1);assert.equal(await workspace.locator('[data-analytics="period-dynamics"]').count(),1);
+   assert((await workspace.locator('[data-analytics="financial-picture"]').innerText()).toLocaleLowerCase().includes(translate(language,'financialRadar').toLocaleLowerCase()),'financial radar remains available');
+   await workspace.locator('[data-analytics="notes"] summary').first().waitFor();await workspace.locator('[data-analytics="notes"] summary').first().click();assert((await workspace.locator('[data-analytics="notes"]').innerText()).includes('Fixture: followed the plan'));
+   const scoreSurface=workspace.locator('[data-analytics="scorecard"] .premium-analytics-card').first();await scoreSurface.scrollIntoViewIfNeeded();await scoreSurface.screenshot({path:`artifacts/history-restored-scorecard-${width}-${theme}-${language}.png`,animations:'disabled'});
    await workspace.getByRole('button',{name:copy.finance,exact:true}).click();assert.equal(await workspace.getAttribute('data-context'),'finance');assert.equal(compact(await amount.innerText()),display(1400));
   }else assert.equal(compact(await amount.innerText()),display(1410));
   const baseAmount=await amount.innerText();
@@ -68,7 +89,11 @@ try{for(const [width,theme,language,trader]of scenarios){
   await workspace.getByRole('button',{name:copy.income,exact:true}).click();assert.equal(await workspace.locator('.financial-record-row').count(),trader?1:3);assert.equal(await amount.innerText(),baseAmount);
   await workspace.getByRole('button',{name:copy.all,exact:true}).click();
   await workspace.getByRole('button',{name:copy.analysis,exact:true}).click();
-  assert.equal(await workspace.locator('.financial-category').count(),3);assert.equal(await workspace.locator('.premium-history-row').count(),0);
+  assert.equal(await workspace.locator('.financial-category').count(),trader?3:4,'all categories are available');assert.equal(await workspace.locator('.premium-history-row').count(),0);
+  assert.equal(await workspace.locator('[data-analytics="financial-picture"]').count(),1);assert.equal(await workspace.locator('[data-analytics="period-dynamics"]').count(),1);
+  for(const key of ['financialRadar','periodPower','activity','frequentIncome','expensePattern'])assert((await workspace.innerText()).toLocaleLowerCase().includes(translate(language,key).toLocaleLowerCase()),key+' is preserved');
+  const materials=await workspace.locator('.premium-analytics-card').evaluateAll(nodes=>nodes.filter(node=>!node.parentElement.closest('.premium-analytics-card')).map(node=>({radius:getComputedStyle(node).borderRadius,background:getComputedStyle(node).backgroundImage})));
+  assert(materials.length>3);assert(materials.every(item=>item.radius==='23px'));assert.equal(new Set(materials.map(item=>item.background)).size,1,'all analytical cards share the same glass material');
   if(!trader)assert.equal(await workspace.locator('.financial-trading-note').count(),1);
   await workspace.locator('.premium-history-plan summary').click();await workspace.locator('.wealth-entry-footer button').click();await page.locator('.savings-dialog').waitFor();
   await page.locator('.savings-dialog button.savings-icon').click();await page.locator('.savings-dialog').waitFor({state:'detached'});

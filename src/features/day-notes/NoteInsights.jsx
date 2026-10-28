@@ -11,7 +11,7 @@ const COPY = {
   md: ['Tranzacțiile și notițele mele', 'După plan', 'M-am grăbit', 'Obosit', 'Am încălcat regulile', 'zile', 'zile profitabile', 'Adaugă o etichetă în detaliile zilei pentru comparații aici.', 'Conform filtrelor curente. Zilele cu mai multe etichete apar în fiecare grup. Corelația nu implică o cauză.', 'Se încarcă notițele…', 'Notițele nu au putut fi încărcate', 'Reîncearcă', 'Date limitate — doar observații', 'Autentifică-te pentru a vedea notițele.'],
 };
 
-export default function NoteInsights({ userId, trades, revision, language, isLight, onDay }) {
+export default function NoteInsights({ userId, trades, revision, language, isLight, onDay, appearance }) {
   const c = COPY[language === 'ro' ? 'md' : language] || COPY.en;
   const locale = language === 'zh-CN' ? 'zh-CN' : language === 'ru' ? 'ru-RU' : ['ro', 'md'].includes(language) ? 'ro-RO' : 'en-US';
   const [retry, setRetry] = useState(0);
@@ -19,7 +19,7 @@ export default function NoteInsights({ userId, trades, revision, language, isLig
   const { notes, state } = useCurveNotes(userId, dates[0], dates.at(-1), `${revision}:${retry}`);
   const groups = useMemo(() => noteStats(trades, notes), [trades, notes]);
   const money = (value, currency) => `${value > 0 ? '+' : ''}${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(value)} ${currency}`;
-  return <section className={`mb-4 rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-gradient-to-br from-amber-50/60 to-white' : 'border-zinc-800 bg-zinc-900/30'}`}>
+  return <section data-analytics="notes" className={appearance === 'glass' ? 'premium-analytics-card premium-analytics-notes' : `mb-4 rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-zinc-200 bg-gradient-to-br from-amber-50/60 to-white' : 'border-zinc-800 bg-zinc-900/30'}`}>
     <h3 className="flex items-center gap-2 text-sm font-semibold"><StickyNote className="h-4 w-4 text-amber-500" />{c[0]}</h3>
     {!userId || state === 'loading' || state === 'error' || !groups.length ? <div className="mt-3 text-xs text-zinc-500">
       {!userId ? c[13] : state === 'loading' ? c[9] : state === 'error' ? c[10] : c[7]}
