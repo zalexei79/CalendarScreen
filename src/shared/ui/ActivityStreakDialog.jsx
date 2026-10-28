@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Flame, Pause, Clock3, RotateCcw, RefreshCw, Share2, Copy, Check, ChevronDown, X } from 'lucide-react';
+import { Flame, Pause, Clock3, RotateCcw, RefreshCw, Share2, Copy, Check, ChevronDown, X, Leaf } from 'lucide-react';
 import SwipeDismissSheet from './SwipeDismissSheet.jsx';
 import { createStreakPoster } from '../lib/streakPoster.js';
 import { streakDayLabel } from '../i18n/streak.js';
@@ -13,7 +13,7 @@ function accountName(user) {
 }
 
 export default function ActivityStreakDialog({
-  open, streak, user, isLight, t, language, referralCode, ensureReferralCode, onClose,
+  open, streak, user, isLight, t, language, referralCode, ensureReferralCode, onClose, onNoSpend,
 }) {
   const [busy, setBusy] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
@@ -27,6 +27,9 @@ export default function ActivityStreakDialog({
   const sharingRef = useRef(false);
   const captionRef = useRef(null);
   const blobUrlRef = useRef('');
+  const [noSpendSaving, setNoSpendSaving] = useState(false);
+  const [noSpendError, setNoSpendError] = useState('');
+  const noSpendRequest = useRef(null);
 
   const days = Math.max(0, Number(streak?.currentStreak) || 0);
   const account = accountName(user);
@@ -44,6 +47,28 @@ export default function ActivityStreakDialog({
   };
   const caption = ready ? streakShareCaption(copy.shareText, streakDayLabel(days, language), preparedShare.url) : '';
   const copied = Boolean(ready && copyFeedback?.caption === caption);
+
+  useEffect(() => {
+    setNoSpendSaving(false); setNoSpendError('');
+    return () => { noSpendRequest.current?.abort(); noSpendRequest.current = null; };
+  }, [open, owner]);
+  useEffect(() => { if (streak?.noSpendToday) setNoSpendError(''); }, [streak?.noSpendToday]);
+
+  async function markNoSpend() {
+    if (noSpendRequest.current || streak?.noSpendToday) return;
+    if (!user?.id || !onNoSpend) { setNoSpendError(t('streakNoSpendLogin')); return; }
+    const controller = new AbortController();
+    noSpendRequest.current = controller;
+    setNoSpendSaving(true); setNoSpendError('');
+    const timeout = window.setTimeout(() => controller.abort(), 12000);
+    try { await onNoSpend(controller.signal); }
+    catch (error) {
+      if (noSpendRequest.current === controller) setNoSpendError(t(String(error?.message).includes('STREAK_HAS_EXPENSES') ? 'streakNoSpendHasExpenses' : 'streakNoSpendError'));
+    } finally {
+      window.clearTimeout(timeout);
+      if (noSpendRequest.current === controller) { noSpendRequest.current = null; setNoSpendSaving(false); }
+    }
+  }
 
   useEffect(() => {
     if (!copyFeedback) return undefined;
@@ -169,8 +194,16 @@ export default function ActivityStreakDialog({
             <strong>{account}</strong>
           </div>
           <p className={`activity-streak-status ${streak.paused ? 'is-paused' : ''}`}>
-            <span className="activity-streak-status-dot" />{days === 0 ? t('streakEmpty') : streak.paused ? copy.paused : copy.active}
+            <span className="activity-streak-status-dot" />{streak.noSpendToday ? t('streakNoSpendSaved') : days === 0 ? t('streakEmpty') : streak.paused ? copy.paused : copy.active}
           </p>
+          <div className="activity-streak-no-spend">
+            <button type="button" onClick={markNoSpend} disabled={noSpendSaving || Boolean(streak.noSpendToday)} aria-busy={noSpendSaving}>
+              {noSpendSaving ? <RefreshCw size={17} className="animate-spin" aria-hidden="true"/> : streak.noSpendToday ? <Check size={17} aria-hidden="true"/> : <Leaf size={17} aria-hidden="true"/>}
+              {t(streak.noSpendToday ? 'streakNoSpendDone' : noSpendSaving ? 'streakNoSpendSaving' : 'streakNoSpendAction')}
+            </button>
+            <p>{t('streakNoSpendHint')}</p>
+            {noSpendError && <p className="activity-streak-no-spend-error" role="alert">{noSpendError}</p>}
+          </div>
           <details className="activity-streak-rules">
             <summary><span>{t('streakRulesTitle')}</span><ChevronDown size={15} aria-hidden="true" /></summary>
             <div className="activity-streak-rules-content">

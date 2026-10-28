@@ -1,0 +1,60 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
+import path from 'node:path';
+const { PGlite } = createRequire(path.resolve('android/app/build/widget-sql-test/package.json'))('@electric-sql/pglite');
+const owner='11111111-1111-4111-8111-111111111111', other='22222222-2222-4222-8222-222222222222';
+test('account no-spend check-ins are private, server-dated, idempotent and never create money; expenses invalidate them',async()=>{
+  const db=new PGlite(); await db.waitReady;
+  try{
+    await db.exec(`create role anon;create role authenticated;create schema auth;
+      create table auth.users(id uuid primary key);insert into auth.users values('${owner}'),('${other}');
+      create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+      grant usage on schema public,auth to authenticated,anon;
+      create table public.trades(id bigint generated always as identity primary key,user_id uuid references auth.users(id),date_key text,platform text,pnl numeric);
+      create table public.wallet_transactions(id bigint generated always as identity primary key,user_id uuid references auth.users(id),date_key date,kind text,amount numeric);
+      grant select,insert,update,delete on public.trades,public.wallet_transactions to authenticated;
+      grant usage on all sequences in schema public to authenticated;
+      alter table public.trades enable row level security;create policy own_trades on public.trades to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
+      alter table public.wallet_transactions enable row level security;create policy own_wallet on public.wallet_transactions to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());`);
+    for(const file of ['202610260001_account_activity_streaks.sql','202610280001_entry_activity_streaks.sql','202610280002_streak_no_spend_days.sql'])await db.exec(await readFile('supabase/migrations/'+file,'utf8'));
+    await db.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${owner}',false)`);
+    const mark=async(zone='Europe/Bucharest')=>(await db.query('select public.mark_streak_no_spend($1) as state',[zone])).rows[0].state;
+    const sync=async()=>(await db.query('select public.sync_activity_streak() as state')).rows[0].state;
+    let state=await mark(); const today=state.serverDate;
+    assert.equal(state.currentStreak,1);assert.equal(state.noSpendToday,true);assert.equal(state.paused,false);assert.equal(state.timeZone,'Europe/Bucharest');
+    assert.equal((await db.query('select * from public.streak_no_spend_days')).rows.length,1);
+    assert.equal((await db.query('select count(*)::int as n from public.trades')).rows[0].n,0);
+    assert.equal((await db.query('select count(*)::int as n from public.wallet_transactions')).rows[0].n,0);
+    assert.equal((await mark('Pacific/Honolulu')).timeZone,'Europe/Bucharest','second device cannot change account day');
+    assert.equal((await mark()).currentStreak,1);assert.equal((await sync()).noSpendToday,true);
+    await db.query('insert into public.trades(user_id,date_key,platform,pnl) values($1,$2,$3,$4)',[owner,today,'Manual',20]);
+    assert.equal((await sync()).noSpendToday,true,'income does not invalidate a no-spend day');
+    await db.query("update public.trades set pnl=-20 where user_id=$1",[owner]);
+    assert.equal((await sync()).noSpendToday,false,'changing income to an expense clears the mark');
+    assert.equal((await sync()).currentStreak,1,'the real entry still keeps the streak');
+    await assert.rejects(mark(),/STREAK_HAS_EXPENSES/);
+    await db.exec('delete from public.trades');await mark();
+    await db.query('insert into public.wallet_transactions(user_id,date_key,kind,amount) values($1,$2,$3,$4)',[owner,today,'expense',10]);
+    assert.equal((await sync()).noSpendToday,false);await assert.rejects(mark(),/STREAK_HAS_EXPENSES/);
+    await db.exec('delete from public.wallet_transactions');
+    await db.query('insert into public.trades(user_id,date_key,platform,pnl) values($1,$2,$3,$4)',[owner,today,'cTrader',-100]);
+    assert.equal((await mark()).noSpendToday,true,'imported trade losses are not spending');
+    const relative=n=>new Date(Date.parse(today+'T12:00:00Z')+n*86400000).toISOString().slice(0,10);
+    for(const [distance,expected] of [[1,9],[2,8],[3,1]]){
+      await db.exec('reset role');
+      await db.query('update public.account_activity_streaks set current_streak=8,last_active_date=$1,last_entry_date=$1 where user_id=$2',[relative(-distance),owner]);
+      await db.exec('set role authenticated');
+      state=await mark();assert.equal(state.currentStreak,expected);assert.equal(state.completedToday,true);
+      await Promise.all([mark(),mark()]);assert.equal((await sync()).currentStreak,expected);
+    }
+    await assert.rejects(db.query('insert into public.streak_no_spend_days values($1,$2,now())',[other,today]),/permission denied/);
+    await assert.rejects(db.query('select public.record_streak_day($1)',[owner]),/permission denied/);
+    await db.exec(`select set_config('request.jwt.claim.sub','${other}',false)`);
+    assert.equal((await db.query('select * from public.streak_no_spend_days')).rows.length,0,'another account cannot read marks');
+    assert.equal((await mark()).currentStreak,1,'another account gets an independent counter');
+    await db.exec("select set_config('request.jwt.claim.sub','',false)");await assert.rejects(mark(),/AUTH_REQUIRED/);
+    await db.exec('reset role;set role anon');await assert.rejects(mark(),/permission denied/);
+  }finally{await db.close();}
+});

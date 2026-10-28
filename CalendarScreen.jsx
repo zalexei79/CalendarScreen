@@ -141,6 +141,8 @@ import ProOffer from './src/features/pro/ProOffer.jsx';
 import ProGrantNotice from './src/features/pro/ProGrantNotice.jsx';
 import ConnectionStatus from './src/shared/ui/ConnectionStatus.jsx';
 import ActivityStreakDialog from './src/shared/ui/ActivityStreakDialog.jsx';
+import { markAccountNoSpend } from './src/shared/lib/accountActivityStreak.js';
+import { notifyStreakEntrySaved } from './src/shared/lib/entryActivityStreak.js';
 
 export default function CalendarScreen() {
   useWorkspaceViewport();
@@ -6702,6 +6704,13 @@ export default function CalendarScreen() {
         t={t}
         referralCode={referralCode}
         ensureReferralCode={ensureReferralCode}
+        onNoSpend={async signal => {
+          let storage;
+          try { storage = window.localStorage; } catch { storage = { setItem() {} }; }
+          const next = await markAccountNoSpend({ client: supabase, storage, ownerId: getValidUserId(user), signal });
+          setActivityStreak(current => current?.ownerId === next.ownerId ? next : current);
+          notifyStreakEntrySaved(next.ownerId);
+        }}
         onClose={() => setActivityStreak(null)}
       />
 

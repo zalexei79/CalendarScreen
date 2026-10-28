@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v98-streak-pause-reminder';
+const CACHE_NAME = 'atj-cache-v99-streak-no-spend';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

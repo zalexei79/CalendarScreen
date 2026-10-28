@@ -9,6 +9,16 @@
 .activity-streak-dialog-light .activity-streak-close { border-color:#e4e4e7; background:#fafafa; }
 .activity-streak-dialog-body { max-height:72dvh; overflow-y:auto; padding:1rem; background:rgba(0,0,0,.14); }
 .activity-streak-dialog-light .activity-streak-dialog-body { background:#fafafa; }
+.activity-streak-no-spend { margin:14px 0; }
+.activity-streak-no-spend button { display:flex; align-items:center; justify-content:center; gap:9px; width:100%; min-height:46px; padding:10px 14px; border:1px solid rgba(110,231,183,.22); border-radius:15px; color:#a7f3d0; background:rgba(110,231,183,.06); font:600 14px/20px system-ui,sans-serif; cursor:pointer; }
+.activity-streak-no-spend button:disabled { cursor:default; }
+.activity-streak-no-spend button[aria-busy=true] { opacity:.65; }
+.activity-streak-no-spend button:focus-visible { outline:2px solid #6ee7b7; outline-offset:3px; }
+.activity-streak-no-spend p { margin:7px 4px 0; color:#a1a1aa; font:400 12px/18px system-ui,sans-serif; }
+.activity-streak-dialog-light .activity-streak-no-spend button { color:#16634d; background:rgba(16,185,129,.05); border-color:rgba(5,150,105,.22); }
+.activity-streak-dialog-light .activity-streak-no-spend p { color:#71717a; }
+.activity-streak-no-spend p.activity-streak-no-spend-error { color:#fca5a5; }
+.activity-streak-dialog-light .activity-streak-no-spend p.activity-streak-no-spend-error { color:#b91c1c; }
 .activity-streak-hero { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; min-height:230px; padding:24px 12px; overflow:hidden; border:1px solid rgba(245,185,31,.18); border-radius:24px; background:radial-gradient(circle at 50% 25%,rgba(245,185,31,.18),transparent 52%),linear-gradient(145deg,rgba(255,255,255,.06),transparent); isolation:isolate; }
 .activity-streak-aura { position:absolute; width:180px; height:180px; border-radius:50%; background:rgba(245,185,31,.13); filter:blur(24px); animation:streak-aura 2.4s ease-in-out infinite; }
 .activity-streak-hero-flame { position:relative; width:24px; height:24px; flex:none; color:#f5b91f; fill:currentColor; animation:streak-flame 1.8s ease-in-out infinite; }

@@ -46,11 +46,29 @@ export async function syncAccountActivityStreak({ client, storage, ownerId, sign
   const { data, error } = await request;
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   if (error) throw error;
+  return cacheAccountStreak(data, storage, ownerId);
+}
+
+function cacheAccountStreak(data, storage, ownerId) {
   if (data?.accountId !== ownerId || !validStreak(data)) throw new Error('INVALID_ACCOUNT_STREAK');
   const next = { currentStreak: data.currentStreak, lastActiveDate: data.lastActiveDate,
     paused: Boolean(data.paused), timeZone: data.timeZone, ownerId, _accountSynced: true,
     entryDate: data.entryDate || null, completedToday: Boolean(data.completedToday), rule: data.rule,
-    serverDate: data.serverDate };
+    serverDate: data.serverDate, noSpendToday: Boolean(data.noSpendToday) };
   try { storage.setItem(PREFIX + ownerId, JSON.stringify(next)); } catch { /* online state remains usable */ }
   return next;
+}
+
+export async function markAccountNoSpend({ client, storage, ownerId, signal, timeZone }) {
+  const { data: auth, error: authError } = await client.auth.getSession();
+  if (authError || !ownerId || auth?.session?.user?.id !== ownerId || !auth.session.access_token) throw new Error('STREAK_AUTH_CHANGED');
+  if (signal?.aborted) throw new DOMException('Aborted','AbortError');
+  let request = client.rpc('mark_streak_no_spend', { p_time_zone: timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' })
+    .setHeader('Authorization', `Bearer ${auth.session.access_token}`);
+  if (signal) request = request.abortSignal(signal);
+  const { data, error } = await request;
+  if (signal?.aborted) throw new DOMException('Aborted','AbortError');
+  if (error) throw error;
+  if (!data?.noSpendToday || !data.completedToday) throw new Error('INVALID_ACCOUNT_STREAK');
+  return cacheAccountStreak(data, storage, ownerId);
 }
