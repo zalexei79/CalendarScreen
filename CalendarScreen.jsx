@@ -12,7 +12,10 @@ import PlatformConnections from './src/features/platforms/PlatformConnections.js
 import WealthPlan from './src/features/pro/WealthPlan.jsx';
 import PremiumHistoryWorkspace from './src/features/history/PremiumHistoryWorkspace.jsx';
 import PremiumHistoryAnalytics from './src/features/history/PremiumHistoryAnalytics.jsx';
-import {premiumHistoryModel} from './src/features/history/premiumHistoryModel.mjs';
+import {premiumHistoryModel, premiumTradeFacts, premiumHistoryAccountKey} from './src/features/history/premiumHistoryModel.mjs';
+import {premiumHistoryChapterCopy} from './src/features/history/premiumHistoryChapterCopy.js';
+import PremiumHistoryReminders from './src/features/history/PremiumHistoryReminders.jsx';
+import LotCalculator from './src/features/trading/LotCalculator.jsx';
 import FreeHistoryOverview from './src/features/history/FreeHistoryOverview.jsx';
 import { summarizeFreeHistory } from './src/features/history/freeHistoryModel.js';
 import { freeHistoryCopy } from './src/features/history/freeHistoryCopy.js';
@@ -2902,7 +2905,7 @@ export default function CalendarScreen() {
   const historyScrollRef = useRef(null);
   const [historyAtDeals, setHistoryAtDeals] = useState(false);
   const [proHistoryTab, setProHistoryTab] = useState('overview');
-  const [premiumMoneyHistoryTab, setPremiumMoneyHistoryTab] = useState('records');
+  const [premiumMoneyHistoryTab, setPremiumMoneyHistoryTab] = useState('dynamics');
   useEffect(() => { setHistoryAtDeals(false); }, [historyOpen]);
 
   function handleHistoryScroll(event) {
@@ -2923,6 +2926,7 @@ export default function CalendarScreen() {
   const [historyWinLoss, setHistoryWinLoss] = useState('all'); // 'all' | 'win' | 'loss'
   const [historyCurrency, setHistoryCurrency] = useState(() => currency || 'USD');
   const [historyNameFilter, setHistoryNameFilter] = useState('');
+  const [historyAccount,setHistoryAccount]=useState('ALL');
   const [savingsReview, setSavingsReview] = useState(null);
   useEffect(() => { setSavingsReview(null); }, [validUserId,historyCurrency,proAccessActive]);
   const [historyFiltersOpen, setHistoryFiltersOpen] = useState(false);
@@ -3008,12 +3012,13 @@ export default function CalendarScreen() {
         return true;
       })
       .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
+      .filter((t) => !proView || !traderMode || historyScope==='money' || historyAccount==='ALL' || premiumHistoryAccountKey(t)===historyAccount)
       .filter((t) => !voiceHistoryKeys || voiceHistoryKeys.has(financialRecordKey(t)))
       .filter((t) => historyCurrency === 'ALL' || (t.currency || 'USD') === historyCurrency)
       .filter((t) => !historyNameFilter || String(t.instrument || '').trim().toUpperCase() === historyNameFilter.trim().toUpperCase())
       .filter((t) => historyWinLoss === 'all' || (historyWinLoss === 'win' ? (traderMode && historyScope !== 'money' ? Number(t.pnl) > 0 : (Number(t.pnl) || 0) >= 0) : (Number(t.pnl) || 0) < 0))
       .sort((a, b) => (a.dateKey === b.dateKey ? (b.time || '').localeCompare(a.time || '') : (b.dateKey || '').localeCompare(a.dateKey || '')));
-  }, [manualTrades, platformFilter, historyWinLoss, historyCurrency, historyNameFilter, traderMode, historyScope, voiceHistoryKeys]);
+  }, [manualTrades, platformFilter, historyWinLoss, historyCurrency, historyNameFilter, traderMode, historyScope, voiceHistoryKeys,historyAccount,proView]);
   const historyTrades = useMemo(() => historyFilteredTrades.filter(t => t.dateKey >= dateFrom && t.dateKey <= dateTo), [historyFilteredTrades, dateFrom, dateTo]);
   const wealthPlanTrades = useMemo(() => Object.entries(manualTrades || {})
     .flatMap(([dateKey, items]) => (Array.isArray(items) ? items : []).map(item => ({ ...item, dateKey })))
@@ -3022,12 +3027,13 @@ export default function CalendarScreen() {
     .filter(item => platformFilter === 'ALL' || item.platform === platformFilter),
   [manualTrades, dateFrom, dateTo, historyCurrency, platformFilter]);
   const freeHistorySummary = useMemo(() => summarizeFreeHistory(wealthPlanTrades, historyCurrency), [wealthPlanTrades, historyCurrency]);
-  const premiumHistorySource = useMemo(() => isFreeMoneyHistory ? [] : Object.entries(manualTrades || {})
+  const premiumHistoryAccountSource = useMemo(() => isFreeMoneyHistory ? [] : Object.entries(manualTrades || {})
     .flatMap(([dateKey, items]) => (Array.isArray(items) ? items : []).map(item => ({...item,dateKey})))
     .filter(item => !traderMode || (historyScope === 'money' ? !isTradingHistoryRecord(item) : isTradingHistoryRecord(item)))
     .filter(item => platformFilter === 'ALL' || item.platform === platformFilter)
     .filter(item => !voiceHistoryKeys || voiceHistoryKeys.has(financialRecordKey(item))),
   [manualTrades,traderMode,historyScope,platformFilter,voiceHistoryKeys,voiceCategories.categories,isFreeMoneyHistory]);
+  const premiumHistorySource = useMemo(()=>premiumHistoryAccountSource.filter(row=>!traderMode||historyScope==='money'||historyAccount==='ALL'||premiumHistoryAccountKey(row)===historyAccount),[premiumHistoryAccountSource,traderMode,historyScope,historyAccount]);
   const premiumHistory = useMemo(() => premiumHistoryModel(premiumHistorySource, {currency:historyCurrency,from:dateFrom,to:dateTo,today:todayKey,isTrading:isTradingHistoryRecord}),
     [premiumHistorySource,historyCurrency,dateFrom,dateTo,todayKey,voiceCategories.categories]);
 
@@ -3851,14 +3857,16 @@ export default function CalendarScreen() {
   const renderHistoryCategoryPicker = (className = '') => (
     <CategoryPicker className={className} userId={traderMode && historyScope !== 'money' ? `${user?.id || 'guest'}:instruments` : user?.id} language={language} isLight={isLight}
       onCreate={traderMode && historyScope !== 'money' ? undefined : voiceCategories.add} onDelete={traderMode && historyScope !== 'money' ? undefined : removeMoneyCategory}
-      value={historyNameFilter} onChange={setHistoryNameFilter} allOption={t('all')}
+      value={historyNameFilter} onChange={value=>{setHistoryNameFilter(value);if(!isFreeMoneyHistory){if(traderMode&&historyScope!=='money')setProHistoryTab('records');else setPremiumMoneyHistoryTab('records');}}} allOption={t('all')}
       options={historyNameOptions.map(value => ({value, label: traderMode && historyScope !== 'money' ? value : getMoneyCategoryLabel(value, language), icon: getHistoryCategoryIcon(value)}))}/>
   );
 
 
   // The existing analytical calculations are retained; only the presentation changes.
   function renderPremiumHistoryAnalytics(section) {
-    return <PremiumHistoryAnalytics section={section} context={{premiumHistory,premiumHistorySource,traderMode,historyScope,validUserId,ctraderAccounts,language,isLight,dateFrom,dateTo,periodPreset,notesRevision,jumpToTradeDate,t,formatAmountInCurrency,formatMoney,formatMoneyShort,formatDateLabel,proHistoryCopy,displayMode,depositSize,handleEditDeposit,setDisplayMode,currencySymbol,openConnectModal,instrumentBreakdownOpen,setInstrumentBreakdownOpen,setHistoryCurrency}}/>;
+    return <PremiumHistoryAnalytics section={section} context={{premiumHistory,premiumHistorySource,traderMode,historyScope,validUserId,ctraderAccounts,language,isLight,dateFrom,dateTo,periodPreset,notesRevision,jumpToTradeDate,t,formatAmountInCurrency,formatMoney,formatMoneyShort,formatDateLabel,proHistoryCopy,displayMode,depositSize,handleEditDeposit,setDisplayMode,currencySymbol,openConnectModal:platform=>{setHistoryOpen(false);openConnectModal(platform);},instrumentBreakdownOpen,setInstrumentBreakdownOpen,setHistoryCurrency,
+      onCategory:(name,direction)=>{setHistoryNameFilter(name);setHistoryWinLoss(direction==='income'?'win':'loss');setPremiumMoneyHistoryTab('records');},
+      onInstrument:name=>{setHistoryNameFilter(name);setHistoryWinLoss('all');setProHistoryTab('records');}}}/>;
   }
 
   function openHistory() {
@@ -3871,12 +3879,13 @@ export default function CalendarScreen() {
       setHistoryWinLoss('all');
     }
     setVoiceHistoryKeys(null);
+    setHistoryAccount('ALL');
     setHistoryOpen(true);
     setHistoryVisible(true);
     setHistoryFiltersOpen(false);
     setProFiltersOpen(false);
     setProHistoryTab('overview');
-    setPremiumMoneyHistoryTab('records');
+    setPremiumMoneyHistoryTab('dynamics');
     setConfirmingClear(false);
     setFreeHistoryPanel(null);
     setFreeTimelineSelected(null);
@@ -5063,11 +5072,11 @@ export default function CalendarScreen() {
                 model={premiumHistory} records={historyTrades} language={language} traderMode={traderMode} trading={traderMode && historyScope !== 'money'}
                 tab={traderMode && historyScope !== 'money' ? proHistoryTab : premiumMoneyHistoryTab}
                 onTab={traderMode && historyScope !== 'money' ? setProHistoryTab : setPremiumMoneyHistoryTab}
-                onContext={value => {setHistoryScope(value ? 'trades' : 'money');setHistoryWinLoss('all');setHistoryNameFilter('');setPlatformFilter('ALL');setVoiceHistoryKeys(null);setHistoryFiltersOpen(false);setProHistoryTab('overview');setPremiumMoneyHistoryTab('records');}}
+                onContext={value => {setHistoryScope(value ? 'trades' : 'money');setHistoryWinLoss('all');setHistoryNameFilter('');setPlatformFilter('ALL');setHistoryAccount('ALL');setVoiceHistoryKeys(null);setHistoryFiltersOpen(false);setProHistoryTab('overview');setPremiumMoneyHistoryTab('dynamics');}}
                 period={periodPreset} periodLabel={periodPreset === 'Вся история' ? freeHistoryCopy(language).allTime : periodPreset === 'custom' ? `${formatDateLabel(dateFrom,language)} — ${formatDateLabel(dateTo,language)}` : periodButtonLabel}
                 periodOptions={[...PERIOD_PRESETS.map(value=>({value,label:value === 'Вся история' ? freeHistoryCopy(language).allTime : periodLabel(value)})),{value:'custom',label:t('customPeriod')}]}
                 onPeriod={value=>{if(value==='custom'){setSelectedKey(null);setPeriodPreset('custom');setHistoryFiltersOpen(true);}else handlePresetChange(value);}}
-                currency={historyCurrency} currencies={CURRENCIES} onCurrency={setHistoryCurrency} platform={platformFilter} onPlatform={setPlatformFilter}
+                currency={historyCurrency} currencies={CURRENCIES} onCurrency={setHistoryCurrency} platform={platformFilter} onPlatform={value=>{setPlatformFilter(value);setHistoryAccount('ALL');}}
                 scope={historyWinLoss} onScope={setHistoryWinLoss} category={historyNameFilter}
                 onCategory={(name,direction)=>{setHistoryNameFilter(name);setHistoryWinLoss(direction==='income'?'win':'loss');setPremiumMoneyHistoryTab('records');setHistoryFiltersOpen(false);}}
                 onClearCategory={()=>{setHistoryNameFilter('');setHistoryWinLoss('all');}}
@@ -5075,6 +5084,19 @@ export default function CalendarScreen() {
                 dateFrom={dateFrom} dateTo={dateTo} onDateFrom={handleDateFromChange} onDateTo={handleDateToChange}
                 onRecord={editTradeFromHistory} getIcon={getHistoryCategoryIcon}
                 renderReceipt={entry=>{const receipt=receiptFromEntry(entry);return receipt?<ReceiptHistoryCard entry={entry} receipt={receipt} language={language} isLight={isLight} previewLimit={3} showDate={false} onEdit={demoMode?undefined:()=>editTradeFromHistory(entry)}/>:null;}}
+                goal={(() => {
+                  const end=periodPreset!=='Вся история'&&dateTo>='1900-01-01'&&dateTo<'2100-01-01'?dateTo:`${year}-${String(month+1).padStart(2,'0')}-01`;
+                  const goalYear=Number(end.slice(0,4)), goalMonth=Number(end.slice(5,7))-1, goalCurrency=historyCurrency==='ALL'?currency:historyCurrency;
+                  const monthKey=`${goalYear}-${String(goalMonth+1).padStart(2,'0')}`;
+                  const total=premiumHistorySource.filter(row=>row.dateKey.startsWith(monthKey)&&(row.currency||'USD')===goalCurrency).reduce((value,row)=>value+(Number(row.pnl)||0),0);
+                  return <div><p className="premium-history-goal-month">{new Intl.DateTimeFormat(intlLocale(language),{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(`${monthKey}-01T12:00:00Z`))} · {goalCurrency}</p><MonthlyGoal year={goalYear} month={goalMonth} currency={goalCurrency} currencySymbol={getCurrencyMeta(goalCurrency).symbol} currentPnl={total} userId={validUserId} language={language} isLight={isLight} traderMode={traderMode&&historyScope!=='money'} filtered={platformFilter!=='ALL'||historyAccount!=='ALL'}/></div>;
+                })()}
+                reminders={<PremiumHistoryReminders plans={plans} currency={historyCurrency} todayKey={todayKey} language={language} isLight={isLight} loading={plansLoading} error={plansLoadError}
+                  onAdd={()=>{setHistoryOpen(false);openPlanComposer();}} onEdit={plan=>{setHistoryOpen(false);openPlanEditor(plan);}} onDelete={plan=>{setHistoryOpen(false);requestPlanDelete(plan);}} onResolve={(plan,outcome)=>{setHistoryOpen(false);handleResolvePlan(plan,outcome);}}/>}
+                tools={<div className="premium-history-toolbox"><div className="premium-history-select premium-history-account"><select aria-label={premiumHistoryChapterCopy(language).account} value={historyAccount} onChange={event=>setHistoryAccount(event.target.value)}><option value="ALL">{premiumHistoryChapterCopy(language).allAccounts}</option>{[...new Map(premiumHistoryAccountSource.map(row=>[premiumHistoryAccountKey(row),row])).entries()].map(([key,row])=><option key={key} value={key}>{row.platform||'Manual'} · {String(premiumTradeFacts(row).account??premiumHistoryChapterCopy(language).unknownAccount)}</option>)}</select><ChevronDown size={13}/></div>{renderPremiumHistoryAnalytics('tools')}<LotCalculator enabled={proAccessActive&&!proAccessLoading} language={language} isLight={isLight} currency={historyCurrency==='ALL'?currency:historyCurrency}/></div>}
+                onWallet={proAccessActive&&!proAccessLoading?()=>{setHistoryOpen(false);transitionView(()=>setAccountMode('wallet'));}:undefined}
+                onCapital={proAccessActive&&!proAccessLoading?()=>{setHistoryOpen(false);openCapitalFromCalendarGesture();}:undefined}
+                receiptCapture={proAccessActive&&!proAccessLoading&&validUserId?<div className="premium-history-receipt-entry"><span>{premiumHistoryChapterCopy(language).receipts}</span><ReceiptCapture key={validUserId} userId={validUserId} proActive={proAccessActive} proLoading={proAccessLoading} language={language} isLight={isLight} defaultCurrency={historyCurrency==='ALL'?currency:historyCurrency} onAccessDenied={refreshProAccess} onSaveReceipt={saveReviewedReceipt}/></div>:null}
                 analytics={renderPremiumHistoryAnalytics}
                 dynamics={traderMode && historyScope !== 'money'
                   ? <PnlCurve appearance="glass" key={validUserId || 'guest'} userId={validUserId} trades={premiumHistory.rows} comparisonTrades={premiumHistorySource} dateFrom={periodPreset === 'Вся история' ? null : dateFrom} dateTo={dateTo} accounts={ctraderAccounts} language={language} isLight={isLight}/>

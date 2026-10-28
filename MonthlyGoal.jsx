@@ -128,6 +128,25 @@ function MonthlyGoalForMonth({
     ? Math.min(100, Math.max(0, (Number(currentPnl) || 0) / goal * 100)) : 0);
   const celebrationTimerRef = useRef(null);
 
+  // The calendar and history can display the same month's goal together.
+  useEffect(() => {
+    const update = event => {
+      const key = event.type === 'storage' ? event.key : event.detail?.key;
+      if (key !== goalStorageKey) return;
+      const next = Number(event.type === 'storage' ? event.newValue : event.detail?.value);
+      const value = Number.isFinite(next) && next > 0 ? next : 0;
+      setGoal(value);
+      setDraft(value ? String(value) : '');
+      setError('');
+    };
+    window.addEventListener('storage', update);
+    window.addEventListener('dayris:monthly-goal-change', update);
+    return () => {
+      window.removeEventListener('storage', update);
+      window.removeEventListener('dayris:monthly-goal-change', update);
+    };
+  }, [goalStorageKey]);
+
   useEffect(() => () => {
     if (celebrationTimerRef.current) window.clearTimeout(celebrationTimerRef.current);
   }, []);
@@ -243,6 +262,7 @@ function MonthlyGoalForMonth({
     }
 
     setGoal(nextGoal);
+    window.dispatchEvent(new CustomEvent('dayris:monthly-goal-change', {detail:{key:goalStorageKey,value:nextGoal}}));
     setDraft(String(nextGoal));
     setError('');
     setEditing(false);

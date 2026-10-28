@@ -35,7 +35,12 @@ export function premiumHistoryModel(source, {currency, from, to, today, isTradin
   const elapsed = finitePeriod && today >= from && today < to ? (Date.parse(today + 'T00:00:00Z') - Date.parse(from + 'T00:00:00Z')) / 86400000 + 1 : 0;
   const days = finitePeriod ? (Date.parse(to + 'T00:00:00Z') - Date.parse(from + 'T00:00:00Z')) / 86400000 + 1 : 0;
   return {rows, summary, expenses, incomes, dailyEntries:[...daily].sort((a,b)=>a[0].localeCompare(b[0])), hasTrading: trading.length > 0, recurring,
-    comparison: !summary.mixed && previous.length ? {range, income: change(sum(rows, true), sum(previous, true)), expense: change(sum(rows, false), sum(previous, false))} : null,
+    comparison: !summary.mixed && previous.length ? {
+      range, income: change(sum(rows, true), sum(previous, true)), expense: change(sum(rows, false), sum(previous, false)),
+      previousIncome:sum(previous,true), previousExpense:sum(previous,false),
+      previousTotal:sum(previous,true)-sum(previous,false),
+      difference:summary.total-(sum(previous,true)-sum(previous,false)),
+    } : null,
     projectedExpense: !summary.mixed && !trading.length && elapsed && rows.length ? sum(rows.filter(row=>row.dateKey<=today), false) / elapsed * days : null,
     winCount: wins.length, lossCount: losses.length, breakevenCount: rows.length - wins.length - losses.length,
     winrate: rows.length ? Math.round(wins.length / rows.length * 100) : null,
@@ -45,6 +50,9 @@ export function premiumHistoryModel(source, {currency, from, to, today, isTradin
 }
 
 const optionalNumber = value => value === null || value === undefined || value === '' || !Number.isFinite(Number(value)) ? null : Number(value);
+export function premiumHistoryAccountKey(row) {
+  return `${row.platform || 'Manual'}:${premiumTradeFacts(row).account ?? 'unknown'}`;
+}
 export function premiumTradeFacts(row) {
   const commission = optionalNumber(row.commission), swap = optionalNumber(row.swap);
   const gross = optionalNumber(row.gross_profit);

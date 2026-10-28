@@ -1,17 +1,21 @@
-import React, {useEffect, useRef, useState} from 'react';
-import {ArrowDownLeft, ArrowUpRight, ArrowLeft, ArrowRight, ChevronDown, ChevronRight, SlidersHorizontal, Wallet, ChartNoAxesCombined, Repeat2, X, Pencil} from 'lucide-react';
+import React, {useEffect, useId, useRef, useState} from 'react';
+import {ArrowDownLeft, ArrowUpRight, ArrowLeft, ArrowRight, ChevronDown, ChevronRight, SlidersHorizontal, Wallet, ChartNoAxesCombined, X, Pencil} from 'lucide-react';
 import {intlLocale} from '../../shared/i18n/locale.js';
 import {getMoneyCategoryLabel} from '../../shared/config/constants.js';
 import {freeHistoryCount} from './freeHistoryCopy.js';
 import {premiumHistoryCopy, premiumHistoryTradeCount} from './premiumHistoryCopy.js';
 import {premiumTradeFacts} from './premiumHistoryModel.mjs';
+import {premiumHistoryChapterCopy} from './premiumHistoryChapterCopy.js';
+import PremiumHistoryCurve from './PremiumHistoryCurve.jsx';
 import './PremiumHistoryWorkspace.css';
 
 export default function PremiumHistoryWorkspace({model, records, language, traderMode, trading, tab, onTab, onContext,
   period, periodLabel, periodOptions, onPeriod, currency, currencies, onCurrency, platform, onPlatform,
   scope, onScope, category, onCategory, onClearCategory, filtersOpen, onFilters, categoryPicker,
-  dateFrom, dateTo, onDateFrom, onDateTo, onRecord, getIcon, renderReceipt, dynamics, analytics, plan, children}) {
-  const copy = premiumHistoryCopy(language), {summary} = model;
+  dateFrom, dateTo, onDateFrom, onDateTo, onRecord, getIcon, renderReceipt, dynamics, analytics, plan, goal, reminders, tools, receiptCapture, onWallet, onCapital, children}) {
+  const copy = premiumHistoryCopy(language), chapterCopy = premiumHistoryChapterCopy(language), {summary} = model;
+  const chapterId = useId();
+  const [riskMode,setRiskMode]=useState('quality'), [breakdownMode,setBreakdownMode]=useState('radar'), [graphMode,setGraphMode]=useState('cumulative');
   const [direction, setDirection] = useState('expense'), [expanded, setExpanded] = useState(false), [selected, setSelected] = useState(null);
   const card = useRef(null), amountNode = useRef(null), panel = useRef(null), detailTitle = useRef(null), previousAmount = useRef(null), animation = useRef(null);
   const money = value => new Intl.NumberFormat(intlLocale(language), {minimumFractionDigits:2,maximumFractionDigits:2}).format(Math.abs(value));
@@ -51,12 +55,59 @@ export default function PremiumHistoryWorkspace({model, records, language, trade
     {!compact && rows.length > (trading ? 5 : 3) && <button type="button" className="premium-history-more" aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{expanded ? copy.less : `${copy.more} · ${rows.length - (trading ? 5 : 3)}`}</button>}
   </>;
   const scopes = <div className="premium-history-scopes" role="group" aria-label={copy.scope}>{[['all',copy.all],['win',trading ? copy.positive : copy.income],['loss',trading ? copy.negative : copy.expense]].map(([value,label]) => <button key={value} type="button" aria-pressed={scope === value} onClick={() => onScope(value)}>{label}</button>)}</div>;
-  const tabs = trading ? [['overview',copy.overview],['dynamics',copy.dynamics],['trades',copy.trades],['analytics',copy.advanced]] : [['records',copy.records],['dynamics',copy.dynamics],['analysis',copy.analysis]];
+  const activeChapter=({overview:'risk',trades:'records',analysis:'breakdown',analytics:'risk'})[tab] ?? tab;
   const groups = direction === 'expense' ? model.expenses : model.incomes, groupTotal = direction === 'expense' ? summary.expense : summary.income;
+  const chapters=trading
+    ? [['risk',chapterCopy.risk],['dynamics',chapterCopy.curve],['instruments',chapterCopy.instruments],['discipline',chapterCopy.discipline],['plan',chapterCopy.tradePlan],['records',chapterCopy.journal]]
+    : [['dynamics',chapterCopy.dynamics],['categories',chapterCopy.categories],['breakdown',chapterCopy.breakdown],['plan',chapterCopy.plan],['records',chapterCopy.records]];
+  const switcher=(value,onChange,options)=><div className="premium-history-subtabs" role="group" aria-label={copy.sections}>{options.map(([key,label])=><button type="button" key={key} aria-pressed={value===key} onClick={()=>onChange(key)}>{label}</button>)}</div>;
+  function caption(id) {
+    if(id==='records') return `${trading?premiumHistoryTradeCount(records.length,language):freeHistoryCount(records.length,language)} · ${trading?chapterCopy.journalHint:chapterCopy.recordsHint}`;
+    if(id==='plan') return trading?chapterCopy.tradePlanHint:chapterCopy.planHint;
+    if(id==='discipline') return chapterCopy.notesHint;
+    if(summary.mixed) return chapterCopy.separate;
+    if(id==='risk') return `${model.winrate===null?'—':model.winrate+'%'} · ${copy.factor} ${model.profitFactor===null?'—':model.profitFactor===Infinity?'∞':model.profitFactor.toFixed(2)}`;
+    if(id==='categories') return `${model.expenses.length} ${chapterCopy.expenses} · ${model.incomes.length} ${chapterCopy.sources}`;
+    if(id==='instruments') return `${new Set(model.rows.map(row=>row.instrument)).size} ${chapterCopy.instrumentsCount} · ${new Set(model.rows.map(row=>row.platform||'Manual')).size} ${chapterCopy.platforms}`;
+    if(id==='breakdown') return chapterCopy.breakdownHint;
+    return periodLabel;
+  }
+  const categories=()=>summary.mixed ? analytics?.('finance-radar') : <section className="financial-distribution">
+    {switcher(direction,setDirection,[['expense',copy.expense],['income',copy.income]])}
+    {groups.map(group=><button type="button" className="premium-history-category financial-category" key={group.name} onClick={()=>{onCategory(group.name,direction);chooseTab('records');}}><span><span>{getMoneyCategoryLabel(group.name,language)}</span><strong>{money(group.amount)} {unit}</strong></span><span className="premium-history-track"><span style={{width:`${groupTotal>0?group.amount/groupTotal*100:0}%`}}/></span><small><span>{freeHistoryCount(group.count,language)}</span><span>{groupTotal>0?Math.round(group.amount/groupTotal*100):0}% <ChevronRight size={12}/></span></small></button>)}
+    {!groups.length && <p className="premium-history-empty">{copy.empty}</p>}
+  </section>;
+  const ticket=selectedRow && trading ? (()=>{const row=selectedRow,facts=premiumTradeFacts(row),code=row.currency||'USD';return <section className="premium-history-ticket">
+        <button type="button" className="premium-history-back" onClick={()=>setSelected(null)}><ArrowLeft size={15}/>{copy.back}</button>
+        <div className="premium-history-ticket-heading"><div><h3 ref={detailTitle} tabIndex={-1}>{row.instrument}</h3><p>{row.direction === 'LONG' ? 'Buy' : row.direction === 'SHORT' ? 'Sell' : row.direction || '—'} · {date(row.dateKey)} · {row.time}</p></div><div><strong data-negative={Number(row.pnl)<0}>{signed(Number(row.pnl))}</strong><small>{code}</small></div></div>
+        <div className="premium-history-prices"><div><span>{copy.entry}</span><strong>{facts.entry === null ? '—' : money(facts.entry)}</strong></div><ArrowRight size={17} aria-hidden="true"/><div><span>{copy.exit}</span><strong>{facts.exit === null ? '—' : money(facts.exit)}</strong></div></div>
+        {fact(copy.volume,facts.volume === null ? null : String(facts.volume))}{fact(copy.gross,facts.gross === null ? null : signed(facts.gross)+' '+code)}{fact(copy.commission,facts.commission === null ? null : signed(facts.commission)+' '+code)}{fact(copy.swap,facts.swap === null ? null : signed(facts.swap)+' '+code)}{fact(copy.net,signed(Number(row.pnl))+' '+code)}{fact(copy.platform,row.platform||'Manual')}{fact(copy.account,facts.account)}{facts.ticket && fact(copy.ticket,facts.ticket)}{facts.takeProfit !== null && fact(copy.takeProfit,money(facts.takeProfit))}{facts.stopLoss !== null && fact(copy.stopLoss,money(facts.stopLoss))}
+        {[facts.entry,facts.exit,facts.volume,facts.commission,facts.swap].includes(null) && <p className="premium-history-hint">{copy.missing}</p>}{facts.note && <p className="premium-history-hint">{copy.note}: {facts.note}</p>}
+        <button type="button" className="premium-history-more" onClick={()=>onRecord(row)}><Pencil size={14}/>{copy.edit}</button>
+      </section>;})() : null;
+  const selectedTotal=records.reduce((total,row)=>total+Number(row.pnl||0),0);
+  function body(id) {
+    switch(id) {
+      case 'risk': return <>{switcher(riskMode,setRiskMode,[['quality',chapterCopy.quality],['stability',chapterCopy.stability]])}{analytics?.(`risk-${riskMode}`)}</>;
+      case 'dynamics': return <>{!trading && !summary.mixed && switcher(graphMode,setGraphMode,[['cumulative',chapterCopy.cumulative],['cashflow',chapterCopy.cashflow]])}{summary.mixed&&!trading ? null : trading||graphMode==='cashflow' ? dynamics : <PremiumHistoryCurve key={`${period}:${currency}:${dateFrom}:${dateTo}`} model={model} language={language}/>} {analytics?.('comparison')}{trading && analytics?.('period-dynamics')}</>;
+      case 'categories': return categories();
+      case 'breakdown': return <>{switcher(breakdownMode,setBreakdownMode,[['radar',chapterCopy.radar],['habits',chapterCopy.habits]])}{analytics?.(`finance-${breakdownMode}`)}</>;
+      case 'instruments': return <>{trading && <div className="premium-history-select premium-history-platform"><select aria-label={copy.platform} value={platform} onChange={event=>onPlatform(event.target.value)}><option value="ALL">{copy.allPlatforms}</option>{['cTrader','MT4','MT5','Manual'].map(value=><option key={value}>{value}</option>)}</select><ChevronDown size={13} aria-hidden="true"/></div>}{tools}{analytics?.('instruments')}</>;
+      case 'discipline': return analytics?.('discipline');
+      case 'plan': return <div className="premium-history-goals">{goal}{!trading && <div className="premium-history-plan-content">{plan}</div>}{reminders}</div>;
+      case 'records': return ticket || <>
+        {category && <div className="premium-history-category-filter"><span>{trading?category:getMoneyCategoryLabel(category,language)}</span><button type="button" aria-label={copy.clearCategory} onClick={onClearCategory}><X size={15}/></button></div>}
+        {scopes}
+        {(category||scope!=='all') && !summary.mixed && <p className="premium-history-selection">{chapterCopy.selection}<strong>{signed(selectedTotal)} {unit}</strong></p>}
+        {rowList(records)}{!trading && receiptCapture}{children}
+      </>;
+      default:return null;
+    }
+  }
   return <section className="premium-history-workspace" data-context={trading ? 'trading' : 'finance'}>
     {traderMode && <div className="premium-history-context" role="group" aria-label={copy.sections}>{[[false,copy.finance,Wallet],[true,copy.trading,ChartNoAxesCombined]].map(([value,label,Icon]) => <button key={label} type="button" aria-pressed={trading === value} onClick={() => onContext(value)}><Icon size={15} aria-hidden="true"/>{label}</button>)}</div>}
     <section ref={card} className="premium-history-card financial-hero" aria-label={trading ? copy.tradeResult : copy.result}
-      onPointerMove={event => {if(event.pointerType !== 'mouse' || matchMedia('(prefers-reduced-motion: reduce)').matches)return;const rect=card.current.getBoundingClientRect();card.current.style.setProperty('--premium-light-x',`${Math.round(Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width))*100)}%`);}}
+      onPointerMove={event => {if(event.pointerType !== 'mouse' || matchMedia('(prefers-reduced-motion: reduce)').matches)return;const rect=card.current.getBoundingClientRect();card.current.style.setProperty('--premium-light-x',`${Math.round(100*Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width)))}%`);}}
       onPointerLeave={() => card.current.style.removeProperty('--premium-light-x')}>
       <p className="premium-history-result-label">{trading ? copy.tradeResult : copy.result}</p>
       <div ref={amountNode} className="premium-history-balance" data-negative={!summary.mixed && summary.total<0}>
@@ -65,46 +116,27 @@ export default function PremiumHistoryWorkspace({model, records, language, trade
       <p className="premium-history-caption">{periodLabel} · {trading ? premiumHistoryTradeCount(summary.count,language) : freeHistoryCount(summary.count,language)}</p>
       {summary.mixed && <p className="premium-history-hint">{copy.mixed}</p>}
       <div className="premium-history-totals"><div><span><ArrowDownLeft size={14} aria-hidden="true"/>{trading ? copy.winning : copy.income}</span><strong>{summary.mixed ? '—' : money(summary.income)}</strong></div><div><span><ArrowUpRight size={14} aria-hidden="true"/>{trading ? copy.losing : copy.expense}</span><strong>{summary.mixed ? '—' : money(summary.expense)}</strong></div></div>
+      {model.comparison && <div className="premium-history-hero-delta"><strong>{signed(model.comparison.difference)} {unit}</strong><span>{copy.previous} · {date(model.comparison.range.from)} — {date(model.comparison.range.to)}</span></div>}
     </section>
     <div className="premium-history-controls">
       <div className="premium-history-select premium-history-period"><select aria-label={copy.period} value={period} onChange={event => onPeriod(event.target.value)}>{periodOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select><ChevronDown size={13} aria-hidden="true"/></div>
       <div className="premium-history-select premium-history-currency"><select aria-label={copy.currency} value={currency} onChange={event => onCurrency(event.target.value)}><option value="ALL">{copy.all}</option>{currencies.map(item => <option key={item.code} value={item.code}>{item.code}</option>)}</select><ChevronDown size={13} aria-hidden="true"/></div>
       <button type="button" className="premium-history-filter" aria-expanded={filtersOpen} aria-label={copy.filters} onClick={onFilters}><SlidersHorizontal size={17}/></button>
     </div>
-    {trading && <div className="premium-history-select premium-history-platform"><select aria-label={copy.platform} value={platform} onChange={event=>onPlatform(event.target.value)}><option value="ALL">{copy.allPlatforms}</option>{['cTrader','MT4','MT5','Manual'].map(value=><option key={value}>{value}</option>)}</select><ChevronDown size={13} aria-hidden="true"/></div>}
+
     {filtersOpen && <div className="premium-history-filters">{period === 'custom' && <div className="premium-history-dates"><label>{copy.dateFrom}<input type="date" value={dateFrom} onChange={event=>onDateFrom(event.target.value)}/></label><label>{copy.dateTo}<input type="date" value={dateTo} onChange={event=>onDateTo(event.target.value)}/></label></div>}{categoryPicker}</div>}
-    <nav className="premium-history-tabs" aria-label={copy.sections}>{tabs.map(([value,label]) => <button key={value} type="button" aria-pressed={tab===value} onClick={()=>chooseTab(value)}>{label}</button>)}</nav>
-    <div ref={panel} className="premium-history-panel" key={`${trading}:${tab}`}>
-      {selectedRow && trading ? (()=>{const row=selectedRow,facts=premiumTradeFacts(row),code=row.currency||'USD';return <section className="premium-history-ticket">
-        <button type="button" className="premium-history-back" onClick={()=>setSelected(null)}><ArrowLeft size={15}/>{copy.back}</button>
-        <div className="premium-history-ticket-heading"><div><h3 ref={detailTitle} tabIndex={-1}>{row.instrument}</h3><p>{row.direction === 'LONG' ? 'Buy' : row.direction === 'SHORT' ? 'Sell' : row.direction || '—'} · {date(row.dateKey)} · {row.time}</p></div><div><strong data-negative={Number(row.pnl)<0}>{signed(Number(row.pnl))}</strong><small>{code}</small></div></div>
-        <div className="premium-history-prices"><div><span>{copy.entry}</span><strong>{facts.entry === null ? '—' : money(facts.entry)}</strong></div><ArrowRight size={17} aria-hidden="true"/><div><span>{copy.exit}</span><strong>{facts.exit === null ? '—' : money(facts.exit)}</strong></div></div>
-        {fact(copy.volume,facts.volume === null ? null : String(facts.volume))}{fact(copy.gross,facts.gross === null ? null : signed(facts.gross)+' '+code)}{fact(copy.commission,facts.commission === null ? null : signed(facts.commission)+' '+code)}{fact(copy.swap,facts.swap === null ? null : signed(facts.swap)+' '+code)}{fact(copy.net,signed(Number(row.pnl))+' '+code)}{fact(copy.platform,row.platform||'Manual')}{fact(copy.account,facts.account)}{facts.ticket && fact(copy.ticket,facts.ticket)}{facts.takeProfit !== null && fact(copy.takeProfit,money(facts.takeProfit))}{facts.stopLoss !== null && fact(copy.stopLoss,money(facts.stopLoss))}
-        {[facts.entry,facts.exit,facts.volume,facts.commission,facts.swap].includes(null) && <p className="premium-history-hint">{copy.missing}</p>}{facts.note && <p className="premium-history-hint">{copy.note}: {facts.note}</p>}
-        <button type="button" className="premium-history-more" onClick={()=>onRecord(row)}><Pencil size={14}/>{copy.edit}</button>
-      </section>;})() : <>
-        {!trading && tab==='records' && <>{category && <div className="premium-history-category-filter"><span>{getMoneyCategoryLabel(category,language)}</span><button type="button" aria-label={copy.clearCategory} onClick={onClearCategory}><X size={15}/></button></div>}{scopes}<p className="premium-history-list-count">{freeHistoryCount(records.length,language)}</p>{rowList(records)}{children}</>}
-        {!trading && tab==='analysis' && <>
-          {!summary.count && <p className="premium-history-empty">{copy.empty}</p>}
-          {!summary.mixed && summary.count>0 && <section className="financial-distribution"><div className="premium-history-section-heading"><h3>{direction==='expense'?copy.categories:copy.sources}</h3><span>{unit}</span></div>
-            <div className="premium-history-direction" role="group" aria-label={copy.analysis}>{[['expense',copy.expense],['income',copy.income]].map(([value,label])=><button key={value} type="button" aria-pressed={direction===value} onClick={()=>setDirection(value)}>{label}</button>)}</div>
-            {summary.income>0 && <p className="premium-history-hint">{copy.saved} · {Math.round((summary.income-summary.expense)/summary.income*100)}%</p>}
-            {groups.map(group=><button type="button" className="premium-history-category financial-category" key={group.name} onClick={()=>onCategory(group.name,direction)}><span><span>{getMoneyCategoryLabel(group.name,language)}</span><strong>{money(group.amount)}</strong></span><span className="premium-history-track"><span style={{width:`${groupTotal>0?group.amount/groupTotal*100:0}%`}}/></span><small><span>{freeHistoryCount(group.count,language)}</span><span>{groupTotal>0?Math.round(group.amount/groupTotal*100):0}% <ChevronRight size={12}/></span></small></button>)}
-            {!groups.length && <p className="premium-history-hint">{copy.empty}</p>}
-          </section>}
-          {summary.mixed && <p className="premium-history-hint">{copy.mixed}</p>}
-          {model.hasTrading && <p className="premium-history-hint financial-trading-note">{copy.tradeNote}</p>}
-          {model.comparison && <div className="premium-history-insight"><span>{copy.previous} · {date(model.comparison.range.from)} — {date(model.comparison.range.to)}</span><div>{[[copy.income,model.comparison.income],[copy.expense,model.comparison.expense]].map(([label,value])=><span key={label}>{label} <strong>{value===null?'—':`${value>0?'+':''}${value}%`}</strong></span>)}</div></div>}
-          {model.recurring && !summary.mixed && <button type="button" className="premium-history-recurring" onClick={()=>onCategory(model.recurring.name,'expense')}><Repeat2 size={16} aria-hidden="true"/><span><strong>{getMoneyCategoryLabel(model.recurring.name,language)} · {model.recurring.count}</strong><small>{copy.repeated} · {copy.review}</small></span><ChevronRight size={14}/></button>}
-          {model.projectedExpense!==null && <div className="premium-history-insight"><span>{copy.estimate}</span><strong>≈ {money(model.projectedExpense)} {unit}</strong><small>{copy.estimateHint}</small></div>}
-          {analytics?.('finance')}
-          <details className="premium-history-plan"><summary><SlidersHorizontal size={15}/><span>{copy.plan}</span><ChevronDown size={14}/></summary><div>{plan}</div></details>
-        </>}
-        {trading && tab==='overview' && <><div className="premium-history-metrics"><div><span>{copy.winrate}</span><strong>{model.winrate===null?'—':`${model.winrate}%`}</strong><small>{model.winCount} / {summary.count}</small></div><div><span>{copy.factor}</span><strong>{model.profitFactor===null?'—':model.profitFactor===Infinity?'∞':model.profitFactor.toFixed(2)}</strong><small>{unit||copy.mixed}</small></div><div><span>{copy.drawdown}</span><strong>{model.maxDrawdown===null?'—':money(model.maxDrawdown)}</strong><small>{unit}</small></div></div><p className="premium-history-hint">{copy.closed}</p>{analytics?.('overview')}<div className="premium-history-section-heading"><h3>{copy.recent}</h3><span>{unit}</span></div>{rowList(records,true)}<button type="button" className="premium-history-more" onClick={()=>chooseTab('trades')}>{copy.journal} · {records.length}<ArrowUpRight size={14}/></button></>}
-        {tab==='dynamics' && (trading || !summary.mixed ? dynamics : analytics?.('finance'))}
-        {trading && tab==='analytics' && analytics?.('full')}
-        {trading && tab==='trades' && <>{scopes}{rowList(records)}{children}</>}
-      </>}
+    <div ref={panel} className="premium-history-chapters" aria-label={copy.sections}>
+      {chapters.map(([id,title],index)=><HistoryChapter key={`${trading}:${id}`} id={`${chapterId}-${id}`} number={index+1} title={title} caption={caption(id)} open={activeChapter===id} onToggle={()=>chooseTab(activeChapter===id?'':id)}>{()=>body(id)}</HistoryChapter>)}
     </div>
+    {!trading && (onWallet||onCapital) && <footer className="premium-history-shortcuts">{onWallet && <button type="button" onClick={onWallet}><Wallet size={15}/>{chapterCopy.wallet}</button>}{onCapital && <button type="button" onClick={onCapital}><ChartNoAxesCombined size={15}/>{chapterCopy.capital}</button>}</footer>}
+  </section>;
+}
+
+function HistoryChapter({id,number,title,caption,open,onToggle,children}) {
+  const [visited,setVisited]=useState(open);
+  useEffect(()=>{if(open)setVisited(true);},[open]);
+  return <section className="premium-history-chapter">
+    <h3><button type="button" id={`${id}-heading`} className="premium-history-chapter-head" aria-expanded={open} aria-controls={id} onClick={onToggle}><span className="premium-history-step" aria-hidden="true">{String(number).padStart(2,'0')}</span><span><strong>{title}</strong><small>{caption}</small></span><ChevronDown size={14} aria-hidden="true"/></button></h3>
+    <div id={id} role="region" aria-labelledby={`${id}-heading`} aria-hidden={!open} inert={open?undefined:''} className="premium-history-chapter-reveal" data-open={open}><div><div className="premium-history-chapter-body premium-history-panel">{(open||visited) && children()}</div></div></div>
   </section>;
 }

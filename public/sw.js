@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v105-pro-theme-parallax-controls';
+const CACHE_NAME = 'atj-cache-v106-history-complete-chapters';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
