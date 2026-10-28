@@ -11,7 +11,7 @@ export function isDateKey(value) {
 }
 
 function validStreak(value) {
-  return Number.isInteger(value?.currentStreak) && value.currentStreak >= 1 && value.currentStreak <= 36500
+  return Number.isInteger(value?.currentStreak) && value.currentStreak >= 0 && value.currentStreak <= 36500
     && isDateKey(value.lastActiveDate);
 }
 
@@ -48,7 +48,8 @@ export async function syncAccountActivityStreak({ client, storage, ownerId, sign
   if (error) throw error;
   if (data?.accountId !== ownerId || !validStreak(data)) throw new Error('INVALID_ACCOUNT_STREAK');
   const next = { currentStreak: data.currentStreak, lastActiveDate: data.lastActiveDate,
-    paused: Boolean(data.paused), timeZone: data.timeZone, ownerId, _accountSynced: true };
+    paused: Boolean(data.paused), timeZone: data.timeZone, ownerId, _accountSynced: true,
+    entryDate: data.entryDate || null, completedToday: Boolean(data.completedToday), rule: data.rule };
   try { storage.setItem(PREFIX + ownerId, JSON.stringify(next)); } catch { /* online state remains usable */ }
   return next;
 }

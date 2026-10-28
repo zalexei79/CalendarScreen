@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { getValidUserId } from '../../../shared/lib/formatters';
+import { notifyStreakEntrySaved } from '../../../shared/lib/entryActivityStreak.js';
 
 const CACHE_PREFIX = 'dayris_wallet_';
 
@@ -78,12 +79,13 @@ export function useWalletTransactions({ user }) {
     if(currentOwner.current!==owner)throw new Error('Аккаунт изменился.');
     const local = { ...item, id: item.id || `wallet-local-${Date.now()}-${Math.random().toString(36).slice(2)}` };
     setTransactions(current=>{if(currentOwner.current!==owner)return current;const next=item.id?current.map(row=>row.id===item.id?local:row):[local,...current];cache(next);return next;});
-    if (!userId) return local;
+    if (!userId) { if (!item.id) notifyStreakEntrySaved(null); return local; }
     const result = item.id
       ? await supabase.from('wallet_transactions').update(payload(local, userId)).eq('id', item.id).eq('user_id', userId).select().single()
       : await supabase.from('wallet_transactions').insert(payload(local, userId)).select().single();
     if(currentOwner.current!==owner)throw new Error('Аккаунт изменился.');
     if (result.error) { await refresh(); throw result.error; }
+    if (!item.id) notifyStreakEntrySaved(userId);
     await refresh(); return normalize(result.data);
   }, [transactions, userId, cache, refresh]);
 

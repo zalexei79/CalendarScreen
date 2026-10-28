@@ -6,6 +6,7 @@ import { getTradesCacheKey } from '../../../shared/config/constants';
 import { fromSupabaseTradeRow, toSupabaseTradePayload, toSupabaseTradeUpdates } from '../lib/tradeMapper';
 import { isRetryableNetworkError, useOfflineQueue } from './useOfflineQueue';
 import {categoryRemovalTargets,detachCategoryLabels,UNCATEGORIZED} from '../../../shared/lib/categoryRemoval.js';
+import { notifyStreakEntrySaved } from '../../../shared/lib/entryActivityStreak.js';
 
 function normalizeCurrency(value) {
   const code = String(value || '').trim().toUpperCase();
@@ -214,7 +215,10 @@ export function useTrades({ user, readOnly = false }) {
       return next;
     });
 
-    if (!cloudUserId) return localTrade;
+    if (!cloudUserId) {
+      if (!isEditing && !['ctrader','mt4','mt5'].includes(String(platform || 'manual').toLowerCase())) notifyStreakEntrySaved(null);
+      return localTrade;
+    }
     const payload = toSupabaseTradePayload(localTrade, dateKey, cloudUserId);
     const updates = toSupabaseTradeUpdates(localTrade, dateKey);
     const temporary = isEditing && isTemporaryId(editingTradeId);
@@ -247,6 +251,7 @@ export function useTrades({ user, readOnly = false }) {
         const { data, error } = await supabase.from('trades').insert(payload).select().single();
         if (error) throw error;
         savedId = data.id;
+        if (isCurrent()) notifyStreakEntrySaved(cloudUserId);
         setManualTrades((prev) => {
           if (!isCurrent()) return prev;
           const next = {

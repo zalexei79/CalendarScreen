@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v96-compact-day-panel';
+const CACHE_NAME = 'atj-cache-v97-daily-entry-streak';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

@@ -28,7 +28,7 @@ export default function ActivityStreakDialog({
   const captionRef = useRef(null);
   const blobUrlRef = useRef('');
 
-  const days = Math.max(1, Number(streak?.currentStreak) || 1);
+  const days = Math.max(0, Number(streak?.currentStreak) || 0);
   const account = accountName(user);
   const activeCode = referralCode || '';
   const owner = user?.id || user?.email || 'guest';
@@ -169,7 +169,7 @@ export default function ActivityStreakDialog({
             <strong>{account}</strong>
           </div>
           <p className={`activity-streak-status ${streak.paused ? 'is-paused' : ''}`}>
-            <span className="activity-streak-status-dot" />{streak.paused ? copy.paused : copy.active}
+            <span className="activity-streak-status-dot" />{days === 0 ? t('streakEmpty') : streak.paused ? copy.paused : copy.active}
           </p>
           <details className="activity-streak-rules">
             <summary><span>{t('streakRulesTitle')}</span><ChevronDown size={15} aria-hidden="true" /></summary>

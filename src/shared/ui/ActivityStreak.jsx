@@ -1,10 +1,11 @@
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Flame } from 'lucide-react';
 import useAccountActivityStreak from '../lib/useAccountActivityStreak.js';
 import './ActivityStreak.css';
 
 export default function ActivityStreak({ ownerId, isLight, t, onOpen, onChange }) {
-  const { streak, status, refresh } = useAccountActivityStreak(ownerId);
+  const { streak, status, refresh, celebration } = useAccountActivityStreak(ownerId);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
@@ -16,10 +17,10 @@ export default function ActivityStreak({ ownerId, isLight, t, onOpen, onChange }
   const label = streak ? (t('streakDays') || '{0} дн.').replace('{0}', days) : days;
   const title = status === 'loading' ? t('streakSyncing') : status === 'offline' ? t('streakSyncOffline') : streak?.paused
     ? t('streakPaused')
-    : (t('streakTitle') || 'Огонёк входов: {0} дней').replace('{0}', days);
+    : (t('streakTitle') || 'Огонёк записей: {0} дней').replace('{0}', days);
 
   return (
-    <button
+    <><button
       type="button"
       onClick={() => { if (streak) onOpen?.(streak); else refresh(); }}
       className={`activity-streak ${isLight ? 'activity-streak-light' : ''} ${streak?.paused || status === 'offline' ? 'activity-streak-paused' : ''}`}
@@ -32,5 +33,8 @@ export default function ActivityStreak({ ownerId, isLight, t, onOpen, onChange }
       <span className="activity-streak-value">{label}</span>
       {streak?.paused && <span className="activity-streak-pause">· {t('streakPauseShort')}</span>}
     </button>
+    {celebration && createPortal(<div className={`activity-streak-success ${isLight ? 'is-light' : ''}`} role="status" aria-live="polite">
+      <Flame size={18} aria-hidden="true"/><span>{t(celebration.started ? 'streakStarted' : 'streakContinued')}</span>
+    </div>, document.body)}</>
   );
 }

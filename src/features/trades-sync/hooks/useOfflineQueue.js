@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { OFFLINE_QUEUE_KEY } from '../../../shared/config/constants';
 import { getValidUserId } from '../../../shared/lib/formatters';
+import { notifyStreakEntrySaved } from '../../../shared/lib/entryActivityStreak.js';
 
 export function isRetryableNetworkError(error) {
   if (!error) return false;
@@ -218,6 +219,8 @@ export function useOfflineQueue({ user, onSyncedInsert }) {
             const safeTrade = { ...item.trade, currency: normalizeCurrency(item.trade?.currency) };
             const { data, error } = await supabase.from('trades').insert(safeTrade).select().single();
             if (error) throw error;
+
+            notifyStreakEntrySaved(item.user_id);
 
             const latestQueue = readOfflineQueue();
             const latestItem = latestQueue.find((entry) => entry.operationId === item.operationId);

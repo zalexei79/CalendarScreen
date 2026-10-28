@@ -57,7 +57,7 @@ export async function createStreakPoster({ days, paused, copy, language, inviteU
   fitText(ctx, labels.streakCardHeadline, 540, 447, 760, 28);
 
   // Draw the actual count, without padding. Fit even multi-year streaks.
-  const number = String(Math.max(1, Number(days) || 1));
+  const number = String(Math.max(0, Number(days) || 0));
   const gold = ctx.createLinearGradient(300, 500, 760, 710);
   gold.addColorStop(0, '#fff9e6'); gold.addColorStop(.42, '#ffe4a3');
   gold.addColorStop(.72, '#ffc56a'); gold.addColorStop(1, '#a6edff');
