@@ -47,7 +47,7 @@ export default function ActivityStreakDialog({
 
   useEffect(() => {
     if (!copyFeedback) return undefined;
-    const timer = window.setTimeout(() => setCopyFeedback(null), 4000);
+    const timer = window.setTimeout(() => setCopyFeedback(null), 2200);
     return () => window.clearTimeout(timer);
   }, [copyFeedback]);
 
@@ -199,9 +199,9 @@ export default function ActivityStreakDialog({
           {shareNotice && <p className="activity-streak-hint" role="status">{shareNotice}</p>}
         </div>
 
-        {copied && <div key={copyFeedback.id} className="activity-streak-copy-toast" role="status" aria-live="polite" aria-atomic="true">
-          <span className="activity-streak-copy-toast-icon"><Check size={22} aria-hidden="true" /></span>
-          <div><strong>{t('streakCaptionCopyDone')}</strong><p>{t('streakCaptionCopied')}</p></div>
+        {copied && <div key={copyFeedback.id} className="activity-streak-copy-toast" role="status" aria-live="polite" aria-atomic="true" aria-label={t('streakCaptionCopied')}>
+          <Check size={16} strokeWidth={2.2} aria-hidden="true" />
+          <span>{t('streakCaptionCopyDone')}</span>
         </div>}
         <div className="activity-streak-actions">
           <button type="button" onClick={share} disabled={busy || !ready || sharing} className="activity-streak-primary"><Share2 size={19} />{copy.share}</button>

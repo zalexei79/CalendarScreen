@@ -106,6 +106,8 @@ try {
         assert.equal(await page.locator('.activity-streak-caption button').textContent(), 'Скопировано');
         const toastBox = await confirmation.boundingBox();
         assert.ok(toastBox.y >= 0 && toastBox.y + toastBox.height <= 844, 'copy confirmation is visible without scrolling');
+        assert.ok(toastBox.width <= 200 && toastBox.height <= 44, 'copy feedback is a compact pill, not a full-width banner');
+        await confirmation.evaluate(node => Promise.all(node.getAnimations().map(animation => animation.finished)));
         await page.screenshot({ path: `artifacts/streak-review/${platform}-dialog.png` });
         const bytes = await page.evaluate(async () => Array.from(new Uint8Array(await window.sharedStreak.files[0].arrayBuffer())));
         await writeFile(`artifacts/streak-review/${platform}-5.png`, Buffer.from(bytes));
