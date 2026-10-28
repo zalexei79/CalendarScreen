@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useState, useSyncExternalStore } from 'react';
 import { MousePointer2, Smartphone } from 'lucide-react';
 import { getGlassTiltState, subscribeGlassTilt, supportsGlassTilt, enableGlassTilt, disableGlassTilt } from './glassTilt.js';
+import { getGlassPointerEnabled, subscribeGlassPointer, setGlassPointerEnabled } from './glassPointer.js';
 
 const COPY = {
   ru:{title:'Глубина при наклоне',off:'Золотой свет движется за стеклом при наклоне телефона. Включается с твоего разрешения.',resume:'Нажми, чтобы снова разрешить наклон в этом сеансе.',asking:'Запрашиваем доступ к датчикам…',waiting:'Держи телефон удобно и слегка наклони его.',active:'Золотой свет и стеклянный календарь реагируют на наклон.',denied:'Доступ не получен. Можно повторить или проверить разрешения браузера. Тема работает как обычно.',unavailable:'Наклон недоступен в этом браузере. На компьютере глубина реагирует на курсор.',noData:'Датчик пока не передаёт данные. Проверь разрешения или попробуй другой браузер.',reduced:'Эффект приостановлен настройкой «Уменьшение движения».'},
@@ -11,11 +12,11 @@ const COPY = {
 };
 
 const POINTER_COPY = {
-  ru:{title:'Параллакс за курсором',hint:'Двигай мышью — свет и стекло будут следовать за курсором. Эффект работает автоматически.'},
-  uk:{title:'Паралакс за курсором',hint:'Рухай мишею — світло та скло слідуватимуть за курсором. Ефект працює автоматично.'},
-  en:{title:'Pointer parallax',hint:'Move your mouse to shift the light and glass with your cursor. The effect works automatically.'},
-  ro:{title:'Paralaxă după cursor',hint:'Mișcă mouse-ul: lumina și sticla urmează cursorul. Efectul funcționează automat.'},
-  zh:{title:'光标视差',hint:'移动鼠标，光线与玻璃将随光标变化。效果会自动启用。'},
+  ru:{title:'Параллакс за курсором',hint:'Двигай мышью — свет и стекло будут следовать за курсором. Выбор сохраняется на этом компьютере.',off:'Параллакс выключен. Свет и стекло остаются неподвижными.'},
+  uk:{title:'Паралакс за курсором',hint:'Рухай мишею — світло та скло слідуватимуть за курсором. Вибір зберігається на цьому комп’ютері.',off:'Паралакс вимкнено. Світло та скло залишаються нерухомими.'},
+  en:{title:'Pointer parallax',hint:'Move your mouse to shift the light and glass with your cursor. Your choice is saved on this computer.',off:'Parallax is off. The light and glass stay still.'},
+  ro:{title:'Paralaxă după cursor',hint:'Mișcă mouse-ul: lumina și sticla urmează cursorul. Alegerea se păstrează pe acest computer.',off:'Paralaxa este oprită. Lumina și sticla rămân nemișcate.'},
+  zh:{title:'光标视差',hint:'移动鼠标，光线与玻璃将随光标变化。选择会保存在此电脑上。',off:'视差已关闭。光线与玻璃保持静止。'},
 };
 const INPUT_QUERY = '(pointer: coarse)';
 function subscribeInput(listener) {
@@ -34,6 +35,7 @@ export default function GlassParallaxControl({language,theme}) {
   }
   const state = useSyncExternalStore(subscribeGlassTilt,getGlassTiltState);
   const phone = useSyncExternalStore(subscribeInput,touchInput,() => false);
+  const pointerEnabled = useSyncExternalStore(subscribeGlassPointer,getGlassPointerEnabled,() => true);
   const [reduced,setReduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
   useEffect(() => {
     const media = matchMedia('(prefers-reduced-motion: reduce)');
@@ -43,8 +45,10 @@ export default function GlassParallaxControl({language,theme}) {
   const unavailable = !supportsGlassTilt();
   const status = reduced ? 'reduced' : unavailable ? 'unavailable' : state.status;
   if (!phone) return <div className="glass-parallax-control glass-parallax-desktop">
-    <div className="glass-parallax-heading"><MousePointer2 size={19} aria-hidden="true"/><span>{POINTER_COPY[locale].title}</span></div>
-    <p role="status">{reduced ? copy.reduced : POINTER_COPY[locale].hint}</p>
+    <button type="button" role="switch" aria-checked={pointerEnabled} aria-labelledby={`${id}-label`} aria-describedby={`${id}-hint`} disabled={!pointerEnabled&&reduced} onClick={() => setGlassPointerEnabled(!pointerEnabled)}>
+      <MousePointer2 size={19} aria-hidden="true"/><span id={`${id}-label`}>{POINTER_COPY[locale].title}</span><span className="glass-parallax-switch" aria-hidden="true"><i/></span>
+    </button>
+    <p id={`${id}-hint`} role="status">{!pointerEnabled ? POINTER_COPY[locale].off : reduced ? copy.reduced : POINTER_COPY[locale].hint}</p>
   </div>;
   return <div className="glass-parallax-control">
     <button type="button" role="switch" aria-checked={state.enabled} aria-labelledby={`${id}-label`} aria-describedby={`${id}-hint`} disabled={state.status==='asking'||(!state.enabled&&(reduced||unavailable))} onClick={() => state.enabled ? disableGlassTilt() : enableGlassTilt()}>

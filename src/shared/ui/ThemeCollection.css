@@ -47,8 +47,6 @@
 .glass-parallax-control { margin-top:16px; padding:12px; border:1px solid var(--collection-line); border-radius:16px; background:var(--glass-control-bg); box-shadow:var(--glass-control-edge); }
 .glass-parallax-control > button { display:flex; align-items:center; gap:10px; width:100%; min-height:44px; padding:0; border:0; background:transparent; color:var(--collection-ink); text-align:left; font:500 12px/1.4 system-ui,sans-serif; cursor:pointer; }
 .glass-parallax-control > button > svg { flex:none; color:var(--dayris-accent); }
-.glass-parallax-heading { display:flex; align-items:center; gap:10px; min-height:32px; color:var(--collection-ink); font:500 12px/1.4 system-ui,sans-serif; }
-.glass-parallax-heading > svg { flex:none; color:var(--dayris-accent); }
 .glass-parallax-control > button > span:first-of-type { flex:1; }
 .glass-parallax-control > button:disabled { cursor:default; opacity:.65; }
 .glass-parallax-control > p { margin:7px 0 0; font:400 10px/1.65 system-ui,sans-serif; color:var(--collection-muted); }

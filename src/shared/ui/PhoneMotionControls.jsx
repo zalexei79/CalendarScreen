@@ -15,7 +15,9 @@ const touchInput = () => window.matchMedia(QUERY).matches;
 
 export default function PhoneMotionControls({ language, theme, active, loading }) {
   const phone = useSyncExternalStore(subscribe, touchInput, () => false);
-  if (!phone) return null;
+  if (!phone) return active && !loading && ['gold','emerald'].includes(theme)
+    ? <GlassParallaxControl language={language} theme={theme}/>
+    : null;
   return <div className="settings-phone-motion" role="group" aria-label={LABEL[localeKey(language)]}>
     {active && !loading && ['gold','emerald'].includes(theme) && <GlassParallaxControl language={language} theme={theme}/>}
     <MonthShakeControl language={language}/>

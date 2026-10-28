@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { getGlassTiltState, subscribeGlassTilt, reportGlassTilt, glassTiltVector, glassDepthProfile } from './glassTilt.js';
+import { getGlassPointerEnabled, subscribeGlassPointer } from './glassPointer.js';
 import './GlassParallax.css';
 
 // Separated atmosphere, reflected light and calendar plane. Never transform
@@ -103,7 +104,7 @@ export default function useGlassParallax(theme) {
       } else window.removeEventListener('deviceorientation',orientation);
     }
     function pointer(event) {
-      if (event.pointerType !== 'mouse' || !allowed() || (listening && hasSignal)) return;
+      if (event.pointerType !== 'mouse' || !getGlassPointerEnabled() || !allowed() || (listening && hasSignal)) return;
       const cell = event.target instanceof Element ? event.target.closest('.calendar-day-surface:not(:disabled)') : null;
       if (cell !== hovered) {
         clearHover(); hovered = cell; hoverRect = cell?.getBoundingClientRect() || null;
@@ -116,7 +117,14 @@ export default function useGlassParallax(theme) {
     function blur() { recenter(); }
     function focus() { sync(); }
     function leave() { if (!listening) recenter(); }
+    function pointerPreference() {
+      if (!getGlassPointerEnabled()) {
+        if (listening && hasSignal) clearHover();
+        else recenter();
+      }
+    }
     const unsubscribe = subscribeGlassTilt(sync);
+    const unsubscribePointer = subscribeGlassPointer(pointerPreference);
     sync();
     document.addEventListener('pointermove',pointer,{ passive:true });
     root.addEventListener('pointerleave',leave);
@@ -128,7 +136,7 @@ export default function useGlassParallax(theme) {
     window.screen.orientation?.addEventListener('change',recenter);
     reduced.addEventListener('change',sync); opaque.addEventListener('change',sync);
     return () => {
-      unsubscribe(); cancelAnimationFrame(frame); clearTimeout(signalTimer);
+      unsubscribe(); unsubscribePointer(); cancelAnimationFrame(frame); clearTimeout(signalTimer);
       clearHover();
       resetGrid();
       window.removeEventListener('deviceorientation',orientation);
