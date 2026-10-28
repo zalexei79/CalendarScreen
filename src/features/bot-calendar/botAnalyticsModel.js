@@ -1,5 +1,12 @@
 const clamp = value => Math.max(0, Math.min(1, value));
 
+export function outcomeDistribution(stats, mode = 'trades') {
+  const keys = mode === 'money' ? ['gross_profit', 'gross_loss'] : ['wins', 'losses', 'breakeven'];
+  const values = keys.map(key => Math.max(0, Number(stats?.[key]) || 0));
+  const total = values.reduce((sum, value) => sum + value, 0);
+  return values.map((value, index) => ({ key: keys[index], value, percent: total ? value / total * 100 : null }));
+}
+
 // A descriptive journal score, not a forecast, safety rating or recommendation.
 // The thresholds and weights are displayed alongside the result in the UI.
 export function performanceScore(stats) {

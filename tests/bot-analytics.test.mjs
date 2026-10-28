@@ -1,6 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { performanceScore, plotGeometry } from '../src/features/bot-calendar/botAnalyticsModel.js';
+import { outcomeDistribution, performanceScore, plotGeometry } from '../src/features/bot-calendar/botAnalyticsModel.js';
+
+test('outcome percentages distinguish counts from money and include breakeven without inventing empty percentages',()=>{
+  const stats={wins:6,losses:3,breakeven:1,gross_profit:300,gross_loss:100};
+  assert.deepEqual(outcomeDistribution(stats).map(x=>x.percent),[60,30,10]);
+  assert.deepEqual(outcomeDistribution(stats,'money').map(x=>x.percent),[75,25]);
+  assert.deepEqual(outcomeDistribution({}).map(x=>x.percent),[null,null,null]);
+  assert.deepEqual(outcomeDistribution({gross_profit:10,gross_loss:0},'money').map(x=>x.percent),[100,0]);
+  assert.deepEqual(outcomeDistribution({wins:0,losses:4,breakeven:0}).map(x=>x.percent),[0,100,0]);
+});
 
 test('score has an explicit sample floor, bounded components and no fabricated zero-loss PF',()=>{
   const good={total:40,active_days:6,positive_days:6,gross_profit:100,gross_loss:0,profit_factor:null,max_drawdown:0,pnl:100,win_rate:100};

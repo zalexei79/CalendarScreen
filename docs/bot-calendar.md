@@ -38,8 +38,10 @@ The displayed current balance is not used as starting capital or fabricated PnL.
    existing private `DAYRIS_CRON_SECRET` in `x-dayris-cron-secret`, matching the
    current internal reminder scheduler. A browser key/JWT does not authorize it.
 4. Apply `supabase/bot-calendar-schedule.sql`. Existing Vault secret
-   `dayris_cron_secret` must match the Edge environment. Schedule: **00:15 UTC
-   daily**, i.e. 02:15 winter / 03:15 summer in Bucharest.
+   `dayris_cron_secret` must match the Edge environment. Schedule: **hourly,
+   08:00 through 20:00 inclusive, Europe/Bucharest**, every day. UTC candidates
+   05:00–18:00 are filtered by local hour to handle daylight saving automatically.
+   Applying the script replaces the former daily job without changing other jobs.
 5. Trigger the same `net.http_post` once for the first snapshot. Check
    `net._http_response`, `bot_calendars.last_sync_at/last_error`, and the anonymous
    RPC response before reporting live data. Cron success alone only confirms
@@ -62,6 +64,13 @@ than silently publishing truncated history. Partial position closes appear as
 separate closing deals, consistent with the personal cTrader importer.
 
 ## Verification
+
+The public page links to the free-access Telegram bot using the supplied referral
+URL. The analytics outcome panel switches between closed-deal counts (including
+breakeven) and monetary shares: gross profit / (gross profit + absolute gross
+loss), with the remaining share assigned to loss. Both follow the selected
+inclusive date range. Empty data displays no percentages; neither view assumes
+a starting deposit or represents a deposit return.
 
 Analytics use every closing deal in the selected inclusive range. The curve
 starts from zero and shows realized end-of-day PnL, not balance/equity or returns

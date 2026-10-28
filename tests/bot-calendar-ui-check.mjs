@@ -46,6 +46,9 @@ for (const [engine,options] of [[chromium,{channel:'msedge',headless:true}],[web
         assert.equal(await maintenance.locator('.calendar-day-annotation').getAttribute('title'),'Технические работы');
       }
       assert.ok(await page.getByRole('link',{name:'Создать свой календарь',exact:true}).isVisible(),'visible invitation without opening menu');
+      const tryBot=page.getByRole('link',{name:'Попробовать бота бесплатно',exact:true});
+      assert.equal(await tryBot.getAttribute('href'),'https://t.me/XauusdScalpSignal_bot?start=ref_aveel');
+      assert.equal(await tryBot.getAttribute('target'),'_blank');
       assert.doesNotMatch(await page.locator('body').innerText(),/47484897|Spotware|Demo|DEMO|демосч[её]т/);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`overflow at ${width}`);
       assert.ok(await page.locator('.bot-top-create').evaluate(el=>el.getBoundingClientRect().top<150),'create-calendar action belongs in the header');
@@ -64,6 +67,12 @@ for (const [engine,options] of [[chromium,{channel:'msedge',headless:true}],[web
       await analytics.getByText('Недостаточно данных для оценки',{exact:true}).waitFor();
       assert.equal(await analytics.getByRole('button',{name:'Вся история',exact:true}).getAttribute('aria-pressed'),'true');
       assert.equal(await analytics.locator('.bot-analytics-metrics article').count(),8);
+      assert.equal(await analytics.locator('.bot-outcomes-legend article').count(),3);
+      assert.match(await analytics.locator('.bot-outcomes-legend article').first().innerText(),/99,05%/);
+      await analytics.getByRole('button',{name:'По суммам',exact:true}).click();
+      assert.equal(await analytics.locator('.bot-outcomes-legend article').count(),2);
+      assert.match(await analytics.locator('.bot-outcomes').innerText(),/95,19%/);
+      await analytics.getByRole('button',{name:'По сделкам',exact:true}).click();
       await analytics.getByRole('button',{name:'Просадка',exact:true}).click();
       await analytics.getByRole('img',{name:'Просадка по закрытым сделкам'}).waitFor();
       await analytics.getByRole('button',{name:'По дням',exact:true}).click();
@@ -76,6 +85,8 @@ for (const [engine,options] of [[chromium,{channel:'msedge',headless:true}],[web
       await analytics.getByRole('button',{name:'Применить',exact:true}).click();
       await analytics.locator('.bot-analytics-period').filter({hasText:/6 октября 2026 г.*1 сделка/}).waitFor();
       assert.ok((await analytics.locator('.bot-chart-title').innerText()).includes('24,35'));
+      assert.match(await analytics.locator('.bot-outcomes-legend article').first().innerText(),/0%/);
+      assert.match(await analytics.locator('.bot-outcomes-legend article').nth(1).innerText(),/100%/);
       await page.screenshot({path:`artifacts/bot-calendar/analytics-${engine.name()}-${width}.png`,fullPage:true});
       await analytics.getByRole('button',{name:'Закрыть аналитику'}).click();
       await page.getByRole('button',{name:/^5 октября 2026.*120,40/}).click();
@@ -169,6 +180,7 @@ for (const [engine,options] of [[chromium,{channel:'msedge',headless:true}],[web
     await page.getByRole('button',{name:'Открыть аналитику бота'}).click();
     await page.getByText('В выбранном периоде нет закрытых сделок.').waitFor();
     assert.equal(await page.locator('.bot-score-ring strong').textContent(),'—');
+    assert.equal(await page.locator('.bot-outcomes-legend strong').allTextContents().then(x=>x.join(',')),'—,—,—');
     await page.keyboard.press('Escape');
     await page.setViewportSize({width:320,height:568});
     await page.goto('http://dayris.test/?maintenance_trade=1');

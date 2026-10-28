@@ -82,7 +82,7 @@ export default function BotCalendarPage({ client }) {
   const cells = calendarCells(month, today);
   const openHistory = (key = null) => { closeMenu(); setSelectedDay(key); setHistory({ day: key }); };
   const changeMonth = offset => { setSelectedDay(null); setMonth(shiftMonth(month, offset)); };
-  const status = data?.status === 'delayed' ? 'Обновление задерживается' : ready ? 'Обновляется ежедневно' : 'Ожидаем первую синхронизацию';
+  const status = data?.status === 'delayed' ? 'Обновление задерживается' : ready ? 'Каждый час · 08:00–20:00' : 'Ожидаем первую синхронизацию';
 
   return <main className="bot-page" style={{ '--bot-weeks': cells.length / 7 }}>
     <div className="bot-shell">
@@ -145,6 +145,10 @@ export default function BotCalendarPage({ client }) {
           {analytics.loading ? <span className="bot-preview-loading">Загружаем график…</span> : Number(analytics.data?.stats?.total)>0 ? <BotPerformanceChart data={analytics.data} mini /> : <span className="bot-preview-loading">График появится после первых закрытых сделок</span>}
           <span className="bot-preview-footer">Кривая результата, скор и статистика<ArrowRight size={14} aria-hidden="true" /></span>
         </button>}
+      </section>
+      <section className="bot-try-card" aria-labelledby="bot-try-title">
+        <div><span className="bot-try-eyebrow">ПОПРОБУЙТЕ САМИ</span><h2 id="bot-try-title">Хотите запустить этого бота?</h2><p>Получите бесплатный доступ в Telegram. Условия и подключение — в боте.</p></div>
+        <a href="https://t.me/XauusdScalpSignal_bot?start=ref_aveel" target="_blank" rel="noopener noreferrer">Попробовать бота бесплатно<ArrowUpRight size={18} aria-hidden="true"/></a>
       </section>
       <footer className="bot-calendar-footer"><span>{status}{ready && <> · {new Intl.DateTimeFormat('ru-RU', { timeZone: data.time_zone, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(data.last_sync_at))}</>}</span><span>Europe/Bucharest</span></footer>
     </div>

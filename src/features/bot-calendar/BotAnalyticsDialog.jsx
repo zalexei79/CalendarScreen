@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, X } from 'lucide-react';
 import { dateLabel, money, shiftMonth, tradeCount } from './botCalendarModel.js';
-import { performanceScore } from './botAnalyticsModel.js';
+import { outcomeDistribution, performanceScore } from './botAnalyticsModel.js';
 import BotPerformanceChart from './BotPerformanceChart.jsx';
 
 export default function BotAnalyticsDialog({ client, overview, start, today, month, onClose }) {
   const dialog = useRef(null);
   const [scope,setScope]=useState('all'),[chartMode,setChartMode]=useState('total');
+  const [outcomeMode, setOutcomeMode] = useState('trades');
   const [from,setFrom]=useState(month>start?month:start),[to,setTo]=useState(today);
   const [range,setRange]=useState(null),[invalid,setInvalid]=useState(false),[retry,setRetry]=useState(0);
   const [state,setState]=useState({data:overview,loading:!overview,error:false});
@@ -31,6 +32,7 @@ export default function BotAnalyticsDialog({ client, overview, start, today, mon
   const data=state.data, s=data?.stats, score=performanceScore(s);
   const format=value=>value==null?'—':money(value,data.currency);
   const decimal=value=>value==null?'—':new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(Number(value));
+  const outcomes = outcomeDistribution(s, outcomeMode);
   return <dialog ref={dialog} className="bot-dialog bot-analytics-dialog" aria-labelledby="bot-analytics-title" onClose={onClose} onCancel={onClose} onClick={event=>{if(event.target===dialog.current)onClose();}}>
     <div className="bot-dialog-inner">
       <header><div><p>DAYRIS · ТОРГОВАЯ СТАТИСТИКА</p><h2 id="bot-analytics-title">Аналитика бота</h2></div><button type="button" aria-label="Закрыть аналитику" onClick={onClose}><X aria-hidden="true" /></button></header>
@@ -50,6 +52,12 @@ export default function BotAnalyticsDialog({ client, overview, start, today, mon
             <BotPerformanceChart key={`${data.from}-${data.to}-${chartMode}`} data={data} mode={chartMode}/>
           </section>
         </div>
+        <section className="bot-outcomes" aria-label="Соотношение прибыли и убытков">
+          <div className="bot-outcomes-heading"><div><span>СТРУКТУРА РЕЗУЛЬТАТА</span><h3>Прибыль и убытки</h3></div><div className="bot-chart-modes" aria-label="Расчёт соотношения">{[['trades','По сделкам'],['money','По суммам']].map(([mode,label])=><button key={mode} type="button" aria-pressed={outcomeMode===mode} onClick={()=>setOutcomeMode(mode)}>{label}</button>)}</div></div>
+          <div className="bot-outcomes-bar" aria-hidden="true">{outcomes.map((part,index)=><i key={part.key} className={`bot-outcome-${index}`} style={{width:`${part.percent||0}%`}}/>)}</div>
+          <div className="bot-outcomes-legend">{outcomes.map((part,index)=><article key={part.key} className={`bot-outcome-${index}`}><span><i/>{(outcomeMode==='money'?['Прибыль','Убытки']:['Прибыльные','Убыточные','В ноль'])[index]}</span><strong>{part.percent==null?'—':`${decimal(part.percent)}%`}</strong><small>{outcomeMode==='money'?format(part.value):tradeCount(part.value)}</small></article>)}</div>
+          <p>{outcomeMode==='money'?'Доли от суммы прибыли и абсолютного убытка закрытых сделок. Это соотношение денежных результатов, не доходность депозита.':'Доли от всех закрытых сделок выбранного периода, включая сделки в ноль.'}</p>
+        </section>
         <div className="bot-analytics-metrics">
           {[
             ['Доля прибыльных',s.win_rate==null?'—':`${decimal(s.win_rate)}%`,`${s.wins} в плюс · ${s.losses} в минус · ${s.breakeven} в ноль`],
