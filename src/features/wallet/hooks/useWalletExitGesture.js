@@ -33,6 +33,7 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
     let motionFrame;
     let surfaceWidth = surface.clientWidth;
     const light = navigation === 'calendar' ? surface.parentElement.querySelector('.calendar-motion-light') : null;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const updateDepth = (x, settling = false, duration = 220) => {
       if (navigation !== 'calendar') return;
       const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -43,7 +44,11 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
         const isIncoming = page && Math.sign(parseFloat(page.style.left)) === incoming;
         const scale = page ? (isIncoming ? .96 + progress * .04 : .96) : 1 - progress * .035;
         const opacity = page ? (isIncoming ? .82 + progress * .18 : .82) : 1 - progress * .12;
-        grid.style.transition = settling && !reduced ? `transform ${duration}ms cubic-bezier(.16,1,.3,1), opacity ${duration}ms cubic-bezier(.16,1,.3,1)` : 'none';
+        const stepMotion = surface.hasAttribute('data-calendar-step-motion');
+        const optics = stepMotion && !reduced ? 'rotate 180ms cubic-bezier(.22,1,.36,1), translate 180ms cubic-bezier(.22,1,.36,1)' : '';
+        const ease = stepMotion ? 'cubic-bezier(.24,.72,.24,1)' : 'cubic-bezier(.16,1,.3,1)';
+        const transition = settling && !reduced ? `transform ${duration}ms ${ease}, opacity ${duration}ms ${ease}` : '';
+        grid.style.transition = [transition,optics].filter(Boolean).join(', ') || 'none';
         grid.style.setProperty('--month-scale', reduced ? '1' : String(scale));
         grid.style.setProperty('--month-opacity', reduced ? '1' : String(opacity));
       }
@@ -78,6 +83,55 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
       if (navigation === 'calendar' && value.axis !== 'x') window.dispatchEvent(new CustomEvent('dayris-calendar-pull', { detail: value.axis === 'y' ? value : IDLE }));
     };
     const reset = () => { gesture = null; updateDrag(IDLE); };
+    function commitMonth(dx) {
+      document.documentElement.setAttribute('data-calendar-swipe-arrival','');
+      // The replacement calendar starts at the exact resting pose: no second
+      // entrance after the incoming page has already reached its destination.
+      flushSync(() => {
+        if (dx < 0) config.current.onNextMonth?.(); else config.current.onPreviousMonth?.();
+      });
+      requestAnimationFrame(() => document.documentElement.removeAttribute('data-calendar-swipe-arrival'));
+    }
+    function cancelStep() {
+      if (!surface.hasAttribute('data-calendar-step-motion')) return;
+      clearTimeout(releaseTimer); cancelAnimationFrame(motionFrame);
+      surface.removeAttribute('data-calendar-step-motion');
+      reset(); exiting = false;
+    }
+    function finishStep() {
+      if (!surface.hasAttribute('data-calendar-step-motion')) return;
+      const dx = surface.dataset.calendarStepMotion === 'next' ? -1 : 1;
+      clearTimeout(releaseTimer); cancelAnimationFrame(motionFrame);
+      if (config.current.disabled || document.hidden) { cancelStep(); return; }
+      commitMonth(dx);
+      // Calendar remount normally disposes this controller synchronously.
+      if (surface.isConnected) cancelStep();
+    }
+    function step(event) {
+      if (navigation !== 'calendar' || !['prev','next'].includes(event.detail?.direction)) return;
+      event.preventDefault();
+      if (config.current.disabled || exiting || gesture || document.hidden) return;
+      if (reducedMotion.matches) {
+        commitMonth(event.detail.direction === 'next' ? -1 : 1); return;
+      }
+      exiting = true;
+      surfaceWidth = surface.clientWidth;
+      surface.dataset.calendarStepMotion = event.detail.direction;
+      const sign = event.detail.direction === 'next' ? -1 : 1;
+      const duration = 560;
+      // Mount just the incoming page at the starting pose, then let two frames
+      // prepare its texture. All travel uses compositor transforms/opacity.
+      flushSync(() => setDrag({axis:'x',x:sign*.01,y:0,ready:true,settling:false}));
+      updateDepth(0);
+      motionFrame = requestAnimationFrame(() => {
+        motionFrame = requestAnimationFrame(() => {
+          updateDrag({axis:'x',x:sign*surfaceWidth,y:0,ready:true,settling:true,duration});
+          releaseTimer = setTimeout(finishStep,duration+20);
+        });
+      });
+    }
+    function visibility() { if (document.hidden) cancelStep(); }
+    function preference() { if (reducedMotion.matches) finishStep(); }
     const acceptsTarget = (target) => {
       if (!(target instanceof Element)) return false;
       const control = target.closest(INTERACTIVE);
@@ -158,13 +212,7 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
         updateDrag({ x: reduced ? 0 : Math.sign(dx) * surfaceWidth, y: 0, axis: 'x', settling: true, ready: true, duration });
         releaseTimer = setTimeout(() => {
           if (!config.current.disabled) {
-            document.documentElement.setAttribute('data-calendar-swipe-arrival', '');
-            // Commit the new page and its fitted geometry before removing the
-            // completed swipe. No intermediate frame may snap the old page back.
-            flushSync(() => {
-              if (dx < 0) config.current.onNextMonth?.(); else config.current.onPreviousMonth?.();
-            });
-            requestAnimationFrame(() => document.documentElement.removeAttribute('data-calendar-swipe-arrival'));
+            commitMonth(dx);
           }
           reset();
           exiting = false;
@@ -190,9 +238,18 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
     surface.addEventListener('click', preventGhostClick, true);
     surface.addEventListener('mousedown', middleDown);
     surface.addEventListener('auxclick', middleClick);
+    if (navigation === 'calendar') {
+      surface.addEventListener('dayris-calendar-step',step);
+      document.addEventListener('visibilitychange',visibility);
+      reducedMotion.addEventListener('change',preference);
+    }
     return () => {
       clearTimeout(releaseTimer);
       cancelAnimationFrame(motionFrame);
+      surface.removeAttribute('data-calendar-step-motion');
+      surface.removeEventListener('dayris-calendar-step',step);
+      document.removeEventListener('visibilitychange',visibility);
+      reducedMotion.removeEventListener('change',preference);
       if (navigation === 'calendar') window.dispatchEvent(new CustomEvent('dayris-calendar-pull', { detail: IDLE }));
       surface.removeEventListener('touchstart', start);
       surface.removeEventListener('touchmove', move);

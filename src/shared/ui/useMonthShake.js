@@ -25,6 +25,10 @@ export default function useMonthShake({active,onPrevious,onNext}) {
           .some(node => !node.closest('[hidden],[aria-hidden="true"],dialog:not([open])') && node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden')) {
         detector.reset(); return;
       }
+      // Let the mounted calendar complete its two-page transition before the
+      // month state changes. Busy transitions consume further requests too.
+      const surface = document.querySelector('.calendar-section:not(.calendar-month-preview)');
+      if (surface && !surface.dispatchEvent(new CustomEvent('dayris-calendar-step',{cancelable:true,detail:{direction}}))) return;
       if (direction === 'prev') actions.current.onPrevious();
       if (direction === 'next') actions.current.onNext();
     }

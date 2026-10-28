@@ -10,7 +10,15 @@ let setup=source.slice(0,source.indexOf(' for(const width of [320,390,1280])'))
  .replace('page.setDefaultTimeout(10000)','page.setDefaultTimeout(30000)');
 if(engine==='webkit')setup=setup.replace('const {chromium}=','const {webkit}=').replace("chromium.launch({channel:'msedge',headless:true})",'webkit.launch({headless:true})');
 setup=setup.replace(' const page=await context.newPage()',`
+ await context.route('**/rest/v1/**',route=>route.request().url().includes('/rpc/get_my_pro_status')?route.fallback():route.fulfill({contentType:'application/json',body:'[]'}));
  await context.route('**/rest/v1/reminders**',route=>route.fulfill({contentType:'application/json',body:'[]'}));
+ await context.route('**/rest/v1/rpc/is_site_admin',route=>route.fulfill({contentType:'application/json',body:'false'}));
+ await context.route('**/auth/v1/token**',route=>{
+  const user={id:storyUserId,email:'story@example.test',role:'authenticated',aud:'authenticated',user_metadata:{nickname:'Story'}};
+  const exp=Math.floor(Date.now()/1000)+86400*365,encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url');
+  const access_token=encode({alg:'HS256',typ:'JWT'})+'.'+encode({sub:storyUserId,exp,role:'authenticated'})+'.local-fixture';
+  return route.fulfill({contentType:'application/json',body:JSON.stringify({access_token,refresh_token:'local-fixture',token_type:'bearer',expires_in:86400*365,expires_at:exp,user})});
+ });
  await context.addInitScript(()=>{
   // A portrait standalone app can have legacy 0 and a different modern
   // natural-angle frame. Feed portrait axes, not axes adapted to app code.
@@ -78,9 +86,9 @@ const finish=`
  await closeSettings();assert.equal(await page.evaluate(()=>window.__motionListeners()),1);
  console.log('${engine} orientation frames:',await page.evaluate(()=>({legacy:window.orientation,modern:window.screen.orientation?.angle})));
  console.log('${engine}: grant, denial, settings guard');
- await flick(1);await month('Ноябрь');
+ await flick(1);
+ await flick(1);await month('Ноябрь'); // Rebound during the transition cannot skip months.
  await page.screenshot({path:shots+'-next-390.png',animations:'disabled'});
- await flick(1);await month('Ноябрь'); // Rebound/cooldown cannot skip months.
  await page.waitForTimeout(1300);await flick(-1);await month('Октябрь');
  console.log('${engine}: direction and cooldown');
  // Walking has substantial vertical acceleration, but no lateral gesture.
