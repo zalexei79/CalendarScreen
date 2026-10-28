@@ -135,6 +135,7 @@ import WalletPanel from './src/features/wallet/WalletPanel.jsx';
 import CapitalPanel from './src/features/capital/CapitalPanel.jsx';
 import { transitionView } from './src/shared/ui/transitionView';
 import SwipeDismissSheet from './src/shared/ui/SwipeDismissSheet.jsx';
+import CalendarDayPanel from './src/shared/ui/CalendarDayPanel.jsx';
 import { readWorkspace, writeWorkspace, clearWorkspace } from './src/shared/lib/sessionWorkspace.js';
 import ProOffer from './src/features/pro/ProOffer.jsx';
 import ProGrantNotice from './src/features/pro/ProGrantNotice.jsx';
@@ -1900,6 +1901,7 @@ export default function CalendarScreen() {
     deletePlan,
   } = useFinancePlans({ user, language });
   const [planComposerOpen, setPlanComposerOpen] = useState(false);
+  const [planComposerDateKey, setPlanComposerDateKey] = useState(null);
   const [planComposerPlan, setPlanComposerPlan] = useState(null);
   const [planSaving, setPlanSaving] = useState(false);
   const [planError, setPlanError] = useState('');
@@ -1954,6 +1956,8 @@ export default function CalendarScreen() {
     }
     setPlanError('');
     setPlanComposerPlan(null);
+    setPlanComposerDateKey(selectedKey || targetDateKey);
+    setSelectedKey(null);
     setPlanComposerOpen(true);
   }
 
@@ -1964,12 +1968,14 @@ export default function CalendarScreen() {
     }
     setPlanError('');
     setPlanComposerPlan(plan);
+    setPlanComposerDateKey(planDateKey(plan));
+    setSelectedKey(null);
     setPlanComposerOpen(true);
   }
 
   async function handleCreatePlan(payload) {
     if (planSaving) return;
-    const dateKey = payload.dateKey || (planComposerPlan ? planDateKey(planComposerPlan) : (selectedKey || targetDateKey));
+    const dateKey = payload.dateKey || (planComposerPlan ? planDateKey(planComposerPlan) : (planComposerDateKey || targetDateKey));
     if (!dateKey || dateKey <= todayKey) {
       setPlanError(t('planFutureOnly'));
       return;
@@ -2451,15 +2457,9 @@ export default function CalendarScreen() {
     setAnalysisTo(range.to);
   }
 
-  const selectedCell = cells.find((c) => c.key === selectedKey);
-  const targetDateKey = selectedCell ? selectedCell.key : keyFromDate(today);
+  const targetDateKey = selectedKey || keyFromDate(today);
   const todayKey = keyFromDate(today);
   const isFutureSelected = targetDateKey > todayKey;
-  const targetDateLabel = parseDateKeyLocal(targetDateKey).toLocaleDateString(intlLocale(language), {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
 
   const [editingTrade, setEditingTrade] = useState(null); // { id, dateKey } | null
 
@@ -2536,6 +2536,7 @@ export default function CalendarScreen() {
     // Categories open in the compact picker. PRO opens extra details only when
     // the saved record contains a note, trade limits or a connected source.
     setDetailsOpen(Boolean(tradeToEdit && (tradeToEdit.comment || (traderMode && (tradeToEdit.take_profit != null || tradeToEdit.stop_loss != null || (tradeToEdit.platform && tradeToEdit.platform !== 'Manual'))))));
+    setSelectedKey(null);
     setModalOpen(true);
     requestAnimationFrame(() => setModalVisible(true));
   }
@@ -4818,127 +4819,23 @@ export default function CalendarScreen() {
         </>
       )}
 
-      {/* DAY VIEW — bottom sheet, tap the dimmed backdrop anywhere to return to the calendar */}
+      {/* One day surface; entry and plan composers keep their own date when it closes. */}
       {selectedKey && (
-      <div
-        className="fixed inset-0 z-40 bg-black/60"
-        onMouseDown={handleBackdropMouseDown}
-        onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) setSelectedKey(null); }}
-      >
-      <SwipeDismissSheet
-        onDismiss={() => setSelectedKey(null)}
-        data-sheet-entrance="true"
-        isLight={isLight}
-        className={`absolute inset-x-0 bottom-0 max-h-[82vh] rounded-t-2xl border-t shadow-2xl overflow-y-auto transition-colors duration-200 ${isLight ? 'border-zinc-300 bg-white' : 'border-zinc-800 bg-zinc-950'}`}
-        onMouseDown={(e) => e.stopPropagation()}
-        onClick={(e) => {
-          if (e.target.closest('button, input, textarea, select, a, label, summary, [role="button"], [contenteditable="true"]')) return;
-          if (window.getSelection()?.toString()) return;
-          e.stopPropagation();
-          setSelectedKey(null);
-        }}
-      >
-        <div className="max-w-3xl mx-auto px-3 sm:px-8 py-4 sm:py-8 flex flex-col gap-4">
-          {isFutureSelected ? (
-            <>
-            <div className={`relative isolate overflow-hidden rounded-[28px] border px-5 py-5 text-center ${isLight ? 'border-slate-200 bg-slate-50/80' : 'border-white/[0.07] bg-white/[0.02]'}`}>
-              <div className="pointer-events-none absolute left-1/2 top-[-88px] -z-10 h-44 w-44 -translate-x-1/2 rounded-full bg-amber-400/[0.11] blur-3xl" />
-              <span className={`mx-auto grid h-11 w-11 place-items-center rounded-2xl ${isLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-400/[0.10] text-amber-400'}`}><Calendar className="h-5 w-5" /></span>
-              <p className={`mt-2 font-data text-[10px] font-semibold uppercase tracking-[0.2em] ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>{t('futureDay')}</p>
-              <h3 className={`mt-1 text-lg font-semibold tracking-[-0.02em] ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>{targetDateLabel}</h3>
-              <p className={`mx-auto mt-2 max-w-xs text-xs leading-relaxed ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>{t('futureDayHint')}</p>
-              <button
-                type="button"
-                onClick={openPlanComposer}
-                className="group mt-4 inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 px-5 py-3 text-sm font-bold text-zinc-950 shadow-lg shadow-amber-500/25 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-amber-500/35 active:scale-[0.98]"
-              >
-                <span className="grid h-7 w-7 place-items-center rounded-full bg-black/10 transition-transform duration-200 group-hover:rotate-90"><Plus className="h-4 w-4 stroke-[3]" /></span>
-                {t('schedule')}
-              </button>
-            </div>
-            <FinancePlanList
-              plans={activePlansForDay(selectedKey)}
-              todayKey={todayKey}
-              language={language}
-              isLight={isLight}
-              busyId={planBusyId}
-              onResolve={handleResolvePlan}
-              onEdit={openPlanEditor}
-              onDelete={requestPlanDelete}
-            />
-            </>
-          ) : <>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-data text-xs tracking-widest text-amber-400 uppercase mb-1">{selectedKey}</p>
-              <p className="text-[11px] text-zinc-500 mb-0.5">{traderMode ? t('overallResult') : t('balanceOfDay')}</p>
-              <div className="flex items-center gap-2">
-                {periodStats.count > 0 &&
-                  (periodStats.pnl >= 0 ? (
-                    <TrendingUp className="h-4 w-4 text-emerald-400" />
-                  ) : (
-                    <TrendingDown className="h-4 w-4 text-red-400" />
-                  ))}
-                <span
-                  className={`font-data text-lg font-semibold ${
-                    periodStats.count === 0 ? 'text-zinc-600' : periodStats.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'
-                  }`}
-                >
-                  {periodStats.count === 0 ? '—' : `${periodStats.pnl >= 0 ? '+' : '-'}${currencySymbol}${formatMoney(periodStats.pnl)}`}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="day-entry-actions" data-light={isLight}>
-            <button
-              type="button"
-              onClick={() => isFutureSelected ? openPlanComposer() : openModal()}
-              title={isFutureSelected ? t('scheduleDay') : undefined}
-              className="day-entry-primary"
-            >
-              <span className="day-entry-primary-icon" aria-hidden="true"><Plus size={20} strokeWidth={2.5}/></span>
-              <span>{isFutureSelected ? t('schedule') : proEntryCopy.newEntry}</span>
-            </button>
-            <button
-              type="button"
-              className="day-voice-entry"
-              aria-label={language==='ru'?'Голосовая запись за выбранный день':language==='ro'?'Înregistrare vocală pentru ziua selectată':language==='zh'?'为所选日期添加语音记录':'Voice entry for selected day'}
-              title={language==='ru'?'Добавить голосом':language==='ro'?'Adaugă vocal':language==='zh'?'语音添加':'Add by voice'}
-              onClick={()=>window.dispatchEvent(new CustomEvent('dayris-start-voice'))}
-            >
-              <Mic size={18}/><span>{language==='ru'?'Голосом':language==='ro'?'Vocal':language==='zh'?'语音':'Voice'}</span>
-            </button>
-          </div>
-
-          {traderMode ? (
-            <div className={`flex items-center gap-2 rounded-md border px-4 py-2 font-data text-xs ${isLight ? 'border-zinc-300 bg-zinc-50 text-zinc-500' : 'border-zinc-800 bg-zinc-900 text-zinc-400'}`}>
-              <span>{t('trades')}: <span className={isLight ? 'text-zinc-900 font-medium' : 'text-zinc-100 font-medium'}>{periodStats.count}</span></span>
-              <span className={isLight ? 'text-zinc-300' : 'text-zinc-700'}>•</span>
-              <span>PnL: <span className={`font-medium ${periodStats.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{periodStats.pnl >= 0 ? '+' : '-'}{currencySymbol}{formatMoney(periodStats.pnl)}</span></span>
-              <span className={isLight ? 'text-zinc-300' : 'text-zinc-700'}>•</span>
-              <span>{t('winrate')}: <span className={isLight ? 'text-zinc-900 font-medium' : 'text-zinc-100 font-medium'}>{periodStats.winrate}%</span></span>
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-2">
-              <div className={`rounded-lg border px-3 py-2.5 ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-900'}`}>
-                <p className={`text-[10px] uppercase tracking-wider mb-1 ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('operations')}</p>
-                <p className={`font-data text-sm ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{periodStats.count}</p>
-              </div>
-              <div className={`rounded-lg border px-3 py-2.5 ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-900'}`}>
-                <p className={`text-[10px] uppercase tracking-wider mb-1 ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('income')}</p>
-                <p className="font-data text-sm text-emerald-500">+{currencySymbol}{formatMoney(periodTrades.reduce((sum, t) => sum + (t.pnl > 0 ? t.pnl : 0), 0))}</p>
-              </div>
-              <div className={`rounded-lg border px-3 py-2.5 ${isLight ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-800 bg-zinc-900'}`}>
-                <p className={`text-[10px] uppercase tracking-wider mb-1 ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>{t('expense')}</p>
-                <p className="font-data text-sm text-red-500">−{currencySymbol}{formatMoney(periodTrades.reduce((sum, t) => sum + (t.pnl < 0 ? Math.abs(t.pnl) : 0), 0))}</p>
-              </div>
-            </div>
-          )}
-
-          {traderMode && selectedKey < todayKey && <DayNote key={`${validUserId || 'guest'}:${selectedKey}`} userId={validUserId} dateKey={selectedKey} isLight={isLight} language={language} onLogin={handleGoogleLogin} onSaved={() => setNotesRevision(v => v + 1)} />}
-
-          {firstRunGuideStep === 4 && !traderMode && (
+        <CalendarDayPanel
+          dateKey={selectedKey} todayKey={todayKey} language={language} isLight={isLight}
+          traderMode={traderMode} currency={currency} records={selectedDayTrades}
+          hasPlans={(isFutureSelected ? activePlansForDay(selectedKey) : plansForDay(selectedKey)).length > 0}
+          onClose={() => setSelectedKey(null)} onAdd={() => openModal(null, selectedKey)} onPlan={openPlanComposer}
+          onVoice={() => {
+            window.dispatchEvent(new CustomEvent('dayris-start-voice', { detail: { dateKey: selectedKey } }));
+            setSelectedKey(null);
+          }}
+          onEdit={demoMode ? undefined : openModal}
+          onDelete={demoMode ? undefined : record => handleDeleteTrade(record.dateKey, record.id)}
+          getIcon={getHistoryCategoryIcon}
+          note={traderMode && selectedKey < todayKey ? <DayNote key={`${validUserId || 'guest'}:${selectedKey}`} userId={validUserId} dateKey={selectedKey} isLight={isLight} language={language} onLogin={handleGoogleLogin} onSaved={() => setNotesRevision(v => v + 1)} /> : null}
+        >
+          {firstRunGuideStep === 4 && !traderMode && !isFutureSelected && (
             <aside
               role="note"
               aria-labelledby="day-history-tip-title"
@@ -4978,85 +4875,16 @@ export default function CalendarScreen() {
           )}
 
           <FinancePlanList
-            plans={plansForDay(selectedKey)}
-            todayKey={todayKey}
-            language={language}
-            isLight={isLight}
-            busyId={planBusyId}
-            onResolve={handleResolvePlan}
-            onEdit={openPlanEditor}
-            onDelete={requestPlanDelete}
+            plans={isFutureSelected ? activePlansForDay(selectedKey) : plansForDay(selectedKey)}
+            todayKey={todayKey} language={language} isLight={isLight} busyId={planBusyId}
+            onResolve={handleResolvePlan} onEdit={openPlanEditor} onDelete={requestPlanDelete}
           />
-
-          {selectedDayTrades.length > 0 ? (
-            <div className={`rounded-lg border divide-y ${isLight ? 'border-zinc-300 bg-zinc-50 divide-zinc-200' : 'border-zinc-800 bg-zinc-900 divide-zinc-800'}`}>
-              {selectedDayTrades.map((trade) => {
-                const receipt=receiptFromEntry(trade);
-                return receipt?<ReceiptHistoryCard key={trade.id} entry={trade} receipt={receipt} language={language} isLight={isLight} showDate={false} onEdit={demoMode?undefined:()=>openModal(trade)} onDelete={demoMode?undefined:()=>handleDeleteTrade(trade.dateKey,trade.id)}/>:(
-                <div key={trade.id} className="px-4 py-3 group">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-4 min-w-0 flex-wrap">
-                      <span className={`font-data text-xs w-12 shrink-0 ${isLight ? 'text-zinc-400' : 'text-zinc-500'}`}>{trade.time}</span>
-                      <span className={`text-sm font-medium truncate ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>{traderMode ? trade.instrument : getMoneyCategoryLabel(trade.instrument, language)}</span>
-                      <span
-                        className={[
-                          'font-data text-[11px] tracking-wider px-2 py-0.5 rounded-full shrink-0',
-                          trade.pnl >= 0
-                            ? 'bg-emerald-500/10 text-emerald-500'
-                            : 'bg-red-500/10 text-red-500',
-                        ].join(' ')}
-                      >
-                        {trade.pnl >= 0 ? (traderMode ? t('profitTrade') : t('income')) : (traderMode ? t('lossTrade') : t('expense'))}
-                      </span>
-                      <span className={`font-data text-[10px] shrink-0 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>{trade.platform}</span>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className={`font-data text-sm font-medium whitespace-nowrap tabular-nums ${trade.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {formatAmountInCurrency(trade.pnl, trade.currency || 'USD')}
-                      </span>
-                      {!demoMode && <><button
-                        onClick={() => openModal(trade)}
-                        className={`grid h-10 w-10 sm:h-8 sm:w-8 place-items-center rounded-xl transition-colors sm:opacity-0 sm:group-hover:opacity-100 ${
-                          isLight ? 'bg-zinc-100 text-zinc-500 hover:text-amber-600' : 'bg-white/[0.05] text-zinc-500 hover:text-amber-400'
-                        }`}
-                        aria-label={traderMode ? t('editTrade') : t('editRecord')}
-                        title={traderMode ? t('editTrade') : t('editRecord')}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteTrade(trade.dateKey, trade.id)}
-                        className={`grid h-10 w-10 sm:h-8 sm:w-8 place-items-center rounded-xl transition-colors sm:opacity-0 sm:group-hover:opacity-100 ${
-                          isLight ? 'bg-zinc-100 text-zinc-500 hover:text-red-500' : 'bg-white/[0.05] text-zinc-500 hover:text-red-400'
-                        }`}
-                        aria-label={traderMode ? t('deleteTrade') : t('deleteRecord')}
-                        title={traderMode ? t('deleteTrade') : t('deleteRecord')}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button></>}
-                    </div>
-                  </div>
-                  {trade.comment && <p className={`text-xs mt-1.5 pl-16 leading-relaxed ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{trade.comment}</p>}
-                </div>
-              );})}
-            </div>
-          ) : plansForDay(selectedKey).length === 0 ? (
-            <div className="flex items-center justify-center py-16">
-              <div className={`text-center max-w-sm border border-dashed rounded-xl px-10 py-10 ${isLight ? 'border-zinc-300' : 'border-zinc-800'}`}>
-                <Inbox className={`h-8 w-8 mx-auto mb-4 ${isLight ? 'text-zinc-300' : 'text-zinc-700'}`} />
-                <p className={`text-sm ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>{traderMode ? t('noTradesDay') : t('noRecordsDay')}</p>
-              </div>
-            </div>
-          ) : null}
-          </>}
-        </div>
-      </SwipeDismissSheet>
-      </div>
+        </CalendarDayPanel>
       )}
 
       <FinancePlanComposer
         open={planComposerOpen}
-        dateKey={planComposerPlan ? planDateKey(planComposerPlan) : (selectedKey || targetDateKey)}
+        dateKey={planComposerPlan ? planDateKey(planComposerPlan) : (planComposerDateKey || targetDateKey)}
         initialPlan={planComposerPlan}
         defaultCurrency={currency}
         isLight={isLight}

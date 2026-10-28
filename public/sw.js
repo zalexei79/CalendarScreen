@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v95-physical-glass-history';
+const CACHE_NAME = 'atj-cache-v96-compact-day-panel';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

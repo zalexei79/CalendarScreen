@@ -36,9 +36,9 @@ export default function CalendarVoiceButton({launchRequest,onLaunchHandled,onRes
  const [answerAction,setAnswerAction]=useState(null);
  const [heard,setHeard]=useState(''),[nextHelp,setNextHelp]=useState(null),[choices,setChoices]=useState([]),[contextLabel,setContextLabel]=useState(''),[compact,setCompact]=useState(false),[showCapabilities,setShowCapabilities]=useState(false);
  const [correction,setCorrection]=useState(null);
- const widgetActive=useRef(false);
+ const widgetActive=useRef(false),launchDate=useRef(null);
  const conversationContext=useRef(null),pendingPhrase=useRef(''),recognitionEvidence=useRef(null),requestGeneration=useRef(0),handlers=useRef(null);
- handlers.current={onCommand,onConversation,onSaveEntry,onResetConversation,selectedDate,userId};
+ handlers.current={onCommand,onConversation,onSaveEntry,onResetConversation,selectedDate:selectedDate||launchDate.current,userId};
  const [intro,setIntro]=useState(null),introSeen=useRef(new Set());
  const lifecycle=useRef(null);lifecycle.current={start,open:openVoice,finish,handlePhrase:processPhrase,saveEntry,respond};
  useEffect(()=>{setIntro(null)},[userId,language]);
@@ -111,7 +111,7 @@ export default function CalendarVoiceButton({launchRequest,onLaunchHandled,onRes
   document.addEventListener('visibilitychange',cancel);
   return ()=>{mounted.current=false;cue.current?.close().catch(()=>{});cue.current=null;document.removeEventListener('visibilitychange',cancel);clearTimeout(phraseTimer.current);clearTimeout(speechPulseTimer.current);clearTimeout(startupTimer.current);clearTimeout(silenceTimer.current);clearTimeout(audioTimer.current);clearTimeout(releaseTimer.current);if(utterance.current){utterance.current.onstart=null;utterance.current.onend=null;utterance.current.onerror=null;utterance.current=null;window.speechSynthesis?.cancel();}clearTimeout(timer.current);clearTimeout(messageTimer.current);const current=session.current;session.current=null;if(current){current.onspeechstart=null;current.onspeechend=null;current.onsoundstart=null;current.onsoundend=null;current.onstart=null;current.onresult=null;current.onerror=null;current.onend=null;current.abort();}};
  },[]);
- useEffect(()=>{const begin=()=>lifecycle.current.open();window.addEventListener('dayris-start-voice',begin);return()=>window.removeEventListener('dayris-start-voice',begin);},[]);
+ useEffect(()=>{const begin=event=>lifecycle.current.open(event.detail?.dateKey);window.addEventListener('dayris-start-voice',begin);return()=>window.removeEventListener('dayris-start-voice',begin);},[]);
  useEffect(()=>{requestGeneration.current++;turnFeedback.cancel();conversationContext.current=null;lastSavedEntry.current=null;setShowCapabilities(false);setHeard('');setChoices([]);setNextHelp(null);setContextLabel('');if(saveBusy.current||voiceBatchHasProgress(saveProgress.current))return;entryDraft.current=null;batchDraft.current=null;setBatch(null);setReview(null);setQuestionField(null);entryPrompt.current='';stop();stopSpeaking();setActive(false);setMessage('');setAnswer('');setAnswerAction(null);clearTimeout(messageTimer.current);},[locale,userId]);
  function cancelDraft(){if(saveBusy.current)return;turnFeedback.cancel();setCorrection(null);handlers.current.onResetConversation?.();requestGeneration.current++;conversationContext.current=null;lastSavedEntry.current=null;setShowCapabilities(false);setHeard('');setNextHelp(null);setChoices([]);setContextLabel('');setCompact(false);entryDraft.current=null;batchDraft.current=null;setBatch(null);setReview(null);setQuestionField(null);entryPrompt.current='';setSaveError('');setSaveLocked(false);saveProgress.current={};stop();stopSpeaking();setActive(false);setAnswer('');setAnswerAction(null);setMessage('');}
  function changeReview(entry){if(saveBusy.current||saveLocked)return;setCorrection(null);if(batchDraft.current){const next={...batchDraft.current,states:batchDraft.current.states.map((state,index)=>index===batchDraft.current.activeIndex?{entry}:state)};batchDraft.current=next;setBatch(next);}entryDraft.current=entry;setReview(entry);setSaveError('');}
@@ -230,7 +230,9 @@ export default function CalendarVoiceButton({launchRequest,onLaunchHandled,onRes
   });
  }
  function submitReply(value){if(!value.trim())return;stop();stopSpeaking();setTranscript('');processPhrase(value);}
- function openVoice(){
+ function openVoice(dateKey){
+  launchDate.current=typeof dateKey==='string'?dateKey:selectedDate||null;
+  handlers.current.selectedDate=launchDate.current;
   if(intro)return;
   const key=voiceIntroKey(userId);
   if(Speech&&!active&&!review&&!answer&&!message&&!session.current&&!introSeen.current.has(key)&&needsVoiceIntro(userId,language)){

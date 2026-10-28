@@ -1,0 +1,56 @@
+import { localeKey } from './locale.js';
+
+const COPY = {
+  ru: {
+    today: 'Сегодня', balance: 'Баланс дня', result: 'Результат дня', records: 'Записи', trades: 'Сделки',
+    income: 'Доходы', expense: 'Расходы', profit: 'Прибыль', loss: 'Убыток', winrate: 'Успешных',
+    add: 'Новая запись', schedule: 'Запланировать', voice: 'Добавить голосом', voiceDay: 'Голосовая запись за выбранный день',
+    empty: 'Пока без записей', emptyHint: 'Добавьте доход или расход за этот день.',
+    emptyTrades: 'Сделок пока нет', emptyTradesHint: 'Добавьте первую сделку за этот день.',
+    future: 'Планы на день', futureHint: 'Запланируйте платёж, доход или личное дело.', note: 'Заметка к дню',
+    editRecord: 'Редактировать запись', editTrade: 'Редактировать сделку', deleteRecord: 'Удалить запись', deleteTrade: 'Удалить сделку',
+    currencyHint: 'Итог в {currency} · записи во всех валютах',
+  },
+  en: {
+    today: 'Today', balance: 'Day balance', result: 'Day result', records: 'Records', trades: 'Trades',
+    income: 'Income', expense: 'Expenses', profit: 'Profit', loss: 'Loss', winrate: 'Win rate',
+    add: 'New entry', schedule: 'Schedule', voice: 'Add by voice', voiceDay: 'Voice entry for selected day',
+    empty: 'No entries yet', emptyHint: 'Add income or an expense for this day.',
+    emptyTrades: 'No trades yet', emptyTradesHint: 'Add the first trade for this day.',
+    future: 'Day plans', futureHint: 'Plan a payment, income or something personal.', note: 'Day note',
+    editRecord: 'Edit record', editTrade: 'Edit trade', deleteRecord: 'Delete record', deleteTrade: 'Delete trade',
+    currencyHint: 'Total in {currency} · records in all currencies',
+  },
+  uk: {
+    today: 'Сьогодні', balance: 'Баланс дня', result: 'Результат дня', records: 'Записи', trades: 'Угоди',
+    income: 'Доходи', expense: 'Витрати', profit: 'Прибуток', loss: 'Збиток', winrate: 'Успішних',
+    add: 'Новий запис', schedule: 'Запланувати', voice: 'Додати голосом', voiceDay: 'Голосовий запис за вибраний день',
+    empty: 'Поки без записів', emptyHint: 'Додайте дохід або витрату за цей день.',
+    emptyTrades: 'Угод поки немає', emptyTradesHint: 'Додайте першу угоду за цей день.',
+    future: 'Плани на день', futureHint: 'Заплануйте платіж, дохід або особисту справу.', note: 'Нотатка до дня',
+    editRecord: 'Редагувати запис', editTrade: 'Редагувати угоду', deleteRecord: 'Видалити запис', deleteTrade: 'Видалити угоду',
+    currencyHint: 'Підсумок у {currency} · записи в усіх валютах',
+  },
+  ro: {
+    today: 'Astăzi', balance: 'Soldul zilei', result: 'Rezultatul zilei', records: 'Înregistrări', trades: 'Tranzacții',
+    income: 'Venituri', expense: 'Cheltuieli', profit: 'Profit', loss: 'Pierdere', winrate: 'Rată de succes',
+    add: 'Înregistrare nouă', schedule: 'Planifică', voice: 'Adaugă vocal', voiceDay: 'Înregistrare vocală pentru ziua selectată',
+    empty: 'Nicio înregistrare încă', emptyHint: 'Adaugă un venit sau o cheltuială pentru această zi.',
+    emptyTrades: 'Nicio tranzacție încă', emptyTradesHint: 'Adaugă prima tranzacție pentru această zi.',
+    future: 'Planurile zilei', futureHint: 'Planifică o plată, un venit sau ceva personal.', note: 'Notița zilei',
+    editRecord: 'Editează înregistrarea', editTrade: 'Editează tranzacția', deleteRecord: 'Șterge înregistrarea', deleteTrade: 'Șterge tranzacția',
+    currencyHint: 'Total în {currency} · înregistrări în toate valutele',
+  },
+  zh: {
+    today: '今天', balance: '当日结余', result: '当日结果', records: '记录', trades: '交易',
+    income: '收入', expense: '支出', profit: '盈利', loss: '亏损', winrate: '胜率',
+    add: '新建记录', schedule: '添加计划', voice: '语音添加', voiceDay: '为所选日期添加语音记录',
+    empty: '暂无记录', emptyHint: '为这一天添加收入或支出。',
+    emptyTrades: '暂无交易', emptyTradesHint: '为这一天添加第一笔交易。',
+    future: '当日计划', futureHint: '安排付款、收入或个人事项。', note: '当日笔记',
+    editRecord: '编辑记录', editTrade: '编辑交易', deleteRecord: '删除记录', deleteTrade: '删除交易',
+    currencyHint: '合计以 {currency} 显示 · 记录包含所有货币',
+  },
+};
+
+export const calendarDayCopy = language => COPY[localeKey(language)];
