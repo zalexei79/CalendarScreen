@@ -32,5 +32,6 @@ const b=fixture();b.prepare();await flush();b.tick(0);b.reduce();assert.ok(b.tra
 const c=fixture({deferred:true});c.prepare();await flush();c.tick(2000);c.resolve();await flush();assert.equal(c.tracks()[0].started.offset,2,'Late decode follows visual clock');c.f.dispose();
 for(const mode of ['stop','dispose','end']){const d=fixture({deferred:true});d.prepare();await flush();d.tick(1000);if(mode==='end')d.tick(8000);else d.f[mode]();d.resolve();await flush();assert.equal(d.tracks().length,0,mode+' prevents late playback');d.f.dispose()}
 const e=fixture({bad:true});e.prepare();await flush();e.tick(1000);assert.equal(e.tracks().length,0);e.f.dispose();
+const short=fixture();short.prepare();await flush();short.f.tick(0,0,4000);assert.equal(short.tracks()[0].started.duration,4,'Short overview trims the supplied track without accelerating it');short.f.tick(1000,4000,4000);assert.ok(short.tracks()[0].stopped);short.f.dispose();
 const unsupported=createLifeStoryFeedback({window:{matchMedia:()=>({matches:false})},performance:{now:()=>0},navigator:{}});assert.doesNotThrow(()=>{unsupported.prepare();unsupported.tick(1,20);unsupported.dispose()});
 console.log('Supplied counter track: gesture activation, timeline sync, mute/resume, one source, haptics, late decode, background, reduced motion and cleanup passed.');

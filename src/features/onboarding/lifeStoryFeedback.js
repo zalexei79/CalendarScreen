@@ -6,7 +6,7 @@ export function createLifeStoryFeedback(env = globalThis) {
   const clock=()=> (env.performance||performance).now();
   let context,buffer,track=null,loading=null,abort=null,generation=0;
   let armed=false,muted=false,listening=false,finished=false,anchor=null;
-  let lastValue=null,lastPulse=-Infinity;
+  let lastValue=null,lastPulse=-Infinity,counterDuration=8000;
   const disconnect=record=>{record.source.disconnect();record.gain.disconnect()};
   const stopTrack=()=>{const record=track;track=null;if(record){try{record.source.stop()}catch{}disconnect(record)}};
   const stop=()=>{
@@ -18,7 +18,7 @@ export function createLifeStoryFeedback(env = globalThis) {
   const motionChanged=()=>{if(motion.matches)stop()};
   const playTrack=()=>{
     if(!armed||muted||doc?.hidden||motion?.matches||!buffer||track||finished||anchor===null||context?.state!=='running')return;
-    const offset=Math.max(0,(clock()-anchor)/1000),end=Math.min(8,buffer.duration),remaining=end-offset;
+    const offset=Math.max(0,(clock()-anchor)/1000),end=Math.min(counterDuration/1000,buffer.duration),remaining=end-offset;
     if(remaining<=.005)return;
     try{
       const source=context.createBufferSource(),gain=context.createGain(),time=context.currentTime;
@@ -63,9 +63,10 @@ export function createLifeStoryFeedback(env = globalThis) {
   return {
     prepare,
     setMuted(value){muted=Boolean(value);if(muted)stopTrack();else playTrack()},
-    tick(value,elapsed){
+    tick(value,elapsed,duration=8000){
       if(!armed||doc?.hidden||motion?.matches||elapsed<0)return;
-      if(elapsed>=8000){anchor=null;stopTrack();return}
+      counterDuration=duration;
+      if(elapsed>=counterDuration){anchor=null;stopTrack();return}
       anchor=clock()-elapsed;playTrack();
       if(value===lastValue)return;lastValue=value;
       const touch=nav?.maxTouchPoints>0||win.matchMedia?.('(pointer: coarse)').matches;

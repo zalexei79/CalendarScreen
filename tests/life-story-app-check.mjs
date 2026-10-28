@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import path from 'node:path';
 import { LIFE_MOTION_END, lifeCalendarMotion } from '../src/features/onboarding/lifeCalendarMotion.js';
+import { lifeStoryElapsed } from '../src/features/onboarding/lifeStoryPlayback.js';
 import { installStoryAccount } from './life-story-auth-fixture.mjs';
 const require = createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE || 'C:/Users/aveel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/package.json');
 const browser = await require('playwright').chromium.launch({ channel: 'msedge', headless: true });
@@ -60,8 +61,8 @@ try {
   await page.mouse.move(0, 0);
   await page.clock.runFor(32);
   const seek = async time => {
-    const current = Number(await page.locator('.life-story').getAttribute('data-time'));
-    await page.clock.fastForward(Math.max(0, time - current));
+    const current = Number(await page.locator('.life-story').getAttribute('data-elapsed'));
+    await page.clock.fastForward(Math.max(0, lifeStoryElapsed(time) - current));
     await page.clock.runFor(32);
   };
   await seek(3500);
@@ -97,7 +98,8 @@ try {
     new MutationObserver(changes => { for (const change of changes) if (change.attributeName === 'aria-label') window.moneyBeats.push(change.target.getAttribute('aria-label')); }).observe(document.querySelector('.life-money-area'), { attributes: true, subtree: true });
   });
   let previousOpacity;
-  for (let frame = 0; frame < 63; frame++) {
+  // Sample the fixed amount window before its deliberate retirement begins.
+  for (let frame = 0; frame < 58; frame++) {
     await page.clock.runFor(16);
     const opacity = await money.evaluateAll(nodes => nodes.map(node => ({ current: Number(node.querySelector('.life-money-current').style.opacity), previous: Number(node.querySelector('.life-money-previous').style.opacity), start: node.dataset.start, value: node.querySelector('.life-money-current').textContent, oldValue: node.querySelector('.life-money-previous').textContent })));
     assert.ok(opacity.every(({ current, previous }) => Math.abs(current + previous - 1) < .001), 'An exchange never blanks out both amounts');
@@ -105,7 +107,7 @@ try {
     previousOpacity = opacity;
   }
   const beats = await page.evaluate(() => window.moneyBeats);
-  assert.ok(beats.length >= 8 && beats.length <= 13, 'The fixed window conveys more individual money events at a faster cadence');
+  assert.ok(beats.length >= 8 && beats.length <= 13, `The shorter overview retains the original cadence by using fewer examples (${beats.length} changes)`);
   assert.ok(beats.every(amount => amount.endsWith(currency)), 'Every transaction uses the selected currency');
   assert.deepEqual(await money.boundingBox(), moneyAnchor, 'The transaction window stays in exactly the same place as weeks advance');
   assert.equal(await page.locator('.life-money-amounts > .life-money-label').innerText(), 'Примеры отдельных сумм', 'The explanatory caption stays still while only amounts change');
@@ -210,14 +212,14 @@ try {
   const geometry = await page.evaluate(() => {
     const live = [...document.querySelectorAll('.calendar-section:not(.calendar-month-preview) > .calendar-days-grid > button')];
     const copies = [...document.querySelectorAll('.life-calendar-cell')];
-    return live.every((cell, index) => {
+    return live.flatMap((cell, index) => {
       const original = cell.getBoundingClientRect();
       const copy = copies[index]?.getBoundingClientRect();
       const face = copies[index]?.querySelector('.life-calendar-face');
-      return copy && ['x', 'y', 'width', 'height'].every(key => Math.abs(original[key] - copy[key]) < .1) && getComputedStyle(cell).padding === getComputedStyle(face).padding && getComputedStyle(cell).backgroundColor === getComputedStyle(face).backgroundColor;
+      return copy && ['x', 'y', 'width', 'height'].every(key => Math.abs(original[key] - copy[key]) < .1) && getComputedStyle(cell).padding === getComputedStyle(face).padding && getComputedStyle(cell).backgroundColor === getComputedStyle(face).backgroundColor ? [] : [{ index, original:original.toJSON(), copy:copy?.toJSON(), padding:[getComputedStyle(cell).padding,getComputedStyle(face).padding], background:[getComputedStyle(cell).backgroundColor,getComputedStyle(face).backgroundColor] }];
     });
   });
-  assert.ok(geometry, 'The moving cells settle onto the real calendar with its exact paint and geometry');
+  assert.equal(geometry.length, 0, `The moving cells settle onto the real calendar with its exact paint and geometry: ${JSON.stringify(geometry.slice(0, 2))}`);
   await seek(LIFE_MOTION_END - 150);
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.settled === 'true');
   assert.equal(await money.count(), 0, 'The financial flow leaves before the calendar becomes interactive');

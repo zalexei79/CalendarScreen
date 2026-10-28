@@ -1,0 +1,8 @@
+.calendar-start { position:relative; min-height:100dvh; padding:max(24px,env(safe-area-inset-top)) max(24px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left)); background:var(--dayris-canvas,#111714); color:var(--dayris-text,#e1e6df); will-change:opacity; }
+.calendar-start[data-theme="light"] { color:#343e36; }
+.calendar-start header { display:flex; justify-content:space-between; align-items:center; gap:16px; max-width:1060px; margin:auto; }
+.calendar-start header > span { display:flex; align-items:center; gap:9px; font-size:12px; font-weight:600; letter-spacing:.16em; }
+.calendar-start header button { min-height:44px; border:0; background:transparent; color:inherit; font-size:11px; }
+.calendar-start-copy { max-width:620px; margin:clamp(90px,20dvh,200px) auto 0; text-align:center; }
+.calendar-start-copy h1 { font-family:Georgia,'Times New Roman',serif; font-size:clamp(30px,4vw,44px); font-weight:400; line-height:1.15; letter-spacing:-.035em; outline:none; }
+.calendar-start-copy p { margin-top:18px; font-size:13px; line-height:1.6; opacity:.7; }

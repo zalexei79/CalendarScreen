@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import path from 'node:path';
 import { installStoryAccount } from './life-story-auth-fixture.mjs';
+import { lifeStoryElapsed } from '../src/features/onboarding/lifeStoryPlayback.js';
 
 const require = createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE || 'C:/Users/aveel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/package.json');
 const desktop = process.argv.includes('--desktop');
@@ -48,8 +49,8 @@ try {
   await page.waitForFunction(() => document.querySelector('.life-story')?.dataset.calendarTarget === 'live');
   await page.mouse.move(0, 0);
   await page.clock.runFor(32);
-  const elapsed = Number(await page.locator('.life-story').getAttribute('data-time'));
-  await page.clock.runFor(Math.max(0, 8000 - elapsed));
+  const elapsed = Number(await page.locator('.life-story').getAttribute('data-elapsed'));
+  await page.clock.runFor(Math.max(0, lifeStoryElapsed(8000) - elapsed));
   const start = Number(await page.locator('.life-story').getAttribute('data-time'));
   const fps = 24;
   for (let frame = 0; frame <= 6 * fps; frame++) {
