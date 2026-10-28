@@ -56,6 +56,7 @@ export default function Header({
   onReplayLifeStory, onRestartOnboarding,
   onOpenActivityStreak = () => {},
   onActivityStreakChange,
+  onCreateStreakEntry,
 }) {
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
   const [syncIssueOpen, setSyncIssueOpen] = useState(false);
@@ -133,7 +134,7 @@ export default function Header({
               {t('titleMoney')}
             </p>
           </div>
-          <ActivityStreak ownerId={getValidUserId(user)} isLight={isLight} t={t} onOpen={onOpenActivityStreak} onChange={onActivityStreakChange} />
+          <ActivityStreak ownerId={getValidUserId(user)} isLight={isLight} t={t} onOpen={onOpenActivityStreak} onChange={onActivityStreakChange} onCreateEntry={onCreateStreakEntry} />
         </div>
 
         {/* Action controls: [ Download ] [ Theme ] [ Settings ] */}

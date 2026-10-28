@@ -1,11 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Flame } from 'lucide-react';
+import { Flame, Pause, X, ArrowUpRight } from 'lucide-react';
 import useAccountActivityStreak from '../lib/useAccountActivityStreak.js';
+import useStreakPauseReminder from '../lib/useStreakPauseReminder.js';
 import './ActivityStreak.css';
 
-export default function ActivityStreak({ ownerId, isLight, t, onOpen, onChange }) {
+export default function ActivityStreak({ ownerId, isLight, t, onOpen, onChange, onCreateEntry }) {
   const { streak, status, refresh, celebration } = useAccountActivityStreak(ownerId);
+  const reminder = useStreakPauseReminder(ownerId, streak, status, celebration);
+  const paused = Boolean(streak?.paused && streak.currentStreak > 0);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
@@ -31,8 +34,18 @@ export default function ActivityStreak({ ownerId, isLight, t, onOpen, onChange }
     >
       <Flame className="activity-streak-icon" aria-hidden="true" />
       <span className="activity-streak-value">{label}</span>
-      {streak?.paused && <span className="activity-streak-pause">· {t('streakPauseShort')}</span>}
+      {paused && <span className="activity-streak-pause"><Pause size={11} strokeWidth={2.7} aria-hidden="true"/>{t('streakPauseShort')}</span>}
     </button>
+    {reminder.visible && createPortal(<div className={`activity-streak-reminder ${isLight ? 'is-light' : ''}`}>
+      <Pause className="activity-streak-reminder-icon" size={18} aria-hidden="true"/>
+      <div className="activity-streak-reminder-copy">
+        <span role="status" aria-live="polite">{t('streakReminderTitle')}</span>
+        <button type="button" onClick={() => { reminder.dismiss(); if (onCreateEntry) onCreateEntry(); else onOpen?.(streak); }}>
+          {t('streakCreateEntry')}<ArrowUpRight size={13} aria-hidden="true"/>
+        </button>
+      </div>
+      <button type="button" className="activity-streak-reminder-close" aria-label={t('streakClose')} onClick={reminder.dismiss}><X size={16} aria-hidden="true"/></button>
+    </div>, document.body)}
     {celebration && createPortal(<div className={`activity-streak-success ${isLight ? 'is-light' : ''}`} role="status" aria-live="polite">
       <Flame size={18} aria-hidden="true"/><span>{t(celebration.started ? 'streakStarted' : 'streakContinued')}</span>
     </div>, document.body)}</>

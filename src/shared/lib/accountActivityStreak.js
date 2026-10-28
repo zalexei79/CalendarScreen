@@ -49,7 +49,8 @@ export async function syncAccountActivityStreak({ client, storage, ownerId, sign
   if (data?.accountId !== ownerId || !validStreak(data)) throw new Error('INVALID_ACCOUNT_STREAK');
   const next = { currentStreak: data.currentStreak, lastActiveDate: data.lastActiveDate,
     paused: Boolean(data.paused), timeZone: data.timeZone, ownerId, _accountSynced: true,
-    entryDate: data.entryDate || null, completedToday: Boolean(data.completedToday), rule: data.rule };
+    entryDate: data.entryDate || null, completedToday: Boolean(data.completedToday), rule: data.rule,
+    serverDate: data.serverDate };
   try { storage.setItem(PREFIX + ownerId, JSON.stringify(next)); } catch { /* online state remains usable */ }
   return next;
 }

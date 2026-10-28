@@ -1,5 +1,6 @@
 export const streakCopy = {
   ru: {
+    streakPauseShort: 'пауза', streakReminderTitle: 'Огонёк на паузе', streakCreateEntry: 'Создай запись',
     streakStarted: 'Вы зажгли огонёк', streakContinued: 'Вы продолжили огонёк',
     streakTitle: 'Огонёк записей: {0} дней', streakPaused: 'Добавь запись сегодня, чтобы продолжить огонёк',
     streakStatusActive: 'Запись за сегодня сохранена — огонёк продолжается',
@@ -27,6 +28,7 @@ export const streakCopy = {
     streakStatusPaused: 'Огонёк на паузе. Создай запись сегодня.',
   },
   en: {
+    streakPauseShort: 'paused', streakReminderTitle: 'Your flame is paused', streakCreateEntry: 'Create an entry',
     streakStarted: 'You lit your flame', streakContinued: 'You continued your streak',
     streakTitle: 'Entry streak: {0} days', streakPaused: 'Add an entry today to continue your streak',
     streakStatusActive: 'Today’s entry is saved — your flame keeps going',
@@ -54,6 +56,7 @@ export const streakCopy = {
     streakStatusPaused: 'Flame paused. Create an entry today.',
   },
   md: {
+    streakPauseShort: 'pauză', streakReminderTitle: 'Flacăra e în pauză', streakCreateEntry: 'Creează o înregistrare',
     streakStarted: 'Ai aprins flacăra', streakContinued: 'Ai continuat seria',
     streakTitle: 'Seria înregistrărilor: {0} zile', streakPaused: 'Adaugă o înregistrare azi pentru a continua',
     streakStatusActive: 'Înregistrarea de azi este salvată — flacăra continuă',
@@ -81,6 +84,7 @@ export const streakCopy = {
     streakStatusPaused: 'Flacăra e în pauză. Creează o înregistrare azi.',
   },
   uk: {
+    streakPauseShort: 'пауза', streakReminderTitle: 'Вогник на паузі', streakCreateEntry: 'Створи запис',
     streakStarted: 'Ви запалили вогник', streakContinued: 'Ви продовжили вогник',
     streakTitle: 'Вогник записів: {0} днів', streakPaused: 'Додай запис сьогодні, щоб продовжити вогник',
     streakStatusActive: 'Запис за сьогодні збережено — вогник триває',
@@ -108,6 +112,7 @@ export const streakCopy = {
     streakStatusPaused: 'Вогник на паузі. Створи запис сьогодні.',
   },
   'zh-CN': {
+    streakPauseShort: '暂停', streakReminderTitle: '火焰已暂停', streakCreateEntry: '创建记录',
     streakStarted: '你点燃了火焰', streakContinued: '你延续了火焰',
     streakTitle: '连续记录：{0}天', streakPaused: '今天添加记录以延续火焰',
     streakStatusActive: '今天的记录已保存，火焰继续燃烧',

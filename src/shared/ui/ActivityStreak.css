@@ -12,7 +12,26 @@
 .activity-streak-paused { color:#a1a1aa; border-color:rgba(161,161,170,.24); background:rgba(161,161,170,.08); }
 .activity-streak-icon { width:14px; height:14px; fill:currentColor; stroke-width:1.8; }
 .activity-streak-value { font-variant-numeric:tabular-nums; }
-.activity-streak-pause { opacity:.82; font-weight:500; }
+.activity-streak-pause { display:inline-flex; align-items:center; gap:3px; margin-left:2px; padding-left:5px; border-left:1px solid currentColor; font-weight:600; color:#f5c46c; }
+.activity-streak-light .activity-streak-pause { color:#905b08; }
+.activity-streak-pause svg { flex-shrink:0; }
+.activity-streak-reminder {
+  position:fixed; z-index:10040; bottom:calc(96px + env(safe-area-inset-bottom,0px)); left:50%;
+  display:flex; align-items:center; gap:12px; width:max-content; max-width:calc(100vw - 32px);
+  box-sizing:border-box; padding:10px 10px 10px 16px; border:1px solid rgba(255,255,255,.16); border-radius:20px;
+  background:rgba(32,34,39,.9); color:#f4f4f5; font:600 13px/19px system-ui,sans-serif;
+  -webkit-backdrop-filter:blur(18px) saturate(140%); backdrop-filter:blur(18px) saturate(140%);
+  box-shadow:0 6px 22px rgba(0,0,0,.18); transform:translateX(-50%);
+  animation:activity-streak-success-in 180ms cubic-bezier(.25,.1,.25,1) both;
+}
+.activity-streak-reminder-icon { flex-shrink:0; color:#f5c46c; }
+.activity-streak-reminder-copy { min-width:0; }
+.activity-streak-reminder-copy > span { display:block; }
+.activity-streak-reminder-copy > button { display:flex; align-items:center; gap:4px; min-height:30px; padding:2px 0; background:none; border:0; color:#f5c46c; font:inherit; font-weight:500; cursor:pointer; }
+.activity-streak-reminder-close { display:grid; place-items:center; flex-shrink:0; width:40px; height:40px; border:0; border-radius:50%; background:transparent; color:#a1a1aa; cursor:pointer; }
+.activity-streak-reminder button:focus-visible { outline:2px solid #f5c46c; outline-offset:3px; }
+.activity-streak-reminder.is-light { background:rgba(255,255,255,.9); color:#27272a; border-color:rgba(0,0,0,.08); }
+.activity-streak-reminder.is-light .activity-streak-reminder-icon,.activity-streak-reminder.is-light .activity-streak-reminder-copy > button { color:#905b08; }
 .activity-streak-success {
   position:fixed; z-index:10050; bottom:calc(96px + env(safe-area-inset-bottom,0px)); left:50%;
   display:flex; align-items:center; gap:9px; width:max-content; max-width:calc(100vw - 32px);
@@ -27,5 +46,6 @@
 @keyframes activity-streak-success-in { from { opacity:0; transform:translate(-50%,5px) scale(.97); } to { opacity:1; transform:translate(-50%,0) scale(1); } }
 @media(prefers-reduced-motion:reduce) { .activity-streak-success { animation:none; } }
 @keyframes activity-streak-in { from { opacity:0; transform:translateY(-3px) scale(.96); } to { opacity:1; transform:none; } }
-@media(max-width:430px) { .activity-streak { padding:0 7px; } .activity-streak-pause { display:none; } }
+@media(max-width:430px) { .activity-streak { padding:0 7px; } }
+@media(prefers-reduced-motion:reduce) { .activity-streak-reminder { animation:none; } }
 @media(prefers-reduced-motion:reduce) { .activity-streak { animation:none; transition:none; } .activity-streak:hover,.activity-streak:active { transform:none; } }

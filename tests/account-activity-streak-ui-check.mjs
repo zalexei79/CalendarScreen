@@ -14,7 +14,7 @@ const bundle = await require('esbuild').build({
     import {translate} from './src/shared/i18n/index.js';
     function App(){const[owner,setOwner]=useState('${owner}'),[opened,setOpened]=useState(null);
       window.setStreakOwner=id=>{window.sessionOwner=id;setOwner(id);setOpened(null)};
-      return <><ActivityStreak ownerId={owner} isLight={window.lightTheme} t={key=>translate('ru',key)} onOpen={setOpened}
+      return <><ActivityStreak ownerId={owner} isLight={window.lightTheme} t={key=>translate('ru',key)} onOpen={setOpened} onCreateEntry={()=>{window.streakCreateClicked=(window.streakCreateClicked||0)+1;}}
         onChange={next=>setOpened(current=>current?.ownerId===next.ownerId?next:current)}/>
         <output id="opened-count">{opened?.currentStreak||''}</output></>;
     }createRoot(document.getElementById('root')).render(<App/>);
@@ -31,7 +31,7 @@ try {
     await context.exposeBinding('streakRpc', async (_, token, parameters) => {
       calls.push({ token, parameters });
       const state = entryStreakState(server.get(token), serverDay);
-      return { data: { ...state, accountId: token, timeZone: 'Europe/Bucharest' }, error: null };
+      return { data: { ...state, accountId: token, timeZone: 'Europe/Bucharest',serverDate:serverDay }, error: null };
     });
     await context.addInitScript(({ owner, count }) => {
       window.sessionOwner = owner;
@@ -57,6 +57,27 @@ try {
     await page.goto('https://streak-account.test/');
     await page.waitForFunction(() => document.querySelector('.activity-streak-value').textContent === '8 дн.');
     assert.equal(await page.locator('.activity-streak-success').count(),0,'opening the app does not celebrate');
+    await page.locator('.activity-streak-pause').waitFor();
+    assert.equal(await page.locator('.activity-streak-pause').textContent(),'пауза');
+    for(const width of [320,360,390,430,1280]){
+      await page.setViewportSize({width,height:844});
+      assert.equal(await page.locator('.activity-streak-pause').isVisible(),true,'pause label stays visible on mobile and desktop');
+      assert.equal(await page.locator('.activity-streak-pause svg').isVisible(),true);
+    }
+    await page.setViewportSize({width:390,height:844});
+    await page.locator('.activity-streak-reminder').waitFor();
+    assert.match(await page.locator('.activity-streak-reminder').textContent(),/Огонёк на паузе.*Создай запись/);
+    await page.evaluate(()=>Promise.all(document.querySelector('.activity-streak-reminder').getAnimations().map(a=>a.finished)));
+    await page.screenshot({path:`artifacts/streak-review/paused-reminder-${count===8?'light':'dark'}.png`});
+    const notice=await page.locator('.activity-streak-reminder').boundingBox();
+    assert.ok(notice.height<=90 && notice.x>=0 && notice.x+notice.width<=390,'small reminder fits the screen');
+    if(count===4){
+      await page.locator('.activity-streak-reminder-copy button').click();
+      assert.equal(await page.evaluate(()=>window.streakCreateClicked),1,'reminder action opens entry creation');
+    }else await page.locator('.activity-streak-reminder-close').click();
+    await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+    await page.waitForTimeout(1100);
+    assert.equal(await page.locator('.activity-streak-reminder').count(),0,'daily reminder does not repeat after focus');
     if (count === 4) await page.locator('.activity-streak').click();
   }
   await pages[0].evaluate(() => window.streakRealtime());
@@ -75,10 +96,13 @@ try {
   await pages[0].waitForFunction(() => document.querySelector('.activity-streak').getAttribute('aria-busy') === 'false' && !document.querySelector('.activity-streak').title.includes('не синхронизирован'));
   assert.equal(await pages[0].locator('.activity-streak-value').textContent(),'8 дн.','online visits do not extend the streak');
   assert.equal(await pages[0].locator('.activity-streak-success').count(),0);
+  await pages[0].locator('.activity-streak-reminder').waitFor();
   server.set(owner,entryStreakState(server.get(owner),serverDay,true));
   await pages[0].evaluate(owner => window.dispatchEvent(new CustomEvent('dayris:streak-entry-saved',{detail:{ownerId:owner}})),owner);
   await pages[0].waitForFunction(() => document.querySelector('.activity-streak-value').textContent === '9 дн.');
   await pages[0].locator('.activity-streak-success').waitFor();
+  assert.equal(await pages[0].locator('.activity-streak-pause').count(),0,'saved entry removes pause');
+  assert.equal(await pages[0].locator('.activity-streak-reminder').count(),0,'saved entry removes pause reminder');
   assert.equal(await pages[0].locator('.activity-streak-success').textContent(),'Вы продолжили огонёк');
   await pages[1].evaluate(() => window.streakRealtime());
   await pages[1].waitForFunction(() => document.querySelector('.activity-streak-value').textContent === '9 дн.');

@@ -6,6 +6,10 @@
 .dayris-brand-row img { width:28px; height:28px; }
 .header-mode-control.workspace-mode-group { width:auto; }
 .header-mode-control .workspace-selector { flex:none; }
+@media(max-width:639px) {
+  .dayris-brand-row:has(.activity-streak-pause) { position:relative; padding-bottom:32px; }
+  .dayris-brand-row .activity-streak:has(.activity-streak-pause) { position:absolute; left:0; bottom:0; }
+}
 @media(max-width:359px) {
   .dayris-header .dayris-brand-row { gap:4px; }
   .dayris-header [data-site-element="brand"] { gap:4px; }

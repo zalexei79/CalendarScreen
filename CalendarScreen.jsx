@@ -4707,6 +4707,7 @@ export default function CalendarScreen() {
         proAccessActive={proAccessActive} proAccessLoading={proAccessLoading} proAccessUntil={proAccessUntil}
         openReferralHub={openReferralHub} openProPresentation={openProPresentation} invitedCount={invitedCount} referralLabel={proAccessCopy.invitesTab}
         onOpenActivityStreak={setActivityStreak}
+        onCreateStreakEntry={() => openModal(null, keyFromDate(new Date()))}
         onActivityStreakChange={next => setActivityStreak(current => current?.ownerId === next.ownerId ? next : current)}
         periodStats={periodStats} periodTrades={periodTrades} currencySymbol={currencySymbol} formatMoney={formatMoney}
       />}

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v97-daily-entry-streak';
+const CACHE_NAME = 'atj-cache-v98-streak-pause-reminder';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

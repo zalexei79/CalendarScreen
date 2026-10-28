@@ -2,6 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { entryStreakState } from '../src/shared/lib/entryActivityStreak.js';
 import { streakCopy } from '../src/shared/i18n/streak.js';
+import { streakReminderDay } from '../src/shared/lib/useStreakPauseReminder.js';
+
+test('pause reminders follow the account day across devices and timezone boundaries',()=>{
+  const midnight = new Date('2026-10-28T23:30:00Z');
+  assert.equal(streakReminderDay({serverDate:'2026-10-28',timeZone:'Pacific/Kiritimati'},midnight),'2026-10-28','confirmed server date wins');
+  assert.equal(streakReminderDay({timeZone:'Pacific/Kiritimati'},midnight),'2026-10-29');
+  assert.equal(streakReminderDay({timeZone:'Pacific/Honolulu'},midnight),'2026-10-28');
+});
 
 test('guest reads never count; one entry per day; pause, rescue and reset match the server',()=>{
   const first=entryStreakState(null,'2026-10-20');
