@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v101-day-panel-motion';
+const CACHE_NAME = 'atj-cache-v102-desktop-parallax-hint';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

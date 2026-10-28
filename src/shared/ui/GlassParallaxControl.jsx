@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useState, useSyncExternalStore } from 'react';
-import { Smartphone } from 'lucide-react';
+import { MousePointer2, Smartphone } from 'lucide-react';
 import { getGlassTiltState, subscribeGlassTilt, supportsGlassTilt, enableGlassTilt, disableGlassTilt } from './glassTilt.js';
 
 const COPY = {
@@ -10,6 +10,21 @@ const COPY = {
   zh:{title:'倾斜景深',off:'倾斜手机时，金色光线在玻璃后方移动。仅在你授权后启用。',resume:'点按以再次允许本次会话使用倾斜效果。',asking:'正在请求传感器权限…',waiting:'舒适地握住手机，然后轻轻倾斜。',active:'金色光线与玻璃日历随倾斜呈现景深。',denied:'未获得权限。可以重试或检查浏览器权限，主题仍可正常使用。',unavailable:'此浏览器不支持倾斜效果。在电脑上，景深随指针移动。',noData:'尚未收到传感器数据。请检查权限或尝试其他浏览器。',reduced:'已根据减少动态效果设置暂停。'},
 };
 
+const POINTER_COPY = {
+  ru:{title:'Параллакс за курсором',hint:'Двигай мышью — свет и стекло будут следовать за курсором. Эффект работает автоматически.'},
+  uk:{title:'Паралакс за курсором',hint:'Рухай мишею — світло та скло слідуватимуть за курсором. Ефект працює автоматично.'},
+  en:{title:'Pointer parallax',hint:'Move your mouse to shift the light and glass with your cursor. The effect works automatically.'},
+  ro:{title:'Paralaxă după cursor',hint:'Mișcă mouse-ul: lumina și sticla urmează cursorul. Efectul funcționează automat.'},
+  zh:{title:'光标视差',hint:'移动鼠标，光线与玻璃将随光标变化。效果会自动启用。'},
+};
+const INPUT_QUERY = '(pointer: coarse)';
+function subscribeInput(listener) {
+  const media = matchMedia(INPUT_QUERY);
+  media.addEventListener('change',listener);
+  return () => media.removeEventListener('change',listener);
+}
+const touchInput = () => matchMedia(INPUT_QUERY).matches;
+
 export default function GlassParallaxControl({language,theme}) {
   const locale = language === 'uk' ? 'uk' : language?.startsWith('zh') ? 'zh' : ['md','ro'].includes(language) ? 'ro' : language === 'en' ? 'en' : 'ru';
   const copy = {...COPY[locale]}, id = useId();
@@ -18,6 +33,7 @@ export default function GlassParallaxControl({language,theme}) {
     copy.active = {ru:'Изумрудный свет и стеклянный календарь реагируют на наклон.',uk:'Смарагдове світло та скляний календар реагують на нахил.',en:'Emerald light and the glass calendar respond to tilt.',ro:'Lumina de smarald și calendarul din sticlă răspund la înclinare.',zh:'翡翠色光线与玻璃日历随倾斜呈现景深。'}[locale];
   }
   const state = useSyncExternalStore(subscribeGlassTilt,getGlassTiltState);
+  const phone = useSyncExternalStore(subscribeInput,touchInput,() => false);
   const [reduced,setReduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
   useEffect(() => {
     const media = matchMedia('(prefers-reduced-motion: reduce)');
@@ -26,6 +42,10 @@ export default function GlassParallaxControl({language,theme}) {
   },[]);
   const unavailable = !supportsGlassTilt();
   const status = reduced ? 'reduced' : unavailable ? 'unavailable' : state.status;
+  if (!phone) return <div className="glass-parallax-control glass-parallax-desktop">
+    <div className="glass-parallax-heading"><MousePointer2 size={19} aria-hidden="true"/><span>{POINTER_COPY[locale].title}</span></div>
+    <p role="status">{reduced ? copy.reduced : POINTER_COPY[locale].hint}</p>
+  </div>;
   return <div className="glass-parallax-control">
     <button type="button" role="switch" aria-checked={state.enabled} aria-labelledby={`${id}-label`} aria-describedby={`${id}-hint`} disabled={state.status==='asking'||(!state.enabled&&(reduced||unavailable))} onClick={() => state.enabled ? disableGlassTilt() : enableGlassTilt()}>
       <Smartphone size={19} aria-hidden="true"/><span id={`${id}-label`}>{copy.title}</span><span className="glass-parallax-switch" aria-hidden="true"><i/></span>
