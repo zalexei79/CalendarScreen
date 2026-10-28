@@ -37,6 +37,16 @@ html[data-glass-parallax] .calendar-section:not(.calendar-month-preview) .calend
   transition:rotate 160ms cubic-bezier(.2,.7,.3,1),translate 160ms cubic-bezier(.2,.7,.3,1);
 }
 html[data-glass-parallax] .calendar-section:is([data-dragging="true"],[data-settling="true"]) .calendar-days-grid { rotate:none!important; translate:none!important; transition:none; }
+/* A phone steers the material directly. Keep the established mouse response,
+   and reserve enough background bleed for the deeper sensor travel. */
+html[data-glass-sensor] .dayris-glass-parallax { inset:-88px; transition-duration:70ms; }
+html[data-glass-sensor] .dayris-glass-caustic { transition-duration:90ms; }
+html[data-glass-sensor] .dayris-glass-light { transition-duration:110ms; }
+html[data-glass-parallax][data-glass-sensor] .calendar-section { perspective:max(760px,115vw); }
+html[data-glass-parallax][data-glass-sensor] .calendar-section:not(.calendar-month-preview) .calendar-days-grid {
+  transition:rotate 80ms cubic-bezier(.2,.7,.3,1),translate 80ms cubic-bezier(.2,.7,.3,1);
+}
+html[data-glass-parallax][data-glass-sensor] .calendar-section:is([data-dragging="true"],[data-settling="true"]) .calendar-days-grid { transition:none; }
 @media(max-width:639px) {
   /* Reserve the projected side edge before moving the glass toward the viewer. */
   html[data-glass-parallax] .calendar-section :is(.calendar-days-grid,.calendar-weekdays) { margin-inline:8px; }

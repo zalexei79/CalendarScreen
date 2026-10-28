@@ -8,6 +8,7 @@ import {pathToFileURL} from 'node:url';
 const engine=process.env.DAYRIS_TEST_ENGINE==='webkit'?'webkit':'chromium';
 const palette=process.env.DAYRIS_TEST_THEME==='emerald'?'emerald':'gold';
 const depthX=palette==='emerald'?44:32,depthY=palette==='emerald'?32:24;
+const sensorX=palette==='emerald'?64:60,sensorY=palette==='emerald'?50:46;
 const source=fs.readFileSync('tests/gold-theme-ui-check.mjs','utf8');
 let setup=source.slice(0,source.indexOf(' for(const width of [320,390,1280])'))
  .replace("'./life-story-auth-fixture.mjs'",JSON.stringify(pathToFileURL(path.resolve('tests/life-story-auth-fixture.mjs')).href))
@@ -90,7 +91,8 @@ const finish=`
  assert.equal(await page.evaluate(()=>window.__tiltListeners()),1);
  await page.evaluate(()=>window.__tiltReading(45,-5));
  await page.evaluate(()=>window.__tiltReading(63,13));
- await page.waitForFunction(()=>parseFloat(document.querySelector('.dayris-glass-parallax').style.translate)===-${depthX});
+ await page.locator('html[data-glass-sensor]').waitFor();
+ await page.waitForFunction(()=>parseFloat(document.querySelector('.dayris-glass-parallax').style.translate)<-10);
  await page.screenshot({path:shots+'-settings-enabled.png',animations:'disabled'});
  await closeSettings();
  await page.screenshot({path:shots+'-tilted-390.png',animations:'disabled'});
@@ -107,7 +109,7 @@ const finish=`
  for(const width of [320,390]) {
   console.log('${palette} ${engine}: projection at '+width);
   await page.setViewportSize({width,height:844});
-  for(const [beta,gamma] of [[57,7],[57,-17],[33,7],[33,-17]]) {
+  for(const [beta,gamma] of [[75,25],[75,-35],[15,25],[15,-35]]) {
    await page.evaluate(([b,g])=>window.__tiltReading(b,g),[beta,gamma]);
    await page.waitForTimeout(220);
    await page.screenshot({path:shots+'-extreme-'+width+'-'+beta+'-'+gamma+'.png',animations:'disabled'});
@@ -121,7 +123,7 @@ const finish=`
  console.log('${palette} ${engine}: motion and visibility preferences');
  await page.evaluate(()=>{window.__tiltReading(999,-999);window.__tiltReading(null,NaN);});
  await page.waitForTimeout(60);
- assert.ok(await layer.evaluate((el,limits)=>{const [x,y]=el.style.translate.split(' ').map(parseFloat);return Math.abs(x)<=limits.x&&Math.abs(y)<=limits.y;},{x:${depthX},y:${depthY}}));
+ assert.ok(await layer.evaluate((el,limits)=>{const [x,y]=el.style.translate.split(' ').map(parseFloat);return Math.abs(x)<=limits.x&&Math.abs(y)<=limits.y;},{x:${sensorX},y:${sensorY}}));
  await page.evaluate(()=>window.dispatchEvent(new Event('orientationchange')));
  await page.evaluate(()=>window.__tiltReading(80,30));
  await page.waitForFunction(()=>parseFloat(document.querySelector('.dayris-glass-parallax').style.translate)===0);

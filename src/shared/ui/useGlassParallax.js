@@ -8,7 +8,8 @@ export default function useGlassParallax(theme) {
   useEffect(() => {
     if (!['gold','emerald'].includes(theme)) return undefined;
     const root = document.documentElement;
-    const depth = glassDepthProfile(theme);
+    const pointerDepth = glassDepthProfile(theme), sensorDepth = glassDepthProfile(theme,'sensor');
+    let depth = pointerDepth;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     const opaque = matchMedia('(prefers-reduced-transparency: reduce)');
     const layer = document.createElement('div');
@@ -21,7 +22,8 @@ export default function useGlassParallax(theme) {
     let frame = 0, target = { x:0,y:0 }, previous = '', neutral = null;
     let listening = false, hasSignal = false, signalTimer = 0;
     let grid = null, hovered = null, optics = null, hoverRect = null, hoverPoint = null;
-    const screenAngle = () => window.screen.orientation?.angle ?? (Number.isFinite(window.orientation) ? window.orientation : 0);
+    // Standalone iOS can disagree with the modern natural-screen angle.
+    const screenAngle = () => Number.isFinite(window.orientation) ? window.orientation : (window.screen.orientation?.angle ?? 0);
     // Window blur is not page visibility: iOS permission sheets can blur a
     // still-visible page and never send focus back. Do not latch sensors off.
     const allowed = () => !reduced.matches && !opaque.matches && !document.hidden;
@@ -29,18 +31,22 @@ export default function useGlassParallax(theme) {
       frame = 0;
       if (!allowed()) return;
       const value = `${target.x.toFixed(1)}px ${target.y.toFixed(1)}px`;
-      if (value !== previous) {
+      if (value !== previous || !grid?.isConnected) {
         previous = value;
         // Only non-inherited compositor properties change. Inherited variables
         // on BODY used to restyle every day, panel and control on every sample.
         layer.style.translate = value;
-        caustic.style.translate = `${(-target.x*.8).toFixed(1)}px ${(-target.y*.8).toFixed(1)}px`;
-        light.style.translate = `${(-target.x*.5).toFixed(1)}px ${(-target.y*.5).toFixed(1)}px`;
+        const sensor = depth === sensorDepth;
+        // Child offsets include their parent's travel: sensor reflections
+        // must actually counter-move, rather than following it at half speed.
+        const causticTravel = sensor ? 1.65 : .8, lightTravel = sensor ? 2.1 : .5;
+        caustic.style.translate = `${(-target.x*causticTravel).toFixed(1)}px ${(-target.y*causticTravel).toFixed(1)}px`;
+        light.style.translate = `${(-target.x*lightTravel).toFixed(1)}px ${(-target.y*lightTravel).toFixed(1)}px`;
         const x=target.x/depth.x, y=target.y/depth.y;
         if (!grid?.isConnected) grid = document.querySelector('.calendar-section:not(.calendar-month-preview) .calendar-days-grid');
         if (grid) {
           grid.style.translate = `${(-x*depth.plane).toFixed(2)}px ${(-y*depth.plane*.7).toFixed(2)}px`;
-          grid.style.rotate = `${Math.abs(y)<.001?'0':y.toFixed(3)} ${Math.abs(x)+Math.abs(y)<.001?'1':(-x).toFixed(3)} 0 ${Math.min(3.2,Math.hypot(x,y)*depth.rotation).toFixed(2)}deg`;
+          grid.style.rotate = `${Math.abs(y)<.001?'0':y.toFixed(3)} ${Math.abs(x)+Math.abs(y)<.001?'1':(-x).toFixed(3)} 0 ${Math.min(sensor?depth.rotation:3.2,Math.hypot(x,y)*depth.rotation).toFixed(2)}deg`;
         }
       }
       if (hovered?.isConnected && hoverRect && hoverPoint) {
@@ -57,6 +63,7 @@ export default function useGlassParallax(theme) {
     }
     function recenter() {
       neutral = null; hasSignal = false; target = { x:0,y:0 }; previous = '';
+      depth = pointerDepth; root.removeAttribute('data-glass-sensor');
       cancelAnimationFrame(frame); frame = 0;
       layer.style.removeProperty('translate'); caustic.style.removeProperty('translate'); light.style.removeProperty('translate');
       resetGrid();
@@ -74,9 +81,12 @@ export default function useGlassParallax(theme) {
     }
     function orientation(event) {
       if (!allowed() || !Number.isFinite(event.beta) || !Number.isFinite(event.gamma)) return;
-      if (!neutral) neutral = { beta:event.beta,gamma:event.gamma };
+      if (!neutral) neutral = { alpha:event.alpha,beta:event.beta,gamma:event.gamma };
       const position = glassTiltVector(event,neutral,screenAngle(),theme);
       if (!position) return;
+      if (depth !== sensorDepth) {
+        depth = sensorDepth; previous = ''; root.setAttribute('data-glass-sensor','');
+      }
       hasSignal = true;
       clearTimeout(signalTimer); reportGlassTilt('active'); moveTo(position.x,position.y);
     }
@@ -129,7 +139,7 @@ export default function useGlassParallax(theme) {
       window.removeEventListener('orientationchange',recenter);
       window.screen.orientation?.removeEventListener('change',recenter);
       reduced.removeEventListener('change',sync); opaque.removeEventListener('change',sync);
-      root.removeAttribute('data-glass-parallax'); layer.remove();
+      root.removeAttribute('data-glass-parallax'); root.removeAttribute('data-glass-sensor'); layer.remove();
     };
   },[theme]);
 }

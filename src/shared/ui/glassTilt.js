@@ -42,18 +42,43 @@ export async function enableGlassTilt() {
 }
 
 // Relative to the user's comfortable holding angle, not an assumed flat phone.
-// No compass/magnetometer data is needed or retained.
-export function glassDepthProfile(theme) {
+// Relative orientation only; no absolute compass permission or persisted pose.
+export function glassDepthProfile(theme, input = 'pointer') {
+  if (input === 'sensor') return theme === 'emerald'
+    ? { x:64,y:50,plane:12,rotation:11.5 }
+    : { x:60,y:46,plane:10,rotation:10 };
   return theme === 'emerald' ? { x:44,y:32,plane:7,rotation:2.8 } : { x:32,y:24,plane:5,rotation:2.2 };
+}
+
+// W3C intrinsic Z-X'-Y'' rotations. Comparing complete screen frames avoids
+// Euler-axis coupling when the phone is held upright or passes through beta=90.
+// https://www.w3.org/TR/orientation-event/#model
+function screenFrame(reading, heading) {
+  const radians = Math.PI / 180;
+  const a = heading ? reading.alpha * radians : 0;
+  const b = reading.beta * radians, g = reading.gamma * radians;
+  const ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b), cg = Math.cos(g), sg = Math.sin(g);
+  return {
+    right:[ca*cg-sa*sb*sg,sa*cg+ca*sb*sg,-cb*sg],
+    up:[-sa*cb,ca*cb,sb],
+    normal:[ca*sg+sa*sb*cg,sa*sg-ca*sb*cg,cb*cg],
+  };
 }
 
 export function glassTiltVector(reading, neutral, angle = 0, theme = 'gold') {
   if (![reading?.beta,reading?.gamma,neutral?.beta,neutral?.gamma,angle].every(Number.isFinite)) return null;
-  const delta = (a,b) => ((a - b + 540) % 360) - 180;
-  const beta = delta(reading.beta,neutral.beta), gamma = delta(reading.gamma,neutral.gamma);
+  const heading = Number.isFinite(reading.alpha) && Number.isFinite(neutral.alpha);
+  const origin = screenFrame(neutral,heading), current = screenFrame(reading,heading);
+  const dot = axis => axis.reduce((sum,value,index) => sum + value * current.normal[index],0);
+  const nx = dot(origin.right), ny = dot(origin.up), nz = dot(origin.normal);
+  const degrees = 180 / Math.PI;
+  const gamma = Math.atan2(nx,nz) * degrees;
+  const beta = Math.atan2(-ny,Math.hypot(nx,nz)) * degrees;
   const radians = angle * Math.PI / 180;
-  const limit = value => Math.max(-1,Math.min(1,value / 12));
-  const depth = glassDepthProfile(theme);
+  // Strong response near neutral, with useful travel beyond the old 12-degree
+  // hard stop. Large turns approach the safe visual limit gradually.
+  const limit = value => Math.abs(value) < 1e-8 ? 0 : Math.tanh(value / 24);
+  const depth = glassDepthProfile(theme,'sensor');
   return { x:-limit(gamma * Math.cos(radians) + beta * Math.sin(radians)) * depth.x,
     y:-limit(beta * Math.cos(radians) - gamma * Math.sin(radians)) * depth.y };
 }
