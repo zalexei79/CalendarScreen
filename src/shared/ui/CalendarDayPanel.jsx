@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { CalendarDays, ChartCandlestick, ChevronDown, ChevronLeft, ChevronRight, CircleDollarSign, Inbox, Mic, Pencil, Plus, Trash2 } from 'lucide-react';
 import SwipeDismissSheet from './SwipeDismissSheet.jsx';
 import SheetCloseButton from './SheetCloseButton.jsx';
+import useDayPanelMotion from './useDayPanelMotion.js';
 import { calendarDayCopy } from '../i18n/calendarDay.js';
 import { intlLocale } from '../i18n/locale.js';
 import { getMoneyCategoryLabel } from '../config/constants';
@@ -18,14 +19,10 @@ export default function CalendarDayPanel({
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const backdropPress = useRef(false);
-  const [direction, setDirection] = useState(null);
   const navigateRef = useRef(null);
   const suppressedClick = useRef(null);
-  navigateRef.current = step => {
-    if (!onNavigate) return;
-    setDirection(step > 0 ? 'next' : 'previous');
-    onNavigate(step);
-  };
+  const dayMotion = useDayPanelMotion({ panelRef, dateKey, onNavigate });
+  navigateRef.current = dayMotion.navigate;
   const copy = calendarDayCopy(language);
   const future = dateKey > todayKey;
   const locale = intlLocale(language);
@@ -133,7 +130,7 @@ export default function CalendarDayPanel({
     onClick={event => { if (event.target === event.currentTarget && backdropPress.current) onClose(); }}>
     <SwipeDismissSheet ref={panelRef} as="section" role="dialog" aria-modal="true" aria-labelledby="calendar-day-title"
       tabIndex={-1} className="calendar-day-panel" data-mode={traderMode ? 'trader' : 'finance'}
-      data-date-key={dateKey} isLight={isLight} onDismiss={onClose} handleClassName="calendar-day-handle"
+      data-date-key={dateKey} data-day-moving={dayMotion.busy} isLight={isLight} onDismiss={onClose} handleClassName="calendar-day-handle"
       onClickCapture={event => {
         const suppressed = suppressedClick.current;
         if (suppressed?.target && suppressed.until > performance.now() && suppressed.target.contains(event.target)) {
@@ -141,7 +138,7 @@ export default function CalendarDayPanel({
         }
       }}>
       <header className="calendar-day-header">
-        <div key={dateKey} className="calendar-day-date" data-step={direction}>
+        <div key={dateKey} className="calendar-day-date" aria-live="polite" aria-atomic="true" aria-busy={dayMotion.busy}>
           <p>{dateKey === todayKey ? `${copy.today} · ` : ''}{weekday} · {date.getFullYear()}</p>
           <h2 id="calendar-day-title"><time dateTime={dateKey}>{title}</time></h2>
         </div>
@@ -168,7 +165,7 @@ export default function CalendarDayPanel({
         {mixedCurrencies && <p className="calendar-day-currency-hint">{copy.currencyHint.replace('{currency}', currency)}</p>}
       </div>}
 
-      <div key={`records-${dateKey}`} className="calendar-day-scroll" data-step={direction}>
+      <div key={`records-${dateKey}`} className="calendar-day-scroll" inert={dayMotion.busy ? '' : undefined}>
         {children}
         {future ? !hasPlans && <div className="calendar-day-empty calendar-day-future">
           <span className="calendar-day-empty-icon"><CalendarDays size={22} strokeWidth={1.6}/></span>
@@ -202,8 +199,8 @@ export default function CalendarDayPanel({
 
       {undoNotice}
       <footer className="calendar-day-actions">
-        <button type="button" className="calendar-day-add" onClick={future ? onPlan : onAdd}><Plus size={19} strokeWidth={2.2}/>{future ? copy.schedule : copy.add}</button>
-        {!future && <button type="button" className="calendar-day-voice" onClick={onVoice} aria-label={copy.voiceDay} title={copy.voice}><Mic size={20} strokeWidth={1.8}/></button>}
+        <button type="button" className="calendar-day-add" disabled={dayMotion.busy} onClick={future ? onPlan : onAdd}><Plus size={19} strokeWidth={2.2}/>{future ? copy.schedule : copy.add}</button>
+        {!future && <button type="button" className="calendar-day-voice" disabled={dayMotion.busy} onClick={onVoice} aria-label={copy.voiceDay} title={copy.voice}><Mic size={20} strokeWidth={1.8}/></button>}
       </footer>
     </SwipeDismissSheet>
   </div>;

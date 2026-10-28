@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v100-day-navigation-undo';
+const CACHE_NAME = 'atj-cache-v101-day-panel-motion';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
