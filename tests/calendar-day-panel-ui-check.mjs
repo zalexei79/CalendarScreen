@@ -124,7 +124,7 @@ async function scenario({ theme, mode, language = 'ru' }) {
   await page.keyboard.press('Tab');
   assert.equal(await panel.evaluate(element => element.contains(document.activeElement)), true, 'Focus stays in the day dialog');
   await panel.locator('.calendar-day-voice').focus(); await page.keyboard.press('Tab');
-  assert.equal(await panel.locator('.dayris-sheet-close').evaluate(element => element === document.activeElement), true, 'Tab wraps within the dialog');
+  assert.equal(await panel.locator('.calendar-day-navigation button').first().evaluate(element => element === document.activeElement), true, 'Tab wraps within the dialog');
   await page.keyboard.press('Escape'); await page.clock.runFor(250);
   assert.equal(await panel.count(), 0);
   await open(28); await page.mouse.click(3, 3); await page.clock.runFor(250);

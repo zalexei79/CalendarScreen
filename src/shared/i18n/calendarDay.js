@@ -2,6 +2,8 @@ import { localeKey } from './locale.js';
 
 const COPY = {
   ru: {
+    browseDays: 'Перелистывание дней', previousDay: 'Предыдущий день', nextDay: 'Следующий день',
+    deleted: 'Запись удалена', deleting: 'Удаляем запись…', undo: 'Вернуть', deleteFailed: 'Не удалось удалить. Запись возвращена.', dismiss: 'Закрыть уведомление', deletionActions: 'Удаление записей',
     today: 'Сегодня', balance: 'Баланс дня', result: 'Результат дня', records: 'Записи', trades: 'Сделки',
     income: 'Доходы', expense: 'Расходы', profit: 'Прибыль', loss: 'Убыток', winrate: 'Успешных',
     add: 'Новая запись', schedule: 'Запланировать', voice: 'Добавить голосом', voiceDay: 'Голосовая запись за выбранный день',
@@ -12,6 +14,8 @@ const COPY = {
     currencyHint: 'Итог в {currency} · записи во всех валютах',
   },
   en: {
+    browseDays: 'Browse days', previousDay: 'Previous day', nextDay: 'Next day',
+    deleted: 'Record deleted', deleting: 'Deleting record…', undo: 'Undo', deleteFailed: 'Could not delete. The record has been restored.', dismiss: 'Dismiss notification', deletionActions: 'Record deletion',
     today: 'Today', balance: 'Day balance', result: 'Day result', records: 'Records', trades: 'Trades',
     income: 'Income', expense: 'Expenses', profit: 'Profit', loss: 'Loss', winrate: 'Win rate',
     add: 'New entry', schedule: 'Schedule', voice: 'Add by voice', voiceDay: 'Voice entry for selected day',
@@ -22,6 +26,8 @@ const COPY = {
     currencyHint: 'Total in {currency} · records in all currencies',
   },
   uk: {
+    browseDays: 'Перегляд днів', previousDay: 'Попередній день', nextDay: 'Наступний день',
+    deleted: 'Запис видалено', deleting: 'Видаляємо запис…', undo: 'Повернути', deleteFailed: 'Не вдалося видалити. Запис повернено.', dismiss: 'Закрити сповіщення', deletionActions: 'Видалення записів',
     today: 'Сьогодні', balance: 'Баланс дня', result: 'Результат дня', records: 'Записи', trades: 'Угоди',
     income: 'Доходи', expense: 'Витрати', profit: 'Прибуток', loss: 'Збиток', winrate: 'Успішних',
     add: 'Новий запис', schedule: 'Запланувати', voice: 'Додати голосом', voiceDay: 'Голосовий запис за вибраний день',
@@ -32,6 +38,8 @@ const COPY = {
     currencyHint: 'Підсумок у {currency} · записи в усіх валютах',
   },
   ro: {
+    browseDays: 'Răsfoiește zilele', previousDay: 'Ziua precedentă', nextDay: 'Ziua următoare',
+    deleted: 'Înregistrare ștearsă', deleting: 'Ștergem înregistrarea…', undo: 'Restabilește', deleteFailed: 'Ștergerea a eșuat. Înregistrarea a fost restabilită.', dismiss: 'Închide notificarea', deletionActions: 'Ștergerea înregistrărilor',
     today: 'Astăzi', balance: 'Soldul zilei', result: 'Rezultatul zilei', records: 'Înregistrări', trades: 'Tranzacții',
     income: 'Venituri', expense: 'Cheltuieli', profit: 'Profit', loss: 'Pierdere', winrate: 'Rată de succes',
     add: 'Înregistrare nouă', schedule: 'Planifică', voice: 'Adaugă vocal', voiceDay: 'Înregistrare vocală pentru ziua selectată',
@@ -42,6 +50,8 @@ const COPY = {
     currencyHint: 'Total în {currency} · înregistrări în toate valutele',
   },
   zh: {
+    browseDays: '浏览日期', previousDay: '前一天', nextDay: '后一天',
+    deleted: '记录已删除', deleting: '正在删除记录…', undo: '撤销', deleteFailed: '删除失败，记录已恢复。', dismiss: '关闭通知', deletionActions: '删除记录',
     today: '今天', balance: '当日结余', result: '当日结果', records: '记录', trades: '交易',
     income: '收入', expense: '支出', profit: '盈利', loss: '亏损', winrate: '胜率',
     add: '新建记录', schedule: '添加计划', voice: '语音添加', voiceDay: '为所选日期添加语音记录',

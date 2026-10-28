@@ -136,6 +136,8 @@ import CapitalPanel from './src/features/capital/CapitalPanel.jsx';
 import { transitionView } from './src/shared/ui/transitionView';
 import SwipeDismissSheet from './src/shared/ui/SwipeDismissSheet.jsx';
 import CalendarDayPanel from './src/shared/ui/CalendarDayPanel.jsx';
+import useUndoableTradeDelete from './src/shared/ui/useUndoableTradeDelete.js';
+import UndoTradeDeleteNotice from './src/shared/ui/UndoTradeDeleteNotice.jsx';
 import { readWorkspace, writeWorkspace, clearWorkspace } from './src/shared/lib/sessionWorkspace.js';
 import ProOffer from './src/features/pro/ProOffer.jsx';
 import ProGrantNotice from './src/features/pro/ProGrantNotice.jsx';
@@ -1858,13 +1860,15 @@ export default function CalendarScreen() {
     retryFailedSync,
     saveTrade: saveCalendarTrade,
     deleteTrade: hookDeleteTrade,
+    resolveTradeId,
     detachMoneyCategory,
     mutateVoiceRecord,
     clearAllTrades: hookClearAllTrades,
     refreshFromCloud,
   } = useTrades({ user, readOnly: !validUserId });
   const demoTrades = useMemo(() => createDemoCalendar({ today, currency, language }), [today, currency, language]);
-  const manualTrades = demoMode ? demoTrades : storedManualTrades;
+  const tradeDeletion = useUndoableTradeDelete({ ownerId: validUserId, records: storedManualTrades, deleteTrade: hookDeleteTrade, resolveTradeId });
+  const manualTrades = demoMode ? demoTrades : tradeDeletion.records;
   const wallet = useWalletTransactions({ user });
   const savings = useSavingsPlan(validUserId);
   const [savingsNotice,setSavingsNotice] = useState(null);
@@ -2875,9 +2879,10 @@ export default function CalendarScreen() {
     } finally { saveInFlightRef.current = false; }
   }
 
-  async function handleDeleteTrade(dateKey, tradeId) {
+  function handleDeleteTrade(dateKey, tradeId) {
     if (!validUserId) return;
-    await hookDeleteTrade(dateKey, tradeId);
+    const record = (manualTradesRef.current[dateKey] || []).find(item => String(item.id) === String(tradeId));
+    tradeDeletion.remove(dateKey, record);
   }
 
   function jumpToTradeDate(dateKey) {
@@ -4829,6 +4834,8 @@ export default function CalendarScreen() {
           traderMode={traderMode} currency={currency} records={selectedDayTrades}
           hasPlans={(isFutureSelected ? activePlansForDay(selectedKey) : plansForDay(selectedKey)).length > 0}
           onClose={() => setSelectedKey(null)} onAdd={() => openModal(null, selectedKey)} onPlan={openPlanComposer}
+          onNavigate={step => jumpToTradeDate(keyFromDate(addDays(parseDateKeyLocal(selectedKey), step)))}
+          undoNotice={<UndoTradeDeleteNotice deletion={tradeDeletion} language={language} isLight={isLight}/>}
           onVoice={() => {
             window.dispatchEvent(new CustomEvent('dayris-start-voice', { detail: { dateKey: selectedKey } }));
             setSelectedKey(null);
@@ -4884,6 +4891,8 @@ export default function CalendarScreen() {
           />
         </CalendarDayPanel>
       )}
+
+      {!selectedKey && <UndoTradeDeleteNotice deletion={tradeDeletion} language={language} isLight={isLight} floating/>}
 
       <FinancePlanComposer
         open={planComposerOpen}

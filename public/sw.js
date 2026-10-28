@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v99-streak-no-spend';
+const CACHE_NAME = 'atj-cache-v100-day-navigation-undo';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

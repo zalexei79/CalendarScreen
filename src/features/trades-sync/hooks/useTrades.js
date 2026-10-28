@@ -45,10 +45,12 @@ export function useTrades({ user, readOnly = false }) {
   const owner = cloudUserId || 'guest';
   const currentOwnerRef = useRef(owner);
   const mutationVersions = useRef(new Map());
+  const tradeIdAliases = useRef(new Map());
   const ownerEpoch = useRef(0);
   if (currentOwnerRef.current !== owner) {
     ownerEpoch.current++;
     mutationVersions.current.clear();
+    tradeIdAliases.current.clear();
   }
   currentOwnerRef.current = owner;
 
@@ -66,6 +68,7 @@ export function useTrades({ user, readOnly = false }) {
   }, [readOnly]);
 
   const handleSyncedInsert = useCallback((dateKey, tempId, realId) => {
+    tradeIdAliases.current.set(`${dateKey}:${tempId}`, realId);
     setManualTrades((prev) => {
       const next = {
         ...prev,
@@ -251,6 +254,7 @@ export function useTrades({ user, readOnly = false }) {
         const { data, error } = await supabase.from('trades').insert(payload).select().single();
         if (error) throw error;
         savedId = data.id;
+        if (isCurrent()) tradeIdAliases.current.set(`${dateKey}:${localId}`, data.id);
         if (isCurrent()) notifyStreakEntrySaved(cloudUserId);
         setManualTrades((prev) => {
           if (!isCurrent()) return prev;
@@ -387,9 +391,11 @@ export function useTrades({ user, readOnly = false }) {
     cacheTradesLocally({}, cloudUserId);
   }, [cloudUserId, cacheTradesLocally]);
 
+  const resolveTradeId = useCallback((dateKey, id) => tradeIdAliases.current.get(`${dateKey}:${id}`) || id, []);
+
   return {
     manualTrades, setManualTrades: readOnly ? () => {} : setManualTrades, manualTradesRef, cacheTradesLocally,
-    pendingSyncCount, failedSyncCount, retryFailedSync,
+    pendingSyncCount, failedSyncCount, retryFailedSync, resolveTradeId,
     saveTrade: readOnly ? async () => { throw new Error('Sign in to save records.'); } : saveTrade,
     deleteTrade: readOnly ? async () => {} : deleteTrade,
     mutateVoiceRecord: readOnly ? async () => { throw new Error('Sign in to edit records.'); } : mutateVoiceRecord,

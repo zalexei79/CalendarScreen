@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { CalendarDays, ChartCandlestick, ChevronDown, CircleDollarSign, Inbox, Mic, Pencil, Plus, Trash2 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { CalendarDays, ChartCandlestick, ChevronDown, ChevronLeft, ChevronRight, CircleDollarSign, Inbox, Mic, Pencil, Plus, Trash2 } from 'lucide-react';
 import SwipeDismissSheet from './SwipeDismissSheet.jsx';
 import SheetCloseButton from './SheetCloseButton.jsx';
 import { calendarDayCopy } from '../i18n/calendarDay.js';
@@ -12,12 +12,20 @@ import './CalendarDayPanel.css';
 
 export default function CalendarDayPanel({
   dateKey, todayKey, language, isLight, traderMode, currency, records = [], hasPlans,
-  onClose, onAdd, onPlan, onVoice, onEdit, onDelete, getIcon, note, children,
+  onClose, onAdd, onPlan, onVoice, onEdit, onDelete, onNavigate, getIcon, note, undoNotice, children,
 }) {
   const panelRef = useRef(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const backdropPress = useRef(false);
+  const [direction, setDirection] = useState(null);
+  const navigateRef = useRef(null);
+  const suppressedClick = useRef(null);
+  navigateRef.current = step => {
+    if (!onNavigate) return;
+    setDirection(step > 0 ? 'next' : 'previous');
+    onNavigate(step);
+  };
   const copy = calendarDayCopy(language);
   const future = dateKey > todayKey;
   const locale = intlLocale(language);
@@ -42,6 +50,13 @@ export default function CalendarDayPanel({
         event.preventDefault();
         closeRef.current();
       }
+      if (['ArrowLeft', 'ArrowRight'].includes(event.key) && !event.defaultPrevented
+        && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey
+        && panelRef.current.contains(event.target)
+        && !event.target.closest('input, textarea, select, [contenteditable="true"], .calendar-day-note')) {
+        event.preventDefault();
+        navigateRef.current(event.key === 'ArrowLeft' ? -1 : 1);
+      }
       if (event.key !== 'Tab') return;
       const items = [...panelRef.current.querySelectorAll('button, input, select, textarea, summary, [tabindex="0"]')]
         .filter(item => !item.matches(':disabled') && item.getClientRects().length);
@@ -61,18 +76,82 @@ export default function CalendarDayPanel({
     };
   }, []);
 
+  useEffect(() => {
+    const panel = panelRef.current;
+    let gesture = null;
+    function start(event) {
+      gesture = null;
+      if (event.touches.length !== 1 || window.getSelection()?.toString()) return;
+      const target = event.target;
+      if (target.closest('input, textarea, select, a, summary, [contenteditable="true"], .calendar-day-note, .trade-delete-notices')
+        || (target.closest('button') && !target.closest('.calendar-day-record-main'))) return;
+      const touch = event.touches[0];
+      gesture = { id: touch.identifier, x: touch.clientX, y: touch.clientY, dx: 0, dy: 0, phase: 'pending', target, startedAt: performance.now() };
+    }
+    function move(event) {
+      if (!gesture || event.touches.length !== 1) { gesture = null; return; }
+      const touch = event.touches[0];
+      if (touch.identifier !== gesture.id) { gesture = null; return; }
+      gesture.dx = touch.clientX - gesture.x;
+      gesture.dy = touch.clientY - gesture.y;
+      if (gesture.phase === 'pending') {
+        if (Math.max(Math.abs(gesture.dx), Math.abs(gesture.dy)) < 10) return;
+        if (Math.abs(gesture.dx) <= Math.abs(gesture.dy) * 1.35) { gesture = null; return; }
+        gesture.phase = 'horizontal';
+      }
+      if (event.cancelable) event.preventDefault();
+      event.stopPropagation();
+    }
+    function end(event) {
+      const current = gesture;
+      gesture = null;
+      if (!current || current.phase !== 'horizontal') return;
+      suppressedClick.current = { target: current.target.closest('.calendar-day-record-main'), until: performance.now() + 500 };
+      const touch = [...event.changedTouches].find(item => item.identifier === current.id);
+      const dx = touch ? touch.clientX - current.x : current.dx;
+      const dy = touch ? touch.clientY - current.y : current.dy;
+      const distance = Math.abs(dx), velocity = distance / Math.max(1, performance.now() - current.startedAt);
+      if (Math.abs(dy) * 1.35 < distance && (distance >= Math.min(64, panel.clientWidth * .17) || (distance >= 30 && velocity >= .45))) {
+        navigateRef.current(dx < 0 ? 1 : -1);
+      }
+    }
+    function cancel() { gesture = null; }
+    panel.addEventListener('touchstart', start, { passive: true, capture: true });
+    panel.addEventListener('touchmove', move, { passive: false, capture: true });
+    panel.addEventListener('touchend', end, true);
+    panel.addEventListener('touchcancel', cancel, true);
+    return () => {
+      panel.removeEventListener('touchstart', start, true);
+      panel.removeEventListener('touchmove', move, true);
+      panel.removeEventListener('touchend', end, true);
+      panel.removeEventListener('touchcancel', cancel, true);
+    };
+  }, []);
+
   return <div className="calendar-day-backdrop fixed inset-0 z-40" data-light={Boolean(isLight)}
     onMouseDown={event => { backdropPress.current = event.target === event.currentTarget; }}
     onClick={event => { if (event.target === event.currentTarget && backdropPress.current) onClose(); }}>
     <SwipeDismissSheet ref={panelRef} as="section" role="dialog" aria-modal="true" aria-labelledby="calendar-day-title"
       tabIndex={-1} className="calendar-day-panel" data-mode={traderMode ? 'trader' : 'finance'}
-      data-date-key={dateKey} isLight={isLight} onDismiss={onClose} handleClassName="calendar-day-handle">
+      data-date-key={dateKey} isLight={isLight} onDismiss={onClose} handleClassName="calendar-day-handle"
+      onClickCapture={event => {
+        const suppressed = suppressedClick.current;
+        if (suppressed?.target && suppressed.until > performance.now() && suppressed.target.contains(event.target)) {
+          event.preventDefault(); event.stopPropagation(); suppressedClick.current = null;
+        }
+      }}>
       <header className="calendar-day-header">
-        <div className="calendar-day-date">
+        <div key={dateKey} className="calendar-day-date" data-step={direction}>
           <p>{dateKey === todayKey ? `${copy.today} · ` : ''}{weekday} · {date.getFullYear()}</p>
           <h2 id="calendar-day-title"><time dateTime={dateKey}>{title}</time></h2>
         </div>
-        <SheetCloseButton language={language} onClick={onClose}/>
+        <div className="calendar-day-header-tools">
+          <nav className="calendar-day-navigation" aria-label={copy.browseDays}>
+            <button type="button" onClick={() => navigateRef.current(-1)} aria-label={copy.previousDay} title={copy.previousDay}><ChevronLeft size={18}/></button>
+            <button type="button" onClick={() => navigateRef.current(1)} aria-label={copy.nextDay} title={copy.nextDay}><ChevronRight size={18}/></button>
+          </nav>
+          <SheetCloseButton language={language} onClick={onClose}/>
+        </div>
       </header>
 
       {!future && <div className="calendar-day-overview">
@@ -89,7 +168,7 @@ export default function CalendarDayPanel({
         {mixedCurrencies && <p className="calendar-day-currency-hint">{copy.currencyHint.replace('{currency}', currency)}</p>}
       </div>}
 
-      <div className="calendar-day-scroll">
+      <div key={`records-${dateKey}`} className="calendar-day-scroll" data-step={direction}>
         {children}
         {future ? !hasPlans && <div className="calendar-day-empty calendar-day-future">
           <span className="calendar-day-empty-icon"><CalendarDays size={22} strokeWidth={1.6}/></span>
@@ -121,6 +200,7 @@ export default function CalendarDayPanel({
         {note && <details className="calendar-day-note"><summary><Pencil size={15}/><span>{copy.note}</span><ChevronDown size={15}/></summary>{note}</details>}
       </div>
 
+      {undoNotice}
       <footer className="calendar-day-actions">
         <button type="button" className="calendar-day-add" onClick={future ? onPlan : onAdd}><Plus size={19} strokeWidth={2.2}/>{future ? copy.schedule : copy.add}</button>
         {!future && <button type="button" className="calendar-day-voice" onClick={onVoice} aria-label={copy.voiceDay} title={copy.voice}><Mic size={20} strokeWidth={1.8}/></button>}
