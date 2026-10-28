@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v103-desktop-parallax-toggle';
+const CACHE_NAME = 'atj-cache-v104-visible-parallax-controls';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

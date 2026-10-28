@@ -13,13 +13,11 @@ function subscribe(listener) {
 }
 const touchInput = () => window.matchMedia(QUERY).matches;
 
-export default function PhoneMotionControls({ language, theme, active, loading }) {
+export default function PhoneMotionControls({ language, theme }) {
   const phone = useSyncExternalStore(subscribe, touchInput, () => false);
-  if (!phone) return active && !loading && ['gold','emerald'].includes(theme)
-    ? <GlassParallaxControl language={language} theme={theme}/>
-    : null;
+  if (!phone) return <GlassParallaxControl language={language} theme={theme}/>;
   return <div className="settings-phone-motion" role="group" aria-label={LABEL[localeKey(language)]}>
-    {active && !loading && ['gold','emerald'].includes(theme) && <GlassParallaxControl language={language} theme={theme}/>}
+    {['gold','emerald'].includes(theme) && <GlassParallaxControl language={language} theme={theme}/>}
     <MonthShakeControl language={language}/>
   </div>;
 }
