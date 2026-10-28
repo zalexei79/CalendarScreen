@@ -1,5 +1,5 @@
 .activity-streak-overlay { position:fixed; inset:0; z-index:98; display:flex; align-items:flex-end; justify-content:center; padding-top:2.5rem; background:rgba(0,0,0,.76); backdrop-filter:blur(10px); }
-.activity-streak-dialog { width:100%; max-width:28rem; overflow:hidden; color:#f4f4f5; border:1px solid rgba(255,255,255,.08); border-radius:28px 28px 0 0; background:#0b0d11; box-shadow:0 24px 80px rgba(0,0,0,.42); animation:streak-dialog-in 360ms cubic-bezier(.2,0,0,1) both; }
+.activity-streak-dialog { position:relative; width:100%; max-width:28rem; overflow:hidden; color:#f4f4f5; border:1px solid rgba(255,255,255,.08); border-radius:28px 28px 0 0; background:#0b0d11; box-shadow:0 24px 80px rgba(0,0,0,.42); animation:streak-dialog-in 360ms cubic-bezier(.2,0,0,1) both; }
 .activity-streak-dialog-light { color:#18181b; border-color:#e4e4e7; background:#fff; }
 .activity-streak-dialog-head { display:flex; align-items:center; justify-content:space-between; padding:1rem 1.25rem; border-bottom:1px solid rgba(255,255,255,.07); }
 .activity-streak-dialog-light .activity-streak-dialog-head { border-color:#e4e4e7; }
@@ -58,6 +58,16 @@
 .activity-streak-dialog-light .activity-streak-caption { border-color:#e4e4e7; }
 .activity-streak-dialog-light .activity-streak-caption-text { color:#3f3f46; }
 .activity-streak-dialog-light .activity-streak-caption button { color:#92400e; }
+.activity-streak-caption button.is-copied { color:#6ee7b7; background:rgba(16,185,129,.16); }
+.activity-streak-dialog-light .activity-streak-caption button.is-copied { color:#047857; }
+.activity-streak-copy-toast { position:absolute; z-index:3; left:1rem; right:1rem; bottom:calc(5.25rem + env(safe-area-inset-bottom,0px)); display:flex; align-items:center; gap:.8rem; padding:1rem; border:1px solid #34d399; border-radius:18px; color:#ecfdf5; background:#073b30; box-shadow:0 12px 36px rgba(0,0,0,.4),0 0 20px rgba(16,185,129,.12); pointer-events:none; animation:streak-copy-confirm-in 220ms cubic-bezier(.2,0,0,1) both; }
+.activity-streak-copy-toast strong { display:block; font-size:.95rem; }
+.activity-streak-copy-toast p { margin:.3rem 0 0; font-size:.75rem; line-height:1.45; }
+.activity-streak-copy-toast-icon { display:grid; place-items:center; flex:none; width:40px; height:40px; border-radius:50%; color:#052e25; background:#6ee7b7; }
+.activity-streak-copy-toast-icon svg { animation:streak-copy-check-in 180ms 50ms cubic-bezier(.2,0,0,1) both; }
+.activity-streak-dialog-light .activity-streak-copy-toast { color:#064e3b; background:#ecfdf5; box-shadow:0 10px 32px rgba(6,78,59,.16); }
+@keyframes streak-copy-confirm-in { from { opacity:0; transform:translateY(10px) scale(.98); } to { opacity:1; transform:none; } }
+@keyframes streak-copy-check-in { from { transform:scale(.65); } to { transform:scale(1); } }
 .activity-streak-actions { display:grid; gap:.5rem; padding:.75rem 1rem max(.9rem,env(safe-area-inset-bottom)); border-top:1px solid rgba(255,255,255,.07); background:#0b0d11; }
 .activity-streak-dialog-light .activity-streak-actions { border-color:#e4e4e7; background:#fff; }
 .activity-streak-actions button { display:inline-flex; min-height:3.35rem; align-items:center; justify-content:center; gap:.55rem; border-radius:1rem; padding:0 1rem; font-size:.92rem; font-weight:800; cursor:pointer; transition:transform 150ms ease,background-color 150ms ease; }
@@ -73,4 +83,4 @@
 @keyframes streak-flame { 0%,100% { transform:translateY(2px) scale(.92) rotate(-2deg); } 50% { transform:translateY(-2px) scale(1.08) rotate(2deg); } }
 @keyframes streak-share-attention { 0%,72%,100% { transform:scale(1); box-shadow:0 8px 22px rgba(245,158,11,.22); } 78% { transform:scale(1.018); box-shadow:0 10px 30px rgba(245,158,11,.42); } 84% { transform:scale(1); box-shadow:0 8px 22px rgba(245,158,11,.22); } }
 @media(min-width:640px) { .activity-streak-overlay { align-items:center; padding:0 1rem; } .activity-streak-dialog { border-radius:28px; } }
-@media(prefers-reduced-motion:reduce) { .activity-streak-dialog,.activity-streak-hero strong,.activity-streak-preview,.activity-streak-aura,.activity-streak-hero-flame,.activity-streak-primary { animation:none; } .activity-streak-actions button { transition:none; } }
+@media(prefers-reduced-motion:reduce) { .activity-streak-dialog,.activity-streak-hero strong,.activity-streak-preview,.activity-streak-aura,.activity-streak-hero-flame,.activity-streak-primary,.activity-streak-copy-toast,.activity-streak-copy-toast-icon svg { animation:none; } .activity-streak-actions button { transition:none; } }

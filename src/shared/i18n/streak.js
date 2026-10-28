@@ -1,5 +1,6 @@
 export const streakCopy = {
   ru: {
+    streakCaptionCopyDone: 'Скопировано',
     streakSyncing: 'Синхронизируем огонёк аккаунта…',
     streakSyncOffline: 'Огонёк не синхронизирован. Подключись к сети; нажми, чтобы повторить.',
     streakReferralUnavailable: 'Не удалось получить твою реферальную ссылку. Войди в аккаунт и попробуй ещё раз.',
@@ -22,6 +23,7 @@ export const streakCopy = {
     streakStatusPaused: 'Серия сохранена после пропуска. Зайди завтра, чтобы продолжить.',
   },
   en: {
+    streakCaptionCopyDone: 'Copied',
     streakSyncing: 'Syncing your account streak…',
     streakSyncOffline: 'Streak is not synced. Connect to the internet; tap to retry.',
     streakReferralUnavailable: 'Could not prepare your referral link. Sign in and try again.',
@@ -44,6 +46,7 @@ export const streakCopy = {
     streakStatusPaused: 'Streak saved after a missed day. Return tomorrow to continue.',
   },
   md: {
+    streakCaptionCopyDone: 'Copiat',
     streakSyncing: 'Sincronizăm seria contului…',
     streakSyncOffline: 'Seria nu este sincronizată. Conectează-te la internet; apasă pentru a reîncerca.',
     streakReferralUnavailable: 'Nu am putut pregăti linkul tău de recomandare. Autentifică-te și încearcă din nou.',
@@ -66,6 +69,7 @@ export const streakCopy = {
     streakStatusPaused: 'Seria a fost salvată după o absență. Revino mâine pentru a continua.',
   },
   uk: {
+    streakCaptionCopyDone: 'Скопійовано',
     streakSyncing: 'Синхронізуємо вогник облікового запису…',
     streakSyncOffline: 'Вогник не синхронізовано. Підключися до мережі; натисни, щоб повторити.',
     streakReferralUnavailable: 'Не вдалося отримати твоє реферальне посилання. Увійди в обліковий запис і спробуй ще раз.',
@@ -88,6 +92,7 @@ export const streakCopy = {
     streakStatusPaused: 'Серію збережено після пропуску. Зайди завтра, щоб продовжити.',
   },
   'zh-CN': {
+    streakCaptionCopyDone: '已复制',
     streakSyncing: '正在同步账号的连续记录…',
     streakSyncOffline: '记录尚未同步。请连接网络，点击重试。',
     streakReferralUnavailable: '无法准备你的邀请链接。请登录后重试。',

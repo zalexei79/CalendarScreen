@@ -47,7 +47,10 @@ try {
         if (window.deferShare) await new Promise(resolve => { window.finishShare = resolve; });
       }, configurable: true });
       Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true });
-      Object.defineProperty(navigator, 'clipboard', { value: { writeText: async text => { window.copiedCaption = text; } }, configurable: true });
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText: async text => {
+        if (window.failCopy) throw new DOMException('Denied', 'NotAllowedError');
+        window.copiedCaption = text;
+      } }, configurable: true });
       // This suite mocks the clipboard transport; real selection-copy and
       // clipboard contents are covered separately in clipboard-ui-check.mjs.
       document.execCommand = () => false;
@@ -97,11 +100,32 @@ try {
         assert.ok((payload.url || payload.text).includes('ref=64511641'));
         await page.getByRole('button', { name: 'Скопировать подпись', exact: true }).click();
         assert.equal(await page.evaluate(() => window.copiedCaption), 'Я сохранил огонёк уже 5 дней 🔥\nПопробуй — https://streak.test/?install=1&ref=64511641');
+        const confirmation = page.locator('.activity-streak-copy-toast');
+        await confirmation.waitFor();
+        assert.ok((await confirmation.textContent()).includes('Скопировано'));
+        assert.equal(await page.locator('.activity-streak-caption button').textContent(), 'Скопировано');
+        const toastBox = await confirmation.boundingBox();
+        assert.ok(toastBox.y >= 0 && toastBox.y + toastBox.height <= 844, 'copy confirmation is visible without scrolling');
+        await page.screenshot({ path: `artifacts/streak-review/${platform}-dialog.png` });
         const bytes = await page.evaluate(async () => Array.from(new Uint8Array(await window.sharedStreak.files[0].arrayBuffer())));
         await writeFile(`artifacts/streak-review/${platform}-5.png`, Buffer.from(bytes));
-        await page.screenshot({ path: `artifacts/streak-review/${platform}-dialog.png` });
+        await confirmation.waitFor({ state: 'hidden', timeout: 6000 });
+        assert.equal(await page.locator('.activity-streak-caption button').textContent(), 'Скопировать подпись');
+        await page.evaluate(() => { window.failCopy = true; });
+        await page.locator('.activity-streak-caption button').click();
+        await page.locator('[role="status"]').filter({ hasText: 'Выдели и скопируй подпись выше.' }).waitFor();
+        assert.equal(await confirmation.count(), 0, 'failed clipboard write cannot show success');
+        await page.evaluate(() => { window.failCopy = false; });
       }
     }
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.evaluate(() => window.configureStreak({ days: 5, language: 'ru', light: true }));
+    await page.waitForFunction(() => !document.querySelector('.activity-streak-primary').disabled);
+    await page.locator('.activity-streak-caption button').click();
+    await page.locator('.activity-streak-copy-toast').waitFor();
+    assert.equal(await page.locator('.activity-streak-copy-toast').evaluate(node => getComputedStyle(node).animationName), 'none');
+    await page.screenshot({ path: `artifacts/streak-review/${platform}-copy-light.png` });
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
     // A missing or failed referral must not produce a generic share URL or leave
     // the previous owner's photo available. A subsequent retry must recover.
     for (const ensure of ['empty', 'throw']) {

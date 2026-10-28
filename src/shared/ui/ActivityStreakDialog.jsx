@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Flame, Pause, Clock3, RotateCcw, RefreshCw, Share2, Copy, ChevronDown, X } from 'lucide-react';
+import { Flame, Pause, Clock3, RotateCcw, RefreshCw, Share2, Copy, Check, ChevronDown, X } from 'lucide-react';
 import SwipeDismissSheet from './SwipeDismissSheet.jsx';
 import { createStreakPoster } from '../lib/streakPoster.js';
 import { streakDayLabel } from '../i18n/streak.js';
@@ -20,6 +20,8 @@ export default function ActivityStreakDialog({
   const [preparedShare, setPreparedShare] = useState(null);
   const [shareError, setShareError] = useState('');
   const [shareNotice, setShareNotice] = useState('');
+  const [copyFeedback, setCopyFeedback] = useState(null);
+  const copyAttemptRef = useRef(0);
   const [sharing, setSharing] = useState(false);
   const [retry, setRetry] = useState(0);
   const sharingRef = useRef(false);
@@ -41,6 +43,13 @@ export default function ActivityStreakDialog({
     runUnit: t('streakRunUnit'), grace: t('streakPosterGrace'), reset: t('streakPosterReset'),
   };
   const caption = ready ? streakShareCaption(copy.shareText, streakDayLabel(days, language), preparedShare.url) : '';
+  const copied = Boolean(ready && copyFeedback?.caption === caption);
+
+  useEffect(() => {
+    if (!copyFeedback) return undefined;
+    const timer = window.setTimeout(() => setCopyFeedback(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [copyFeedback]);
 
   useEffect(() => () => {
     if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
@@ -52,6 +61,8 @@ export default function ActivityStreakDialog({
     setBusy(true);
     setShareError('');
     setShareNotice('');
+    setCopyFeedback(null);
+    copyAttemptRef.current += 1;
     setPreparedShare(null);
     setPreviewUrl('');
 
@@ -121,10 +132,15 @@ export default function ActivityStreakDialog({
 
   async function copyCaption() {
     if (!caption) return;
+    const attempt = ++copyAttemptRef.current;
+    setCopyFeedback(null);
     try {
       await copyText(caption, { container: captionRef.current || document.body, preferSelection: isAppleTouchDevice() });
-      setShareNotice(t('streakCaptionCopied'));
+      if (attempt !== copyAttemptRef.current) return;
+      setShareNotice('');
+      setCopyFeedback({ caption, id: attempt });
     } catch {
+      if (attempt !== copyAttemptRef.current) return;
       setShareNotice(t('streakCaptionSelect'));
     }
   }
@@ -176,13 +192,17 @@ export default function ActivityStreakDialog({
           {previewUrl && <img className="activity-streak-preview" src={previewUrl} alt={copy.title} />}
           <p className="activity-streak-hint">{copy.inviteHint}</p>
           {ready && <div className="activity-streak-caption" ref={captionRef}>
-            <div><strong>{t('streakCaptionTitle')}</strong><button type="button" onClick={copyCaption}><Copy size={14} aria-hidden="true" />{t('streakCaptionCopy')}</button></div>
+            <div><strong>{t('streakCaptionTitle')}</strong><button type="button" onClick={copyCaption} className={copied ? 'is-copied' : ''}>{copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}{t(copied ? 'streakCaptionCopyDone' : 'streakCaptionCopy')}</button></div>
             <p className="activity-streak-caption-text">{caption}</p>
             <p className="activity-streak-hint">{t('streakCaptionHint')}</p>
           </div>}
           {shareNotice && <p className="activity-streak-hint" role="status">{shareNotice}</p>}
         </div>
 
+        {copied && <div key={copyFeedback.id} className="activity-streak-copy-toast" role="status" aria-live="polite" aria-atomic="true">
+          <span className="activity-streak-copy-toast-icon"><Check size={22} aria-hidden="true" /></span>
+          <div><strong>{t('streakCaptionCopyDone')}</strong><p>{t('streakCaptionCopied')}</p></div>
+        </div>}
         <div className="activity-streak-actions">
           <button type="button" onClick={share} disabled={busy || !ready || sharing} className="activity-streak-primary"><Share2 size={19} />{copy.share}</button>
         </div>
