@@ -48,9 +48,9 @@ export const receiptFormats=[
  {id:'two-receipts-one-photo',text:receipt('BON FISCAL\nTea 15.00\nTOTAL 15.00\nBON FISCAL\nSoap 15.00\nTOTAL 15.00'),total:'15.00',count:1,valid:false,issue:'multipleReceipts'},
  {id:'ambiguous-lei',text:'MAGAZIN\nPaine 7.10\nTOTAL LEI 7.10\n19-10-2026',total:'7.10',count:1,valid:false,currency:''},
  {id:'mixed-currency',text:receipt('Milk 10.00\nTOTAL USD 10.00\nPaid EUR 9.00'),total:'10.00',count:1,valid:false,currency:''},
- {id:'multiple-dates',text:receipt('Milk 10.00\nTOTAL 10.00','Expires 20-10-2026'),total:'10.00',count:1,valid:false,date:''},
+ {id:'expiry-is-not-purchase-date',text:receipt('Milk 10.00\nTOTAL 10.00','Expires 20-10-2026'),total:'10.00',count:1,valid:true,date:'2026-10-19'},
  {id:'invalid-day',text:'SHOP\nUSD\nMilk 10.00\nTOTAL 10.00\n30-02-2026',total:'10.00',count:1,valid:false},
- {id:'us-date-not-silently-reversed',text:'SHOP\nUSD\nMilk 10.00\nTOTAL 10.00\n10/19/2026',total:'10.00',count:1,valid:false},
+ {id:'unambiguous-us-date',text:'SHOP\nUSD\nMilk 10.00\nTOTAL 10.00\n10/19/2026',total:'10.00',count:1,valid:true,date:'2026-10-19'},
  {id:'future-date',text:'SHOP\nUSD\nMilk 10.00\nTOTAL 10.00\n21-10-2026',total:'10.00',count:1,valid:false},
 ];
 

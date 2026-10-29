@@ -1,4 +1,5 @@
 const rows = {
+  itemPriceMissing: ['Цена требует проверки','Unit price needs review','Prețul necesită verificare','单价待核对'],
   scanGallery: ['Галерея','Gallery','Galerie','相册'],
   scanCaptured: ['Снимок готов. Читаем чек…','Photo captured. Reading receipt…','Fotografie capturată. Citim bonul…','已拍摄，正在识别收据…'],
   ocrLocal: ['Выделяем чек и проверяем сумму на устройстве.','Locating the receipt and checking the amount on your device.','Identificăm bonul și verificăm suma pe dispozitiv.','在本设备上定位收据并核对金额。'],

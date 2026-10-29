@@ -2,6 +2,8 @@
 
 See [receipt formats and recognition boundaries](receipt-formats.md) for the
 expanded parser corpus, source research and deliberate manual-review cases.
+The [public corpus experiment](receipt-corpus.md) documents the trained row-role
+helper, exact source licenses, reproducible fixtures and separate photo results.
 
 The finance calendar has a photo button beside the microphone. PRO members can
 choose an image or take a new photo, review/edit recognized items and save one
@@ -16,7 +18,7 @@ product names. Unknown names require correction/removal. Each conflicting row is
 marked; the difference between item sums and the receipt total is shown explicitly.
 
 Product types are separate from accounting categories. The shared catalog contains
-93 stable types with Russian, Romanian, English and Chinese aliases/icons. Unknown
+98 stable types with Russian, Romanian, English and Chinese aliases/icons. Unknown
 products retain their name and a generic icon; they never create calendar
 categories. The searchable type picker can correct a match. Exact-name corrections
 are stored for that account on the current device (maximum 1,000 aliases), with an
@@ -47,12 +49,20 @@ currency or date stays unset. Item discrepancies show a warning; an explicit
 photo/date/currency/total confirmation is always required and resets after edits.
 Users can remove unreadable rows and save only a manually verified total.
 
-Current currency options remain USD/EUR/MDL/RUB/CNY. RON is recognized as RON but
+Current currency options remain USD/EUR/MDL/RUB/CNY/UAH. RON is recognized as RON but
 must not be silently converted to MDL. Date must be today or in the past. Repeated
 identical date/amount/currency/details are blocked against current calendar data;
 this is not an atomic cross-device deduplication guarantee. Saves use the normal
 calendar cloud-sync queue. The success screen reports expenses on the receipt's
 date in that currency, excluding income and trading-platform records.
+
+The learned helper only nominates possible product rows when a visual price
+column exists. It never authorizes a financial total or invents missing unit
+prices by dividing a line total. Final-total labels outrank intermediate totals.
+Conflicting, low-confidence or recovered-after-failure OCR totals remain review
+choices, even when two numeric rereads agree. Country evidence can resolve a
+numeric date; unresolved day/month order remains blank. Merchant extraction
+excludes promotions, addresses, cashier identifiers and payment processors.
 
 ## Verification
 

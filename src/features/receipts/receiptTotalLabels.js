@@ -7,6 +7,7 @@ const groups = [
   'итог|итого|всего|всего к оплате|итого к оплате|итог к оплате|к оплате|сумма|общая сумма|общая стоимость|сумма чека|итог чека|итого по чеку|всего по чеку|сумма покупки|сумма к оплате|всего на сумму|всего оплачено|оплачено всего|итоговая сумма|полная стоимость',
   'сума|усього|всього|разом|до сплати|сума до сплати|сума до оплати|до оплати|разом до сплати|разом до оплати|загальна сума|загальна вартість|сума чека|сума покупки|всього до сплати|усього до сплати|сплачено всього',
   'total|totalul|total lei|total de plata|total spre plata|total de achitat|total general|total bon|total bon fiscal|suma|suma totala|suma de plata|suma spre plata|suma de achitat|de plata|spre plata|de achitat|valoare totala|valoarea totala|total achitat|total incasat',
+  'grandtotal|due|dine in total|take away total|for here total|total take away|eatin total|total belanja|total bayar|jumlah',
   'grand total|total amount|total price|total cost|total payment|total paid|total sale|total sales|total purchase|total payable|total to pay|total incl tax|total including tax|total incl vat|total including vat|amount paid|amount payable|net payable|all price|receipt total|purchase total|sale total|order total|payment total|final total|final amount|transaction total|transaction amount',
   'gesamt|gesamtsumme|gesamtbetrag|endbetrag|endsumme|summe|zu zahlen|zahlbetrag|rechnungsbetrag|bruttobetrag',
   'total ttc|montant total|total a payer|net a payer|montant a payer|total general|somme totale',

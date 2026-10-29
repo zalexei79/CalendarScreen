@@ -1,0 +1,188 @@
+{
+  "version": 1,
+  "checkedOn": "2026-10-29",
+  "sources": [
+    {
+      "name": "CORD v2 by NAVER CLOVA",
+      "url": "https://github.com/clovaai/cord",
+      "dataUrl": "https://huggingface.co/datasets/naver-clova-ix/cord-v2",
+      "revision": "7f0115a4b758a71d6473b8d085751692da2fef98",
+      "license": "CC BY 4.0",
+      "originalRecordsSHA256": "dccdf1695dab4c99dedd7642f11528ea9f12d89ffc7856126ee3eda771991db4"
+    },
+    {
+      "name": "ExpressExpense SRD",
+      "url": "https://expressexpense.com/blog/free-receipt-images-ocr-machine-learning-dataset/",
+      "dataUrl": "https://expressexpense.com/large-receipt-image-dataset-SRD.zip",
+      "license": "MIT",
+      "zipSHA256": "aac2e8ea4d42c62b38c2762fc655eafe1e37edb7b67923cce1a494e66bc64939"
+    },
+    {
+      "name": "Auad et al., SIBGRAPI2024 manual OCR transcripts",
+      "url": "https://zenodo.org/records/13688441",
+      "dataUrl": "https://github.com/MaVILab-UFV/Filtering-Preparation-for-OCR_SIBGRAPI-2024",
+      "revision": "eeca2d823e2eccb4e76688fa010a26514215afc8",
+      "license": "CC BY 4.0",
+      "licenseEvidence": "https://api.datacite.org/dois/10.5281/zenodo.13688441"
+    }
+  ],
+  "training": {
+    "documents": 763,
+    "validation": 99,
+    "test": 100,
+    "duplicateTrainExclusions": 37
+  },
+  "ocr": {
+    "actualUniqueImages": 266,
+    "rawPasses": 327,
+    "engine": "Tesseract.js6.0.1",
+    "languages": [
+      "eng",
+      "ron",
+      "rus"
+    ],
+    "fullPipelineSample": 20,
+    "fullPipelineBundleSHA256": "2d4c61e4853fe5a09c02840b27b732d97ba31f0be834f50946c8b978a4f390d2",
+    "summary": {
+      "generatedAt": "2026-10-28T20:19:25.198Z",
+      "stage": "raw OCR and alternate raw segmentation, not full DAYRIS recovery",
+      "datasets": {
+        "cord-v2": {
+          "actualUniqueImagesAttempted": 226,
+          "rawPsm3": {
+            "workerSuccess": 223,
+            "blank": 57,
+            "errors": [
+              {
+                "id": "cord-v2-test-059",
+                "error": "IMAGE_TIMEOUT"
+              },
+              {
+                "id": "cord-v2-train-013",
+                "error": "IMAGE_TIMEOUT"
+              },
+              {
+                "id": "cord-v2-train-019",
+                "error": "IMAGE_TIMEOUT"
+              }
+            ],
+            "nonblank": 166,
+            "medianMs": 1202,
+            "p95Ms": 7475
+          },
+          "rawPsm6OnBlankOrFailure": {
+            "attempted": 60,
+            "workerSuccess": 53,
+            "nonblank": 49,
+            "errors": [
+              {
+                "id": "cord-v2-test-043",
+                "error": "IMAGE_TIMEOUT"
+              },
+              {
+                "id": "cord-v2-test-059",
+                "error": "IMAGE_TIMEOUT"
+              },
+              {
+                "id": "cord-v2-validation-005",
+                "error": "IMAGE_TIMEOUT"
+              },
+              {
+                "id": "cord-v2-validation-020",
+                "error": "IMAGE_TIMEOUT"
+              },
+              {
+                "id": "cord-v2-validation-026",
+                "error": "IMAGE_TIMEOUT"
+              },
+              {
+                "id": "cord-v2-validation-027",
+                "error": "IMAGE_TIMEOUT"
+              },
+              {
+                "id": "cord-v2-validation-044",
+                "error": "IMAGE_TIMEOUT"
+              }
+            ]
+          },
+          "combinedNonblank": 215,
+          "stillUnreadable": [
+            "cord-v2-test-020",
+            "cord-v2-test-039",
+            "cord-v2-test-043",
+            "cord-v2-test-059",
+            "cord-v2-train-011",
+            "cord-v2-validation-005",
+            "cord-v2-validation-020",
+            "cord-v2-validation-026",
+            "cord-v2-validation-027",
+            "cord-v2-validation-044",
+            "cord-v2-validation-082"
+          ],
+          "selectionRule": "Use PSM3 when nonblank; otherwise use PSM6 when nonblank. Ground truth never used for this selection."
+        },
+        "express-expense": {
+          "actualUniqueImagesAttempted": 40,
+          "rawPsm3": {
+            "workerSuccess": 40,
+            "blank": 1,
+            "errors": [],
+            "nonblank": 39,
+            "medianMs": 3013,
+            "p95Ms": 6025
+          },
+          "rawPsm6OnBlankOrFailure": {
+            "attempted": 1,
+            "workerSuccess": 1,
+            "nonblank": 1,
+            "errors": []
+          },
+          "combinedNonblank": 40,
+          "stillUnreadable": [],
+          "selectionRule": "Use PSM3 when nonblank; otherwise use PSM6 when nonblank. Ground truth never used for this selection."
+        }
+      },
+      "actualUniqueImagesAttempted": 266,
+      "totalRawPasses": 327,
+      "combinedNonblank": 255,
+      "limits": [
+        "Nonblank text is coverage, not correct field extraction or total accuracy.",
+        "Measurements are from this computer using Node Tesseract, not physical iPhone capture.",
+        "Full DAYRIS image crop, total numeric rereads and item recovery were not run in this benchmark."
+      ],
+      "uniqueImageHashesVerified": 266
+    }
+  },
+  "files": [
+    {
+      "name": "cord-v2.jsonl.gz",
+      "bytes": 473587,
+      "sha256": "738afa878c14d5e64ed6533bb334aac375e4a6ba122e59b69ab75369ab091187"
+    },
+    {
+      "name": "express-transcripts.jsonl.gz",
+      "bytes": 52597,
+      "sha256": "20e9ae912ed02606c248de12a27ed0abd1eeb56522763517d46cb16ccd229524"
+    },
+    {
+      "name": "ocr-evaluation.jsonl.gz",
+      "bytes": 187006,
+      "sha256": "b52ae6290fef74c43c4b5199c5384c48b208426474242e29b0fe650020b8ba13"
+    },
+    {
+      "name": "full-pipeline.jsonl.gz",
+      "bytes": 19234,
+      "sha256": "6c02e1abb266c60d5f5ed744d04dc60ca48f9be0cc7c2425f05d872cdf30c440"
+    },
+    {
+      "name": "field-gold.jsonl",
+      "bytes": 28324,
+      "sha256": "d1ec1f3d675bebb7319402f450e6b90d0af1792088958e158fbe46a2889cbaf6"
+    },
+    {
+      "name": "splits.json",
+      "bytes": 28863,
+      "sha256": "fd56d2687d8fc35586c456ff32b78c94c36a8c45975ba844b26a07f7bd9cfc14"
+    }
+  ]
+}

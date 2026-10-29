@@ -3,12 +3,12 @@ import {finalReceiptLabel} from './receiptTotalLabels.js';
 
 // Match the whole accounting label, not a product containing "Total" or "Tax".
 const dueLabel = /^(?:amount\s+due|balance\s+due)(?=$|[\s:：=\d€$₽£¥])/iu;
-const currencies = /\b(?:mdl|ron|lei|leu|usd|eur|rub|cny|rmb|gbp|chf|uah|pln|jpy)\b|us\$|руб\.?|грн\.?|[€$₽£¥₴]|人民币/giu;
+const currencies = /\b(?:mdl|ron|lei|leu|usd|eur|rub|cny|rmb|gbp|chf|uah|pln|jpy|idr)\b|\brp\.?\s*|us\$|руб\.?|грн\.?|[€$₽£¥₴]|人民币/giu;
 const includedTax = /\b(?:incl(?:uded|usive)?\.?|with)\s*(?:vat|tax|tva)\b|\b(?:cu\s+tva|tva\s+inclus[ae]?)\b|с\s+ндс(?=$|\s|\d)/giu;
 export function receiptTotalAnchor(value) {
-  const text=normalize(value).replace(/^[\s*#>·|]+/u,'');
+  const text=normalize(value).replace(/^[\s*#>·|]+/u,'').replace(/^(?:(?:\d{1,2}[./-]\d{1,2}(?:[./-]\d{2,4})?)\s+)?\d{1,2}:\d{2}(?::\d{2})?(?:\s*[ap]m)?\s+/iu,'');
   const label=text.match(finalReceiptLabel)||text.match(dueLabel);
-  if(label)return {role:dueLabel.test(text)?'due':'final',tail:text.slice(label[0].length),fuzzy:false};
+  if(label)return {role:dueLabel.test(text)?'due':'final',tail:text.slice(label[0].length),fuzzy:false,priority:/^(?:grand\s*total|final (?:total|amount)|total grand)(?=$|[\s:.,=\d])/iu.test(text)?2:1};
   // Only known visual OCR confusions, never arbitrary edit-distance matching
   // ("Sumac" and other real product names must remain products).
   const fuzzy=text.match(/^(?:t[оo0]ta[l1i|]|[иiі][тt][оo0][гr](?:[оo0])?|[вb][сc][еe][гr][оo0]|[сc\[][уyчu](?:[мm]|r[nm])[аa]|с\s+у\s+м\s+а|и\s+т\s+о\s+г(?:\s+о)?|t\s+o\s+t\s+a\s+l)(?=$|[\s.,:：=\d€$₽£¥₴])/iu);
@@ -21,18 +21,19 @@ export function receiptTotalLine(value) {
   // A fiscal total may wrap, but arbitrary product words and percent summaries
   // are not final-total labels. Signs remain available for refund detection.
   if(tail&&!/^[+\-−]?\s*\d[\d\s.,'’]*$/.test(tail))return null;
-  return {role:label.role,amount:tail,evidence:String(value)};
+  return {role:label.role,amount:tail,evidence:String(value),priority:label.priority||1};
 }
 
 export function receiptNonItemLine(value) {
   const text=normalize(value).replace(/^[>\s*#]+/u,'');
-  return /^(?:sub\s*total\b|подытог|промежуточ|reduc\w*\b|discount\b|coupon\b|voucher\s+(?:used|redeemed)\b|скидк|знижк|сума\s+податк|сума\s+пдв|пдв|готівк|решта|заокругл|экономия|economii\b|savings\b|brut\b|net\s+total\b|numerar\b|cash\b|rest\b|change\b|card\b|visa\b|mastercard\b|debit\b|credit\b|payment\b|paid\b|tendered\b|налич|безнал|сдач|оплата|карта\b|tva\b|vat\b|tax(?:es)?\b|ндс\b|service\s+charge\b|tip\b|gratuity\b|rounding\b|rotunjire\b|округление|обслуживание|чаевые|loyalty\b|bonus\b|points\b|балл|小计|优惠|找零|税|支付|现金)/iu.test(text);
+  if(/^total\s+(?:discount|tax|vat|tva|items?|qty|quantity|weight|change|kembalian|cash)\b/iu.test(text))return true;
+  return /^(?:sub[\s-]*total\b|подытог|промежуточ|reduc\w*\b|discount\b|coupon\b|voucher\s+(?:used|redeemed)\b|скидк|знижк|сума\s+податк|сума\s+пдв|пдв|готівк|решта|заокругл|экономия|economii\b|savings\b|brut\b|net\s+total\b|numerar\b|cash\b|tunai\b|kembali(?:an)?\b|debet\b|edc\b|ppn\b|pajak\b|dpp\b|ongkos\b|rest\b|change\b|card\b|visa\b|mastercard\b|debit\b|credit\b|payment\b|paid\b|tendered\b|налич|безнал|сдач|оплата|карта\b|tva\b|vat\b|tax(?:es)?\b|ндс\b|service\s+charge\b|tip\b|gratuity\b|rounding\b|rotunjire\b|округление|обслуживание|чаевые|loyalty\b|bonus\b|points\b|балл|小计|优惠|找零|税|支付|现金)/iu.test(text);
 }
 
 export function receiptMetadataLine(value) {
   const text=normalize(value).replace(/^[\s|]+/u,'');
   if(/^(?:[i1l|]{1,3}|[з3][1iнh])\s+.*(?:\d[\s-]?){6,}/iu.test(text))return true;
-  return /^(?:[з3]н|пн|чн|фн|фп|іпн|рнокпп|каса|касса|касир|кассир|кас[аи]|чек\s*\d|id(?:no|np)?|inr|kkm|ккм|инн|эклз)(?=$|[\s:№#\d])/iu.test(text)||/^(?:mdl|ron|usd|eur|rub|cny|rmb|gbp|chf|uah|pln|jpy|lei|грн|руб)\.?$/iu.test(text);
+  return /^(?:[з3]н|пн|чн|фн|фп|іпн|рнокпп|каса|касса|касир|кассир|кас[аи]|чек\s*\d|id(?:no|np)?|inr|kkm|ккм|инн|эклз)(?=$|[\s:№#\d])/iu.test(text)||/^(?:mdl|ron|usd|eur|rub|cny|rmb|gbp|chf|uah|pln|jpy|idr|rp|lei|грн|руб)\.?$/iu.test(text);
 }
 
 export function receiptDocumentIssue(lines) {

@@ -1,0 +1,1587 @@
+{
+  "measuredOn": "2026-10-29",
+  "baselineCommit": "34a2c55d",
+  "fieldModel": {
+    "model": {
+      "version": 1,
+      "kind": "post-OCR-row-role-softmax",
+      "source": "CORD v2 by NAVER CLOVA, CC BY 4.0",
+      "sourceUrl": "https://github.com/clovaai/cord",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "changes": "Advisory row-role classifier trained on763 deduplicated receipts; no source images in runtime.",
+      "revision": "7f0115a4b758a71d6473b8d085751692da2fef98",
+      "fixtureSHA256": "738afa878c14d5e64ed6533bb334aac375e4a6ba122e59b69ab75369ab091187",
+      "trainingDocuments": 763,
+      "trainingRows": 6386,
+      "seed": 708,
+      "epochs": 30,
+      "roles": [
+        "item",
+        "total",
+        "adjustment",
+        "payment"
+      ],
+      "features": 148
+    },
+    "training": {
+      "documents": 763,
+      "rows": 6386,
+      "accuracy": 0.9317256498590667,
+      "roles": [
+        {
+          "role": "item",
+          "precision": 0.9726628417144786,
+          "recall": 0.9449180327868852
+        },
+        {
+          "role": "total",
+          "precision": 0.8413948256467941,
+          "recall": 0.9420654911838791
+        },
+        {
+          "role": "adjustment",
+          "precision": 0.896404109589041,
+          "recall": 0.896404109589041
+        },
+        {
+          "role": "payment",
+          "precision": 0.931918008784773,
+          "recall": 0.9264919941775837
+        }
+      ],
+      "confusion": [
+        [
+          2882,
+          34,
+          83,
+          51
+        ],
+        [
+          8,
+          748,
+          17,
+          21
+        ],
+        [
+          43,
+          57,
+          1047,
+          21
+        ],
+        [
+          30,
+          50,
+          21,
+          1273
+        ]
+      ]
+    },
+    "validation": {
+      "documents": 99,
+      "rows": 734,
+      "accuracy": 0.9482288828337875,
+      "roles": [
+        {
+          "role": "item",
+          "precision": 0.9546827794561934,
+          "recall": 0.9693251533742331
+        },
+        {
+          "role": "total",
+          "precision": 0.8990825688073395,
+          "recall": 1
+        },
+        {
+          "role": "adjustment",
+          "precision": 0.9548872180451128,
+          "recall": 0.9136690647482014
+        },
+        {
+          "role": "payment",
+          "precision": 0.9627329192546584,
+          "recall": 0.9064327485380117
+        }
+      ],
+      "confusion": [
+        [
+          316,
+          1,
+          5,
+          4
+        ],
+        [
+          0,
+          98,
+          0,
+          0
+        ],
+        [
+          5,
+          5,
+          127,
+          2
+        ],
+        [
+          10,
+          5,
+          1,
+          155
+        ]
+      ]
+    },
+    "test": {
+      "documents": 100,
+      "rows": 791,
+      "accuracy": 0.9405815423514539,
+      "roles": [
+        {
+          "role": "item",
+          "precision": 0.9623655913978495,
+          "recall": 0.9572192513368984
+        },
+        {
+          "role": "total",
+          "precision": 0.8715596330275229,
+          "recall": 0.95
+        },
+        {
+          "role": "adjustment",
+          "precision": 0.910958904109589,
+          "recall": 0.9236111111111112
+        },
+        {
+          "role": "payment",
+          "precision": 0.9634146341463414,
+          "recall": 0.9132947976878613
+        }
+      ],
+      "confusion": [
+        [
+          358,
+          1,
+          10,
+          5
+        ],
+        [
+          4,
+          95,
+          1,
+          0
+        ],
+        [
+          6,
+          4,
+          133,
+          1
+        ],
+        [
+          4,
+          9,
+          2,
+          158
+        ]
+      ]
+    }
+  },
+  "baseline": {
+    "version": 3,
+    "parser": "baseline",
+    "evaluation": "Separate parsing of annotated transcriptions and frozen raw OCR; no claim of full mobile/app accuracy. Manual40field gold is calibration, not blind validation. Full-pipeline replay re-parses20 frozen browser OCR outputs, not a fresh engine run.",
+    "trainingDocuments": 763,
+    "annotation": {
+      "train": {
+        "documents": 763,
+        "annotatedTotal": 742,
+        "exactTotal": 527,
+        "wrongSelectedTotal": 4,
+        "missingTotal": 211,
+        "correctReviewCandidate": 0,
+        "unknownGold": 21,
+        "itemsRecognized": 185,
+        "expectedItems": 2019,
+        "exactNamedItemAmounts": 59
+      },
+      "validation": {
+        "documents": 99,
+        "annotatedTotal": 97,
+        "exactTotal": 73,
+        "wrongSelectedTotal": 0,
+        "missingTotal": 24,
+        "correctReviewCandidate": 0,
+        "unknownGold": 2,
+        "itemsRecognized": 13,
+        "expectedItems": 220,
+        "exactNamedItemAmounts": 1
+      },
+      "test": {
+        "documents": 100,
+        "annotatedTotal": 95,
+        "exactTotal": 64,
+        "wrongSelectedTotal": 0,
+        "missingTotal": 31,
+        "correctReviewCandidate": 0,
+        "unknownGold": 5,
+        "itemsRecognized": 30,
+        "expectedItems": 251,
+        "exactNamedItemAmounts": 13
+      }
+    },
+    "raw": {
+      "train": {
+        "documents": 23,
+        "annotatedTotal": 23,
+        "exactTotal": 0,
+        "wrongSelectedTotal": 0,
+        "missingTotal": 23,
+        "correctReviewCandidate": 0,
+        "unknownGold": 0,
+        "itemsRecognized": 3,
+        "expectedItems": 79,
+        "exactNamedItemAmounts": 0
+      },
+      "validation": {
+        "documents": 99,
+        "annotatedTotal": 97,
+        "exactTotal": 7,
+        "wrongSelectedTotal": 3,
+        "missingTotal": 87,
+        "correctReviewCandidate": 0,
+        "unknownGold": 2,
+        "itemsRecognized": 3,
+        "expectedItems": 220,
+        "exactNamedItemAmounts": 0
+      },
+      "test": {
+        "documents": 99,
+        "annotatedTotal": 94,
+        "exactTotal": 10,
+        "wrongSelectedTotal": 0,
+        "missingTotal": 84,
+        "correctReviewCandidate": 0,
+        "unknownGold": 5,
+        "itemsRecognized": 13,
+        "expectedItems": 242,
+        "exactNamedItemAmounts": 0
+      }
+    },
+    "rawWithFallback": {
+      "train": {
+        "documents": 25,
+        "annotatedTotal": 25,
+        "exactTotal": 0,
+        "wrongSelectedTotal": 0,
+        "missingTotal": 25,
+        "correctReviewCandidate": 0,
+        "unknownGold": 0,
+        "itemsRecognized": 5,
+        "expectedItems": 91,
+        "exactNamedItemAmounts": 0
+      },
+      "validation": {
+        "documents": 99,
+        "annotatedTotal": 97,
+        "exactTotal": 8,
+        "wrongSelectedTotal": 5,
+        "missingTotal": 84,
+        "correctReviewCandidate": 0,
+        "unknownGold": 2,
+        "itemsRecognized": 6,
+        "expectedItems": 220,
+        "exactNamedItemAmounts": 0
+      },
+      "test": {
+        "documents": 100,
+        "annotatedTotal": 95,
+        "exactTotal": 10,
+        "wrongSelectedTotal": 1,
+        "missingTotal": 84,
+        "correctReviewCandidate": 0,
+        "unknownGold": 5,
+        "itemsRecognized": 15,
+        "expectedItems": 251,
+        "exactNamedItemAmounts": 0
+      }
+    },
+    "curated": {
+      "calibration": true,
+      "documents": 40,
+      "merchant": {
+        "gold": 35,
+        "exact": 25,
+        "unlabelledPredictions": 5
+      },
+      "date": {
+        "gold": 29,
+        "exact": 5,
+        "unlabelledPredictions": 5
+      },
+      "total": {
+        "gold": 32,
+        "exact": 25,
+        "wrong": 0
+      },
+      "failures": [
+        {
+          "id": "1000-receipt",
+          "field": "date",
+          "gold": "2016-05-26",
+          "predicted": ""
+        },
+        {
+          "id": "1001-receipt",
+          "field": "date",
+          "gold": "2015-04-25",
+          "predicted": ""
+        },
+        {
+          "id": "1002-receipt",
+          "field": "merchant",
+          "gold": "Taco Bell 017314",
+          "predicted": "For a Chance to WIN"
+        },
+        {
+          "id": "1003-receipt",
+          "field": "date",
+          "gold": "2017-04-20",
+          "predicted": ""
+        },
+        {
+          "id": "1004-receipt",
+          "field": "date",
+          "gold": "2019-05-18",
+          "predicted": "2019-18-05"
+        },
+        {
+          "id": "1005-receipt",
+          "field": "date",
+          "gold": "2017-08-15",
+          "predicted": "2017-15-08"
+        },
+        {
+          "id": "1012-receipt",
+          "field": "date",
+          "gold": "2019-04-01",
+          "predicted": ""
+        },
+        {
+          "id": "1014-receipt",
+          "field": "date",
+          "gold": "2019-02-23",
+          "predicted": ""
+        },
+        {
+          "id": "1018-receipt",
+          "field": "merchant",
+          "gold": "IN-N-OUT BURGER SANTA CLARA",
+          "predicted": "L1T1 12:49 PM"
+        },
+        {
+          "id": "1020-receipt",
+          "field": "date",
+          "gold": "2019-07-26",
+          "predicted": ""
+        },
+        {
+          "id": "1021-receipt",
+          "field": "date",
+          "gold": "2018-07-13",
+          "predicted": ""
+        },
+        {
+          "id": "1023-receipt",
+          "field": "merchant",
+          "gold": "Thai Gusto Restaurant",
+          "predicted": "Thai"
+        },
+        {
+          "id": "1023-receipt",
+          "field": "date",
+          "gold": "2017-06-16",
+          "predicted": ""
+        },
+        {
+          "id": "1027-receipt",
+          "field": "merchant",
+          "gold": "Longboards",
+          "predicted": "OAHU, HAWAII"
+        },
+        {
+          "id": "1033-receipt",
+          "field": "date",
+          "gold": "2019-05-18",
+          "predicted": "2019-18-05"
+        },
+        {
+          "id": "1036-receipt",
+          "field": "merchant",
+          "gold": "Pappadeaux Seafood Kitchen (030)",
+          "predicted": "PAPPADEAU X"
+        },
+        {
+          "id": "1036-receipt",
+          "field": "date",
+          "gold": "2017-11-18",
+          "predicted": ""
+        },
+        {
+          "id": "1037-receipt",
+          "field": "merchant",
+          "gold": "Panda Express",
+          "predicted": "Store #1291"
+        },
+        {
+          "id": "1037-receipt",
+          "field": "date",
+          "gold": "2013-03-16",
+          "predicted": ""
+        },
+        {
+          "id": "1038-receipt",
+          "field": "merchant",
+          "gold": "Yogurtland",
+          "predicted": "Micros Demo System"
+        },
+        {
+          "id": "1038-receipt",
+          "field": "date",
+          "gold": "2018-09-07",
+          "predicted": ""
+        },
+        {
+          "id": "1049-receipt",
+          "field": "date",
+          "gold": "2019-07-18",
+          "predicted": ""
+        },
+        {
+          "id": "1057-receipt",
+          "field": "date",
+          "gold": "2019-01-24",
+          "predicted": ""
+        },
+        {
+          "id": "1060-receipt",
+          "field": "date",
+          "gold": "2017-12-17",
+          "predicted": "2017-17-12"
+        },
+        {
+          "id": "1062-receipt",
+          "field": "date",
+          "gold": "2017-02-18",
+          "predicted": ""
+        },
+        {
+          "id": "1064-receipt",
+          "field": "merchant",
+          "gold": "IN-N-OUT BURGER ESCONDIDO",
+          "predicted": "2013-08-10 L1 T2 3:04 PM"
+        },
+        {
+          "id": "1078-receipt",
+          "field": "date",
+          "gold": "2019-02-19",
+          "predicted": ""
+        },
+        {
+          "id": "1083-receipt",
+          "field": "merchant",
+          "gold": "King Taco # 30",
+          "predicted": "RESTAURANTS, INC"
+        },
+        {
+          "id": "1083-receipt",
+          "field": "date",
+          "gold": "2017-03-17",
+          "predicted": ""
+        },
+        {
+          "id": "1090-receipt",
+          "field": "date",
+          "gold": "2017-05-25",
+          "predicted": "2017-31-12"
+        },
+        {
+          "id": "1117-receipt",
+          "field": "date",
+          "gold": "2019-02-22",
+          "predicted": "2019-22-02"
+        },
+        {
+          "id": "1118-receipt",
+          "field": "date",
+          "gold": "2017-03-18",
+          "predicted": "2017-18-03"
+        },
+        {
+          "id": "1147-receipt",
+          "field": "date",
+          "gold": "2016-11-24",
+          "predicted": ""
+        },
+        {
+          "id": "1156-receipt",
+          "field": "merchant",
+          "gold": "IKEA FOOD",
+          "predicted": "IKEA"
+        }
+      ]
+    },
+    "curatedOcr": {
+      "calibration": true,
+      "documents": 40,
+      "merchant": {
+        "gold": 35,
+        "exact": 5,
+        "unlabelledPredictions": 4
+      },
+      "date": {
+        "gold": 29,
+        "exact": 4,
+        "unlabelledPredictions": 3
+      },
+      "total": {
+        "gold": 32,
+        "exact": 9,
+        "wrong": 1
+      },
+      "failures": [
+        {
+          "id": "1000-receipt",
+          "field": "date",
+          "gold": "2016-05-26",
+          "predicted": ""
+        },
+        {
+          "id": "1001-receipt",
+          "field": "merchant",
+          "gold": "GRAND LUX CAFE",
+          "predicted": ""
+        },
+        {
+          "id": "1001-receipt",
+          "field": "date",
+          "gold": "2015-04-25",
+          "predicted": ""
+        },
+        {
+          "id": "1002-receipt",
+          "field": "merchant",
+          "gold": "Taco Bell 017314",
+          "predicted": "Seq Bac of"
+        },
+        {
+          "id": "1003-receipt",
+          "field": "merchant",
+          "gold": "El Gran Mar de Plata",
+          "predicted": ""
+        },
+        {
+          "id": "1003-receipt",
+          "field": "date",
+          "gold": "2017-04-20",
+          "predicted": ""
+        },
+        {
+          "id": "1004-receipt",
+          "field": "merchant",
+          "gold": "GOLDEN BOWL TERIYAKI",
+          "predicted": "SOLDEN Bow. TERI"
+        },
+        {
+          "id": "1004-receipt",
+          "field": "date",
+          "gold": "2019-05-18",
+          "predicted": "2019-18-05"
+        },
+        {
+          "id": "1005-receipt",
+          "field": "merchant",
+          "gold": "SASKA'S",
+          "predicted": "Rye 10yr (2 620.00)"
+        },
+        {
+          "id": "1005-receipt",
+          "field": "date",
+          "gold": "2017-08-15",
+          "predicted": ""
+        },
+        {
+          "id": "1006-receipt",
+          "field": "merchant",
+          "gold": "Akira",
+          "predicted": ""
+        },
+        {
+          "id": "1006-receipt",
+          "field": "date",
+          "gold": "2018-11-16",
+          "predicted": ""
+        },
+        {
+          "id": "1012-receipt",
+          "field": "merchant",
+          "gold": "He Pho Ga",
+          "predicted": "HP Pho Ga"
+        },
+        {
+          "id": "1012-receipt",
+          "field": "date",
+          "gold": "2019-04-01",
+          "predicted": ""
+        },
+        {
+          "id": "1014-receipt",
+          "field": "merchant",
+          "gold": "Loaded Cafe",
+          "predicted": ""
+        },
+        {
+          "id": "1014-receipt",
+          "field": "date",
+          "gold": "2019-02-23",
+          "predicted": ""
+        },
+        {
+          "id": "1018-receipt",
+          "field": "merchant",
+          "gold": "IN-N-OUT BURGER SANTA CLARA",
+          "predicted": "oT 12:49 РМ"
+        },
+        {
+          "id": "1020-receipt",
+          "field": "date",
+          "gold": "2019-07-26",
+          "predicted": ""
+        },
+        {
+          "id": "1021-receipt",
+          "field": "merchant",
+          "gold": "HAWWI ETHIOPIAN RESTAU",
+          "predicted": ""
+        },
+        {
+          "id": "1021-receipt",
+          "field": "date",
+          "gold": "2018-07-13",
+          "predicted": ""
+        },
+        {
+          "id": "1023-receipt",
+          "field": "merchant",
+          "gold": "Thai Gusto Restaurant",
+          "predicted": "Thai"
+        },
+        {
+          "id": "1023-receipt",
+          "field": "date",
+          "gold": "2017-06-16",
+          "predicted": ""
+        },
+        {
+          "id": "1027-receipt",
+          "field": "merchant",
+          "gold": "Longboards",
+          "predicted": "МАНЫ, HAWAII"
+        },
+        {
+          "id": "1033-receipt",
+          "field": "date",
+          "gold": "2019-05-18",
+          "predicted": "2019-18-05"
+        },
+        {
+          "id": "1036-receipt",
+          "field": "merchant",
+          "gold": "Pappadeaux Seafood Kitchen (030)",
+          "predicted": "PAPPADEAUNX"
+        },
+        {
+          "id": "1036-receipt",
+          "field": "date",
+          "gold": "2017-11-18",
+          "predicted": ""
+        },
+        {
+          "id": "1037-receipt",
+          "field": "merchant",
+          "gold": "Panda Express",
+          "predicted": "Store #1291"
+        },
+        {
+          "id": "1037-receipt",
+          "field": "date",
+          "gold": "2013-03-16",
+          "predicted": ""
+        },
+        {
+          "id": "1038-receipt",
+          "field": "merchant",
+          "gold": "Yogurtland",
+          "predicted": "Micros Demo System"
+        },
+        {
+          "id": "1038-receipt",
+          "field": "date",
+          "gold": "2018-09-07",
+          "predicted": ""
+        },
+        {
+          "id": "1049-receipt",
+          "field": "merchant",
+          "gold": "KICKIN KAJUR KAPOLEI",
+          "predicted": "KICKIN KAJUN KAPOLEI"
+        },
+        {
+          "id": "1049-receipt",
+          "field": "date",
+          "gold": "2019-07-18",
+          "predicted": ""
+        },
+        {
+          "id": "1053-receipt",
+          "field": "merchant",
+          "gold": "Primo",
+          "predicted": ""
+        },
+        {
+          "id": "1057-receipt",
+          "field": "date",
+          "gold": "2019-01-24",
+          "predicted": ""
+        },
+        {
+          "id": "1060-receipt",
+          "field": "date",
+          "gold": "2017-12-17",
+          "predicted": "2017-17-12"
+        },
+        {
+          "id": "1062-receipt",
+          "field": "merchant",
+          "gold": "MARIANACCI'S",
+          "predicted": "PREM RED 10."
+        },
+        {
+          "id": "1062-receipt",
+          "field": "date",
+          "gold": "2017-02-18",
+          "predicted": ""
+        },
+        {
+          "id": "1064-receipt",
+          "field": "merchant",
+          "gold": "IN-N-OUT BURGER ESCONDIDO",
+          "predicted": "2013-08-10 LI тг | 3:04 PM"
+        },
+        {
+          "id": "1078-receipt",
+          "field": "date",
+          "gold": "2019-02-19",
+          "predicted": ""
+        },
+        {
+          "id": "1083-receipt",
+          "field": "merchant",
+          "gold": "King Taco # 30",
+          "predicted": "& FC"
+        },
+        {
+          "id": "1083-receipt",
+          "field": "date",
+          "gold": "2017-03-17",
+          "predicted": ""
+        },
+        {
+          "id": "1090-receipt",
+          "field": "merchant",
+          "gold": "FIVE GUYS",
+          "predicted": "Jalapeno Peppers"
+        },
+        {
+          "id": "1090-receipt",
+          "field": "date",
+          "gold": "2017-05-25",
+          "predicted": "2017-31-12"
+        },
+        {
+          "id": "1114-receipt",
+          "field": "merchant",
+          "gold": "la Source",
+          "predicted": ""
+        },
+        {
+          "id": "1117-receipt",
+          "field": "merchant",
+          "gold": "KOBE JAPANESE STEAK",
+          "predicted": "JAPANESE STE AK"
+        },
+        {
+          "id": "1117-receipt",
+          "field": "date",
+          "gold": "2019-02-22",
+          "predicted": ""
+        },
+        {
+          "id": "1118-receipt",
+          "field": "merchant",
+          "gold": "Wendy's Restaurant #00003675",
+          "predicted": "Plain Potato"
+        },
+        {
+          "id": "1118-receipt",
+          "field": "date",
+          "gold": "2017-03-18",
+          "predicted": ""
+        },
+        {
+          "id": "1126-receipt",
+          "field": "merchant",
+          "gold": "SAGE",
+          "predicted": "| FRENCH CAFE & WINE BAR"
+        },
+        {
+          "id": "1139-receipt",
+          "field": "merchant",
+          "gold": "SS PARADISE",
+          "predicted": "Bill No. 00027 Bill Date 06.07.2027"
+        },
+        {
+          "id": "1147-receipt",
+          "field": "merchant",
+          "gold": "NEW DELHI",
+          "predicted": ""
+        },
+        {
+          "id": "1147-receipt",
+          "field": "date",
+          "gold": "2016-11-24",
+          "predicted": ""
+        },
+        {
+          "id": "1156-receipt",
+          "field": "merchant",
+          "gold": "IKEA FOOD",
+          "predicted": "<TD"
+        },
+        {
+          "id": "1158-receipt",
+          "field": "merchant",
+          "gold": "MITASU JAPANESE RESTAURANT SDN BHD",
+          "predicted": "rrr"
+        },
+        {
+          "id": "1197-receipt",
+          "field": "merchant",
+          "gold": "SAN MONTANO S.R.L.",
+          "predicted": "BAR RISTORANIE"
+        }
+      ]
+    },
+    "fullPipelineReplay": {
+      "documents": 20,
+      "exactTotal": 5,
+      "wrongSelectedTotal": 0,
+      "correctReviewCandidate": 1,
+      "missingOrUnhelpful": 14,
+      "results": [
+        {
+          "id": "cord-v2-test-000",
+          "gold": "60.000",
+          "total": "",
+          "candidates": [],
+          "elapsedMs": 8841
+        },
+        {
+          "id": "cord-v2-test-005",
+          "gold": "31.000",
+          "total": "31000.00",
+          "candidates": [],
+          "elapsedMs": 2422
+        },
+        {
+          "id": "cord-v2-test-010",
+          "gold": "17,000",
+          "total": "17000.00",
+          "candidates": [],
+          "elapsedMs": 4626
+        },
+        {
+          "id": "cord-v2-test-015",
+          "gold": "63.000",
+          "total": "",
+          "candidates": [
+            "3000.00",
+            "6000.00"
+          ],
+          "elapsedMs": 22801
+        },
+        {
+          "id": "cord-v2-test-020",
+          "gold": "377,859",
+          "total": "",
+          "candidates": [],
+          "elapsedMs": 20297
+        },
+        {
+          "id": "cord-v2-test-025",
+          "gold": "43,000",
+          "total": "",
+          "candidates": [],
+          "elapsedMs": 7386
+        },
+        {
+          "id": "cord-v2-test-030",
+          "gold": "31,500",
+          "total": "31500.00",
+          "candidates": [],
+          "elapsedMs": 5147
+        },
+        {
+          "id": "cord-v2-test-035",
+          "gold": "54,000",
+          "total": "",
+          "candidates": [
+            "5090.00",
+            "5000.00"
+          ],
+          "elapsedMs": 9466
+        },
+        {
+          "id": "cord-v2-test-040",
+          "gold": "68,000",
+          "total": "",
+          "candidates": [],
+          "elapsedMs": 17464
+        },
+        {
+          "id": "cord-v2-test-045",
+          "gold": "88,000",
+          "total": "",
+          "candidates": [],
+          "elapsedMs": 10596
+        },
+        {
+          "id": "cord-v2-test-050",
+          "gold": "19,500",
+          "total": "",
+          "candidates": [
+            "19.30",
+            "18.50"
+          ],
+          "elapsedMs": 12502
+        },
+        {
+          "id": "cord-v2-test-055",
+          "gold": "54,000",
+          "total": "",
+          "candidates": [
+            "5000.00"
+          ],
+          "elapsedMs": 6908
+        },
+        {
+          "id": "cord-v2-test-060",
+          "gold": "26.250",
+          "total": "",
+          "candidates": [
+            "26250.00",
+            "260.00"
+          ],
+          "elapsedMs": 14118
+        },
+        {
+          "id": "cord-v2-test-065",
+          "gold": "13.000",
+          "total": "",
+          "candidates": [
+            "13088.00",
+            "13600.00"
+          ],
+          "elapsedMs": 12937
+        },
+        {
+          "id": "cord-v2-test-070",
+          "gold": "1,565,938",
+          "total": "",
+          "candidates": [],
+          "elapsedMs": 27183
+        },
+        {
+          "id": "cord-v2-test-075",
+          "gold": "282,000",
+          "total": "",
+          "candidates": [],
+          "elapsedMs": 9311
+        },
+        {
+          "id": "cord-v2-test-080",
+          "gold": "25.000",
+          "total": "25000.00",
+          "candidates": [],
+          "elapsedMs": 1729
+        },
+        {
+          "id": "cord-v2-test-085",
+          "gold": "197.450",
+          "total": "",
+          "candidates": [
+            "107.00",
+            "10.00"
+          ],
+          "elapsedMs": 20463
+        },
+        {
+          "id": "cord-v2-test-090",
+          "gold": "29,500",
+          "total": "29500.00",
+          "candidates": [],
+          "elapsedMs": 2244
+        },
+        {
+          "id": "cord-v2-test-095",
+          "gold": "61,799",
+          "total": "",
+          "candidates": [],
+          "elapsedMs": 8749
+        }
+      ]
+    }
+  },
+  "current": {
+    "version": 3,
+    "parser": "current",
+    "evaluation": "Separate parsing of annotated transcriptions and frozen raw OCR; no claim of full mobile/app accuracy. Manual40field gold is calibration, not blind validation. Full-pipeline replay re-parses20 frozen browser OCR outputs, not a fresh engine run.",
+    "trainingDocuments": 763,
+    "annotation": {
+      "train": {
+        "documents": 763,
+        "annotatedTotal": 742,
+        "exactTotal": 603,
+        "wrongSelectedTotal": 1,
+        "missingTotal": 138,
+        "correctReviewCandidate": 19,
+        "unknownGold": 21,
+        "itemsRecognized": 1326,
+        "expectedItems": 2019,
+        "exactNamedItemAmounts": 920
+      },
+      "validation": {
+        "documents": 99,
+        "annotatedTotal": 97,
+        "exactTotal": 84,
+        "wrongSelectedTotal": 0,
+        "missingTotal": 13,
+        "correctReviewCandidate": 3,
+        "unknownGold": 2,
+        "itemsRecognized": 141,
+        "expectedItems": 220,
+        "exactNamedItemAmounts": 101
+      },
+      "test": {
+        "documents": 100,
+        "annotatedTotal": 95,
+        "exactTotal": 77,
+        "wrongSelectedTotal": 0,
+        "missingTotal": 18,
+        "correctReviewCandidate": 3,
+        "unknownGold": 5,
+        "itemsRecognized": 171,
+        "expectedItems": 251,
+        "exactNamedItemAmounts": 114
+      }
+    },
+    "raw": {
+      "train": {
+        "documents": 23,
+        "annotatedTotal": 23,
+        "exactTotal": 0,
+        "wrongSelectedTotal": 0,
+        "missingTotal": 23,
+        "correctReviewCandidate": 0,
+        "unknownGold": 0,
+        "itemsRecognized": 3,
+        "expectedItems": 79,
+        "exactNamedItemAmounts": 0
+      },
+      "validation": {
+        "documents": 99,
+        "annotatedTotal": 97,
+        "exactTotal": 9,
+        "wrongSelectedTotal": 1,
+        "missingTotal": 87,
+        "correctReviewCandidate": 0,
+        "unknownGold": 2,
+        "itemsRecognized": 26,
+        "expectedItems": 220,
+        "exactNamedItemAmounts": 10
+      },
+      "test": {
+        "documents": 99,
+        "annotatedTotal": 94,
+        "exactTotal": 11,
+        "wrongSelectedTotal": 0,
+        "missingTotal": 83,
+        "correctReviewCandidate": 2,
+        "unknownGold": 5,
+        "itemsRecognized": 45,
+        "expectedItems": 242,
+        "exactNamedItemAmounts": 7
+      }
+    },
+    "rawWithFallback": {
+      "train": {
+        "documents": 25,
+        "annotatedTotal": 25,
+        "exactTotal": 0,
+        "wrongSelectedTotal": 0,
+        "missingTotal": 25,
+        "correctReviewCandidate": 0,
+        "unknownGold": 0,
+        "itemsRecognized": 8,
+        "expectedItems": 91,
+        "exactNamedItemAmounts": 3
+      },
+      "validation": {
+        "documents": 99,
+        "annotatedTotal": 97,
+        "exactTotal": 10,
+        "wrongSelectedTotal": 2,
+        "missingTotal": 85,
+        "correctReviewCandidate": 0,
+        "unknownGold": 2,
+        "itemsRecognized": 29,
+        "expectedItems": 220,
+        "exactNamedItemAmounts": 10
+      },
+      "test": {
+        "documents": 100,
+        "annotatedTotal": 95,
+        "exactTotal": 11,
+        "wrongSelectedTotal": 1,
+        "missingTotal": 83,
+        "correctReviewCandidate": 2,
+        "unknownGold": 5,
+        "itemsRecognized": 49,
+        "expectedItems": 251,
+        "exactNamedItemAmounts": 8
+      }
+    },
+    "curated": {
+      "calibration": true,
+      "documents": 40,
+      "merchant": {
+        "gold": 35,
+        "exact": 35,
+        "unlabelledPredictions": 0
+      },
+      "date": {
+        "gold": 29,
+        "exact": 29,
+        "unlabelledPredictions": 5
+      },
+      "total": {
+        "gold": 32,
+        "exact": 26,
+        "wrong": 0
+      },
+      "failures": []
+    },
+    "curatedOcr": {
+      "calibration": true,
+      "documents": 40,
+      "merchant": {
+        "gold": 35,
+        "exact": 12,
+        "unlabelledPredictions": 1
+      },
+      "date": {
+        "gold": 29,
+        "exact": 18,
+        "unlabelledPredictions": 2
+      },
+      "total": {
+        "gold": 32,
+        "exact": 8,
+        "wrong": 0
+      },
+      "failures": [
+        {
+          "id": "1001-receipt",
+          "field": "merchant",
+          "gold": "GRAND LUX CAFE",
+          "predicted": ""
+        },
+        {
+          "id": "1001-receipt",
+          "field": "date",
+          "gold": "2015-04-25",
+          "predicted": ""
+        },
+        {
+          "id": "1002-receipt",
+          "field": "merchant",
+          "gold": "Taco Bell 017314",
+          "predicted": ""
+        },
+        {
+          "id": "1003-receipt",
+          "field": "merchant",
+          "gold": "El Gran Mar de Plata",
+          "predicted": ""
+        },
+        {
+          "id": "1003-receipt",
+          "field": "date",
+          "gold": "2017-04-20",
+          "predicted": ""
+        },
+        {
+          "id": "1004-receipt",
+          "field": "merchant",
+          "gold": "GOLDEN BOWL TERIYAKI",
+          "predicted": "SOLDEN Bow. TERI"
+        },
+        {
+          "id": "1005-receipt",
+          "field": "merchant",
+          "gold": "SASKA'S",
+          "predicted": ""
+        },
+        {
+          "id": "1005-receipt",
+          "field": "date",
+          "gold": "2017-08-15",
+          "predicted": ""
+        },
+        {
+          "id": "1006-receipt",
+          "field": "merchant",
+          "gold": "Akira",
+          "predicted": ""
+        },
+        {
+          "id": "1006-receipt",
+          "field": "date",
+          "gold": "2018-11-16",
+          "predicted": ""
+        },
+        {
+          "id": "1012-receipt",
+          "field": "merchant",
+          "gold": "He Pho Ga",
+          "predicted": "HP Pho Ga"
+        },
+        {
+          "id": "1014-receipt",
+          "field": "merchant",
+          "gold": "Loaded Cafe",
+          "predicted": ""
+        },
+        {
+          "id": "1014-receipt",
+          "field": "date",
+          "gold": "2019-02-23",
+          "predicted": ""
+        },
+        {
+          "id": "1036-receipt",
+          "field": "merchant",
+          "gold": "Pappadeaux Seafood Kitchen (030)",
+          "predicted": "PAPPADEAUNX"
+        },
+        {
+          "id": "1038-receipt",
+          "field": "merchant",
+          "gold": "Yogurtland",
+          "predicted": "Melsone to Yogurtland"
+        },
+        {
+          "id": "1049-receipt",
+          "field": "merchant",
+          "gold": "KICKIN KAJUR KAPOLEI",
+          "predicted": "KICKIN KAJUN KAPOLEI"
+        },
+        {
+          "id": "1053-receipt",
+          "field": "merchant",
+          "gold": "Primo",
+          "predicted": ""
+        },
+        {
+          "id": "1062-receipt",
+          "field": "merchant",
+          "gold": "MARIANACCI'S",
+          "predicted": "YONG RIPIENE 907"
+        },
+        {
+          "id": "1062-receipt",
+          "field": "date",
+          "gold": "2017-02-18",
+          "predicted": ""
+        },
+        {
+          "id": "1064-receipt",
+          "field": "merchant",
+          "gold": "IN-N-OUT BURGER ESCONDIDO",
+          "predicted": "IN-N-OUT BURGER вод"
+        },
+        {
+          "id": "1083-receipt",
+          "field": "merchant",
+          "gold": "King Taco # 30",
+          "predicted": "Exquisitamente. . _"
+        },
+        {
+          "id": "1083-receipt",
+          "field": "date",
+          "gold": "2017-03-17",
+          "predicted": ""
+        },
+        {
+          "id": "1090-receipt",
+          "field": "merchant",
+          "gold": "FIVE GUYS",
+          "predicted": ""
+        },
+        {
+          "id": "1090-receipt",
+          "field": "date",
+          "gold": "2017-05-25",
+          "predicted": "2017-12-31"
+        },
+        {
+          "id": "1114-receipt",
+          "field": "merchant",
+          "gold": "la Source",
+          "predicted": ""
+        },
+        {
+          "id": "1117-receipt",
+          "field": "merchant",
+          "gold": "KOBE JAPANESE STEAK",
+          "predicted": ""
+        },
+        {
+          "id": "1117-receipt",
+          "field": "date",
+          "gold": "2019-02-22",
+          "predicted": ""
+        },
+        {
+          "id": "1118-receipt",
+          "field": "merchant",
+          "gold": "Wendy's Restaurant #00003675",
+          "predicted": ""
+        },
+        {
+          "id": "1118-receipt",
+          "field": "date",
+          "gold": "2017-03-18",
+          "predicted": ""
+        },
+        {
+          "id": "1126-receipt",
+          "field": "merchant",
+          "gold": "SAGE",
+          "predicted": ""
+        },
+        {
+          "id": "1139-receipt",
+          "field": "merchant",
+          "gold": "SS PARADISE",
+          "predicted": ""
+        },
+        {
+          "id": "1147-receipt",
+          "field": "merchant",
+          "gold": "NEW DELHI",
+          "predicted": ""
+        },
+        {
+          "id": "1147-receipt",
+          "field": "date",
+          "gold": "2016-11-24",
+          "predicted": ""
+        },
+        {
+          "id": "1197-receipt",
+          "field": "merchant",
+          "gold": "SAN MONTANO S.R.L.",
+          "predicted": "STRBILIMENTO MARINO E TERMALE"
+        }
+      ]
+    },
+    "fullPipelineReplay": {
+      "documents": 20,
+      "exactTotal": 4,
+      "wrongSelectedTotal": 0,
+      "correctReviewCandidate": 2,
+      "missingOrUnhelpful": 14,
+      "results": [
+        {
+          "id": "cord-v2-test-000",
+          "gold": "60.000",
+          "total": "",
+          "candidates": [],
+          "elapsedMs": 8841
+        },
+        {
+          "id": "cord-v2-test-005",
+          "gold": "31.000",
+          "total": "31000.00",
+          "candidates": [],
+          "elapsedMs": 2422
+        },
+        {
+          "id": "cord-v2-test-010",
+          "gold": "17,000",
+          "total": "17000.00",
+          "candidates": [],
+          "elapsedMs": 4626
+        },
+        {
+          "id": "cord-v2-test-015",
+          "gold": "63.000",
+          "total": "",
+          "candidates": [
+            "3000.00",
+            "6000.00"
+          ],
+          "elapsedMs": 22801
+        },
+        {
+          "id": "cord-v2-test-020",
+          "gold": "377,859",
+          "total": "",
+          "candidates": [],
+          "elapsedMs": 20297
+        },
+        {
+          "id": "cord-v2-test-025",
+          "gold": "43,000",
+          "total": "",
+          "candidates": [],
+          "elapsedMs": 7386
+        },
+        {
+          "id": "cord-v2-test-030",
+          "gold": "31,500",
+          "total": "",
+          "candidates": [
+            "31500.00"
+          ],
+          "elapsedMs": 5147
+        },
+        {
+          "id": "cord-v2-test-035",
+          "gold": "54,000",
+          "total": "",
+          "candidates": [
+            "5090.00",
+            "5000.00"
+          ],
+          "elapsedMs": 9466
+        },
+        {
+          "id": "cord-v2-test-040",
+          "gold": "68,000",
+          "total": "",
+          "candidates": [],
+          "elapsedMs": 17464
+        },
+        {
+          "id": "cord-v2-test-045",
+          "gold": "88,000",
+          "total": "",
+          "candidates": [],
+          "elapsedMs": 10596
+        },
+        {
+          "id": "cord-v2-test-050",
+          "gold": "19,500",
+          "total": "",
+          "candidates": [
+            "19.30",
+            "18.50"
+          ],
+          "elapsedMs": 12502
+        },
+        {
+          "id": "cord-v2-test-055",
+          "gold": "54,000",
+          "total": "",
+          "candidates": [
+            "5000.00"
+          ],
+          "elapsedMs": 6908
+        },
+        {
+          "id": "cord-v2-test-060",
+          "gold": "26.250",
+          "total": "",
+          "candidates": [
+            "26250.00",
+            "260.00"
+          ],
+          "elapsedMs": 14118
+        },
+        {
+          "id": "cord-v2-test-065",
+          "gold": "13.000",
+          "total": "",
+          "candidates": [
+            "13088.00",
+            "13600.00"
+          ],
+          "elapsedMs": 12937
+        },
+        {
+          "id": "cord-v2-test-070",
+          "gold": "1,565,938",
+          "total": "",
+          "candidates": [],
+          "elapsedMs": 27183
+        },
+        {
+          "id": "cord-v2-test-075",
+          "gold": "282,000",
+          "total": "",
+          "candidates": [],
+          "elapsedMs": 9311
+        },
+        {
+          "id": "cord-v2-test-080",
+          "gold": "25.000",
+          "total": "25000.00",
+          "candidates": [],
+          "elapsedMs": 1729
+        },
+        {
+          "id": "cord-v2-test-085",
+          "gold": "197.450",
+          "total": "",
+          "candidates": [
+            "107.00",
+            "10.00"
+          ],
+          "elapsedMs": 20463
+        },
+        {
+          "id": "cord-v2-test-090",
+          "gold": "29,500",
+          "total": "29500.00",
+          "candidates": [],
+          "elapsedMs": 2244
+        },
+        {
+          "id": "cord-v2-test-095",
+          "gold": "61,799",
+          "total": "",
+          "candidates": [],
+          "elapsedMs": 8749
+        }
+      ]
+    }
+  }
+}

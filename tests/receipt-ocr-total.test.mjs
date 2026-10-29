@@ -125,3 +125,5 @@ test('folded paper and a merged tax box do not clip the total label or include t
 });
 
 test('a readable labelled total remains a review choice when an independent reread is inconclusive',async()=>{const data={...fixture('TOTAL','151.85'),totalNeedsReview:true};const result=await refineReceiptTotals(data,async()=> '');assert.equal(parseReceiptPhoto(result,context).total,'');assert.deepEqual(result.totalCandidates,['151.85']);});
+
+test('a count before an already grouped total cannot enter the numeric crop',async()=>{const data=fixture('TOTAL','4 156,090'),line=data.blocks[0].paragraphs[0].lines[0];line.words=[{text:'TOTAL',bbox:{x0:10,x1:80,y0:200,y1:240}},{text:'4',bbox:{x0:100,x1:110,y0:200,y1:240}},{text:'156,090',bbox:{x0:120,x1:300,y0:200,y1:240}}];const result=await refineReceiptTotals(data,async rectangle=>{assert.ok(rectangle.left>110);return '156,090';});assert.equal(parseReceiptPhoto(result,context).total,'');assert.deepEqual(result.totalCandidates,['156090.00']);});

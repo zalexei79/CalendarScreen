@@ -1,9 +1,15 @@
+import{extractReceiptDate}from'./receiptDate.js';
 import {classifyProduct,presentProduct,normalizeProductText} from './productCatalog.js';
-import {receiptTotalLine,receiptNonItemLine,receiptMetadataLine,receiptDocumentIssue} from './receiptStructure.js';
+import {receiptTotalAnchor,receiptTotalLine,receiptNonItemLine,receiptMetadataLine,receiptDocumentIssue} from './receiptStructure.js';
 // Receipt arithmetic uses minor units; OCR output never writes a calendar entry.
 export const normalizeReceiptText = normalizeProductText;
 export function receiptMoney(value) {
-  const text = String(value ?? '').trim().replace(/[\s\u00a0'’]/g, '');
+  const original=String(value??'').trim().replace(/([.,])\s+(?=\d{1,3}(?:[^\d]|$))/g,'$1');
+  const fraction=original.match(/[.,]\s*\d{1,2}$/),integer=(fraction?original.slice(0,fraction.index):original).trim();
+  // Spaces/apostrophes may group thousands, but may not join a quantity or
+  // another printed amount onto the total ("1 Rp10,000", "4 156,090").
+  if(/[\s\u00a0'’]/.test(integer)&&!/^\d{1,3}(?:[\s\u00a0'’]+\d{3})+$/.test(integer))return null;
+  const text = original.replace(/[\s\u00a0'’]/g, '');
   if (!/^\d+(?:[.,]\d{3})*(?:[.,]\d{1,2})?$/.test(text)) return null;
   const decimal = text.match(/[.,](\d{1,2})$/);
   const whole = (decimal ? text.slice(0, decimal.index) : text).replace(/[.,]/g, '');
@@ -64,17 +70,20 @@ export function validReceiptDate(value, today) {
 }
 export function parseReceipt(rawText) {
   const lines = String(rawText || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-  const candidates = [];
+  const candidates = [];let strongestLabel=1;
   for (let index = 0; index < lines.length; index++) {
+    const anchor=receiptTotalAnchor(lines[index]);
+    if(anchor&&!anchor.fuzzy&&!receiptNonItemLine(lines[index]))strongestLabel=Math.max(strongestLabel,anchor.priority||1);
     const label = receiptTotalLine(lines[index]);
     if (!label) continue;
+    strongestLabel=Math.max(strongestLabel,label.priority||1);
     const next = lines[index + 1] || '';
     // Currency may wrap together with the total; no other text may be consumed.
     const wrapped=!label.amount?receiptTotalLine(`TOTAL ${next}`):null;
     const amount=receiptMoney(label.amount||wrapped?.amount);
-    if(amount!==null)candidates.push({amount,role:label.role,index,evidence:lines[index]+(wrapped?.amount?`\n${next}`:'')});
+    if(amount!==null)candidates.push({amount,role:label.role,priority:label.priority||1,index,evidence:lines[index]+(wrapped?.amount?`\n${next}`:'')});
   }
-  const finals=candidates.filter(item=>item.role==='final'),selected=finals.length?finals:candidates;
+  const finals=candidates.filter(item=>item.role==='final'),pool=finals.length?finals:candidates,priority=Math.max(strongestLabel,...pool.map(item=>item.priority||1)),selected=pool.filter(item=>(item.priority||1)===priority);
   const unique = [...new Set(selected.map(item => item.amount))];
   const total = unique.length === 1 ? moneyText(unique[0]) : '';
   const normalized = normalizeReceiptText(rawText);
@@ -83,22 +92,13 @@ export function parseReceipt(rawText) {
     [/\bmdl\b|moldova|moldretail|\bidno\b/i, 'MDL'], [/\busd\b|\bus\$/i, 'USD'],
     [/\beur\b|(?<!\p{L})€(?!\p{L})/iu, 'EUR'], [/\brub\b|₽|руб/i, 'RUB'], [/\bcny\b|\brmb\b|人民币/i, 'CNY'], [/\bron\b/i, 'RON'],
   ].filter(([pattern]) => pattern.test(normalized)).map(([,code]) => code))];
-  let dateKey = '';
-  const dateMatches=[...String(rawText).matchAll(/\b(\d{2})[./-](\d{2})[./-](\d{4})\b|\b(\d{4})[./-](\d{2})[./-](\d{2})\b/g)];
-  const dates=[...new Set(dateMatches.map(match=>match[1]?`${match[3]}-${match[2]}-${match[1]}`:`${match[4]}-${match[5]}-${match[6]}`))];
-  if(dates.length===1)dateKey=dates[0];
-  if(!dateMatches.length){
-    // Legacy cash registers print a two-digit year next to the time. Do not
-    // interpret arbitrary dotted product codes as dates or roll future years back.
-    const shortDates=[...String(rawText).matchAll(/\b(\d{2})[./-](\d{2})[./-](\d{2})\s+\d{1,2}:\d{2}\b/g)];
-    const keys=[...new Set(shortDates.map(match=>`20${match[3]}-${match[2]}-${match[1]}`))];
-    if(keys.length===1)dateKey=keys[0];
-  }
+  const dateKey=extractReceiptDate(rawText);
   const items = [];
   let pending = [];
   for (let index=0;index<lines.length;index++) {
     let line=lines[index];
     const normalizedLine = normalizeReceiptText(line);
+    if(items.length&&/^sub[\s-]*total\b/iu.test(normalizedLine))break;
     if (receiptTotalLine(line)||/^(?:всего|итого?)\s*[.,:=]/iu.test(normalizedLine)) break;
     if (receiptNonItemLine(line) || receiptMetadataLine(line)) { pending = []; continue; }
     if (/casier|cashier|кассир|idno|idnp|\binr\b|\btva\b|\bvat\b|str\.|s\.r\.l|\bbon\b|\btelefon\b|\btel\b|ккм|инн|эклз|^чек\s*[№#]/i.test(normalizedLine)) { pending = []; continue; }
@@ -129,7 +129,7 @@ export function parseReceipt(rawText) {
     else if (/[\p{L}]/u.test(line) && !/\d{2}[:/-]\d{2}|^\s*\d{6,}/.test(line)) pending = [...pending.slice(-1), line];
   }
   const documentIssue=receiptDocumentIssue(lines)||(finals.length>1&&lines.filter(line=>/^(?:bon\s+fiscal|fiscal\s+receipt|кассовый\s+чек)\s*$/iu.test(normalizeReceiptText(line))).length>1?'multipleReceipts':'');
-  return {merchant: lines.find(line => /[\p{L}]/u.test(line))?.slice(0,120) || '', dateKey, currency: explicitCurrencies.length === 1 ? explicitCurrencies[0] : '', total, items, category: receiptCategory(items), evidence: total ? selected.find(item => item.amount === unique[0])?.evidence || '' : '', rawText: String(rawText || '').slice(0,40000), ambiguousTotal: unique.length > 1, documentIssue};
+  return {merchant: lines.find(line => /[\p{L}]/u.test(line))?.slice(0,120) || '', dateKey, currency: explicitCurrencies.length === 1 ? explicitCurrencies[0] : '', total, items, category: receiptCategory(items), evidence: total ? selected.find(item => item.amount === unique[0])?.evidence || '' : '', rawText: String(rawText || '').slice(0,40000), ambiguousTotal: unique.length > 1, totalCandidates:unique.length>1?unique.filter(amount=>amount>0).slice(0,3).map(moneyText):[], documentIssue};
 }
 export function receiptValidation(draft, today, currencies) {
   const total = receiptMoney(draft.total);

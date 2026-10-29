@@ -22,12 +22,12 @@ const numericReading=value=>{
   const text=String(value||'').trim().replace(/^[=:]+/,'').trim();
   // Decimal separators may be surrounded by OCR whitespace. Multiple amounts,
   // signs and a bare three-decimal weight are never accepted as a final amount.
-  if(!/^\d+(?:[ '\u00a0’]\d{3})*(?:\s*[.,]\s*\d{1,2})?$/.test(text))return null;
+  if(!/^\d+(?:[ '\u00a0’.,]\d{3})*(?:\s*[.,]\s*\d{1,2})?$/.test(text))return null;
   return receiptMoney(text.replace(/\s*([.,])\s*/g,'$1'));
 };
 export async function refineReceiptTotals(data,readLine,{signal,onProgress}={}){
   const lines=linesOf(data),anchors=lines.map((line,index)=>({line,index,anchor:receiptTotalAnchor(line.text)})).filter(totalCandidate);
-  const finals=anchors.filter(row=>row.anchor.role==='final'),targets=(finals.length?finals:anchors).slice(0,3);
+  const finals=anchors.filter(row=>row.anchor.role==='final'),pool=finals.length?finals:anchors,priority=Math.max(1,...pool.map(row=>row.anchor.priority||1)),targets=pool.filter(row=>(row.anchor.priority||1)===priority).slice(0,3);
   let text=String(data.text||''),totalNeedsReview=Boolean(data.totalNeedsReview),totalRecovered=Boolean(data.totalRecovered),totalCandidates=[];
   for(const [number,{line,index,anchor}]of targets.entries()){
     if(signal?.aborted)throw new Error('CANCELLED');
@@ -51,10 +51,17 @@ export async function refineReceiptTotals(data,readLine,{signal,onProgress}={}){
       let position=source.words.indexOf(amountWord);
       while(position>0){
         const before=source.words[position-1];
-        if(!/^\d{1,3}$/.test(before.text)||before.bbox.x0<left||box.x0-before.bbox.x1>=box.y1-box.y0)break;
+        const splitFraction=/^[„.,]\d{2}$/.test(amountWord.text);
+        if(!/^\d{1,3}$/.test(before.text)||before.bbox.x0<left||box.x0-before.bbox.x1>=box.y1-box.y0||!splitFraction&&receiptMoney(before.text+' '+amountWord.text)===null)break;
         box={...box,x0:before.bbox.x0,y0:Math.min(box.y0,before.bbox.y0),y1:Math.max(box.y1,before.bbox.y1)};position--;
       }
-      if(afterLabel.some(word=>word!==amountWord&&(word.bbox.x0<box.x0||word.bbox.x1>box.x1))){totalNeedsReview=true;continue;}
+      const outside=afterLabel.filter(word=>word!==amountWord&&(word.bbox.x0<box.x0||word.bbox.x1>box.x1));
+      if(outside.length){
+        totalNeedsReview=true;
+        // A separate count beside an already grouped price stays outside the
+        // crop. Its presence still requires review of the reread amount.
+        if(!outside.every(word=>word.bbox.x1<=box.x0&&/^\d{1,3}$/.test(word.text)&&receiptMoney(word.text+' '+amountWord.text)===null))continue;
+      }
     }
     const height=box.y1-box.y0,pad=Math.max(3,Math.round(height*(data.totalLayout ? .1 : .2)));
     const rectangle={left:Math.max(0,box.x0-pad),top:Math.max(0,box.y0-pad),width:box.x1-box.x0+2*pad,height:height+2*pad};
@@ -66,15 +73,17 @@ export async function refineReceiptTotals(data,readLine,{signal,onProgress}={}){
     }
     const accepted=readings.length===2&&readings[0]>0&&readings[0]===readings[1];
     if(accepted){
+      if(totalNeedsReview)totalCandidates.push(moneyText(readings[0]));
       totalRecovered=totalRecovered||anchor.fuzzy||!receiptTotalLine(line.text);
       const currency=anchor.tail.match(/\b(?:MDL|RON|USD|EUR|RUB|CNY|UAH|LEI|GBP|CHF|PLN|JPY)\b|грн\.?|руб\.?|[€$₽£¥₴]/giu)?.join(' ')||'';
-      const replacement=`${anchor.role==='due'?'AMOUNT DUE':'TOTAL'} ${currency} ${moneyText(readings[0])}`.replace(/\s+/g,' ');
+      const replacement=`${anchor.role==='due'?'AMOUNT DUE':anchor.priority>1?'GRAND TOTAL':'TOTAL'} ${currency} ${moneyText(readings[0])}`.replace(/\s+/g,' ');
       text=text.replace(line.text.trim(),replacement);
-    }else if(anchor.fuzzy||!receiptTotalLine(line.text)||readings.every(value=>value!==null)&&readings[0]!==readings[1]){
+    }else{
       totalNeedsReview=true;totalCandidates.push(...readings.filter(value=>value>0).map(moneyText));
     }
     onProgress?.(82+Math.round((number+1)/targets.length*3));
   }
+  if(!targets.length&&parseReceipt(data.text||'').total)totalNeedsReview=true;
   // An exact, independently printed total can still be offered for explicit
   // photo review when a second pixel reading is inconclusive. Never auto-pick it.
   if(totalNeedsReview&&!totalCandidates.length){const printed=parseReceipt(data.text||'').total;if(receiptMoney(printed)>0)totalCandidates.push(printed);}
