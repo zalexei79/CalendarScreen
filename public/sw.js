@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v126-numbered-friends-day-history';
+const CACHE_NAME = 'atj-cache-v127-positive-numbers-social-premium';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
