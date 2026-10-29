@@ -7,6 +7,10 @@ const currencies = /\b(?:mdl|ron|lei|leu|usd|eur|rub|cny|rmb|gbp|chf|uah|pln|jpy
 const includedTax = /\b(?:incl(?:uded|usive)?\.?|with)\s*(?:vat|tax|tva)\b|\b(?:cu\s+tva|tva\s+inclus[ae]?)\b|с\s+ндс(?=$|\s|\d)/giu;
 export function receiptTotalAnchor(value) {
   const text=normalize(value).replace(/^[\s*#>·|]+/u,'').replace(/^(?:(?:\d{1,2}[./-]\d{1,2}(?:[./-]\d{2,4})?)\s+)?\d{1,2}:\d{2}(?::\d{2})?(?:\s*[ap]m)?\s+/iu,'');
+  // Tiny thermal lettering can lose the middle strokes of TOTAL. The short
+  // form needs an adjacent currency cue and pixel rereads, never text-only money.
+  const small=text.match(/^(?:(?:t[oо0][tт]?[l1i|])\s+(?:lei|le1|lel|mdl)|total\s+(?:le1|lel|lay))(?=$|[\s.,:：=\d])/iu);
+  if(small)return {role:'final',tail:text.slice(small[0].length),fuzzy:true};
   const label=text.match(finalReceiptLabel)||text.match(dueLabel);
   if(label)return {role:dueLabel.test(text)?'due':'final',tail:text.slice(label[0].length),fuzzy:false,priority:/^(?:grand\s*total|final (?:total|amount)|total grand)(?=$|[\s:.,=\d])/iu.test(text)?2:1};
   // Only known visual OCR confusions, never arbitrary edit-distance matching

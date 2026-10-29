@@ -27,7 +27,7 @@ export async function receiptPaperImage(file,{fallbackToWhole=false}={}){
     const pixels=context.getImageData(0,0,sample.width,sample.height);
     const bounds=receiptDocumentBounds(pixels)||receiptPaperBounds(pixels)||(fallbackToWhole?{left:0,top:0,width:1,height:1}:null);
     if(!bounds)return null;
-    const sourceWidth=Math.round(bounds.width*bitmap.width),sourceHeight=Math.round((bounds.height||1)*bitmap.height),scale=Math.min(3,1600/sourceWidth,3200/sourceHeight),canvas=document.createElement('canvas');canvas.width=Math.round(sourceWidth*scale);canvas.height=Math.round(sourceHeight*scale);
+    const sourceWidth=Math.round(bounds.width*bitmap.width),sourceHeight=Math.round((bounds.height||1)*bitmap.height),scale=Math.min(6,1600/sourceWidth,3200/sourceHeight),canvas=document.createElement('canvas');canvas.width=Math.round(sourceWidth*scale);canvas.height=Math.round(sourceHeight*scale);
     const target=canvas.getContext('2d');target.imageSmoothingQuality='high';target.drawImage(bitmap,Math.round(bounds.left*bitmap.width),Math.round((bounds.top||0)*bitmap.height),sourceWidth,sourceHeight,0,0,canvas.width,canvas.height);
     return canvas;
   }catch{return null;}finally{bitmap?.close();}

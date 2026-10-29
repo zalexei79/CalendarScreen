@@ -24,7 +24,7 @@ export default function ReceiptCapture(props) {
 function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurrency='',defaultDateKey, onAccessDenied, onSaveReceipt, checkAccess = checkReceiptAccess, recognize = recognizeReceipt }) {
   const c = receiptCopy(language), today = localDateKey();
   const [open, setOpen] = useState(false), [draft, setDraft] = useState(null), [preview, setPreview] = useState('');
-  const [phase, setPhase] = useState('idle'), [progress, setProgress] = useState(0), [error, setError] = useState(''), [confirmed, setConfirmed] = useState(false), [saved, setSaved] = useState(null);
+  const [phase, setPhase] = useState('idle'), [progress, setProgress] = useState(0), [error, setError] = useState(''), [saved, setSaved] = useState(null);
   const [ocrStage,setOcrStage]=useState('preparing');
   const [editingIndex, setEditingIndex] = useState(-1), [metadataOpen, setMetadataOpen] = useState(false);
   const [omittedItems, setOmittedItems] = useState(null);
@@ -34,7 +34,7 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
   const gallery = useRef(null), camera = useRef(null), dialog = useRef(null), trigger = useRef(null), generation = useRef(0), abort = useRef(null), busySave = useRef(false), mounted = useRef(false), currentOwner = useRef(userId);
   currentOwner.current = userId;
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; generation.current++; abort.current?.abort(); }; }, []);
-  useEffect(() => { generation.current++; abort.current?.abort(); setOpen(false); setDraft(null); setPreview(''); setSaved(null); setError(''); setPhase('idle'); setConfirmed(false); setProductMemory(readProductMemory(userId)); }, [userId]);
+  useEffect(() => { generation.current++; abort.current?.abort(); setOpen(false); setDraft(null); setPreview(''); setSaved(null); setError(''); setPhase('idle'); setProductMemory(readProductMemory(userId)); }, [userId]);
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
   useEffect(() => {
     if (open && dialog.current && !dialog.current.open) { dialog.current.showModal(); dialog.current.querySelector('#receipt-title')?.focus({preventScroll:true}); }
@@ -52,7 +52,7 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
   }
   function rescan(){setDraft(null);setError('');setPhase('scanner');}
   function manual(){if(!draft)review('');setError('');setPhase('review');requestAnimationFrame(focusTotal);}
-  function update(next) { setDraft(previous => ({ ...previous, ...next })); setConfirmed(false); setError(''); }
+  function update(next) { setDraft(previous => ({ ...previous, ...next })); setError(''); }
   function review(text) {
     const parsed = parseReceiptPhoto(text,{today,defaultDateKey:defaultDateKey||today,defaultCurrency:CURRENCIES.some(item=>item.code===defaultCurrency)?defaultCurrency:''});
     const memory=readProductMemory(userId);setProductMemory(memory);
@@ -61,7 +61,7 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
     const checked=receiptValidation(parsed,today,CURRENCIES.map(item=>item.code));
     const fallback=parsed.items.length&&!parsed.documentIssue&&(!parsed.total||checked.mismatch||parsed.items.some(receiptItemIssue));
     setOmittedItems(fallback?parsed.items:null);
-    setDraft(fallback?{...parsed,items:[]}:parsed);setEditingIndex(-1);setConfirmed(false);
+    setDraft(fallback?{...parsed,items:[]}:parsed);setEditingIndex(-1);
     setMetadataOpen(false);
     return parsed;
   }
@@ -96,7 +96,7 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
     const request = ++generation.current, owner = userId;
     abort.current?.abort(); const controller = new AbortController(); abort.current = controller;
     const alive = () => mounted.current && request === generation.current && currentOwner.current === owner;
-    setOpen(true); setDraft(null); setSaved(null); setPreview(''); setConfirmed(false); setError(''); setProgress(0);
+    setOpen(true); setDraft(null); setSaved(null); setPreview(''); setError(''); setProgress(0);
     if (!/^image\/(?:jpeg|png|webp|bmp)$/i.test(file.type) || file.size > 20 * 1024 * 1024) { setPhase('review'); setError(c.file); return; }
     setPreview(URL.createObjectURL(file)); setPhase('checking');
     try {
@@ -140,7 +140,7 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
   const retryAccess = phase === 'access-error';
   const actionLabel = saved ? c.done : retryAccess ? c.retryAccess : phase === 'saving' ? c.saving : documentIssue ? c.gallery : requiredField ? (requiredField==='total'?c.enterAmount:requiredField==='currency'?c.chooseCurrency:c.chooseDate) : itemIssues.length ? (itemIssues.length === 1 ? c.checkPurchase : c.checkPurchases) : validation?.mismatch ? c.checkTotal : c.save;
   async function save() {
-    if (busySave.current || !confirmed || !validation?.valid) return;
+    if (busySave.current || !validation?.valid) return;
     const owner = userId, request = generation.current;
     busySave.current = true; setPhase('saving'); setError('');
     const snapshot = structuredClone(draft);
@@ -200,12 +200,11 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
               {needsReview && !documentIssue && <button type="button" className="receipt-total-only" aria-label={c.useTotalOnly} onClick={toggleTotalOnly}><ReceiptText size={17}/><span>{c.useTotalOnly}<small>{c.withoutItems}</small></span><ChevronRight size={15}/></button>}
               {omittedItems && <div className="receipt-omitted"><ReceiptText size={16}/><span>{c.withoutItems}</span><button type="button" onClick={toggleTotalOnly}>{c.restoreItems}</button></div>}
               <details className="receipt-raw"><summary>{c.raw}</summary>{draft.evidence && <blockquote className="receipt-evidence">{draft.evidence}</blockquote>}<textarea aria-label={c.raw} value={draft.rawText} maxLength={40000} onChange={event => update({rawText:event.target.value})}/><button type="button" onClick={() => review(draft.rawText)}>{c.reparse}</button></details>
-              {!documentIssue && !needsReview && !requiredField && <label className="receipt-confirm"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)}/><span>{c.confirm}</span></label>}
             </fieldset>}
             {!draft && !busy && !retryAccess && phase!=='scan-failed' && photoChoices}
           </>}
         </div>
-        {phase!=='scan-failed' && <footer className="receipt-footer"><button type="button" className="receipt-primary" aria-label={actionLabel} disabled={!saved && !retryAccess && (busy || (!documentIssue && !requiredField && !needsReview && (!confirmed || !validation?.valid)))} onClick={saved ? close : retryAccess ? () => readFile(selectedFile.current) : documentIssue ? () => gallery.current?.click() : requiredField ? focusRequired : needsReview ? focusCorrection : save}><span>{actionLabel}</span>{!saved && draft && !documentIssue && receiptMoney(draft.total)>0 && <b aria-hidden="true">{displayMoney(draft.total)} {draft.currency}</b>}</button></footer>}
+        {phase!=='scan-failed' && <footer className="receipt-footer"><button type="button" className="receipt-primary" aria-label={actionLabel} disabled={!saved && !retryAccess && (busy || (!documentIssue && !requiredField && !needsReview && !validation?.valid))} onClick={saved ? close : retryAccess ? () => readFile(selectedFile.current) : documentIssue ? () => gallery.current?.click() : requiredField ? focusRequired : needsReview ? focusCorrection : save}><span>{actionLabel}</span>{!saved && draft && !documentIssue && receiptMoney(draft.total)>0 && <b aria-hidden="true">{displayMoney(draft.total)} {draft.currency}</b>}</button></footer>}
       </div>)}
     </dialog>,document.body)}
   </>;

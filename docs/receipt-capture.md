@@ -18,7 +18,7 @@ product names. Unknown names require correction/removal. Each conflicting row is
 marked; the difference between item sums and the receipt total is shown explicitly.
 
 Product types are separate from accounting categories. The shared catalog contains
-98 stable types with Russian, Romanian, English and Chinese aliases/icons. Unknown
+101 stable types with Russian, Romanian, English and Chinese aliases/icons. Unknown
 products retain their name and a generic icon; they never create calendar
 categories. The searchable type picker can correct a match. Exact-name corrections
 are stored for that account on the current device (maximum 1,000 aliases), with an
@@ -46,8 +46,10 @@ to 20 MB in JPEG/PNG/WebP/BMP are supported; HEIC needs conversion to JPEG.
 The parser treats receipt totals separately from item sums, payment, change,
 discounts and tax. Monetary arithmetic uses integer minor units. Ambiguous total,
 currency or date stays unset. Item discrepancies show a warning; an explicit
-photo/date/currency/total confirmation is always required and resets after edits.
-Users can remove unreadable rows and save only a manually verified total.
+save action confirms the visible draft; there is no separate photo checkbox.
+Unresolved totals, missing currency/date and contradictory item arithmetic still
+lead to the relevant correction. Users can remove unreadable rows and save only
+the verified total. See [Moldovan receipt follow-up](receipt-moldova.md).
 
 Current currency options remain USD/EUR/MDL/RUB/CNY/UAH. RON is recognized as RON but
 must not be silently converted to MDL. Date must be today or in the past. Repeated

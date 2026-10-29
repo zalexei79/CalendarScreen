@@ -103,7 +103,6 @@ const rows = {
   missing: ['Не удалось однозначно прочитать итог. Введите его с фото вручную.','The total could not be read unambiguously. Enter it from the photo.','Totalul nu a fost citit clar. Introdu-l manual din fotografie.','无法明确识别总额，请根据照片手动输入。'],
   dateMissing: ['Укажите дату чека: сегодня или прошедший день.','Choose the receipt date: today or a past day.','Alege data bonului: astăzi sau o zi din trecut.','请选择收据日期：今天或过去的日期。'],
   totalOnly: ['Сохранится итог без списка покупок','The total will be saved without items','Se salvează totalul fără produse','仅保存总额，不含商品'],
-  confirm: ['Сверено с фото','Checked against photo','Verificat în fotografie','已对照照片核对'],
   save: ['Сохранить расход','Save expense','Salvează cheltuiala','保存支出'],
   saving: ['Сохраняем…','Saving…','Salvăm…','正在保存…'],
   saved: ['Расход добавлен в календарь','Expense added to calendar','Cheltuiala a fost adăugată în calendar','支出已记入日历'],

@@ -1,5 +1,6 @@
 import {receiptTotalAnchor,receiptTotalLine,receiptNonItemLine} from './receiptStructure.js';
 import {receiptMoney,moneyText,parseReceipt} from './receiptModel.js';
+import{receiptSpatialRows}from'./receiptSpatial.js';
 
 const linesOf=data=>(data.blocks||[]).flatMap(block=>(block.paragraphs||[]).flatMap(paragraph=>paragraph.lines||[]));
 function labelEnd(line){
@@ -26,7 +27,13 @@ const numericReading=value=>{
   return receiptMoney(text.replace(/\s*([.,])\s*/g,'$1'));
 };
 export async function refineReceiptTotals(data,readLine,{signal,onProgress}={}){
-  const lines=linesOf(data),anchors=lines.map((line,index)=>({line,index,anchor:receiptTotalAnchor(line.text)})).filter(totalCandidate);
+  const rawLines=linesOf(data),spatial=receiptSpatialRows(data);
+  const lines=rawLines.map(line=>{
+    const anchor=receiptTotalAnchor(line.text),literal=receiptTotalLine(line.text);
+    if(!anchor||(literal&&receiptMoney(literal.amount)>0)||!line.bbox)return line;
+    const center=(line.bbox.y0+line.bbox.y1)/2,height=line.bbox.y1-line.bbox.y0;
+    return spatial.find(row=>{const merged=receiptTotalAnchor(row.text);return merged&&/\d/.test(merged.tail)&&row.words.length>(line.words?.length||0)&&Math.abs((row.bbox.y0+row.bbox.y1)/2-center)<height*.55;})||line;
+  }),anchors=lines.map((line,index)=>({line,index,anchor:receiptTotalAnchor(line.text)})).filter(totalCandidate);
   const finals=anchors.filter(row=>row.anchor.role==='final'),pool=finals.length?finals:anchors,priority=Math.max(1,...pool.map(row=>row.anchor.priority||1)),targets=pool.filter(row=>(row.anchor.priority||1)===priority).slice(0,3);
   let text=String(data.text||''),totalNeedsReview=Boolean(data.totalNeedsReview),totalRecovered=Boolean(data.totalRecovered),totalCandidates=[];
   for(const [number,{line,index,anchor}]of targets.entries()){
@@ -39,9 +46,17 @@ export async function refineReceiptTotals(data,readLine,{signal,onProgress}={}){
     if(wrapped){source=lines[index+1];left=source.bbox.x0;}
     if(!source.bbox||left===undefined||source.bbox.x1-left<5)continue;
     let afterLabel=(source.words||[]).filter(word=>word.bbox.x0>=left&&/\d/.test(word.text));
-    const amountWord=afterLabel.findLast(word=>/\d\s*[.,]\s*\d/.test(word.text))||afterLabel.at(-1);
+    const formatted=afterLabel.findLast(word=>/\d\s*[.,]\s*\d/.test(word.text)),split=afterLabel.findLast(word=>/^\d+[.,]$/.test(word.text));
+    const amountWord=formatted||split||afterLabel.at(-1);
     let box=amountWord?.bbox||{...source.bbox,x0:left};
     if(amountWord){
+      // Segmentation can put damaged cents in their own word ("44. /0").
+      // Include the adjacent printed fragment for pixel rereads, never repair
+      // its characters into a price by guessing from text.
+      if(!formatted&&split){
+        const next=source.words[source.words.indexOf(split)+1],h=box.y1-box.y0;
+        if(next&&/^[\d.,„/\\oOsSЭЙ]{1,3}[A-D]?$/u.test(next.text)&&next.bbox.x0-box.x1<h&&Math.abs((next.bbox.y0+next.bbox.y1-box.y0-box.y1)/2)<h*.35)box={x0:box.x0,x1:next.bbox.x1,y0:Math.min(box.y0,next.bbox.y0),y1:Math.max(box.y1,next.bbox.y1)};
+      }
       const amountHeight=box.y1-box.y0;
       afterLabel=afterLabel.filter(word=>!(word.bbox.x0>box.x1+amountHeight*.75&&word.bbox.y1-word.bbox.y0<amountHeight*.75));
       if(/^[=:€$₽£¥₴]+\s*\d/.test(amountWord.text)){
@@ -65,7 +80,7 @@ export async function refineReceiptTotals(data,readLine,{signal,onProgress}={}){
     }
     const height=box.y1-box.y0,pad=Math.max(3,Math.round(height*(data.totalLayout ? .1 : .2)));
     const rectangle={left:Math.max(0,box.x0-pad),top:Math.max(0,box.y0-pad),width:box.x1-box.x0+2*pad,height:height+2*pad};
-    const readings=[],needsDecimal=Boolean(data.totalRequiresDecimal||/[.,]\s*\d{1,2}(?!\d)/.test(anchor.tail));
+    const readings=[],needsDecimal=Boolean(data.totalRequiresDecimal||split||/[.,]\s*\d{1,2}(?!\d)/.test(anchor.tail));
     for(const mode of ['7','13']){
       if(signal?.aborted)throw new Error('CANCELLED');
       try{const reading=await readLine(rectangle,mode);readings.push(needsDecimal&&!/[.,]\s*\d{1,2}(?!\d)/.test(reading)?null:numericReading(reading));}
@@ -73,11 +88,13 @@ export async function refineReceiptTotals(data,readLine,{signal,onProgress}={}){
     }
     const accepted=readings.length===2&&readings[0]>0&&readings[0]===readings[1];
     if(accepted){
+      const literal=receiptTotalLine(line.text),printed=receiptMoney(literal?.amount);
+      if(printed>0&&printed!==readings[0])totalNeedsReview=true;
       if(totalNeedsReview)totalCandidates.push(moneyText(readings[0]));
       totalRecovered=totalRecovered||anchor.fuzzy||!receiptTotalLine(line.text);
       const currency=anchor.tail.match(/\b(?:MDL|RON|USD|EUR|RUB|CNY|UAH|LEI|GBP|CHF|PLN|JPY)\b|грн\.?|руб\.?|[€$₽£¥₴]/giu)?.join(' ')||'';
       const replacement=`${anchor.role==='due'?'AMOUNT DUE':anchor.priority>1?'GRAND TOTAL':'TOTAL'} ${currency} ${moneyText(readings[0])}`.replace(/\s+/g,' ');
-      text=text.replace(line.text.trim(),replacement);
+      text=text.includes(line.text.trim())?text.replace(line.text.trim(),replacement):`${text}\n${replacement}`;
     }else{
       totalNeedsReview=true;totalCandidates.push(...readings.filter(value=>value>0).map(moneyText));
     }
@@ -86,7 +103,7 @@ export async function refineReceiptTotals(data,readLine,{signal,onProgress}={}){
   if(!targets.length&&parseReceipt(data.text||'').total)totalNeedsReview=true;
   // An exact, independently printed total can still be offered for explicit
   // photo review when a second pixel reading is inconclusive. Never auto-pick it.
-  if(totalNeedsReview&&!totalCandidates.length){const printed=parseReceipt(data.text||'').total;if(receiptMoney(printed)>0)totalCandidates.push(printed);}
+  if(totalNeedsReview){const printed=parseReceipt(data.text||'').total;if(receiptMoney(printed)>0)totalCandidates.unshift(printed);}
   return {...data,text,totalNeedsReview,totalRecovered,totalCandidates:totalNeedsReview?[...new Set(totalCandidates)].slice(0,3):[]};
 }
 

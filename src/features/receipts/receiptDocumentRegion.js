@@ -26,6 +26,11 @@ export function receiptDocumentBounds({data,width,height}){
       }
       const w=x1-x0+1,h=y1-y0+1,area=w*h/size,aspect=(h*cell)/(w*cell),fill=paper/(w*h);
       if(area<.025||area>.9||aspect<.8||aspect>10||fill<.48||w<3||h<7)continue;
+      // A bright textured table can connect into a large region at the image
+      // borders. Cropping that background discards receipt pixels; a close-up
+      // page can safely use the original image when it fills the frame.
+      const borders=Number(x0<=1)+Number(y0<=1)+Number(x1>=cols-2)+Number(y1>=rows-2);
+      if(area>.3&&borders>0)continue;
       let surrounding=0,outside=0;for(let y=Math.max(0,y0-3);y<=Math.min(rows-1,y1+3);y++)for(let x=Math.max(0,x0-3);x<=Math.min(cols-1,x1+3);x++){if(x>=x0&&x<=x1&&y>=y0&&y<=y1)continue;surrounding+=light[y*cols+x];outside++;}
       const contrast=brightness/paper-(outside?surrounding/outside:brightness/paper);
       if(contrast<9)continue;

@@ -6,9 +6,9 @@ import {parseReceipt,receiptValidation}from'../src/features/receipts/receiptMode
 import {recoverReceiptTotal}from'../src/features/receipts/receiptTotalRecovery.js';
 const context={today:'2026-10-20',defaultDateKey:'2026-10-20',defaultCurrency:'MDL'};
 const fixture=(label='Сума',amount='22,90')=>({text:`SHOP\nЧек № 123\n${label} ${amount}\n20-10-2026`,blocks:[{paragraphs:[{lines:[{text:`${label} ${amount}\n`,bbox:{x0:10,y0:200,x1:500,y1:240},words:[{text:label,bbox:{x0:10,y0:200,x1:100,y1:240}},{text:amount,bbox:{x0:300,y0:200,x1:450,y1:240}}]}]}]}]});
-test('two agreeing total-region readings recover digits without relying on item recognition',async()=>{
+test('two agreeing rereads cannot silently replace a different literal total',async()=>{
  const calls=[],result=await refineReceiptTotals(fixture(),async(rect,mode)=>{calls.push({rect,mode});return'532.90';});
- assert.equal(parseReceiptPhoto(result,context).total,'532.90');assert.equal(calls.length,2);assert.deepEqual(calls.map(call=>call.mode),['7','13']);assert.ok(calls[0].rect.left>200,'read the amount, not the label/background');
+ assert.equal(parseReceiptPhoto(result,context).total,'');assert.deepEqual(result.totalCandidates,['22.90','532.90']);assert.equal(calls.length,2);assert.deepEqual(calls.map(call=>call.mode),['7','13']);assert.ok(calls[0].rect.left>200,'read the amount, not the label/background');
 });
 test('known OCR label confusions require pixels; a fuzzy word alone cannot supply a total',async()=>{
  for(const label of['счма','CYMA','curma','curna','С У М А','T0TAL','Tota1','ИT0Г','И Т О Г','ВСЕГ0','TOTA|']){
@@ -91,7 +91,7 @@ test('an unreadable amount beside a readable total heading cannot stop footer re
   seen.push(image);if(!options.rectangle)return fixture('Сума',image==='paper'?'???':'635.50');
   return {text:image==='footer'?'695.50':''};
  });
- assert.equal(result.input,'footer');assert.equal(parseReceiptPhoto(result.data,context).total,'695.50');assert.ok(seen.includes('paper')&&seen.includes('footer'));
+ assert.equal(result.input,'footer');assert.equal(parseReceiptPhoto(result.data,context).total,'');assert.deepEqual(result.data.totalCandidates,['635.50','695.50']);assert.ok(seen.includes('paper')&&seen.includes('footer'));
 });
 
 test('recovery keeps conflicting footer values for review and never selects a cash amount',async()=>{
@@ -127,3 +127,12 @@ test('folded paper and a merged tax box do not clip the total label or include t
 test('a readable labelled total remains a review choice when an independent reread is inconclusive',async()=>{const data={...fixture('TOTAL','151.85'),totalNeedsReview:true};const result=await refineReceiptTotals(data,async()=> '');assert.equal(parseReceiptPhoto(result,context).total,'');assert.deepEqual(result.totalCandidates,['151.85']);});
 
 test('a count before an already grouped total cannot enter the numeric crop',async()=>{const data=fixture('TOTAL','4 156,090'),line=data.blocks[0].paragraphs[0].lines[0];line.words=[{text:'TOTAL',bbox:{x0:10,x1:80,y0:200,y1:240}},{text:'4',bbox:{x0:100,x1:110,y0:200,y1:240}},{text:'156,090',bbox:{x0:120,x1:300,y0:200,y1:240}}];const result=await refineReceiptTotals(data,async rectangle=>{assert.ok(rectangle.left>110);return '156,090';});assert.equal(parseReceiptPhoto(result,context).total,'');assert.deepEqual(result.totalCandidates,['156090.00']);});
+
+test('short damaged TOTAL with a currency cue requires actual number rereads',async()=>{for(const label of['TOI LEI','TOTI LEI','TOTAL LE1','TOTAL LAY']){const data=fixture(label,'88.40');assert.equal(parseReceiptPhoto(data,context).total,'');const result=await refineReceiptTotals(data,async()=> '88.40');assert.equal(parseReceiptPhoto(result,context).total,'88.40',label);}for(const label of['TOI','TOI cereal','TOT yogurt']){let reads=0;await refineReceiptTotals(fixture(label,'88.40'),async()=>{reads++;return'88.40';});assert.equal(reads,0,label);}});
+test('split damaged cents stay inside the crop and cannot lose their decimal separator',async()=>{const data=fixture('TOTAL LEI','88. /40'),line=data.blocks[0].paragraphs[0].lines[0];line.words=[{text:'TOTAL',bbox:{x0:10,x1:70,y0:200,y1:240}},{text:'LEI',bbox:{x0:75,x1:105,y0:200,y1:240}},{text:'88.',bbox:{x0:300,x1:350,y0:200,y1:240}},{text:'/40',bbox:{x0:355,x1:410,y0:200,y1:240}}];const result=await refineReceiptTotals(data,async rectangle=>{assert.ok(rectangle.left+rectangle.width>410);return '88.40';});assert.equal(parseReceiptPhoto(result,context).total,'88.40');assert.equal(parseReceiptPhoto(await refineReceiptTotals(data,async()=> '8840'),context).total,'');});
+test('separate OCR paragraphs on the total baseline are reread as one spatial row',async()=>{
+ const data=fixture('TOI LEI','88.40'),words=data.blocks[0].paragraphs[0].lines[0].words;data.text='TOI LEI\n88.40';
+ data.blocks=[{paragraphs:words.map(word=>({lines:[{text:word.text,bbox:word.bbox,words:[word]}]}))}];
+ const result=await refineReceiptTotals(data,async()=> '88.40');assert.equal(parseReceiptPhoto(result,context).total,'88.40');
+});
+test('a literal total stays visible even when several rereads fill the candidate limit',async()=>{const data=fixture('TOTAL','88.40'),line=data.blocks[0].paragraphs[0].lines[0];data.blocks[0].paragraphs[0].lines=[line,structuredClone(line),structuredClone(line)];let value=10;const result=await refineReceiptTotals(data,async()=>`${value++}.10`);assert.equal(result.totalCandidates[0],'88.40');assert.equal(result.totalCandidates.length,3);assert.equal(parseReceiptPhoto(result,context).total,'');});

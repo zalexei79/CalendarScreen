@@ -1,10 +1,11 @@
 // Product types are a presentation/classification layer, not calendar categories.
 // Many aliases and brands can map to one stable type; unknown products stay intact.
+import{ROMANIAN_PRODUCT_ALIASES}from'./romanianProductAliases.js';
 export const normalizeProductText = value => String(value || '').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().replace(/\s+/g,' ').trim();
 export const productLocale = language => String(language).startsWith('zh') ? 3 : ['ro','md'].includes(language) ? 2 : language === 'en' ? 1 : 0;
 const wordText = value => normalizeProductText(value).replace(/[^\p{L}\p{N}*]+/gu,' ').trim();
 const define = (id,symbol,category,labels,aliases) => {
-  const words=[...new Set([...labels,...aliases.split('|')].map(normalizeProductText))];
+  const words=[...new Set([...labels,...aliases.split('|'),...(ROMANIAN_PRODUCT_ALIASES[id]||'').split('|')].map(normalizeProductText))];
   const matchers=words.filter(Boolean).map(word=>({needle:wordText(word),parts:wordText(word).split(' '),stem:word.includes('*'),han:/\p{Script=Han}/u.test(word)}));
   return {id,symbol,category,labels,aliases:words,matchers};
 };
@@ -23,7 +24,8 @@ export const RECEIPT_PRODUCT_TYPES = [
   define('nut_spread','🥜','Продукты',['Ореховая паста','Nut spread','Pastă de nuci','坚果酱'],'peanut butter|unt de arahide|арахисовая паста|nutella'),
   define('milk','🥛','Продукты',['Молоко','Milk','Lapte','牛奶'],'молок*|lapte|milk'),
   define('yogurt','🥛','Продукты',['Йогурт','Yogurt','Iaurt','酸奶'],'iaurt|yoghurt|кефир*|kefir|йогурт*'),
-  define('cheese','🧀','Продукты',['Сыр','Cheese','Brânză','奶酪'],'branza|cascaval|сыр*|творог|cottage cheese|mozzarella|parmesan'),
+  define('cheese','🧀','Продукты',['Сыр','Cheese','Brânză','奶酪'],'branza|cascaval|сыр*|mozzarella|parmesan'),
+  define('cottage_cheese','🧀','Продукты',['Творог','Cottage cheese','Brânză de vaci','凝乳'],'cottage cheese|творог*'),
   define('butter','🧈','Продукты',['Сливочное масло','Butter','Unt','黄油'],'unt|butter|масло сливоч*'),
   define('cream','🥛','Продукты',['Сметана и сливки','Cream','Smântână și frișcă','奶油'],'smantana|frisca|sour cream|сметан*|сливки'),
   define('eggs','🥚','Продукты',['Яйца','Eggs','Ouă','鸡蛋'],'oua|egg|яйц*'),
@@ -39,6 +41,7 @@ export const RECEIPT_PRODUCT_TYPES = [
   define('rice','🍚','Продукты',['Рис','Rice','Orez','大米'],'orez|рис'),
   define('pasta','🍝','Продукты',['Макароны','Pasta','Paste făinoase','意大利面'],'paste|spaghetti|macar*|макарон*|спагетти'),
   define('grains','🌾','Продукты',['Крупы и хлопья','Grains and cereal','Crupe și cereale','谷物'],'hrisca|ovaz|fulgi|cereal*|oat*|buckwheat|греч*|овсян*|хлопья|круп*'),
+  define('porridge','🥣','Продукты',['Каша','Porridge','Terci','粥'],'porridge|oatmeal porridge|каша|каши'),
   define('flour','🌾','Продукты',['Мука','Flour','Făină','面粉'],'faina|мука'),
   define('sugar','🍬','Продукты',['Сахар','Sugar','Zahăr','白糖'],'zahar|сахар'),
   define('salt_spices','🧂','Продукты',['Соль и специи','Salt and spices','Sare și condimente','调味料'],'sare|condiment*|spices|соль|специ*|перец молот*'),
@@ -51,6 +54,7 @@ export const RECEIPT_PRODUCT_TYPES = [
   define('onions','🧅','Продукты',['Лук','Onions','Ceapă','洋葱'],'ceapa|onion*|лук'),
   define('carrots','🥕','Продукты',['Морковь','Carrots','Morcovi','胡萝卜'],'morcov*|carrot*|морков*'),
   define('vegetables','🥬','Продукты',['Овощи','Vegetables','Legume','蔬菜'],'legume|vegetable*|овощ*|varza|cabbage|капуст*|salata verde|salad leaves|usturoi|garlic|чеснок'),
+  define('mushrooms','🍄','Продукты',['Грибы','Mushrooms','Ciuperci','蘑菇'],'mushroom*|грибы|шампиньон*'),
   define('apples','🍎','Продукты',['Яблоки','Apples','Mere','苹果'],'mere|mere rosii|mere verzi|apple*|яблок*'),
   define('bananas','🍌','Продукты',['Бананы','Bananas','Banane','香蕉'],'banan*|банан*'),
   define('citrus','🍊','Продукты',['Цитрусовые','Citrus fruit','Citrice','柑橘'],'portocal*|mandarin*|lamaie|lemon*|orange*|апельсин*|мандарин*|лимон*'),
@@ -62,7 +66,7 @@ export const RECEIPT_PRODUCT_TYPES = [
   define('ice_cream','🍦','Продукты',['Мороженое','Ice cream','Înghețată','冰淇淋'],'inghetat*|ice cream|морожен*'),
   define('snacks','🍿','Продукты',['Снеки','Snacks','Gustări','零食'],'snack*|chips*|crisps|popcorn|чипс*|сухарик*|попкорн'),
   define('frozen_food','🧊','Продукты',['Замороженные продукты','Frozen food','Produse congelate','冷冻食品'],'congelat*|frozen|пельмен*|вареник*|заморож*'),
-  define('baby_food','🍼','Продукты',['Детское питание','Baby food','Hrană pentru copii','婴儿食品'],'baby food|lapte praf|formula de lapte|детская смесь|детское пюре'),
+  define('baby_food','🍼','Продукты',['Детское питание','Baby food','Hrană pentru copii','婴儿食品'],'baby food|formula de lapte|детская смесь|детское пюре'),
   define('pet_food','🐾','Покупки',['Корм для животных','Pet food','Hrană pentru animale','宠物食品'],'hrana pisici|hrana caini|cat food|dog food|корм*|whiskas|pedigree|purina'),
   define('shampoo','🧴','Покупки',['Шампунь','Shampoo','Șampon','洗发水'],'sampon|шампун*'),
   define('soap','🧼','Покупки',['Мыло и гель для душа','Soap and shower gel','Săpun și gel de duș','香皂和沐浴露'],'sapun|soap|gel de dus|shower gel|мыло|гель для душа'),
@@ -123,9 +127,10 @@ export function classifyProduct(value, preferredType = '') {
   const preferred=productTypeById(preferredType); if(preferred)return preferred;
   const text=wordText(value);
   if(detected.has(text))return productTypeById(detected.get(text));
-  const tokens=text.split(' ');
+  // A named product before "cu/with" outranks a longer ingredient name.
+  const tokens=text.split(' '),ingredient=tokens.findIndex(token=>token==='cu'||token==='with'),head=ingredient>0?tokens.slice(0,ingredient):null;
   let best=null,score=0;
-  for(const type of RECEIPT_PRODUCT_TYPES){const candidate=typeScore(text,tokens,type);if(candidate>score){best=type;score=candidate;}}
+  for(const type of RECEIPT_PRODUCT_TYPES){let candidate=typeScore(text,tokens,type);if(head&&typeScore(head.join(' '),head,type)>0)candidate+=1000;if(candidate>score){best=type;score=candidate;}}
   if(detected.size>=5000)detected.clear();detected.set(text,best?.id||'');
   return best;
 }
