@@ -51,7 +51,7 @@ try{
  await page.getByRole('button',{name:'Расходы',exact:true}).click();
  await page.getByRole('button',{name:'+50',exact:true}).click();await page.getByRole('button',{name:'Категория',exact:true}).click();
  await page.getByRole('textbox',{name:'Найти раздел'}).fill('аквариум');
- await page.getByRole('button',{name:'Закрепить АКВАРИУМ',exact:true}).click();
+ await page.getByRole('button',{name:'Управлять разделами',exact:true}).click();await page.getByRole('button',{name:'Закрепить АКВАРИУМ',exact:true}).click();await page.getByRole('button',{name:'Готово',exact:true}).click();
  await page.getByRole('button',{name:'АКВАРИУМ',exact:true}).click();await page.getByRole('dialog',{name:'Разделы'}).waitFor({state:'detached'});
  assert.equal((await cache()).length,1,'category selection never saves the entry');
  await page.getByRole('button',{name:'Сохранить запись',exact:true}).click();await page.waitForFunction(()=>Object.values(JSON.parse(localStorage.getItem('money_calendar_trades_'+window.testOwner)||'{}')).flat().length===2);
@@ -82,7 +82,9 @@ try{
  assert.equal(await page.locator('.category-picker-trigger .lucide-gamepad-2').count(),1,'custom icon is used by the actual entry composer');
  await page.getByRole('button',{name:'Категория',exact:true}).click();await page.getByRole('textbox',{name:'Найти раздел'}).fill('Настольные игры');
  assert.equal(await page.getByRole('button',{name:'Настольные игры',exact:true}).count(),1);
- await page.getByRole('button',{name:'Управлять разделами'}).click();await page.getByRole('button',{name:'Удалить раздел Настольные игры',exact:true}).click();
+ await page.getByRole('button',{name:'Управлять разделами'}).click();await page.getByRole('button',{name:'Настольные игры',exact:true}).click();await page.getByRole('button',{name:'Эмодзи',exact:true}).click();await page.getByRole('textbox',{name:'Свой эмодзи'}).fill('🎲');await page.getByRole('button',{name:'Сохранить',exact:true}).click();await page.locator('.category-picker-new').waitFor({state:'detached'});
+ assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('dayris_category_library:'+window.testOwner)).icons['настольные игры']),'emoji:🎲');assert.equal((await cache()).length,3,'changing the icon preserves financial entries');
+ await page.getByRole('button',{name:'Удалить раздел Настольные игры',exact:true}).click();
  await page.getByRole('button',{name:'Отмена',exact:true}).click();assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem('dayris_money_categories:'+window.testOwner)).includes('Настольные игры')));
  await page.getByRole('textbox',{name:'Найти раздел'}).fill('АКВАРИУМ');await page.getByRole('button',{name:'Удалить раздел АКВАРИУМ',exact:true}).click();
  assert.match(await page.locator('.category-picker-confirm').textContent(),/Записи, суммы и даты сохранятся/);

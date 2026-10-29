@@ -27,6 +27,7 @@ try{
  const open=async(index=0)=>{await page.locator('.category-picker-trigger').nth(index).click();await page.getByRole('dialog').waitFor();await page.waitForFunction(()=>document.querySelector('.category-picker-sheet').getAnimations().every(animation=>animation.playState==='finished'));};
  const close=async()=>{await page.getByRole('button',{name:'Закрыть разделы'}).click();await page.getByRole('dialog').waitFor({state:'detached'});};
  const search=()=>page.getByRole('textbox',{name:'Найти раздел'});
+ const pin=async name=>{await page.getByRole('button',{name:'Управлять разделами',exact:true}).click();await page.getByRole('button',{name:'Закрепить '+name,exact:true}).click();await page.getByRole('button',{name:'Готово',exact:true}).click();};
  await open();assert.equal(await page.locator('.category-picker-expand').count(),0,'all categories are immediately available');
  assert.deepEqual(await page.locator('.category-picker-quick .category-picker-choice').allTextContents(),['Продукты','Такси','Монитор','Сок']);
  assert.equal(await page.locator('.category-picker-quick .category-picker-icon').count(),4,'quick categories retain their icons');
@@ -36,15 +37,15 @@ try{
  assert.ok(await page.locator('.category-picker-list .category-picker-choice').count()>100);
  await page.locator('.category-picker-list .category-picker-choice').last().scrollIntoViewIfNeeded();assert.equal(await page.locator('.category-picker-list .category-picker-choice').last().isVisible(),true);
  await search().fill('со');assert.equal(await page.locator('.category-picker-choice').count(),2);
- await page.getByRole('button',{name:'Закрепить Сок',exact:true}).click();
+ await pin('Сок');
  await page.getByRole('button',{name:'Сок',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});
  assert.equal(await page.locator('output').textContent(),'Сок');assert.equal(await page.locator('#root').evaluate(element=>element.inert),false);
  assert.equal(await page.locator('.category-picker-trigger').first().evaluate(element=>document.activeElement===element),true);
  await open(1);assert.deepEqual(await page.locator('.category-picker-quick .category-picker-choice').allTextContents(),['Продукты','Такси','Сок','Монитор']);await close();
  // Successful voice-created sections are available immediately, without reopening the app.
  await page.evaluate(()=>addCategory('Аквариум'));await open();assert.ok((await page.locator('.category-picker-choice').allTextContents()).includes('Аквариум'));
- for(const name of ['Кафе','Покупки','Жильё']){await search().fill(name);await page.getByRole('button',{name:'Закрепить '+name,exact:true}).click();}
- await search().fill('Монитор');await page.getByRole('button',{name:'Закрепить Монитор',exact:true}).click();assert.match(await page.locator('footer').textContent(),/до 6/);
+ for(const name of ['Кафе','Покупки','Жильё']){await search().fill(name);await pin(name);}
+ await search().fill('Монитор');await page.getByRole('button',{name:'Управлять разделами',exact:true}).click();await page.getByRole('button',{name:'Закрепить Монитор',exact:true}).click();assert.match(await page.locator('footer').textContent(),/до 6/);await page.getByRole('button',{name:'Готово',exact:true}).click();
  await search().fill('ЖИЛЬЕ');assert.equal(await page.locator('.category-picker-choice').textContent(),'Жильё');
  await search().fill('Личный проект');await page.getByRole('button',{name:'Создать «Личный проект»'}).click();await page.getByRole('button',{name:'Кристалл',exact:true}).click();await page.getByRole('button',{name:'Создать',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});assert.equal(await page.locator('output').textContent(),'Личный проект');
  assert.ok(!(await page.evaluate(()=>JSON.parse(localStorage.getItem('dayris_money_categories:a')))).includes('Личный проект'),'draft choice does not create a stored category');

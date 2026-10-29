@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {categoryLibrary,cleanCategoryProfile,rememberCategory,toggleFavorite,setCategoryIcon,forgetCategory} from '../src/shared/lib/categoryLibrary.js';
+import {validCategoryEmoji,categoryEmoji,CATEGORY_EMOJIS} from '../src/shared/lib/categoryIconCatalog.js';
 test('search uses localized labels, canonical names, word order and е/ё',()=>{
  const options=[{value:'Жильё',label:'Housing'},{value:'Сотовая связь',label:'Сотовая связь'},{value:'Сок',label:'Сок'}];
  const profile=cleanCategoryProfile(null);
@@ -37,4 +38,14 @@ test('icons survive activity and favorite updates, use canonical names, and disa
  assert.deepEqual(forgetCategory(profile,'личный проект').icons,{});
  assert.deepEqual(cleanCategoryProfile({icons:{' ЖИЛЬЁ ':'home','Unknown':'bad','""':'star'}}).icons,{'жилье':'home'});
  assert.deepEqual(cleanCategoryProfile({icons:['star']}).icons,{});
+});
+test('one emoji, including joined families, flags and modifiers, survives preference storage',()=>{
+ for(const emoji of [...CATEGORY_EMOJIS,'👨‍👩‍👧‍👦','🇲🇩','👍🏽','1️⃣']){
+  assert.ok(validCategoryEmoji(emoji),emoji);
+  const profile=setCategoryIcon(cleanCategoryProfile(null),'Мой раздел','emoji:'+emoji);
+  assert.equal(categoryEmoji(cleanCategoryProfile(JSON.parse(JSON.stringify(profile))).icons['мой раздел']),emoji);
+  assert.deepEqual(forgetCategory(profile,'Мой раздел').icons,{});
+ }
+ for(const invalid of ['', 'text', '✨💎','🇲','👩‍','<svg>','✨\n','✨hello'])assert.equal(validCategoryEmoji(invalid),false,invalid);
+ assert.deepEqual(cleanCategoryProfile({icons:{safe:'emoji:💎',bad:'emoji:<img>'}}).icons,{safe:'emoji:💎'});
 });

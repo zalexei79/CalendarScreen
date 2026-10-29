@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v113-receipt-optional-details';
+const CACHE_NAME = 'atj-cache-v114-glass-category-emoji';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

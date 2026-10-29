@@ -36,4 +36,10 @@ export const CATEGORY_ICON_CATALOG = [
   ['repeat','money','Повтор','Repeat','Repetare','重复','Повтор'],
 ].map(([id,group,ru,en,ro,zh,uk])=>({id,group,labels:{ru,en,ro,zh,uk}}));
 export const CATEGORY_ICON_IDS=new Set(CATEGORY_ICON_CATALOG.map(icon=>icon.id));
-export function validCategoryIcon(id){return typeof id==='string'&&CATEGORY_ICON_IDS.has(id);}
+export const CATEGORY_EMOJIS=['✨','💎','🤍','💜','⭐️','🌙','☀️','🌿','🪴','🌸','🦋','🎯','🎨','🎧','🎵','🎮','📚','💻','📷','🧩','🧸','🚗','✈️','🏠','🍵','☕️','🍎','🛍️','🎁','💼','💰','💳','🏦','📈','🏋️','🐾','💡','🧭','🪙','🪐'];
+export function validCategoryEmoji(value){
+ if(typeof value!=='string'||!value||value.length>40||value!==value.trim())return false;
+ return /^(?:\p{Regional_Indicator}{2}|[#*0-9]\uFE0F?\u20E3|\p{Extended_Pictographic}[\uFE0E\uFE0F]?\p{Emoji_Modifier}?(?:\u200D\p{Extended_Pictographic}[\uFE0E\uFE0F]?\p{Emoji_Modifier}?)*)$/u.test(value);
+}
+export function categoryEmoji(id){return typeof id==='string'&&id.startsWith('emoji:')&&validCategoryEmoji(id.slice(6))?id.slice(6):undefined;}
+export function validCategoryIcon(id){return typeof id==='string'&&(CATEGORY_ICON_IDS.has(id)||Boolean(categoryEmoji(id)));}
