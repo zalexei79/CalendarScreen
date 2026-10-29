@@ -16,6 +16,9 @@ try{
   if(rpc==='admin_capabilities')return json({viewUsers:mode!=='denied',editUsers:mode==='full',design:true});
   if(rpc==='admin_list_users_activity')return json({users:[recipient],total:1});
   if(rpc==='admin_recent_entries')return json({rows:[],total:0});
+  if(rpc==='admin_reply_unread')return json(0);
+  if(rpc==='chat_admin_dialogs')return json({rows:[],total:0});
+  if(rpc==='chat_admin_thread')return json({rows:[],has_more:false});
   if(rpc==='admin_user_profile')return json(recipient);
   if(rpc==='admin_pro_state')return json({grants:[],subscriptions:[],server_now:new Date().toISOString()});
   if(rpc==='admin_streak_state')return json({current_days:0});
@@ -28,7 +31,7 @@ try{
   return route.fulfill({contentType:file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html',body:fs.readFileSync(file)});
  });
  await installStoryAccount(context);const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
- await page.goto('http://calendar.test/admin.html');await page.getByRole('button',{name:/Тестовый пользователь user@example.test/}).click();await page.getByRole('button',{name:'Написать пользователю',exact:true}).click();
+ await page.goto('http://calendar.test/admin.html');await page.getByRole('button',{name:/Тестовый пользователь user@example.test/}).click();await page.getByRole('button',{name:'Написать пользователю',exact:true}).click();await page.getByRole('button',{name:'Сообщение / подарок PRO',exact:true}).click();
  await page.getByRole('heading',{name:'Рассылка сообщений'}).waitFor();await page.locator('.admin-message-selected').getByText(recipient.id,{exact:true}).waitFor();
  await page.getByLabel('Текст сообщения ·').fill(body);await page.getByLabel('Также отправить push',{exact:true}).check();await page.getByLabel('Заголовок push ·').fill('Подарок от DAYRIS');await page.getByLabel('Текст push ·').fill('Откройте ваш подарок');await page.getByLabel('Выдать или продлить PRO вместе с сообщением').check();
  await page.screenshot({path:'artifacts/admin-messages-desktop.png',fullPage:true});
@@ -44,6 +47,6 @@ try{
  await inbox.route('**/*',r=>r.fulfill({contentType:'text/html',body:`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{background:#101a17;color:#eee;font-family:system-ui}main{max-width:600px;margin:40px auto}${css}</style><div id="root"></div><script>${js}</script>`}));
  const userPage=await inbox.newPage();userPage.on('pageerror',e=>errors.push(e.message));await userPage.goto('http://inbox.test/?creatorMessage=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');await userPage.getByRole('dialog').getByRole('heading',{name:'Вам подарили PRO'}).waitFor();await userPage.waitForFunction(()=>!location.search.includes('creatorMessage'));assert.equal(await userPage.evaluate(()=>window.injected),undefined);await userPage.screenshot({path:'artifacts/creator-inbox-desktop.png'});
  await userPage.setViewportSize({width:390,height:844});await userPage.screenshot({path:'artifacts/creator-inbox-mobile.png'});assert.equal(await userPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await userPage.getByRole('heading',{name:'Вам подарили PRO',exact:true}).waitFor();await userPage.getByRole('button',{name:'Спасибо',exact:true}).click();await userPage.getByRole('dialog').waitFor({state:'detached'});assert.equal(await userPage.evaluate(()=>window.read),true);await userPage.locator('.creator-gift-note').getByRole('button').click();await userPage.getByRole('dialog').waitFor();
- await userPage.evaluate(()=>{window.inboxUser='user-b';window.changeMessageAccount('user-b');});await userPage.getByRole('dialog').waitFor({state:'detached'});await userPage.locator('.creator-gift-note').waitFor({state:'detached'});await userPage.locator('.creator-messages-button').click();await userPage.getByText('Сообщений пока нет',{exact:true}).waitFor();assert.equal(await userPage.getByText(body,{exact:true}).count(),0);
+ await userPage.evaluate(()=>{window.inboxUser='user-b';window.changeMessageAccount('user-b');});await userPage.getByRole('dialog').waitFor({state:'detached'});await userPage.locator('.creator-gift-note').waitFor({state:'detached'});await userPage.locator('.creator-messages-button').click();await userPage.getByText('Начните разговор',{exact:true}).waitFor();assert.equal(await userPage.getByText(body,{exact:true}).count(),0);
  assert.deepEqual(errors,[]);console.log('PASS: admin single/all confirmation, gift/push preview, read-only/denied; recipient inbox, safe plain text, deep link, persistent gift and account isolation. Mock data only.');
 }finally{await browser.close();}

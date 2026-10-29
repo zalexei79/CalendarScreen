@@ -13,7 +13,7 @@ test('creator campaigns: roles, invisible preview, fixed audience, atomic gift, 
  create table public.pro_subscriptions(id uuid primary key default gen_random_uuid(),user_id uuid,provider text,status text,ends_at timestamptz,renews_at timestamptz,trial_ends_at timestamptz,updated_at timestamptz default now());
  create table public.push_subscriptions(id uuid primary key default gen_random_uuid(),user_id uuid references auth.users(id),active boolean default true,endpoint text,p256dh text,auth text);
  `);
- for(const file of ['202610150001_site_admin.sql','202610150002_admin_user_management.sql','202610150003_admin_google_access.sql','202610010001_pro_notifications.sql','202610200001_admin_pro_management.sql','202610290002_creator_messages.sql','202610290003_message_cards_and_replies.sql'])await db.exec(await fs.readFile('supabase/migrations/'+file,'utf8'));
+ for(const file of ['202610150001_site_admin.sql','202610150002_admin_user_management.sql','202610150003_admin_google_access.sql','202610010001_pro_notifications.sql','202610200001_admin_pro_management.sql','202610290002_creator_messages.sql','202610290003_message_cards_and_replies.sql','202610290004_account_messenger.sql'])await db.exec(await fs.readFile('supabase/migrations/'+file,'utf8'));
  await db.query("insert into auth.users(id,email) values($1,'owner@test'),($2,'reader@test'),($3,'user@test'),($4,'other@test')",[owner,reader,user,other]);await db.exec("insert into auth.identities select id,'google',jsonb_build_object('email',email) from auth.users");
  await db.query('insert into public.site_admins(user_id,can_view_users,can_edit_users) values($1,true,true),($2,true,false),($3,true,true)',[owner,reader,other]);
  await db.query("insert into public.push_subscriptions(user_id,endpoint,p256dh,auth) values($1,'https://fcm.googleapis.com/test','secret-key','secret-auth')",[user]);
@@ -57,6 +57,16 @@ test('creator campaigns: roles, invisible preview, fixed audience, atomic gift, 
  const revoked=await prepare(false,0);await db.exec('reset role');await db.query('update public.site_admins set can_edit_users=false where user_id=$1',[owner]);await asUser(owner);await assert.rejects(send(revoked),/permission required/);await db.exec('reset role');await db.query('update public.site_admins set can_edit_users=true where user_id=$1',[owner]);await asUser(owner);
  const broken=await prepare(true,1);await db.exec("reset role;create function public.fail_campaign_audit() returns trigger language plpgsql as $$begin if new.action='pro.extend' then raise exception 'AUDIT_FAIL';end if;return new;end$$;create trigger fail_campaign_audit before insert on public.site_admin_audit for each row execute function public.fail_campaign_audit();");
  await asUser(owner);await assert.rejects(send(broken),/AUDIT_FAIL/);await db.exec('reset role');assert.equal((await db.query('select status from public.creator_campaigns where id=$1',[broken.id])).rows[0].status,'draft');assert.equal((await db.query('select count(*)::int as n from public.pro_entitlements')).rows[0].n,1);
- await db.exec('set role anon');await assert.rejects(inbox(),/permission denied/);
+ await asUser(owner);const chatRequest='77777777-7777-4777-8777-777777777777';
+ const chatSend=()=>call('select public.chat_admin_send($1,$2,$3) as data',[user,'Личное сообщение в чате',chatRequest]);
+ const chat=await chatSend();assert.equal((await chatSend()).id,chat.id);
+ await asUser(reader);await assert.rejects(chatSend(),/permission required/);
+ await asUser(other);const foreignThread=await call('select public.chat_user_thread() as data');assert.equal(foreignThread.rows.some(m=>m.id===chat.id),false);await db.query('select public.chat_user_read($1)',[[chat.id]]);
+ await asUser(user);let thread=await call('select public.chat_user_thread() as data');assert.equal(thread.rows.find(m=>m.id===chat.id).read_at,null);assert.ok(thread.rows.some(m=>m.pro_until));
+ await assert.rejects(db.query('select * from public.site_chat_entries'),/permission denied/);await assert.rejects(call('select public.chat_admin_thread($1) as data',[other]),/permission required/);
+ const userRequest='88888888-8888-4888-8888-888888888888';const userSend=()=>call('select public.chat_user_send($1,$2) as data',['Ответ в том же разговоре',userRequest]);assert.equal((await userSend()).id,(await userSend()).id);
+ await db.query('select public.chat_user_read($1)',[[chat.id]]);await asUser(owner);thread=await call('select public.chat_admin_thread($1) as data',[user]);assert.ok(thread.rows.find(m=>m.id===chat.id).read_at);assert.equal(thread.rows.filter(m=>m.id===userRequest).length,1);
+ assert.ok((await call('select public.chat_admin_dialogs() as data')).rows.some(u=>u.id===user));
+ await db.exec('reset role;set role anon');await assert.rejects(inbox(),/permission denied/);await assert.rejects(call('select public.chat_user_thread() as data'),/permission denied/);
  }finally{await db.close();}
 });
