@@ -17,6 +17,7 @@ import CalendarMonthBrief from './src/shared/ui/CalendarMonthBrief.jsx';
 import LoginButtons from './src/features/auth/LoginButtons.jsx';
 import ActivityStreak from './src/shared/ui/ActivityStreak.jsx';
 import { getValidUserId } from './src/shared/lib/formatters.js';
+import {HomeFriendsButton} from './src/features/social/HomeFriends.jsx';
 
 function pendingSyncText(count, traderMode, language) {
   if (language === 'uk') return `${count} ${traderMode ? 'угод' : 'записів'} очікують синхронізації.`;
@@ -249,6 +250,7 @@ export default function Header({
           </div>
 
           {/* Settings gear */}
+          <HomeFriendsButton userId={getValidUserId(user)} language={language}/>
           <div className="relative" ref={settingsRef}>
             <button
               type="button"

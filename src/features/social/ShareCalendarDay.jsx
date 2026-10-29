@@ -1,0 +1,12 @@
+import React,{useEffect,useState} from 'react';
+import {supabase} from '../../supabaseClient';
+import {chatLocale} from '../messages/chatCopy.js';
+const words={ru:['Поделиться днём','Записей','Отправить сводку','Будут отправлены только дата, количество записей и итоги по валютам.','Отмена','Не удалось загрузить день.'],uk:['Поділитися днем','Записів','Надіслати підсумок','Буде надіслано лише дату, кількість записів та підсумки за валютами.','Скасувати','Не вдалося завантажити день.'],en:['Share a day','Entries','Send summary','Only the date, entry count and totals by currency will be shared.','Cancel','Could not load this day.'],md:['Distribuie o zi','Înregistrări','Trimite sumarul','Se trimit doar data, numărul de înregistrări și totalurile pe monede.','Anulează','Ziua nu s-a putut încărca.'],'zh-CN':['分享某一天','记录数','发送摘要','仅分享日期、记录数量和各币种合计。','取消','无法加载此日期。']};
+export const dayShareCopy=language=>words[language==='ro'?'md':language]||words.en;
+export default function ShareCalendarDay({userId,language,onCancel,onSend}){
+ const t=dayShareCopy(language),now=new Date(),[day,setDay]=useState(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`),[state,setState]=useState({day:'',data:null,error:false});
+ useEffect(()=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(day))return;let alive=true;supabase.rpc('social_day_summary',{p_day:day,p_owner:userId}).then(({data,error})=>{if(alive)setState({day,data:!error&&data?.owner_id===userId?data:null,error:Boolean(error)||data?.owner_id!==userId});}).catch(()=>{if(alive)setState({day,data:null,error:true});});return()=>{alive=false;};},[day,userId]);
+ const data=state.day===day?state.data:null,locale=chatLocale(language),label=new Date(day+'T12:00:00').toLocaleDateString(locale,{day:'numeric',month:'long',year:'numeric'});
+ const text=data?[`DAYRIS · ${label}`,`${t[1]}: ${data.entries}`,...data.totals.map(item=>`${item.currency}: ${new Intl.NumberFormat(locale,{maximumFractionDigits:2,signDisplay:'exceptZero'}).format(Number(item.amount))}`)].join('\n'):'';
+ return <section className="chat-day-share"><label><span>{t[0]}</span><input aria-label={t[0]} type="date" min="1900-01-01" max="2200-12-31" value={day} onChange={e=>setDay(e.target.value)}/></label>{data&&<pre>{text}</pre>}{state.day===day&&state.error&&<p role="alert">{t[5]}</p>}<p>{t[3]}</p><div><button type="button" disabled={!data} onClick={()=>onSend(text)}>{t[2]}</button><button type="button" onClick={onCancel}>{t[4]}</button></div></section>;
+}

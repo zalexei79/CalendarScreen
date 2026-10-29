@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v124-profiles-and-friends';
+const CACHE_NAME = 'atj-cache-v125-friend-qr-chat';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
@@ -12,6 +12,7 @@ self.addEventListener('push', (event) => {
   const deliveryId = uuid(data.deliveryId) ? data.deliveryId : '';
   const proNotificationId = data.type === 'pro_granted' && uuid(data.proNotificationId) ? data.proNotificationId : '';
   const creatorMessageId = data.type === 'creator_message' && uuid(data.creatorMessageId) ? data.creatorMessageId : '';
+  const friendId = data.type === 'friend_message' && uuid(data.friendId) ? data.friendId : '';
   // Compatible with the existing sender and already queued reminder payloads.
   const eventTitle = typeof data.title === 'string' && data.title.trim() && data.title.length < 90 ? data.title.trim() : '';
   // The OS already identifies the app (including "from DAYRIS" on Watch).
@@ -25,8 +26,8 @@ self.addEventListener('push', (event) => {
     body,
     icon: '/icon-192.png?v=20260920-desktop-v4',
     tag: deliveryId ? 'dayris-' + deliveryId : 'dayris-reminder',
-    data: { reminderId, ...(proNotificationId ? { proNotificationId } : {}),...(creatorMessageId?{creatorMessageId}:{}) },
-    actions: proNotificationId || creatorMessageId ? [] : [
+    data: { reminderId, ...(proNotificationId ? { proNotificationId } : {}),...(creatorMessageId?{creatorMessageId}:{}),...(friendId?{friendId}:{}) },
+    actions: proNotificationId || creatorMessageId || friendId ? [] : [
       { action: 'completed', title: 'Подтвердилось' },
       { action: 'missed', title: 'Не получилось' },
       { action: 'amount', title: 'Указать сумму' },
@@ -38,6 +39,8 @@ self.addEventListener('notificationclick', (event) => {
   const target = new URL('/', self.location.origin);
   const id = event.notification.data?.reminderId;
   const creatorId=event.notification.data?.creatorMessageId;
+  const friendId=event.notification.data?.friendId;
+  if(typeof friendId==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(friendId))target.searchParams.set('friendChat',friendId);
   if(typeof creatorId==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(creatorId))target.searchParams.set('creatorMessage',creatorId);
   if (typeof id === 'string' && id) target.searchParams.set('reminder', id);
   if (id && ['completed', 'missed', 'amount'].includes(event.action)) target.searchParams.set('action', event.action);

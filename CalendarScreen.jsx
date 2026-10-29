@@ -146,6 +146,8 @@ import { readWorkspace, writeWorkspace, clearWorkspace } from './src/shared/lib/
 import ProOffer from './src/features/pro/ProOffer.jsx';
 import ProGrantNotice from './src/features/pro/ProGrantNotice.jsx';
 import CreatorMessages from './src/features/messages/CreatorMessages.jsx';
+import {FriendChatDialog,FriendInvitePrompt} from './src/features/social/FriendMessaging.jsx';
+import HomeFriends from './src/features/social/HomeFriends.jsx';
 import ConnectionStatus from './src/shared/ui/ConnectionStatus.jsx';
 import ActivityStreakDialog from './src/shared/ui/ActivityStreakDialog.jsx';
 import { markAccountNoSpend } from './src/shared/lib/accountActivityStreak.js';
@@ -4505,6 +4507,9 @@ export default function CalendarScreen() {
     }} /> : <div className={`premium-shell min-h-screen w-full flex flex-col transition-colors duration-500 ${proView ? 'pro-active-shell' : ''} ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
       <ProGrantNotice userId={validUserId} active={proAccessActive} until={proAccessUntil} language={language} isLight={isLight} />
       <CreatorMessages userId={validUserId} language={language} isLight={isLight}/>
+      <FriendChatDialog key={'friend-chat:'+validUserId} userId={validUserId} language={language} blocked={Boolean(setupStep||nicknameModalOpen)}/>
+      <FriendInvitePrompt key={'friend-invite:'+validUserId} userId={validUserId} language={language} blocked={Boolean(setupStep||nicknameModalOpen)}/>
+      <HomeFriends key={'friends-home:'+validUserId} userId={validUserId} language={language}/>
       <AndroidWidgetPairing ready={homeVoiceReady} userId={validUserId} language={language} currency={currency} categories={moneyCategoryNames.map(value=>({value,label:getMoneyCategoryLabel(value,language),type:MONEY_CATEGORIES.find(item=>item.key===value)?.type}))} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');

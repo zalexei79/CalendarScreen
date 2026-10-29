@@ -216,7 +216,8 @@ export function useReferral({ user }) {
     }
 
     claimPendingReferral();
-    return () => { cancelled = true; };
+    window.addEventListener('online',claimPendingReferral);
+    return () => { cancelled = true; window.removeEventListener('online',claimPendingReferral); };
   }, [userId, refreshReferralStatus]);
 
   useEffect(() => {
@@ -229,6 +230,7 @@ export function useReferral({ user }) {
 
     window.addEventListener('focus', refresh);
     window.addEventListener('online', refresh);
+    window.addEventListener('dayris:referral-refresh', refresh);
     document.addEventListener('visibilitychange', onVisibility);
 
     // Fast enough to make referral progress/rewards feel live without Realtime setup.
@@ -237,6 +239,7 @@ export function useReferral({ user }) {
     return () => {
       window.removeEventListener('focus', refresh);
       window.removeEventListener('online', refresh);
+      window.removeEventListener('dayris:referral-refresh', refresh);
       document.removeEventListener('visibilitychange', onVisibility);
       window.clearInterval(timer);
     };

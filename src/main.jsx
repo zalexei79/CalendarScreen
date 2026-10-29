@@ -11,6 +11,7 @@ import SiteConfigRuntime from './features/admin/SiteConfigRuntime.jsx'
 import ExtensionRuntime from './features/extensions/ExtensionRuntime.jsx'
 import { installInteractionHaptics } from './shared/lib/interactionHaptics.js'
 import { installDisplayPreferences } from './shared/lib/displayPreferences.js'
+import { captureSocialLinks,readSocialPending } from './features/social/socialLinks.js'
 const AdminPanel = React.lazy(() => import('./features/admin/AdminApp.jsx'))
 const BotCalendarPage = React.lazy(() => import('./features/bot-calendar/BotCalendarPage.jsx'))
 
@@ -93,12 +94,13 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
 }
 
 const params = new URLSearchParams(window.location.search)
+const incomingFriendInvite = captureSocialLinks() || Boolean(readSocialPending('invite'))
 
 // Keep the inviter code across:
 // QR -> install screen -> Google OAuth -> first app launch.
 // This is intentionally stored before React renders.
 const incomingReferral = String(params.get('ref') || '').trim().toUpperCase()
-if (/^[A-Z0-9]{4,32}$/.test(incomingReferral)) {
+if (!incomingFriendInvite && /^[A-Z0-9]{4,32}$/.test(incomingReferral)) {
   try { window.localStorage.setItem('atj_pending_referral_code', incomingReferral) } catch { /* ignore */ }
 
   // iPhone/iPad Home Screen web apps do not inherit Safari localStorage.
