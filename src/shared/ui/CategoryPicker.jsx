@@ -8,6 +8,7 @@ import {CATEGORY_ICON_CATALOG,CATEGORY_EMOJIS,categoryEmoji,validCategoryEmoji} 
 import {categoryIcon,categoryDefaultIcon,categoryIconTone} from './categoryIcons.js';
 import {categoryPickerDesignCopy} from './categoryPickerDesignCopy.js';
 import useCategoryPreferences from './useCategoryPreferences.js';
+import useCategorySwipeDismiss from './useCategorySwipeDismiss.js';
 import './CategoryPicker.css';
 
 const copy = {
@@ -26,6 +27,7 @@ const managementCopy={
 };
 
 function PickerSheet({options,managementOptions,value,language,isLight,preferences,onClose,onSelect,allowCreate,allOption,onCreate,onDelete}) {
+ const motionRef=useRef(null);
  const locale = language.startsWith('zh') ? 'zh' : ['md','ro'].includes(language) ? 'ro' : language;
  const c = copy[locale] || copy.ru, m=managementCopy[locale]||managementCopy.ru, d=categoryPickerDesignCopy(language), titleId = useId(), formId=useId(), searchRef = useRef(null), panelRef = useRef(null), closeRef = useRef(null), timer = useRef(null),actionTimer=useRef(null),mounted=useRef(true),actionBusy=useRef(false);
  const [query,setQuery] = useState(''), [closing,setClosing] = useState(false), [limit,setLimit] = useState(false), [searchHeight,setSearchHeight] = useState(300);
@@ -49,6 +51,7 @@ function PickerSheet({options,managementOptions,value,language,isLight,preferenc
   timer.current = setTimeout(() => {onClose(); if (selected !== undefined) onSelect(selected);}, window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 180);
  };
  const closeAction = useRef(close); closeAction.current = close;
+ useCategorySwipeDismiss(panelRef,motionRef,{disabled:busy||closing,onDismissStart:()=>setClosing(true),onDismiss:onClose});
  useEffect(() => {
   mounted.current=true;
   const returnFocus = document.activeElement, previousOverflow = document.body.style.overflow;
@@ -67,7 +70,7 @@ function PickerSheet({options,managementOptions,value,language,isLight,preferenc
   }
   document.addEventListener('keydown',keyboard,true);
   const viewport = window.visualViewport;
-  const fit = () => {if (!viewport) return;const layer=panelRef.current.parentElement;layer.style.height=`${viewport.height}px`;layer.style.top=`${viewport.offsetTop}px`;layer.style.bottom='auto';layer.style.setProperty('--cp-viewport',`${viewport.height}px`);};
+  const fit = () => {if (!viewport) return;const layer=panelRef.current.closest('.category-picker-layer');layer.style.height=`${viewport.height}px`;layer.style.top=`${viewport.offsetTop}px`;layer.style.bottom='auto';layer.style.setProperty('--cp-viewport',`${viewport.height}px`);};
   fit();viewport?.addEventListener('resize',fit);viewport?.addEventListener('scroll',fit);
   return () => {mounted.current=false;clearTimeout(timer.current);clearTimeout(actionTimer.current);document.removeEventListener('keydown',keyboard,true);viewport?.removeEventListener('resize',fit);viewport?.removeEventListener('scroll',fit);document.body.style.overflow = previousOverflow;inert.forEach(([item,previous]) => {item.inert = previous;});if (returnFocus?.isConnected) returnFocus.focus({preventScroll:true});};
  }, []);
@@ -108,6 +111,7 @@ function PickerSheet({options,managementOptions,value,language,isLight,preferenc
   </div>;
  })}</div>;
  return createPortal(<div className={`category-picker-layer ${isLight ? 'is-light' : ''} ${closing ? 'is-closing' : ''}`} onClick={event => {if (event.target === event.currentTarget) close();}}>
+  <div ref={motionRef} className="category-picker-motion">
   <section ref={panelRef} className={`category-picker-sheet ${query.trim() ? 'has-query' : ''} ${managing?'is-managing':''} ${creating?'is-creating':''}`} style={{'--cp-search-height':`${searchHeight}px`}} role="dialog" aria-modal="true" aria-labelledby={titleId}>
    <div className="category-picker-handle"/>
    <header><div><small>DAYRIS</small><h2 id={titleId}>{editingCategory?d.symbol:creating?m.add:c.title}</h2></div><div className="category-picker-header-actions">{!creating&&<button type="button" className="category-picker-close" disabled={busy||!!pendingDelete} aria-label={managing?m.done:m.manage} aria-pressed={managing} onClick={()=>{setManaging(!managing);setError('');setLimit(false);setFilter('all');}}>{managing?<Check size={19}/>:<Settings2 size={19}/>}</button>}<button ref={closeRef} type="button" className="category-picker-close" disabled={busy} aria-label={c.close} onClick={() => close()}><X size={21}/></button></div></header>
@@ -135,6 +139,7 @@ function PickerSheet({options,managementOptions,value,language,isLight,preferenc
     :<>{limit&&<p role="status">{c.limit}</p>}{query.trim().length>60&&<p role="status">{c.long}</p>}{canCreate?<button type="button" className="category-picker-create" disabled={busy} onClick={()=>startCreating(query)}><Plus size={18}/><span>{c.create} «{query.trim()}»</span></button>:onCreate&&<button type="button" className="category-picker-create" disabled={busy} onClick={()=>startCreating('')}><Plus size={18}/><span>{m.add}</span></button>}</>}
    </footer>}
   </section>
+  </div>
  </div>,document.body);
 }
 

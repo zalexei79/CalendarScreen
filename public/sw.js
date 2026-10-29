@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v114-glass-category-emoji';
+const CACHE_NAME = 'atj-cache-v115-category-swipe-dismiss';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

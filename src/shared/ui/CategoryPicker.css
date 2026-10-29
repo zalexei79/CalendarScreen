@@ -117,6 +117,14 @@
 .category-picker-sheet.is-creating.has-query{min-height:0}
 @media(max-width:360px){.category-picker-scroll{padding-left:12px;padding-right:12px}.category-picker-row{border-radius:13px}.category-picker-choice,.category-picker-quick .category-picker-choice{padding-left:7px;padding-right:7px}.category-picker-new>.category-picker-icon-library{gap:4px;grid-template-columns:repeat(5,minmax(0,1fr))}.category-picker-sheet h2{font-size:21px}}
 /* Glass belongs to the icon, leaving the category grid quiet and easy to scan. */
+.category-picker-motion{display:flex;width:100%;max-width:460px;min-height:0;transform:translate3d(0,var(--cp-drag-y,0px),0)}
+.category-picker-motion.is-dragging{will-change:transform;transition:none}
+.category-picker-motion.is-settling{transition:transform 280ms cubic-bezier(.22,1,.36,1)}
+.category-picker-motion.is-dismissing{will-change:transform;transition:transform 220ms cubic-bezier(.32,0,.67,0);pointer-events:none}
+.category-picker-motion.is-dismissing .category-picker-sheet{animation:none!important}
+.category-picker-motion.is-dragging .category-picker-choice:active{transform:none}
+@media(max-width:639px){.category-picker-sheet>header,.category-picker-handle{touch-action:pan-x}.category-picker-handle{box-shadow:0 0 0 9px transparent}}
+@media(prefers-reduced-motion:reduce){.category-picker-motion{transition:none!important}}
 .category-picker,.category-picker-layer{--cp-bg:rgba(24,28,35,.87);--cp-raised:rgba(255,255,255,.045);--cp-text:#edf1f7;--cp-muted:#a0a8b7;--cp-line:rgba(226,237,255,.11);--cp-gold:#c9d8f4;--cp-tint:rgba(194,217,255,.08);--ci-hue:220}
 .category-picker.is-light,.category-picker-layer.is-light{--cp-bg:rgba(246,249,255,.9);--cp-raised:rgba(255,255,255,.45);--cp-text:#232c3b;--cp-muted:#626e80;--cp-line:rgba(42,65,100,.12);--cp-gold:#345888;--cp-tint:rgba(70,110,170,.07)}
 .category-picker-layer{background:rgba(3,6,12,.4);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
