@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v125-friend-qr-chat';
+const CACHE_NAME = 'atj-cache-v126-numbered-friends-day-history';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
