@@ -65,6 +65,7 @@ export default function PremiumHistoryAnalytics({section, context}) {
     {!model.expenses.some(group=>group.count>=2) && <p className="premium-history-hint">{chapter.noRepeats}</p>}
     {model.projectedExpense!==null && <div className="premium-history-insight"><span>{copy.estimate}</span><strong>≈ {money(model.projectedExpense)}</strong><small>{copy.estimateHint}</small></div>}
   </div>;
+  }
   if (section==='instruments') {
     const instruments=new Map();
     for (const row of rows) {const key=row.instrument||'—',item=instruments.get(key)||{count:0,total:0};item.count++;item.total+=Number(row.pnl);instruments.set(key,item);}

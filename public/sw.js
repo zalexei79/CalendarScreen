@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v107-torn-paper-receipts';
+const CACHE_NAME = 'atj-cache-v108-history-build-repair';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
