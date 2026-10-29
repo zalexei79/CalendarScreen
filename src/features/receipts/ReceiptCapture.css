@@ -105,7 +105,7 @@
 .receipt-scanner header{display:flex;align-items:center;justify-content:space-between;padding:20px 22px;flex:none}
 .receipt-scanner small{font-size:10px;letter-spacing:.18em;color:#a9a9ac}.receipt-scanner small b{color:#d0af68}.receipt-scanner h2{font-size:19px;margin:7px 0 0}.receipt-scanner h2:focus{outline:none}
 .receipt-scanner header button{background:#ffffff0c;color:white;border-color:#ffffff20;width:44px;height:44px;padding:0;display:grid;place-items:center}
-.receipt-viewfinder{position:relative;flex:1;min-height:240px;overflow:hidden;background:radial-gradient(ellipse at center,#292825,#111213 75%)}
+.receipt-viewfinder{position:relative;flex:1;min-height:240px;overflow:hidden;touch-action:none;overscroll-behavior:contain;background:radial-gradient(ellipse at center,#292825,#111213 75%)}
 .receipt-viewfinder video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .receipt-scan-frame{position:absolute;inset:5% 14% 25%;border:1px solid #ffffff20;border-radius:20px;box-shadow:0 0 0 100vmax #0008}
 .receipt-scan-frame i{position:absolute;width:33px;height:33px;border:3px solid #f4ebd5}.receipt-scan-frame i:nth-child(1){top:-2px;left:-2px;border-right:0;border-bottom:0;border-radius:20px 0 0 0}.receipt-scan-frame i:nth-child(2){top:-2px;right:-2px;border-left:0;border-bottom:0;border-radius:0 20px 0 0}.receipt-scan-frame i:nth-child(3){bottom:-2px;left:-2px;border-top:0;border-right:0;border-radius:0 0 0 20px}.receipt-scan-frame i:nth-child(4){bottom:-2px;right:-2px;border-top:0;border-left:0;border-radius:0 0 20px 0}
