@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v120-creator-gift-letter';
+const CACHE_NAME = 'atj-cache-v121-message-card-editor-replies';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

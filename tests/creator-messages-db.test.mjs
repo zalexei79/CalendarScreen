@@ -13,7 +13,7 @@ test('creator campaigns: roles, invisible preview, fixed audience, atomic gift, 
  create table public.pro_subscriptions(id uuid primary key default gen_random_uuid(),user_id uuid,provider text,status text,ends_at timestamptz,renews_at timestamptz,trial_ends_at timestamptz,updated_at timestamptz default now());
  create table public.push_subscriptions(id uuid primary key default gen_random_uuid(),user_id uuid references auth.users(id),active boolean default true,endpoint text,p256dh text,auth text);
  `);
- for(const file of ['202610150001_site_admin.sql','202610150002_admin_user_management.sql','202610150003_admin_google_access.sql','202610010001_pro_notifications.sql','202610200001_admin_pro_management.sql','202610290002_creator_messages.sql'])await db.exec(await fs.readFile('supabase/migrations/'+file,'utf8'));
+ for(const file of ['202610150001_site_admin.sql','202610150002_admin_user_management.sql','202610150003_admin_google_access.sql','202610010001_pro_notifications.sql','202610200001_admin_pro_management.sql','202610290002_creator_messages.sql','202610290003_message_cards_and_replies.sql'])await db.exec(await fs.readFile('supabase/migrations/'+file,'utf8'));
  await db.query("insert into auth.users(id,email) values($1,'owner@test'),($2,'reader@test'),($3,'user@test'),($4,'other@test')",[owner,reader,user,other]);await db.exec("insert into auth.identities select id,'google',jsonb_build_object('email',email) from auth.users");
  await db.query('insert into public.site_admins(user_id,can_view_users,can_edit_users) values($1,true,true),($2,true,false),($3,true,true)',[owner,reader,other]);
  await db.query("insert into public.push_subscriptions(user_id,endpoint,p256dh,auth) values($1,'https://fcm.googleapis.com/test','secret-key','secret-auth')",[user]);
@@ -39,6 +39,15 @@ test('creator campaigns: roles, invisible preview, fixed audience, atomic gift, 
  await db.exec('reset role;set role service_role');const jobs=(await db.query('select * from public.dayris_claim_creator_messages()')).rows;assert.equal(jobs.length,1);await db.query("select public.dayris_finish_creator_message($1,$2,'accepted','HTTP_201')",[jobs[0].delivery_id,jobs[0].token]);assert.equal((await db.query('select * from public.dayris_claim_creator_messages()')).rows.length,0);
  await asUser(other);assert.equal(await call('select public.creator_message($1) as data',[message.id]),null);assert.equal(await call('select public.creator_latest_gift() as data'),null);await db.query('select public.creator_ack_message($1)',[message.id]);assert.equal((await inbox()).total,0);
  await asUser(user);assert.equal((await inbox()).unread_count,1);await db.query('select public.creator_ack_message($1)',[message.id]);assert.equal((await inbox()).unread_count,0);assert.equal((await inbox()).total,1,'read messages remain available');
+ const replyId='66666666-6666-4666-8666-666666666666';
+ const reply=()=>call('select public.creator_reply($1,$2,$3) as data',[message.id,'Спасибо, есть вопрос!',replyId]);
+ assert.equal((await reply()).id,replyId);assert.equal((await reply()).id,replyId);
+ assert.equal((await call('select public.creator_own_replies($1) as data',[message.id])).length,1);
+ await assert.rejects(call('select public.admin_reply_inbox() as data'),/permission required/);
+ await asUser(other);assert.equal((await call('select public.creator_own_replies($1) as data',[message.id])).length,0);
+ await assert.rejects(call('select public.creator_reply($1,$2,$3) as data',[message.id,'Чужое сообщение',late]),/unavailable/);
+ await asUser(reader);assert.equal((await call('select public.admin_reply_inbox() as data')).unread_count,1);await assert.rejects(db.query('select public.admin_ack_reply($1)',[replyId]),/permission required/);
+ await asUser(owner);await db.query('select public.admin_ack_reply($1)',[replyId]);assert.equal((await call('select public.admin_reply_inbox() as data')).unread_count,0);
  await asUser(owner);const all=await prepare(true,0);assert.equal(all.recipient_count,4);
  await db.exec('reset role');await db.query("insert into auth.users(id,email) values($1,'late@test')",[late]);await asUser(owner);await send(all);
  await asUser(late);assert.equal((await inbox()).total,0,'new signup is not silently added to approved audience');

@@ -26,6 +26,18 @@
 .creator-inbox .creator-letter-text p{margin:0;white-space:pre-wrap;color:var(--letter-ink);font-size:15px;font-weight:400;line-height:1.7;overflow-wrap:anywhere}
 .creator-inbox .creator-thanks{display:block;width:100%;min-height:48px;padding:12px 20px;border:0;border-radius:14px;background:#f5f5f7;color:#19191c;font-size:15px;font-weight:600;line-height:1.4;letter-spacing:-.02em}
 .creator-inbox .creator-thanks:hover:not(:disabled){background:#dedee3}
+.creator-inbox .creator-reply-action{display:block;width:100%;min-height:44px;margin-top:8px;padding:10px 14px;border:1px solid var(--letter-line);border-radius:13px;background:transparent;color:var(--letter-ink);font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.creator-inbox .creator-thanks{overflow-wrap:anywhere}
+.creator-inbox .creator-accent-blue .creator-letter-icon{color:#78b6ff;background:#0a84ff16;border-color:#0a84ff40}
+.creator-inbox .creator-accent-gold .creator-letter-icon{color:#d9bb79;background:#d9bb7914;border-color:#d9bb7935}
+.creator-inbox .creator-accent-blue .creator-thanks{background:#0a84ff;color:#fff}
+.creator-inbox .creator-accent-gold .creator-thanks{background:#dec58f;color:#241d0f}
+.creator-reply-form h2{font-size:25px;line-height:1.25;letter-spacing:-.035em;margin:18px 24px 22px 0}
+.creator-reply-form textarea{display:block;width:100%;min-height:160px;resize:vertical;padding:14px;margin:18px 0;border:1px solid var(--letter-line);border-radius:14px;background:#8888880c;color:var(--letter-ink);font:inherit;font-size:14px;line-height:1.6}
+.creator-reply-form textarea:focus-visible{outline:2px solid #7dafff;outline-offset:2px}
+.creator-reply-form details{max-height:220px;overflow:auto;font-size:12px;color:var(--letter-muted)}
+.creator-reply-form [role=alert]{font-size:12px;color:var(--letter-muted);line-height:1.6}
+.creator-reply-sent{white-space:pre-wrap;overflow-wrap:anywhere;border-left:2px solid var(--letter-line);padding-left:12px;font-size:13px;line-height:1.7;margin:16px 0 24px;color:var(--letter-ink)}
 .creator-inbox .creator-letter-saved{margin:14px 0 0;color:var(--letter-muted);font-size:10px;line-height:1.6}
 .creator-inbox .creator-history-link{display:flex;align-items:center;justify-content:center;gap:4px;width:100%;min-height:44px;margin-top:4px;border:0;background:transparent;color:var(--letter-muted);font-size:12px}
 .creator-history-heading{padding:12px 26px 18px 0}

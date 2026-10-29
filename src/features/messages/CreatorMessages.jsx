@@ -3,6 +3,9 @@ import {createPortal} from 'react-dom';
 import {Mail,Gift,X,ChevronLeft,ChevronRight} from 'lucide-react';
 import {supabase} from '../../supabaseClient';
 import {creatorCopy} from './creatorCopy.js';
+import MessageCard from './MessageCard.jsx';
+import MessageReply from './MessageReply.jsx';
+import {cardLabels,cardHeading,cardTheme} from './messageCardModel.js';
 import './CreatorMessages.css';
 const OPEN='dayris:creator-open',COUNT='dayris:creator-count';
 const date=(value,language)=>new Date(value).toLocaleDateString(({ru:'ru-RU',uk:'uk-UA',md:'ro-RO',ro:'ro-RO','zh-CN':'zh-CN'})[language]||'en-US',{day:'numeric',month:'long',year:'numeric'});
@@ -19,13 +22,15 @@ export function CreatorGiftNote({userId,language,onOpen}){
  const [state,setState]=useState({owner:null,data:null});const t=creatorCopy(language);
  useEffect(()=>{if(!userId)return;let alive=true;supabase.rpc('creator_latest_gift').then(({data,error})=>{if(alive&&!error)setState({owner:userId,data});}).catch(()=>{});return()=>{alive=false;};},[userId]);
  const message=state.owner===userId?state.data:null;if(!message)return null;
- return <section className="creator-gift-note"><span><Gift size={16}/>{t.from}</span><strong>{message.title}</strong><p>{message.body.length>300?message.body.slice(0,300)+'…':message.body}</p><button type="button" onClick={()=>requestOpen(userId,onOpen)}>{t.inbox}</button></section>;
+ const c=cardLabels(message,t);
+ return <section className="creator-gift-note">{c.sender&&<span><Gift size={16}/>{c.sender}</span>}<strong>{cardHeading(message,t)}</strong><p>{message.body.length>300?message.body.slice(0,300)+'…':message.body}</p><button type="button" onClick={()=>requestOpen(userId,onOpen)}>{t.inbox}</button></section>;
 }
 export default function CreatorMessages({userId,language,isLight}){
  const [state,setState]=useState({owner:null,data:null,error:false}),[openFor,setOpenFor]=useState(null),[offset,setOffset]=useState(0),[revision,setRevision]=useState(0),[focused,setFocused]=useState(null),[saving,setSaving]=useState(false),[view,setView]=useState('message');
+ const [replyBusy,setReplyBusy]=useState(false);
  const current=useRef(userId);current.current=userId;const announced=useRef(new Set()),refreshedGifts=useRef(new Set()),dialog=useRef(null),marking=useRef(null);
  const t=creatorCopy(language),own=state.owner===userId?state:{data:null,error:false};
- useEffect(()=>{announced.current=new Set();refreshedGifts.current=new Set();marking.current=null;setFocused(null);setOpenFor(null);setOffset(0);setSaving(false);setView('message');},[userId]);
+ useEffect(()=>{announced.current=new Set();refreshedGifts.current=new Set();marking.current=null;setFocused(null);setOpenFor(null);setOffset(0);setSaving(false);setReplyBusy(false);setView('message');},[userId]);
  useEffect(()=>{if(!userId)return;let alive=true,busy=false;
   async function refresh(){if(busy||document.visibilityState==='hidden')return;busy=true;try{
    const {data,error}=await supabase.rpc('creator_inbox',{p_limit:20,p_offset:offset});if(!alive)return;
@@ -59,35 +64,25 @@ export default function CreatorMessages({userId,language,isLight}){
  if(!visible)return null;
  const messages=own.data?.messages||[];
  const message=focused?(messages.find(m=>m.id===focused.id)||focused):(messages.find(m=>!m.read_at)||messages[0]);
- const gift=Boolean(message?.pro_until),showHistory=view==='history';
- const genericTitle=message&&['Сообщение от создателя',t.inbox,t.from].includes(message.title);
+ const showHistory=view==='history',c=cardLabels(message,t),locked=saving||replyBusy;
  function select(m){setFocused(m);setView('message');if(m.pro_until)window.dispatchEvent(new Event('dayris:pro-refresh'));}
  return createPortal(
-  <dialog ref={dialog} className={`creator-inbox${isLight?' creator-inbox-light':''}${showHistory?' creator-inbox-history':''}`} aria-labelledby="creator-inbox-title" onCancel={e=>{e.preventDefault();if(!saving)setOpenFor(null);}}>
-   <button type="button" className="creator-close" aria-label={t.close} disabled={saving} onClick={()=>setOpenFor(null)}><X size={18} aria-hidden="true"/></button>
+  <dialog ref={dialog} className={`creator-inbox${cardTheme(message,isLight)?' creator-inbox-light':''}${showHistory?' creator-inbox-history':''}`} aria-labelledby="creator-inbox-title" onCancel={e=>{e.preventDefault();if(!locked)setOpenFor(null);}}>
+   <button type="button" className="creator-close" aria-label={c.closeLabel} disabled={locked} onClick={()=>setOpenFor(null)}><X size={18} aria-hidden="true"/></button>
    {showHistory?<>
     <header className="creator-history-heading"><span>DAYRIS</span><h2 id="creator-inbox-title">{t.inbox}</h2></header>
     <div className="creator-history-list">{messages.map(m=><button type="button" key={m.id} className="creator-history-item" onClick={()=>select(m)}>
      <span className={`creator-history-icon${m.pro_until?' creator-history-gift':''}`}>{m.pro_until?<Gift size={19}/>:<Mail size={19}/>}</span>
-     <span className="creator-history-content"><strong>{m.pro_until?t.giftTitle:m.title}</strong><span>{m.body}</span><time>{date(m.created_at,language)}</time></span>
+     <span className="creator-history-content"><strong>{cardHeading(m,t)}</strong><span>{m.body}</span><time>{date(m.created_at,language)}</time></span>
      {!m.read_at&&<span className="creator-unread-dot" aria-label={t.unread}/>}<ChevronRight size={16} aria-hidden="true"/>
     </button>)}</div>
     {(offset>0||offset+20<(own.data?.total||0))&&<nav className="creator-history-pages" aria-label={t.more}>
      <button type="button" disabled={offset===0} aria-label={t.previous} onClick={()=>setOffset(n=>Math.max(0,n-20))}><ChevronLeft size={17}/></button>
      <button type="button" disabled={offset+20>=(own.data?.total||0)} onClick={()=>setOffset(n=>n+20)}>{t.more}<ChevronRight size={16}/></button>
     </nav>}
-   </>:message?<article className="creator-letter">
-    <div className={`creator-letter-icon${gift?' creator-letter-icon-gift':''}`} aria-hidden="true">{gift?<Gift size={28} strokeWidth={1.5}/>:<Mail size={27} strokeWidth={1.5}/>}</div>
-    <span className="creator-letter-from">{t.from}</span>
-    <h2 id="creator-inbox-title">{gift?t.giftTitle:genericTitle?t.messageTitle:message.title}</h2>
-    {gift&&<p className="creator-letter-access">{message.pro_until==='infinity'?t.forever:`${t.gift} ${date(message.pro_until,language)}`}</p>}
-    <div className="creator-letter-text">
-     {gift&&!genericTitle&&<h3>{message.title}</h3>}
-     <p>{message.body}</p>
-    </div>
-    <button type="button" className="creator-thanks" disabled={saving} onClick={()=>mark(message)}>{saving?t.saving:t.read}</button>
-    {(own.data?.total||0)>1?<button type="button" className="creator-history-link" disabled={saving} onClick={()=>setView('history')}>{t.history}<ChevronRight size={14}/></button>:<p className="creator-letter-saved">{t.saved}</p>}
-   </article>:<div className="creator-empty"><Mail size={28} aria-hidden="true"/><h2 id="creator-inbox-title">{own.data?t.empty:t.loading}</h2></div>}
+   </>:message?(view==='reply'?<MessageReply key={userId+':'+message.id} message={message} t={t} onBusy={setReplyBusy} onBack={()=>setView('message')} onClose={()=>setOpenFor(null)} onSent={()=>{announced.current.add(message.id);setRevision(n=>n+1);}}/>:
+    <MessageCard message={message} t={t} dateLabel={message.pro_until&&message.pro_until!=='infinity'?date(message.pro_until,language):''} saving={saving} onPrimary={()=>mark(message)} onReply={c.allowReply?()=>{setFocused(message);setView('reply');}:undefined} onHistory={(own.data?.total||0)>1?()=>setView('history'):undefined}/>
+   ):<div className="creator-empty"><Mail size={28} aria-hidden="true"/><h2 id="creator-inbox-title">{own.data?t.empty:t.loading}</h2></div>}
    {own.error&&<div className="creator-message-error" role="alert"><p>{t.error}</p><button type="button" disabled={saving} onClick={()=>setRevision(n=>n+1)}>{t.refresh}</button></div>}
   </dialog>,document.body);
 }

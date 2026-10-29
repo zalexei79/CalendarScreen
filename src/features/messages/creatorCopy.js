@@ -6,4 +6,11 @@ const copy={
  md:{inbox:'Mesaje de la creator',from:'De la creatorul DAYRIS',close:'Închide',read:'Mulțumesc',empty:'Nu există mesaje',error:'Nu s-a putut încărca sau salva. Încearcă din nou.',gift:'Acces acordat până la',forever:'PRO fără termen-limită',refresh:'Încearcă din nou',more:'Mai multe mesaje',previous:'Mesajele anterioare',giftTitle:'Ai primit PRO în dar',messageTitle:'Pentru tine',saving:'Se salvează…',saved:'Poți reciti mesajul în Setări',history:'Toate mesajele',loading:'Se încarcă…',unread:'Mesaj nou'},
  'zh-CN':{inbox:'来自创作者的消息',from:'来自 DAYRIS 创作者',close:'关闭',read:'谢谢',empty:'暂无消息',error:'无法加载或保存，请重试。',gift:'授权到期日期',forever:'PRO 无到期限制',refresh:'重试',more:'更多消息',previous:'上一页消息',giftTitle:'您收到了 PRO 礼物',messageTitle:'致您',saving:'保存中…',saved:'可在设置中再次阅读',history:'所有消息',loading:'加载中…',unread:'新消息'}
 };
-export const creatorCopy=language=>copy[language==='ro'?'md':language]||ru;
+const channel={
+ ru:{inbox:'Сообщения',from:'DAYRIS',messageTitle:'Сообщение',ok:'Хорошо',reply:'Ответить',replyTitle:'Ваш ответ',replyPlaceholder:'Напишите сообщение…',sendReply:'Отправить',replySent:'Ответ отправлен',replyError:'Не удалось отправить. Попробуйте ещё раз.',back:'Назад'},
+ uk:{inbox:'Повідомлення',from:'DAYRIS',messageTitle:'Повідомлення',ok:'Добре',reply:'Відповісти',replyTitle:'Ваша відповідь',replyPlaceholder:'Напишіть повідомлення…',sendReply:'Надіслати',replySent:'Відповідь надіслано',replyError:'Не вдалося надіслати. Спробуйте ще раз.',back:'Назад'},
+ en:{inbox:'Messages',from:'DAYRIS',messageTitle:'Message',ok:'Okay',reply:'Reply',replyTitle:'Your reply',replyPlaceholder:'Write a message…',sendReply:'Send',replySent:'Reply sent',replyError:'Could not send. Please try again.',back:'Back'},
+ md:{inbox:'Mesaje',from:'DAYRIS',messageTitle:'Mesaj',ok:'Bine',reply:'Răspunde',replyTitle:'Răspunsul tău',replyPlaceholder:'Scrie un mesaj…',sendReply:'Trimite',replySent:'Răspuns trimis',replyError:'Nu s-a putut trimite. Încearcă din nou.',back:'Înapoi'},
+ 'zh-CN':{inbox:'消息',from:'DAYRIS',messageTitle:'消息',ok:'好的',reply:'回复',replyTitle:'您的回复',replyPlaceholder:'写一条消息…',sendReply:'发送',replySent:'回复已发送',replyError:'无法发送，请重试。',back:'返回'}
+};
+export const creatorCopy=language=>{const key=language==='ro'?'md':language;return {...(copy[key]||ru),...(channel[key]||channel.ru)};};
