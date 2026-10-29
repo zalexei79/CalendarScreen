@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v118-creator-messages';
+const CACHE_NAME = 'atj-cache-v119-creator-messages-apple';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
