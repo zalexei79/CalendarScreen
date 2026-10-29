@@ -41,5 +41,5 @@ export default function useVoiceCategories(userId){
   write({items:existing.items.filter(item=>normalizeVoiceCategory(item)!==id),hidden:[...existing.hidden.filter(item=>normalizeVoiceCategory(item)!==id),name]});
   preferences.forget(name);
  }
- return {categories:current.items,hidden:current.hidden,add,remove};
+ return {categories:current.items,hidden:current.hidden,icons:preferences.profile.icons,add,remove};
 }

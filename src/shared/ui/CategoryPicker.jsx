@@ -3,6 +3,10 @@ import {createPortal} from 'react-dom';
 import {Check, ChevronDown, Search, Star, X, Plus, Shapes, Settings2, Trash2} from 'lucide-react';
 import {categoryLibrary, FAVORITE_LIMIT} from '../lib/categoryLibrary.js';
 import {normalizeVoiceCategory} from '../lib/voiceCategory.js';
+import {getMoneyCategoryMeta} from '../config/constants.js';
+import {CATEGORY_ICON_CATALOG} from '../lib/categoryIconCatalog.js';
+import {categoryIcon} from './categoryIcons.js';
+import {categoryPickerDesignCopy} from './categoryPickerDesignCopy.js';
 import useCategoryPreferences from './useCategoryPreferences.js';
 import './CategoryPicker.css';
 
@@ -23,17 +27,22 @@ const managementCopy={
 
 function PickerSheet({options,managementOptions,value,language,isLight,preferences,onClose,onSelect,allowCreate,allOption,onCreate,onDelete}) {
  const locale = language.startsWith('zh') ? 'zh' : ['md','ro'].includes(language) ? 'ro' : language;
- const c = copy[locale] || copy.ru, m=managementCopy[locale]||managementCopy.ru, titleId = useId(), searchRef = useRef(null), panelRef = useRef(null), closeRef = useRef(null), timer = useRef(null),actionTimer=useRef(null),mounted=useRef(true),actionBusy=useRef(false);
+ const c = copy[locale] || copy.ru, m=managementCopy[locale]||managementCopy.ru, d=categoryPickerDesignCopy(language), titleId = useId(), formId=useId(), searchRef = useRef(null), panelRef = useRef(null), closeRef = useRef(null), timer = useRef(null),actionTimer=useRef(null),mounted=useRef(true),actionBusy=useRef(false);
  const [query,setQuery] = useState(''), [closing,setClosing] = useState(false), [limit,setLimit] = useState(false), [searchHeight,setSearchHeight] = useState(300);
  const [managing,setManaging]=useState(false),[creating,setCreating]=useState(false),[name,setName]=useState(''),[pendingDelete,setPendingDelete]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const {favorites,recent,all} = categoryLibrary(managing?managementOptions:options, preferences.profile, query, locale);
- const [expanded,setExpanded] = useState(() => !favorites.length && !recent.length);
+ const [filter,setFilter]=useState('all'),[icon,setIcon]=useState('shapes'),[iconGroup,setIconGroup]=useState('universal');
+ const quick=[...favorites,...recent].slice(0,FAVORITE_LIMIT);
+ const quickIds=new Set(quick.map(item=>normalizeVoiceCategory(item.value)));
+ const custom=item=>!getMoneyCategoryMeta(item.value);
+ const visible=all.filter(item=>(filter!=='mine'||custom(item))&&(query.trim()||managing||filter==='mine'||!quickIds.has(normalizeVoiceCategory(item.value))));
+ const hasCustom=options.some(custom);
  const pinned = new Set(preferences.profile.favorites.map(normalizeVoiceCategory));
  const exact = managementOptions.some(item => [item.value,item.label].some(label => normalizeVoiceCategory(label) === normalizeVoiceCategory(query)));
  const canCreate = (allowCreate||onCreate) && query.trim() && !exact && query.trim().length <= 60;
  const close = (selected) => {
   if (closing || actionBusy.current) return;
-  if(selected===undefined&&(pendingDelete||creating)){setPendingDelete(null);setCreating(false);setError('');return;}
+  if(selected===undefined&&(pendingDelete||creating)){setPendingDelete(null);setCreating(false);setError('');requestAnimationFrame(()=>searchRef.current?.focus());return;}
   setClosing(true);
   timer.current = setTimeout(() => {onClose(); if (selected !== undefined) onSelect(selected);}, window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 180);
  };
@@ -65,7 +74,7 @@ function PickerSheet({options,managementOptions,value,language,isLight,preferenc
   if(managementOptions.some(item=>[item.value,item.label].some(label=>normalizeVoiceCategory(label)===normalizeVoiceCategory(next)))){setError(m.duplicate);return;}
   if(!onCreate){close(next);return;}
   actionBusy.current=true;setBusy(true);setError('');
-  try{const canonical=await onCreate(next);if(mounted.current){actionBusy.current=false;setBusy(false);close(canonical||next);}}
+  try{const canonical=await onCreate(next);if(mounted.current){preferences.setIcon(canonical||next,icon);actionBusy.current=false;setBusy(false);close(canonical||next);}}
   catch{if(mounted.current){setBusy(false);setError(m.failed);}}
   finally{actionBusy.current=false;}
  }
@@ -83,11 +92,12 @@ function PickerSheet({options,managementOptions,value,language,isLight,preferenc
   }
  }
  const select = item => {preferences.remember(item.value);close(item.value);};
+ const startCreating=initial=>{setName(initial||'');setIcon('shapes');setIconGroup('universal');setCreating(true);setError('');};
  const rows = (items, compact = false) => <div className={compact ? 'category-picker-quick' : 'category-picker-list'}>{items.map(item => {
-  const active = normalizeVoiceCategory(item.value) === normalizeVoiceCategory(value), favorite = pinned.has(normalizeVoiceCategory(item.value)), Icon = item.icon || Shapes;
+  const active = normalizeVoiceCategory(item.value) === normalizeVoiceCategory(value), favorite = pinned.has(normalizeVoiceCategory(item.value)), Icon = categoryIcon(preferences.profile.icons[normalizeVoiceCategory(item.value)]) || item.icon || Shapes;
   return <div key={item.value} className={`category-picker-row ${active ? 'is-selected' : ''}`}>
    <button type="button" className="category-picker-choice" disabled={busy||!!pendingDelete||creating||(managing&&normalizeVoiceCategory(item.value)===normalizeVoiceCategory('Другое'))} onClick={() => managing?setPendingDelete(item):select(item)} aria-pressed={active} aria-label={item.label}>
-    <span className="category-picker-icon"><Icon size={18} strokeWidth={1.6}/></span><span>{item.label}</span>{active && <Check size={16} className="category-picker-check"/>}
+    <span className="category-picker-icon"><Icon size={21} strokeWidth={1.65} aria-hidden="true"/></span><span>{item.label}</span>{active && <Check size={14} className="category-picker-check" aria-hidden="true"/>}
    </button>
    {managing?(normalizeVoiceCategory(item.value)!==normalizeVoiceCategory('Другое')&&<button type="button" className="category-picker-pin category-picker-delete" disabled={busy||!!pendingDelete||creating} aria-label={`${m.remove} ${item.label}`} onClick={()=>{setPendingDelete(item);setError('');}}><Trash2 size={17}/></button>):<button type="button" className="category-picker-pin" disabled={busy||!!pendingDelete||creating} aria-label={`${favorite ? c.unpin : c.pin} ${item.label}`} aria-pressed={favorite} onClick={() => {
     if (!favorite && pinned.size >= FAVORITE_LIMIT) {setLimit(true);return;}setLimit(false);preferences.toggle(item.value);
@@ -95,26 +105,30 @@ function PickerSheet({options,managementOptions,value,language,isLight,preferenc
   </div>;
  })}</div>;
  return createPortal(<div className={`category-picker-layer ${isLight ? 'is-light' : ''} ${closing ? 'is-closing' : ''}`} onClick={event => {if (event.target === event.currentTarget) close();}}>
-  <section ref={panelRef} className={`category-picker-sheet ${query.trim() ? 'has-query' : ''}`} style={{'--cp-search-height':`${searchHeight}px`}} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+  <section ref={panelRef} className={`category-picker-sheet ${query.trim() ? 'has-query' : ''} ${managing?'is-managing':''} ${creating?'is-creating':''}`} style={{'--cp-search-height':`${searchHeight}px`}} role="dialog" aria-modal="true" aria-labelledby={titleId}>
    <div className="category-picker-handle"/>
-   <header><div><small>DAYRIS</small><h2 id={titleId}>{c.title}</h2></div><div className="category-picker-header-actions">{onDelete&&<button type="button" className="category-picker-close" disabled={busy||!!pendingDelete||creating} aria-label={managing?m.done:m.manage} aria-pressed={managing} onClick={()=>{setManaging(!managing);setError('');}}><Settings2 size={19}/></button>}<button ref={closeRef} type="button" className="category-picker-close" disabled={busy} aria-label={c.close} onClick={() => close()}><X size={21}/></button></div></header>
-   <div className="category-picker-search"><Search size={18}/><input ref={searchRef} disabled={busy||!!pendingDelete||creating} aria-label={c.search} placeholder={c.search} value={query} onChange={event => {if (!query.trim()) setSearchHeight(panelRef.current.offsetHeight);setQuery(event.target.value);}} maxLength={120} autoComplete="off" enterKeyHint="search"/>{query && <button type="button" disabled={busy||!!pendingDelete||creating} aria-label={`${c.search}: ×`} onClick={() => {setQuery('');searchRef.current?.focus();}}><X size={16}/></button>}</div>
+   <header><div><small>DAYRIS</small><h2 id={titleId}>{creating?m.add:c.title}</h2></div><div className="category-picker-header-actions">{onDelete&&!creating&&<button type="button" className="category-picker-close" disabled={busy||!!pendingDelete} aria-label={managing?m.done:m.manage} aria-pressed={managing} onClick={()=>{setManaging(!managing);setError('');setFilter('all');}}><Settings2 size={19}/></button>}<button ref={closeRef} type="button" className="category-picker-close" disabled={busy} aria-label={c.close} onClick={() => close()}><X size={21}/></button></div></header>
+   {!creating&&<div className="category-picker-search"><Search size={18}/><input ref={searchRef} disabled={busy||!!pendingDelete} aria-label={c.search} placeholder={c.search} value={query} onChange={event => {if (!query.trim()) setSearchHeight(panelRef.current.offsetHeight);setQuery(event.target.value);setFilter('all');}} maxLength={120} autoComplete="off" enterKeyHint="search"/>{query && <button type="button" disabled={busy||!!pendingDelete} aria-label={`${c.search}: ×`} onClick={() => {setQuery('');searchRef.current?.focus();}}><X size={16}/></button>}</div>}
    <div className="category-picker-scroll">
+    {creating?<form id={formId} className="category-picker-new" onSubmit={event=>{event.preventDefault();createCategory(name);}}><label>{m.name}<input autoFocus aria-label={m.name} placeholder={d.name} value={name} maxLength={60} disabled={busy} onChange={event=>{setName(event.target.value);setError('');}} enterKeyHint="done"/></label>
+      <div className="category-picker-preview" aria-label={d.preview}><span className="category-picker-icon">{React.createElement(categoryIcon(icon),{size:25,strokeWidth:1.65,'aria-hidden':true})}</span><span>{name.trim()||d.name}</span></div>
+      <h3 className="category-picker-section-title">{d.symbol}</h3><div className="category-picker-icon-groups" role="group" aria-label={d.symbol}>{['universal','daily','money'].map(group=><button type="button" key={group} disabled={busy} aria-pressed={iconGroup===group} onClick={()=>setIconGroup(group)}>{d[group]}</button>)}</div>
+      <div className="category-picker-icon-library" role="group" aria-label={d[iconGroup]}>{CATEGORY_ICON_CATALOG.filter(item=>item.group===iconGroup).map(item=>{const Icon=categoryIcon(item.id);return <button type="button" key={item.id} disabled={busy} aria-label={item.labels[locale]||item.labels.en} aria-pressed={icon===item.id} data-category-icon={item.id} onClick={()=>setIcon(item.id)}><Icon size={23} strokeWidth={1.65} aria-hidden="true"/></button>;})}</div>
+    </form>:<>
     {managing&&<p className="category-picker-tip">{m.hint}</p>}
     {query.trim()||managing ? <><p className="category-picker-section-title" role="status">{query.trim()?c.found:c.all} · {all.length}</p>{all.length ? rows(all) : <p className="category-picker-empty">{c.empty}</p>}</> : <>
      {allOption && <button type="button" className="category-picker-all-option" onClick={() => close('')}>{allOption}{value === '' && <Check size={16}/>}</button>}
-     {favorites.length > 0 && <section><h3 className="category-picker-section-title">{c.favorites}<span>{favorites.length}/{FAVORITE_LIMIT}</span></h3>{rows(favorites,true)}</section>}
-     {recent.length > 0 && <section><h3 className="category-picker-section-title">{c.recent}</h3>{rows(recent)}</section>}
-     {!favorites.length && <p className="category-picker-tip">{c.tip}</p>}
-     <button type="button" className="category-picker-expand" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{c.all}<span>{options.length}</span><ChevronDown size={17} className={expanded ? 'is-expanded' : ''}/></button>
-     {expanded && <div className="category-picker-expanded">{rows(all)}</div>}
+     {quick.length>0&&filter==='all'&&<section><h3 className="category-picker-section-title">{d.frequent}<span>{quick.length}</span></h3>{rows(quick,true)}</section>}
+     <div className="category-picker-browse-heading"><h3 className="category-picker-section-title">{filter==='mine'?d.mine:c.all}<span>{visible.length}</span></h3>{hasCustom&&!creating&&<div className="category-picker-view-filter" role="group" aria-label={c.all}>{[['all',d.browse],['mine',d.shortMine]].map(([key,label])=><button type="button" key={key} aria-pressed={filter===key} onClick={()=>setFilter(key)}>{label}</button>)}</div>}</div>
+     {visible.length>0?rows(visible):<p className="category-picker-empty">{c.empty}</p>}
+    </>}
     </>}
    </div>
    {(onCreate||pendingDelete||canCreate||limit||query.trim().length>60||error)&&<footer>
     {error&&<p role="alert">{error}</p>}
     {pendingDelete?<div className="category-picker-confirm"><strong>{m.remove} «{pendingDelete.label}»?</strong><p>{m.confirm}</p><div><button type="button" disabled={busy} onClick={()=>{setPendingDelete(null);setError('');searchRef.current?.focus();}}>{m.cancel}</button><button type="button" className="category-picker-confirm-delete" disabled={busy} onClick={deleteCategory}>{busy?m.busy:m.delete}</button></div></div>
-    :creating?<form className="category-picker-new" onSubmit={event=>{event.preventDefault();createCategory(name);}}><label>{m.name}<input autoFocus aria-label={m.name} value={name} maxLength={60} disabled={busy} onChange={event=>{setName(event.target.value);setError('');}} enterKeyHint="done"/></label><div><button type="button" disabled={busy} onClick={()=>{setCreating(false);setError('');searchRef.current?.focus();}}>{m.cancel}</button><button type="submit" disabled={busy||!name.trim()}>{busy?m.busy:c.create}</button></div></form>
-    :<>{limit&&<p role="status">{c.limit}</p>}{query.trim().length>60&&<p role="status">{c.long}</p>}{canCreate?<button type="button" className="category-picker-create" disabled={busy} onClick={()=>createCategory(query)}><Plus size={18}/><span>{c.create} «{query.trim()}»</span></button>:onCreate&&<button type="button" className="category-picker-create" disabled={busy} onClick={()=>{setCreating(true);setName('');setError('');}}><Plus size={18}/><span>{m.add}</span></button>}</>}
+    :creating?<div className="category-picker-create-actions"><button type="button" disabled={busy} onClick={()=>{setCreating(false);setError('');requestAnimationFrame(()=>searchRef.current?.focus());}}>{m.cancel}</button><button type="submit" form={formId} disabled={busy||!name.trim()}>{busy?m.busy:c.create}</button></div>
+    :<>{limit&&<p role="status">{c.limit}</p>}{query.trim().length>60&&<p role="status">{c.long}</p>}{canCreate?<button type="button" className="category-picker-create" disabled={busy} onClick={()=>startCreating(query)}><Plus size={18}/><span>{c.create} «{query.trim()}»</span></button>:onCreate&&<button type="button" className="category-picker-create" disabled={busy} onClick={()=>startCreating('')}><Plus size={18}/><span>{m.add}</span></button>}</>}
    </footer>}
   </section>
  </div>,document.body);
@@ -124,7 +138,7 @@ export default function CategoryPicker({options=[],managementOptions=options,val
  const [open,setOpen] = useState(false), preferences = useCategoryPreferences(userId);
  const c = copy[language.startsWith('zh') ? 'zh' : ['md','ro'].includes(language) ? 'ro' : language] || copy.ru;
  const selected = options.find(item => normalizeVoiceCategory(item.value) === normalizeVoiceCategory(value));
- const Icon = selected?.icon || Shapes;
+ const Icon = categoryIcon(preferences.profile.icons[normalizeVoiceCategory(value)]) || selected?.icon || Shapes;
  return <div className={`category-picker ${isLight ? 'is-light' : ''} ${className}`}>
   <button type="button" className="category-picker-trigger" aria-label={ariaLabel || c.choose} aria-haspopup="dialog" aria-expanded={open} onClick={() => {onOpen?.();setOpen(true);}}><span className="category-picker-icon"><Icon size={19} strokeWidth={1.6}/></span><span>{selected?.label || value || allOption || c.choose}</span><ChevronDown size={17}/></button>
   {open && <PickerSheet key={userId || 'guest'} options={options} managementOptions={managementOptions} value={value} language={language} isLight={isLight} preferences={preferences} onClose={() => setOpen(false)} onSelect={onChange} allowCreate={allowCreate} allOption={allOption} onCreate={onCreate} onDelete={onDelete}/>}

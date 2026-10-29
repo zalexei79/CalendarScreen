@@ -12,5 +12,5 @@ test('a label edit or deletion during removal is preserved and never recreates a
  const records={'2026-10-01':[{id:'a',instrument:'Сок',pnl:-80},{id:'b',instrument:'Сок',pnl:-30}]};
  const targets=categoryRemovalTargets(records,'Сок',()=>true),latest={'2026-10-01':[{id:'a',instrument:'Кафе',pnl:-350}]};
  assert.deepEqual(detachCategoryLabels(latest,targets),latest);
- assert.deepEqual(forgetCategory({favorites:['Сок','Такси'],recent:['СОК','Кафе']},'сок'),{favorites:['Такси'],recent:['Кафе']});
+ assert.deepEqual(forgetCategory({favorites:['Сок','Такси'],recent:['СОК','Кафе']},'сок'),{favorites:['Такси'],recent:['Кафе'],icons:{}});
 });

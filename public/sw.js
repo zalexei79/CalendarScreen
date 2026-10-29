@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v111-receipt-one-step-romanian';
+const CACHE_NAME = 'atj-cache-v112-category-icon-library';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

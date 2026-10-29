@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {categoryLibrary,cleanCategoryProfile,rememberCategory,toggleFavorite} from '../src/shared/lib/categoryLibrary.js';
+import {categoryLibrary,cleanCategoryProfile,rememberCategory,toggleFavorite,setCategoryIcon,forgetCategory} from '../src/shared/lib/categoryLibrary.js';
 test('search uses localized labels, canonical names, word order and е/ё',()=>{
  const options=[{value:'Жильё',label:'Housing'},{value:'Сотовая связь',label:'Сотовая связь'},{value:'Сок',label:'Сок'}];
  const profile=cleanCategoryProfile(null);
@@ -26,5 +26,15 @@ test('stored preferences tolerate malformed data and unknown or filtered categor
  const profile=cleanCategoryProfile({favorites:['Сок','сок',null,4,'Жильё'],recent:['A',null,'a','', 'x'.repeat(61)]});
  assert.deepEqual(profile.favorites,['сок','Жильё']);assert.deepEqual(profile.recent,['a']);
  assert.deepEqual(categoryLibrary([{value:'СОК',label:'Сок'}],profile).favorites.map(item=>item.value),['СОК']);
- assert.deepEqual(cleanCategoryProfile({favorites:'bad',recent:{}}),{favorites:[],recent:[]});
+ assert.deepEqual(cleanCategoryProfile({favorites:'bad',recent:{}}),{favorites:[],recent:[],icons:{}});
+});
+test('icons survive activity and favorite updates, use canonical names, and disappear on category removal',()=>{
+ let profile=setCategoryIcon(cleanCategoryProfile({favorites:['Жильё'],recent:['Сок']}),'Личный ПРОЕКТ','diamond');
+ profile=rememberCategory(toggleFavorite(profile,'Сок'),'ЛИЧНЫЙ проект');
+ assert.deepEqual(profile.icons,{'личный проект':'diamond'});
+ assert.deepEqual(cleanCategoryProfile(JSON.parse(JSON.stringify(profile))),profile);
+ assert.equal(setCategoryIcon(profile,'Другое','<svg>'),profile,'only registered icon IDs are accepted');
+ assert.deepEqual(forgetCategory(profile,'личный проект').icons,{});
+ assert.deepEqual(cleanCategoryProfile({icons:{' ЖИЛЬЁ ':'home','Unknown':'bad','""':'star'}}).icons,{'жилье':'home'});
+ assert.deepEqual(cleanCategoryProfile({icons:['star']}).icons,{});
 });

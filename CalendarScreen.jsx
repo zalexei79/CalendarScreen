@@ -120,6 +120,7 @@ import {financialQueryResult, financialRecordKey, resolveFinancialQueryCategory}
 import { categoryMatches, normalizeVoiceCategory, resolveLocalizedCategory } from './src/shared/lib/voiceCategory.js';
 import useVoiceCategories from './src/shared/ui/useVoiceCategories.js';
 import CategoryPicker from './src/shared/ui/CategoryPicker.jsx';
+import {categoryIcon} from './src/shared/ui/categoryIcons.js';
 import CtraderControl from './src/features/ctrader/CtraderControl';
 import { createQrMatrix, drawQrToCanvas } from './qrCode.js';
 import { useReferral } from './src/features/referrals/useReferral.js';
@@ -3836,6 +3837,10 @@ export default function CalendarScreen() {
   }, [historyTrades, dateTo, today, freeTimelineOffset]);
 
   const getHistoryCategoryIcon = (instrument) => {
+    const chosen=categoryIcon(voiceCategories.icons[normalizeVoiceCategory(instrument)]);
+    if(chosen)return chosen;
+    const builtin=getMoneyCategoryMeta(instrument)?.icon;
+    if(builtin)return builtin;
     const normalized = String(instrument || '').trim().toUpperCase();
     if (normalized.includes('СИГАРЕТ') || normalized.includes('ТАБАК')) return Cigarette;
     if (normalized.includes('ЗАРПЛАТ') || normalized.includes('РАБОТ')) return Briefcase;
@@ -3847,7 +3852,7 @@ export default function CalendarScreen() {
     if (normalized.includes('РАЗВЛЕЧ') || normalized.includes('ИГР')) return Gamepad2;
     if (normalized.includes('РЫБ')) return Fish;
     if (/BTC|ETH|XAU|NDX|NASDAQ|EURUSD|GBPUSD|USDJPY/.test(normalized)) return ChartCandlestick;
-    return getMoneyCategoryMeta(instrument)?.icon || CircleDollarSign || MoreHorizontal;
+    return categoryIcon('tag');
   };
 
   const moneyCategoriesWithIcons = moneyCategoryNames.map(key => ({key, ...getMoneyCategoryMeta(key), icon: getHistoryCategoryIcon(key)})).filter((item) =>

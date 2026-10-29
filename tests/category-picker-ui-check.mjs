@@ -9,11 +9,11 @@ import {MONEY_CATEGORIES,getMoneyCategoryLabel} from './src/shared/config/consta
 function App(){const[owner,setOwner]=useState('a'),[light,setLight]=useState(false),[language,setLanguage]=useState('ru'),[value,setValue]=useState('Продукты'),[management,setManagement]=useState(false);const categories=useVoiceCategories(owner);
  window.switchOwner=setOwner;window.setLight=setLight;window.setLanguage=setLanguage;window.addCategory=categories.add;window.setManagement=setManagement;
  const options=[...MONEY_CATEGORIES,...categories.categories.map(key=>({key}))].filter(item=>!categories.hidden.some(name=>name.toLowerCase()===item.key.toLowerCase())).map(item=>({value:item.key,label:getMoneyCategoryLabel(item.key,language),icon:item.icon}));
- const actions=management?{onCreate:categories.add,onDelete:async name=>{if(window.failRemoval)throw new Error('retry');categories.remove(name);}}:{};
+ const actions=management?{onCreate:async name=>{if(window.failCreate)throw new Error('retry');return categories.add(name);},onDelete:async name=>{if(window.failRemoval)throw new Error('retry');categories.remove(name);}}:{};
  return <main style={{maxWidth:500,margin:'60px auto',padding:16}}><h1 style={{color:light?'#222':'#eee',fontSize:24,marginBottom:24}}>DAYRIS</h1><CategoryPicker {...actions} options={options} value={value} onChange={setValue} userId={owner} language={language} isLight={light} allowCreate/><div style={{marginTop:20}}><CategoryPicker options={options} value={value} onChange={setValue} userId={owner} language={language} isLight={light} allOption="Все"/></div><output>{value}</output></main>;
 }createRoot(document.getElementById('root')).render(<App/>);
 `},bundle:true,write:false,outfile:'categories.js',format:'iife'});
-const utility=fs.readFileSync(path.join('dist/assets',fs.readdirSync('dist/assets').find(file=>file.endsWith('.css'))),'utf8');
+const utility=fs.readFileSync(path.join('dist/assets',fs.readdirSync('dist/assets').find(file=>/^main-.*\.css$/.test(file))),'utf8');
 const browser=await createRequire(process.env.DAYRIS_PLAYWRIGHT_PACKAGE||import.meta.url)('playwright').chromium.launch({channel:'msedge',headless:true});
 try{
  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
@@ -27,32 +27,32 @@ try{
  const open=async(index=0)=>{await page.locator('.category-picker-trigger').nth(index).click();await page.getByRole('dialog').waitFor();await page.waitForFunction(()=>document.querySelector('.category-picker-sheet').getAnimations().every(animation=>animation.playState==='finished'));};
  const close=async()=>{await page.getByRole('button',{name:'Закрыть разделы'}).click();await page.getByRole('dialog').waitFor({state:'detached'});};
  const search=()=>page.getByRole('textbox',{name:'Найти раздел'});
- await open();assert.equal(await page.locator('.category-picker-expand').getAttribute('aria-expanded'),'false');
- assert.deepEqual(await page.locator('.category-picker-quick .category-picker-choice').allTextContents(),['Продукты','Такси']);
- assert.deepEqual(await page.locator('.category-picker-list .category-picker-choice').allTextContents(),['Монитор','Сок']);
+ await open();assert.equal(await page.locator('.category-picker-expand').count(),0,'all categories are immediately available');
+ assert.deepEqual(await page.locator('.category-picker-quick .category-picker-choice').allTextContents(),['Продукты','Такси','Монитор','Сок']);
+ assert.equal(await page.locator('.category-picker-quick .category-picker-icon').count(),4,'quick categories retain their icons');
+ assert.ok(!(await page.locator('.category-picker-list .category-picker-choice').allTextContents()).includes('Монитор'),'quick categories are not repeated in the main grid');
  assert.equal(await page.locator('#root').evaluate(element=>element.inert),true);
  await page.screenshot({path:'tests/category-picker-dark.png',animations:'disabled'});
- await page.locator('.category-picker-expand').click();assert.ok(await page.locator('.category-picker-expanded .category-picker-choice').count()>100);
- await page.locator('.category-picker-expanded .category-picker-choice').last().scrollIntoViewIfNeeded();assert.equal(await page.locator('.category-picker-expanded .category-picker-choice').last().isVisible(),true);
- await page.locator('.category-picker-expand').click();assert.equal(await page.locator('.category-picker-expanded').count(),0);
+ assert.ok(await page.locator('.category-picker-list .category-picker-choice').count()>100);
+ await page.locator('.category-picker-list .category-picker-choice').last().scrollIntoViewIfNeeded();assert.equal(await page.locator('.category-picker-list .category-picker-choice').last().isVisible(),true);
  await search().fill('со');assert.equal(await page.locator('.category-picker-choice').count(),2);
  await page.getByRole('button',{name:'Закрепить Сок',exact:true}).click();
  await page.getByRole('button',{name:'Сок',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});
  assert.equal(await page.locator('output').textContent(),'Сок');assert.equal(await page.locator('#root').evaluate(element=>element.inert),false);
  assert.equal(await page.locator('.category-picker-trigger').first().evaluate(element=>document.activeElement===element),true);
- await open(1);assert.deepEqual(await page.locator('.category-picker-quick .category-picker-choice').allTextContents(),['Продукты','Такси','Сок']);await close();
+ await open(1);assert.deepEqual(await page.locator('.category-picker-quick .category-picker-choice').allTextContents(),['Продукты','Такси','Сок','Монитор']);await close();
  // Successful voice-created sections are available immediately, without reopening the app.
- await page.evaluate(()=>addCategory('Аквариум'));await open();assert.ok((await page.locator('.category-picker-list .category-picker-choice').allTextContents()).includes('Аквариум'));
+ await page.evaluate(()=>addCategory('Аквариум'));await open();assert.ok((await page.locator('.category-picker-choice').allTextContents()).includes('Аквариум'));
  for(const name of ['Кафе','Покупки','Жильё']){await search().fill(name);await page.getByRole('button',{name:'Закрепить '+name,exact:true}).click();}
  await search().fill('Монитор');await page.getByRole('button',{name:'Закрепить Монитор',exact:true}).click();assert.match(await page.locator('footer').textContent(),/до 6/);
  await search().fill('ЖИЛЬЕ');assert.equal(await page.locator('.category-picker-choice').textContent(),'Жильё');
- await search().fill('Личный проект');await page.getByRole('button',{name:'Создать «Личный проект»'}).click();await page.getByRole('dialog').waitFor({state:'detached'});assert.equal(await page.locator('output').textContent(),'Личный проект');
+ await search().fill('Личный проект');await page.getByRole('button',{name:'Создать «Личный проект»'}).click();await page.getByRole('button',{name:'Кристалл',exact:true}).click();await page.getByRole('button',{name:'Создать',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});assert.equal(await page.locator('output').textContent(),'Личный проект');
  assert.ok(!(await page.evaluate(()=>JSON.parse(localStorage.getItem('dayris_money_categories:a')))).includes('Личный проект'),'draft choice does not create a stored category');
- await page.evaluate(()=>switchOwner('b'));await open();assert.equal(await page.locator('.category-picker-quick').count(),0);assert.equal(await page.locator('.category-picker-expand').getAttribute('aria-expanded'),'true');await close();
+ await page.evaluate(()=>switchOwner('b'));await open();assert.equal(await page.locator('.category-picker-quick').count(),0);assert.ok(await page.locator('.category-picker-list .category-picker-choice').count()>0);await close();
  await page.evaluate(()=>switchOwner('a'));await open();assert.equal(await page.locator('.category-picker-quick .category-picker-choice').count(),6);await close();
  for(const width of [320,390,1280])for(const light of [false,true]){
   await page.setViewportSize({width,height:844});await page.evaluate(light=>{setLight(light);document.body.style.background=light?'#f4f4f6':'#101114';},light);await open();
-  const box=await page.locator('.category-picker-sheet').boundingBox();assert.ok(box.x>=0&&box.x+box.width<=width&&box.y>=0&&box.y+box.height<=844);
+  const box=await page.locator('.category-picker-sheet').boundingBox();assert.ok(box.x>=0&&box.x+box.width<=width&&box.y>=0&&box.y+box.height<=844,JSON.stringify({width,light,box}));
   await search().fill('Очень');assert.equal(await page.locator('.category-picker-choice').count(),1);
   assert.ok(await page.locator('.category-picker-sheet').evaluate(element=>element.scrollWidth<=element.clientWidth));
   for(const button of await page.locator('.category-picker-sheet button').all()){const rect=await button.boundingBox();if(rect)assert.ok(rect.height>=44&&rect.width>=44,'touch target');}
@@ -71,12 +71,23 @@ try{
  for(const width of [320,390,1280])for(const light of [false,true]){
   await page.setViewportSize({width,height:844});await page.evaluate(light=>setLight(light),light);await open();
   await page.getByRole('button',{name:'Добавить раздел',exact:true}).click();await page.getByRole('textbox',{name:'Название раздела'}).fill('Ручной раздел');
+  await page.getByRole('button',{name:'Кристалл',exact:true}).click();assert.equal(await page.locator('.category-picker-preview .lucide-diamond').count(),1);
+  for(const button of await page.locator('.category-picker-icon-library button').all()){const rect=await button.boundingBox();assert.ok(rect.width>=44&&rect.height>=44,'icon touch target');}
+  if(width===320&&!light){await page.evaluate(()=>window.failCreate=true);await page.getByRole('button',{name:'Создать',exact:true}).click();await page.getByRole('alert').waitFor();assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('dayris_category_library:a')).icons?.['ручной раздел']),undefined);await page.evaluate(()=>window.failCreate=false);}
   if(width===390&&light)await page.screenshot({path:'tests/category-create-light.png',animations:'disabled'});
   await page.getByRole('button',{name:'Создать',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});assert.equal(await page.locator('output').textContent(),'Ручной раздел');
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('dayris_category_library:a')).icons['ручной раздел']),'diamond');
+  assert.equal(await page.locator('.category-picker-trigger .lucide-diamond').count(),2,'all open pickers reflect the saved icon');
+  if(width===320&&!light){await page.evaluate(()=>switchOwner('b'));assert.equal(await page.locator('.category-picker-trigger .lucide-diamond').count(),0);await page.evaluate(()=>switchOwner('a'));assert.equal(await page.locator('.category-picker-trigger .lucide-diamond').count(),2);}
   await open();await page.getByRole('button',{name:'Управлять разделами'}).click();await search().fill('Ручной раздел');await page.getByRole('button',{name:'Удалить раздел Ручной раздел',exact:true}).click();
   const rect=await page.locator('.category-picker-sheet').boundingBox();assert.ok(rect.x>=0&&rect.x+rect.width<=width&&rect.y>=0&&rect.y+rect.height<=844);
   if(width===320&&!light){await page.evaluate(()=>window.failRemoval=true);await page.getByRole('button',{name:'Удалить',exact:true}).click();await page.getByRole('alert').waitFor();assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem('dayris_money_categories:a')).includes('Ручной раздел')));await page.evaluate(()=>window.failRemoval=false);}
-  await page.getByRole('button',{name:'Удалить',exact:true}).click();await page.locator('.category-picker-confirm').waitFor({state:'detached'});assert.equal(await page.locator('output').textContent(),'Другое');await close();
+  await page.getByRole('button',{name:'Удалить',exact:true}).click();await page.locator('.category-picker-confirm').waitFor({state:'detached'});assert.equal(await page.locator('output').textContent(),'Другое');assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('dayris_category_library:a')).icons['ручной раздел']),undefined);await close();
  }
+ await page.setViewportSize({width:390,height:844});await page.evaluate(()=>{switchOwner('preview');setLight(false);setLanguage('ru');});
+ await open();await page.getByRole('button',{name:'Добавить раздел',exact:true}).click();await page.getByRole('textbox',{name:'Название раздела'}).fill('Мой проект');await page.getByRole('button',{name:'Кристалл',exact:true}).click();await page.getByRole('button',{name:'Создать',exact:true}).click();await page.getByRole('dialog').waitFor({state:'detached'});
+ await open();await page.locator('.category-picker-sheet').screenshot({path:'artifacts/category-picker-reworked-dark.png',animations:'disabled'});
+ await page.getByRole('button',{name:'Добавить раздел',exact:true}).click();await page.getByRole('textbox',{name:'Название раздела'}).fill('Мои увлечения');await page.getByRole('button',{name:'Компас',exact:true}).click();await page.locator('.category-picker-sheet').screenshot({path:'artifacts/category-picker-create-icon-dark.png',animations:'disabled'});
+ await page.getByRole('button',{name:'Закрыть разделы'}).click();await page.locator('.category-picker-new').waitFor({state:'detached'});await close();
  assert.deepEqual(errors,[]);console.log('PASS: manual create/delete/retry, 100 categories, favorites/recents, owner isolation, keyboard/focus, light/dark 320–1280px, reduced motion');
 }finally{await browser.close();}
