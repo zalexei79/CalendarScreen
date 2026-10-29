@@ -2,9 +2,15 @@
 
 The receipt review now saves with one primary button. The redundant “Checked
 against photo” checkbox and its state are removed. Recognition still never writes
-automatically: saving checks the current account, PRO, required fields and item
-arithmetic. Conflicting totals expose short numeric choices; missing date/currency
+automatically: saving checks the current account, PRO and required expense fields.
+Item arithmetic is informational. Conflicting totals expose short numeric choices; missing date/currency
 remain editable. Double-click/network failure/PRO-revocation checks are retained.
+
+The later optional-details change shows all recognized items immediately and
+permits saving incomplete/contradictory details with the independent receipt total.
+A "Save item list" switch defaults on; off saves only the total without discarding
+edits from the review. No extra confirmation or forced correction of items is
+required. This replaces the earlier automatic hiding/mandatory reconciliation.
 
 ## Romanian product names
 

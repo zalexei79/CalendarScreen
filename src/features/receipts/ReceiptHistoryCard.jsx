@@ -11,7 +11,7 @@ export default function ReceiptHistoryCard({entry,receipt:provided,language='ru'
   const [expanded,setExpanded]=useState(false),receipt=provided||receiptFromEntry(entry),c=receiptCopy(language),locale=productLocale(language);
   if(!receipt)return null;
   const numberLocale=['ru-RU','en-US','ro-MD','zh-CN'][locale];
-  const money=value=>new Intl.NumberFormat(numberLocale,{minimumFractionDigits:2,maximumFractionDigits:2}).format((receiptMoney(value)||0)/100);
+  const money=value=>{const minor=receiptMoney(value);return minor===null?'—':new Intl.NumberFormat(numberLocale,{minimumFractionDigits:2,maximumFractionDigits:2}).format(minor/100);};
   const date=new Date(`${entry.dateKey}T12:00:00`),dateText=showDate&&!Number.isNaN(+date)?new Intl.DateTimeFormat(numberLocale,{day:'numeric',month:'short'}).format(date):'';
   const category=MONEY_CATEGORIES.find(item=>item.key.toUpperCase()===String(entry.instrument).toUpperCase());
   const categoryText=category?locale===0?category.key:locale===1?category.en:locale===2?category.ro:category['zh-CN']:entry.instrument;
@@ -24,7 +24,7 @@ export default function ReceiptHistoryCard({entry,receipt:provided,language='ru'
     <div className="receipt-history-overview">{paper?<span className="receipt-history-total-label"><span>{c.total}</span><small>{categoryText}</small></span>:<span>{categoryText}</span>}<strong>−{money(receipt.total)} <small>{receipt.currency}</small></strong></div>
     {receipt.items.length>0&&<ul className="receipt-history-items">{visible.map((item,index)=>{
       const product=receiptProduct(item.name,language,item.productType),expected=receiptLineTotal(item.quantity,item.unitPrice),mismatch=receiptMoney(expected)!==receiptMoney(item.total);
-      return <li key={index}><span className="receipt-history-product-icon" aria-hidden="true">{product.symbol||'🛍️'}</span><span className="receipt-history-product"><b>{product.title||item.name}</b><span>{item.quantity.replace('.',locale===1||locale===3?'.':',')} {c[item.unit]||c.pcs} × {money(item.unitPrice)}{mismatch&&<> = {expected?money(expected):'—'}</>} {receipt.currency}</span>{mismatch&&<em>{c.checkItem}</em>}</span><span className="receipt-history-line-total">{mismatch&&<small>{c.readAmount}</small>}{money(item.total)}<small>{receipt.currency}</small></span></li>;
+      return <li key={index}><span className="receipt-history-product-icon" aria-hidden="true">{product.symbol||'🛍️'}</span><span className="receipt-history-product"><b>{product.title||item.name||c.unknownItem}</b><span>{(String(item.quantity??'').trim()||'—').replace('.',locale===1||locale===3?'.':',')} {c[item.unit]||c.pcs} × {money(item.unitPrice)}{mismatch&&<> = {expected?money(expected):'—'}</>} {receipt.currency}</span>{mismatch&&<em>{c.itemUncertain}</em>}</span><span className="receipt-history-line-total">{mismatch&&<small>{c.readAmount}</small>}{money(item.total)}<small>{receipt.currency}</small></span></li>;
     })}</ul>}
     {receipt.items.length>previewLimit&&<button type="button" className="receipt-history-expand" aria-expanded={expanded} onClick={()=>setExpanded(!expanded)}>{expanded?c.showLess:`${c.showAll} (${receipt.items.length})`}<ChevronDown size={14}/></button>}
     {receipt.mismatch&&<div className="receipt-history-difference"><span>{c.itemSum}<b>{money(receipt.sum)} {receipt.currency}</b></span><span>{c.difference}<b>{money(receipt.difference)} {receipt.currency}</b></span></div>}

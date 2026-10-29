@@ -25,6 +25,14 @@ export function receiptLineTotal(quantity, unitPrice) {
   const result = (BigInt(price) * numerator + denominator / 2n) / denominator;
   return result < 100000000000000n ? moneyText(Number(result)) : '';
 }
+// Detail amounts do not authorize or change the independent receipt grand total.
+// Keep the printed evidence until the user explicitly edits the factors.
+export function receiptItemAmount(item={}) {
+  const calculated=receiptLineTotal(item.quantity,item.unitPrice);
+  const choices=item.priceReviewed?[calculated,item.printedTotal,item.total]:[item.printedTotal,item.total,calculated];
+  for(const value of choices){const amount=receiptMoney(value);if(amount!==null)return moneyText(amount);}
+  return '';
+}
 // Only read factors from the same printed equation; never derive them from a receipt total.
 export function receiptMath(value) {
   const match = String(value).match(/(?<![\d.,+\-−])(\d+(?:\s*[.,]\s*\d{1,4})?)\s*([\p{L}]{1,4}\.?)?\s*[xх×*@]\s*(\d+(?:[ \u00a0'’]\d{3})*(?:\s*[.,]\s*\d{1,2})?)\s*(?:[=:\-]\s*|\s+)(\d+(?:[ \u00a0'’]\d{3})*(?:\s*[.,]\s*\d{1,2})?)(?![\d.,])[^\d]{0,12}$/iu);
@@ -133,12 +141,12 @@ export function parseReceipt(rawText) {
 }
 export function receiptValidation(draft, today, currencies) {
   const total = receiptMoney(draft.total);
-  const invalidItem = draft.items.some(receiptItemIssue);
-  const sum = draft.items.reduce((value,item) => value + (receiptMoney(receiptLineTotal(item.quantity,item.unitPrice)) || 0), 0);
+  const sum = draft.items.reduce((value,item) => value + (receiptMoney(receiptItemAmount(item)) ?? 0), 0);
   const lineMismatch = draft.items.some(receiptItemMathIssue);
   const mismatch = Boolean(total > 0 && draft.items.length && sum !== total);
-  // The printed total is independent evidence, never proof that OCR item prices are correct.
-  return { valid: !draft.documentIssue && total > 0 && currencies.includes(draft.currency) && validReceiptDate(draft.dateKey, today) && !invalidItem && !lineMismatch && !mismatch, total, sum, mismatch, lineMismatch };
+  // Item issues are review information. Only the independent grand total and
+  // financial/document fields decide whether this receipt can be saved.
+  return { valid: !draft.documentIssue && total > 0 && currencies.includes(draft.currency) && validReceiptDate(draft.dateKey, today), total, sum, mismatch, lineMismatch };
 }
 export function receiptComment(draft,language='ru') {
   if(draft.kind==='amount'){
@@ -146,9 +154,14 @@ export function receiptComment(draft,language='ru') {
     const equation=draft.expression?`${draft.expression} = ${moneyText(receiptMoney(draft.total))}`:'';
     return [`📷 ${draft.merchant.trim()||label}`,receiptMath(equation)?.consistent?`${equation} ${draft.currency}`:''].filter(Boolean).join('\n');
   }
-  return [`🧾 ${draft.merchant.trim()}`, ...draft.items.map(item => {
-    const product=receiptProduct(item.name,language,item.productType), original=item.name.trim();
-    const label=product.type?`${product.symbol} ${product.title} [${original}]`:original;
-    return `${label} · ${item.quantity}${item.unit === 'kg' ? ' kg' : item.unit === 'l' ? ' l' : ''} × ${moneyText(receiptMoney(item.unitPrice))} = ${receiptLineTotal(item.quantity,item.unitPrice)} ${draft.currency}`;
+  return [`🧾 ${cleanReceiptName(draft.merchant)}`, ...draft.items.map(item => {
+    const original=cleanReceiptName(item.name),product=receiptProduct(original,language,item.productType);
+    const label=product.type?`${product.symbol} ${product.title} [${original}]`:original||'—';
+    const quantity=String(item.quantity??'').replace(',','.'),unit=['kg','l'].includes(item.unit)?item.unit:'pcs',price=moneyText(receiptMoney(item.unitPrice)),amount=receiptItemAmount(item),calculated=receiptLineTotal(quantity,price);
+    const hasQuantity=/^\d+(?:\.\d{1,4})?$/.test(quantity),complete=validReceiptName(original)&&hasQuantity&&Number(quantity)>0&&price!==''&&amount!==''&&calculated===amount&&(!item.mathUncertain||item.priceReviewed);
+    if(complete)return `${label} · ${quantity}${unit==='pcs'?'':` ${unit}`} × ${price} = ${amount} ${draft.currency}`;
+    // Independent readable columns preserve partial/contradictory OCR without
+    // asserting a false equation or guessing missing factors.
+    return `${label} · ${hasQuantity?quantity:'—'} ${unit} @ ${price||'—'} · ${amount||'—'} ${draft.currency}`;
   })].join('\n');
 }

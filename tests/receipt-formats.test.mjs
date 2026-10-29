@@ -32,10 +32,10 @@ test('long receipt retains every row and ignores payment amounts larger than the
  const draft=parseReceiptPhoto(`SHOP\nUSD\n${rows.join('\n')}\nTOTAL 345.00\nCASH 500.00\nCHANGE 155.00\n19-10-2026`,context);
  assert.equal(draft.items.length,150);assert.equal(draft.total,'345.00');assert.equal(receiptValidation(draft,today,['USD']).valid,true);
 });
-test('unhandled explicit units require review instead of silently claiming piece counts',()=>{
+test('unhandled explicit units stay flagged without blocking an independent receipt total',()=>{
  for(const unit of ['g','ml','lb']){
   const draft=parseReceiptPhoto(`SHOP\nUSD\nProduct\n250 ${unit} x 0.02 = 5.00\nTOTAL 5.00\n19-10-2026`,context);
-  assert.equal(draft.items[0].mathUncertain,true);assert.equal(receiptValidation(draft,today,['USD']).valid,false);
+  assert.equal(draft.items[0].mathUncertain,true);assert.equal(receiptValidation(draft,today,['USD']).valid,true);
  }
 });
 

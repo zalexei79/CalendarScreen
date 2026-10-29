@@ -69,6 +69,10 @@
 .receipt-price-check b{font-size:15px;font-weight:550;color:var(--receipt-fg);overflow-wrap:anywhere}
 .receipt-price-check small{font-size:10px;font-weight:400;color:var(--receipt-muted)}
 .receipt-reconciliation{margin-top:13px;padding:0 2px}
+.receipt-list-choice{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:10px 12px;margin:0 0 12px;border:1px solid var(--receipt-line);border-radius:13px;background:var(--receipt-field);cursor:pointer}
+.receipt-list-choice>span{display:flex;flex-direction:column;gap:4px;min-width:0}.receipt-list-choice strong{font-size:12px;font-weight:500;line-height:1.4}.receipt-list-choice small{font-size:10px;line-height:1.4;color:var(--receipt-muted)}
+.receipt-list-choice>input{appearance:none;position:relative;box-sizing:border-box;width:40px;min-width:40px;height:24px;min-height:24px;margin:0;padding:0;border:1px solid var(--receipt-line);border-radius:20px;background:#88888830;cursor:pointer}
+.receipt-list-choice>input::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#f5f2eb;box-shadow:0 1px 3px #0003}.receipt-list-choice>input:checked{background:#c6a65d;border-color:#c6a65d}.receipt-list-choice>input:checked::after{left:19px;background:#fffaf0}.receipt-list-choice>input:focus-visible{outline:2px solid #b58a38;outline-offset:3px}
 .receipt-document-status{display:flex;align-items:center;gap:9px;padding:12px 0;margin:0;font-size:12px;line-height:1.5;color:var(--receipt-muted)}
 .receipt-document-status>svg{flex:none;color:#b58a38}
 .receipt-reconciliation .receipt-sum{margin:0;padding:9px 0;font-size:12px}

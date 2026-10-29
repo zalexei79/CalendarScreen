@@ -13,9 +13,11 @@ additional expenses. The receipt photo and raw OCR text are not uploaded/stored.
 The review starts with a prominent total and a compact purchase list. Known
 product names have localized readable labels (with the original brand retained);
 the original recognized name remains editable. Tap a row to edit its name,
-quantity, unit, price and line total. Broken calculation fragments cannot pass as
-product names. Unknown names require correction/removal. Each conflicting row is
-marked; the difference between item sums and the receipt total is shown explicitly.
+quantity, unit and price. Recognized rows are visible by default, including
+incomplete names/numbers. A compact "Save item list" switch starts on. Turning
+it off saves only the grand total; turning it back on restores the current edits.
+Item uncertainties and differences from the receipt total are informational and
+do not block saving. Editing items never changes the receipt grand total.
 
 Product types are separate from accounting categories. The shared catalog contains
 101 stable types with Russian, Romanian, English and Chinese aliases/icons. Unknown
@@ -27,7 +29,9 @@ option to return to automatic detection. They do not sync between devices.
 New comments have a readable receipt header and readable item labels, retaining
 the original recognized names in brackets. There is no hidden JSON payload. Day
 history and global history render receipt cards from these lines and also from
-legacy receipt comments. Ordinary notes remain text. Historic totals are never
+legacy receipt comments. Partial rows keep independent fields with missing-value
+placeholders instead of asserting a false multiplication. Ordinary notes remain
+text. Historic totals are never
 recomputed from OCR rows. A mismatch is displayed without changing ledger values.
 Canonical original-name fingerprints keep duplicate detection working across
 old/new comment formats and display languages. General entry editing is preserved.
@@ -45,11 +49,13 @@ to 20 MB in JPEG/PNG/WebP/BMP are supported; HEIC needs conversion to JPEG.
 
 The parser treats receipt totals separately from item sums, payment, change,
 discounts and tax. Monetary arithmetic uses integer minor units. Ambiguous total,
-currency or date stays unset. Item discrepancies show a warning; an explicit
-save action confirms the visible draft; there is no separate photo checkbox.
-Unresolved totals, missing currency/date and contradictory item arithmetic still
-lead to the relevant correction. Users can remove unreadable rows and save only
-the verified total. See [Moldovan receipt follow-up](receipt-moldova.md).
+currency or date stays unset. The save action confirms the visible draft; there
+is no separate photo-confirmation checkbox. Only unresolved grand totals, missing
+currency/date and excluded document types block a purchase expense. Item names,
+quantities, prices and arithmetic may remain incomplete or contradictory. The
+expense amount always comes from the independent grand total. Unreadable item
+amounts display as an em dash in review/history, never as an invented zero.
+See [Moldovan receipt follow-up](receipt-moldova.md).
 
 Current currency options remain USD/EUR/MDL/RUB/CNY/UAH. RON is recognized as RON but
 must not be silently converted to MDL. Date must be today or in the past. Repeated

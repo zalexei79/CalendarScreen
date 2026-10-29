@@ -1,5 +1,5 @@
 import {classifyProduct} from './productCatalog.js';
-import {normalizeReceiptText,receiptMoney,moneyText,receiptLineTotal,validReceiptName} from './receiptModel.js';
+import {normalizeReceiptText,receiptMoney,moneyText,receiptLineTotal,receiptItemAmount,validReceiptName} from './receiptModel.js';
 
 // Read both the original plain-text receipts and new, explicitly marked receipts.
 // This is a read-only view: historic totals and source comments are not rewritten.
@@ -12,8 +12,18 @@ export function readSavedReceipt(comment,currency='') {
     return {kind:'amount',merchant:lines[0].replace(/^📷\s*/u,''),items:[],currency:currency||code||'',marked:true,expression:lines[1]?.split(' = ')[0]||''};
   }
   const pattern=/^(.+?)\s+·\s+(\d+(?:[.,]\d{1,4})?)\s*(kg|кг|l|л)?\s*[×xх]\s*(\d+(?:[.,]\d{1,2}))\s*=\s*(\d+(?:[.,]\d{1,2}))\s+([A-Z]{3})$/u;
+  const partialPattern=/^(.+?)\s+·\s+(—|\d+(?:[.,]\d{1,4})?)\s+(pcs|kg|l)\s+@\s+(—|\d+(?:[.,]\d{1,2}))\s+·\s+(—|\d+(?:[.,]\d{1,2}))\s+([A-Z]{3})$/u;
   const rows=[],prefix=[];
   for(const line of lines){
+    const partial=marked?line.match(partialPattern):null;
+    if(partial){
+      const [,label,quantity,unit,unitPrice,total,code]=partial;
+      if(currency&&code!==currency)return null;
+      const original=label.match(/^(.+?)\s+\[([\s\S]*)\]$/),name=original?original[2]:label==='—'?'':label;
+      const amount=total==='—'?'':moneyText(receiptMoney(total));
+      rows.push({name,quantity:quantity==='—'?'':quantity.replace(',','.'),unit,unitPrice:unitPrice==='—'?'':moneyText(receiptMoney(unitPrice)),total:amount,printedTotal:amount,currency:code,productType:original?classifyProduct(original[1])?.id||'':'',mathUncertain:true});
+      continue;
+    }
     const match=line.match(pattern);
     if(!match){if(rows.length)return null;prefix.push(line);continue;}
     const [,label,quantity,unit,unitPrice,total,code]=match;
@@ -33,10 +43,10 @@ export function receiptFromEntry(entry) {
   if(Number(entry?.pnl)>=0||!Number.isFinite(Number(entry?.pnl))||entry?.traderMode===true||entry?.platform&&entry.platform!=='Manual')return null;
   const receipt=readSavedReceipt(entry?.comment,entry.currency||'USD');
   if(!receipt)return null;
-  const total=Math.round(Math.abs(Number(entry.pnl))*100),sum=receipt.items.reduce((value,item)=>value+receiptMoney(item.total),0);
-  return{...receipt,total:moneyText(total),sum:moneyText(sum),difference:moneyText(Math.abs(total-sum)),mismatch:receipt.items.length>0&&sum!==total,lineMismatch:receipt.items.some(item=>receiptMoney(receiptLineTotal(item.quantity,item.unitPrice))!==receiptMoney(item.total))};
+  const total=Math.round(Math.abs(Number(entry.pnl))*100),sum=receipt.items.reduce((value,item)=>value+(receiptMoney(receiptItemAmount(item))??0),0);
+  return{...receipt,total:moneyText(total),sum:moneyText(sum),difference:moneyText(Math.abs(total-sum)),mismatch:receipt.items.length>0&&sum!==total,lineMismatch:receipt.items.some(item=>receiptMoney(receiptLineTotal(item.quantity,item.unitPrice))!==receiptMoney(receiptItemAmount(item)))};
 }
 export function receiptFingerprint(receipt) {
   if(receipt.kind==='amount')return JSON.stringify(['photo',normalizeReceiptText(receipt.merchant),String(receipt.expression||'').replace(/,/g,'.').replace(/\s/g,'')]);
-  return JSON.stringify([normalizeReceiptText(receipt.merchant),receipt.items.map(item=>[normalizeReceiptText(item.name),Number(item.quantity),item.unit||'pcs',receiptMoney(item.unitPrice),receiptMoney(item.total)])]);
+  return JSON.stringify([normalizeReceiptText(receipt.merchant),receipt.items.map(item=>{const quantity=String(item.quantity??'').replace(',','.');return[normalizeReceiptText(item.name),/^\d+(?:\.\d{1,4})?$/.test(quantity)?Number(quantity):null,item.unit||'pcs',receiptMoney(item.unitPrice),receiptMoney(receiptItemAmount(item))];})]);
 }

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseReceipt, receiptMath, receiptMoney, receiptLineTotal, receiptValidation, receiptCategory, receiptComment, receiptProduct, validReceiptName } from '../src/features/receipts/receiptModel.js';
+import { parseReceipt, receiptMath, receiptMoney, receiptLineTotal, receiptItemAmount, receiptValidation, receiptCategory, receiptComment, receiptProduct, validReceiptName } from '../src/features/receipts/receiptModel.js';
 
 export const sample = `MOLDRETAIL GROUP S.R.L.
 rn. Floresti, sat. Sanatauca
@@ -67,24 +67,24 @@ test('unclear currency/date/total are not silently inferred', () => {
 test('editable items flag disagreement without overwriting printed total', () => {
   const receipt = parseReceipt(sample); receipt.items[0].total='60.00';
   const validation = receiptValidation(receipt,'2026-10-19',['MDL']);
-  assert.equal(validation.mismatch,false,'items sum is calculated from factors, never from a tampered item amount'); assert.equal(validation.lineMismatch,true); assert.equal(receipt.total,'151.85');
-  assert.equal(validation.valid,false,'inconsistent OCR cannot be saved');
-  receipt.items[0].name=''; assert.equal(receiptValidation(receipt,'2026-10-19',['MDL']).valid,false);
+  assert.equal(validation.mismatch,false,'printed item evidence has priority over an unrelated internal item amount'); assert.equal(validation.lineMismatch,true); assert.equal(receipt.total,'151.85');
+  assert.equal(validation.valid,true,'item arithmetic does not block the independent grand total');
+  receipt.items[0].name=''; assert.equal(receiptValidation(receipt,'2026-10-19',['MDL']).valid,true);
 });
 
-test('independent receipt total cannot override a wrong item equation or a missing item', () => {
+test('independent receipt total is saveable while item errors and missing rows remain informational', () => {
   const receipt=parseReceipt(sample);
   receipt.items[0].unitPrice='23.95';receipt.items[0].total='39.90';
   let checked=receiptValidation(receipt,'2026-10-19',['MDL']);
-  assert.equal(checked.valid,false);assert.equal(checked.lineMismatch,true);assert.equal(checked.sum,13985);assert.equal(checked.total,15185);
-  // Even when item totals agree with the receipt total, the equation must be true.
+  assert.equal(checked.valid,true);assert.equal(checked.lineMismatch,true);assert.equal(checked.sum,15185);assert.equal(checked.total,15185);
+  // Changing the grand total never silently changes item evidence or vice versa.
   receipt.total='139.85';checked=receiptValidation(receipt,'2026-10-19',['MDL']);
-  assert.equal(checked.mismatch,false);assert.equal(checked.valid,false);
+  assert.equal(checked.mismatch,true);assert.equal(checked.valid,true);
   receipt.items[0].unitPrice='29.95';receipt.items[0].total='59.90';
   checked=receiptValidation(receipt,'2026-10-19',['MDL']);
-  assert.equal(checked.lineMismatch,false);assert.equal(checked.valid,false,'correct equations still need to reconcile with the printed total');
+  assert.equal(checked.lineMismatch,false);assert.equal(checked.valid,true,'item reconciliation is not a save precondition');
   receipt.total='151.85';assert.equal(receiptValidation(receipt,'2026-10-19',['MDL']).valid,true);
-  receipt.items.pop();assert.equal(receiptValidation(receipt,'2026-10-19',['MDL']).valid,false,'missing purchases block detailed saving');
+  receipt.items.pop();assert.equal(receiptValidation(receipt,'2026-10-19',['MDL']).valid,true,'a partial purchase list can accompany the full printed total');
   assert.equal(receiptValidation({...receipt,items:[]},'2026-10-19',['MDL']).valid,true,'explicit total-only fallback remains available');
 });
 test('common products map to existing categories across languages', () => {
@@ -99,7 +99,7 @@ test('broken price rows use the previous product name, or require a name correct
   for(const name of ['buc x 23.95=','n 1 buc x 15.9%=','1 Бис х 44.95','400g']) assert.equal(validReceiptName(name),false,name);
   const unknown=parseReceipt('IDNO: 123\nbuc x 23.95= 23.95 A\nTOTAL 23.95');
   assert.equal(unknown.items[0].name,'');
-  assert.equal(receiptValidation({...unknown,dateKey:'2026-10-19',currency:'MDL'},'2026-10-19',['MDL']).valid,false);
+  assert.equal(receiptValidation({...unknown,dateKey:'2026-10-19',currency:'MDL'},'2026-10-19',['MDL']).valid,true);
   const mismatch=parseReceipt('IDNO: 123\nBIERMANN Bere blonda 2.4l\n2 buc x 23.95 = 39.90 A\nSUBTOTAL 39.90\nReducere Total 17.00\nTOTAL LEI 39.90');
   assert.equal(mismatch.items.length,1,'subtotal/discount lines are not purchases');
   assert.equal(mismatch.items[0].unitPrice,'23.95','a price is never inferred from the total');assert.equal(mismatch.items[0].total,'47.90','the displayed amount is always quantity times price');assert.equal(mismatch.items[0].printedTotal,'39.90','OCR evidence is kept separately');
@@ -112,11 +112,23 @@ test('two-factor receipt equations support integers, decimal commas and OCR deci
     assert.equal(receipt.items.length,1,line);assert.equal(receipt.items[0].total,total);assert.equal(receiptMath(line).consistent,true);
   }
   const receipt=parseReceipt('SHOP\nIDNO: 123\nПиво\n2 buc x 23.95 = 39.90\nTOTAL 47.90\n19-10-2026');
-  assert.equal(receiptValidation(receipt,'2026-10-19',['MDL']).valid,false,'a matching calculated grand total cannot hide conflicting OCR evidence');
-  assert.match(receiptComment(receipt),/2 × 23.95 = 47.90/,'serialization never writes a false equation');
+  assert.equal(receiptValidation(receipt,'2026-10-19',['MDL']).valid,true,'item discrepancies are informational');
+  assert.match(receiptComment(receipt),/2 pcs @ 23.95 · 39.90 MDL/,'serialization preserves independent printed fields');
+  assert.doesNotMatch(receiptComment(receipt),/2 × 23.95 = 39.90/,'serialization never asserts a false equation');
   receipt.items[0].priceReviewed=true;assert.equal(receiptValidation(receipt,'2026-10-19',['MDL']).valid,true,'the user can verify the factors against the photo');
   const uncertain=parseReceipt('SHOP\nАрахис\n1 buc x 15.9%=15.95\nTOTAL 15.95');
   assert.equal(uncertain.items[0].mathUncertain,true,'broken multiplication cannot silently become a one-item guess');
+});
+test('item amount selection preserves printed zero, missing factors and explicit user edits',()=>{
+ assert.equal(receiptItemAmount({quantity:'2',unitPrice:'23.95',printedTotal:'39.90',total:'47.90'}),'39.90');
+ assert.equal(receiptItemAmount({quantity:'2',unitPrice:'23.95',printedTotal:'39.90',total:'47.90',priceReviewed:true}),'47.90');
+ assert.equal(receiptItemAmount({quantity:'2',unitPrice:'',printedTotal:'0.00',total:'10.00'}),'0.00');
+ assert.equal(receiptItemAmount({quantity:'',unitPrice:'',total:'76.00'}),'76.00');
+ assert.equal(receiptItemAmount({quantity:'2',unitPrice:'10.00'}),'20.00');
+ assert.equal(receiptItemAmount({quantity:'',unitPrice:''}),'');
+ const draft={total:'100.00',currency:'MDL',dateKey:'2026-10-19',items:[{name:'',quantity:'',unitPrice:'',printedTotal:'76.00'},{name:'buc x 2 =',quantity:'',unitPrice:''}]};
+ assert.deepEqual(receiptValidation(draft,'2026-10-19',['MDL']),{valid:true,total:10000,sum:7600,mismatch:true,lineMismatch:true});
+ for(const invalid of[{total:''},{total:'0.00'},{currency:''},{dateKey:''},{documentIssue:'refund'}])assert.equal(receiptValidation({...draft,...invalid},'2026-10-19',['MDL']).valid,false);
 });
 test('readable localized product titles retain brands, preserve original text and never invent sizes or prices', () => {
   const beer=receiptProduct('BIERMANN Bere blonda 2.4l','ru');

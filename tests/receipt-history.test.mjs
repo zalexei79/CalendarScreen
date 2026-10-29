@@ -24,6 +24,27 @@ test('ordinary comments, extra personal notes, trading entries and mixed-currenc
  assert.equal(receiptFromEntry({pnl:-151.85,currency:'MDL',platform:'cTrader',comment:legacyComment}),null);
  assert.equal(readSavedReceipt(legacyComment.replace('= 7.10 MDL','= 7.10 EUR'),'MDL'),null);
 });
+test('partial and contradictory receipt rows round-trip without inventing names, factors or equations',()=>{
+ const draft={merchant:'SHOP',currency:'RUB',total:'16628.00',items:[
+  {name:'Кирпич',quantity:'800',unit:'pcs',unitPrice:'10.22',total:'8176.00',printedTotal:'76.00'},
+  {name:'',quantity:'',unit:'pcs',unitPrice:'',total:'',printedTotal:'5400.00'},
+  {name:'buc x 2 =',quantity:'4',unit:'pcs',unitPrice:'',total:''},
+  {name:'Молоко',quantity:'1',unit:'pcs',unitPrice:'0.00',total:'0.00',printedTotal:'0.00'},
+ ]};
+ const comment=receiptComment(draft),restored=readSavedReceipt(comment,'RUB');
+ assert.match(comment,/Кирпич · 800 pcs @ 10.22 · 76.00 RUB/);assert.doesNotMatch(comment,/800 × 10.22 = 76.00/);assert.doesNotMatch(comment,/\{"/);
+ assert.equal(restored.items.length,4);assert.equal(restored.items[0].total,'76.00');assert.equal(restored.items[0].printedTotal,'76.00');assert.equal(restored.items[0].mathUncertain,true);
+ assert.equal(restored.items[1].name,'');assert.equal(restored.items[1].quantity,'');assert.equal(restored.items[1].unitPrice,'');assert.equal(restored.items[1].total,'5400.00');
+ assert.equal(restored.items[2].name,'buc x 2 =');assert.equal(restored.items[2].total,'');assert.equal(restored.items[3].total,'0.00');
+ assert.equal(receiptFingerprint(restored),receiptFingerprint(draft));assert.equal(readSavedReceipt(comment,'MDL'),null);
+ const entry={pnl:-16628,currency:'RUB',platform:'Manual',comment},receipt=receiptFromEntry(entry);assert.equal(receipt.total,'16628.00');assert.equal(receipt.sum,'5476.00');assert.equal(receipt.difference,'11152.00');assert.equal(receipt.mismatch,true);assert.equal(receipt.lineMismatch,true);assert.equal(entry.pnl,-16628);
+ const totalOnly=receiptFromEntry({...entry,comment:receiptComment({...draft,items:[]})});assert.equal(totalOnly.total,'16628.00');assert.deepEqual(totalOnly.items,[]);
+ assert.equal(readSavedReceipt(comment.replace(/^🧾 SHOP/,'SHOP'),'RUB'),null,'relaxed detail grammar must be explicitly marked');
+});
+test('user-edited factors choose the edited amount while unknown amounts stay absent',()=>{
+ const draft={merchant:'Shop',currency:'MDL',items:[{name:'Bere',quantity:'2',unitPrice:'29.95',total:'59.90',printedTotal:'39.90',priceReviewed:true},{name:'Unknown',quantity:'',unitPrice:'',total:''}]};
+ const comment=receiptComment(draft),restored=readSavedReceipt(comment,'MDL');assert.match(comment,/2 × 29.95 = 59.90 MDL/);assert.equal(restored.items[0].total,'59.90');assert.equal(restored.items[1].total,'');assert.equal(receiptFingerprint(restored),receiptFingerprint(draft));
+});
 test('one shared product catalog covers everyday purchases across groups and scripts without making financial categories',()=>{
  assert.ok(RECEIPT_PRODUCT_TYPES.length>=80);
  for(const [name,id] of [['sampon NIVEA','shampoo'],['шампунь 400мл','shampoo'],['洗发水','shampoo'],['pantaloni jeans','trousers'],['куриная грудка','chicken'],['cartofi','potatoes'],['mere rosii','apples'],['Peanut butter','nut_spread'],['pasta de dinti','toothpaste'],['paracetamol','medicine'],['benzina AI95','fuel'],['кабель USB','electronics'],['тетрадь','stationery'],['hrana pisici','pet_food']])assert.equal(classifyProduct(name)?.id,id,name);

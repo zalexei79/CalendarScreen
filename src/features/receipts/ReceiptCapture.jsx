@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertCircle, Camera, Check, ChevronDown, ChevronRight, Plus, ReceiptText, ShoppingBag, Trash2, X } from 'lucide-react';
+import { AlertCircle, Camera, Check, ChevronDown, Plus, ReceiptText, ShoppingBag, Trash2, X } from 'lucide-react';
 import { CURRENCIES } from '../../shared/config/constants';
 import { localDateKey } from '../../shared/lib/voiceEntryReview.js';
 import { checkReceiptAccess } from './receiptAccess.js';
 import { recognizeReceipt } from './receiptOcr.js';
-import { receiptLineTotal, receiptMoney, moneyText, receiptValidation, receiptItemIssue, receiptItemMathIssue, validReceiptDate, validReceiptName, receiptProduct, receiptCategory } from './receiptModel.js';
+import { receiptLineTotal, receiptMoney, moneyText, receiptValidation, receiptItemAmount, receiptItemMathIssue, validReceiptDate, validReceiptName, receiptProduct, receiptCategory } from './receiptModel.js';
 import {parseReceiptPhoto} from './receiptPhoto.js';
 import ReceiptOverview from './ReceiptOverview.jsx';
 import { receiptCopy } from './receiptCopy.js';
@@ -27,7 +27,7 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
   const [phase, setPhase] = useState('idle'), [progress, setProgress] = useState(0), [error, setError] = useState(''), [saved, setSaved] = useState(null);
   const [ocrStage,setOcrStage]=useState('preparing');
   const [editingIndex, setEditingIndex] = useState(-1), [metadataOpen, setMetadataOpen] = useState(false);
-  const [omittedItems, setOmittedItems] = useState(null);
+  const [includeItems, setIncludeItems] = useState(true);
   const [accessDenied, setAccessDenied] = useState(false);
   const selectedFile = useRef(null), attempts=useRef(0);
   const [productMemory,setProductMemory]=useState(()=>readProductMemory(userId));
@@ -58,10 +58,8 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
     const memory=readProductMemory(userId);setProductMemory(memory);
     parsed.items=parsed.items.map(item=>({...item,productType:recalledProductType(memory,item.name)}));
     parsed.category=receiptCategory(parsed.items);
-    const checked=receiptValidation(parsed,today,CURRENCIES.map(item=>item.code));
-    const fallback=parsed.items.length&&!parsed.documentIssue&&(!parsed.total||checked.mismatch||parsed.items.some(receiptItemIssue));
-    setOmittedItems(fallback?parsed.items:null);
-    setDraft(fallback?{...parsed,items:[]}:parsed);setEditingIndex(-1);
+    setIncludeItems(true);
+    setDraft(parsed);setEditingIndex(-1);
     setMetadataOpen(false);
     return parsed;
   }
@@ -81,11 +79,6 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
     const items=draft.items.map((item,row)=>row===index?{...item,productType:type?.id||'',name:validReceiptName(item.name)||!type?item.name:type.labels[productLocale(language)]}:item);
     update({items,...(draft.category===receiptCategory(draft.items)?{category:receiptCategory(items)}:{})});
   }
-  function toggleTotalOnly() {
-    if (omittedItems) { update({items:omittedItems}); setOmittedItems(null); }
-    else { setOmittedItems(draft.items); update({items:[]}); }
-    setEditingIndex(-1);
-  }
   async function selectFile(event) {
     const file = event.target.files?.[0]; event.target.value = '';
     await readFile(file);
@@ -104,7 +97,7 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
       if (!alive()) return;
       setPhase('reading');setOcrStage('preparing');attempts.current++;
       const text = await recognize(file, { language, signal: controller.signal, onStage: value=>{if(alive())setOcrStage(value);},onProgress: value => { if (alive()) setProgress(previous=>Math.max(previous,value)); } });
-      if (alive()) { const parsed=review(text);setPhase(!parsed.total&&!parsed.totalCandidates?.length&&!parsed.documentIssue?'scan-failed':'review'); }
+      if (alive()) { const parsed=review(text);setPhase(!parsed.total&&!parsed.totalCandidates?.length&&!parsed.documentIssue&&!parsed.items.length?'scan-failed':'review'); }
     } catch (failure) {
       if (!alive()) return;
       setError(failure.message === 'RECEIPT_ACCESS_UNAVAILABLE' ? c.access : failure.message==='OCR_TIMEOUT'?c.ocrTimeout:'');
@@ -114,23 +107,11 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
     }
   }
   const validation = draft ? receiptValidation(draft, today, CURRENCIES.map(item => item.code)) : null;
-  const itemIssues = draft ? draft.items.flatMap((item,index) => receiptItemIssue(item) ? [index] : []) : [];
   const documentIssue = draft?.documentIssue || '';
-  const needsReview = Boolean(itemIssues.length || validation?.mismatch);
   const requiredField = draft ? !(receiptMoney(draft.total)>0)?'total':!CURRENCIES.some(item=>item.code===draft.currency)?'currency':!validReceiptDate(draft.dateKey,today)?'date':'' : '';
   function focusTotal() {
     const input = dialog.current?.querySelector('.receipt-total input');
     input?.focus({preventScroll:true}); input?.scrollIntoView({block:'nearest'});
-  }
-  function focusCorrection() {
-    if (!itemIssues.length) { focusTotal(); return; }
-    const index = itemIssues[0];
-    setEditingIndex(index);
-    requestAnimationFrame(() => {
-      const item = dialog.current?.querySelectorAll('.receipt-item')[index];
-      const input = validReceiptName(draft.items[index].name) ? item?.querySelectorAll('.receipt-item-numbers input')[1] : item?.querySelector('.receipt-item-name input');
-      input?.focus({preventScroll:true}); item?.scrollIntoView({block:'nearest'});
-    });
   }
   function focusRequired(){
     if(requiredField==='total'){focusTotal();return;}
@@ -138,12 +119,13 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
     input?.focus({preventScroll:true});input?.scrollIntoView({block:'nearest'});try{input?.showPicker?.();}catch{}
   }
   const retryAccess = phase === 'access-error';
-  const actionLabel = saved ? c.done : retryAccess ? c.retryAccess : phase === 'saving' ? c.saving : documentIssue ? c.gallery : requiredField ? (requiredField==='total'?c.enterAmount:requiredField==='currency'?c.chooseCurrency:c.chooseDate) : itemIssues.length ? (itemIssues.length === 1 ? c.checkPurchase : c.checkPurchases) : validation?.mismatch ? c.checkTotal : c.save;
+  const actionLabel = saved ? c.done : retryAccess ? c.retryAccess : phase === 'saving' ? c.saving : documentIssue ? c.gallery : requiredField ? (requiredField==='total'?c.enterAmount:requiredField==='currency'?c.chooseCurrency:c.chooseDate) : c.save;
   async function save() {
     if (busySave.current || !validation?.valid) return;
     const owner = userId, request = generation.current;
     busySave.current = true; setPhase('saving'); setError('');
     const snapshot = structuredClone(draft);
+    if(!includeItems)snapshot.items=[];
     try {
       if (!await checkAccess(owner)) { if (currentOwner.current === owner && request === generation.current && mounted.current) denyAccess(); return; }
       if (currentOwner.current !== owner || request !== generation.current || !mounted.current) return;
@@ -176,35 +158,33 @@ function ReceiptCaptureSession({ userId, language = 'ru', isLight, defaultCurren
             {draft && phase!=='scan-failed' && <fieldset disabled={busy} className="receipt-fields"><legend className="receipt-sr-only">{c.review}</legend>
               <ReceiptOverview draft={draft} c={c} today={today} language={language} busy={busy} update={update} metadataOpen={metadataOpen} setMetadataOpen={setMetadataOpen}/>
               {documentIssue && <p className="receipt-document-status" role="status"><AlertCircle size={16}/><span>{c[documentIssue]}</span></p>}
-              {!omittedItems && draft.items.length>0 && <div className="receipt-section-title"><h3>{c.items} <small>{draft.items.length}</small></h3><button type="button" aria-label={c.add} onClick={() => { setEditingIndex(draft.items.length); update({items:[...draft.items,{name:'',quantity:'1',unit:'pcs',unitPrice:'',total:''}]}); }}><Plus size={18}/></button></div>}
-              {draft.kind==='receipt'&&!draft.items.length&&!omittedItems&&<button type="button" className="receipt-add-empty" onClick={()=>{setEditingIndex(0);update({items:[{name:'',quantity:'1',unit:'pcs',unitPrice:'',total:''}]});}}><Plus size={14}/>{c.add}</button>}
-              <div className="receipt-items">{draft.items.map((item,index) => {
+              {draft.items.length>0 && <><div className="receipt-section-title"><h3>{c.items} <small>{draft.items.length}</small></h3><button type="button" aria-label={c.add} onClick={() => { setIncludeItems(true);setEditingIndex(draft.items.length); update({items:[...draft.items,{name:'',quantity:'1',unit:'pcs',unitPrice:'',total:''}]}); }}><Plus size={18}/></button></div><label className="receipt-list-choice"><span><strong>{c.saveList}</strong><small>{includeItems?c.listIncluded:c.totalOnly}</small></span><input type="checkbox" role="switch" aria-label={c.saveList} checked={includeItems} onChange={event=>{setIncludeItems(event.target.checked);setEditingIndex(-1);}}/></label></>}
+              {draft.kind==='receipt'&&!draft.items.length&&<button type="button" className="receipt-add-empty" onClick={()=>{setIncludeItems(true);setEditingIndex(0);update({items:[{name:'',quantity:'1',unit:'pcs',unitPrice:'',total:''}]});}}><Plus size={14}/>{c.add}</button>}
+              <div className="receipt-items">{includeItems&&draft.items.map((item,index) => {
                 const product = receiptProduct(item.name,language,item.productType), expected = receiptLineTotal(item.quantity,item.unitPrice), mismatch = receiptItemMathIssue(item), unknown = !validReceiptName(item.name);
                 const unit = c[item.unit] || c.pcs;
                 return <details className="receipt-item" data-issue={mismatch || unknown} key={index} open={editingIndex === index}>
                   <summary className="receipt-item-summary" aria-label={`${c.editItem} ${index+1}`} onClick={event => { event.preventDefault(); setEditingIndex(editingIndex === index ? -1 : index); }}>
                     <span className="receipt-item-icon" aria-hidden="true">{unknown ? <AlertCircle size={19}/> : product.symbol || <ShoppingBag size={18}/>}</span>
-                    <span className="receipt-item-description"><strong>{product.title || c.unknownItem}</strong>{product.detail && <span className="receipt-product-size">{product.detail}</span>}<span className="receipt-item-calculation">{String(item.quantity).replace('.',numberLocale.startsWith('en')||numberLocale.startsWith('zh')?'.':',')} {unit}{expected?<> × {displayMoney(item.unitPrice)} {draft.currency}</>:<> · {c.itemPriceMissing}</>}</span>{(unknown || mismatch) && <span className="receipt-item-status"><span aria-hidden="true"/>{unknown ? c.unknownItem : c.refinePrice}</span>}</span>
-                    <span className="receipt-item-amount"><b>{displayMoney(expected||item.printedTotal)}</b><small>{draft.currency}</small></span><ChevronDown size={14} className="receipt-item-chevron"/>
+                    <span className="receipt-item-description"><strong>{product.title || c.unknownItem}</strong>{product.detail && <span className="receipt-product-size">{product.detail}</span>}<span className="receipt-item-calculation">{(String(item.quantity??'').trim()||'—').replace('.',numberLocale.startsWith('en')||numberLocale.startsWith('zh')?'.':',')} {unit}{expected?<> × {displayMoney(item.unitPrice)} {draft.currency}</>:<> · {c.itemPriceMissing}</>}</span>{(unknown || mismatch) && <span className="receipt-item-status"><span aria-hidden="true"/>{unknown ? c.unknownItem : c.itemUncertain}</span>}</span>
+                    <span className="receipt-item-amount"><b>{displayMoney(receiptItemAmount(item))}</b><small>{draft.currency}</small></span><ChevronDown size={14} className="receipt-item-chevron"/>
                   </summary>
                   <div className="receipt-item-editor">
                     <ProductTypePicker language={language} value={item.productType||product.type} onChange={id=>chooseProductType(index,id)}/>
                     <div className="receipt-item-name"><label className="receipt-field"><span>{c.name} {index+1}</span><input aria-label={`${c.name} ${index+1}`} aria-invalid={unknown || undefined} value={item.name} maxLength={180} onChange={event => updateItem(index,'name',event.target.value)}/></label><button type="button" aria-label={`${c.remove} ${index+1}`} onClick={() => { setEditingIndex(-1); update({items:draft.items.filter((_,row) => row !== index)}); }}><Trash2 size={17}/></button></div>
-                    <div className="receipt-item-numbers">{[['quantity',c.quantity],['unitPrice',c.price],['total',c.lineTotal]].map(([key,label]) => <label className="receipt-field" key={key}><span>{label}</span><input aria-label={`${label} ${index+1}`} readOnly={key==='total'} title={key==='total'?c.calculated:undefined} aria-invalid={key!=='total'&&mismatch || undefined} aria-describedby={mismatch ? `receipt-price-check-${index}` : undefined} inputMode="decimal" value={key==='total'?expected:item[key]} onChange={event => {if(key!=='total')updateItem(index,key,event.target.value);}}/></label>)}</div>
-                    {mismatch && <><div className="receipt-price-check" id={`receipt-price-check-${index}`} role="status"><span>{c.readAmount}<b>{displayMoney(item.printedTotal??item.total)} <small>{draft.currency}</small></b></span><span aria-hidden="true">{receiptMoney(item.printedTotal??item.total)===receiptMoney(expected)?'=':'≠'}</span><span>{c.calculated}<b>{displayMoney(expected)} <small>{draft.currency}</small></b></span></div><button type="button" className="receipt-verify-math" disabled={!receiptMoney(expected)} onClick={()=>update({items:draft.items.map((row,number)=>number===index?{...row,total:expected,priceReviewed:true}:row)})}><Check size={14}/>{c.confirmCalculation}</button></>}
+                    <div className="receipt-item-numbers">{[['quantity',c.quantity],['unitPrice',c.price],['total',c.lineTotal]].map(([key,label]) => <label className="receipt-field" key={key}><span>{label}</span><input aria-label={`${label} ${index+1}`} readOnly={key==='total'} title={key==='total'?c.calculated:undefined} aria-invalid={key!=='total'&&mismatch || undefined} aria-describedby={mismatch ? `receipt-price-check-${index}` : undefined} inputMode="decimal" value={(key==='total'?expected:item[key])??''} onChange={event => {if(key!=='total')updateItem(index,key,event.target.value);}}/></label>)}</div>
+                    {mismatch && <><div className="receipt-price-check" id={`receipt-price-check-${index}`} role="status"><span>{c.readAmount}<b>{displayMoney(item.printedTotal??item.total)} <small>{draft.currency}</small></b></span><span aria-hidden="true">{receiptMoney(item.printedTotal??item.total)===receiptMoney(expected)?'=':'≠'}</span><span>{c.calculated}<b>{displayMoney(expected)} <small>{draft.currency}</small></b></span></div></>}
                     <label className="receipt-field receipt-unit-field"><span>{c.unit}</span><select aria-label={`${c.unit} ${index+1}`} value={item.unit || 'pcs'} onChange={event => updateItem(index,'unit',event.target.value)}>{['pcs','kg','l'].map(value => <option key={value} value={value}>{c[value]}</option>)}</select></label>
                   </div>
                 </details>;
               })}</div>
-              {draft.items.length > 0 && <div className="receipt-reconciliation"><p className="receipt-sum">{c.itemSum}<b>{displayMoney(moneyText(validation.sum))} {draft.currency}</b></p>{validation.mismatch && <button type="button" className="receipt-difference" aria-label={c.checkTotal} onClick={focusTotal}><AlertCircle size={14}/><span>{c.shortDifference}</span><b>{displayMoney(moneyText(Math.abs((validation.total || 0)-validation.sum)))} {draft.currency}</b><ChevronRight size={14}/></button>}</div>}
-              {needsReview && !documentIssue && <button type="button" className="receipt-total-only" aria-label={c.useTotalOnly} onClick={toggleTotalOnly}><ReceiptText size={17}/><span>{c.useTotalOnly}<small>{c.withoutItems}</small></span><ChevronRight size={15}/></button>}
-              {omittedItems && <div className="receipt-omitted"><ReceiptText size={16}/><span>{c.withoutItems}</span><button type="button" onClick={toggleTotalOnly}>{c.restoreItems}</button></div>}
+              {includeItems&&draft.items.length > 0 && <div className="receipt-reconciliation"><p className="receipt-sum">{c.itemSum}<b>{displayMoney(moneyText(validation.sum))} {draft.currency}</b></p>{validation.mismatch && <p className="receipt-difference" role="status"><AlertCircle size={14}/><span>{c.shortDifference}</span><b>{displayMoney(moneyText(Math.abs((validation.total || 0)-validation.sum)))} {draft.currency}</b></p>}</div>}
               <details className="receipt-raw"><summary>{c.raw}</summary>{draft.evidence && <blockquote className="receipt-evidence">{draft.evidence}</blockquote>}<textarea aria-label={c.raw} value={draft.rawText} maxLength={40000} onChange={event => update({rawText:event.target.value})}/><button type="button" onClick={() => review(draft.rawText)}>{c.reparse}</button></details>
             </fieldset>}
             {!draft && !busy && !retryAccess && phase!=='scan-failed' && photoChoices}
           </>}
         </div>
-        {phase!=='scan-failed' && <footer className="receipt-footer"><button type="button" className="receipt-primary" aria-label={actionLabel} disabled={!saved && !retryAccess && (busy || (!documentIssue && !requiredField && !needsReview && !validation?.valid))} onClick={saved ? close : retryAccess ? () => readFile(selectedFile.current) : documentIssue ? () => gallery.current?.click() : requiredField ? focusRequired : needsReview ? focusCorrection : save}><span>{actionLabel}</span>{!saved && draft && !documentIssue && receiptMoney(draft.total)>0 && <b aria-hidden="true">{displayMoney(draft.total)} {draft.currency}</b>}</button></footer>}
+        {phase!=='scan-failed' && <footer className="receipt-footer"><button type="button" className="receipt-primary" aria-label={actionLabel} disabled={!saved && !retryAccess && (busy || (!documentIssue && !requiredField && !validation?.valid))} onClick={saved ? close : retryAccess ? () => readFile(selectedFile.current) : documentIssue ? () => gallery.current?.click() : requiredField ? focusRequired : save}><span>{actionLabel}</span>{!saved && draft && !documentIssue && receiptMoney(draft.total)>0 && <b aria-hidden="true">{displayMoney(draft.total)} {draft.currency}</b>}</button></footer>}
       </div>)}
     </dialog>,document.body)}
   </>;

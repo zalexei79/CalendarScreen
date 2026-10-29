@@ -14,6 +14,7 @@ const current=new Date(),dateKey=`${current.getFullYear()}-${String(current.getM
 const records=[
  {id:'legacy-receipt',date_key:dateKey,time:'22:00',pnl:-151.85,currency:'MDL',platform:'Manual',instrument:'ПРОДУКТЫ',comment:legacyReceiptComment,user_id:storyUserId},
  {id:'new-receipt',date_key:dateKey,time:'21:00',pnl:-35,currency:'MDL',platform:'Manual',instrument:'ПОКУПКИ',comment:receiptComment({merchant:'COSMETICS SHOP',currency:'MDL',items:[{name:'XYZ creme',productType:'shampoo',quantity:'1',unitPrice:'35.00',total:'35.00'}]}),user_id:storyUserId},
+ {id:'partial-receipt',date_key:dateKey,time:'20:00',pnl:-100,currency:'MDL',platform:'Manual',instrument:'ПОКУПКИ',comment:receiptComment({merchant:'PARTIAL SHOP',currency:'MDL',items:[{name:'Bere',quantity:'2',unitPrice:'23.95',total:'47.90',printedTotal:'39.90'},{name:'',quantity:'',unitPrice:'',printedTotal:'76.00'},{name:'Unknown',quantity:'',unitPrice:'',total:''}]}),user_id:storyUserId},
  {id:'ordinary',date_key:dateKey,time:'09:00',pnl:200,currency:'MDL',platform:'Manual',instrument:'ЗАРПЛАТА',comment:'Важный обычный комментарий',user_id:storyUserId},
 ];
 fs.mkdirSync('artifacts/receipt-history',{recursive:true});
@@ -26,9 +27,10 @@ try{
   const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto(origin);await page.locator('.calendar-days-grid').waitFor();await page.waitForFunction(()=>!document.getElementById('boot-screen'));
   await page.locator('[data-today-cell=true]').click();await page.locator('.receipt-history').first().waitFor();
-  assert.equal(await page.locator('.receipt-history').count(),2);
+  assert.equal(await page.locator('.receipt-history').count(),3);
   const card=page.locator('.receipt-history').filter({hasText:'MOLDRETAIL'});assert.equal(await card.locator('.receipt-history-items>li').count(),5);assert.match(await card.innerText(),/151,85/);assert.match(await card.innerText(),/Пиво BIERMANN/);assert.match(await card.innerText(),/20,00/);
-  const beer=card.locator('.receipt-history-items>li').first();assert.match(await beer.innerText(),/2 шт\. × 23,95 = 47,90 MDL/);assert.match(await beer.innerText(),/Считано\s*39,90/);assert.match(await beer.innerText(),/Цена и сумма не сходятся/);
+  const beer=card.locator('.receipt-history-items>li').first();assert.match(await beer.innerText(),/2 шт\. × 23,95 = 47,90 MDL/);assert.match(await beer.innerText(),/Считано\s*39,90/);assert.match(await beer.innerText(),/Возможна неточность/);
+  const partial=page.locator('.receipt-history').filter({hasText:'PARTIAL SHOP'});assert.equal(await partial.locator('.receipt-history-items>li').count(),3);assert.match(await partial.innerText(),/100,00/);assert.match(await partial.innerText(),/Покупка без названия/);assert.doesNotMatch(await partial.innerText(),/NaN|undefined/);assert.match(await partial.locator('.receipt-history-line-total').last().innerText(),/—/);assert.doesNotMatch(await partial.locator('.receipt-history-line-total').last().innerText(),/0,00/);
   assert.equal(await card.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);await card.locator('h4').click();assert.equal(await card.isVisible(),true,'reading receipt text does not dismiss day history');
   assert.equal(await page.getByText('Важный обычный комментарий',{exact:true}).isVisible(),true);
   await card.screenshot({path:`artifacts/receipt-history/day-${width}-${light?'light':'dark'}.png`});

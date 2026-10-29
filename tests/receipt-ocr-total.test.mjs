@@ -26,7 +26,7 @@ test('different numeric readings leave the total for manual review, never choose
 test('currency survives total recovery; items and their original amounts are not adjusted',async()=>{
  const data=fixture('TOTAL','25.00 EUR');data.text='SHOP\nMilk 30.00\nTOTAL 25.00 EUR\n20-10-2026';
  const result=await refineReceiptTotals(data,async()=> '25.00'),draft=parseReceiptPhoto(result,context);
- assert.equal(draft.currency,'EUR');assert.equal(draft.items[0].total,'30.00');assert.equal(draft.total,'25.00');assert.equal(receiptValidation(draft,context.today,['EUR']).valid,false);
+ assert.equal(draft.currency,'EUR');assert.equal(draft.items[0].total,'30.00');assert.equal(draft.total,'25.00');assert.equal(receiptValidation(draft,context.today,['EUR']).valid,true);assert.equal(receiptValidation(draft,context.today,['EUR']).mismatch,true);
 });
 test('products and tax summaries are never total-region candidates',async()=>{
  for(const label of['Total cereal','Sumac','Сума податку','Сума ПДВ']){
