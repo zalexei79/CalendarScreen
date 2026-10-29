@@ -2,6 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.111.0';
 import webpush from 'npm:web-push@3.6.7';
 import { allowedEndpoint, resultForStatus } from './policy.mjs';
 import { proNotificationPayload } from './proNotification.mjs';
+import { creatorNotificationPayload } from './creatorNotification.mjs';
 
 const reply = (status: number, body: unknown) => Response.json(body, { status });
 const trimText = (value: unknown, limit: number) => String(value || '').trim().replace(/\s+/g, ' ').slice(0, limit);
@@ -86,7 +87,21 @@ Deno.serve(async (req: Request) => {
     return finishError ? 'record_failed' : result;
   }));
   outcomes.push(...proOutcomes);
+  const {data:creatorJobs,error:creatorClaimError}=await db.rpc('dayris_claim_creator_messages');
+  const creatorOutcomes=await Promise.all((creatorJobs||[]).map(async(job:any)=>{
+    let result='failed',code='INVALID_ENDPOINT_OR_MESSAGE';const payload=creatorNotificationPayload(job);
+    if(payload&&allowedEndpoint(job.endpoint)){
+      try{
+        const details=webpush.generateRequestDetails({endpoint:job.endpoint,keys:{p256dh:job.p256dh,auth:job.auth}},JSON.stringify(payload),{TTL:86400,urgency:'normal',topic:job.delivery_id.replaceAll('-',''),contentEncoding:'aes128gcm'});
+        const response=await fetch(details.endpoint,{method:details.method,headers:details.headers,body:details.body,redirect:'error',signal:AbortSignal.timeout(10000)});
+        result=resultForStatus(response.status);code=`HTTP_${response.status}`;await response.body?.cancel();
+      }catch{result='uncertain';code='NETWORK_OR_ENCODING_ERROR';}
+    }
+    const {error:finishError}=await db.rpc('dayris_finish_creator_message',{p_id:job.delivery_id,p_token:job.token,p_result:result,p_code:code});
+    return finishError?'record_failed':result;
+  }));
+  outcomes.push(...creatorOutcomes);
   const counts = outcomes.reduce((a: Record<string, number>, k: string) => ({ ...a, [k]: (a[k] || 0) + 1 }), {});
   console.info('[send-reminders]', JSON.stringify(counts));
-  return reply(proClaimError || outcomes.includes('record_failed') ? 500 : 200, { processed: outcomes.length, counts, ...(proClaimError ? { error: 'PRO_CLAIM_FAILED' } : {}) });
+  return reply(proClaimError || creatorClaimError || outcomes.includes('record_failed') ? 500 : 200, { processed: outcomes.length, counts, ...(proClaimError ? { error: 'PRO_CLAIM_FAILED' } : creatorClaimError ? {error:'CREATOR_CLAIM_FAILED'} : {}) });
 });

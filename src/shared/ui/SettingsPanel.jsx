@@ -8,6 +8,7 @@ import ThemeCollection from './ThemeCollection.jsx';
 import PhoneMotionControls from './PhoneMotionControls.jsx';
 import LoginButtons from '../../features/auth/LoginButtons.jsx';
 import AdminCalendarLink from '../../features/admin/AdminCalendarLink.jsx';
+import {CreatorMessagesButton} from '../../features/messages/CreatorMessages.jsx';
 import { CURRENCIES } from '../config/constants.js';
 import './SettingsPanel.css';
 
@@ -93,6 +94,7 @@ export default function SettingsPanel({ t, language, setLanguage, currency, setC
           {onStory && <button type="button" className="settings-story-card" onClick={()=>action(onStory)}><Play size={18} aria-hidden="true"/><span><strong>{copy.story}</strong><small>{copy.storyHint}</small></span><ChevronRight size={15} aria-hidden="true"/></button>}
           <Row icon={Info} label={copy.help} onClick={()=>navigate('help')}/>
           <AdminCalendarLink user={user} language={language}/>
+          <CreatorMessagesButton userId={user?.id} language={language} onOpen={onClose}/>
           <CreatorContact locale={locale}/>
           {!user && <Row icon={Sparkles} label="DAYRIS PRO" value={copy.learn} onClick={()=>action(onPro)}/>}
         </>}

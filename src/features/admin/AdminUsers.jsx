@@ -20,7 +20,7 @@ export function DataFields({ value }) {
 }
 export {Pagination,QueryStatus} from './AdminQueryUI.jsx';
 
-export default function AdminUsers({canEdit}) {
+export default function AdminUsers({canEdit,onMessageUser}) {
   const [search,setSearch]=useState(''),[query,setQuery]=useState(''),[offset,setOffset]=useState(0);
   const [user,setUser]=useState(null),[revision,setRevision]=useState(0),[pane,setPane]=useState('list');
   const [activityDays,setActivityDays]=useState('0'),[activitySort,setActivitySort]=useState('records');
@@ -45,12 +45,12 @@ export default function AdminUsers({canEdit}) {
         {!list.loading&&!list.error&&!list.data?.users?.length&&<div className="people-search-empty"><UsersRound size={28}/><strong>Никого не нашли</strong><p>Попробуйте другое имя или уберите фильтры.</p><button onClick={()=>{setSearch('');setQuery('');filter('0');}}>Сбросить поиск</button></div>}</div>
         <Pagination offset={offset} limit={30} total={list.data?.total||0} disabled={list.loading} onChange={setOffset}/>
       </aside>
-      <section ref={detail} tabIndex={-1} className="admin-user-detail people-workbench" aria-label="Карточка пользователя">{user?<UserDetail key={user.id+':'+(user.entry?.record_key||'')} user={user} canEdit={canEdit} externalRevision={revision} onStreakChanged={()=>setRevision(n=>n+1)} onBack={()=>setPane('list')}/>:<AdminActivity revision={revision} onSelect={(item,row)=>choose(list.data?.users?.find(u=>u.id===item.id)||item,row)}/>}</section>
+      <section ref={detail} tabIndex={-1} className="admin-user-detail people-workbench" aria-label="Карточка пользователя">{user?<UserDetail key={user.id+':'+(user.entry?.record_key||'')} user={user} canEdit={canEdit} externalRevision={revision} onMessageUser={onMessageUser} onStreakChanged={()=>setRevision(n=>n+1)} onBack={()=>setPane('list')}/>:<AdminActivity revision={revision} onSelect={(item,row)=>choose(list.data?.users?.find(u=>u.id===item.id)||item,row)}/>}</section>
     </div>
   </main>;
 }
 
-function UserDetail({ user, canEdit, externalRevision,onBack,onStreakChanged }) {
+function UserDetail({ user, canEdit, externalRevision,onBack,onStreakChanged,onMessageUser }) {
   const initial=entryLocation(user.entry,user.id);
   const [highlighted,setHighlighted]=useState(initial?.key||'');
   const [section, setSection] = useState(initial?'calendar':user.entry?'activity':'overview');
@@ -86,6 +86,7 @@ function UserDetail({ user, canEdit, externalRevision,onBack,onStreakChanged }) 
   function openEntry(row){const location=entryLocation(row,user.id);if(!location){setSection('activity');setNotice('У этой записи нет корректной даты календаря. Она доступна в ленте.');return;}setDataset(location.dataset);setMonth(location.month);setSelectedDay(location.day);setHighlighted(location.key);setAllDates(false);setOffset(0);setSection('calendar');}
   async function copyId(){try{await navigator.clipboard.writeText(user.id);setNotice('ID пользователя скопирован.');}catch{setNotice('Не удалось скопировать. ID доступен в разделе «ID аккаунта».');}}
   return <>
+    {canEdit&&onMessageUser&&<button onClick={()=>onMessageUser(user)}>Написать пользователю</button>}
     <button className="people-back-list" onClick={onBack}><ArrowLeft size={15}/> К списку пользователей</button><div className="admin-subject"><div className="people-subject-top"><PersonAvatar name={user.name} large/><div><h2>{user.name}</h2><p>{user.email || "Аккаунт без email"}</p></div></div><div className="people-subject-meta"><button className="people-copy-id" onClick={copyId}><Copy size={13}/> Скопировать ID</button><span>{editMode && canEdit ? "Редактирование включено" : "Безопасный просмотр"}</span><details><summary>ID аккаунта</summary><code>{user.id}</code></details><span>{user.last_sign_in_at?`Последний вход: ${new Date(user.last_sign_in_at).toLocaleDateString("ru")}`:"Дата входа не указана"}</span></div></div>{section!=='pro'&&<UserProSummary userId={user.id} revision={`${externalRevision}:${revision}`} onOpen={()=>setSection("pro")}/>}
     <div className="admin-detail-tabs" role="group" aria-label="Разделы пользователя">{[['overview','Обзор'],['calendar','Календарь'],['activity','Последние записи'],['data','Все данные'],['profile','Профиль'],['pro','PRO'],['streak','Огонёк'],['audit','История действий']].map(([id,label]) => <button aria-pressed={section === id} key={id} onClick={() => setSection(id)}>{label}</button>)}</div>
     {notice && <p role="status" className="admin-notice">{notice}</p>}

@@ -3,9 +3,10 @@ import { ArrowDownLeft, ArrowRight, ArrowUpRight, Camera, ChartCandlestick, Char
 import { getProOfferCopy, XAUUSD_SIGNALS_URL, XAUUSD_SIGNALS_BOT_URL } from './proOfferCopy';
 import { BOT_CALENDAR_URL } from '../bot-calendar/botCalendarModel.js';
 import './ProPresentation.css';
+import {CreatorMessagesButton,CreatorGiftNote} from '../messages/CreatorMessages.jsx';
 
 // Presentation only. All account, referral and checkout actions stay with the caller.
-export default function ProOffer({ language, copy, active, daysRemaining, untilLabel, signedIn, referralLoading, referralCode, referralError, checkoutLoading, checkoutError, onInvite, onCheckout, onInvites, onWallet, onPlatforms }) {
+export default function ProOffer({ userId,onMessages,language, copy, active, daysRemaining, untilLabel, signedIn, referralLoading, referralCode, referralError, checkoutLoading, checkoutError, onInvite, onCheckout, onInvites, onWallet, onPlatforms }) {
   const [feature, setFeature] = useState('capital');
   const id = useId();
   const text = getProOfferCopy(language);
@@ -26,6 +27,8 @@ export default function ProOffer({ language, copy, active, daysRemaining, untilL
   const inviteLabel = !signedIn ? copy.signIn : referralCode ? text.inviteAction : referralError ? copy.retryInvite : copy.preparing;
 
   return <div className="pro-offer">
+    <CreatorGiftNote userId={userId} language={language} onOpen={onMessages}/>
+    <CreatorMessagesButton userId={userId} language={language} onOpen={onMessages}/>
     {active && <section className="pro-membership-status" aria-label={copy.myPro}>
       <div><span className="pro-eyebrow">{copy.myPro}</span><strong>{copy.proRemaining}: {daysRemaining} {copy.daysShort}</strong><p>{copy.proUntil} {untilLabel}</p></div>
       <Check aria-hidden="true" />

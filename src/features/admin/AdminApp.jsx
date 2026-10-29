@@ -5,6 +5,7 @@ import { disablePush } from '../reminders/pushClient.js';
 import AdminUsers from './AdminUsers.jsx';
 import AdminAudit from './AdminAudit.jsx';
 import AdminPro from './AdminPro.jsx';
+import AdminMessages from './AdminMessages.jsx';
 import StudioLaunch from './StudioLaunch.jsx';
 import './AdminPanel.css';
 import './AdminUsers.css';
@@ -13,7 +14,8 @@ const ProjectExplorer = React.lazy(() => import('./AdminProject.jsx'));
 const NO_ACCESS = { design: false, viewUsers: false, editUsers: false };
 
 export default function AdminApp() {
-  const [section, setSection] = useState(() => {const requested=new URLSearchParams(location.search).get('section');return ['studio','pro'].includes(requested)?requested:location.pathname==='/admin.html'?'users':'design';});
+  const [section, setSection] = useState(() => {const requested=new URLSearchParams(location.search).get('section');return ['studio','pro','messages'].includes(requested)?requested:location.pathname==='/admin.html'?'users':'design';});
+  const [messageRecipient,setMessageRecipient]=useState(null);
   const [session, setSession] = useState(null);
   const [capabilities, setCapabilities] = useState(NO_ACCESS);
   const [loading, setLoading] = useState(true);
@@ -40,6 +42,7 @@ export default function AdminApp() {
       const userId = next?.user?.id || null;
       if (userId === knownUser) { setSession(next); return; }
       knownUser = userId;
+      setMessageRecipient(null);
       const request = ++revision;
       setSession(next); setCapabilities(NO_ACCESS); setLoading(Boolean(next)); setNotice('');
       if (!next) { setLoading(false); return; }
@@ -70,9 +73,9 @@ export default function AdminApp() {
     catch { setNotice('Откройте /admin.html и установите DAYRIS Admin через меню браузера.'); }
   }
   const allowed = ['design','project','studio'].includes(section) ? capabilities.design === true : capabilities.viewUsers === true;
-  const sections = [['users','Пользователи'],['pro','PRO'],['studio','Студия'],['design','Оформление'],['project','Проект'],['audit','Журнал']];
+  const sections = [['users','Пользователи'],['pro','PRO'],['messages','Рассылка'],['studio','Студия'],['design','Оформление'],['project','Проект'],['audit','Журнал']];
   const designOrProject = section === 'project' ? <ProjectExplorer key={session?.user.id} initialPath={projectPath}/> : <DesignEditor onDirtyChange={setDesignDirty}/>;
-  const userSection=section==='pro'?<AdminPro key={session?.user.id} canEdit={capabilities.editUsers===true}/>:<AdminUsers key={session?.user.id} canEdit={capabilities.editUsers===true}/>;
+  const userSection=section==='messages'?<AdminMessages key={session?.user.id} canEdit={capabilities.editUsers===true} initialRecipient={messageRecipient}/>:section==='pro'?<AdminPro key={session?.user.id} canEdit={capabilities.editUsers===true}/>:<AdminUsers key={session?.user.id} canEdit={capabilities.editUsers===true} onMessageUser={user=>{setMessageRecipient(user);setSection('messages');}}/>;
   return <div className="dayris-admin admin-app">
     <header className="admin-app-header"><a href="/admin.html" className="admin-app-brand">DAYRIS <span>ADMIN</span></a><a href="/" className="admin-calendar-return">← В календарь</a><nav aria-label="Разделы админки">{sections.map(([id,label]) => <button key={id} className={id==='studio'?'admin-studio-entry':undefined} aria-current={section === id ? 'page' : undefined} onClick={() => setSection(id)}>{label}</button>)}</nav><button onClick={install}>Установить приложение</button><a href="/admin.html" target="_blank" rel="noreferrer">Открыть отдельно ↗</a>{session && <button onClick={async () => { try { const {error}=await supabase.auth.signOut(); if(error) throw error; } catch { setNotice('Не удалось выйти. Проверьте подключение.'); } }}>Выйти</button>}</header>
     {notice && <p className="admin-notice" role="status">{notice}</p>}

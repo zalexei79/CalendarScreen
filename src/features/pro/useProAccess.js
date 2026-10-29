@@ -81,6 +81,7 @@ export function useProAccess({ user }) {
     };
 
     window.addEventListener('focus', onFocus);
+    window.addEventListener('dayris:pro-refresh', onFocus);
     window.addEventListener('online', onOnline);
     document.addEventListener('visibilitychange', onVisibility);
 
@@ -90,6 +91,7 @@ export function useProAccess({ user }) {
 
     return () => {
       window.removeEventListener('focus', onFocus);
+      window.removeEventListener('dayris:pro-refresh', onFocus);
       window.removeEventListener('online', onOnline);
       document.removeEventListener('visibilitychange', onVisibility);
       window.clearInterval(timer);
