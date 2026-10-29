@@ -34,7 +34,9 @@ try{
   await card.screenshot({path:`artifacts/receipt-history/day-${width}-${light?'light':'dark'}.png`});
   await page.mouse.click(2,2);await page.locator('.receipt-history').first().waitFor({state:'detached'});
   await page.getByRole('button',{name:'История',exact:true}).click();const history=page.locator('.financial-history-dialog');await history.waitFor();
-  await history.getByRole('button',{name:/История операций/}).click();
+  assert.equal(await history.getByRole('tab',{name:'Записи',exact:true}).getAttribute('aria-selected'),'true','history opens directly on receipts and entries');
+  assert.equal(await history.locator('.premium-history-chapter-head:visible').count(),0,'analytics do not precede the receipt list');
+  if(width===390&&!light)await history.screenshot({path:'artifacts/history-records-with-receipts-phone.png',animations:'disabled'});
   const globalCard=history.locator('.receipt-history').filter({hasText:'MOLDRETAIL'});await globalCard.waitFor();assert.equal(await globalCard.locator('.receipt-history-items>li').count(),3);
   await globalCard.getByRole('button',{name:/Показать все покупки/}).click();assert.equal(await globalCard.locator('.receipt-history-items>li').count(),5);
   assert.equal(await history.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);assert.equal(await globalCard.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);

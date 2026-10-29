@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v108-history-build-repair';
+const CACHE_NAME = 'atj-cache-v109-history-records-first';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

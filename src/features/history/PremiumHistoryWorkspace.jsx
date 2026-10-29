@@ -12,9 +12,13 @@ import './PremiumHistoryWorkspace.css';
 export default function PremiumHistoryWorkspace({model, records, language, traderMode, trading, tab, onTab, onContext,
   period, periodLabel, periodOptions, onPeriod, currency, currencies, onCurrency, platform, onPlatform,
   scope, onScope, category, onCategory, onClearCategory, filtersOpen, onFilters, categoryPicker,
-  dateFrom, dateTo, onDateFrom, onDateTo, onRecord, getIcon, renderReceipt, dynamics, analytics, plan, goal, reminders, tools, receiptCapture, onWallet, onCapital, children}) {
+  dateFrom, dateTo, onDateFrom, onDateTo, onRecord, getIcon, renderReceipt, dynamics, analytics, plan, goal, reminders, tools, accountPicker, receiptCapture, onWallet, onCapital, children}) {
   const copy = premiumHistoryCopy(language), chapterCopy = premiumHistoryChapterCopy(language), {summary} = model;
   const chapterId = useId();
+  const recordsView=tab==='records'||tab==='trades';
+  const workspace=useRef(null), tabs=useRef(null), lastChapter=useRef({finance:'dynamics',trading:'risk'});
+  const contextKey=trading?'trading':'finance';
+  const [analyticsVisited,setAnalyticsVisited]=useState(!recordsView);
   const [riskMode,setRiskMode]=useState('quality'), [breakdownMode,setBreakdownMode]=useState('radar'), [graphMode,setGraphMode]=useState('cumulative');
   const [direction, setDirection] = useState('expense'), [expanded, setExpanded] = useState(false), [selected, setSelected] = useState(null);
   const card = useRef(null), amountNode = useRef(null), panel = useRef(null), detailTitle = useRef(null), previousAmount = useRef(null), animation = useRef(null);
@@ -23,6 +27,8 @@ export default function PremiumHistoryWorkspace({model, records, language, trade
   const date = value => new Intl.DateTimeFormat(intlLocale(language), {day:'numeric', month:'long', year:'numeric', timeZone:'UTC'}).format(new Date(value + 'T12:00:00Z'));
   const amount = summary.mixed ? '—' : signed(summary.total), unit = summary.mixed || summary.currency === 'ALL' ? '' : summary.currency;
   const selectedRow = selected && records.find(row => row.id === selected);
+  useEffect(()=>{if(!recordsView)setAnalyticsVisited(true);},[recordsView]);
+  useEffect(()=>{workspace.current?.closest('.premium-history-scroll')?.scrollTo({top:0,behavior:'auto'});},[recordsView,trading]);
   useEffect(() => {setExpanded(false); setSelected(null);}, [trading, period, currency, platform, scope, category, dateFrom, dateTo]);
   useEffect(() => {
     const media = matchMedia('(prefers-reduced-motion: reduce)');
@@ -36,7 +42,8 @@ export default function PremiumHistoryWorkspace({model, records, language, trade
     previousAmount.current = amount;
   }, [amount]);
   useEffect(() => {if (selectedRow) detailTitle.current?.focus({preventScroll:true});}, [selectedRow]);
-  const chooseTab = value => {setSelected(null); onTab(value);};
+  const chooseTab = value => {setSelected(null);if(value!=='records'&&value!=='trades')lastChapter.current[contextKey]=value;onTab(value);};
+  const chooseView = value => chooseTab(value==='records'?'records':lastChapter.current[contextKey]);
   const fact = (label, value) => <div className="premium-history-fact"><span>{label}</span><strong>{value ?? '—'}</strong></div>;
   const rowList = (rows, compact = false) => <>
     {rows.length ? (compact ? rows.slice(0,3) : expanded ? rows : rows.slice(0,trading ? 5 : 3)).map((row, index) => {
@@ -58,8 +65,8 @@ export default function PremiumHistoryWorkspace({model, records, language, trade
   const activeChapter=({overview:'risk',trades:'records',analysis:'breakdown',analytics:'risk'})[tab] ?? tab;
   const groups = direction === 'expense' ? model.expenses : model.incomes, groupTotal = direction === 'expense' ? summary.expense : summary.income;
   const chapters=trading
-    ? [['risk',chapterCopy.risk],['dynamics',chapterCopy.curve],['instruments',chapterCopy.instruments],['discipline',chapterCopy.discipline],['plan',chapterCopy.tradePlan],['records',chapterCopy.journal]]
-    : [['dynamics',chapterCopy.dynamics],['categories',chapterCopy.categories],['breakdown',chapterCopy.breakdown],['plan',chapterCopy.plan],['records',chapterCopy.records]];
+    ? [['risk',chapterCopy.risk],['dynamics',chapterCopy.curve],['instruments',chapterCopy.instruments],['discipline',chapterCopy.discipline],['plan',chapterCopy.tradePlan]]
+    : [['dynamics',chapterCopy.dynamics],['categories',chapterCopy.categories],['breakdown',chapterCopy.breakdown],['plan',chapterCopy.plan]];
   const switcher=(value,onChange,options)=><div className="premium-history-subtabs" role="group" aria-label={copy.sections}>{options.map(([key,label])=><button type="button" key={key} aria-pressed={value===key} onClick={()=>onChange(key)}>{label}</button>)}</div>;
   function caption(id) {
     if(id==='records') return `${trading?premiumHistoryTradeCount(records.length,language):freeHistoryCount(records.length,language)} · ${trading?chapterCopy.journalHint:chapterCopy.recordsHint}`;
@@ -104,16 +111,21 @@ export default function PremiumHistoryWorkspace({model, records, language, trade
       default:return null;
     }
   }
-  return <section className="premium-history-workspace" data-context={trading ? 'trading' : 'finance'}>
+  return <section ref={workspace} className="premium-history-workspace" data-context={trading ? 'trading' : 'finance'} data-view={recordsView?'records':'analytics'}>
     {traderMode && <div className="premium-history-context" role="group" aria-label={copy.sections}>{[[false,copy.finance,Wallet],[true,copy.trading,ChartNoAxesCombined]].map(([value,label,Icon]) => <button key={label} type="button" aria-pressed={trading === value} onClick={() => onContext(value)}><Icon size={15} aria-hidden="true"/>{label}</button>)}</div>}
-    <section ref={card} className="premium-history-card financial-hero" aria-label={trading ? copy.tradeResult : copy.result}
+    <nav ref={tabs} className="premium-history-main-tabs" role="tablist" aria-label={copy.sections} onKeyDown={event=>{
+      if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+      event.preventDefault();const next=event.key==='Home'?'records':event.key==='End'?'analytics':recordsView?'analytics':'records';
+      chooseView(next);tabs.current?.querySelector(`[data-view-tab="${next}"]`)?.focus();
+    }}>{[['records',trading?copy.trades:copy.records],['analytics',copy.advanced]].map(([value,label])=><button key={value} type="button" role="tab" id={`${chapterId}-tab-${value}`} aria-controls={`${chapterId}-view-${value}`} aria-selected={(value==='records')===recordsView} tabIndex={(value==='records')===recordsView?0:-1} data-view-tab={value} onClick={()=>chooseView(value)}>{label}</button>)}</nav>
+    <section ref={card} className="premium-history-card financial-hero" data-compact={recordsView} aria-label={trading ? copy.tradeResult : copy.result}
       onPointerMove={event => {if(event.pointerType !== 'mouse' || matchMedia('(prefers-reduced-motion: reduce)').matches)return;const rect=card.current.getBoundingClientRect();card.current.style.setProperty('--premium-light-x',`${Math.round(100*Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width)))}%`);}}
       onPointerLeave={() => card.current.style.removeProperty('--premium-light-x')}>
       <p className="premium-history-result-label">{trading ? copy.tradeResult : copy.result}</p>
       <div ref={amountNode} className="premium-history-balance" data-negative={!summary.mixed && summary.total<0}>
         <strong className="premium-history-amount financial-amount" style={{'--premium-fit':`${Math.min(14,145/Math.max(10,amount.length))}cqw`}}>{amount}</strong>{unit && <span>{unit}</span>}
       </div>
-      <p className="premium-history-caption">{periodLabel} · {trading ? premiumHistoryTradeCount(summary.count,language) : freeHistoryCount(summary.count,language)}</p>
+      <p className="premium-history-caption">{!recordsView && `${periodLabel} · `}{trading ? premiumHistoryTradeCount(summary.count,language) : freeHistoryCount(summary.count,language)}</p>
       {summary.mixed && <p className="premium-history-hint">{copy.mixed}</p>}
       <div className="premium-history-totals"><div><span><ArrowDownLeft size={14} aria-hidden="true"/>{trading ? copy.winning : copy.income}</span><strong>{summary.mixed ? '—' : money(summary.income)}</strong></div><div><span><ArrowUpRight size={14} aria-hidden="true"/>{trading ? copy.losing : copy.expense}</span><strong>{summary.mixed ? '—' : money(summary.expense)}</strong></div></div>
       {model.comparison && <div className="premium-history-hero-delta"><strong>{signed(model.comparison.difference)} {unit}</strong><span>{copy.previous} · {date(model.comparison.range.from)} — {date(model.comparison.range.to)}</span></div>}
@@ -124,11 +136,15 @@ export default function PremiumHistoryWorkspace({model, records, language, trade
       <button type="button" className="premium-history-filter" aria-expanded={filtersOpen} aria-label={copy.filters} onClick={onFilters}><SlidersHorizontal size={17}/></button>
     </div>
 
-    {filtersOpen && <div className="premium-history-filters">{period === 'custom' && <div className="premium-history-dates"><label>{copy.dateFrom}<input type="date" value={dateFrom} onChange={event=>onDateFrom(event.target.value)}/></label><label>{copy.dateTo}<input type="date" value={dateTo} onChange={event=>onDateTo(event.target.value)}/></label></div>}{categoryPicker}</div>}
-    <div ref={panel} className="premium-history-chapters" aria-label={copy.sections}>
+    {filtersOpen && <div className="premium-history-filters">{period === 'custom' && <div className="premium-history-dates"><label>{copy.dateFrom}<input type="date" value={dateFrom} onChange={event=>onDateFrom(event.target.value)}/></label><label>{copy.dateTo}<input type="date" value={dateTo} onChange={event=>onDateTo(event.target.value)}/></label></div>}{trading && recordsView && <div className="premium-history-journal-filters"><div className="premium-history-select"><select aria-label={copy.platform} value={platform} onChange={event=>onPlatform(event.target.value)}><option value="ALL">{copy.allPlatforms}</option>{['cTrader','MT4','MT5','Manual'].map(value=><option key={value}>{value}</option>)}</select><ChevronDown size={13} aria-hidden="true"/></div>{accountPicker}</div>}{categoryPicker}</div>}
+    <div id={`${chapterId}-view-records`} role="tabpanel" aria-labelledby={`${chapterId}-tab-records`} hidden={!recordsView} className="premium-history-records-panel premium-history-panel">{body('records')}</div>
+    <div id={`${chapterId}-view-analytics`} role="tabpanel" aria-labelledby={`${chapterId}-tab-analytics`} hidden={recordsView}>
+    {(analyticsVisited||!recordsView) && <><div ref={panel} className="premium-history-chapters" aria-label={copy.sections}>
       {chapters.map(([id,title],index)=><HistoryChapter key={`${trading}:${id}`} id={`${chapterId}-${id}`} number={index+1} title={title} caption={caption(id)} open={activeChapter===id} onToggle={()=>chooseTab(activeChapter===id?'':id)}>{()=>body(id)}</HistoryChapter>)}
     </div>
     {!trading && (onWallet||onCapital) && <footer className="premium-history-shortcuts">{onWallet && <button type="button" onClick={onWallet}><Wallet size={15}/>{chapterCopy.wallet}</button>}{onCapital && <button type="button" onClick={onCapital}><ChartNoAxesCombined size={15}/>{chapterCopy.capital}</button>}</footer>}
+    </>}
+    </div>
   </section>;
 }
 

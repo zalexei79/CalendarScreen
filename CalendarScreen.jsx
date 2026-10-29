@@ -2904,8 +2904,8 @@ export default function CalendarScreen() {
   const historyDealsRef = useRef(null);
   const historyScrollRef = useRef(null);
   const [historyAtDeals, setHistoryAtDeals] = useState(false);
-  const [proHistoryTab, setProHistoryTab] = useState('overview');
-  const [premiumMoneyHistoryTab, setPremiumMoneyHistoryTab] = useState('dynamics');
+  const [proHistoryTab, setProHistoryTab] = useState('records');
+  const [premiumMoneyHistoryTab, setPremiumMoneyHistoryTab] = useState('records');
   useEffect(() => { setHistoryAtDeals(false); }, [historyOpen]);
 
   function handleHistoryScroll(event) {
@@ -3862,6 +3862,11 @@ export default function CalendarScreen() {
   );
 
 
+  function renderHistoryAccountPicker() {
+    const copy=premiumHistoryChapterCopy(language);
+    return <div className="premium-history-select premium-history-account"><select aria-label={copy.account} value={historyAccount} onChange={event=>setHistoryAccount(event.target.value)}><option value="ALL">{copy.allAccounts}</option>{[...new Map(premiumHistoryAccountSource.map(row=>[premiumHistoryAccountKey(row),row])).entries()].map(([key,row])=><option key={key} value={key}>{row.platform||'Manual'} · {String(premiumTradeFacts(row).account??copy.unknownAccount)}</option>)}</select><ChevronDown size={13} aria-hidden="true"/></div>;
+  }
+
   // The existing analytical calculations are retained; only the presentation changes.
   function renderPremiumHistoryAnalytics(section) {
     return <PremiumHistoryAnalytics section={section} context={{premiumHistory,premiumHistorySource,traderMode,historyScope,validUserId,ctraderAccounts,language,isLight,dateFrom,dateTo,periodPreset,notesRevision,jumpToTradeDate,t,formatAmountInCurrency,formatMoney,formatMoneyShort,formatDateLabel,proHistoryCopy,displayMode,depositSize,handleEditDeposit,setDisplayMode,currencySymbol,openConnectModal:platform=>{setHistoryOpen(false);openConnectModal(platform);},instrumentBreakdownOpen,setInstrumentBreakdownOpen,setHistoryCurrency,
@@ -3884,14 +3889,13 @@ export default function CalendarScreen() {
     setHistoryVisible(true);
     setHistoryFiltersOpen(false);
     setProFiltersOpen(false);
-    setProHistoryTab('overview');
-    setPremiumMoneyHistoryTab('dynamics');
+    setProHistoryTab('records');
+    setPremiumMoneyHistoryTab('records');
     setConfirmingClear(false);
     setFreeHistoryPanel(null);
     setFreeTimelineSelected(null);
     setFreeTimelineOffset(0);
-    // In trader mode the first screen should answer one clear question: how did I trade?
-    // Money remains a separate, explicit destination instead of mixing two histories.
+    // Open the actual journal first; the analytical chapters are a separate tab.
     setHistoryScope(traderMode ? 'trades' : 'all');
   }
 
@@ -5072,7 +5076,7 @@ export default function CalendarScreen() {
                 model={premiumHistory} records={historyTrades} language={language} traderMode={traderMode} trading={traderMode && historyScope !== 'money'}
                 tab={traderMode && historyScope !== 'money' ? proHistoryTab : premiumMoneyHistoryTab}
                 onTab={traderMode && historyScope !== 'money' ? setProHistoryTab : setPremiumMoneyHistoryTab}
-                onContext={value => {setHistoryScope(value ? 'trades' : 'money');setHistoryWinLoss('all');setHistoryNameFilter('');setPlatformFilter('ALL');setHistoryAccount('ALL');setVoiceHistoryKeys(null);setHistoryFiltersOpen(false);setProHistoryTab('overview');setPremiumMoneyHistoryTab('dynamics');}}
+                onContext={value => {setHistoryScope(value ? 'trades' : 'money');setHistoryWinLoss('all');setHistoryNameFilter('');setPlatformFilter('ALL');setHistoryAccount('ALL');setVoiceHistoryKeys(null);setHistoryFiltersOpen(false);setProHistoryTab('records');setPremiumMoneyHistoryTab('records');}}
                 period={periodPreset} periodLabel={periodPreset === 'Вся история' ? freeHistoryCopy(language).allTime : periodPreset === 'custom' ? `${formatDateLabel(dateFrom,language)} — ${formatDateLabel(dateTo,language)}` : periodButtonLabel}
                 periodOptions={[...PERIOD_PRESETS.map(value=>({value,label:value === 'Вся история' ? freeHistoryCopy(language).allTime : periodLabel(value)})),{value:'custom',label:t('customPeriod')}]}
                 onPeriod={value=>{if(value==='custom'){setSelectedKey(null);setPeriodPreset('custom');setHistoryFiltersOpen(true);}else handlePresetChange(value);}}
@@ -5093,7 +5097,8 @@ export default function CalendarScreen() {
                 })()}
                 reminders={<PremiumHistoryReminders plans={plans} currency={historyCurrency} todayKey={todayKey} language={language} isLight={isLight} loading={plansLoading} error={plansLoadError}
                   onAdd={()=>{setHistoryOpen(false);openPlanComposer();}} onEdit={plan=>{setHistoryOpen(false);openPlanEditor(plan);}} onDelete={plan=>{setHistoryOpen(false);requestPlanDelete(plan);}} onResolve={(plan,outcome)=>{setHistoryOpen(false);handleResolvePlan(plan,outcome);}}/>}
-                tools={<div className="premium-history-toolbox"><div className="premium-history-select premium-history-account"><select aria-label={premiumHistoryChapterCopy(language).account} value={historyAccount} onChange={event=>setHistoryAccount(event.target.value)}><option value="ALL">{premiumHistoryChapterCopy(language).allAccounts}</option>{[...new Map(premiumHistoryAccountSource.map(row=>[premiumHistoryAccountKey(row),row])).entries()].map(([key,row])=><option key={key} value={key}>{row.platform||'Manual'} · {String(premiumTradeFacts(row).account??premiumHistoryChapterCopy(language).unknownAccount)}</option>)}</select><ChevronDown size={13}/></div>{renderPremiumHistoryAnalytics('tools')}<LotCalculator enabled={proAccessActive&&!proAccessLoading} language={language} isLight={isLight} currency={historyCurrency==='ALL'?currency:historyCurrency}/></div>}
+                accountPicker={renderHistoryAccountPicker()}
+                tools={<div className="premium-history-toolbox">{renderHistoryAccountPicker()}{renderPremiumHistoryAnalytics('tools')}<LotCalculator enabled={proAccessActive&&!proAccessLoading} language={language} isLight={isLight} currency={historyCurrency==='ALL'?currency:historyCurrency}/></div>}
                 onWallet={proAccessActive&&!proAccessLoading?()=>{setHistoryOpen(false);transitionView(()=>setAccountMode('wallet'));}:undefined}
                 onCapital={proAccessActive&&!proAccessLoading?()=>{setHistoryOpen(false);openCapitalFromCalendarGesture();}:undefined}
                 receiptCapture={proAccessActive&&!proAccessLoading&&validUserId?<div className="premium-history-receipt-entry"><span>{premiumHistoryChapterCopy(language).receipts}</span><ReceiptCapture key={validUserId} userId={validUserId} proActive={proAccessActive} proLoading={proAccessLoading} language={language} isLight={isLight} defaultCurrency={historyCurrency==='ALL'?currency:historyCurrency} onAccessDenied={refreshProAccess} onSaveReceipt={saveReviewedReceipt}/></div>:null}
