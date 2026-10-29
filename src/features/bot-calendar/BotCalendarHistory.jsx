@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { dateLabel, money, shiftMonth, tradeCount } from './botCalendarModel.js';
 
-export default function BotCalendarHistory({ client, start, today, month, initialDay, initialMonth, onClose }) {
+export default function BotCalendarHistory({ client, slug = 'bot', start, today, month, initialDay, initialMonth, onClose }) {
   const [mode, setMode] = useState(initialDay || initialMonth ? 'period' : 'all');
   const [from, setFrom] = useState(initialDay || (month > start ? month : start));
   const lastDay = new Date(`${shiftMonth(month, 1)}T12:00:00Z`); lastDay.setUTCDate(0);
@@ -19,13 +19,13 @@ export default function BotCalendarHistory({ client, start, today, month, initia
   useEffect(() => {
     let cancelled = false;
     setLoading(true); setError(false); setResult(null);
-    client.rpc('get_bot_calendar_history', { p_slug: 'bot', p_from: range?.from || null,
+    client.rpc('get_bot_calendar_history', { p_slug: slug, p_from: range?.from || null,
       p_to: range?.to || null, p_offset: offset }).then(({ data, error: failure }) => {
       if (cancelled) return;
       if (failure || !data) setError(true); else setResult(data);
     }).catch(() => { if (!cancelled) setError(true); }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [client, range, offset, retry]);
+  }, [client, slug, range, offset, retry]);
   const apply = event => {
     event.preventDefault();
     if (!from || !to || from < start || to > today || from > to) { setInvalid(true); return; }

@@ -196,6 +196,38 @@ for (const [engine,options] of [[chromium,{channel:'msedge',headless:true}],[web
     await page.getByRole('dialog',{name:'Ссылка на календарь'}).waitFor();
     assert.equal(await page.getByLabel('Прямая ссылка на календарь').inputValue(),'http://dayris.test/?calendar=bot');
     assert.equal(await page.getByText('Ссылка на календарь скопирована',{exact:true}).count(),0);
+    for(const width of [320,390,1440]) {
+      await page.setViewportSize({width,height:900});
+      await page.goto('http://dayris.test/?stages=1');
+      await page.getByText('Реальный счёт · Live',{exact:true}).waitFor();
+      assert.match(await page.getByRole('region',{name:'Торговый лимит этапа'}).innerText(),/1\s000,00/);
+      assert.match(await page.locator('.bot-capital').innerText(),/1\s025,00/);
+      assert.match(await page.locator('.bot-capital').innerText(),/\+2,5%/);
+      assert.equal(await page.locator('[data-calendar-notice=true]').count(),0,'old maintenance notes belong only to the first stage');
+      await page.getByRole('button',{name:'Открыть аналитику бота'}).click();
+      await page.getByText('Результат периода к стартовому лимиту',{exact:true}).waitFor();
+      assert.match(await page.locator('.bot-budget-return').innerText(),/2,5%/);
+      await page.getByRole('button',{name:'Закрыть аналитику'}).click();
+      await page.screenshot({path:`artifacts/bot-calendar/stage-${engine.name()}-${width}.png`,fullPage:true});
+      await page.getByLabel('Этап торговли').selectOption('bot-stage-1');
+      await page.getByText(/Архив этапа/).waitFor();
+      assert.equal(await page.locator('.bot-capital,.bot-live-badge').count(),0);
+      await page.getByRole('button',{name:'Открыть аналитику бота'}).click();
+      await page.getByRole('dialog',{name:'Аналитика бота'}).waitFor();
+      await page.getByRole('button',{name:'За месяц',exact:true}).click();
+      await page.waitForFunction(()=>window.__botRequests.at(-1)?.args?.p_slug==='bot-stage-1');
+      assert.equal(await page.locator('.bot-budget-return').count(),0,'no invented historical deposit');
+      await page.getByRole('button',{name:'Закрыть аналитику'}).click();
+      await page.getByRole('button',{name:'История за месяц'}).click();
+      await page.locator('.bot-trades article').first().waitFor();
+      assert.equal((await page.evaluate(()=>window.__botRequests.at(-1))).args.p_slug,'bot-stage-1');
+      await page.getByRole('button',{name:'Закрыть историю'}).click();
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+    }
+    await page.goto('http://dayris.test/?stages=1&scheduled=1');
+    await page.getByText(/Начинаем 30 октября в 08:00/).waitFor();
+    assert.match(await page.locator('.bot-capital').innerText(),/0%/);
+    assert.equal(await page.getByRole('button',{name:'История за месяц'}).isDisabled(),true);
     assert.deepEqual(errors,[]);
     console.log(`${engine.name()}: classic calendar at 320/390/768/1440, private metadata absent, range/all totals and pagination, copy/native share success/cancel/failure passed`);
   } finally { await browser.close(); }

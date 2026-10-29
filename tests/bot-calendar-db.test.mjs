@@ -24,6 +24,7 @@ test('public bot snapshot: account pinning, cutoff, atomicity, leases, redaction
     await db.exec(await readFile('supabase/migrations/202610230002_bot_calendar_history.sql','utf8'));
     await db.exec(await readFile('supabase/migrations/202610240001_bot_calendar_analytics.sql','utf8'));
     await db.exec(await readFile('supabase/migrations/202610240002_bot_deal_timestamps.sql','utf8'));
+    await db.exec(await readFile('supabase/migrations/202610290020_bot_calendar_stages.sql','utf8'));
     // No source exists yet: never invent successful results.
     let source = (await db.query("select public.claim_bot_calendar('bot') as value")).rows[0].value;
     assert.equal(source,null);
@@ -135,5 +136,48 @@ test('public bot snapshot: account pinning, cutoff, atomicity, leases, redaction
     const exact=(await db.query("select public.get_bot_calendar_analytics('bot','2026-10-05','2026-10-05') as value")).rows[0].value;
     assert.equal(exact.timestamp_precision,'execution');assert.equal(exact.stats.max_drawdown,110,'broker instants must override lexicographic and numeric deal-ID order within a minute');
     assert.equal(exact.stats.pnl,20);
+    // A budget basis is not a deposit: real money and all prior-stage results
+    // remain untouched, while percentages explicitly refer to the risk budget.
+    await db.exec("update public.bot_calendars set initial_budget=1000 where slug='bot'");
+    const budget=(await db.query("select public.get_bot_calendar_analytics('bot','2026-10-05','2026-10-05') as value")).rows[0].value;
+    assert.equal(budget.stats.pnl,20);assert.equal(budget.accounting.basis,'risk_budget');
+    assert.equal(budget.accounting.initial_budget,1000);assert.equal(budget.accounting.budget_with_result,1020);
+    assert.equal(budget.period_return_percent,2);assert.equal(budget.accounting.return_percent,2);
+    await db.exec("update public.bot_calendars set end_date='2026-10-06' where slug='bot'");
+    assert.equal((await db.query("select public.claim_bot_calendar('bot') as value")).rows[0].value,null);
+    const archived=(await db.query("select public.get_bot_calendar_history('bot') as value")).rows[0].value;
+    assert.equal(archived.to,'2026-10-06');assert.equal(archived.total,4);
+    await assert.rejects(db.query("select public.get_bot_calendar_history('bot',null,'2026-10-07')"),/PERIOD_OUT_OF_RANGE/);
+    await assert.rejects(publish([]),/ARCHIVED_STAGE/);
+    await db.exec("update public.bot_calendars set end_date=null,lease_until=null,starts_at='2026-10-05T10:00:00.200Z' where slug='bot'");
+    source=(await db.query("select public.claim_bot_calendar('bot') as value")).rows[0].value;
+    assert.equal(source.starts_at,'2026-10-05T10:00:00.2+00:00');
+    await assert.rejects(publish([{...deal,executed_at:'2026-10-05T10:00:00.100Z'}]),/OUTSIDE_PUBLICATION/);
+    for(const role of ['anon','authenticated']) {
+      await db.exec(`set role ${role}`);
+      for(const sql of ["select public.bot_calendar_raw('bot','2026-10-01')", "select public.bot_stage_context('bot')", "select public.claim_bot_calendar_raw('bot')", "select public.publish_bot_calendar_raw('bot',gen_random_uuid(),'USD','[]')"])
+        await assert.rejects(db.query(sql),/permission denied/);
+      await db.exec('reset role');
+    }
+    // Run the actual transition script: copy the whole verified snapshot before
+    // clearing the canonical stage, pin the unique admin Live source, rerun safely.
+    await db.exec(`create table public.site_admins(user_id uuid);
+      create table public.ctrader_tokens(user_id uuid);
+      alter table public.ctrader_accounts add column is_active boolean default false;
+      insert into public.site_admins values('${owner}');insert into public.ctrader_tokens values('${owner}');
+      insert into public.ctrader_accounts values('44444444-4444-4444-8444-444444444444','${owner}','49362144',true,true);
+      update public.bot_calendars set lease_until=null where slug='bot';`);
+    const rotate=await readFile('supabase/bot-calendar-pipfarm-stage.sql','utf8');
+    await db.exec(rotate);await db.exec(rotate);
+    const rotation=(await db.query("select calendar_slug,count(*)::int as count,sum(pnl)::float as pnl from public.bot_calendar_deals where calendar_slug in ('bot','bot-stage-1') group by calendar_slug")).rows;
+    assert.deepEqual(rotation,[{calendar_slug:'bot-stage-1',count:4,pnl:20}]);
+    const newStage=(await db.query("select public.get_bot_calendar('bot','2026-10-01') as value")).rows[0].value;
+    assert.equal(newStage.start_date,'2026-10-30');assert.equal(newStage.accounting.initial_budget,1000);
+    assert.equal(newStage.accounting.budget_with_result,1000);assert.ok(newStage.periods.some(p=>p.slug==='bot-stage-1'));
+    assert.equal(newStage.accounting.return_percent,0);assert.deepEqual(newStage.days,[]);
+    assert.equal(JSON.stringify(newStage).includes('49362144'),false);
+    const newSource=(await db.query("select public.claim_bot_calendar('bot') as value")).rows[0].value;
+    assert.equal(newSource.account_id,'49362144');assert.equal(newSource.is_live,true);
+    assert.equal((await db.query("select public.claim_bot_calendar('bot-stage-1') as value")).rows[0].value,null);
   } finally { await db.close(); }
 });

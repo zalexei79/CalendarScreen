@@ -332,3 +332,27 @@
   .bot-outcomes-legend strong { font-size:22px; }
   .bot-outcomes-legend article>span { font-size:10px; gap:4px; }
 }
+.bot-stage-switch { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:18px 0 0; }
+.bot-stage-switch label { color:#b9b3a4; font-size:12px; }
+.bot-stage-switch select { min-width:0; max-width:75%; border:1px solid #d8be8638; border-radius:10px; padding:10px 12px; color:#e8d6b0; background:#151b19; font:inherit; font-size:12px; color-scheme:dark; }
+.bot-live-badge { display:flex; gap:8px; align-items:center; width:fit-content; padding:8px 11px; margin:16px 0 0; border:1px solid #7fe0b238; border-radius:30px; color:#9de5c4; background:#183b292e; font-size:11px; font-weight:600; }
+.bot-live-badge>span { width:6px; height:6px; border-radius:50%; background:#91e1b9; box-shadow:0 0 9px #91e1b940; }
+.bot-capital { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; margin:16px 0 0; padding:20px; border:1px solid #d8be8633; border-radius:16px; background:linear-gradient(130deg,#d8be8610,transparent),#131b18; }
+.bot-capital>div { display:flex; flex-direction:column; gap:9px; min-width:0; }
+.bot-capital span,.bot-budget-return>span { color:#b5beb7; font-size:11px; }
+.bot-capital strong { color:#eee1bf; font-size:25px; font-weight:550; letter-spacing:-.6px; }
+.bot-capital p { grid-column:1/-1; color:#96a79c; font-size:10px; line-height:1.7; margin:0; }
+.bot-stage-start { margin:14px 0 0; color:#e4c990; border-left:2px solid #bfa576; padding:8px 12px; font-size:12px; line-height:1.7; }
+.bot-budget-return { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding:15px; border:1px solid #d8be8633; border-radius:12px; margin-bottom:14px; }
+.bot-budget-return strong { font-size:23px; }
+.bot-budget-return small { flex-basis:100%; color:#96a79c; font-size:10px; line-height:1.6; }
+@media(max-width:600px) {
+  .bot-stage-switch { gap:8px; }
+  .bot-stage-switch label { font-size:10px; }
+  .bot-stage-switch select { font-size:11px; padding:10px 8px; }
+  .bot-capital { grid-template-columns:repeat(2,minmax(0,1fr)); padding:15px 12px; gap:17px 10px; }
+  .bot-capital>div:first-child { grid-column:1/-1; }
+  .bot-capital>div:first-child strong { font-size:30px; }
+  .bot-capital strong { font-size:22px; }
+  .bot-capital span { font-size:10px; }
+}

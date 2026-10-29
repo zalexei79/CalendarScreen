@@ -43,7 +43,8 @@ export async function collectSnapshot(source, token, { connect, refresh, now = D
     for (const deal of deals) {
       const row = mapDeal(deal, { userId: source.user_id, accountId: source.source_account_id,
         currency, symbols, timeZone: source.time_zone });
-      if (!row || row.date_key < source.start_date) continue;
+      if (!row || row.date_key < source.start_date ||
+        (source.starts_at && Number(deal.executionTimestamp) < Date.parse(source.starts_at))) continue;
       rows.set(row.ctrader_deal_id, { deal_id: row.ctrader_deal_id, date_key: row.date_key,
         time: row.time, instrument: row.instrument, direction: row.direction, pnl: row.pnl, currency,
         executed_at: new Date(Number(deal.executionTimestamp)).toISOString() });

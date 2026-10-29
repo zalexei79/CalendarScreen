@@ -10,7 +10,14 @@ import BotPerformanceChart from './BotPerformanceChart.jsx';
 import './BotCalendarPage.css';
 
 export default function BotCalendarPage({ client }) {
-  const [month, setMonth] = useState(() => `${dateKey().slice(0, 7)}-01`);
+  const [stage, setStage] = useState({ slug: 'bot' });
+  const [periods, setPeriods] = useState([]);
+  return <BotStagePage key={stage.slug} client={client} stage={stage} periods={periods} onPeriods={setPeriods} onStage={setStage}/>;
+}
+
+function BotStagePage({ client, stage, periods, onPeriods, onStage }) {
+  const slug = stage.slug;
+  const [month, setMonth] = useState(() => `${(stage.end_date || dateKey()).slice(0, 7)}-01`);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -27,20 +34,20 @@ export default function BotCalendarPage({ client }) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true); setError(false); setData(null);
-    client.rpc('get_bot_calendar', { p_slug: 'bot', p_month: month }).then(({ data: result, error: failure }) => {
+    client.rpc('get_bot_calendar', { p_slug: slug, p_month: month }).then(({ data: result, error: failure }) => {
       if (cancelled) return;
-      if (failure || !result) setError(true); else setData(result);
+      if (failure || !result) setError(true); else { setData(result); if (result.periods) onPeriods(result.periods); }
     }).catch(() => { if (!cancelled) setError(true); }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [client, month, retry]);
+  }, [client, slug, month, retry, onPeriods]);
   useEffect(() => {
     let cancelled = false;
     setAnalytics({ data: null, loading: true, error: false });
-    client.rpc('get_bot_calendar_analytics', { p_slug: 'bot', p_from: null, p_to: null }).then(({ data, error }) => {
+    client.rpc('get_bot_calendar_analytics', { p_slug: slug, p_from: null, p_to: null }).then(({ data, error }) => {
       if (!cancelled) setAnalytics({ data, loading: false, error: Boolean(error || !data) });
     }).catch(() => { if (!cancelled) setAnalytics({ data: null, loading: false, error: true }); });
     return () => { cancelled = true; };
-  }, [client, analyticsRetry]);
+  }, [client, slug, analyticsRetry]);
   useEffect(() => {
     if (copyFailed) linkDialog.current?.showModal(); else linkDialog.current?.close();
   }, [copyFailed]);
@@ -73,16 +80,22 @@ export default function BotCalendarPage({ client }) {
       if (failure?.name !== 'AbortError') setCopyFailed(true);
     }
   }
-  const today = data?.today || dateKey(), start = data?.start_date || BOT_START_DATE;
+  const actualToday = data?.today || dateKey();
+  const today = data?.end_date && data.end_date < actualToday ? data.end_date : actualToday;
+  const start = data?.start_date || BOT_START_DATE;
+  const scheduled = data?.status === 'scheduled';
+  const accounting = data?.accounting;
+  const percent = value => new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2, signDisplay: 'exceptZero' }).format(Number(value)) + '%';
+  const launchLabel = start === BOT_START_DATE ? 'Старт учёта' : 'Старт этапа';
   const days = data?.days || [], byDate = new Map(days.map(day => [day.date_key, day]));
   const total = days.reduce((sum, day) => sum + Number(day.pnl), 0);
   const count = days.reduce((sum, day) => sum + Number(day.count), 0);
   const maxPnl = Math.max(0, ...days.map(day => Math.abs(Number(day.pnl))));
-  const ready = Boolean(data?.last_sync_at), currency = data?.currency || 'USD';
+  const ready = Boolean(data?.last_sync_at) && !scheduled, currency = data?.currency || 'USD';
   const cells = calendarCells(month, today);
   const openHistory = (key = null) => { closeMenu(); setSelectedDay(key); setHistory({ day: key }); };
   const changeMonth = offset => { setSelectedDay(null); setMonth(shiftMonth(month, offset)); };
-  const status = data?.status === 'delayed' ? 'Обновление задерживается' : ready ? 'Каждый час · 08:00–20:00' : 'Ожидаем первую синхронизацию';
+  const status = data?.archived ? 'Архив этапа' : scheduled ? 'Ожидаем старт этапа' : data?.status === 'delayed' ? 'Обновление задерживается' : ready ? 'Каждый час · 08:00–20:00' : 'Ожидаем первую синхронизацию';
 
   return <main className="bot-page" style={{ '--bot-weeks': cells.length / 7 }}>
     <div className="bot-shell">
@@ -94,7 +107,7 @@ export default function BotCalendarPage({ client }) {
           <details ref={menu} className="bot-menu">
             <summary role="button" aria-label="Меню календаря" className="bot-icon-button"><Menu aria-hidden="true" /></summary>
             <nav aria-label="Функции календаря">
-              <button type="button" onClick={() => { closeMenu(); setAnalyticsOpen(true); }}><ChartNoAxesCombined aria-hidden="true" />Аналитика бота</button>
+              <button type="button" disabled={scheduled} onClick={() => { closeMenu(); setAnalyticsOpen(true); }}><ChartNoAxesCombined aria-hidden="true" />Аналитика бота</button>
               <button type="button" disabled={loading || error || !ready} onClick={() => openHistory()}><History aria-hidden="true" />История</button>
               <button type="button" onClick={shareCalendar}><Share2 aria-hidden="true" />Поделиться календарём</button>
               <a href="/"><ArrowRight aria-hidden="true" />Создать свой календарь</a>
@@ -102,6 +115,15 @@ export default function BotCalendarPage({ client }) {
           </details>
         </div>
       </header>
+      {periods.length > 1 && <div className="bot-stage-switch"><label htmlFor="bot-stage-select">Этап торговли</label><select id="bot-stage-select" value={slug} onChange={event=>onStage(periods.find(item=>item.slug===event.target.value))}>{periods.map(item=><option key={item.slug} value={item.slug}>{item.title}{item.archived?' · Архив':''}</option>)}</select></div>}
+      {data?.real_account && <p className="bot-live-badge"><span aria-hidden="true"/>Реальный счёт · Live</p>}
+      {accounting && <section className="bot-capital" aria-label="Торговый лимит этапа">
+        <div><span>Стартовый торговый лимит</span><strong>{money(accounting.initial_budget,currency)}</strong></div>
+        <div><span>Лимит с учётом результата</span><strong>{money(accounting.budget_with_result,currency)}</strong></div>
+        <div><span>Результат к лимиту</span><strong className={Number(accounting.return_percent)<0?'bot-loss':'bot-profit'}>{percent(accounting.return_percent)}</strong></div>
+        <p>Стартовый лимит + закрытый результат этапа. Процент считается от стартового лимита.</p>
+      </section>}
+      {scheduled && <p className="bot-stage-start" role="status">Начинаем {dateLabel(start, {day:'numeric',month:'long'})} в {new Intl.DateTimeFormat('ru-RU',{timeZone:'Europe/Bucharest',hour:'2-digit',minute:'2-digit'}).format(new Date(data.starts_at))} · Бухарест. Здесь появятся сделки нового этапа.</p>}
       <section className="bot-calendar" aria-label="Календарь результатов" aria-busy={loading}>
         <div className="bot-calendar-toolbar">
           <div className="bot-month-controls">
@@ -120,18 +142,18 @@ export default function BotCalendarPage({ client }) {
           <div className="bot-grid" style={{ gridTemplateRows: `repeat(${cells.length / 7},minmax(0,1fr))` }}>
             {cells.map((cell, i) => {
               const result = byDate.get(cell.key), available = cell.inMonth && cell.key >= start && cell.key <= today && ready && !loading;
-              const dayNote = cell.inMonth ? BOT_DAY_NOTES[cell.key] : null;
+              const dayNote = cell.inMonth && start === BOT_START_DATE ? BOT_DAY_NOTES[cell.key] : null;
               return <CalendarDayCell key={cell.key} cell={cell} cellIndex={i} traderMode proView isLight={false}
                 disabled={!available} isSelected={selectedDay === cell.key} hasTrades={Boolean(result)} pnl={Number(result?.pnl || 0)} monthMaxAbsPnl={maxPnl}
-                milestone={cell.inMonth && cell.key === start ? <span className="bot-launch-mark"><PartyPopper className="bot-launch-icon" aria-hidden="true"/><span>Старт учёта</span><i aria-hidden="true"/></span> : undefined}
+                milestone={cell.inMonth && cell.key === start ? <span className="bot-launch-mark"><PartyPopper className="bot-launch-icon" aria-hidden="true"/><span>{launchLabel}</span><i aria-hidden="true"/></span> : undefined}
                 annotation={dayNote ? <><Wrench aria-hidden="true"/><span className="bot-note-full">{dayNote}</span><span className="bot-note-short" aria-hidden="true">Тех.<br/>работы</span></> : undefined}
                 annotationLabel={dayNote || undefined}
-                ariaLabel={`${dateLabel(cell.key)}${cell.inMonth && cell.key === start ? ', Старт учёта' : ''}${dayNote ? `, ${dayNote}` : ''}${available ? result ? `: ${money(result.pnl, currency, true)}, ${tradeCount(result.count)}` : ': нет закрытых сделок' : ''}`}
+                ariaLabel={`${dateLabel(cell.key)}${cell.inMonth && cell.key === start ? `, ${launchLabel}` : ''}${dayNote ? `, ${dayNote}` : ''}${available ? result ? `: ${money(result.pnl, currency, true)}, ${tradeCount(result.count)}` : ': нет закрытых сделок' : ''}`}
                 formatPnlDisplay={(value, compact) => compact ? new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2, notation: Math.abs(value) >= 1000 ? 'compact' : 'standard', signDisplay: 'exceptZero' }).format(value) : money(value, currency, true)} onSelect={() => openHistory(cell.key)}
                 caption={result ? <span className="bot-cell-count">{tradeCount(result.count)}</span> : null} />;
             })}
           </div>
-          {!loading && !ready && <p className="bot-pending" role="status">История появится после первой синхронизации.</p>}
+          {!loading && !ready && !scheduled && <p className="bot-pending" role="status">История появится после первой синхронизации.</p>}
           {loading && <p className="bot-pending" role="status">Загружаем историю…</p>}
         </>}
       </section>
@@ -153,8 +175,8 @@ export default function BotCalendarPage({ client }) {
       <footer className="bot-calendar-footer"><span>{status}{ready && <> · {new Intl.DateTimeFormat('ru-RU', { timeZone: data.time_zone, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(data.last_sync_at))}</>}</span><span>Europe/Bucharest</span></footer>
     </div>
     {notice && <p className="bot-copy-notice" role="status"><Check size={16} aria-hidden="true" />{notice}</p>}
-    {history && <BotCalendarHistory client={client} start={start} today={today} month={month} initialDay={history.day} initialMonth={history.month} onClose={() => setHistory(null)} />}
-    {analyticsOpen && <BotAnalyticsDialog client={client} overview={analytics.data} start={start} today={today} month={month} onClose={() => setAnalyticsOpen(false)} />}
+    {history && <BotCalendarHistory client={client} slug={slug} start={start} today={today} month={month} initialDay={history.day} initialMonth={history.month} onClose={() => setHistory(null)} />}
+    {analyticsOpen && <BotAnalyticsDialog client={client} slug={slug} overview={analytics.data} start={start} today={today} month={month} onClose={() => setAnalyticsOpen(false)} />}
     <dialog ref={linkDialog} className="bot-dialog bot-link-dialog" onCancel={() => setCopyFailed(false)} onClose={() => setCopyFailed(false)} aria-labelledby="bot-link-title">
       <div className="bot-dialog-inner"><header><h2 id="bot-link-title">Ссылка на календарь</h2><button type="button" aria-label="Закрыть ссылку" onClick={() => setCopyFailed(false)}><X aria-hidden="true" /></button></header>
         <p className="bot-settings-note">Скопируйте ссылку или нажмите и удерживайте её, чтобы отправить.</p>

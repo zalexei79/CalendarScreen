@@ -4,7 +4,7 @@ import { dateLabel, money, shiftMonth, tradeCount } from './botCalendarModel.js'
 import { outcomeDistribution, performanceScore } from './botAnalyticsModel.js';
 import BotPerformanceChart from './BotPerformanceChart.jsx';
 
-export default function BotAnalyticsDialog({ client, overview, start, today, month, onClose }) {
+export default function BotAnalyticsDialog({ client, slug = 'bot', overview, start, today, month, onClose }) {
   const dialog = useRef(null);
   const [scope,setScope]=useState('all'),[chartMode,setChartMode]=useState('total');
   const [outcomeMode, setOutcomeMode] = useState('trades');
@@ -15,11 +15,11 @@ export default function BotAnalyticsDialog({ client, overview, start, today, mon
   useEffect(()=>{
     if(!range&&overview&&retry===0){setState({data:overview,loading:false,error:false});return;}
     let cancelled=false;setState({data:null,loading:true,error:false});
-    client.rpc('get_bot_calendar_analytics',{p_slug:'bot',p_from:range?.from||null,p_to:range?.to||null}).then(({data,error})=>{
+    client.rpc('get_bot_calendar_analytics',{p_slug:slug,p_from:range?.from||null,p_to:range?.to||null}).then(({data,error})=>{
       if(!cancelled)setState({data,loading:false,error:Boolean(error||!data)});
     }).catch(()=>{if(!cancelled)setState({data:null,loading:false,error:true});});
     return ()=>{cancelled=true;};
-  },[client,overview,range,retry]);
+  },[client,slug,overview,range,retry]);
   const choose = value => {
     setScope(value);setInvalid(false);
     if(value==='all'){setRange(null);return;}
@@ -40,6 +40,7 @@ export default function BotAnalyticsDialog({ client, overview, start, today, mon
       {scope==='custom'&&<form className="bot-date-filter" onSubmit={apply}><label>С<input type="date" aria-label="Начало периода аналитики" min={start} max={today} value={from} required onChange={e=>setFrom(e.target.value)}/></label><label>По<input type="date" aria-label="Конец периода аналитики" min={start} max={today} value={to} required onChange={e=>setTo(e.target.value)}/></label><button type="submit">Применить</button>{invalid&&<p role="alert">Начало периода должно быть не позже конца, в пределах опубликованной истории.</p>}</form>}
       {state.loading?<p className="bot-state" role="status">Рассчитываем аналитику…</p>:state.error?<div className="bot-state" role="alert"><p>Не удалось загрузить аналитику.</p><button type="button" onClick={()=>setRetry(n=>n+1)}>Повторить</button></div>:data&&<>
         <p className="bot-analytics-period">{dateLabel(data.from)} — {dateLabel(data.to)} · {tradeCount(s.total)}</p>
+        {data.accounting && <div className="bot-budget-return"><span>Результат периода к стартовому лимиту</span><strong className={Number(data.period_return_percent)<0?'bot-loss':'bot-profit'}>{decimal(data.period_return_percent)}%</strong><small>Закрытый результат / {money(data.accounting.initial_budget,data.currency)}. Доля от торгового лимита.</small></div>}
         {Number(s.total)===0&&<p className="bot-analytics-empty" role="status">В выбранном периоде нет закрытых сделок.</p>}
         <div className="bot-analytics-dashboard">
           <section className="bot-score-card" aria-label="Скор результата"><div className="bot-score-heading"><span>Скор результата</span><ArrowUpRight size={16} aria-hidden="true" /></div>

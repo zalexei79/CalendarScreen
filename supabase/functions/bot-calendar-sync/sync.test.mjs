@@ -49,3 +49,12 @@ test('expired credentials refresh once without returning tokens',async()=>{
   assert.equal(f.refreshed,1);assert.equal(f.closes,2);assert.equal(JSON.stringify(result).includes('access_token'),false);
   assert.equal(safeError(new Error('secret https://upstream/?token=private')),'SYNC_FAILED');
 });
+
+test('stage opening uses the exact 08:00 Bucharest instant without rescaling money',async()=>{
+  const start='2026-10-05T05:00:00.000Z';
+  const f=fixture({deals:[{...deal,dealId:'1',executionTimestamp:Date.parse(start)-1},
+    {...deal,dealId:'2',executionTimestamp:Date.parse(start)}]});
+  const result=await collectSnapshot({...source,starts_at:start},{access_token:'secret'},f.deps);
+  assert.equal(result.deals.length,1);assert.equal(result.deals[0].deal_id,'2');
+  assert.equal(result.deals[0].pnl,'120.40');
+});

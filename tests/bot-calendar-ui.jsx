@@ -48,4 +48,21 @@ const client = { rpc:async(name,args)=>{
   }
   return {error:{message:'Unexpected public RPC'}};
 }};
+if(params.has('stages')) {
+  const rpc=client.rpc;
+  client.rpc=async(name,args)=>{
+    const result=await rpc(name,args);if(!result.data)return result;
+    const d=result.data,archived=args.p_slug==='bot-stage-1',scheduled=params.has('scheduled')&&!archived;
+    const context={start_date:archived?'2026-10-05':'2026-10-30',end_date:archived?'2026-10-29':null,
+      starts_at:archived?null:'2026-10-30T06:00:00Z',stage_title:archived?'5–29 октября 2026':'Новый этап · с 30 октября',archived,
+      real_account:!archived,accounting:archived?null:{basis:'risk_budget',initial_budget:1000,budget_with_result:scheduled?1000:1025,pnl:scheduled?0:25,return_percent:scheduled?0:2.5},
+      periods:[{slug:'bot',title:'Новый этап · с 30 октября',start_date:'2026-10-30'},
+        {slug:'bot-stage-1',title:'5–29 октября 2026',start_date:'2026-10-05',end_date:'2026-10-29',archived:true}]};
+    Object.assign(d,context);
+    if(name==='get_bot_calendar')Object.assign(d,{today:scheduled?'2026-10-29':'2026-10-30',status:archived?'archived':scheduled?'scheduled':'ready',days:archived?days:scheduled?[]:[{date_key:'2026-10-30',pnl:25,count:1}]});
+    if(name==='get_bot_calendar_analytics'&&!archived)Object.assign(d,{from:'2026-10-30',to:'2026-10-30',period_return_percent:scheduled?0:2.5,
+      stats:{...d.stats,total:scheduled?0:1,pnl:scheduled?0:25,wins:scheduled?0:1,losses:0,breakeven:0,active_days:scheduled?0:1,positive_days:scheduled?0:1},curve:scheduled?[]:[{date_key:'2026-10-30',pnl:25,total:25,drawdown:0,trades:1}]});
+    return result;
+  };
+}
 createRoot(document.getElementById('root')).render(<BotCalendarPage client={client}/>);

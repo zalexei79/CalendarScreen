@@ -18,9 +18,19 @@ create-calendar link in the header opens the personal calendar homepage.
 Owner-confirmed technical work on 13–15 October 2026 is shown as calendar
 annotations. These labels do not create trades or change PnL, counts or analytics.
 
-Source: Spotware Demo account `47484897`, closed deals dated **5 October 2026
-onward**, using `Europe/Bucharest`. This cutoff is fixed and history accumulates.
-The displayed current balance is not used as starting capital or fabricated PnL.
+Stages are isolated by calendar slug. The original Spotware account `47484897`
+is retained as `bot-stage-1`, **5–29 October 2026**, with its complete snapshot.
+The current canonical `bot` stage pins PipFarm Live account `49362144`, starting
+**30 October 2026 at 08:00 Europe/Bucharest**. Earlier deals on that account,
+including the balance shown when connecting it, do not enter the new stage.
+
+The owner confirmed **1,000 USD is the available trading risk budget**, not the
+broker account balance or deposited capital. Public labels say “Стартовый торговый
+лимит”, “Лимит с учётом результата”, and “Результат к лимиту”. Real broker PnL is
+never rescaled: 10 USD of PnL is 10 USD and 1% of the initial 1,000 USD allowance.
+Budget plus closed PnL is a journal calculation, not an official prop-firm limit
+or broker equity. No deposit return or normalized balance is fabricated. A safe
+“Реальный счёт · Live” badge is published only after the Live source was synced.
 
 ## Deployment
 
@@ -46,6 +56,12 @@ The displayed current balance is not used as starting capital or fabricated PnL.
    `net._http_response`, `bot_calendars.last_sync_at/last_error`, and the anonymous
    RPC response before reporting live data. Cron success alone only confirms
    the HTTP request was queued, not that the worker succeeded.
+6. Apply `202610290020_bot_calendar_stages.sql` for safe period metadata, archive
+   boundaries and exact opening-time enforcement. Deploy the updated worker,
+   then apply `supabase/bot-calendar-pipfarm-stage.sql` for this owner-confirmed
+   transition. It atomically copies the previous snapshot, rebinds only the unique
+   active admin Live account, and clears the current snapshot. It is safe to rerun
+   for this exact transition. Archived stages cannot be claimed or republished.
 
 ## Boundaries
 
