@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v115-category-swipe-dismiss';
+const CACHE_NAME = 'atj-cache-v116-category-choice-no-keyboard';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

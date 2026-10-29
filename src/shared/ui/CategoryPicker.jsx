@@ -4,7 +4,7 @@ import {Check, ChevronDown, Search, Star, X, Plus, Shapes, Smile, Settings2, Tra
 import {categoryLibrary, FAVORITE_LIMIT} from '../lib/categoryLibrary.js';
 import {normalizeVoiceCategory} from '../lib/voiceCategory.js';
 import {getMoneyCategoryMeta} from '../config/constants.js';
-import {CATEGORY_ICON_CATALOG,CATEGORY_EMOJIS,categoryEmoji,validCategoryEmoji} from '../lib/categoryIconCatalog.js';
+import {CATEGORY_ICON_CATALOG,CATEGORY_EMOJI_GROUPS,categoryEmoji,validCategoryEmoji} from '../lib/categoryIconCatalog.js';
 import {categoryIcon,categoryDefaultIcon,categoryIconTone} from './categoryIcons.js';
 import {categoryPickerDesignCopy} from './categoryPickerDesignCopy.js';
 import useCategoryPreferences from './useCategoryPreferences.js';
@@ -35,6 +35,7 @@ function PickerSheet({options,managementOptions,value,language,isLight,preferenc
  const [editingCategory,setEditingCategory]=useState(null),[iconType,setIconType]=useState('symbol'),[symbolIcon,setSymbolIcon]=useState('shapes'),[emojiDraft,setEmojiDraft]=useState('✨');
  const {favorites,recent,all} = categoryLibrary(managing?managementOptions:options, preferences.profile, query, locale);
  const [filter,setFilter]=useState('all'),[icon,setIcon]=useState('shapes'),[iconGroup,setIconGroup]=useState('universal');
+ const [emojiGroup,setEmojiGroup]=useState('universal');
  const validIcon=iconType!=='emoji'||validCategoryEmoji(emojiDraft);
  const quick=[...favorites,...recent].slice(0,FAVORITE_LIMIT);
  const quickIds=new Set(quick.map(item=>normalizeVoiceCategory(item.value)));
@@ -44,21 +45,23 @@ function PickerSheet({options,managementOptions,value,language,isLight,preferenc
  const pinned = new Set(preferences.profile.favorites.map(normalizeVoiceCategory));
  const exact = managementOptions.some(item => [item.value,item.label].some(label => normalizeVoiceCategory(label) === normalizeVoiceCategory(query)));
  const canCreate = (allowCreate||onCreate) && query.trim() && !exact && query.trim().length <= 60;
+ const focusBrowse=()=>(window.matchMedia('(pointer: coarse)').matches?closeRef.current:searchRef.current)?.focus({preventScroll:true});
  const close = (selected) => {
   if (closing || actionBusy.current) return;
-  if(selected===undefined&&(pendingDelete||creating)){setPendingDelete(null);setCreating(false);setEditingCategory(null);setError('');requestAnimationFrame(()=>searchRef.current?.focus());return;}
+  if(selected===undefined&&(pendingDelete||creating)){setPendingDelete(null);setCreating(false);setEditingCategory(null);setError('');requestAnimationFrame(focusBrowse);return;}
   setClosing(true);
   timer.current = setTimeout(() => {onClose(); if (selected !== undefined) onSelect(selected);}, window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 180);
  };
  const closeAction = useRef(close); closeAction.current = close;
  useCategorySwipeDismiss(panelRef,motionRef,{disabled:busy||closing,onDismissStart:()=>setClosing(true),onDismiss:onClose});
+ useEffect(()=>{if(creating)closeRef.current?.focus({preventScroll:true});},[creating]);
  useEffect(() => {
   mounted.current=true;
   const returnFocus = document.activeElement, previousOverflow = document.body.style.overflow;
   const siblings = [...document.body.children].filter(item => !item.contains(panelRef.current));
   const inert = siblings.map(item => [item,item.inert]); siblings.forEach(item => {item.inert = true;});
   document.body.style.overflow = 'hidden';
-  (window.matchMedia('(pointer: coarse)').matches ? closeRef.current : searchRef.current)?.focus();
+  focusBrowse();
   function keyboard(event) {
    if (event.key === 'Escape') {event.preventDefault();event.stopImmediatePropagation();closeAction.current();}
    if (event.key !== 'Tab') return;
@@ -76,7 +79,7 @@ function PickerSheet({options,managementOptions,value,language,isLight,preferenc
  }, []);
  async function createCategory(raw){
   const next=raw.trim();if(actionBusy.current||!next||next.length>60||!validIcon)return;
-  if(editingCategory){preferences.setIcon(editingCategory.value,icon);setEditingCategory(null);setCreating(false);setError('');requestAnimationFrame(()=>searchRef.current?.focus());return;}
+  if(editingCategory){preferences.setIcon(editingCategory.value,icon);setEditingCategory(null);setCreating(false);setError('');requestAnimationFrame(focusBrowse);return;}
   if(managementOptions.some(item=>[item.value,item.label].some(label=>normalizeVoiceCategory(label)===normalizeVoiceCategory(next)))){setError(m.duplicate);return;}
   if(!onCreate){close(next);return;}
   actionBusy.current=true;setBusy(true);setError('');
@@ -93,13 +96,13 @@ function PickerSheet({options,managementOptions,value,language,isLight,preferenc
   }catch{if(mounted.current)setError(m.failed);}
   finally{
    // A second tap must not hit the creation button that replaces confirmation.
-   if(mounted.current)actionTimer.current=setTimeout(()=>{actionBusy.current=false;setBusy(false);requestAnimationFrame(()=>{if(mounted.current)searchRef.current?.focus();});},220);
+   if(mounted.current)actionTimer.current=setTimeout(()=>{actionBusy.current=false;setBusy(false);requestAnimationFrame(()=>{if(mounted.current)focusBrowse();});},220);
    else actionBusy.current=false;
   }
  }
  const select = item => {preferences.remember(item.value);close(item.value);};
- const startCreating=initial=>{setEditingCategory(null);setName(initial||'');setIcon('shapes');setSymbolIcon('shapes');setIconType('symbol');setEmojiDraft('✨');setIconGroup('universal');setCreating(true);setError('');};
- const editIcon=item=>{const selected=preferences.profile.icons[normalizeVoiceCategory(item.value)]||categoryDefaultIcon(item.value),emoji=categoryEmoji(selected);setEditingCategory(item);setName(item.label);setIcon(selected);setSymbolIcon(emoji?'shapes':selected);setIconType(emoji?'emoji':'symbol');setEmojiDraft(emoji||'✨');setIconGroup(CATEGORY_ICON_CATALOG.find(icon=>icon.id===selected)?.group||'universal');setCreating(true);setError('');};
+ const startCreating=initial=>{setEditingCategory(null);setName(initial||'');setIcon('shapes');setSymbolIcon('shapes');setIconType('symbol');setEmojiDraft('✨');setEmojiGroup('universal');setIconGroup('universal');setCreating(true);setError('');};
+ const editIcon=item=>{const selected=preferences.profile.icons[normalizeVoiceCategory(item.value)]||categoryDefaultIcon(item.value),emoji=categoryEmoji(selected);setEditingCategory(item);setName(item.label);setIcon(selected);setSymbolIcon(emoji?'shapes':selected);setIconType(emoji?'emoji':'symbol');setEmojiDraft(emoji||'✨');setEmojiGroup(Object.keys(CATEGORY_EMOJI_GROUPS).find(group=>CATEGORY_EMOJI_GROUPS[group].includes(emoji))||'universal');setIconGroup(CATEGORY_ICON_CATALOG.find(icon=>icon.id===selected)?.group||'universal');setCreating(true);setError('');};
  const pin=item=>{const favorite=pinned.has(normalizeVoiceCategory(item.value));if(!favorite&&pinned.size>=FAVORITE_LIMIT){setLimit(true);return;}setLimit(false);preferences.toggle(item.value);};
  const rows = (items, compact = false) => <div className={compact ? 'category-picker-quick' : 'category-picker-list'}>{items.map(item => {
   const active = normalizeVoiceCategory(item.value) === normalizeVoiceCategory(value), favorite = pinned.has(normalizeVoiceCategory(item.value)), iconId=preferences.profile.icons[normalizeVoiceCategory(item.value)], Icon = categoryIcon(iconId) || item.icon || Shapes;
@@ -117,11 +120,11 @@ function PickerSheet({options,managementOptions,value,language,isLight,preferenc
    <header><div><small>DAYRIS</small><h2 id={titleId}>{editingCategory?d.symbol:creating?m.add:c.title}</h2></div><div className="category-picker-header-actions">{!creating&&<button type="button" className="category-picker-close" disabled={busy||!!pendingDelete} aria-label={managing?m.done:m.manage} aria-pressed={managing} onClick={()=>{setManaging(!managing);setError('');setLimit(false);setFilter('all');}}>{managing?<Check size={19}/>:<Settings2 size={19}/>}</button>}<button ref={closeRef} type="button" className="category-picker-close" disabled={busy} aria-label={c.close} onClick={() => close()}><X size={21}/></button></div></header>
    {!creating&&<div className="category-picker-search"><Search size={18}/><input ref={searchRef} disabled={busy||!!pendingDelete} aria-label={c.search} placeholder={c.search} value={query} onChange={event => {if (!query.trim()) setSearchHeight(panelRef.current.offsetHeight);setQuery(event.target.value);setFilter('all');}} maxLength={120} autoComplete="off" enterKeyHint="search"/>{query && <button type="button" disabled={busy||!!pendingDelete} aria-label={`${c.search}: ×`} onClick={() => {setQuery('');searchRef.current?.focus();}}><X size={16}/></button>}</div>}
    <div className="category-picker-scroll">
-    {creating?<form id={formId} className="category-picker-new" onSubmit={event=>{event.preventDefault();createCategory(name);}}>{!editingCategory&&<label>{m.name}<input autoFocus aria-label={m.name} placeholder={d.name} value={name} maxLength={60} disabled={busy} onChange={event=>{setName(event.target.value);setError('');}} enterKeyHint="done"/></label>}
+    {creating?<form id={formId} className="category-picker-new" onSubmit={event=>{event.preventDefault();createCategory(name);}}>{!editingCategory&&<label>{m.name}<input aria-label={m.name} placeholder={d.name} value={name} maxLength={60} disabled={busy} onChange={event=>{setName(event.target.value);setError('');}} enterKeyHint="done"/></label>}
       <div className="category-picker-preview" aria-label={d.preview} style={{'--ci-hue':categoryIconTone(icon)}}><span className="category-picker-icon">{React.createElement(categoryIcon(icon)||Shapes,{size:26,strokeWidth:1.5,'aria-hidden':true})}</span><span>{name.trim()||d.name}</span></div>
       <div className="category-picker-icon-types" role="group" aria-label={d.symbol}>{[['symbol',d.symbols],['emoji',d.emoji]].map(([type,label])=><button type="button" key={type} disabled={busy} aria-pressed={iconType===type} onClick={()=>{setIconType(type);if(type==='symbol')setIcon(symbolIcon);else{const next=validCategoryEmoji(emojiDraft)?emojiDraft:'✨';setEmojiDraft(next);setIcon('emoji:'+next);}}}>{type==='symbol'?<Shapes size={16}/>:<Smile size={16}/>} {label}</button>)}</div>
       {iconType==='symbol'?<><div className="category-picker-icon-groups" role="group" aria-label={d.symbol}>{['universal','daily','money'].map(group=><button type="button" key={group} disabled={busy} aria-pressed={iconGroup===group} onClick={()=>setIconGroup(group)}>{d[group]}</button>)}</div>
-      <div className="category-picker-icon-library" role="group" aria-label={d[iconGroup]}>{CATEGORY_ICON_CATALOG.filter(item=>item.group===iconGroup).map(item=>{const Icon=categoryIcon(item.id);return <button type="button" key={item.id} disabled={busy} style={{'--ci-hue':categoryIconTone(item.id)}} aria-label={item.labels[locale]||item.labels.en} aria-pressed={icon===item.id} data-category-icon={item.id} onClick={()=>{setIcon(item.id);setSymbolIcon(item.id);}}><span className="category-picker-icon"><Icon size={23} strokeWidth={1.5} aria-hidden="true"/></span></button>;})}</div></>:<><label className="category-picker-emoji-field">{d.ownEmoji}<input aria-label={d.ownEmoji} aria-invalid={!validIcon} aria-describedby={`${formId}-emoji-help`} value={emojiDraft} maxLength={40} disabled={busy} autoComplete="off" spellCheck={false} onChange={event=>{const next=event.target.value.trim();setEmojiDraft(next);if(validCategoryEmoji(next))setIcon('emoji:'+next);}}/></label><p id={`${formId}-emoji-help`} className="category-picker-tip" role={validIcon?undefined:'alert'}>{validIcon?d.emojiHint:d.emojiError}</p><div className="category-picker-icon-library category-picker-emoji-library" role="group" aria-label={d.emoji}>{CATEGORY_EMOJIS.map(emoji=><button type="button" key={emoji} disabled={busy} aria-label={emoji} aria-pressed={validIcon&&icon==='emoji:'+emoji} data-category-icon={'emoji:'+emoji} onClick={()=>{setEmojiDraft(emoji);setIcon('emoji:'+emoji);}}><span className="category-picker-icon"><span className="category-icon-emoji" aria-hidden="true">{emoji}</span></span></button>)}</div></>}
+      <div className="category-picker-icon-library" role="group" aria-label={d[iconGroup]}>{CATEGORY_ICON_CATALOG.filter(item=>item.group===iconGroup).map(item=>{const Icon=categoryIcon(item.id);return <button type="button" key={item.id} disabled={busy} style={{'--ci-hue':categoryIconTone(item.id)}} aria-label={item.labels[locale]||item.labels.en} aria-pressed={icon===item.id} data-category-icon={item.id} onClick={()=>{setIcon(item.id);setSymbolIcon(item.id);}}><span className="category-picker-icon"><Icon size={23} strokeWidth={1.5} aria-hidden="true"/></span></button>;})}</div></>:<><div className="category-picker-icon-groups" role="group" aria-label={d.emoji}>{Object.keys(CATEGORY_EMOJI_GROUPS).map(group=><button type="button" key={group} disabled={busy} aria-pressed={emojiGroup===group} onClick={()=>setEmojiGroup(group)}>{d[group]}</button>)}</div><label className="category-picker-emoji-field">{d.ownEmoji}<input aria-label={d.ownEmoji} aria-invalid={!validIcon} aria-describedby={`${formId}-emoji-help`} value={emojiDraft} maxLength={40} disabled={busy} autoComplete="off" spellCheck={false} onChange={event=>{const next=event.target.value.trim();setEmojiDraft(next);if(validCategoryEmoji(next))setIcon('emoji:'+next);}}/></label><p id={`${formId}-emoji-help`} className="category-picker-tip" role={validIcon?undefined:'alert'}>{validIcon?d.emojiHint:d.emojiError}</p><div className="category-picker-icon-library category-picker-emoji-library" role="group" aria-label={d[emojiGroup]}>{CATEGORY_EMOJI_GROUPS[emojiGroup].map(emoji=><button type="button" key={emoji} disabled={busy} aria-label={emoji} aria-pressed={validIcon&&icon==='emoji:'+emoji} data-category-icon={'emoji:'+emoji} onClick={()=>{setEmojiDraft(emoji);setIcon('emoji:'+emoji);}}><span className="category-picker-icon"><span className="category-icon-emoji" aria-hidden="true">{emoji}</span></span></button>)}</div></>}
     </form>:<>
     {managing&&<p className="category-picker-tip">{d.manageHint}</p>}
     {query.trim()||managing ? <><p className="category-picker-section-title" role="status">{query.trim()?c.found:c.all} · {all.length}</p>{all.length ? rows(all) : <p className="category-picker-empty">{c.empty}</p>}</> : <>
@@ -134,7 +137,7 @@ function PickerSheet({options,managementOptions,value,language,isLight,preferenc
    </div>
    {(onCreate||creating||pendingDelete||canCreate||limit||query.trim().length>60||error)&&<footer>
     {error&&<p role="alert">{error}</p>}
-    {pendingDelete?<div className="category-picker-confirm"><strong>{m.remove} «{pendingDelete.label}»?</strong><p>{m.confirm}</p><div><button type="button" disabled={busy} onClick={()=>{setPendingDelete(null);setError('');searchRef.current?.focus();}}>{m.cancel}</button><button type="button" className="category-picker-confirm-delete" disabled={busy} onClick={deleteCategory}>{busy?m.busy:m.delete}</button></div></div>
+    {pendingDelete?<div className="category-picker-confirm"><strong>{m.remove} «{pendingDelete.label}»?</strong><p>{m.confirm}</p><div><button type="button" disabled={busy} onClick={()=>{setPendingDelete(null);setError('');focusBrowse();}}>{m.cancel}</button><button type="button" className="category-picker-confirm-delete" disabled={busy} onClick={deleteCategory}>{busy?m.busy:m.delete}</button></div></div>
     :creating?<div className="category-picker-create-actions"><button type="button" disabled={busy} onClick={()=>close()}>{m.cancel}</button><button type="submit" form={formId} disabled={busy||!name.trim()||!validIcon}>{busy?m.busy:editingCategory?d.save:c.create}</button></div>
     :<>{limit&&<p role="status">{c.limit}</p>}{query.trim().length>60&&<p role="status">{c.long}</p>}{canCreate?<button type="button" className="category-picker-create" disabled={busy} onClick={()=>startCreating(query)}><Plus size={18}/><span>{c.create} «{query.trim()}»</span></button>:onCreate&&<button type="button" className="category-picker-create" disabled={busy} onClick={()=>startCreating('')}><Plus size={18}/><span>{m.add}</span></button>}</>}
    </footer>}
