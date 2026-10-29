@@ -10,6 +10,11 @@ import DisplayScaleSettings, { displayScaleCopy } from './DisplayScaleSettings.j
 import LoginButtons from '../../features/auth/LoginButtons.jsx';
 import AdminCalendarLink from '../../features/admin/AdminCalendarLink.jsx';
 import {CreatorMessagesButton} from '../../features/messages/CreatorMessages.jsx';
+import useSocialProfile from '../../features/social/useSocialProfile.js';
+import SocialAvatar from '../../features/social/SocialAvatar.jsx';
+import ProfileSettings from '../../features/social/ProfileSettings.jsx';
+import FriendsPanel,{FriendsEntry} from '../../features/social/FriendsPanel.jsx';
+import {socialCopy} from '../../features/social/socialCopy.js';
 import { CURRENCIES } from '../config/constants.js';
 import './SettingsPanel.css';
 
@@ -45,13 +50,14 @@ function Group({ title, children }) { return <section className="settings-group"
 export default function SettingsPanel({ t, language, setLanguage, currency, setCurrency, theme, themePreference = theme, setTheme, isLight, user, handleGoogleLogin, handleTelegramLogin, handleGoogleLogout, loginPending, loginError, proAccessActive, proAccessLoading, onPro, onStory, onRestart, onClose, visible, anchorRef }) {
   const locale = language === 'uk' ? 'uk' : language.startsWith('zh') ? 'zh' : ['md','ro'].includes(language) ? 'ro' : language === 'en' ? 'en' : 'ru';
   const copy = COPY[locale];
+  const social=useSocialProfile(user?.id),socialText=socialCopy(language);
   const [page, setPage] = useState('root');
   const [direction, setDirection] = useState('forward');
   const [position, setPosition] = useState({ top: 86, right: 20 });
   const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches);
   const panel = useRef(null);
   const heading = useRef(null);
-  const name = user?.user_metadata?.nickname || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.user_metadata?.preferred_username || user?.email || copy.guest;
+  const name = social.data?.display_name || user?.user_metadata?.nickname || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.user_metadata?.preferred_username || user?.email || copy.guest;
   const parentPage = page === 'about' ? 'help' : 'root';
   const navigate = (next, back = false) => { setDirection(back || next === 'root' ? 'back' : 'forward'); setPage(next); };
   useLayoutEffect(() => {
@@ -72,13 +78,13 @@ export default function SettingsPanel({ t, language, setLanguage, currency, setC
   function keyboard(event) {
     if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); page === 'root' ? onClose() : navigate(parentPage, true); }
     if (event.key !== 'Tab') return;
-    const focusable = [...panel.current.querySelectorAll('button:not(:disabled), a[href], select, input')].filter(el => el.getClientRects().length);
+    const focusable = [...panel.current.querySelectorAll('button:not(:disabled), a[href], select:not(:disabled), input:not(:disabled), textarea:not(:disabled), summary, [tabindex]:not([tabindex="-1"])')].filter(el => el.getClientRects().length);
     const first = focusable[0], last = focusable.at(-1);
     if (event.shiftKey && (document.activeElement === first || document.activeElement === heading.current)) { event.preventDefault(); last?.focus(); }
     else if (!event.shiftKey && (document.activeElement === last || document.activeElement === heading.current)) { event.preventDefault(); first?.focus(); }
   }
   function action(callback) { onClose(); callback?.(); }
-  const title = page === 'root' ? t('settings') : page === 'pro' ? 'DAYRIS PRO' : page === 'display' ? displayScaleCopy(language).title : copy[page];
+  const title = page === 'root' ? t('settings') : page === 'friends' ? socialText.friends : page === 'pro' ? 'DAYRIS PRO' : page === 'display' ? displayScaleCopy(language).title : copy[page];
   const choices = page === 'language' ? LANGUAGES.map(item => ({...item, selected: language === item.code, choose: () => setLanguage(item.code)})) : page === 'currency' ? CURRENCIES.map((item,index) => ({code:item.code,label:`${item.code} — ${copy.currencies[index]}`,symbol:item.symbol,selected:currency===item.code,choose:()=>setCurrency(item.code)})) : [];
   return createPortal(<div className={`settings-overlay${visible ? ' is-visible' : ''}`} data-dayris-settings onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
     <SwipeDismissSheet ref={panel} className="dayris-settings-panel settings-surface" style={{'--settings-top':`${position.top}px`,'--settings-right':`${position.right}px`}} isLight={isLight} onDismiss={onClose} disabled={!mobile} handleClassName="settings-drag-handle" role="dialog" aria-modal="true" aria-labelledby="settings-title" onKeyDown={keyboard}>
@@ -87,7 +93,8 @@ export default function SettingsPanel({ t, language, setLanguage, currency, setC
         <h2 ref={heading} tabIndex={-1} id="settings-title">{title}</h2>
         {page === 'root' && <>
 
-          {user ? <button type="button" className="settings-identity settings-account-card" aria-label={copy.profile} onClick={()=>navigate('profile')}><div className="settings-avatar">{name.charAt(0).toUpperCase()}</div><div><strong>{name}</strong><p>{user.email || copy.profile}</p><span className="settings-membership">{proAccessActive?'DAYRIS PRO':'DAYRIS FREE'}</span></div><ChevronRight size={16} aria-hidden="true"/></button> : <><div className="settings-identity"><div className="settings-avatar"><User size={22}/></div><div><strong>{copy.guest}</strong><p>{copy.guestHint}</p></div></div><div className="settings-auth"><LoginButtons t={t} handleGoogleLogin={handleGoogleLogin} handleTelegramLogin={handleTelegramLogin} loginPending={loginPending} loginError={loginError}/></div></>}
+          {user ? <button type="button" className="settings-identity settings-account-card" aria-label={copy.profile} onClick={()=>navigate('profile')}><SocialAvatar userId={user.id} name={name} path={social.data?.avatar_path} className="settings-avatar"/><div><strong>{name}</strong><p>{user.email || copy.profile}</p><span className="settings-membership">{proAccessActive?'DAYRIS PRO':'DAYRIS FREE'}</span></div><ChevronRight size={16} aria-hidden="true"/></button> : <><div className="settings-identity"><div className="settings-avatar"><User size={22}/></div><div><strong>{copy.guest}</strong><p>{copy.guestHint}</p></div></div><div className="settings-auth"><LoginButtons t={t} handleGoogleLogin={handleGoogleLogin} handleTelegramLogin={handleTelegramLogin} loginPending={loginPending} loginError={loginError}/></div></>}
+          {user&&<FriendsEntry key={user.id} userId={user.id} language={language} onOpen={()=>navigate('friends')}/>}
           <ThemeCollection language={language} theme={theme} preference={themePreference} active={proAccessActive} loading={proAccessLoading} onSelect={setTheme} onPro={()=>action(onPro)}>
             <PhoneMotionControls language={language} theme={theme} active={proAccessActive} loading={proAccessLoading}/>
           </ThemeCollection>
@@ -105,7 +112,8 @@ export default function SettingsPanel({ t, language, setLanguage, currency, setC
         {page==='display' && <DisplayScaleSettings language={language}/>}
         {page==='help' && <Group title={copy.help}><Row icon={RotateCcw} label={copy.restart} onClick={()=>action(onRestart)}/><Row icon={Info} label={locale==='ru'?'О DAYRIS':locale==='zh'?'关于 DAYRIS':locale==='ro'?'Despre DAYRIS':'About DAYRIS'} onClick={()=>navigate('about')}/><a className="settings-row" href={locale==='zh'?'/privacy-zh.html':'/privacy.html'} target="_blank" rel="noreferrer"><ShieldCheck size={18}/><span>{t('privacyPolicy')}</span><ChevronRight size={15}/></a></Group>}
         {page==='currency' && <p className="settings-note">{copy.currencyHint}</p>}
-        {page==='profile' && <div className="settings-profile"><div className="settings-avatar">{name.charAt(0).toUpperCase()}</div><h3>{name}</h3>{user?.email && <p>{user.email}</p>}<Row icon={Sparkles} label="DAYRIS PRO" value={proAccessLoading?'…':proAccessActive?copy.active:copy.learn} onClick={()=>action(onPro)}/><button className="settings-row" onClick={()=>action(handleGoogleLogout)}><LogOut size={18}/>{t('signOut')}</button><a className="settings-delete" href={locale==='zh'?'/delete-account-zh.html':'/delete-account.html'} target="_blank" rel="noreferrer">{t('deleteAccountData')}</a></div>}
+        {page==='profile' && user&&<div className="settings-profile"><ProfileSettings key={user.id} userId={user.id} profile={social.data} language={language}/>{social.error&&<button className="social-button" onClick={social.refresh}>{socialText.refresh}</button>}{user.email&&<p>{user.email}</p>}<Row icon={Sparkles} label="DAYRIS PRO" value={proAccessLoading?'…':proAccessActive?copy.active:copy.learn} onClick={()=>action(onPro)}/><button className="settings-row" onClick={()=>action(handleGoogleLogout)}><LogOut size={18}/>{t('signOut')}</button><a className="settings-delete" href={locale==='zh'?'/delete-account-zh.html':'/delete-account.html'} target="_blank" rel="noreferrer">{t('deleteAccountData')}</a></div>}
+        {page==='friends'&&user&&<FriendsPanel key={user.id} userId={user.id} profile={social.data} language={language} onProfile={()=>navigate('profile')}/>}
         {page==='about' && <div className="settings-about"><BrandIcon className="h-20 w-20"/><h3>DAYRIS</h3><p>{copy.description}</p></div>}
       </div>
     </SwipeDismissSheet>
