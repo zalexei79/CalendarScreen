@@ -14,6 +14,8 @@ try {
   let entry = { id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',user_id:user.id,date_key:'2026-10-05',time:'12:00:00',instrument:'Тестовая покупка',pnl:-20,currency:'USD',platform:'Manual',direction:'SHORT',comment:'' };
   const audit = [];
   let proGrants=[{user_id:user.id,source:'admin',starts_at:'2026-10-01T00:00:00Z',ends_at:'2026-10-25T12:00:00Z'}],proWrites=0;
+  let streak=3,streakWrites=0;
+  const streakState=id=>({user_id:id,snapshot:id===user.id?{user_id:id,current_streak:streak}:null,current_days:id===user.id?streak:0,stored_days:id===user.id?streak:0,server_date:'2026-10-15',time_zone:'Europe/Bucharest',last_active_date:'2026-10-15',last_entry_date:null,completed_today:false,expired:false,admin_adjusted_at:streakWrites?'2026-10-15T12:00:00Z':null});
   const dist = path.resolve('dist');
   await context.route('**/*', async route => {
     const url = new URL(route.request().url());
@@ -21,7 +23,9 @@ try {
     const args = url.pathname.includes('/rpc/') ? route.request().postDataJSON() || {} : {};
     const rpc = url.pathname.split('/rpc/')[1];
     if(rpc === 'admin_capabilities') return json({design:true,viewUsers:mode!=='denied',editUsers:mode==='full'});
-    if(rpc === 'admin_list_users_activity') { listCalls++; assert.ok([0,1,7,30,-1].includes(args.p_days)); const extra=many?Array.from({length:35},(_,i)=>({...other,id:'55555555-5555-4555-8555-'+String(i+1).padStart(12,'0'),name:i===0?'ДлинноеИмяБезПробелов'.repeat(10):`Пользователь ${i+1}`})):[];const users=[user,other,...extra].filter(item=>`${item.name} ${item.email}`.includes(args.p_search)).filter(item=>args.p_days===-1?item.id===other.id:args.p_days>0?item.id===user.id:true).map(item=>({...item,entry_count:item.id===user.id?1:0,last_entry_at:item.id===user.id?'2026-10-15T11:00:00Z':null})); return json({users:users.slice(args.p_offset,args.p_offset+args.p_limit),total:users.length}); }
+    if(rpc === 'admin_streak_state')return json(streakState(args.p_user_id));
+    if(rpc === 'admin_change_streak'){assert.equal(mode,'full');assert.equal(args.p_user_id,user.id);assert.equal(args.p_action,'adjust');assert.equal(args.p_value,1);assert.deepEqual(args.p_expected,streakState(user.id));assert.equal(args.p_note,null);streak++;streakWrites++;return json(streakState(user.id));}
+    if(rpc === 'admin_list_users_activity') { listCalls++; assert.ok([0,1,7,30,-1].includes(args.p_days)); const extra=many?Array.from({length:35},(_,i)=>({...other,id:'55555555-5555-4555-8555-'+String(i+1).padStart(12,'0'),name:i===0?'ДлинноеИмяБезПробелов'.repeat(10):`Пользователь ${i+1}`})):[];const users=[user,other,...extra].filter(item=>`${item.name} ${item.email}`.includes(args.p_search)).filter(item=>args.p_days===-1?item.id===other.id:args.p_days>0?item.id===user.id:true).map(item=>({...item,streak_days:item.id===user.id?streak:0,streak_admin_adjusted_at:item.id===user.id&&streakWrites?'2026-10-15T12:00:00Z':null,entry_count:item.id===user.id?1:0,last_entry_at:item.id===user.id?'2026-10-15T11:00:00Z':null})); return json({users:users.slice(args.p_offset,args.p_offset+args.p_limit),total:users.length}); }
     if(rpc === 'admin_recent_entries') return json({rows:args.p_user_id===other.id?[]:[{...entry,record_key:entry.id,user_id:user.id,name:user.name,email:user.email,dataset:'trades',event_at:'2026-10-15T11:00:00Z',record_date:entry.date_key,title:entry.instrument,amount:entry.pnl}],total:args.p_user_id===other.id?0:1});
     if(rpc === 'admin_user_profile') return json({...([user,other].find(item=>item.id===args.p_user_id)),profile:{nickname:args.p_user_id===user.id?'Тестовый пользователь':'Другой пользователь'},providers:['google']});
     if(rpc === 'admin_pro_state') return json({grants:args.p_user_id===user.id?proGrants:[],subscriptions:[],server_now:'2026-10-15T12:00:00Z'});
@@ -81,6 +85,20 @@ try {
   await page.getByText('PRO активен',{exact:true}).waitFor();
   await page.waitForFunction(()=>!document.querySelector('.people-workbench [role="status"]'));
   await page.screenshot({path:'tests/admin-users-overview-desktop.png',fullPage:true});
+  await page.getByRole('button',{name:'Открыть огонёк',exact:true}).click();
+  await page.getByRole('heading',{name:'Огонёк пользователя',exact:true}).waitFor();
+  await page.getByRole('button',{name:'+1 день',exact:true}).click();
+  const streakDialog=page.getByRole('dialog');await streakDialog.getByText(/3 → 4 дней/).waitFor();
+  await streakDialog.getByRole('button',{name:'Отмена',exact:true}).click();assert.equal(streakWrites,0);
+  await page.getByRole('button',{name:'+1 день',exact:true}).click();
+  await streakDialog.getByRole('button',{name:'Подтвердить изменение огонька',exact:true}).click();
+  await page.getByText('Огонёк обновлён. Изменение записано в журнал.',{exact:true}).waitFor();assert.equal(streak,4);
+  await page.locator('.admin-streak-meter strong').filter({hasText:/^4$/}).waitFor();
+  await page.locator('.people-streak-badge').filter({hasText:'4 дней'}).waitFor();
+  await page.screenshot({path:'tests/admin-streak-desktop.png',fullPage:true});
+  await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:'tests/admin-streak-mobile.png',fullPage:true});
+  await page.setViewportSize({width:1440,height:1000});
+  await page.getByRole('group',{name:'Разделы пользователя'}).getByRole('button',{name:'Обзор',exact:true}).click();
   await page.getByRole('button',{name:'Открыть запись',exact:true}).click();
   assert.equal(await page.getByLabel('Месяц календаря').inputValue(),'2026-10','feed entry must navigate to its real calendar month');
   await page.locator('.admin-record-heading strong').filter({hasText:'Тестовая покупка'}).waitFor();
@@ -137,6 +155,8 @@ try {
   await page.getByRole('button',{name:'Открыть PRO',exact:true}).click();
   await page.getByRole('heading',{name:'PRO не активен',exact:true}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Выдать PRO',exact:true}).count(),0,'read-only role cannot grant inside user card');
+  await page.getByRole('group',{name:'Разделы пользователя'}).getByRole('button',{name:'Огонёк',exact:true}).click();await page.getByRole('heading',{name:'Огонёк пользователя',exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'+1 день',exact:true}).count(),0,'read-only role cannot edit streak');
   assert.equal(await page.locator('.admin-record-heading strong').filter({hasText:'Тестовая покупка'}).count(),0);
   many=true;mode='full';await page.setViewportSize({width:1440,height:1000});await page.reload();
   await page.waitForFunction(()=>document.querySelectorAll('.admin-user-card').length===30);
