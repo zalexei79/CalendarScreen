@@ -4678,7 +4678,7 @@ export default function CalendarScreen() {
         @media (min-width: 640px) { .pro-calendar-day .day-amount { left: 14px; right: 14px; bottom: 14px; } }
         @media (hover: hover) and (pointer: fine) {
           .pro-calendar-day:hover { z-index: 2; }
-          .pro-calendar-day:hover .day-amount { bottom: 50%; transform: translateY(50%); text-align: center; font-size: clamp(12px, 1.25vw, 20px); }
+          .pro-calendar-day:hover .day-amount { bottom: 50%; transform: translateY(50%); text-align: center; font-size: calc(clamp(12px, 1.25vw, 20px) * var(--dayris-interface-scale,1) * var(--dayris-text-scale,1)); }
           .pro-calendar-day.has-calendar-plans:hover .day-amount { bottom: auto; transform: none; text-align: left; font-size: inherit; }
           .pro-calendar-day:hover .day-amount-short { display: none; }
           .pro-calendar-day:hover .day-amount-full { display: block; overflow: hidden; text-overflow: ellipsis; }
@@ -4687,9 +4687,9 @@ export default function CalendarScreen() {
         @keyframes premiumFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
         .premium-shell { min-height: 100dvh; }
         /* Reserve the dock's space in the scrollable calendar, including iOS's home indicator. */
-        .premium-shell { font-size: 15px; }
+        .premium-shell { font-size: calc(15px * var(--dayris-interface-scale,1) * var(--dayris-text-scale,1)); }
         .premium-shell .font-data { letter-spacing: .055em; }
-        @media (max-width: 640px) { .premium-shell { font-size: 16px; } .premium-shell p, .premium-shell button { -webkit-font-smoothing: antialiased; } }
+        @media (max-width: 640px) { .premium-shell { font-size: calc(16px * var(--dayris-interface-scale,1) * var(--dayris-text-scale,1)); } .premium-shell p, .premium-shell button { -webkit-font-smoothing: antialiased; } }
         @keyframes proEmber { 0%,100% { opacity:.55; transform:scale(.85) } 50% { opacity:1; transform:scale(1.15) } }
         .pro-ember { animation: proEmber 1.8s ease-in-out infinite; }
         @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }

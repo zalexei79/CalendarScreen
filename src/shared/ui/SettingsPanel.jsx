@@ -1,11 +1,12 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronLeft, ChevronRight, Check, Languages, CircleDollarSign, Mic, Play, Sparkles, User, LogOut, ShieldCheck, Info, RotateCcw, Send, ArrowUpRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Check, Languages, CircleDollarSign, Mic, Play, Sparkles, User, LogOut, ShieldCheck, Info, RotateCcw, Send, ArrowUpRight, Type } from 'lucide-react';
 import SwipeDismissSheet from './SwipeDismissSheet.jsx';
 import VoiceSettings from './VoiceSettings.jsx';
 import BrandIcon from './BrandIcon.jsx';
 import ThemeCollection from './ThemeCollection.jsx';
 import PhoneMotionControls from './PhoneMotionControls.jsx';
+import DisplayScaleSettings, { displayScaleCopy } from './DisplayScaleSettings.jsx';
 import LoginButtons from '../../features/auth/LoginButtons.jsx';
 import AdminCalendarLink from '../../features/admin/AdminCalendarLink.jsx';
 import {CreatorMessagesButton} from '../../features/messages/CreatorMessages.jsx';
@@ -77,7 +78,7 @@ export default function SettingsPanel({ t, language, setLanguage, currency, setC
     else if (!event.shiftKey && (document.activeElement === last || document.activeElement === heading.current)) { event.preventDefault(); first?.focus(); }
   }
   function action(callback) { onClose(); callback?.(); }
-  const title = page === 'root' ? t('settings') : page === 'pro' ? 'DAYRIS PRO' : copy[page];
+  const title = page === 'root' ? t('settings') : page === 'pro' ? 'DAYRIS PRO' : page === 'display' ? displayScaleCopy(language).title : copy[page];
   const choices = page === 'language' ? LANGUAGES.map(item => ({...item, selected: language === item.code, choose: () => setLanguage(item.code)})) : page === 'currency' ? CURRENCIES.map((item,index) => ({code:item.code,label:`${item.code} — ${copy.currencies[index]}`,symbol:item.symbol,selected:currency===item.code,choose:()=>setCurrency(item.code)})) : [];
   return createPortal(<div className={`settings-overlay${visible ? ' is-visible' : ''}`} data-dayris-settings onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
     <SwipeDismissSheet ref={panel} className="dayris-settings-panel settings-surface" style={{'--settings-top':`${position.top}px`,'--settings-right':`${position.right}px`}} isLight={isLight} onDismiss={onClose} disabled={!mobile} handleClassName="settings-drag-handle" role="dialog" aria-modal="true" aria-labelledby="settings-title" onKeyDown={keyboard}>
@@ -90,6 +91,7 @@ export default function SettingsPanel({ t, language, setLanguage, currency, setC
           <ThemeCollection language={language} theme={theme} preference={themePreference} active={proAccessActive} loading={proAccessLoading} onSelect={setTheme} onPro={()=>action(onPro)}>
             <PhoneMotionControls language={language} theme={theme} active={proAccessActive} loading={proAccessLoading}/>
           </ThemeCollection>
+          <Row icon={Type} label={displayScaleCopy(language).title} onClick={()=>navigate('display')}/>
           <Group title={copy.calendar}><Row icon={CircleDollarSign} label={copy.currency} value={currency} onClick={()=>navigate('currency')}/><Row icon={Languages} label={copy.language} value={LANGUAGES.find(item=>item.code===language)?.label} onClick={()=>navigate('language')}/><Row icon={Mic} label={copy.voice} onClick={()=>navigate('voice')}/></Group>
           {onStory && <button type="button" className="settings-story-card" onClick={()=>action(onStory)}><Play size={18} aria-hidden="true"/><span><strong>{copy.story}</strong><small>{copy.storyHint}</small></span><ChevronRight size={15} aria-hidden="true"/></button>}
           <Row icon={Info} label={copy.help} onClick={()=>navigate('help')}/>
@@ -100,6 +102,7 @@ export default function SettingsPanel({ t, language, setLanguage, currency, setC
         </>}
         {choices.length > 0 && <div className="settings-choices" role="group" aria-label={title}>{choices.map(({code,label,icon:Icon,symbol,selected,choose})=><button type="button" key={code} className={`settings-choice${selected?' is-selected':''}`} aria-pressed={selected} onClick={choose}>{Icon && <Icon size={21}/>} {symbol && <span className="settings-choice-symbol">{symbol}</span>}<span>{label}</span>{selected && <Check size={19}/>}</button>)}{page==='theme' && <p className="settings-note">{copy.systemHint}</p>}</div>}
         {page==='voice' && <VoiceSettings language={language} isLight={isLight}/>}
+        {page==='display' && <DisplayScaleSettings language={language}/>}
         {page==='help' && <Group title={copy.help}><Row icon={RotateCcw} label={copy.restart} onClick={()=>action(onRestart)}/><Row icon={Info} label={locale==='ru'?'О DAYRIS':locale==='zh'?'关于 DAYRIS':locale==='ro'?'Despre DAYRIS':'About DAYRIS'} onClick={()=>navigate('about')}/><a className="settings-row" href={locale==='zh'?'/privacy-zh.html':'/privacy.html'} target="_blank" rel="noreferrer"><ShieldCheck size={18}/><span>{t('privacyPolicy')}</span><ChevronRight size={15}/></a></Group>}
         {page==='currency' && <p className="settings-note">{copy.currencyHint}</p>}
         {page==='profile' && <div className="settings-profile"><div className="settings-avatar">{name.charAt(0).toUpperCase()}</div><h3>{name}</h3>{user?.email && <p>{user.email}</p>}<Row icon={Sparkles} label="DAYRIS PRO" value={proAccessLoading?'…':proAccessActive?copy.active:copy.learn} onClick={()=>action(onPro)}/><button className="settings-row" onClick={()=>action(handleGoogleLogout)}><LogOut size={18}/>{t('signOut')}</button><a className="settings-delete" href={locale==='zh'?'/delete-account-zh.html':'/delete-account.html'} target="_blank" rel="noreferrer">{t('deleteAccountData')}</a></div>}

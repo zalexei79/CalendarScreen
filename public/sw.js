@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v121-message-card-editor-replies';
+const CACHE_NAME = 'atj-cache-v122-display-scale-settings';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

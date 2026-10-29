@@ -1,3 +1,12 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+html { font-size:16px; touch-action:pan-x pan-y; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+body { touch-action:pan-x pan-y; font-size:calc(1rem * var(--dayris-interface-scale,1) * var(--dayris-text-scale,1)); --dayris-control-font-size:calc(1rem * var(--dayris-interface-scale,1) * var(--dayris-text-scale,1)); }
+/* Safari must not zoom the viewport when a small text field receives focus. */
+@media (pointer:coarse) {
+  input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not([type=color]), textarea, select {
+    font-size:max(16px,var(--dayris-control-font-size,1rem))!important;
+  }
+}
