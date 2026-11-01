@@ -1,12 +1,55 @@
-import React,{useEffect,useState} from 'react';
+import React,{useEffect,useLayoutEffect,useRef,useState} from 'react';
+import {CalendarDays,Flame,LockKeyhole,ArrowUpRight,Send,Check,X,RotateCcw,LoaderCircle} from 'lucide-react';
 import {supabase} from '../../supabaseClient';
+import {syncAccountActivityStreak} from '../../shared/lib/accountActivityStreak.js';
+import {chatLocale} from '../messages/chatCopy.js';
 import DayHistoryCard from './DayHistoryCard.jsx';
-import {socialHubCopy} from './socialHubCopy.js';
-const words={ru:['Поделиться днём','Записей','Отправить историю','Будет отправлена вся история дня, включая названия, суммы и комментарии.','Отмена','Не удалось загрузить день.'],uk:['Поділитися днем','Записів','Надіслати історію','Буде надіслано всі записи дня, суми та коментарі.','Скасувати','Не вдалося завантажити день.'],en:['Share a day','Entries','Send day history','All entries, amounts and comments for this day will be shared.','Cancel','Could not load this day.'],md:['Distribuie o zi','Înregistrări','Trimite istoricul','Se trimit toate înregistrările zilei, sumele și comentariile.','Anulează','Ziua nu s-a putut încărca.'],'zh-CN':['分享某一天','记录数','发送历史','将分享当天的全部记录、金额和备注。','取消','无法加载此日期。']};
-export const dayShareCopy=language=>words[language==='ro'?'md':language]||words.en;
-export default function ShareCalendarDay({userId,language,onCancel,onSend}){
- const t=dayShareCopy(language),h=socialHubCopy(language),now=new Date(),[day,setDay]=useState(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`),[state,setState]=useState({day:'',data:null,error:false}),[amounts,setAmounts]=useState(false),[details,setDetails]=useState(false);
- useEffect(()=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(day))return;let alive=true;supabase.rpc('social_day_history',{p_day:day,p_owner:userId}).then(({data,error})=>{if(alive)setState({day,data:!error&&data?.owner_id===userId?data:null,error:Boolean(error)||data?.owner_id!==userId});}).catch(()=>{if(alive)setState({day,data:null,error:true});});return()=>{alive=false;};},[day,userId]);
- const data=state.day===day?state.data:null,preview=data&&(details?data:{...data,totals:amounts?data.totals:[],records:[],summary:true,amountsVisible:amounts});
- return <section className="chat-day-share"><label><span>{t[0]}</span><input aria-label={t[0]} type="date" min="1900-01-01" max="2200-12-31" value={day} onChange={e=>setDay(e.target.value)}/></label>{preview&&<DayHistoryCard data={preview} language={language}/>}<label className="social-day-option"><input type="checkbox" checked={amounts||details} disabled={details} onChange={e=>setAmounts(e.target.checked)}/><span>{h.amounts}</span></label><label className="social-day-option"><input type="checkbox" checked={details} onChange={e=>setDetails(e.target.checked)}/><span>{h.details}</span></label>{state.day===day&&state.error&&<p role="alert">{t[5]}</p>}{details&&<p>{t[3]}</p>}<div><button type="button" disabled={!data} onClick={()=>onSend({...data,shareDetails:details,shareAmounts:amounts})}>{t[2]}</button><button type="button" onClick={onCancel}>{t[4]}</button></div></section>;
+import StreakShareCard from './StreakShareCard.jsx';
+import {momentShareCopy} from './momentShareCopy.js';
+import './SocialShare.css';
+
+export const dayShareCopy=language=>[momentShareCopy(language).title];
+export default function ShareCalendarDay({userId,language,onCancel,onSend,initialKind='day',sending=false,sent=false,recipientName,onExternalShare}){
+ const t=momentShareCopy(language),now=new Date(),[kind,setKind]=useState(initialKind==='streak'?'streak':'day'),[mode,setMode]=useState('private');
+ const [day,setDay]=useState(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`),[revision,setRevision]=useState(0);
+ const [state,setState]=useState({key:'',data:null,error:false}),card=useRef(null),animation=useRef(null);
+ const key=kind==='day'?'day:'+day:'streak';
+ useEffect(()=>{setKind(initialKind==='streak'?'streak':'day');},[initialKind]);
+ useEffect(()=>{
+  if(kind==='day'&&!/^\d{4}-\d{2}-\d{2}$/.test(day))return;
+  let alive=true;const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
+  async function load(){
+   try{
+    let data;
+    if(kind==='streak')data=await syncAccountActivityStreak({client:supabase,storage:localStorage,ownerId:userId,signal:controller.signal});
+    else{const response=await supabase.rpc('social_day_history',{p_day:day,p_owner:userId}).abortSignal(controller.signal);if(response.error)throw response.error;data=response.data;if(data?.owner_id!==userId)throw new Error('Owner changed');}
+    if(alive)setState({key,data,error:false});
+   }catch{if(alive)setState({key,data:null,error:true});}finally{clearTimeout(timer);}
+  }
+  load();return()=>{alive=false;controller.abort();clearTimeout(timer);};
+ },[userId,kind,day,key,revision]);
+ useLayoutEffect(()=>{
+  animation.current?.cancel();
+  if(card.current&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches)animation.current=card.current.animate([{transform:'translateY(8px) scale(.985)',opacity:.65},{transform:'translateY(0) scale(1)',opacity:1}],{duration:340,easing:'cubic-bezier(.2,.7,.2,1)'});
+  return()=>animation.current?.cancel();
+ },[kind,mode,state.data]);
+ const data=state.key===key?state.data:null,failed=state.key===key&&state.error,streak=kind==='streak',disabled=sending||sent;
+ const preview=data&&!streak&&(mode==='details'?data:{...data,totals:mode==='amounts'?data.totals:[],records:[],summary:true,amountsVisible:mode==='amounts'});
+ const canSend=Boolean(data&&(!streak||data.currentStreak>0)&&!disabled);
+ const formattedDay=/^\d{4}-\d{2}-\d{2}$/.test(day)?new Date(day+'T12:00:00').toLocaleDateString(chatLocale(language),{day:'numeric',month:'long'}):t.date;
+ function send(){if(canSend)onSend(streak?{kind:'streak'}:{...data,shareDetails:mode==='details',shareAmounts:mode==='amounts'});}
+ return <section className={`social-share-panel${sent?' is-sent':''}`} aria-label={t.title} aria-busy={sending}>
+  <div className="social-share-top"><div><span className="social-share-eyebrow">DAYRIS · {t.title}</span>{recipientName&&<p><strong>{recipientName}</strong></p>}</div><button type="button" className="social-share-close" onClick={onCancel} disabled={disabled} aria-label={t.close}><X size={18}/></button></div>
+  <div className="social-share-kind" role="group" aria-label={t.title} data-kind={kind}><span className="social-share-kind-highlight"/>{[['day',CalendarDays,t.day],['streak',Flame,t.streak]].map(([id,Icon,label])=><button type="button" key={id} aria-pressed={kind===id} disabled={disabled} onClick={()=>setKind(id)}><Icon size={17}/>{label}</button>)}</div>
+  <div className="social-share-scroll">
+   {!streak&&<label className="social-share-date"><CalendarDays size={15}/><span>{formattedDay}</span><ArrowUpRight size={13}/><input aria-label={t.date} type="date" min="1900-01-01" max="2200-12-31" value={day} disabled={disabled} onChange={e=>setDay(e.target.value)}/></label>}
+   <div className="social-share-preview" ref={card}>
+    {data?streak?<StreakShareCard data={{days:data.currentStreak,paused:data.paused,day:data.serverDate}} language={language}/>:<DayHistoryCard data={preview} language={language}/>:<div className="social-share-placeholder" role="status">{failed?<><RotateCcw size={25}/><p>{t.loadError}</p><button type="button" onClick={()=>{setState({key:'',data:null,error:false});setRevision(n=>n+1);}}>{t.retry}</button></>:<><span className="social-share-skeleton"/><LoaderCircle size={22} className="social-share-spinner"/></>}</div>}
+   </div>
+   {!streak&&<><div className="social-share-modes" role="group" aria-label={t.title}>{[['private',LockKeyhole],['amounts',CalendarDays],['details',ArrowUpRight]].map(([id,Icon])=><button type="button" key={id} aria-pressed={mode===id} disabled={disabled} onClick={()=>setMode(id)}><Icon size={14}/><span>{t[id]}</span></button>)}</div><p className="social-share-disclosure" aria-live="polite">{t[mode+'Hint']}</p></>}
+   {streak&&data?.currentStreak===0&&<p className="social-share-disclosure">{t.streakEmpty}</p>}
+   {streak&&onExternalShare&&<button type="button" className="social-share-outside" disabled={disabled} onClick={onExternalShare}>{t.outside}<ArrowUpRight size={14}/></button>}
+  </div>
+  <footer className="social-share-footer"><button type="button" className="social-share-submit" disabled={!canSend} onClick={send}>{sent?<Check size={19}/>:sending?<LoaderCircle size={19} className="social-share-spinner"/>:<Send size={18}/>}<span>{sent?t.sent:sending?t.sending:t.send}</span></button><span className="social-share-footer-note"><LockKeyhole size={11}/>{recipientName||'DAYRIS'}</span></footer>
+ </section>;
 }

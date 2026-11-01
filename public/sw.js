@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v129-social-hub';
+const CACHE_NAME = 'atj-cache-v130-social-moments';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
@@ -23,8 +23,8 @@ self.addEventListener('push', (event) => {
     ? data.body.trim().replace(/\s+/g, ' ')
     : 'Откройте календарь и отметьте выполнение.';
   event.waitUntil(self.registration.showNotification(title, {
-    body: friendId && typeof data.body === 'string' && data.body.startsWith('DAYRIS_DAY_V1\n')
-      ? 'DAYRIS · '+(data.body.match(/"day":"(\d{4}-\d{2}-\d{2})"/)?.[1] || '📅') : body,
+    body: friendId && typeof data.body === 'string' && /^DAYRIS_(DAY|STREAK)_V1\n/.test(data.body)
+      ? 'DAYRIS · '+(data.body.startsWith('DAYRIS_STREAK_V1')?'🔥 '+(data.body.match(/"days":(\d+)/)?.[1]||''):(data.body.match(/"day":"(\d{4}-\d{2}-\d{2})"/)?.[1]||'📅')) : body,
     icon: '/icon-192.png?v=20260920-desktop-v4',
     tag: deliveryId ? 'dayris-' + deliveryId : 'dayris-reminder',
     data: { reminderId, ...(proNotificationId ? { proNotificationId } : {}),...(creatorMessageId?{creatorMessageId}:{}),...(friendId?{friendId}:{}) },

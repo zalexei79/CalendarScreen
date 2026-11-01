@@ -1,0 +1,86 @@
+/* A quiet paper-and-metal treatment, scoped to personal sharing. */
+.dayris-chat-friend,.social-share-panel,.social-moment-card{--moment-bg:#171e21;--moment-surface:#20292b;--moment-ink:#eeeade;--moment-muted:#a2ada8;--moment-gold:#d8c18f;--moment-line:#cfc6a81c;--moment-ease:cubic-bezier(.2,.7,.2,1)}
+.dayris-chat-friend{background:var(--moment-bg);--chat-ink:var(--moment-ink);--chat-muted:var(--moment-muted);--chat-line:var(--moment-line)}
+.dayris-chat-friend .chat-peer-header,.dayris-chat-friend .chat-composer{background:#1b2326}
+.dayris-chat-friend .chat-peer-label h2{color:var(--moment-ink)}
+.dayris-chat-friend .chat-bubble{background:#242e30;box-shadow:0 2px 9px #00000010}
+.dayris-chat-friend .is-mine .chat-bubble{background:#32392f}
+.dayris-chat-friend .chat-day-divider>span{background:#252d2c;color:var(--moment-muted)}
+.dayris-chat-friend .chat-composer textarea{background:#252e30;border-color:var(--moment-line);color:var(--moment-ink)}
+.dayris-chat-friend .chat-send{background:var(--moment-gold);color:#25291f}
+.dayris-chat-friend .chat-share-day-button{color:var(--moment-gold)}
+.dayris-chat-friend .chat-message-meta,.dayris-chat-friend .is-mine .chat-message-meta{color:#b2b8a7}
+.dayris-chat-friend .chat-timeline-wrap[hidden]{display:none}
+.social-share-panel{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:var(--moment-bg);color:var(--moment-ink);animation:moment-panel-in 380ms var(--moment-ease) both}
+.social-share-panel button{font:inherit;-webkit-tap-highlight-color:transparent}
+.social-share-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;padding:19px 22px 13px}
+.social-share-eyebrow{font-size:10px;letter-spacing:.13em;color:var(--moment-muted)}
+.social-share-top p{margin:5px 0 0;font-size:13px;color:var(--moment-muted)}
+.social-share-top p strong{color:var(--moment-ink);font-weight:500}
+.dayris-chat .social-share-close{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;border:1px solid var(--moment-line);border-radius:50%;padding:0;background:transparent;color:var(--moment-muted)}
+.social-share-kind{position:relative;display:flex;flex-shrink:0;margin:0 22px 3px;padding:4px;border:1px solid var(--moment-line);border-radius:15px;background:#222a2b;isolation:isolate}
+.social-share-kind-highlight{position:absolute;z-index:-1;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);border-radius:11px;background:#363b31;box-shadow:0 2px 8px #0002;transition:transform 360ms var(--moment-ease)}
+.social-share-kind[data-kind=streak] .social-share-kind-highlight{transform:translateX(100%)}
+.dayris-chat .social-share-kind button{display:flex;align-items:center;justify-content:center;gap:8px;flex:1;min-width:0;min-height:40px;border:0;border-radius:10px;background:transparent;color:var(--moment-muted);font-size:13px;transition:color 180ms ease}
+.dayris-chat .social-share-kind button[aria-pressed=true]{color:var(--moment-gold)}
+.social-share-scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:14px 22px 8px;scrollbar-width:thin}
+.social-share-date{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;min-height:35px;width:fit-content;margin:0 auto 12px;color:var(--moment-muted);font-size:12px}
+.social-share-date input{position:absolute;inset:0;opacity:0;width:100%;min-width:0;cursor:pointer;color-scheme:dark}
+.social-share-date:focus-within{outline:2px solid var(--moment-gold);outline-offset:3px;border-radius:8px}
+.social-share-preview{max-width:400px;margin:0 auto;transform-origin:50% 40%;transition:transform 320ms var(--moment-ease),opacity 240ms ease}
+.social-moment-card{position:relative;isolation:isolate;overflow:hidden;min-width:0;padding:25px;border:1px solid #d9c69730;border-radius:23px;background:linear-gradient(145deg,#2c3430,#1e292a 72%);box-shadow:inset 0 1px #f6e5b40b,0 14px 35px #00000018;color:var(--moment-ink)}
+.social-moment-card::before{content:'';position:absolute;z-index:-1;pointer-events:none;width:220px;height:220px;top:-135px;right:-90px;border-radius:50%;background:radial-gradient(circle,#dac18619,transparent 70%)}
+.social-moment-card>header{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:10px;font-weight:500;letter-spacing:.15em;color:var(--moment-gold)}
+.social-moment-card>header>span:first-child{letter-spacing:.25em}
+.social-day-date{display:flex;align-items:baseline;gap:12px;margin:25px 0 4px}
+.social-day-date>strong{font-size:62px;line-height:1.1;font-weight:400;letter-spacing:-.075em;color:var(--moment-ink);font-variant-numeric:tabular-nums}
+.social-day-date>span{font-size:19px;font-weight:400;letter-spacing:-.025em;color:var(--moment-gold)}
+.social-day-weekday{font-size:12px;color:var(--moment-muted);text-transform:capitalize;margin:0 0 25px!important}
+.social-day-count{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:16px;border-top:1px solid var(--moment-line);font-size:12px;color:var(--moment-muted)}
+.social-day-count>strong{font-size:17px;font-weight:400;color:var(--moment-ink)}
+.social-day-amounts{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
+.social-day-amounts>span{padding:7px 10px;border-radius:9px;background:#dbc99c0d;color:var(--moment-ink);font-size:13px;font-variant-numeric:tabular-nums}
+.social-moment-card>footer{display:flex;align-items:flex-start;gap:7px;padding-top:15px;margin-top:18px;font-size:11px;line-height:1.6;color:var(--moment-muted)}
+.social-moment-card>footer svg{margin-top:2px;flex-shrink:0}
+.social-streak-card{text-align:center;background:radial-gradient(ellipse at 50% 30%,#3f3d2c88,transparent 65%),linear-gradient(150deg,#2b322c,#1c2727 80%)}
+.social-streak-art{position:relative;display:grid;place-items:center;height:102px;margin:15px 0 0}
+.social-streak-halo{position:absolute;inset:7px auto auto;width:100px;height:100px;border-radius:50%;background:radial-gradient(circle,#e0bd5325,transparent 70%);animation:moment-halo-in 650ms var(--moment-ease) both}
+.social-streak-flame{position:relative;width:67px;height:76px;color:#e0c184;fill:#dfb34f10;filter:drop-shadow(0 4px 14px #e1aa431e);animation:moment-flame-in 560ms var(--moment-ease) both}
+.social-streak-number{display:flex;justify-content:center;align-items:baseline;gap:9px;margin:0 0 9px;color:var(--moment-gold)}
+.social-streak-number>strong{font-size:67px;line-height:1;font-weight:400;letter-spacing:-.075em;font-variant-numeric:tabular-nums}
+.social-streak-number>span{font-size:18px;letter-spacing:-.025em}
+.social-moment-card .social-moment-caption{font-size:13px;line-height:1.6;color:var(--moment-ink);margin:0}
+.social-streak-card>footer{justify-content:center;border-top:1px solid var(--moment-line);margin-top:22px}
+.social-moment-seal{width:5px;height:5px;flex-shrink:0;border-radius:50%;background:var(--moment-gold);margin-top:6px}
+.social-share-modes{display:flex;gap:6px;max-width:400px;margin:19px auto 0}
+.dayris-chat .social-share-modes>button{display:flex;align-items:center;justify-content:center;gap:5px;flex:1;min-width:0;min-height:41px;padding:7px 6px;border:1px solid var(--moment-line);border-radius:12px;background:transparent;color:var(--moment-muted);font-size:11px;white-space:nowrap;transition:background 200ms ease,color 200ms ease,border-color 200ms ease,transform 160ms var(--moment-ease)}
+.dayris-chat .social-share-modes>button[aria-pressed=true]{border-color:#d8c18f66;background:#cbbb8f12;color:var(--moment-gold)}
+.social-share-panel .social-share-disclosure{font-size:11px;line-height:1.65;max-width:360px;text-align:center;min-height:37px;margin:12px auto 3px;color:var(--moment-muted)}
+.social-share-footer{flex-shrink:0;display:grid;gap:8px;padding:13px 22px max(12px,env(safe-area-inset-bottom));background:var(--moment-bg);border-top:1px solid var(--moment-line)}
+.dayris-chat .social-share-submit{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;max-width:400px;min-height:49px;margin:0 auto;padding:11px 16px;border:1px solid #ecd9a638;border-radius:15px;background:linear-gradient(125deg,#e0cba1,#c6aa75);box-shadow:inset 0 1px #fff3,0 5px 17px #00000018;color:#26291f;font-size:14px;font-weight:550;transition:transform 160ms var(--moment-ease),box-shadow 240ms ease}
+.dayris-chat .social-share-submit:disabled{opacity:.6}
+.social-share-footer-note{display:flex;align-items:center;justify-content:center;gap:5px;color:var(--moment-muted);font-size:10px}
+.dayris-chat .social-share-outside{display:flex;align-items:center;justify-content:center;gap:5px;min-height:40px;margin:10px auto 0;padding:6px;border:0;background:transparent;color:var(--moment-muted);font-size:11px}
+.social-share-placeholder{min-height:260px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;padding:25px;border:1px solid var(--moment-line);border-radius:23px;background:var(--moment-surface);color:var(--moment-muted);text-align:center;font-size:12px}
+.social-share-placeholder>p{margin:0;max-width:240px;line-height:1.6}
+.dayris-chat .social-share-placeholder>button{border:1px solid var(--moment-line);background:transparent;color:var(--moment-gold);border-radius:10px;padding:9px 14px;min-height:40px;font-size:12px}
+.social-share-skeleton{height:62px;width:62px;border:1px solid var(--moment-line);border-radius:20px;background:#cbb58108}
+.social-share-spinner{animation:moment-spin 900ms linear infinite}
+.social-share-panel.is-sent .social-share-preview{transform:translateY(-7px) scale(.975);opacity:.65}
+.social-share-panel.is-sent .social-share-submit{background:#d2c69c}
+.dayris-chat-friend .chat-share-actions{display:flex;align-items:center;gap:2px;align-self:center}
+.dayris-chat-friend .chat-share-actions .chat-share-day-button{flex:0 0 29px;width:29px;height:44px;color:var(--moment-gold)}
+.dayris-chat-friend .chat-composer{gap:8px}
+.dayris-chat-friend .chat-bubble:has(.social-moment-card){max-width:94%;width:335px;padding:6px;background:transparent;box-shadow:none}
+.dayris-chat-friend .chat-bubble .social-moment-card{padding:21px}
+.dayris-chat-friend .chat-message-row:has(.social-moment-card){animation:moment-card-in 350ms var(--moment-ease) both}
+.social-share-panel .day-history-card{border-radius:22px;padding:20px;background:var(--moment-surface);border-color:var(--moment-line)}
+.dayris-chat .social-share-modes>button:active,.dayris-chat .social-share-submit:active{transform:scale(.975)}
+.social-share-panel button:focus-visible{outline:2px solid var(--moment-gold);outline-offset:3px}
+@keyframes moment-panel-in{from{opacity:.65;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes moment-card-in{from{opacity:.7;transform:translateY(9px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes moment-flame-in{from{opacity:.4;transform:translateY(7px) scale(.92)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes moment-halo-in{from{opacity:.2;transform:scale(.75)}to{opacity:1;transform:scale(1)}}
+@keyframes moment-spin{to{transform:rotate(360deg)}}
+@media(max-width:380px){.social-share-top{padding:15px 16px 11px}.social-share-kind{margin-left:16px;margin-right:16px}.social-share-scroll{padding:11px 16px 7px}.social-share-footer{padding-left:16px;padding-right:16px}.social-moment-card{padding:21px}.social-share-modes{gap:4px}.dayris-chat .social-share-modes>button{font-size:10px;gap:4px;padding:7px 4px}.social-share-modes svg{width:12px}.social-day-date>strong{font-size:55px}.social-streak-art{height:90px}.social-streak-number>strong{font-size:59px}.dayris-chat-friend .chat-composer{padding-left:9px;padding-right:9px;gap:5px}}
+@media(prefers-reduced-motion:reduce){.social-share-panel,.social-share-panel *,.dayris-chat-friend .chat-message-row:has(.social-moment-card){animation:none!important;transition:none!important}}
