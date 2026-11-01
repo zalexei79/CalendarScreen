@@ -94,6 +94,7 @@ import { TRANSLATIONS, translate } from './src/shared/i18n';
 import { useAuth } from './src/features/auth/hooks/useAuth';
 import { useTrades } from './src/features/trades-sync/hooks/useTrades';
 import Header from './Header';
+import useAppInstall from './src/shared/ui/useAppInstall.js';
 import HistoryChart from './HistoryChart';
 import DayNote from './src/features/day-notes/DayNote';
 import { useCurveNotes } from './src/features/day-notes/useCurveNotes';
@@ -2129,54 +2130,7 @@ export default function CalendarScreen() {
   const dragTagIndex = useRef(null);
 
   // --- Install as app (PWA) ------------------------------------------------
-  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
-  const [installInfoOpen, setInstallInfoOpen] = useState(false);
-  const [isPwaInstalled, setIsPwaInstalled] = useState(() => {
-    const standalone = window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    try { return standalone || window.localStorage.getItem('atj_pwa_installed') === 'true'; } catch { return standalone; }
-  });
-  const installInfoRef = useRef(null);
-  const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent);
-
-  useEffect(() => {
-    function onBeforeInstallPrompt(e) {
-      e.preventDefault();
-      setDeferredInstallPrompt(e);
-    }
-    function onAppInstalled() {
-      setIsPwaInstalled(true);
-      try { window.localStorage.setItem('atj_pwa_installed', 'true'); } catch { /* ignore */ }
-    }
-    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
-    window.addEventListener('appinstalled', onAppInstalled);
-    return () => {
-      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', onAppInstalled);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!installInfoOpen) return;
-    function onDocClick(e) {
-      if (installInfoRef.current && !installInfoRef.current.contains(e.target)) setInstallInfoOpen(false);
-    }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [installInfoOpen]);
-
-  const installInstructions = isIOS
-    ? t('installIos')
-    : t('installOther');
-
-  async function handleInstallClick() {
-    if (deferredInstallPrompt) {
-      deferredInstallPrompt.prompt();
-      await deferredInstallPrompt.userChoice;
-      setDeferredInstallPrompt(null);
-      return;
-    }
-    setInstallInfoOpen((v) => !v);
-  }
+  const { installed: isPwaInstalled, showSteps: installInfoOpen, setShowSteps: setInstallInfoOpen, install: handleInstallClick } = useAppInstall();
 
   // --- Period filter state (compact popover) --------------------------------
   const [periodPreset, setPeriodPreset] = useState('Вся история');
@@ -4733,8 +4687,8 @@ export default function CalendarScreen() {
         calendarTypeFilter={calendarTypeFilter} setCalendarTypeFilter={setCalendarTypeFilter}
         openConnectModal={openConnectModal} ctraderConnected={ctraderConnected} ctraderReconnect={ctraderReconnect}
         metaTraderState={metaTraderState.owner === user?.id && proAccessActive ? metaTraderState : {}}
-        installInfoRef={installInfoRef} handleInstallClick={handleInstallClick}
-        pendingSyncCount={pendingSyncCount} installInfoOpen={installInfoOpen} installInstructions={installInstructions} isPwaInstalled={isPwaInstalled}
+        handleInstallClick={handleInstallClick} closeInstallInfo={() => setInstallInfoOpen(false)}
+        pendingSyncCount={pendingSyncCount} installInfoOpen={installInfoOpen} isPwaInstalled={isPwaInstalled}
         failedSyncCount={failedSyncCount} retryFailedSync={retryFailedSync}
         proAccessActive={proAccessActive} proAccessLoading={proAccessLoading} proAccessUntil={proAccessUntil}
         openReferralHub={openReferralHub} openProPresentation={openProPresentation} invitedCount={invitedCount} referralLabel={proAccessCopy.invitesTab}

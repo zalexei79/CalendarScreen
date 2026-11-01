@@ -1,0 +1,38 @@
+body dialog.dayris-install-dialog {
+  --install-text: #f4f4f5; --install-muted: #b5b5be; --install-line: #36343a; --install-row: #242328;
+  position: fixed; inset: 0; margin: auto; box-sizing: border-box;
+  width: min(420px, calc(100vw - 32px)); max-width: none;
+  max-height: calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  padding: 24px; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+  border: 1px solid #494137; border-radius: 26px;
+  background: #19181c; color: var(--install-text); box-shadow: 0 24px 100px #0009;
+  font-family: inherit; text-align: left; color-scheme: dark;
+}
+body dialog.dayris-install-dialog[data-light="true"] {
+  --install-text: #202126; --install-muted: #555762; --install-line: #dedde1; --install-row: #f5f4f2;
+  background: #fff; border-color: #dfd7c8; color-scheme: light;
+}
+body dialog.dayris-install-dialog::backdrop { background: #08090cb8; backdrop-filter: blur(5px); }
+.dayris-install-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.dayris-install-top > span { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 750; letter-spacing: .08em; }
+.dayris-install-top > span svg { color: #eab24d; }
+.dayris-install-top > button { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--install-line); border-radius: 50%; color: var(--install-text); background: var(--install-row); }
+body dialog.dayris-install-dialog h1 { margin: 0; color: var(--install-text); font-size: 27px; line-height: 1.15; letter-spacing: -.035em; font-weight: 750; }
+.dayris-install-subtitle { margin: 12px 0 24px; color: var(--install-muted); font-size: 14px; line-height: 1.55; }
+.dayris-install-guide { --install-text: #f4f4f5; --install-muted: #b5b5be; --install-line: #36343a; --install-row: #242328; color: var(--install-text); text-align: left; }
+[data-light="true"] .dayris-install-guide { --install-text: #202126; --install-muted: #555762; --install-line: #dedde1; --install-row: #f5f4f2; }
+.dayris-install-platform { margin: 0 0 8px; color: #d59b32; font-size: 12px; font-weight: 650; }
+.dayris-install-guide h2 { margin: 0 0 16px; font-size: 17px; font-weight: 650; line-height: 1.35; color: var(--install-text); }
+.dayris-install-guide ol { display: grid; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.dayris-install-guide li { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border: 1px solid var(--install-line); border-radius: 16px; background: var(--install-row); }
+.dayris-install-number { display: grid; place-items: center; flex: 0 0 25px; height: 25px; border-radius: 50%; background: #edb850; color: #241902; font-size: 12px; font-weight: 750; }
+.dayris-install-guide li > div { min-width: 0; }
+.dayris-install-guide li svg { color: #d59b32; margin: 2px 0 8px; }
+.dayris-install-guide li p { margin: 0; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.dayris-install-note { margin: 14px 0 0; color: var(--install-muted); font-size: 12px; line-height: 1.6; }
+body dialog.dayris-install-dialog .dayris-install-done { display: block; width: 100%; min-height: 48px; margin-top: 22px; border: 0; border-radius: 14px; background: #edb850; color: #241902; font-size: 15px; font-weight: 750; }
+.dayris-install-dialog button:focus-visible { outline: 3px solid #eab24d; outline-offset: 3px; }
+@media (max-width: 359px), (max-height: 600px) {
+  body dialog.dayris-install-dialog { padding: 18px; border-radius: 22px; }
+  .dayris-install-guide li { padding: 11px; }
+}

@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { transitionView } from './src/shared/ui/transitionView';
 import './src/shared/ui/GlassSystem.css';
 import {
-  ChevronLeft, ChevronRight, Link2, LogOut, Download, Smartphone, Monitor, Wifi, Cloud,
+  ChevronLeft, ChevronRight, Link2, LogOut, Download,
   Settings, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw,
 } from 'lucide-react';
 
+import InstallGuide from './src/shared/ui/InstallGuide.jsx';
+import { installGuideCopy } from './src/shared/i18n/installGuide.js';
 import CalendarCurrencyPicker from './src/shared/ui/CalendarCurrencyPicker.jsx';
 import SettingsPanel from './src/shared/ui/SettingsPanel.jsx';
 import { monthsFor } from './src/shared/i18n';
@@ -44,8 +46,8 @@ export default function Header({
   goToPrevMonth, goToNextMonth, monthMenuRef, monthMenuOpen, setMonthMenuOpen,
   yearMenuRef, yearMenuOpen, setYearMenuOpen, month, year, today,
   setViewMonth, setViewYear, setSelectedKey, setTraderMode, setPlatformFilter,
-  openConnectModal, ctraderConnected, ctraderReconnect, metaTraderState, installInfoRef, handleInstallClick,
-  pendingSyncCount, installInfoOpen, installInstructions, isPwaInstalled,
+  openConnectModal, ctraderConnected, ctraderReconnect, metaTraderState, handleInstallClick, closeInstallInfo,
+  pendingSyncCount, installInfoOpen, isPwaInstalled,
   failedSyncCount = 0, retryFailedSync = () => {},
   platformFilter, platformOptions = [], calendarTypeFilter, setCalendarTypeFilter,
   periodStats, periodTrades = [], currencySymbol = '$', formatMoney,
@@ -141,11 +143,15 @@ export default function Header({
         {/* Action controls: [ Download ] [ Theme ] [ Settings ] */}
         <div data-site-element="actions" className="flex items-center gap-1.5 shrink-0">
           {/* Install is useful in the browser, not inside the installed app. */}
-          {!isPwaInstalled && <div className="relative shrink-0 block" ref={installInfoRef}>
+          {!isPwaInstalled && <div className="relative shrink-0 block">
             <button
               data-site-element="install"
               onClick={handleInstallClick}
-              title={t('app')}
+              type="button"
+              title={installGuideCopy(language).action}
+              aria-label={installGuideCopy(language).action}
+              aria-haspopup="dialog"
+              aria-expanded={Boolean(installInfoOpen)}
               className={`group flex h-10 w-10 sm:h-9 sm:w-auto items-center justify-center gap-1.5 rounded-full sm:rounded-xl border sm:px-2.5 shadow-sm transition-all hover:-translate-y-px hover:border-amber-400/45 ${
                 isLight
                   ? 'border-zinc-300 bg-white text-zinc-600 hover:bg-amber-50 hover:text-amber-700'
@@ -159,51 +165,7 @@ export default function Header({
               {pendingSyncCount > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />}
             </button>
 
-            {installInfoOpen && (
-              <div className={`dayris-status-menu absolute right-0 top-full mt-3 w-[min(320px,calc(100vw-32px))] overflow-hidden rounded-2xl border shadow-2xl backdrop-blur-xl z-50 ${isLight ? 'border-zinc-200 bg-white/95' : 'border-zinc-800 bg-zinc-950/95'}`}>
-                <div className={`border-b bg-gradient-to-r from-amber-400/10 via-transparent to-transparent px-4 py-3.5 ${isLight ? 'border-zinc-200' : 'border-zinc-800'}`}>
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/10 text-amber-400">
-                      <Download className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="font-data text-[10px] tracking-[0.2em] text-amber-400 uppercase">{t('titleMoney')}</p>
-                      <p className={`mt-0.5 text-sm font-semibold ${isLight ? 'text-zinc-900' : 'text-zinc-100'}`}>{t('alwaysAtHand')}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-3 px-4 py-3.5">
-                  <p className={`text-xs leading-relaxed ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>
-                    {t('installAppDesc')}
-                  </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className={`rounded-xl border p-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}>
-                      <Smartphone className="mb-1 h-3.5 w-3.5 text-amber-400" />
-                      <p className={`text-[10px] ${isLight ? 'text-zinc-600' : 'text-zinc-300'}`}>{t('mobile')}</p>
-                    </div>
-                    <div className={`rounded-xl border p-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}>
-                      <Monitor className="mb-1 h-3.5 w-3.5 text-amber-400" />
-                      <p className={`text-[10px] ${isLight ? 'text-zinc-600' : 'text-zinc-300'}`}>{t('desktop')}</p>
-                    </div>
-                    <div className={`rounded-xl border p-2 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/60'}`}>
-                      <Cloud className="mb-1 h-3.5 w-3.5 text-amber-400" />
-                      <p className={`text-[10px] ${isLight ? 'text-zinc-600' : 'text-zinc-300'}`}>{t('sync')}</p>
-                    </div>
-                  </div>
-                  <div className={`rounded-xl border p-2.5 ${isLight ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/40'}`}>
-                    <div className="flex gap-2">
-                      <Wifi className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
-                      <p className={`text-[11px] leading-relaxed ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>{installInstructions}</p>
-                    </div>
-                  </div>
-                  {pendingSyncCount > 0 && (
-                    <p className="border-t border-zinc-800 pt-2.5 text-[11px] leading-relaxed text-amber-300">
-                      {pendingSyncText(pendingSyncCount, traderMode, language)}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
+            <InstallGuide open={installInfoOpen} onClose={closeInstallInfo} language={language} isLight={isLight} />
           </div>}
 
           {failedSyncCount > 0 && (
