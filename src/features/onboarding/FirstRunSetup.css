@@ -1,5 +1,5 @@
 .first-run-product-type { margin: 4px 0 0; font-size: 9px; font-weight: 400; letter-spacing: .09em; color: #899d8e; }
-.first-run-language-options{display:grid;gap:6px;margin-top:16px}
+.first-run-language-options{display:grid;grid-auto-rows:1fr;gap:6px;margin-top:16px}
 .first-run-language-choice{min-height:48px}
 .first-run-dialog[data-setup-step="language"] .first-run-mobile-brand{margin-bottom:12px}
 .first-run-dialog[data-setup-step="language"] .first-run-progress{margin-bottom:14px}
@@ -11,14 +11,14 @@
  .first-run-language-code,.first-run-language-hint{display:none}
  .first-run-language-choice>span{flex:none;text-align:center}
  .first-run-language-name{font-size:13px}
- .first-run-language-choice:last-child{grid-column:1/-1}
+ .first-run-language-choice:last-child{grid-column:1/-1;width:calc((100% - 6px)/2);justify-self:center}
  .first-run-dialog[data-setup-step="language"] .first-run-mobile-brand .first-run-product-type{display:none}
  .first-run-dialog[data-setup-step="language"] .first-run-progress>div>span{display:none}
 }
 @media(max-height:450px){
  .first-run-dialog[data-setup-step="language"] .first-run-mobile-brand,.first-run-dialog[data-setup-step="language"] .first-run-progress{display:none}
  .first-run-language-options{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:12px}
- .first-run-language-choice:last-child{grid-column:auto}
+ .first-run-language-choice:last-child{grid-column:auto;width:100%}
  .first-run-dialog[data-setup-step="language"] .first-run-scroll{padding-top:10px;padding-bottom:10px}
 }
 .first-run-dialog:not([data-story]){height:min(100dvh,var(--sheet-visible-height,100dvh));overflow:hidden}

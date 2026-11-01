@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v133-one-tap-onboarding-birthday';
+const CACHE_NAME = 'atj-cache-v134-uniform-language-buttons';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
