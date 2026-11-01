@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../supabaseClient';
+const EMPTY_NOTES=Object.freeze({});
 
 export function useCurveNotes(userId, from, to, revision = 0) {
   const [result, setResult] = useState({ key: '', notes: {}, state: 'idle' });
@@ -28,5 +29,5 @@ export function useCurveNotes(userId, from, to, revision = 0) {
     })();
     return () => { cancelled = true; };
   }, [userId, from, to, key, revision]);
-  return result.key === key ? result : { notes: {}, state: userId && from && to ? 'loading' : 'idle' };
+  return result.key === key ? result : { notes: EMPTY_NOTES, state: userId && from && to ? 'loading' : 'idle' };
 }

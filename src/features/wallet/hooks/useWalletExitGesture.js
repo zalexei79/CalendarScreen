@@ -49,8 +49,10 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
         const ease = stepMotion ? 'cubic-bezier(.24,.72,.24,1)' : 'cubic-bezier(.16,1,.3,1)';
         const transition = settling && !reduced ? `transform ${duration}ms ${ease}, opacity ${duration}ms ${ease}` : '';
         grid.style.transition = [transition,optics].filter(Boolean).join(', ') || 'none';
-        grid.style.setProperty('--month-scale', reduced ? '1' : String(scale));
-        grid.style.setProperty('--month-opacity', reduced ? '1' : String(opacity));
+        // Non-inherited compositor properties avoid restyling every day for
+        // every touch sample. Keep the same approved scale/opacity trajectory.
+        grid.style.transform = reduced ? 'none' : `scale(${scale})`;
+        grid.style.opacity = reduced ? '1' : String(opacity);
       }
     };
     const updateDrag = (value) => {
@@ -247,6 +249,9 @@ export function useWalletExitGesture({ onExit, disabled, navigation = 'wallet', 
       clearTimeout(releaseTimer);
       cancelAnimationFrame(motionFrame);
       surface.removeAttribute('data-calendar-step-motion');
+      if(navigation==='calendar')for(const grid of surface.querySelectorAll('.calendar-days-grid')){
+        grid.style.removeProperty('transform');grid.style.removeProperty('opacity');grid.style.removeProperty('transition');
+      }
       surface.removeEventListener('dayris-calendar-step',step);
       document.removeEventListener('visibilitychange',visibility);
       reducedMotion.removeEventListener('change',preference);

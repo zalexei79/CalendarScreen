@@ -94,9 +94,9 @@ try {
   assert.equal(await page.locator('.calendar-motion-sheen').count(), 0, 'no decorative stripe between months');
   const trackedX = await page.locator('.calendar-section').evaluate(el => new DOMMatrix(getComputedStyle(el).transform).m41);
   assert.ok(Math.abs(trackedX + 100) < 1, 'month follows the finger one-to-one');
-  const depth = await page.locator('.calendar-section > .calendar-days-grid').evaluate(el => Number(el.style.getPropertyValue('--month-scale')));
+  const depth = await page.locator('.calendar-section > .calendar-days-grid').evaluate(el => new DOMMatrix(getComputedStyle(el).transform).a);
   assert.ok(depth < 1 && depth > .96, 'outgoing month recedes gently during drag');
-  const incomingDepth = await page.locator('.calendar-month-preview').last().locator('.calendar-days-grid').evaluate(el => Number(el.style.getPropertyValue('--month-scale')));
+  const incomingDepth = await page.locator('.calendar-month-preview').last().locator('.calendar-days-grid').evaluate(el => new DOMMatrix(getComputedStyle(el).transform).a);
   assert.ok(incomingDepth > .96 && incomingDepth < 1, 'incoming month unfolds continuously with swipe progress');
   const previewBox = await page.locator('.calendar-month-preview').last().boundingBox();
   assert.ok(previewBox.x < 390 && previewBox.x > 0, 'next month enters the viewport behind the finger');

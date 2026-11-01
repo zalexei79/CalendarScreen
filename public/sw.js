@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v131-subscription-tier-receipt-trader';
+const CACHE_NAME = 'atj-cache-v132-mobile-calendar-onboarding';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

@@ -1,5 +1,6 @@
 import {saveVoiceDestinations} from './src/shared/lib/saveVoiceDestinations.js';
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import {createCalendarDayIndex} from './src/shared/lib/calendarDayIndex.js';
 import './src/shared/ui/PurpleTheme.css';
 import './src/shared/ui/EmeraldGlass.css';
 import './src/shared/ui/GoldTheme.css';
@@ -450,7 +451,7 @@ export default function CalendarScreen() {
   const year = viewYear;
   const month = viewMonth;
 
-  function goToPrevMonth() {
+  const goToPrevMonth=useCallback(() => {
     setSelectedKey(null);
     setSlideDirection('prev');
     setAnimKey((k) => k + 1);
@@ -461,9 +462,9 @@ export default function CalendarScreen() {
       }
       return m - 1;
     });
-  }
+  },[]);
 
-  function goToNextMonth() {
+  const goToNextMonth=useCallback(() => {
     setSelectedKey(null);
     setSlideDirection('next');
     setAnimKey((k) => k + 1);
@@ -474,20 +475,20 @@ export default function CalendarScreen() {
       }
       return m + 1;
     });
-  }
+  },[]);
 
   const [selectedKey, setSelectedKey] = useState(null);
   const [firstRunGuideStep, setFirstRunGuideStep] = useState(0); // 0 off, 1 today, 2 form, 3 success, 4 day view tip
   const guideAmountRef = useRef(null);
   const guideCommentRef = useRef(null);
 
-  function openCapitalFromCalendarGesture() {
+  const openCapitalFromCalendarGesture=useCallback(() => {
     if (proAccessLoading) return;
     if (!proAccessActive) { openProPresentation(); return; }
     transitionView(() => {
       setAccountMode('capital');
     });
-  }
+  },[proAccessLoading,proAccessActive]);
   function openWalletFromCalendarAction() {
     if (proAccessLoading || !proAccessActive) return;
     transitionView(() => {
@@ -784,8 +785,8 @@ export default function CalendarScreen() {
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [settingsOpen]);
 
-  const t = (key) => translate(language, key);
-  const formatMoneyShort = value => formatMoneyShortBase(value, language);
+  const t = useCallback(key=>translate(language,key),[language]);
+  const formatMoneyShort = useCallback(value=>formatMoneyShortBase(value,language),[language]);
 
   useEffect(() => {
     document.documentElement.lang = language === 'md' ? 'ro' : language;
@@ -1819,14 +1820,14 @@ export default function CalendarScreen() {
     custom: t('customPeriod'),
   }[preset] || preset);
 
-  function formatPnlDisplay(amount, short) {
+  const formatPnlDisplay=useCallback((amount,short) => {
     const num = Number(amount) || 0;
     if (displayMode === 'percent' && depositSize > 0) {
       const pct = (num / depositSize) * 100;
       return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
     }
     return `${num >= 0 ? '+' : '-'}${currencySymbol}${short ? formatMoneyShort(num) : formatMoney(num)}`;
-  }
+  },[displayMode,depositSize,currencySymbol,formatMoneyShort]);
 
   function formatAmountInCurrency(amount, code, { signed = true, short = false } = {}) {
     const symbol = getCurrencyMeta(code || 'USD').symbol;
@@ -1930,19 +1931,19 @@ export default function CalendarScreen() {
     try { window.history.replaceState({}, document.title, window.location.pathname); } catch { /* ignore */ }
   }, [plans]);
 
-  function plansForDay(dateKey) {
+  const plansForDay=useCallback(dateKey => {
     return projectPlansForDay(plans, dateKey);
-  }
+  },[plans]);
 
-  function activePlansForDay(dateKey) {
+  const activePlansForDay=useCallback(dateKey => {
     return plansForDay(dateKey).filter((plan) => plan.status === 'active' && plan.outcome === 'planned');
-  }
+  },[plansForDay]);
 
-  function formatPlanAmount(plan) {
+  const formatPlanAmount=useCallback(plan => {
     if (plan?.amount == null) return t('planAmountLater');
     const symbol = getCurrencyMeta(plan?.currency || 'USD').symbol;
     return `${plan?.kind === 'income' ? '+' : '−'}${symbol}${formatMoney(Number(plan?.amount) || 0)}`;
-  }
+  },[t]);
 
   function openPlanComposer() {
     if (!validUserId) {
@@ -2199,6 +2200,7 @@ export default function CalendarScreen() {
 
   const [notesRevision, setNotesRevision] = useState(0);
   const { notes: calendarNotes } = useCurveNotes(traderMode ? validUserId : null, cells[0]?.key, cells.at(-1)?.key, notesRevision);
+  const {tradesForDayFiltered,totalPnlForDay}=useMemo(()=>createCalendarDayIndex(manualTrades,{platform:platformFilter,type:calendarTypeFilter,currency}),[manualTrades,platformFilter,calendarTypeFilter,currency]);
   const monthSummary = useMemo(() => {
     let total = 0, days = 0;
     const records = [];
@@ -2211,23 +2213,6 @@ export default function CalendarScreen() {
     }
     return { total, days, entries: records };
   }, [cells, manualTrades, platformFilter, currency, calendarTypeFilter]);
-
-  // filtered by the active platform selection, so the calendar always
-  // matches what the platform filter says (e.g. only Bybit trades)
-  function tradesForDayFiltered(key) {
-    return calendarRecordsForDay(key)
-      .filter((t) => String(t.currency || 'USD').trim().toUpperCase() === currency);
-  }
-
-  function calendarRecordsForDay(key) {
-    return (manualTrades[key] || [])
-      .filter((t) => platformFilter === 'ALL' || t.platform === platformFilter)
-      .filter((t) => calendarTypeFilter === 'all' || (calendarTypeFilter === 'income' ? t.pnl >= 0 : t.pnl < 0));
-  }
-
-  function totalPnlForDay(key) {
-    return tradesForDayFiltered(key).reduce((sum, t) => sum + (Number(t.pnl) || 0), 0);
-  }
 
   // heatmap scale: strongest color = the day with the biggest |PnL| this month
   const monthMaxAbsPnl = useMemo(() => {
@@ -4422,6 +4407,17 @@ export default function CalendarScreen() {
             }
   }
 
+  const calendarEntryOpener=useRef(openModal);
+  calendarEntryOpener.current=openModal;
+  const selectCalendarDay=useCallback(dateKey=>{
+    if(firstRunGuideStep===1&&dateKey===todayKey&&!traderMode){
+      setFirstRunGuideStep(2);calendarEntryOpener.current(null,todayKey);
+      setForm(current=>({...current,sign:'minus',instrument:'Продукты'}));return;
+    }
+    setSelectedKey(dateKey);
+  },[firstRunGuideStep,todayKey,traderMode]);
+  const clearCalendarDay=useCallback(()=>setSelectedKey(null),[]);
+
   useMonthShake({
     active:authReady && Boolean(validUserId || demoMode) && accountMode === 'main' && !(
       setupStep || nicknameModalOpen || selectedKey || settingsOpen || modalOpen || historyOpen || monthMenuOpen || yearMenuOpen ||
@@ -4732,16 +4728,8 @@ export default function CalendarScreen() {
         cells={cells} selectedKey={selectedKey} isLight={isLight} monthMaxAbsPnl={monthMaxAbsPnl}
         plansForDay={activePlansForDay} formatPlanAmount={formatPlanAmount}
         tradesForDayFiltered={tradesForDayFiltered} totalPnlForDay={totalPnlForDay}
-        formatPnlDisplay={formatPnlDisplay} onSelectDay={(dateKey) => {
-          if (firstRunGuideStep === 1 && dateKey === todayKey && !traderMode) {
-            setFirstRunGuideStep(2);
-            openModal(null, todayKey);
-            setForm(current => ({ ...current, sign: 'minus', instrument: 'Продукты' }));
-            return;
-          }
-          setSelectedKey(dateKey);
-        }}
-        onEmptyClick={() => setSelectedKey(null)}
+        formatPnlDisplay={formatPnlDisplay} onSelectDay={selectCalendarDay}
+        onEmptyClick={clearCalendarDay}
         onOpenCapital={proAccessLoading ? undefined : openCapitalFromCalendarGesture}
         gesturesDisabled={Boolean(modalOpen || historyOpen || settingsOpen || connectOpen || metaTraderOpen || proAccessPromptOpen)}
       />

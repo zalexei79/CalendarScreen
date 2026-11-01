@@ -9,6 +9,7 @@ import { useCalendarFit } from './src/shared/ui/useCalendarFit';
 import { localeKey } from './src/shared/i18n/locale.js';
 
 const planLabelFor = language => ({ ru: 'Планы', uk: 'Плани', en: 'Plans', ro: 'Planuri', zh: '计划' }[localeKey(language)]);
+const EMPTY_NOTES={};
 
 const CalendarMonthPreview = React.memo(function CalendarMonthPreview({ preview, isLight, language, traderMode, proView, selectedKey, notes, noteLabel, tradesForDayFiltered, plansForDay, formatPlanAmount, totalPnlForDay, monthMaxAbsPnl, formatPnlDisplay }) {
   // Match the target month's heatmap before it becomes the active page.
@@ -22,10 +23,10 @@ const CalendarMonthPreview = React.memo(function CalendarMonthPreview({ preview,
   </div>;
 });
 
-export default function CalendarGrid({
+function CalendarGrid({
   traderMode = false,
   proView = false,
-  notes = {},
+  notes = EMPTY_NOTES,
   noteLabel,
   language = 'ru',
   firstEntryLabel,
@@ -72,6 +73,11 @@ export default function CalendarGrid({
       }) };
     });
   }, [cells]);
+  // Touch tracking changes the surrounding plane, not the day's text/controls.
+  const dayCells=useMemo(()=>cells.map((cell,cellIndex)=>{
+    const isSelected=cell.key===selectedKey;
+    return <CalendarDayCell key={cell.key} firstEntryLabel={firstEntryLabel} firstEntryDayLabel={firstEntryDayLabel} planLabel={planLabelFor(language)} hasNote={!!notes[cell.key]} noteLabel={noteLabel} traderMode={traderMode} proView={proView} cell={cell} cellIndex={cellIndex} isSelected={isSelected} hasTrades={tradesForDayFiltered(cell.key).length>0} plans={plansForDay?.(cell.key)||[]} formatPlanAmount={formatPlanAmount} pnl={totalPnlForDay(cell.key)} monthMaxAbsPnl={monthMaxAbsPnl} isLight={isLight} formatPnlDisplay={formatPnlDisplay} onSelect={()=>onSelectDay(isSelected?null:cell.key)}/>;
+  }),[cells,selectedKey,firstEntryLabel,firstEntryDayLabel,language,notes,noteLabel,traderMode,proView,tradesForDayFiltered,plansForDay,formatPlanAmount,totalPnlForDay,monthMaxAbsPnl,isLight,formatPnlDisplay,onSelectDay]);
   const animClass = swipeArrival.current ? '' : slideDirection === 'next' ? 'animate-slide-next' : slideDirection === 'prev' ? 'animate-slide-prev' : '';
   return (
     <div className="calendar-pages-viewport" data-pro={proView} data-light={isLight}>
@@ -119,16 +125,11 @@ export default function CalendarGrid({
         {weekdaysFor(language).map((w) => <div key={w} className={`font-data text-[11px] sm:text-xs font-semibold tracking-wider text-center uppercase pb-1 ${isLight ? 'text-slate-600' : 'text-zinc-500'}`}>{w}</div>)}
       </div>
       <div className="calendar-days-grid grid flex-none grid-cols-7 auto-rows-[64px] gap-1 sm:flex-1 sm:auto-rows-auto sm:gap-2" onClick={(e) => { if (e.target === e.currentTarget) onEmptyClick(); }}>
-        {cells.map((cell, cellIndex) => {
-          const isSelected = cell.key === selectedKey;
-          const hasTrades = tradesForDayFiltered(cell.key).length > 0;
-          const plans = plansForDay?.(cell.key) || [];
-          const pnl = totalPnlForDay(cell.key);
-          return <CalendarDayCell key={cell.key} firstEntryLabel={firstEntryLabel} firstEntryDayLabel={firstEntryDayLabel} planLabel={planLabelFor(language)} hasNote={!!notes[cell.key]} noteLabel={noteLabel} traderMode={traderMode} proView={proView} cell={cell} cellIndex={cellIndex} isSelected={isSelected} hasTrades={hasTrades} plans={plans} formatPlanAmount={formatPlanAmount} pnl={pnl} monthMaxAbsPnl={monthMaxAbsPnl} isLight={isLight} formatPnlDisplay={formatPnlDisplay} onSelect={() => onSelectDay(isSelected ? null : cell.key)} />;
-        })}
+        {dayCells}
       </div>
       {touchDrag.axis === 'x' && adjacentMonths.filter(preview => preview.direction === (touchDrag.x < 0 ? 1 : -1)).map(preview => <CalendarMonthPreview key={preview.direction} preview={preview} isLight={isLight} language={language} traderMode={traderMode} proView={proView} selectedKey={selectedKey} notes={notes} noteLabel={noteLabel} tradesForDayFiltered={tradesForDayFiltered} plansForDay={plansForDay} formatPlanAmount={formatPlanAmount} totalPnlForDay={totalPnlForDay} monthMaxAbsPnl={monthMaxAbsPnl} formatPnlDisplay={formatPnlDisplay} />)}
     </section>
     </div>
   );
 }
+export default React.memo(CalendarGrid);
