@@ -8,10 +8,11 @@ const require=createRequire('C:/Users/aveel/.cache/codex-runtimes/codex-primary-
 const browser=await require('playwright').chromium.launch({channel:'msedge',headless:true});
 try {
   for(const [code,language,label,amethyst,january] of [
-    ['ru','Русский','Дата рождения','Аметист','январь'],
-    ['en','English','Date of birth','Amethyst','January'],
-    ['md','Română','Data nașterii','Ametist','ianuarie'],
-    ['zh-CN','简体中文','出生日期','紫水晶','一月'],
+    ['ru','Русский','Дата рождения','Аметист','Январь (01)'],
+    ['uk','Українська','Дата народження','Аметист','Січень (01)'],
+    ['en','English','Date of birth','Amethyst','January (01)'],
+    ['md','Română','Data nașterii','Ametist','Ianuarie (01)'],
+    ['zh-CN','简体中文','出生日期','紫水晶','一月 (01)'],
   ]) {
     const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block'});
     await context.addInitScript(()=>{localStorage.setItem('atj_language','ru');localStorage.setItem('atj_theme','dark');localStorage.setItem('calendar_guide_completed','1');});
@@ -27,18 +28,17 @@ try {
     await page.goto('http://calendar.test/');await page.clock.pauseAt(new Date('2026-10-07T13:00:00'));
     await page.getByRole('button',{name:new RegExp(language)}).click();
     await page.getByRole('button',{name:amethyst,exact:true}).click();await page.clock.runFor(700);
-    assert.equal(await page.getByRole('button',{name:amethyst,exact:true}).getAttribute('aria-pressed'),'true');
-    assert.notEqual(await page.locator('[data-theme-option=purple] .theme-option-label').evaluate(el=>getComputedStyle(el).color),await page.locator('[data-theme-option=dark] .theme-option-label').evaluate(el=>getComputedStyle(el).color));
+    assert.equal(await page.locator('html').getAttribute('data-dayris-theme'),'purple');
     await page.screenshot({path:`tests/amethyst-onboarding-${code}.png`,animations:'disabled'});
     await page.getByRole('button',{name:/MDL/}).click();await page.clock.runFor(300);
     assert.equal(await page.locator('#life-birthday legend').innerText(),label);
     assert.equal(await page.locator('#life-birthday select').nth(1).locator('option[value="01"]').innerText(),january);
-    if(code!=='ru')assert.doesNotMatch(await page.getByRole('dialog').innerText(),/[А-Яа-яЁё]/,'No Russian copy remains after language selection');
-    await selectBirthday(page,'2026-12-31');await page.locator('.life-birthday-card').evaluate(form=>form.requestSubmit());
-    assert.equal(await page.getByRole('alert').count(),1,'Future date is rejected');
+    if(!['ru','uk'].includes(code))assert.doesNotMatch(await page.getByRole('dialog').innerText(),/[А-Яа-яЁё]/,'No Russian copy remains after language selection');
+    await page.locator('#life-birthday input').fill('2026');await page.locator('.life-birthday-card').evaluate(form=>form.requestSubmit());
+    assert.ok(await page.getByRole('alert').count()>0,'A birth year below the minimum age is rejected');
     await selectBirthday(page,'2000-02-29');
-    await page.locator('#life-birthday select').nth(2).selectOption('2001');
-    assert.equal(await page.locator('#life-birthday select').nth(0).inputValue(),'28','Leap day adjusts to selected year');
+    await page.locator('#life-birthday input').fill('2001');
+    assert.equal(await page.locator('#life-birthday select').nth(0).inputValue(),'','A nonexistent leap day is cleared instead of changing the birthday');
     await selectBirthday(page,'2000-02-29');
     assert.equal(await page.getByRole('alert').count(),0);
     for(const width of [320,390]){

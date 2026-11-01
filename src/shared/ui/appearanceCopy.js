@@ -7,9 +7,9 @@ export const APPEARANCE_COPY = {
 };
 
 export const APPEARANCE_SETUP_COPY = {
-  ru:{title:'Твой стиль DAYRIS.',hint:'Выбери материал, с которым хочется встречать каждый день.'},
-  uk:{title:'Твій стиль DAYRIS.',hint:'Вибери матеріал, з яким хочеться зустрічати кожен день.'},
-  en:{title:'Your DAYRIS style.',hint:'Choose the material you want to see every day.'},
-  ro:{title:'Stilul tău DAYRIS.',hint:'Alege materialul pe care vrei să-l vezi în fiecare zi.'},
-  zh:{title:'你的 DAYRIS 风格。',hint:'选择每天都想看见的独特材质。'},
+  ru:{title:'Выберите оформление',hint:'Позже его можно поменять в настройках.'},
+  uk:{title:'Виберіть оформлення',hint:'Пізніше його можна змінити в налаштуваннях.'},
+  en:{title:'Choose your appearance',hint:'You can change it later in Settings.'},
+  ro:{title:'Alege aspectul',hint:'Îl poți schimba mai târziu în Setări.'},
+  zh:{title:'选择外观',hint:'之后可随时在设置中更改。'},
 };

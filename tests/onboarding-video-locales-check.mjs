@@ -32,7 +32,7 @@ try{for(const locale of locales)for(const mobile of [false,true]){
  await installStoryAccount(context);const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
  await page.clock.install({time:new Date('2026-10-05T12:00:00')});await page.goto('http://calendar.test/');await page.clock.pauseAt(new Date('2026-10-05T13:00:00'));
  await page.getByRole('button',{name:new RegExp(locale.name)}).click();
- await page.locator('.first-run-dialog').getByRole('button',{name:locale.next,exact:true}).click();
+ await page.locator('.first-run-dialog [data-theme-option="dark"]').click();
  await page.locator('.first-run-dialog').getByRole('button',{name:/USD/}).click();await selectBirthday(page,'1998-03-14');
  await page.getByRole('button',{name:locale.story,exact:true}).click();await page.clock.runFor(32);await page.clock.fastForward(14500);await page.clock.runFor(32);
  const section=page.locator('.onboarding-video[data-active="true"]');

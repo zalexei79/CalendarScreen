@@ -24,6 +24,11 @@ export default function ThemeCollection({language,theme,preference=theme,active=
   },[preview]);
   function choose(code) {if(loading)return;if(active)onSelect(code);else setPreview(code);}
   function openPro() {setPreview(null);onPro?.();}
+  if(context==='onboarding')return <section className="theme-collection theme-collection-onboarding theme-onboarding-compact" data-current-theme={theme} aria-label={copy.title}>
+    <div className="theme-onboarding-options" role="group" aria-label={copy.title}>{['light','dark','system','purple',...(active?['gold','emerald']:[])].map(code=><button key={code} type="button" className="theme-basic-option theme-onboarding-option" data-theme-option={code} aria-label={copy[code]} aria-pressed={basicPreference===code} onClick={()=>onSelect(code)}>
+      <span className="theme-basic-sample" data-material={code} aria-hidden="true"><i/><i/><i/><i/>{basicPreference===code&&<Check size={12}/>}</span><span>{copy[code]}</span>
+    </button>)}</div>
+  </section>;
   return <section className={`theme-collection theme-collection-${context}`} data-current-theme={theme} aria-label={copy.title}>
     <div className="theme-basic-heading">{copy.basic}</div>
     <div className="theme-basics" role="group" aria-label={copy.basic}>

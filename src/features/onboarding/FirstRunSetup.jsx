@@ -12,6 +12,7 @@ import ThemeCollection from '../../shared/ui/ThemeCollection.jsx';
 import { createLifeStoryFeedback } from './lifeStoryFeedback.js';
 import {APPEARANCE_COPY,APPEARANCE_SETUP_COPY} from '../../shared/ui/appearanceCopy.js';
 import useSheetViewport from '../../shared/ui/useSheetViewport.js';
+import {allowedBirthday} from './birthdayModel.js';
 
 const COPY = {
   uk: {
@@ -66,11 +67,11 @@ const COPY = {
 };
 const EMPTY_RECORDS = [];
 const BIRTHDAY_SETUP_COPY={
- ru:{title:'Ваш день рождения',hint:'Укажите дату, чтобы увидеть персональную анимацию вашей истории.',optional:'Необязательно.'},
- uk:{title:'Ваш день народження',hint:'Укажіть дату, щоб побачити персональну анімацію вашої історії.',optional:'Необов’язково.'},
- en:{title:'Your birthday',hint:'Add your birthday to see a personal animated story.',optional:'Optional.'},
- ro:{title:'Data nașterii',hint:'Adaugă data pentru o poveste animată personalizată.',optional:'Opțional.'},
- zh:{title:'你的生日',hint:'填写生日，查看专属于你的人生动画。',optional:'选填。'},
+ ru:{title:'Ваш день рождения',hint:'Укажите дату, чтобы увидеть персональную анимацию вашей истории.',optional:'Необязательно.',invalid:'Укажите корректную дату рождения для возраста от 13 лет.'},
+ uk:{title:'Ваш день народження',hint:'Укажіть дату, щоб побачити персональну анімацію вашої історії.',optional:'Необов’язково.',invalid:'Укажіть коректну дату народження для віку від 13 років.'},
+ en:{title:'Your birthday',hint:'Add your birthday to see a personal animated story.',optional:'Optional.',invalid:'Enter a valid birthday for age 13 or older.'},
+ ro:{title:'Data nașterii',hint:'Adaugă data pentru o poveste animată personalizată.',optional:'Opțional.',invalid:'Introdu o dată de naștere validă pentru vârsta de cel puțin 13 ani.'},
+ zh:{title:'你的生日',hint:'填写生日，查看专属于你的人生动画。',optional:'选填。',invalid:'请输入年满13岁的有效出生日期。'},
 };
 const LANGUAGES = [{code:'uk',name:'Українська',hint:'Ukrainian'},{ code: 'ru', name: 'Русский', hint: 'Russian' }, { code: 'en', name: 'English', hint: 'English' }, { code: 'md', name: 'Română', hint: 'Romanian' }, { code: 'zh-CN', name: '简体中文', hint: 'Simplified Chinese' }];
 
@@ -139,7 +140,7 @@ export default function FirstRunSetup({ step, language, currency, theme, themePr
   }, [profileKey]);
 
   const startStory = (withoutDate = false) => {
-    if (!withoutDate && !lifeWeeks(birthday)) { setDateError(true); return; }
+    if (!withoutDate && !allowedBirthday(birthday)) { setDateError(true); return; }
     if (!personalStory && !withoutDate) feedbackRef.current.prepare();
     else feedbackRef.current.stop();
     const value = withoutDate ? '' : birthday;
@@ -167,7 +168,7 @@ export default function FirstRunSetup({ step, language, currency, theme, themePr
   }, [step, videoActive]);
 
   return (
-    <dialog ref={dialogRef} style={viewportStyle} lang={lang==='zh'?'zh-CN':lang} data-theme={theme} data-story={story || undefined} aria-labelledby="first-run-heading" onCancel={(event) => { event.preventDefault(); if (videoActive) dialogRef.current.querySelector('.onboarding-video-skip')?.click(); else onSkip(); }}
+    <dialog ref={dialogRef} style={viewportStyle} lang={lang==='zh'?'zh-CN':lang} data-setup-step={step} data-theme={theme} data-story={story || undefined} aria-labelledby="first-run-heading" onCancel={(event) => { event.preventDefault(); if (videoActive) dialogRef.current.querySelector('.onboarding-video-skip')?.click(); else onSkip(); }}
       className={`first-run-dialog fixed inset-0 m-0 h-[100dvh] max-h-none w-full max-w-none overflow-y-auto border-0 bg-transparent p-0 backdrop:bg-black/75 backdrop:backdrop-blur-md ${light ? 'text-zinc-900' : 'text-zinc-100'}`}>
       {videoAvailable && <OnboardingVideo key={videoRun} active={videoActive} theme={theme} lang={lang} initialMuted={soundMuted} onSoundChange={changeSound} onStart={onStart} onSkip={onSkip} onRestart={() => { if (!calendarStart) feedbackRef.current.prepare(); setVideoActive(false); setCalendarStartDone(false); setVideoRun(value => value + 1); }} />}
       {story ? calendarStart ? !calendarStartDone && <CalendarStart lang={lang} theme={theme} revealing={videoActive} onReveal={() => setVideoActive(true)} onArrive={() => setCalendarStartDone(true)} /> : !videoActive && <LifeStory birthday={birthday} lang={lang} theme={theme} currency={currency} calendarRecords={calendarRecords} personalStory={personalStory} feedback={personalStory ? null : feedbackRef.current} soundMuted={soundMuted} onSoundChange={changeSound} onStart={onStart} onArrive={videoAvailable ? () => setVideoActive(true) : onArrive} onSkip={onSkip} onBack={() => onStep('birthday')} /> : <div className="first-run-frame flex min-h-full items-center justify-center p-3 sm:p-6">
@@ -183,32 +184,30 @@ export default function FirstRunSetup({ step, language, currency, theme, themePr
 
           <div className="first-run-setup-panel flex min-w-0 flex-col">
            <div className="first-run-scroll p-4 sm:p-9">
-            <div className="mb-5 flex items-center gap-2 md:hidden"><BrandIcon className="h-8 w-8" /><div><span className="text-xs font-semibold tracking-[0.16em]">DAYRIS</span><p className="first-run-product-type">{copy.productType}</p></div></div>
-            <nav aria-label={copy.steps.join(' / ')} className="mb-6 flex gap-2">
+            <div className="first-run-mobile-brand mb-5 flex items-center gap-2 md:hidden"><BrandIcon className="h-8 w-8" /><div><span className="text-xs font-semibold tracking-[0.16em]">DAYRIS</span><p className="first-run-product-type">{copy.productType}</p></div></div>
+            <nav aria-label={copy.steps.join(' / ')} className="first-run-progress mb-6 flex gap-2">
               {copy.steps.map((label, item) => <div key={label} aria-current={item === index ? 'step' : undefined} className="min-w-0 flex-1">
                 <div className={`mb-2 h-1 rounded-full ${item <= index ? 'bg-amber-400' : light ? 'bg-zinc-200' : 'bg-white/10'}`} />
                 <span className={`text-[10px] font-medium ${item === index ? light ? 'text-zinc-800' : 'text-zinc-200' : muted}`}>{String(item + 1).padStart(2, '0')} · {label}</span>
               </div>)}
             </nav>
             <div className="flex-1">
-              <h1 id="first-run-heading" ref={headingRef} tabIndex={-1} className={`whitespace-pre-line text-[28px] font-semibold leading-[1.12] tracking-[-0.035em] outline-none sm:text-[34px] ${index === 0 ? 'first-run-product-heading' : ''}`}>{index === 0 ? copy.productTitle : index === 1 ? choosingAppearance?appearanceCopy.title:copy.currencyTitle : birthdayCopy.title}</h1>
-              <p className={`mt-3 whitespace-pre-line text-sm leading-relaxed ${muted}`}>{index === 0 ? copy.productHint : index === 1 ? choosingAppearance?appearanceCopy.hint:copy.currencyHint : birthdayCopy.hint}</p>
-              {index === 0 && <MoneyCalendarPreview copy={copy} currency={currency} lang={lang} className="mt-5 md:hidden" />}
+              <h1 id="first-run-heading" ref={headingRef} tabIndex={-1} className="whitespace-pre-line text-[28px] font-semibold leading-[1.12] tracking-[-0.035em] outline-none sm:text-[34px]">{index === 0 ? copy.languageTitle : index === 1 ? choosingAppearance?appearanceCopy.title:copy.currencyTitle : birthdayCopy.title}</h1>
+              <p className={`first-run-setup-hint mt-3 whitespace-pre-line text-sm leading-relaxed ${muted}`}>{index === 0 ? copy.languageHint : index === 1 ? choosingAppearance?appearanceCopy.hint:copy.currencyHint : birthdayCopy.hint}</p>
 
-              {index === 0 && <div className="mt-5 space-y-2" role="group" aria-label={copy.languageHint}>
-                <h2 className="pb-1 text-sm font-medium">{copy.languageTitle}</h2>
+              {index === 0 && <div className="first-run-language-options" role="group" aria-label={copy.languageHint}>
                 {LANGUAGES.map((item) => {
                   const active = selectedLanguage === item.code;
-                  return <button key={item.code} type="button" aria-pressed={active} onClick={() => { setSelectedLanguage(item.code); onLanguage(item); onStep('appearance'); }} className={`flex w-full items-center gap-4 rounded-2xl border px-4 py-2.5 sm:py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${active ? selected : idle}`}>
-                    <span className={`grid h-8 w-8 place-items-center rounded-xl text-xs font-semibold ${light ? 'bg-black/[0.04]' : 'bg-white/[0.05]'}`}>{item.code === 'md' ? 'RO' : item.code === 'zh-CN' ? 'ZH' : item.code.toUpperCase()}</span>
-                    <span className="flex-1"><span lang={item.code === 'md' ? 'ro' : item.code} className="block text-sm font-semibold">{item.name}</span><span className={`mt-0.5 block text-[11px] ${muted}`}>{item.hint}</span></span>
+                  return <button key={item.code} type="button" aria-pressed={active} onClick={() => { setSelectedLanguage(item.code); onLanguage(item); onStep('appearance'); }} className={`first-run-language-choice flex w-full items-center gap-3 rounded-2xl border px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${active ? selected : idle}`}>
+                    <span className={`first-run-language-code grid h-8 w-8 place-items-center rounded-xl text-xs font-semibold ${light ? 'bg-black/[0.04]' : 'bg-white/[0.05]'}`}>{item.code === 'md' ? 'RO' : item.code === 'zh-CN' ? 'ZH' : item.code.toUpperCase()}</span>
+                    <span className="flex-1"><span lang={item.code === 'md' ? 'ro' : item.code} className="first-run-language-name block text-sm font-semibold">{item.name}</span><span className={`first-run-language-hint mt-0.5 block text-[11px] ${muted}`}>{item.hint}</span></span>
                     {active && <Check className="h-4 w-4 text-amber-500" aria-hidden="true" />}
                   </button>;
                 })}
               </div>}
 
               {index === 1 && <>
-                {choosingAppearance?<ThemeCollection language={language} theme={theme} preference={themePreference} active={proAccessActive} loading={proAccessLoading} onSelect={onTheme} context="onboarding"/>:<>
+                {choosingAppearance?<ThemeCollection language={language} theme={theme} preference={themePreference} active={proAccessActive} loading={proAccessLoading} onSelect={code=>{onTheme(code);onStep('currency');}} context="onboarding"/>:<>
                 <button type="button" className="first-run-appearance-summary" onClick={()=>onStep('appearance')}><span className="first-run-theme-dot" data-material={theme}/><span>{copy.appearance}<strong>{themeCopy[themePreference==='system'?'system':theme]}</strong></span><ArrowRight size={16} aria-hidden="true"/></button>
                 <div className="mt-6 grid grid-cols-2 gap-2.5" role="group" aria-label={copy.currencyHint}>
                   {CURRENCIES.map((item, i) => <button key={item.code} type="button" aria-pressed={selectedCurrency === item.code} onClick={() => { setSelectedCurrency(item.code); onCurrency(item.code); onStep('birthday'); }} className={`relative rounded-2xl border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${selectedCurrency === item.code ? selected : idle}`}>
@@ -223,14 +222,13 @@ export default function FirstRunSetup({ step, language, currency, theme, themePr
               {index === 2 && <form className="life-birthday-card mt-8" onSubmit={event => { event.preventDefault(); startStory(); }}>
                 <BirthdayField value={birthday} onChange={value => { setBirthday(value); setDateError(false); }} lang={lang} label={lifeCopy.birthdayLabel} invalid={dateError} describedBy={dateError?'life-birthday-error':'life-birthday-note'}/>
                 <p id="life-birthday-note" className={`mt-3 text-[11px] ${muted}`}>{lifeCopy.birthdayNote}</p>
-                {dateError && <p id="life-birthday-error" role="alert" className="mt-3 text-xs text-rose-500">{lifeCopy.invalid}</p>}
+                {dateError && <p id="life-birthday-error" role="alert" className="mt-3 text-xs text-rose-500">{birthdayCopy.invalid}</p>}
               </form>}
             </div>
            </div>
             <div className="first-run-actions">
               <div className="flex gap-2">
                 {index > 0 && <button type="button" onClick={() => onStep(index === 1 ? choosingAppearance?'language':'appearance' : 'currency')} aria-label={copy.back} className={`grid min-h-12 w-12 shrink-0 place-items-center rounded-xl border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${idle}`}><ArrowLeft className="h-4 w-4" /></button>}
-                {index<2&&!currencyStep&&<button type="button" onClick={()=>onStep(index===0?'appearance':'currency')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-amber-300 px-4 py-3 text-sm font-semibold text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500">{copy.next}<ArrowRight className="h-4 w-4"/></button>}
                 {index === 2 && <button type="button" onClick={() => startStory()} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-amber-300 px-4 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2">{lifeCopy.seeStory}<ArrowRight className="h-4 w-4" /></button>}
                 {currencyStep&&<button type="button" onClick={onSkip} className={`min-h-12 flex-1 rounded-xl text-xs ${muted}`}>{copy.skip}</button>}
               </div>

@@ -36,7 +36,6 @@ try {
     const dialog = page.locator('.first-run-dialog');
     await dialog.getByRole('button', { name: /Русский/ }).click();
     await dialog.getByRole('button', { name: scenario.label, exact: true }).click();
-    await dialog.getByRole('button', { name: 'Продолжить', exact: true }).click();
     await dialog.getByRole('button', { name: /MDL/ }).click();
     const recordKey = `money_calendar_trades_${storyUserId}`;
     const before = await page.evaluate(key => localStorage.getItem(key), recordKey);

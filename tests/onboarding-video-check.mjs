@@ -41,7 +41,7 @@ try {
     await page.goto('http://calendar.test/');
     await page.clock.pauseAt(new Date('2026-10-05T13:00:00'));
     await page.getByRole('button', { name: /Русский/ }).click();
-    await page.locator('.first-run-dialog').getByRole('button', { name: 'Продолжить', exact: true }).click();
+    await page.locator('.first-run-dialog [data-theme-option="dark"]').click();
     await page.locator('.first-run-dialog').getByRole('button', { name: /USD/ }).click();
     await selectBirthday(page, '1998-03-14');
     await page.getByRole('button', { name: 'Увидеть мою историю', exact: true }).click();

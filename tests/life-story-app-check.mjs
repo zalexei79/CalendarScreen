@@ -46,7 +46,6 @@ try {
     assert.equal(await page.getByRole('button', { name: 'Продолжить', exact: true }).count(), 0);
     await page.getByRole('button', { name: /Русский/ }).click();
     await page.getByRole('button', { name: purple ? 'Аметист' : dark ? 'Тёмное' : 'Светлое', exact: true }).click();
-    await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
     assert.equal(await page.getByRole('button', { name: 'Продолжить', exact: true }).count(), 0);
     await page.getByRole('button', { name: new RegExp(currency) }).click();
   };
