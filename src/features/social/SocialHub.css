@@ -1,0 +1,57 @@
+/* Shared by the calendar dialog and settings. Colors follow their parent surface. */
+.social-hub.social-friends{--social-accent:#d7bd85;--social-accent-soft:#c7a46112;min-width:0}
+[data-glass-theme=light] .social-hub.social-friends{--social-accent:#80632b;--social-accent-soft:#a37e3010}
+.social-hub .social-hub-purpose{font-size:14px;line-height:1.65;margin:0 0 20px;color:var(--settings-muted)}
+.social-hub-share{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:22px}
+.social-hub-share>button{display:grid;gap:5px;align-content:start;min-width:0;min-height:135px;padding:18px 14px;text-align:left;border:1px solid var(--settings-line);border-radius:19px;color:var(--settings-text);background:var(--settings-hover);font:inherit;cursor:pointer}
+.social-hub-share>button:first-child{background:linear-gradient(135deg,var(--social-accent-soft),var(--settings-hover))}
+.social-hub-share svg{color:var(--social-accent);margin-bottom:12px;stroke-width:1.5}
+.social-hub-share strong{font-size:15px;line-height:1.3;font-weight:550;letter-spacing:-.02em}
+.social-hub-share small{font-size:11px;line-height:1.5;color:var(--settings-muted);overflow-wrap:anywhere}
+.social-hub.social-friends .social-hub-tabs{display:flex;gap:4px;margin:0 0 18px;padding:5px;border:0;background:var(--settings-hover);border-radius:14px}
+.social-hub .social-hub-tabs>button{flex:1;min-height:42px;border:0;border-radius:10px;font-size:12px;gap:5px;background:transparent;color:var(--settings-muted)}
+.social-hub .social-hub-tabs>button[aria-pressed=true]{background:var(--social-accent-soft);color:var(--social-accent);box-shadow:inset 0 0 0 1px var(--settings-line)}
+.social-hub .social-hub-tabs span{font-size:10px;color:inherit;background:var(--settings-hover);padding:1px 5px}
+.social-hub-list{display:grid;gap:0}
+.social-hub-person{display:flex;align-items:center;gap:5px;min-width:0;border-bottom:1px solid var(--settings-line)}
+.social-hub-person:last-child{border-bottom:0}
+.social-hub-conversation{display:flex;align-items:center;gap:12px;width:100%;min-width:0;min-height:76px;padding:14px 0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.social-hub-conversation>.social-avatar{width:44px;height:44px;box-shadow:none}
+.social-hub-conversation>span:not(.social-avatar){display:grid;gap:5px;min-width:0;flex:1}
+.social-hub-conversation strong{display:block;font-size:14px;font-weight:550;letter-spacing:-.02em;overflow-wrap:anywhere}
+.social-hub-conversation small{display:block;font-size:12px;color:var(--settings-muted);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.social-hub-conversation>svg{color:var(--settings-muted);flex-shrink:0;opacity:.65}
+.social-hub-count{display:grid;place-items:center;min-width:21px;height:21px;padding:0 6px;border-radius:12px;background:var(--social-accent);color:#18191c;font-size:10px;font-weight:600;flex-shrink:0}
+.social-hub-folder{border:1px solid var(--settings-line);border-radius:16px;background:var(--settings-hover);margin:10px 0 20px;padding:0 14px}
+.social-hub-folder>button{width:100%;min-width:0;display:flex;align-items:center;gap:12px;min-height:72px;padding:12px 0;border:0;background:transparent;color:var(--settings-text);font:inherit;text-align:left;cursor:pointer}
+.social-hub-folder>button>svg{flex-shrink:0;color:var(--social-accent);stroke-width:1.6}
+.social-hub-folder>button>svg:last-child{color:var(--settings-muted)}
+.social-hub-folder>button>span{flex:1;min-width:0;font-size:13px;font-weight:500}
+.social-hub-folder small{display:block;margin-top:4px;color:var(--settings-muted);font-size:11px;line-height:1.5;font-weight:400}
+.social-hub-back{display:flex;align-items:center;justify-content:flex-start;gap:7px;min-height:42px;margin:0 0 14px;padding:6px 0;border:0;background:transparent;color:var(--settings-muted);font:inherit;font-size:12px;cursor:pointer}
+.social-hub-back.social-hub-privacy{margin:22px auto 0;justify-content:center}
+.social-hub-section{display:flex;align-items:center;gap:10px;margin:10px 0 16px;color:var(--social-accent)}
+.social-hub-section h3{margin:0;color:var(--settings-text);font-size:18px;letter-spacing:-.025em}
+.social-hub-requests>section{margin:10px 0 26px}
+.social-hub-requests h3{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;margin:0 0 14px;color:var(--settings-muted)}
+.social-hub-requests h3 svg{color:var(--social-accent)}
+.social-hub-requests h3 small{margin-left:auto;font-size:11px}
+.social-hub.social-friends .social-hub-empty-note{padding:15px;border:1px dashed var(--settings-line);border-radius:12px;color:var(--settings-muted);font-size:12px}
+.social-hub .social-empty h3{margin:0;color:var(--settings-text);font-size:18px;font-weight:500}
+.social-hub.social-friends .social-empty p{font-size:13px;max-width:280px;margin:0 0 5px}
+.social-hub.social-friends>.social-privacy{display:flex;align-items:flex-start;gap:7px;font-size:11px;line-height:1.65;margin:20px 0 0!important;padding-top:15px}
+.social-hub>.social-privacy svg{flex:0 0 13px;margin-top:3px}
+.social-hub button:focus-visible{outline:2px solid var(--social-accent);outline-offset:3px}
+dialog.creator-inbox.social-home-dialog{background:var(--letter-bg);border-color:var(--letter-line)}
+.social-home-dialog .social-home-heading{border-color:var(--letter-line)}
+.social-home-dialog .social-home-heading h2{font-size:27px;font-weight:550}
+.social-day-option{display:flex!important;flex-direction:row!important;align-items:center;gap:10px;margin:8px 0!important;padding:5px 0;color:inherit;min-height:38px;font-size:12px}
+.social-day-option input{width:18px!important;min-height:18px!important;height:18px;flex:0 0 18px;accent-color:#b69759}
+.day-history-card.day-history-summary{padding:20px;background:linear-gradient(135deg,#c6ab7210,#8b9d9d08);border-radius:18px}
+.day-history-summary header{align-items:center;gap:12px}
+.day-history-summary header>svg{width:27px;height:27px;stroke-width:1.4}
+.day-history-summary header strong{font-size:18px;letter-spacing:-.03em}
+.day-history-summary header small{font-size:10px;letter-spacing:.07em}
+.day-history-summary .day-history-hidden{font-size:12px!important;margin:18px 0 0!important;opacity:.75}
+.dayris-chat .chat-day-share{max-height:55dvh;overflow:auto;overscroll-behavior:contain;flex-shrink:1}
+@media(max-width:380px){.social-hub-share>button{padding:15px 11px;min-height:125px}.social-hub-share strong{font-size:14px}.social-hub .social-hub-tabs>button{font-size:11px}.social-hub-conversation{gap:9px}.social-hub-conversation>.social-avatar{width:39px;height:39px}.social-hub.social-friends .social-hub-tabs{gap:2px}}

@@ -11,6 +11,15 @@ export default function ActivityStreak({ ownerId, isLight, t, onOpen, onChange, 
   const paused = Boolean(streak?.paused && streak.currentStreak > 0);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const openRef = useRef(null);
+  const pendingOpen = useRef(false);
+  openRef.current = () => { if (streak) { pendingOpen.current = false; onOpen?.(streak); } else { pendingOpen.current = true; refresh(); } };
+  useEffect(() => {
+    const open = event => { if (ownerId && event.detail?.ownerId === ownerId) openRef.current?.(); };
+    window.addEventListener('dayris:streak-open', open);
+    return () => { pendingOpen.current = false; window.removeEventListener('dayris:streak-open', open); };
+  }, [ownerId]);
+  useEffect(() => { if (streak && pendingOpen.current) { pendingOpen.current = false; onOpen?.(streak); } }, [streak, onOpen]);
 
   useEffect(() => {
     if (streak) onChangeRef.current?.(streak);

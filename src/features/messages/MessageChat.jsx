@@ -7,14 +7,15 @@ import SocialAvatar from '../social/SocialAvatar.jsx';
 import {socialInviteCopy} from '../social/socialInviteCopy.js';
 import ShareCalendarDay,{dayShareCopy} from '../social/ShareCalendarDay.jsx';
 import DayHistoryCard from '../social/DayHistoryCard.jsx';
+import {sharedDayMessage,readSharedDay} from '../social/sharedDayMessage.js';
 const merge=(a,b)=>[...new Map([...a,...b].map(m=>[m.entry_key,m])).values()].sort((a,b)=>a.created_at.localeCompare(b.created_at)||a.entry_key.localeCompare(b.entry_key));
-export default function MessageChat({userId,peer=null,admin=false,friend=false,canEdit=true,language='ru',onBack,onCampaign,previewMessages=null}){
+export default function MessageChat({userId,peer=null,admin=false,friend=false,canEdit=true,language='ru',onBack,onCampaign,previewMessages=null,initialShareDay=false}){
  const t=chatCopy(language),locale=chatLocale(language),[rows,setRows]=useState(previewMessages||[]),[body,setBody]=useState(''),[error,setError]=useState(''),[sendFailed,setSendFailed]=useState(false),[loading,setLoading]=useState(!previewMessages),[sending,setSending]=useState(false),[more,setMore]=useState(false),[older,setOlder]=useState(false),[hasNew,setHasNew]=useState(false);
  const alive=useRef(true),list=useRef(null),nearBottom=useRef(true),scrollPlan=useRef(null),pendingLatest=useRef(null),fetching=useRef(false),reading=useRef(false),locked=useRef(false),request=useRef(null),known=useRef(new Set()),initialized=useRef(false),refreshRef=useRef(null),rowsRef=useRef(rows);rowsRef.current=rows;
  const [unavailable,setUnavailable]=useState(false),accessDenied=useRef(false),selfDirection=friend?'self':admin?'admin':'user',peerId=friend?peer?.user_id:peer?.id,peerName=friend?peer?.display_name:peer?.name;
- const [shareDay,setShareDay]=useState(false);
+ const [shareDay,setShareDay]=useState(Boolean(initialShareDay));
  const dayRequest=useRef(null);
- async function sendDay(data){if(locked.current||!friend||unavailable)return;locked.current=true;setSending(true);setError('');if(dayRequest.current?.day!==data.day)dayRequest.current={day:data.day,id:crypto.randomUUID()};try{const {error}=await supabase.rpc('friend_chat_share_day',{p_peer:peerId,p_day:data.day,p_request_id:dayRequest.current.id,p_owner:userId});if(error)throw error;if(!alive.current)return;dayRequest.current=null;setShareDay(false);nearBottom.current=true;await refreshRef.current?.();notify();}catch{if(alive.current)setError(t.sendError);}finally{locked.current=false;if(alive.current)setSending(false);}}
+ async function sendDay(data){if(locked.current||!friend||unavailable)return;locked.current=true;setSending(true);setError('');const body=data.shareDetails?null:sharedDayMessage(data,data.shareAmounts),key=body||data.day+':full';if(dayRequest.current?.key!==key)dayRequest.current={key,id:crypto.randomUUID()};try{const args={p_peer:peerId,p_request_id:dayRequest.current.id,p_owner:userId};const {error}=await supabase.rpc(body?'friend_chat_send':'friend_chat_share_day',body?{...args,p_body:body}:{...args,p_day:data.day});if(error)throw error;if(!alive.current)return;dayRequest.current=null;setShareDay(false);nearBottom.current=true;await refreshRef.current?.();notify();}catch{if(alive.current)setError(t.sendError);}finally{locked.current=false;if(alive.current)setSending(false);}}
  const notify=()=>window.dispatchEvent(friend?new CustomEvent('dayris:friends-messages',{detail:{userId,peerId}}):admin?new Event('dayris:admin-replies-refresh'):new CustomEvent('dayris:creator-count',{detail:{userId}}));
  function deny(){accessDenied.current=true;setUnavailable(true);setSendFailed(false);setRows([]);setMore(false);setHasNew(false);pendingLatest.current=null;known.current=new Set();initialized.current=false;setError(socialInviteCopy(language).unavailable);}
  async function markRead(items){
@@ -65,7 +66,7 @@ export default function MessageChat({userId,peer=null,admin=false,friend=false,c
    {rows.map((m,index)=>{const mine=m.direction===selfDirection,newDay=index===0||date(rows[index-1].created_at)!==date(m.created_at),generic=['Сообщение','Сообщение от создателя','Сообщения от создателя'].includes(m.title);return <React.Fragment key={m.entry_key}>
     {newDay&&<div className="chat-day-divider"><span>{date(m.created_at)}</span></div>}
     <div className={`chat-message-row${mine?' is-mine':''}`}><div className={`chat-bubble${m.pro_until?' has-gift':''}`}>
-     {m.kind==='notice'&&m.title&&!generic&&<strong className="chat-notice-title">{m.title}</strong>}{m.day_share?<DayHistoryCard data={m.day_share} language={language}/>:<p>{m.body}</p>}
+     {m.kind==='notice'&&m.title&&!generic&&<strong className="chat-notice-title">{m.title}</strong>}{m.day_share||friend&&readSharedDay(m.body)?<DayHistoryCard data={m.day_share||readSharedDay(m.body)} language={language}/>:<p>{m.body}</p>}
      {m.pro_until&&<div className="chat-pro-attachment"><Gift size={17}/><span><strong>{t.pro}</strong><span>{m.pro_until==='infinity'?t.forever:`${t.until} ${date(m.pro_until)}`}</span></span></div>}
      <span className="chat-message-meta"><time dateTime={m.created_at}>{time(m.created_at)}</time>{mine&&(m.read_at?<CheckCheck size={14} aria-label={t.read}/>:<Check size={14} aria-label={t.sent}/>)}</span>
     </div></div>
