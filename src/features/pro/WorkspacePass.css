@@ -85,7 +85,7 @@ html[data-dayris-theme="purple"] .workspace-selector.workspace-pass {
   box-shadow:0 .5px 1px var(--pass-shadow);
   transition:border-color 460ms ease;
 }
-.workspace-selector.workspace-pass .workspace-mode-toggle[aria-checked] {
+.workspace-selector.workspace-pass .workspace-mode-toggle.workspace-mode-toggle {
   position:absolute; z-index:1; left:0; top:0; display:grid; place-items:center; isolation:isolate;
   width:60px; height:44px; min-height:44px; margin:0; padding:0;
   border:0; border-radius:12px; background:transparent; box-shadow:none;
@@ -100,7 +100,7 @@ html[data-dayris-theme="purple"] .workspace-selector.workspace-pass {
   transition:background-color 460ms ease,border-color 460ms ease,box-shadow 460ms ease,transform 150ms var(--pass-ease);
 }
 .workspace-pass-face::after { content:''; position:absolute; inset:1px; border:1px solid #ffffff12; border-radius:inherit; pointer-events:none; }
-.workspace-selector.workspace-pass .workspace-mode-toggle[aria-checked] > .workspace-pass-label {
+.workspace-selector.workspace-pass .workspace-mode-toggle.workspace-mode-toggle > .workspace-pass-label {
   position:relative; font:650 10px/1 system-ui,sans-serif; letter-spacing:.15em; padding-left:.15em;
   color:var(--pass-ink); text-shadow:none;
 }
@@ -126,14 +126,6 @@ html[data-dayris-theme="purple"] .workspace-selector.workspace-pass {
 }
 .workspace-pass .workspace-pro-info:hover::before { border-color:var(--pass-metal); }
 .workspace-selector.workspace-pass .workspace-pro-info:hover { background:transparent; box-shadow:none; }
-@media(prefers-reduced-motion:no-preference) {
-  .workspace-pass.has-switched .workspace-pass-face { animation:pass-settle-free 460ms var(--pass-ease); }
-  .workspace-pass.has-switched.is-pro .workspace-pass-face { animation:pass-settle-pro 460ms var(--pass-ease); }
-  .workspace-pass.has-switched .workspace-pass-label { animation:pass-label-enter 220ms var(--pass-ease); }
-  @keyframes pass-settle-pro { from {transform:scale(.97)} to {transform:scale(1)} }
-  @keyframes pass-settle-free { from {transform:scale(.97)} to {transform:scale(1)} }
-  @keyframes pass-label-enter { from {opacity:.3;transform:translateY(2px)} to {opacity:1;transform:translateY(0)} }
-}
 @media(prefers-reduced-motion:reduce) {
   .workspace-pass *,.workspace-pass *::before { transition:none!important; animation:none!important; }
 }

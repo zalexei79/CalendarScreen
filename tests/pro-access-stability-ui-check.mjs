@@ -29,6 +29,7 @@ const bundle = await build({
   }],
 });
 const browser=await require('playwright').chromium.launch({channel:'msedge',headless:true});
+let currentApp;
 try {
   const page=await browser.newPage();
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -84,12 +85,12 @@ try {
   // Check the real CalendarScreen/Capital integration in the production build.
   const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block'});
   await context.addInitScript(()=>{
-    for(const [key,value] of Object.entries({atj_pro_view:'1',atj_trader_mode:'0',atj_language:'ru',atj_currency:'USD',dayris_onboarding_v2_completed:'1',calendar_guide_completed:'1'}))localStorage.setItem(key,value);
+    for(const [key,value] of Object.entries({atj_pro_view:'0',atj_trader_mode:'0',atj_language:'ru',atj_currency:'USD',dayris_onboarding_v2_completed:'1',calendar_guide_completed:'1'}))localStorage.setItem(key,value);
   });
   await context.route('**/*',route=>{
     const url=new URL(route.request().url());
     if(url.origin!=='http://stability.test'){
-      if(url.pathname.startsWith('/rest/v1/'))return route.fulfill({contentType:'application/json',body:'[]'});
+      if(url.pathname.startsWith('/rest/v1/'))return route.fulfill({contentType:'application/json',body:url.pathname.endsWith('/creator_latest_gift')?'null':'[]'});
       return route.abort();
     }
     const root=path.resolve('dist'),file=path.resolve(root,url.pathname==='/'?'index.html':'.'+url.pathname);
@@ -97,16 +98,32 @@ try {
     return route.fulfill({contentType:file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.png')?'image/png':'text/html',body:fs.readFileSync(file)});
   });
   await installStoryAccount(context);
-  let calls=0,release;
+  let calls=0,release,revoked=false;
   await context.route('**/rest/v1/rpc/get_my_pro_status',async route=>{
     calls++;
-    if(calls>1)await new Promise(resolve=>{release=resolve;});
-    await route.fulfill({contentType:'application/json',body:JSON.stringify(calls===3?{message:'Temporary network error'}:{active:true,until:'2026-10-15T12:00:00Z'}),status:calls===3?503:200});
+    if(calls>1&&!revoked)await new Promise(resolve=>{release=resolve;});
+    await route.fulfill({contentType:'application/json',body:JSON.stringify(revoked?{active:false}:calls===3?{message:'Temporary network error'}:{active:true,until:'2026-10-15T12:00:00Z'}),status:!revoked&&calls===3?503:200});
   });
-  const app=await context.newPage();app.on('pageerror',e=>errors.push(e.message));
+  const app=await context.newPage();currentApp=app;app.on('pageerror',e=>errors.push(e.message));app.setDefaultTimeout(10000);
   await app.clock.install({time:new Date('2026-10-14T12:00:00Z')});
   await app.emulateMedia({reducedMotion:'reduce'});
   await app.goto('http://stability.test/');
+  await app.locator('.receipt-launch').waitFor();
+  assert.equal(await app.locator('.workspace-pass-label').textContent(),'PRO','paid account ignores the old FREE preference');
+  assert.equal(await app.locator('.workspace-mode-toggle').getAttribute('role'),null,'membership is not a switch');
+  await app.locator('.workspace-mode-toggle').click();await app.locator('.pro-offer').waitFor();
+  await app.locator('.pro-dialog-close').click();
+  assert.equal(await app.locator('.workspace-pass-label').textContent(),'PRO','membership click opens details without downgrading');
+  for(const width of [390,1280]){
+    await app.setViewportSize({width,height:844});
+    await app.locator('.pro-control-trader').click();await app.waitForFunction(()=>document.querySelector('.pro-control-trader').getAttribute('aria-checked')==='true');
+    assert.equal(await app.locator('.receipt-launch').isVisible(),true,'camera stays visible with platforms enabled');
+    assert.equal(await app.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'dock stays within viewport');
+    if(width===390){await app.locator('.receipt-launch').click();await app.locator('.receipt-dialog').waitFor();await app.getByRole('button',{name:'Закрыть чек',exact:true}).click();}
+    await app.locator('.pro-control-trader').click();
+    assert.equal(await app.locator('.receipt-launch').isVisible(),true,'camera remains visible with trader off');
+  }
+  await app.setViewportSize({width:390,height:844});
   await app.locator('.workspace-capital-entry').click();
   await app.getByRole('button',{name:'Добавить актив',exact:true}).click();
   await app.locator('.capital-sheet').waitFor();
@@ -121,7 +138,13 @@ try {
     assert.equal(await app.evaluate(()=>window.originalSheet===document.querySelector('.capital-sheet')),true,'Success and network error keep Capital mounted');
     assert.equal(await app.evaluate(()=>localStorage.getItem('dayris_account_mode')),'capital');
   }
+  revoked=true;await app.evaluate(()=>{localStorage.setItem('atj_pro_view','1');window.dispatchEvent(new Event('dayris:pro-refresh'));});
+  await app.waitForFunction(()=>document.querySelector('.workspace-pass-label')?.textContent==='FREE');
+  assert.equal(await app.locator('.receipt-launch').count(),0,'revocation removes receipt access');
+  assert.equal(await app.locator('.capital-sheet').count(),0,'revocation leaves the protected workspace');
+  await app.locator('.workspace-mode-toggle').click();await app.locator('.pro-offer').waitFor();
+  assert.equal(await app.locator('.workspace-pass-label').textContent(),'FREE','free account cannot activate PRO by clicking the badge');
   assert.deepEqual(errors,[]);
   await context.close();
-  console.log('PASS: production mobile CalendarScreen retains the open Capital sheet and navigation during periodic PRO success and HTTP 503.');
-} finally {await browser.close();}
+  console.log('PASS: subscription-owned tier, stale preferences ignored, badge opens details, receipt available with trader on/off at 390/1280px, stable periodic refresh, free gating and revocation.');
+} catch(error){if(currentApp){console.log('APP DIAGNOSTIC',JSON.stringify({url:currentApp.url(),body:(await currentApp.locator('body').innerText()).slice(0,3600),account:await currentApp.evaluate(()=>localStorage.getItem('dayris_account_mode'))}));await currentApp.screenshot({path:'artifacts/subscription-tier-failed.png'});}throw error;} finally {await browser.close();}

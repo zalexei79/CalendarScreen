@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { Info, ChartNoAxesCombined } from 'lucide-react';
 import ProWorkspaceActions from './ProWorkspaceActions';
 import WalletEntry from './WalletEntry';
@@ -7,7 +7,7 @@ import './ProPresentation.css';
 import './WorkspaceModePanel.css';
 import './WorkspacePass.css';
 
-export default function WorkspaceModePanel({ todayAction, hideSelector = false, proView, onModeChange, isLight, language, currency, t, traderMode, onTraderChange, onWallet, onCapital, walletAccess = false, walletLoading = false, onConnect, connected, metatrader, reconnect, onOffer }) {
+export default function WorkspaceModePanel({ todayAction, hideSelector = false, proView, isLight, language, currency, t, traderMode, onTraderChange, onWallet, onCapital, walletAccess = false, walletLoading = false, onConnect, connected, metatrader, reconnect, onOffer }) {
   const text = (r,e,m,z) => platformText(language,r,e,m,z);
   const financialProActive = proView && walletAccess && !walletLoading;
   return <div className={`workspace-mode-group ${isLight ? 'pro-light' : ''}`}>
@@ -16,14 +16,13 @@ export default function WorkspaceModePanel({ todayAction, hideSelector = false, 
     {financialProActive && onCapital && <button type="button" className="workspace-capital-entry" onClick={onCapital} title={t('capitalHomeTitle')} aria-label={t('capitalHomeTitle')}><ChartNoAxesCombined aria-hidden="true"/><span>{text('Инвестиции','Investments','Investiții','投资')}</span></button>}
     {todayAction}
     <ProWorkspaceActions inPanel visible={proView} isLight={isLight} language={language} currency={currency} t={t} traderMode={traderMode} onTraderChange={onTraderChange} onWallet={onWallet} onConnect={onConnect} connected={connected} metatrader={metatrader} reconnect={reconnect} onOffer={onOffer}/>
-    {!hideSelector && <WorkspaceModeSelector proView={proView} onModeChange={onModeChange} language={language} t={t} onOffer={onOffer}/> }
+    {!hideSelector && <WorkspaceModeSelector proView={proView} language={language} t={t} onOffer={onOffer}/> }
     </section>
   </div>;
 }
 
-export function WorkspaceModeSelector({proView, onModeChange, language, t, onOffer}) {
+export function WorkspaceModeSelector({proView, language, t, onOffer}) {
   const text = (r,e,m,z) => platformText(language,r,e,m,z);
-  const [hasSwitched, setHasSwitched] = useState(false);
   const pointerBounds = useRef(null);
   function enterPass(event) {
     if (event.pointerType !== 'mouse' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -41,9 +40,9 @@ export function WorkspaceModeSelector({proView, onModeChange, language, t, onOff
     event.currentTarget.style.removeProperty('--pass-light-x');
     event.currentTarget.style.removeProperty('--pass-light-y');
   }
-  return (<div className={`workspace-selector workspace-pass ${proView ? 'is-pro' : 'is-free'}${hasSwitched ? ' has-switched' : ''}`} role="group" aria-label={text('Режим DAYRIS','DAYRIS mode','Mod DAYRIS', "DAYRIS 模式")} onPointerEnter={enterPass} onPointerMove={reflectPointer} onPointerLeave={leavePass}>
+  return (<div className={`workspace-selector workspace-pass ${proView ? 'is-pro' : 'is-free'}`} role="group" aria-label={text('Тариф DAYRIS','DAYRIS plan','Plan DAYRIS', "DAYRIS 订阅")} onPointerEnter={enterPass} onPointerMove={reflectPointer} onPointerLeave={leavePass}>
       <span className="workspace-pass-orbit" aria-hidden="true"/>
-      <button className="workspace-mode-toggle" type="button" role="switch" aria-checked={proView} aria-label={text('Режим PRO','PRO mode','Mod PRO', "PRO 模式")} onClick={() => { setHasSwitched(true); onModeChange(); }}>
+      <button className="workspace-mode-toggle" type="button" aria-label={proView ? 'DAYRIS PRO' : 'DAYRIS FREE'} title={t('proInfoAction')} onClick={onOffer}>
         <span className="workspace-pass-face" aria-hidden="true"/>
         <span key={proView ? 'pro-label' : 'free-label'} className="workspace-pass-label">{proView ? 'PRO' : 'FREE'}</span>
       </button>

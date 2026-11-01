@@ -36,13 +36,14 @@ try{
  const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
  await page.goto(origin);await page.locator('.calendar-days-grid').waitFor();await page.waitForFunction(()=>!document.getElementById('boot-screen'));
  await page.locator('.receipt-launch:not([disabled])').waitFor();
- // A paid account in the regular view and a free account with a stale PRO
- // preference must both omit the camera and its upload inputs altogether.
+ // The server owns the tier. A paid account keeps its camera despite an old
+ // FREE preference, while a free account cannot unlock it through storage.
  for(const [active,mode] of [[true,'0'],[false,'1']]){
   proActive=active;await page.evaluate(value=>localStorage.setItem('atj_pro_view',value),mode);
   const checked=page.waitForResponse(response=>response.url().endsWith('/rpc/get_my_pro_status'));
   await page.reload();await checked;await page.locator('.calendar-days-grid').waitFor();await page.waitForFunction(()=>!document.getElementById('boot-screen'));
-  assert.equal(await page.locator('.receipt-launch,.receipt-file,.receipt-dialog').count(),0,`camera hidden with access=${active}, PRO view=${mode}`);
+  assert.equal(await page.locator('.receipt-launch').count(),active?1:0,`camera follows subscription with access=${active}, stale view=${mode}`);
+  if(!active)assert.equal(await page.locator('.receipt-file,.receipt-dialog').count(),0,'free account has no receipt upload inputs');
   for(const width of[390,1280]){
    await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
    await page.screenshot({path:`artifacts/receipt-check/camera-hidden-${active?'regular':'free'}-${width}.png`});

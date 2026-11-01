@@ -75,7 +75,6 @@ import {
   RECENT_INSTRUMENTS_STORAGE_KEY,
   CUSTOM_TAGS_STORAGE_KEY,
   DEPOSIT_SIZE_STORAGE_KEY,
-  PRO_VIEW_STORAGE_KEY,
   TRADER_MODE_STORAGE_KEY,
   LANGUAGE_STORAGE_KEY,
   CURRENCY_STORAGE_KEY,
@@ -486,14 +485,12 @@ export default function CalendarScreen() {
     if (proAccessLoading) return;
     if (!proAccessActive) { openProPresentation(); return; }
     transitionView(() => {
-      setProViewInternal(true);
       setAccountMode('capital');
     });
   }
   function openWalletFromCalendarAction() {
     if (proAccessLoading || !proAccessActive) return;
     transitionView(() => {
-      setProViewInternal(true);
       setAccountMode('wallet');
     });
   }
@@ -514,20 +511,18 @@ export default function CalendarScreen() {
     }
   }, [depositSize]);
 
-  // Access is server-owned. The selected PRO view and Trader Mode are only
-  // local presentation preferences and can never grant entitlement.
-  const [proView, setProViewInternal] = useState(false);
-  const proViewPreferenceReady = useRef(false);
+  // The subscription owns the tier. Only Trader Mode is a presentation preference.
+  const proView = proAccessActive && !proAccessLoading;
   const [traderMode, setTraderModeInternal] = useState(false);
   const traderModePreferenceReady = useRef(false);
   const isFinancialPro = proView && !traderMode;
   const isFreeMoneyHistory = !proView && !traderMode;
   useEffect(() => {
     if (!authReady) return;
-    if (!proAccessLoading && (!proAccessActive || (proViewPreferenceReady.current && !proView))) {
+    if (!proAccessLoading && !proAccessActive) {
       if (accountMode === 'wallet' || accountMode === 'capital') setAccountMode('main');
     }
-  }, [authReady, proAccessActive, proAccessLoading, proView, accountMode]);
+  }, [authReady, proAccessActive, proAccessLoading, accountMode]);
   const [proAccessPromptOpen, setProAccessPromptOpen] = useState(false);
   const [proOfferTab, setProOfferTab] = useState('offer');
   const [proCheckoutLoading, setProCheckoutLoading] = useState(false);
@@ -540,19 +535,12 @@ export default function CalendarScreen() {
       ? Boolean(valueOrUpdater(proView))
       : Boolean(valueOrUpdater);
 
-    if (requested && proAccessLoading) return;
-    if (requested && !proAccessActive) {
-      setReferralShareStatus('');
-      setProOfferTab('offer');
-      setProAccessPromptOpen(true);
-      return;
-    }
-
-    setProViewInternal(requested);
-    if (!requested) {
-      setTraderModeInternal(false);
-      setPlatformFilter('ALL');
-    }
+    // Retain existing upgrade entry points, including voice commands, without
+    // allowing a local action to downgrade an active subscription.
+    if (!requested || proAccessLoading || proAccessActive) return;
+    setReferralShareStatus('');
+    setProOfferTab('offer');
+    setProAccessPromptOpen(true);
   }
 
   function setTraderMode(valueOrUpdater) {
@@ -639,39 +627,32 @@ export default function CalendarScreen() {
   }
 
   useEffect(() => {
-    if (!proViewPreferenceReady.current || proAccessLoading || !proAccessActive) return;
+    if (!traderModePreferenceReady.current || proAccessLoading || !proAccessActive) return;
     try {
-      window.localStorage.setItem(PRO_VIEW_STORAGE_KEY, proView ? '1' : '0');
       window.localStorage.setItem(TRADER_MODE_STORAGE_KEY, traderMode ? '1' : '0');
     } catch {
       // localStorage remembers only the preferred view, never the entitlement.
     }
-  }, [proView, traderMode, proAccessActive, proAccessLoading]);
+  }, [traderMode, proAccessActive, proAccessLoading]);
 
   useEffect(() => {
     if (proAccessLoading) {
-      proViewPreferenceReady.current = false;
       traderModePreferenceReady.current = false;
       return;
     }
 
     if (!proAccessActive) {
-      setProViewInternal(false);
       setTraderModeInternal(false);
-      proViewPreferenceReady.current = false;
       traderModePreferenceReady.current = false;
       return;
     }
 
     // Restore presentation only after the server confirms access.
     try {
-      const nextProView = window.localStorage.getItem(PRO_VIEW_STORAGE_KEY) === '1';
-      setProViewInternal(nextProView);
-      setTraderModeInternal(nextProView && window.localStorage.getItem(TRADER_MODE_STORAGE_KEY) === '1');
+      setTraderModeInternal(window.localStorage.getItem(TRADER_MODE_STORAGE_KEY) === '1');
     } catch {
       // ignore storage read failures
     }
-    proViewPreferenceReady.current = true;
     traderModePreferenceReady.current = true;
   }, [proAccessActive, proAccessLoading, user?.id]);
 
@@ -4958,7 +4939,7 @@ export default function CalendarScreen() {
             </span>
           </button>
           <CalendarVoiceButton launchRequest={homeVoiceReady ? homeVoiceLaunch.request : null} onLaunchHandled={homeVoiceLaunch.handled} userId={user?.id} onCreateCategory={voiceCategories.add} onDeleteCategory={removeMoneyCategory} onSaveEntry={saveReviewedVoiceEntry} defaultCurrency={currency} walletAvailable={proAccessActive && !proAccessLoading} language={language} isLight={isLight} traderMode={traderMode} categoryOptions={moneyCategoryNames.map(value => ({value, label: getMoneyCategoryLabel(value, language), type: MONEY_CATEGORIES.find(item=>item.key===value)?.type, icon: getHistoryCategoryIcon(value)}))} onResetConversation={voiceConversation.reset} onConversation={voiceConversation.handle} selectedDate={selectedKey} onCommand={handleCalendarVoiceCommand} />
-          {isFinancialPro && proAccessActive && !proAccessLoading && validUserId && <ReceiptCapture key={validUserId} userId={validUserId} proActive={proAccessActive} proLoading={proAccessLoading} language={language} isLight={isLight} defaultCurrency={currency} defaultDateKey={selectedKey} onAccessDenied={refreshProAccess} onSaveReceipt={saveReviewedReceipt}/>}
+          {proAccessActive && !proAccessLoading && validUserId && <ReceiptCapture key={validUserId} userId={validUserId} proActive={proAccessActive} proLoading={proAccessLoading} language={language} isLight={isLight} defaultCurrency={currency} defaultDateKey={selectedKey} onAccessDenied={refreshProAccess} onSaveReceipt={saveReviewedReceipt}/>}
         </div>
       </WorkspaceDock>
 

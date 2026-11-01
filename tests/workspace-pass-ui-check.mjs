@@ -23,10 +23,11 @@ try {
  for(const width of [320,390,1280])for(const language of ['ru','en','uk','md','zh-CN'])for(const light of [false,true]){
   await page.setViewportSize({width,height:844});await page.goto(`http://pass.test/header?preview&mode=free&language=${language}${light?'&light':''}`);await pass.waitFor();
   await page.locator('.activity-streak-value').evaluate(el=>el.textContent='10 дн.');
-  assert.equal(await toggle.getAttribute('aria-checked'),'false');assert.equal(await info.isVisible(),true,'features can be opened without switching to PRO');
+  assert.equal(await toggle.getAttribute('aria-checked'),null);assert.equal(await pass.locator('.workspace-pass-label').textContent(),'FREE');assert.equal(await info.isVisible(),true,'features can be opened from FREE');
   const freeFace=await pass.locator('.workspace-pass-face').evaluate(el=>getComputedStyle(el).backgroundImage);
   const initial=await pass.boundingBox();await info.click();await page.waitForFunction(()=>document.querySelector('#state').textContent==='main/false/true');
-  await toggle.click();await page.waitForFunction(()=>document.querySelector('.workspace-mode-toggle').getAttribute('aria-checked')==='true');await settle();
+  await toggle.click();assert.equal(await pass.locator('.workspace-pass-label').textContent(),'FREE','clicking the badge does not change the tier');
+  await page.goto(`http://pass.test/header?preview&mode=pro&language=${language}${light?'&light':''}`);await pass.waitFor();await settle();await page.locator('.activity-streak-value').evaluate(el=>el.textContent='10 дн.');
   assert.notEqual(await pass.locator('.workspace-pass-face').evaluate(el=>getComputedStyle(el).backgroundImage),freeFace,'the pass material changes, not only the icon');
   assert.equal(await pass.locator('.workspace-pass-label').evaluate(el=>getComputedStyle(el).color),await pass.evaluate(el=>getComputedStyle(el).color),'mode label retains the intended readable metallic color');
   const pro=await pass.boundingBox();assert.equal(pro.width,initial.width,'mode changes do not resize the header');assert.equal(pro.height,initial.height);
@@ -38,11 +39,11 @@ try {
   if(width===390&&language==='ru'&&!light)await page.locator('.dayris-brand-row').screenshot({path:'artifacts/orbit-pass-pro-header.png'});
  }
  for(const reducedMotion of ['no-preference','reduce']){
-  await page.emulateMedia({reducedMotion});await page.goto('http://pass.test/header?preview&mode=free&language=ru');await pass.waitFor();
+  await page.emulateMedia({reducedMotion});await page.goto('http://pass.test/header?preview&mode=pro&language=ru');await pass.waitFor();
   await toggle.focus();await page.keyboard.press('Space');await page.keyboard.press('Space');await page.keyboard.press('Space');
-  await page.waitForFunction(()=>document.querySelector('.workspace-mode-toggle').getAttribute('aria-checked')==='true');await settle();
+  assert.equal(await pass.locator('.workspace-pass-label').textContent(),'PRO');await settle();
   const active=await info.locator('svg').boundingBox(),activeTarget=await info.boundingBox();await info.focus();await page.keyboard.press('Enter');await page.waitForFunction(()=>document.querySelector('#state').textContent==='main/true/true');
-  await toggle.click();await page.waitForFunction(()=>document.querySelector('.workspace-mode-toggle').getAttribute('aria-checked')==='false');await settle();
+  await page.goto('http://pass.test/header?preview&mode=free&language=ru');await pass.waitFor();await settle();
   const inactive=await info.locator('svg').boundingBox(),inactiveTarget=await info.boundingBox();assert.ok(active.y<inactive.y-8,'satellite moves along its orbit between modes');
   assert.deepEqual(activeTarget,inactiveTarget,'the visible satellite moves inside a fixed touch target');
   if(reducedMotion==='reduce')assert.equal(await pass.evaluate(el=>el.getAnimations({subtree:true}).filter(a=>a.playState==='running').length),0);
@@ -54,7 +55,7 @@ try {
   await page.locator('.activity-streak-value').evaluate(el=>el.textContent='10 дн.');
   let freeMaterial;
   for(const active of [false,true]){
-   if(active){await toggle.click();await settle();}
+   if(active){await page.goto(`http://pass.test/header?preview&mode=pro&language=ru${theme==='light'?'&light':''}`);await pass.waitFor();await page.evaluate(theme=>document.documentElement.dataset.dayrisTheme=theme,theme);await settle();await page.locator('.activity-streak-value').evaluate(el=>el.textContent='10 дн.');}
    const palette=await pass.evaluate(el=>{
     const face=getComputedStyle(el.querySelector('.workspace-pass-face'));
     return {fill:face.backgroundColor,image:face.backgroundImage,ink:getComputedStyle(el.querySelector('.workspace-pass-label')).color,highlight:getComputedStyle(el).getPropertyValue('--pass-highlight').trim()};
@@ -83,7 +84,7 @@ try {
  // A live theme change updates the existing pass without resetting the selected mode.
  for(const theme of ['gold','emerald','purple','dark']){
   await page.evaluate(theme=>document.documentElement.dataset.dayrisTheme=theme,theme);await settle();
-  assert.equal(await toggle.getAttribute('aria-checked'),'true');
+  assert.equal(await pass.locator('.workspace-pass-label').textContent(),'PRO');
   const palette=await pass.evaluate(el=>({actual:getComputedStyle(el.querySelector('.workspace-pass-face')).backgroundColor,expected:getComputedStyle(el).getPropertyValue('--pass-pro-fill').trim()}));
   assert.equal(luminance(palette.actual),luminance(palette.expected),'runtime theme changes repaint the pass');
  }
@@ -98,5 +99,5 @@ try {
  await page.setViewportSize({width:390,height:844});await page.goto('http://pass.test/header?preview&mode=free&language=ru');await pass.waitFor();
  await page.locator('.activity-streak-value').evaluate(el=>el.textContent='10 дн.');
  await page.locator('.dayris-brand-row').screenshot({path:'artifacts/orbit-pass-free-header.png'});
- assert.deepEqual(errors,[]);console.log('Quiet orbit: 30 localized header layouts and 30 theme/mode layouts, reflected-text contrast, fixed 44px targets, live theme changes, independent features, keyboard switching and reduced motion passed.');
+ assert.deepEqual(errors,[]);console.log('Quiet orbit: localized tier badges, theme layouts, reflected-text contrast, fixed 44px targets, no manual tier switching, subscription details, keyboard access and reduced motion passed.');
 } finally {await browser.close();}

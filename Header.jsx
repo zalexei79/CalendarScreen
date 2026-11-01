@@ -208,7 +208,7 @@ export default function Header({
           )}
 
           <div className={`header-mode-control workspace-mode-group ${isLight ? 'pro-light' : ''}`}>
-            <WorkspaceModeSelector proView={proView} onModeChange={() => setProView(value => !value)} language={language} t={t} onOffer={openProPresentation}/>
+            <WorkspaceModeSelector proView={proView} language={language} t={t} onOffer={openProPresentation}/>
           </div>
 
           {/* Settings gear */}
@@ -246,7 +246,7 @@ export default function Header({
         </div>
       </div>
 
-      {/* Second row: Calendar month navigation + Free/PRO switch */}
+      {/* Second row: Calendar month navigation */}
       <div className="relative">
       <div>
         <div className="dayris-command-row">
@@ -353,7 +353,7 @@ export default function Header({
           {proView && <div className="dayris-workspace-slot">
             <WorkspaceModePanel
               todayAction={todayAction}
-              hideSelector proView={proView} onModeChange={() => setProView((value) => !value)} isLight={isLight}
+              hideSelector proView={proView} isLight={isLight}
               language={language} currency={currency} t={t} traderMode={traderMode}
               onTraderChange={() => setTraderMode((value) => {
                 const next = !value;
