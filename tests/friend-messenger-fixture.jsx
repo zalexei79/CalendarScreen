@@ -2,6 +2,7 @@
 import React,{useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import HomeFriends from '../src/features/social/HomeFriends.jsx';
+import {FriendChatDialog} from '../src/features/social/FriendMessaging.jsx';
 import {sharedDayMessage,sharedStreakMessage} from '../src/features/social/sharedDayMessage.js';
 import {importFriendKey,lockFriendMessage} from '../src/features/messages/friendMessage.js';
 const owner='22222222-2222-4222-8222-222222222222',anna='33333333-3333-4333-8333-333333333333',max='44444444-4444-4444-8444-444444444444',maria='55555555-5555-4555-8555-555555555555';
@@ -15,6 +16,7 @@ fixture.rpc=async(name,args={})=>{
  if(name==='social_own_profile')return {data:{user_id:fixture.owner,display_name:'Алексей',handle:'1001',discoverable:true}};
  if(name==='social_friends')return {data:social()};
  if(name==='social_friend_count')return {data:3};
+ if(name==='friend_chat_peer')return {data:people.find(p=>p.user_id===args.p_peer)};
  if(name==='friend_chat_thread'){if(fixture.denied)return {error:{code:'42501'}};const thread=messages.filter(m=>[m.sender_id,m.recipient_id].includes(args.p_peer)&&[m.sender_id,m.recipient_id].includes(fixture.owner));return {data:{owner_id:fixture.owner,rows:thread.map(m=>({...m,direction:m.sender_id===fixture.owner?'self':'peer'})),has_more:false}};}
  if(name==='friend_chat_read'){for(const id of args.p_ids){const m=messages.find(m=>m.id===id);if(m){m.read_at=new Date().toISOString();fixture.readIds.push(id);}}return {data:null};}
  if(name==='friend_chat_send'){
@@ -30,5 +32,5 @@ fixture.rpc=async(name,args={})=>{
  return {data:null};
 };
 fixture.receiveLocked=async(code,text)=>{const secret=await importFriendKey(code),id=crypto.randomUUID();messages.push({...row(id,anna,owner,await lockFriendMessage(text,secret.key,{owner,peer:anna,sender:anna,id}),'12:05'),created_at:new Date(Date.now()+60000).toISOString()});window.dispatchEvent(new Event('focus'));return id;};
-function Fixture(){const [user,setUser]=useState(owner);fixture.changeOwner=id=>{fixture.owner=id;setUser(id);};return <><div className="fixture-background"><b>DAYRIS</b><p>Календарь важных дней</p><button onClick={()=>window.dispatchEvent(new CustomEvent('dayris:friends-home',{detail:{userId:user}}))}>Открыть друзей</button></div><HomeFriends userId={user} language="ru"/></>;}
+function Fixture(){const [user,setUser]=useState(owner);fixture.changeOwner=id=>{fixture.owner=id;setUser(id);};return <><div className="fixture-background"><b>DAYRIS</b><p>Календарь важных дней</p><button onClick={()=>window.dispatchEvent(new CustomEvent('dayris:friends-home',{detail:{userId:user}}))}>Открыть друзей</button></div><HomeFriends userId={user} language="ru"/><FriendChatDialog userId={user} language="ru"/></>;}
 createRoot(document.getElementById('root')).render(<Fixture/>);

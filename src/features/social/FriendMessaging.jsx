@@ -7,6 +7,7 @@ import SocialAvatar from './SocialAvatar.jsx';
 import {socialInviteCopy} from './socialInviteCopy.js';
 import {socialProfileChanged} from './useSocialProfile.js';
 import {readSocialPending,clearSocialPending,rememberSocialReferral,clearSocialReferral,openFriendChat} from './socialLinks.js';
+import useDialogBackdropDismiss from '../../shared/ui/useDialogBackdropDismiss.js';
 import '../messages/CreatorMessages.css';
 import './Social.css';
 function useSocialDialog(ref,visible,blocked){useEffect(()=>{if(!visible||blocked)return;const previous=document.activeElement,node=ref.current;const show=()=>{if(node&&!node.open&&!document.querySelector('dialog[open],[aria-modal="true"]'))node.showModal();};show();const timer=setInterval(show,500);return()=>{clearInterval(timer);node?.close();if(previous?.isConnected)previous.focus?.();};},[visible,blocked]);}
@@ -16,8 +17,9 @@ export function FriendChatDialog({userId,language,blocked=false}){
  useEffect(()=>{if(!userId)return;const pending=readSocialPending('chat');if(pending)setRequest({owner:userId,peerId:pending});const open=e=>{if(e.detail?.userId===userId&&e.detail.peerId)setRequest({owner:userId,peerId:e.detail.peerId,shareDay:e.detail.shareDay==='streak'?'streak':Boolean(e.detail.shareDay)});};window.addEventListener('dayris:friend-chat-open',open);return()=>window.removeEventListener('dayris:friend-chat-open',open);},[userId]);
  useEffect(()=>{if(!key)return;let alive=true;supabase.rpc('friend_chat_peer',{p_peer:request.peerId}).then(({data,error})=>{if(!alive)return;setState({key,peer:error?null:data,error:Boolean(error)||!data});if(!error||['42501','P0002','22P02'].includes(error.code))clearSocialPending('chat',request.peerId);}).catch(()=>{if(alive)setState({key,peer:null,error:true});});return()=>{alive=false;};},[key,revision]);
  const visible=Boolean(key);useSocialDialog(dialog,visible,blocked);
- if(!visible)return null;
  const close=()=>{clearSocialPending('chat',request.peerId);setRequest({owner:null,peerId:''});};
+ useDialogBackdropDismiss(dialog,visible&&!blocked,close);
+ if(!visible)return null;
  return createPortal(<dialog ref={dialog} className="creator-inbox creator-inbox-chat" aria-labelledby="friend-chat-title" onCancel={e=>{e.preventDefault();close();}}>{own.peer?<MessageChat key={key} friend userId={userId} peer={own.peer} language={language} initialShareDay={request.shareDay} onBack={close}/>:<div className="social-chat-status"><button className="creator-close" aria-label={t.close} onClick={close}><X size={18}/></button><h2 id="friend-chat-title">{own.error?t.unavailable:'…'}</h2>{own.error&&<button className="social-button" onClick={()=>setRevision(n=>n+1)}>{t.retry}</button>}</div>}</dialog>,document.body);
 }
 export function FriendInvitePrompt({userId,language,blocked=false}){
@@ -26,8 +28,9 @@ export function FriendInvitePrompt({userId,language,blocked=false}){
  useEffect(()=>{alive.current=true;setToken(userId?readSocialPending('invite'):'');setSubmitting(false);lock.current=false;setNotice('');return()=>{alive.current=false;};},[userId]);
  useEffect(()=>{if(!key)return;let current=true;(async()=>{try{const {data:peer,error}=await supabase.rpc('social_invite_lookup',{p_token:token});if(error)throw error;if(!current||peer?.viewer_id!==userId)return;let reward=null;if(!peer.self){rememberSocialReferral(peer.referral_code);const result=await supabase.rpc('social_invite_claim',{p_token:token,p_owner:userId});if(result.error)throw result.error;reward=result.data;clearSocialReferral(peer.referral_code);window.dispatchEvent(new Event('dayris:referral-refresh'));window.dispatchEvent(new Event('dayris:pro-refresh'));}if(current)setState({key,peer,reward,error:false});}catch{if(current)setState({key,peer:null,reward:null,error:true});}})();return()=>{current=false;};},[key,revision]);
  const visible=Boolean(key);useSocialDialog(dialog,visible,blocked);
- if(!visible)return null;
  const close=()=>{if(lock.current)return;clearSocialPending('invite',token);setToken('');};
+ useDialogBackdropDismiss(dialog,visible&&!blocked,close);
+ if(!visible)return null;
  async function add(){if(lock.current||!own.peer)return;const actor=userId,invite=token,peer=own.peer;lock.current=true;setSubmitting(true);setNotice('');try{const incoming=peer.relationship==='pending'&&peer.requested_by!==userId;const {data,error}=await supabase.rpc(incoming?'social_friend_action':'social_invite_request',incoming?{p_user_id:peer.user_id,p_action:'accept',p_owner:userId}:{p_token:invite,p_owner:userId});if(error)throw error;if(!alive.current)return;setState(s=>s.key===actor+':'+invite?{...s,peer:{...s.peer,relationship:incoming?'accepted':data.state,requested_by:actor}}:s);socialProfileChanged(peer.user_id);window.dispatchEvent(new CustomEvent('dayris:friends-messages',{detail:{userId:actor}}));}catch{if(alive.current)setNotice(t.error);}finally{lock.current=false;if(alive.current)setSubmitting(false);}}
  const peer=own.peer,incoming=peer?.relationship==='pending'&&peer.requested_by!==userId,accepted=peer?.relationship==='accepted',pending=peer?.relationship==='pending'&&!incoming;
  return createPortal(<dialog ref={dialog} className="creator-inbox social-invite-modal" aria-labelledby="friend-invite-title" onCancel={e=>{e.preventDefault();close();}}><button className="creator-close" aria-label={t.close} disabled={submitting} onClick={close}><X size={18}/></button>

@@ -8,6 +8,7 @@ import useSocialProfile from './useSocialProfile.js';
 import {socialCopy} from './socialCopy.js';
 import MessageChat from '../messages/MessageChat.jsx';
 import {friendMessengerCopy} from '../messages/friendMessengerCopy.js';
+import useDialogBackdropDismiss from '../../shared/ui/useDialogBackdropDismiss.js';
 import '../messages/CreatorMessages.css';
 export function HomeFriendsButton({userId,language}){
  const t=socialCopy(language),[count,setCount]=useState(0);
@@ -27,6 +28,7 @@ function Content({userId,language,onClose}){
 }
 export default function HomeFriends({userId,language}){
  const [owner,setOwner]=useState(null),dialog=useRef(null),visible=Boolean(userId&&owner===userId);
+ useDialogBackdropDismiss(dialog,visible,()=>setOwner(null));
  useEffect(()=>{const open=e=>{if(e.detail?.userId===userId)setOwner(userId);};window.addEventListener('dayris:friends-home',open);return()=>window.removeEventListener('dayris:friends-home',open);},[userId]);
  useEffect(()=>{if(!visible)return;const node=dialog.current,previous=document.activeElement;node?.showModal();return()=>{node?.close();if(previous?.isConnected)previous.focus?.();};},[visible]);
  if(!visible)return null;

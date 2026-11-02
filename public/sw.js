@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v140-friends-messenger';
+const CACHE_NAME = 'atj-cache-v141-friends-dismiss';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

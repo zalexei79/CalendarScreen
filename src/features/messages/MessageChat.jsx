@@ -22,6 +22,16 @@ export default function MessageChat({userId,peer=null,admin=false,friend=false,c
  const alive=useRef(true),list=useRef(null),nearBottom=useRef(true),scrollPlan=useRef(null),pendingLatest=useRef(null),fetching=useRef(false),reading=useRef(false),locked=useRef(false),request=useRef(null),known=useRef(new Set()),initialized=useRef(false),refreshRef=useRef(null),rowsRef=useRef(rows);rowsRef.current=rows;
  const [unavailable,setUnavailable]=useState(false),accessDenied=useRef(false),selfDirection=friend?'self':admin?'admin':'user',peerId=friend?peer?.user_id:peer?.id,peerName=friend?peer?.display_name:peer?.name;
  const [secret,setSecret]=useState(null),[keyPanel,setKeyPanel]=useState(false),[keyRequired,setKeyRequired]=useState(()=>friend?readFriendLockMode(userId,peerId):false),[decrypted,setDecrypted]=useState({}),[reply,setReply]=useState(null),[messageSearch,setMessageSearch]=useState(''),[showSearch,setShowSearch]=useState(false),[messageFilter,setMessageFilter]=useState('all'),[savedMessages,setSavedMessages]=useState(()=>friend?readSavedMessages(userId,peer?.user_id):[]),[toolNotice,setToolNotice]=useState(''),textarea=useRef(null),decryptionCache=useRef(new Map());
+ const chatSurface=useRef(null);
+ useEffect(()=>{
+  if(!friend)return;
+  const selector='details.friend-message-actions,details.friend-share-menu',openMenus=()=>[...(chatSurface.current?.querySelectorAll(selector)||[])].filter(node=>node.open);
+  const outside=event=>{if(event.button>0)return;for(const menu of openMenus())if(!menu.contains(event.target))menu.open=false;};
+  const toggle=event=>{const menu=event.target;if(!menu.matches?.(selector)||!menu.open||!chatSurface.current?.contains(menu))return;for(const other of openMenus())if(other!==menu)other.open=false;};
+  const escape=event=>{if(event.key!=='Escape')return;const menus=openMenus();if(!menus.length)return;event.preventDefault();event.stopPropagation();for(const menu of menus)menu.open=false;menus.at(-1).querySelector('summary')?.focus({preventScroll:true});};
+  document.addEventListener('pointerdown',outside,true);document.addEventListener('click',outside,true);document.addEventListener('toggle',toggle,true);document.addEventListener('keydown',escape,true);
+  return()=>{document.removeEventListener('pointerdown',outside,true);document.removeEventListener('click',outside,true);document.removeEventListener('toggle',toggle,true);document.removeEventListener('keydown',escape,true);};
+ },[friend]);
  const encryptedRows=friend?rows.filter(m=>isLockedMessage(m.body)):[],requiresKey=friend&&(keyRequired||encryptedRows.length>0),needsKey=requiresKey&&!secret;
  const serialized=friend?friendNote(body.trim(),reply):body.trim(),wireSize=friendWireSize(serialized,Boolean(friend&&secret));
  useEffect(()=>{if(!friend)return;let current=true;const cache=decryptionCache.current;if(!secret){cache.clear();setDecrypted({});return;}Promise.all(rows.filter(m=>isLockedMessage(m.body)).map(async m=>{const cached=cache.get(m.entry_key);if(cached?.body===m.body)return [m.entry_key,cached.text];let text=null;try{text=await unlockFriendMessage(m.body,secret.key,{owner:userId,peer:peerId,sender:m.sender_id||(m.direction==='self'?userId:peerId),id:m.id});}catch{/* A different key or a changed envelope stays locked. */}if(current)cache.set(m.entry_key,{body:m.body,text});return [m.entry_key,text];})).then(entries=>{if(current)setDecrypted(Object.fromEntries(entries));});return()=>{current=false;};},[friend,rows,secret,userId,peerId]);
@@ -106,7 +116,7 @@ export default function MessageChat({userId,peer=null,admin=false,friend=false,c
  const needle=messageSearch.trim().toLocaleLowerCase(),visibleRows=friend?rows.filter(m=>{
   const content=messageBody(m);return (messageFilter!=='saved'||savedMessages.includes(m.entry_key))&&(messageFilter!=='moments'||Boolean(m.day_share||readSharedDay(content)||readSharedStreak(content)))&&(!needle||(content!==null&&messageText(m).toLocaleLowerCase().includes(needle)));
  }):rows;
- return <section className={'dayris-chat'+(admin?' dayris-chat-admin':'')+(friend?' dayris-chat-friend':'')} aria-label={admin||friend?peerName:t.title}>
+ return <section ref={chatSurface} className={'dayris-chat'+(admin?' dayris-chat-admin':'')+(friend?' dayris-chat-friend':'')} aria-label={admin||friend?peerName:t.title}>
   <header className="chat-peer-header">
    {onBack&&<button type="button" className="chat-back" aria-label={t.back} onClick={onBack}><ArrowLeft size={20}/></button>}
    {admin||friend?<SocialAvatar userId={peerId} name={peerName} path={friend?peer.avatar_path:undefined} loadProfile={!friend} className="chat-peer-avatar"/>:<span className="chat-peer-avatar">D</span>}
