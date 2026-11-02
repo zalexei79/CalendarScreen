@@ -22,7 +22,7 @@ try {
   });
   const dimensions=()=>page.evaluate(()=>{
     const root=document.querySelector('.dayris-date-navigation'),box=document.querySelector('.dayris-header').getBoundingClientRect();
-    const items=[...root.children].map(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom};});
+    const items=[...root.children].map(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,centerY:r.y+r.height/2};});
     const month=document.querySelector('.dayris-month-trigger'),year=document.querySelector('.dayris-year-trigger');
     const flame=document.querySelector('.activity-streak').getBoundingClientRect(),title=document.querySelector('.dayris-month-title').getBoundingClientRect();
     return {height:box.height,top:box.top,bottom:box.bottom,items,headerHeight:box.height,flameY:flame.y+flame.height/2,titleY:title.y+title.height/2,
@@ -33,11 +33,13 @@ try {
   const cases=['dark','light','purple','gold','emerald'].flatMap(theme=>[320,390,1280].map(width=>[theme,width,'ru','pro']));
   cases.push(...['en','uk','md','zh-CN'].flatMap(language=>[320,390].map(width=>['gold',width,language,'pro'])));
   cases.push(['dark',320,'en','free'],['light',390,'uk','free']);
+  const arrowsOnly=process.argv.includes('--arrows-only');
   await page.emulateMedia({reducedMotion:'reduce'});
-  for(const [theme,width,language,mode] of cases){
+  for(const [theme,width,language,mode] of (arrowsOnly?cases.filter(([theme,width,language])=>['dark','gold','emerald'].includes(theme)&&(language==='ru'||width===320)):cases)){
     await page.setViewportSize({width,height:844});
     await page.goto(`http://navigation.test/header?preview&current&user&theme=${theme}&language=${language}&mode=${mode}${theme==='light'?'&light':''}`);
     await page.locator('.dayris-month-trigger').waitFor();
+    await page.locator('.activity-streak').evaluate(node=>{node.style.minWidth='62px';});
     const originalMonth=await page.locator('.dayris-month-label > span:not(.dayris-month-outgoing)').textContent(),originalYear=await page.locator('.dayris-year-trigger').textContent();
     const original=await dimensions();
     assert.ok(original.height<=108,`compact header: ${theme}/${width}/${language}`);
@@ -50,6 +52,8 @@ try {
       assert.equal(layout.height,original.height,`row height stable: ${context}`);
       assert.equal(layout.headerHeight,original.headerHeight,`calendar stays in place: ${context}`);
       assert.ok(layout.yearLeft>=layout.monthRight-1,`month/year do not overlap: ${context}`);
+      assert.ok(Math.abs(layout.items[0].centerY-layout.items[1].centerY)<4&&Math.abs(layout.items[2].centerY-layout.items[1].centerY)<4,`month arrows share the date line: ${context}`);
+      assert.ok(layout.items[0].right<=layout.items[1].left+1&&layout.items[1].right<=layout.items[2].left+1,`arrows sit either side of date: ${context}`);
       layout.items.forEach((item,index)=>{
         assert.ok(item.top>=layout.top&&item.bottom<=layout.bottom,`one row: ${context}`);
         if(index===4)assert.ok(item.left>=layout.items[1].right-1,`Today does not overlap date: ${context}`);
@@ -86,7 +90,7 @@ try {
   }));
   assert.ok(samples.every(height=>height===before.headerHeight),'motion never pushes the calendar down');
   await page.emulateMedia({reducedMotion:'reduce'});
-  for(const [theme,mode] of [['dark','free'],['dark','pro'],['light','free'],['purple','pro'],['gold','pro'],['emerald','pro']])for(const width of [390,1280])for(const [year,month,weeks] of [[2027,1,4],[2026,11,5],[2026,2,6]]){
+  for(const [theme,mode] of (arrowsOnly?[]:[['dark','free'],['dark','pro'],['light','free'],['purple','pro'],['gold','pro'],['emerald','pro']]))for(const width of [390,1280])for(const [year,month,weeks] of [[2027,1,4],[2026,11,5],[2026,2,6]]){
     const height=width===390?844:900;
     await page.setViewportSize({width,height});
     await page.goto(`http://navigation.test/header?preview&current&user&dock&mode=${mode}&theme=${theme}&year=${year}&month=${month}${theme==='light'?'&light':''}`);
