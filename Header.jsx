@@ -10,9 +10,8 @@ import InstallGuide from './src/shared/ui/InstallGuide.jsx';
 import { installGuideCopy } from './src/shared/i18n/installGuide.js';
 import CalendarCurrencyPicker from './src/shared/ui/CalendarCurrencyPicker.jsx';
 import SettingsPanel from './src/shared/ui/SettingsPanel.jsx';
-import { monthsFor } from './src/shared/i18n';
 import BrandIcon from './src/shared/ui/BrandIcon.jsx';
-import AnimatedMonthLabel from './src/shared/ui/AnimatedMonthLabel.jsx';
+import CalendarPeriodPicker from './src/shared/ui/CalendarPeriodPicker.jsx';
 import { WorkspaceModeSelector } from './src/features/pro/WorkspaceModePanel.jsx';
 import ProToolsMenu from './src/features/pro/ProToolsMenu.jsx';
 import './src/shared/ui/HeaderCompact.css';
@@ -267,61 +266,7 @@ export default function Header({
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <div className="dayris-month-title flex items-baseline gap-1.5 sm:gap-2 min-w-0 sm:min-w-[190px]">
-            <div className="relative" ref={monthMenuRef}>
-              <button
-                onClick={() => { setMonthMenuOpen((v) => !v); setYearMenuOpen(false); }}
-                className={`dayris-month-trigger font-display text-2xl sm:text-[28px] font-semibold transition-colors ${isLight ? 'text-zinc-900 hover:text-amber-600' : 'text-zinc-50 hover:text-amber-400'}`}
-              >
-                <AnimatedMonthLabel year={year} month={month} label={monthsFor(language)[month]} />
-              </button>
-              {monthMenuOpen && (
-                <div className={`dayris-date-menu absolute left-0 top-full mt-2 w-40 max-h-64 overflow-y-auto rounded-xl border shadow-xl z-50 p-1 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900'}`}>
-                  {monthsFor(language).map((m, i) => (
-                    <button
-                      key={m}
-                      onClick={() => { setViewMonth(i); setSelectedKey(null); setMonthMenuOpen(false); }}
-                      className={[
-                        'w-full text-left rounded-md px-2.5 py-1.5 text-sm transition-colors',
-                        i === month
-                          ? 'bg-amber-400/10 text-amber-500 font-semibold'
-                          : isLight ? 'text-zinc-700 hover:bg-zinc-100' : 'text-zinc-300 hover:bg-zinc-800',
-                      ].join(' ')}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="relative" ref={yearMenuRef}>
-              <button
-                onClick={() => { setYearMenuOpen((v) => !v); setMonthMenuOpen(false); }}
-                className={`dayris-year-trigger font-display text-2xl sm:text-[28px] font-semibold transition-colors ${isLight ? 'text-zinc-600 hover:text-amber-600' : 'text-zinc-500 hover:text-amber-400'}`}
-              >
-                {year}
-              </button>
-              {yearMenuOpen && (
-                <div className={`dayris-date-menu absolute left-0 top-full mt-2 w-24 max-h-64 overflow-y-auto rounded-xl border shadow-xl z-50 p-1 ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800 bg-zinc-900'}`}>
-                  {Array.from({ length: 12 }, (_, i) => today.getFullYear() - 6 + i).map((y) => (
-                    <button
-                      key={y}
-                      onClick={() => { setViewYear(y); setSelectedKey(null); setYearMenuOpen(false); }}
-                      className={[
-                        'w-full text-left rounded-md px-2.5 py-1.5 text-sm font-data transition-colors',
-                        y === year
-                          ? 'bg-amber-400/10 text-amber-500 font-semibold'
-                          : isLight ? 'text-zinc-700 hover:bg-zinc-100' : 'text-zinc-300 hover:bg-zinc-800',
-                      ].join(' ')}
-                    >
-                      {y}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          <CalendarPeriodPicker {...{month,year,language,isLight,monthMenuOpen,yearMenuOpen,setMonthMenuOpen,setYearMenuOpen,monthMenuRef,yearMenuRef,setViewMonth,setViewYear,setSelectedKey}}/>
           <button
             data-site-element="next"
             onClick={goToNextMonth}

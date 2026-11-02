@@ -2527,24 +2527,6 @@ export default function CalendarScreen() {
     return () => window.removeEventListener('keydown', onKey);
   }, [modalOpen, connectOpen]);
 
-  useEffect(() => {
-    if (!monthMenuOpen) return;
-    function onDocClick(e) {
-      if (monthMenuRef.current && !monthMenuRef.current.contains(e.target)) setMonthMenuOpen(false);
-    }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [monthMenuOpen]);
-
-  useEffect(() => {
-    if (!yearMenuOpen) return;
-    function onDocClick(e) {
-      if (yearMenuRef.current && !yearMenuRef.current.contains(e.target)) setYearMenuOpen(false);
-    }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [yearMenuOpen]);
-
   // Load previously remembered "frequently used" instruments (client-only).
   useEffect(() => {
     try {

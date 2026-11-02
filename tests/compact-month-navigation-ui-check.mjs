@@ -69,9 +69,9 @@ try {
   await page.setViewportSize({width:390,height:844});
   await page.goto('http://navigation.test/header?preview&current&user&mode=pro&theme=gold');
   await page.locator('.dayris-month-trigger').click();
-  await page.locator('.dayris-date-menu button').nth(8).click();
+  await page.locator('.calendar-picker-options [data-month="8"]').click();
   await page.locator('.dayris-year-trigger').click();
-  await page.locator('.dayris-date-menu button').first().click();
+  await page.locator('.calendar-picker-options [data-year]').first().click();
   await page.locator('.calendar-currency-trigger').click();
   await page.locator('.calendar-currency-option').filter({hasText:'MDL'}).click();
   assert.equal(await page.locator('.calendar-currency-trigger > span').textContent(),'MDL');

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v138-calendar-onboarding-layout';
+const CACHE_NAME = 'atj-cache-v139-anchored-calendar-pickers';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
