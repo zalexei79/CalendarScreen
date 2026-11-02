@@ -26,7 +26,7 @@ export default function ProToolsMenu({language,t,isLight,currency,traderMode,onT
   const top=box.bottom+8;
   Object.assign(panel.current.style,{left:left+'px',top:top+'px',width:width+'px',maxHeight:Math.max(100,(viewport?.height||innerHeight)+(viewport?.offsetTop||0)-top-12)+'px',transformOrigin:`${box.left+box.width/2-left}px -8px`});
  }
- function close(action){
+ function close(action,restoreFocus=true){
   const node=panel.current;
   if(pending.current)return;
   if(!node?.matches(':popover-open')){action?.();return;}
@@ -34,7 +34,7 @@ export default function ProToolsMenu({language,t,isLight,currency,traderMode,onT
   const finish=()=>{
    if(pending.current!==work)return;
    pending.current=null;node.hidePopover();work.animation?.cancel();node.removeAttribute('data-exiting');
-   trigger.current?.focus({preventScroll:true});action?.();
+   if(restoreFocus)trigger.current?.focus({preventScroll:true});action?.();
   };
   if(matchMedia('(prefers-reduced-motion: reduce)').matches||!node.animate){finish();return;}
   const current=getComputedStyle(node);
@@ -48,14 +48,19 @@ export default function ProToolsMenu({language,t,isLight,currency,traderMode,onT
  useEffect(()=>{
   const node=panel.current;
   const sync=()=>{const visible=node.matches(':popover-open');setOpen(visible);if(!visible)cancelPending();};
+  const outside=event=>{
+   if(node.matches(':popover-open')&&!node.contains(event.target)&&!trigger.current?.closest('.workspace-selector')?.contains(event.target))close(undefined,false);
+  };
+  const escape=event=>{if(event.key==='Escape'&&!event.defaultPrevented&&node.matches(':popover-open')){event.preventDefault();close();}};
   const scroll=event=>{if((!(event.target instanceof Node)||!node.contains(event.target))&&node.matches(':popover-open'))node.hidePopover();};
+  document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',escape);
   node.addEventListener('toggle',sync);window.addEventListener('resize',position);window.visualViewport?.addEventListener('resize',position);window.addEventListener('scroll',scroll,true);
-  return()=>{cancelPending();node.removeEventListener('toggle',sync);window.removeEventListener('resize',position);window.visualViewport?.removeEventListener('resize',position);window.removeEventListener('scroll',scroll,true);};
+  return()=>{cancelPending();document.removeEventListener('pointerdown',outside,true);document.removeEventListener('keydown',escape);node.removeEventListener('toggle',sync);window.removeEventListener('resize',position);window.visualViewport?.removeEventListener('resize',position);window.removeEventListener('scroll',scroll,true);};
  },[]);
  const destinations=[{key:'wallet',Icon:Wallet,label:t('walletLabel'),hint:copy.wallet,action:onWallet},{key:'capital',Icon:ChartNoAxesCombined,label:copy.capital,hint:copy.portfolio,action:onCapital}];
  return <>
   <WorkspaceModeSelector proView language={language} t={t} onOffer={()=>close(onOffer)} onTools={toggle} toolsOpen={open} toolsId={id} toolsLabel={copy.tools} triggerRef={trigger} traderMode={traderMode}/>
-  {createPortal(<div ref={panel} id={id} popover="auto" role="dialog" aria-labelledby={id+'-title'} className="pro-tools-popover" data-light={isLight} onKeyDown={event=>{if(event.key==='Escape'&&event.currentTarget.contains(event.target)&&event.currentTarget.matches(':popover-open')){event.preventDefault();event.stopPropagation();close();}}}>
+  {createPortal(<div ref={panel} id={id} popover="manual" role="dialog" aria-labelledby={id+'-title'} className="pro-tools-popover" data-light={isLight} onKeyDown={event=>{if(event.key==='Escape'&&event.currentTarget.contains(event.target)&&event.currentTarget.matches(':popover-open')){event.preventDefault();event.stopPropagation();close();}}}>
    <header className="pro-tools-heading"><h2 id={id+'-title'}>{copy.title}</h2><button type="button" onClick={()=>close()} aria-label={copy.close}><X size={17}/></button></header>
    <div className="pro-tools-destinations">
     {destinations.filter(item=>item.action).map(({key,Icon,label,hint,action},index)=><button key={key} type="button" className="pro-tools-destination" data-destination={key} onClick={()=>close(action)} style={{'--tools-order':index}}><span className="pro-tools-icon"><Icon size={19}/></span><span className="pro-tools-copy"><strong>{label}</strong><small>{hint}</small></span><ChevronRight className="pro-tools-arrow" size={15}/></button>)}

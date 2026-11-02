@@ -7,7 +7,7 @@ const bundle=await createRequire(path.resolve('package.json'))('esbuild').build(
 const js=bundle.outputFiles.find(file=>file.path.endsWith('.js')).text,css=fs.readFileSync(path.join('dist/assets',fs.readdirSync('dist/assets').find(file=>/^main-.*\.css$/.test(file))),'utf8');
 const browser=await require('playwright').chromium.launch({channel:'msedge',headless:true});
 try{
- const page=await browser.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));page.setDefaultTimeout(8000);
+ const page=await browser.newPage({hasTouch:true}),errors=[];page.on('pageerror',error=>errors.push(error.message));page.setDefaultTimeout(8000);
  await page.route('**/*',route=>{const url=new URL(route.request().url());if(url.origin!=='http://tools.test')return route.abort();const file=path.resolve('public','.'+url.pathname);if(file.startsWith(path.resolve('public')+path.sep)&&fs.existsSync(file)&&fs.statSync(file).isFile())return route.fulfill({body:fs.readFileSync(file),contentType:file.endsWith('.png')?'image/png':'image/svg+xml'});return route.fulfill({contentType:'text/html',body:`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style><div id="root"></div><script>${js}</script>`});});
  const menu=page.locator('.pro-tools-popover'),trigger=page.locator('.workspace-mode-toggle');
  const settle=()=>menu.evaluate(el=>Promise.all(el.getAnimations({subtree:true}).map(animation=>animation.finished.catch(()=>{}))));
@@ -20,6 +20,12 @@ try{
   await show();let box=await menu.boundingBox();assert.ok(box.x>=0&&box.y>=0&&box.x+box.width<=width&&box.y+box.height<=height+1);
   assert.equal((await page.locator('.dayris-header').boundingBox()).height,before.height,'opening tools does not move calendar');
   if(width===390&&theme==='emerald')await page.screenshot({path:'artifacts/pro-tools-menu-mobile.png'});
+  await trigger.click();await menu.waitFor({state:'hidden'});assert.equal(await trigger.getAttribute('aria-expanded'),'false','second PRO click closes instead of reopening');
+  const touch=await trigger.boundingBox();await page.touchscreen.tap(touch.x+touch.width/2,touch.y+touch.height/2);await menu.waitFor({state:'visible'});await settle();
+  await page.touchscreen.tap(touch.x+touch.width/2,touch.y+touch.height/2);await menu.waitFor({state:'hidden'});
+  await show();await page.mouse.click(2,height-2);await menu.waitFor({state:'hidden'});assert.equal(await trigger.getAttribute('aria-expanded'),'false','blank page space dismisses PRO');
+  await show();await page.locator('.dayris-month-trigger').click();await page.locator('.calendar-period-menu').waitFor({state:'visible'});await menu.waitFor({state:'hidden'});assert.equal(await page.locator('.calendar-period-menu').isVisible(),true,'outside dismissal preserves the newly opened date picker');await page.keyboard.press('Escape');await page.locator('.calendar-period-menu').waitFor({state:'hidden'});
+  await show();
   await page.locator('[data-destination="capital"]').click();await menu.waitFor({state:'hidden'});await page.waitForFunction(()=>window.handoffs?.at(-1)?.kind==='capital');assert.equal(await page.evaluate(()=>handoffs.at(-1).open),false);
   await show();await page.locator('.pro-tools-trader').click();await settle();assert.equal(await page.locator('.pro-tools-trader').getAttribute('aria-checked'),'true');
   if(width===390&&theme==='emerald')await page.screenshot({path:'artifacts/pro-tools-menu-platforms.png'});
