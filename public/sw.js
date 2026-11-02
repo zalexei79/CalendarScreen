@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v135-theme-previews-birthday-picker';
+const CACHE_NAME = 'atj-cache-v136-pro-tools-orbit';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

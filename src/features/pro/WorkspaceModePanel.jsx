@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Info, ChartNoAxesCombined } from 'lucide-react';
+import { Info, ChevronDown, ChartNoAxesCombined } from 'lucide-react';
 import ProWorkspaceActions from './ProWorkspaceActions';
 import WalletEntry from './WalletEntry';
 import { platformText } from '../platforms/PlatformConnections';
@@ -21,7 +21,7 @@ export default function WorkspaceModePanel({ todayAction, hideSelector = false, 
   </div>;
 }
 
-export function WorkspaceModeSelector({proView, language, t, onOffer}) {
+export function WorkspaceModeSelector({proView, language, t, onOffer, onTools, toolsOpen, toolsId, toolsLabel, triggerRef, traderMode}) {
   const text = (r,e,m,z) => platformText(language,r,e,m,z);
   const pointerBounds = useRef(null);
   function enterPass(event) {
@@ -42,9 +42,9 @@ export function WorkspaceModeSelector({proView, language, t, onOffer}) {
   }
   return (<div className={`workspace-selector workspace-pass ${proView ? 'is-pro' : 'is-free'}`} role="group" aria-label={text('Тариф DAYRIS','DAYRIS plan','Plan DAYRIS', "DAYRIS 订阅")} onPointerEnter={enterPass} onPointerMove={reflectPointer} onPointerLeave={leavePass}>
       <span className="workspace-pass-orbit" aria-hidden="true"/>
-      <button className="workspace-mode-toggle" type="button" aria-label={proView ? 'DAYRIS PRO' : 'DAYRIS FREE'} title={t('proInfoAction')} onClick={onOffer}>
+      <button ref={triggerRef} className="workspace-mode-toggle" type="button" aria-label={proView ? 'DAYRIS PRO' : 'DAYRIS FREE'} title={onTools ? toolsLabel : t('proInfoAction')} aria-haspopup={onTools ? 'dialog' : undefined} aria-expanded={onTools ? toolsOpen : undefined} aria-controls={onTools ? toolsId : undefined} data-trader={traderMode||undefined} onClick={onTools||onOffer}>
         <span className="workspace-pass-face" aria-hidden="true"/>
-        <span key={proView ? 'pro-label' : 'free-label'} className="workspace-pass-label">{proView ? 'PRO' : 'FREE'}</span>
+        <span key={proView ? 'pro-label' : 'free-label'} className="workspace-pass-label">{proView ? 'PRO' : 'FREE'}{onTools&&<ChevronDown aria-hidden="true"/>}</span>
       </button>
       <button className="workspace-pro-info" type="button" onClick={onOffer} aria-label={t('proInfoAction')} title={t('proInfoAction')}><Info aria-hidden="true" /></button>
     </div>);

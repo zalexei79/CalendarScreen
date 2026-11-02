@@ -111,20 +111,21 @@ try {
   await app.locator('.receipt-launch').waitFor();
   assert.equal(await app.locator('.workspace-pass-label').textContent(),'PRO','paid account ignores the old FREE preference');
   assert.equal(await app.locator('.workspace-mode-toggle').getAttribute('role'),null,'membership is not a switch');
-  await app.locator('.workspace-mode-toggle').click();await app.locator('.pro-offer').waitFor();
+  await app.locator('.workspace-pro-info').click();await app.locator('.pro-offer').waitFor();
   await app.locator('.pro-dialog-close').click();
   assert.equal(await app.locator('.workspace-pass-label').textContent(),'PRO','membership click opens details without downgrading');
+  const openTools=async()=>{if(!await app.locator('.pro-tools-popover').evaluate(el=>el.matches(':popover-open')))await app.locator('.workspace-mode-toggle').click();await app.locator('.pro-tools-popover').waitFor({state:'visible'});};
   for(const width of [390,1280]){
     await app.setViewportSize({width,height:844});
-    await app.locator('.pro-control-trader').click();await app.waitForFunction(()=>document.querySelector('.pro-control-trader').getAttribute('aria-checked')==='true');
+    await openTools();await app.locator('.pro-tools-trader').click();await app.waitForFunction(()=>document.querySelector('.pro-tools-trader').getAttribute('aria-checked')==='true');
     assert.equal(await app.locator('.receipt-launch').isVisible(),true,'camera stays visible with platforms enabled');
     assert.equal(await app.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'dock stays within viewport');
     if(width===390){await app.locator('.receipt-launch').click();await app.locator('.receipt-dialog').waitFor();await app.getByRole('button',{name:'Закрыть чек',exact:true}).click();}
-    await app.locator('.pro-control-trader').click();
+    await openTools();await app.locator('.pro-tools-trader').click();await app.keyboard.press('Escape');
     assert.equal(await app.locator('.receipt-launch').isVisible(),true,'camera remains visible with trader off');
   }
   await app.setViewportSize({width:390,height:844});
-  await app.locator('.workspace-capital-entry').click();
+  await openTools();await app.locator('[data-destination="capital"]').click();
   await app.getByRole('button',{name:'Добавить актив',exact:true}).click();
   await app.locator('.capital-sheet').waitFor();
   await app.evaluate(()=>window.originalSheet=document.querySelector('.capital-sheet'));

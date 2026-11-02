@@ -26,6 +26,9 @@ function HeaderFixture() {
   const [pro,setPro]=useState(preview && params.get('mode')!=='free'), [account,setAccount]=useState('main'), [offer,setOffer]=useState(false);
   const [trader,setTrader]=useState(preview && params.get('mode')==='trader'), [light,setLight]=useState(params.has('light'));
   const [selected,setSelected]=useState(null);
+  const theme=params.get('theme')||(light?'light':'dark');
+  useEffect(()=>{document.documentElement.dataset.dayrisTheme=theme;},[theme]);
+  const action=kind=>{window.handoffs??=[];window.handoffs.push({kind,open:Boolean(document.querySelector('.pro-tools-popover:popover-open'))});};
   const cells=Array.from({length:35},(_,i)=>{const date=new Date(2026,7,31+i);return {date,key:String(i),inMonth:date.getMonth()===8,isToday:i===30};});
   // Deterministic synthetic calendar for layout QA only; never user account data.
   const pnl=key=>Number(key)%7>4 ? 0 : [125,-82,43,-106,68][Number(key)%5];
@@ -34,9 +37,9 @@ function HeaderFixture() {
   return <div className={preview ? `premium-shell min-h-screen flex flex-col ${pro?'pro-active-shell':''} ${light?'theme-light bg-zinc-100 text-zinc-900':'bg-zinc-950 text-zinc-100'}` : ''}>
     <Header t={key=>translate(language,key)} language={language} month={8} year={2026} today={new Date(2026,8,30)}
       isPwaInstalled proAccessActive={access} proAccessLoading={loading} proView={pro} setProView={setPro}
-      accountMode={account} setAccountMode={setAccount} openProPresentation={()=>setOffer(true)}
-      traderMode={trader} setTraderMode={setTrader} setPlatformFilter={()=>{}} openConnectModal={()=>{}}
-      ctraderConnected isLight={light} theme={light?'light':'dark'} setTheme={value=>setLight(value==='light')}
+      accountMode={account} setAccountMode={value=>{action(value);setAccount(value);}} openProPresentation={()=>{action('offer');setOffer(true);}} onOpenCapital={()=>action('capital')}
+      traderMode={trader} setTraderMode={setTrader} setPlatformFilter={()=>{}} openConnectModal={action}
+      ctraderConnected isLight={light} theme={theme} setTheme={value=>setLight(value==='light')}
       periodStats={{}} currency="USD" formatMoney={String}/>
     {preview && <>
       <div className="px-3 sm:px-5"><MonthlyGoal year={2026} month={8} currency="USD" currencySymbol="$" currentPnl={cells.reduce((sum,cell)=>sum+pnl(cell.key),0)} language={language} isLight={light}/></div>
