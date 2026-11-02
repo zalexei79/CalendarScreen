@@ -32,13 +32,13 @@ try {
     await page.screenshot({path:`tests/amethyst-onboarding-${code}.png`,animations:'disabled'});
     await page.getByRole('button',{name:/MDL/}).click();await page.clock.runFor(300);
     assert.equal(await page.locator('#life-birthday legend').innerText(),label);
-    assert.equal(await page.locator('#life-birthday select').nth(1).locator('option[value="01"]').innerText(),january);
+    assert.equal(await page.locator('.birthday-month select').locator('option[value="01"]').innerText(),january);
     if(!['ru','uk'].includes(code))assert.doesNotMatch(await page.getByRole('dialog').innerText(),/[А-Яа-яЁё]/,'No Russian copy remains after language selection');
-    await page.locator('#life-birthday input').fill('2026');await page.locator('.life-birthday-card').evaluate(form=>form.requestSubmit());
+    assert.equal(await page.locator('.birthday-year select option[value="2026"]').count(),0);await page.locator('.life-birthday-card').evaluate(form=>form.requestSubmit());
     assert.ok(await page.getByRole('alert').count()>0,'A birth year below the minimum age is rejected');
     await selectBirthday(page,'2000-02-29');
-    await page.locator('#life-birthday input').fill('2001');
-    assert.equal(await page.locator('#life-birthday select').nth(0).inputValue(),'','A nonexistent leap day is cleared instead of changing the birthday');
+    await page.locator('.birthday-year select').selectOption('2001');
+    assert.equal(await page.locator('.birthday-day select').inputValue(),'','A nonexistent leap day is cleared instead of changing the birthday');
     await selectBirthday(page,'2000-02-29');
     assert.equal(await page.getByRole('alert').count(),0);
     for(const width of [320,390]){

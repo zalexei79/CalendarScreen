@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v134-uniform-language-buttons';
+const CACHE_NAME = 'atj-cache-v135-theme-previews-birthday-picker';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

@@ -3,8 +3,7 @@
 .life-birthday-fields label{display:flex;flex-direction:column}
 .life-birthday-fields label>span{font-size:11px;line-height:1.4}
 .life-birthday-fields.life-birthday-fields :is(input,select){margin-top:auto;width:100%;min-width:0;min-height:52px;padding:10px 12px;border:1px solid var(--dayris-line,#3b483e);border-radius:13px;background:var(--dayris-canvas,#121713);color:var(--dayris-text,#e1e6df);font:500 16px system-ui,sans-serif}
-.life-birthday-fields .birthday-year input{font-size:20px;letter-spacing:.08em;font-variant-numeric:tabular-nums}
-.life-birthday-fields input::placeholder{font-size:14px;letter-spacing:.04em;color:var(--dayris-muted,#92949c)}
+.life-birthday-fields .birthday-year select{font-variant-numeric:tabular-nums}
 .first-run-dialog[data-theme="light"] .life-birthday-fields :is(input,select){background:#fafbf7;color:#343e36;border-color:#cbd2c6}
 .life-birthday-fields :is(input,select):focus-visible{outline:2px solid var(--dayris-accent,#719780);outline-offset:2px}
 .life-birthday-fields :is(input,select)[aria-invalid="true"]{border-color:#c68778}

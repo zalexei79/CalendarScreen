@@ -6,7 +6,7 @@ import GlassParallaxControl from './GlassParallaxControl.jsx';
 
 function MaterialPreview({code}) {
   return <span className="theme-material-art" data-material={code} aria-hidden="true">
-    <span className="theme-art-wordmark">DAYRIS<span>PRO</span></span>
+    <span className="theme-art-wordmark">DAYRIS{['gold','emerald'].includes(code)&&<span>PRO</span>}</span>
     <span className="theme-art-calendar">{Array.from({length:14},(_,i)=><i key={i} data-tone={i===5?'income':i===8?'expense':undefined} data-today={i===6||undefined}>{i+1}</i>)}</span>
     <span className="theme-art-dock"><i/><i/><i/></span>
   </span>;
@@ -24,9 +24,10 @@ export default function ThemeCollection({language,theme,preference=theme,active=
   },[preview]);
   function choose(code) {if(loading)return;if(active)onSelect(code);else setPreview(code);}
   function openPro() {setPreview(null);onPro?.();}
-  if(context==='onboarding')return <section className="theme-collection theme-collection-onboarding theme-onboarding-compact" data-current-theme={theme} aria-label={copy.title}>
-    <div className="theme-onboarding-options" role="group" aria-label={copy.title}>{['light','dark','system','purple',...(active?['gold','emerald']:[])].map(code=><button key={code} type="button" className="theme-basic-option theme-onboarding-option" data-theme-option={code} aria-label={copy[code]} aria-pressed={basicPreference===code} onClick={()=>onSelect(code)}>
-      <span className="theme-basic-sample" data-material={code} aria-hidden="true"><i/><i/><i/><i/>{basicPreference===code&&<Check size={12}/>}</span><span>{copy[code]}</span>
+  if(context==='onboarding')return <section className="theme-collection theme-collection-onboarding" data-current-theme={theme} aria-label={copy.title}>
+    <div className="theme-onboarding-options" role="group" aria-label={copy.title}>{['light','dark','system','purple',...(active?['gold','emerald']:[])].map(code=><button key={code} type="button" className="theme-onboarding-option" data-theme-option={code} data-material={code} aria-label={copy[code]} aria-pressed={basicPreference===code} onClick={()=>onSelect(code)}>
+      <MaterialPreview code={code}/>
+      <span className="theme-onboarding-caption"><span>{copy[code]}</span><span className="theme-onboarding-check" aria-hidden="true">{basicPreference===code&&<Check size={12}/>}</span></span>
     </button>)}</div>
   </section>;
   return <section className={`theme-collection theme-collection-${context}`} data-current-theme={theme} aria-label={copy.title}>
