@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v144-date-arrow-placement';
+const CACHE_NAME = 'atj-cache-v145-date-arrow-spacing';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

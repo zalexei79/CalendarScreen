@@ -28,7 +28,7 @@ try {
     return {height:box.height,top:box.top,bottom:box.bottom,items,headerHeight:box.height,flameY:flame.y+flame.height/2,titleY:title.y+title.height/2,
       overflow:document.documentElement.scrollWidth>innerWidth,
       clippedMonth:month.scrollWidth>month.clientWidth+1,
-      monthRight:month.getBoundingClientRect().right,yearLeft:year.getBoundingClientRect().left};
+      monthRight:month.getBoundingClientRect().right,yearLeft:year.getBoundingClientRect().left,yearRight:year.getBoundingClientRect().right};
   });
   const cases=['dark','light','purple','gold','emerald'].flatMap(theme=>[320,390,1280].map(width=>[theme,width,'ru','pro']));
   cases.push(...['en','uk','md','zh-CN'].flatMap(language=>[320,390].map(width=>['gold',width,language,'pro'])));
@@ -54,10 +54,11 @@ try {
       assert.ok(layout.yearLeft>=layout.monthRight-1,`month/year do not overlap: ${context}`);
       assert.ok(Math.abs(layout.items[0].centerY-layout.items[1].centerY)<4&&Math.abs(layout.items[2].centerY-layout.items[1].centerY)<4,`month arrows share the date line: ${context}`);
       assert.ok(layout.items[0].right<=layout.items[1].left+1&&layout.items[1].right<=layout.items[2].left+1,`arrows sit either side of date: ${context}`);
+      assert.ok(layout.items[2].left-layout.yearRight<=8,`next arrow stays close to the year: ${context}`);
       layout.items.forEach((item,index)=>{
         assert.ok(item.top>=layout.top&&item.bottom<=layout.bottom,`one row: ${context}`);
         if(index===4)assert.ok(item.left>=layout.items[1].right-1,`Today does not overlap date: ${context}`);
-        if(width<960&&index>=2)assert.equal(item.left,original.items[index].left,`navigation controls stay anchored: ${context}`);
+        if(width<960&&index>=3)assert.equal(item.left,original.items[index].left,`currency and Today stay anchored: ${context}`);
       });
       if(step===1&&language==='ru'&&((theme==='gold'&&width!==320)||(theme==='emerald'&&width===390))){
         await page.locator('.dayris-header').screenshot({path:`artifacts/compact-month-${theme}-${width}.png`});
