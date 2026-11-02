@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v137-compact-month-navigation';
+const CACHE_NAME = 'atj-cache-v138-calendar-onboarding-layout';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

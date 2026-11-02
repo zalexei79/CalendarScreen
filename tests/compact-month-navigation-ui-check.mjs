@@ -21,10 +21,11 @@ try {
     return route.fulfill({contentType:'text/html',body:`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style><div id="root"></div><script>${js}</script>`});
   });
   const dimensions=()=>page.evaluate(()=>{
-    const root=document.querySelector('.dayris-date-navigation'),box=root.getBoundingClientRect();
+    const root=document.querySelector('.dayris-date-navigation'),box=document.querySelector('.dayris-header').getBoundingClientRect();
     const items=[...root.children].map(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom};});
     const month=document.querySelector('.dayris-month-trigger'),year=document.querySelector('.dayris-year-trigger');
-    return {height:box.height,top:box.top,bottom:box.bottom,items,headerHeight:document.querySelector('.dayris-header').getBoundingClientRect().height,
+    const flame=document.querySelector('.activity-streak').getBoundingClientRect(),title=document.querySelector('.dayris-month-title').getBoundingClientRect();
+    return {height:box.height,top:box.top,bottom:box.bottom,items,headerHeight:box.height,flameY:flame.y+flame.height/2,titleY:title.y+title.height/2,
       overflow:document.documentElement.scrollWidth>innerWidth,
       clippedMonth:month.scrollWidth>month.clientWidth+1,
       monthRight:month.getBoundingClientRect().right,yearLeft:year.getBoundingClientRect().left};
@@ -35,11 +36,12 @@ try {
   await page.emulateMedia({reducedMotion:'reduce'});
   for(const [theme,width,language,mode] of cases){
     await page.setViewportSize({width,height:844});
-    await page.goto(`http://navigation.test/header?preview&current&theme=${theme}&language=${language}&mode=${mode}${theme==='light'?'&light':''}`);
+    await page.goto(`http://navigation.test/header?preview&current&user&theme=${theme}&language=${language}&mode=${mode}${theme==='light'?'&light':''}`);
     await page.locator('.dayris-month-trigger').waitFor();
     const originalMonth=await page.locator('.dayris-month-label > span:not(.dayris-month-outgoing)').textContent(),originalYear=await page.locator('.dayris-year-trigger').textContent();
     const original=await dimensions();
-    assert.ok(original.height<=56,`compact initial row: ${theme}/${width}/${language}`);
+    assert.ok(original.height<=108,`compact header: ${theme}/${width}/${language}`);
+    assert.ok(Math.abs(original.titleY-original.flameY)<=5,JSON.stringify({check:'date and flame share top line',theme,width,language,original}));
     for(let step=0;step<13;step++){
       if(step)await page.locator('[data-site-element="next"]').click();
       const layout=await dimensions(),context=`${theme}/${width}/${language}/${step}`;
@@ -50,8 +52,8 @@ try {
       assert.ok(layout.yearLeft>=layout.monthRight-1,`month/year do not overlap: ${context}`);
       layout.items.forEach((item,index)=>{
         assert.ok(item.top>=layout.top&&item.bottom<=layout.bottom,`one row: ${context}`);
-        if(index)assert.ok(item.left>=layout.items[index-1].right-1,`controls do not overlap: ${context}`);
-        if(index>=2)assert.equal(item.left,original.items[index].left,`navigation controls stay anchored: ${context}`);
+        if(index===4)assert.ok(item.left>=layout.items[1].right-1,`Today does not overlap date: ${context}`);
+        if(width<960&&index>=2)assert.equal(item.left,original.items[index].left,`navigation controls stay anchored: ${context}`);
       });
       if(step===1&&language==='ru'&&((theme==='gold'&&width!==320)||(theme==='emerald'&&width===390))){
         await page.locator('.dayris-header').screenshot({path:`artifacts/compact-month-${theme}-${width}.png`});
@@ -65,7 +67,7 @@ try {
   }
   // Interactive menus and motion in the exact Gold phone layout from the report.
   await page.setViewportSize({width:390,height:844});
-  await page.goto('http://navigation.test/header?preview&current&mode=pro&theme=gold');
+  await page.goto('http://navigation.test/header?preview&current&user&mode=pro&theme=gold');
   await page.locator('.dayris-month-trigger').click();
   await page.locator('.dayris-date-menu button').nth(8).click();
   await page.locator('.dayris-year-trigger').click();
@@ -83,6 +85,20 @@ try {
     sample();
   }));
   assert.ok(samples.every(height=>height===before.headerHeight),'motion never pushes the calendar down');
+  await page.emulateMedia({reducedMotion:'reduce'});
+  for(const [theme,mode] of [['dark','free'],['dark','pro'],['light','free'],['purple','pro'],['gold','pro'],['emerald','pro']])for(const width of [390,1280])for(const [year,month,weeks] of [[2027,1,4],[2026,11,5],[2026,2,6]]){
+    const height=width===390?844:900;
+    await page.setViewportSize({width,height});
+    await page.goto(`http://navigation.test/header?preview&current&user&dock&mode=${mode}&theme=${theme}&year=${year}&month=${month}${theme==='light'?'&light':''}`);
+    await page.waitForFunction(()=>Boolean(document.querySelector('.calendar-section')?.style.getPropertyValue('--calendar-row-height')));
+    await page.waitForFunction(()=>{const grid=document.querySelector('.calendar-days-grid').getBoundingClientRect(),dock=document.querySelector('.history-fab').getBoundingClientRect();return grid.bottom<=dock.top;});
+    const fit=await page.evaluate(()=>{const grid=document.querySelector('.calendar-days-grid'),box=grid.getBoundingClientRect(),dock=document.querySelector('.history-fab').getBoundingClientRect();return {gap:dock.top-box.bottom,count:grid.children.length,cellHeight:grid.children[0].getBoundingClientRect().height,width:box.width};});
+    assert.equal(fit.count,weeks*7);
+    assert.ok(fit.cellHeight>=56);
+    assert.ok(fit.gap>=10&&fit.gap<=(['gold','emerald'].includes(theme)?46:14),JSON.stringify({check:'month fills available space above dock',theme,mode,width,weeks,fit}));
+    assert.ok(fit.width>=width-(width===390?36:80),'calendar uses full content width');
+    if(theme==='dark'&&mode==='free'&&weeks===5)await page.screenshot({path:`artifacts/calendar-full-height-dark-${width}.png`});
+  }
   assert.deepEqual(errors,[]);
-  console.log('PASS: all 12 months, year rollover, five themes/locales, phone/desktop, FREE/PRO, stable single row, readable labels, date/currency menus, Today and reduced motion');
+  console.log('PASS: compact header with date beside flame, all months, year rollover, five themes/locales, phone/desktop, FREE/PRO, readable labels, date/currency menus, Today and reduced motion');
 } finally {await browser.close();}

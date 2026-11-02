@@ -101,3 +101,6 @@
 .theme-onboarding-check { display:grid; place-items:center; flex:none; width:18px; height:18px; border:1px solid var(--preview-line); border-radius:50%; }
 [aria-pressed="true"] > .theme-onboarding-caption > .theme-onboarding-check { background:var(--preview-ink); color:var(--preview-bg); border-color:transparent; }
 .theme-onboarding-option:focus-visible { outline:2px solid var(--dayris-accent,#d3c090); outline-offset:3px; }
+.theme-collection-onboarding .theme-collection-heading { margin-top:20px; padding-top:16px; }
+.theme-collection-onboarding .theme-premium-card .theme-art-calendar > i { aspect-ratio:auto; height:18px; }
+.theme-collection-onboarding .theme-premium-info > span { font-size:9px; }

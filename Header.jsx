@@ -143,7 +143,7 @@ export default function Header({
         </div>
 
         {/* Action controls: [ Download ] [ Theme ] [ Settings ] */}
-        <div data-site-element="actions" className="flex items-center gap-1.5 shrink-0">
+        <div data-site-element="actions" className="dayris-header-actions flex items-center gap-1.5 shrink-0">
           {/* Install is useful in the browser, not inside the installed app. */}
           {!isPwaInstalled && <div className="relative shrink-0 block">
             <button
@@ -254,8 +254,8 @@ export default function Header({
       </div>
 
       {/* Second row: Calendar month navigation */}
-      <div className="relative">
-      <div>
+      <div className="dayris-command-wrap relative">
+      <div className="dayris-command-content">
         <div className="dayris-command-row">
           <div className="dayris-date-navigation">
           <button

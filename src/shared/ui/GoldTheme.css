@@ -155,7 +155,7 @@ html[data-dayris-theme="gold"] .calendar-motion-light { display:none; }
 html[data-dayris-theme="gold"] .calendar-weekdays > div { color:#e3dac4; font-family:inherit; letter-spacing:.08em; font-size:10px; font-weight:550; }
 html[data-dayris-theme="gold"] .dayris-header { border:0; background:linear-gradient(180deg,#0b0d113d,transparent); box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none; }
 html[data-dayris-theme="gold"] .dayris-brand-row { margin-bottom:12px; }
-html[data-dayris-theme="gold"] .dayris-date-navigation { border-color:#fff7e02e; background:var(--gold-control); color:#fff0bc; box-shadow:var(--gold-edge),0 2px 0 #19191999,0 9px 22px #0005; backdrop-filter:blur(18px) saturate(1.4); -webkit-backdrop-filter:blur(18px) saturate(1.4); }
+html[data-dayris-theme="gold"] .dayris-date-navigation { color:#fff0bc; }
 html[data-dayris-theme="gold"] :is(.dayris-header button.rounded-full,.workspace-mode-toggle.workspace-mode-toggle) {
   background:radial-gradient(ellipse at var(--gold-pointer-x,25%) var(--gold-pointer-y,0%),#fff7df38,transparent 75%),linear-gradient(145deg,#ffffff0e,#ffffff04),#1a1c2024;
   color:#fff3d0; border-color:#fff5d944; box-shadow:var(--gold-edge),0 2px 0 #19191999,0 7px 12px #0004;

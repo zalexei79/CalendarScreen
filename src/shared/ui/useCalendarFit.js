@@ -9,12 +9,10 @@ export function useCalendarFit(surfaceRef, cellCount) {
     const grid = surface?.querySelector('.calendar-days-grid');
     if (!grid) return;
     const viewport = window.visualViewport;
-    const mobile = window.matchMedia('(max-width: 639px)');
     let frame;
     const update = () => {
-      // Glass themes have raised cells on desktop too: reserve the real dock
-      // instead of letting a six-week month grow behind its floating glass.
-      if ((!mobile.matches && !['gold','emerald'].includes(document.documentElement.dataset.dayrisTheme)) || viewport?.scale > 1.05) return;
+      // Every palette uses the available space above the real floating dock.
+      if (viewport?.scale > 1.05) return;
       let top = 0;
       for (let node = grid; node; node = node.offsetParent) top += node.offsetTop;
       const dock = document.querySelector('.history-fab');
@@ -41,14 +39,12 @@ export function useCalendarFit(surfaceRef, cellCount) {
     mutations.observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'data-dayris-theme'] });
     viewport?.addEventListener('resize', schedule);
     window.addEventListener('resize', schedule);
-    mobile.addEventListener('change', schedule);
     update();
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect(); mutations.disconnect();
       viewport?.removeEventListener('resize', schedule);
       window.removeEventListener('resize', schedule);
-      mobile.removeEventListener('change', schedule);
     };
   }, [surfaceRef, cellCount]);
 }

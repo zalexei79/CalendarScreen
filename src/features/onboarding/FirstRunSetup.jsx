@@ -191,7 +191,7 @@ export default function FirstRunSetup({ step, language, currency, theme, themePr
                 <span className={`text-[10px] font-medium ${item === index ? light ? 'text-zinc-800' : 'text-zinc-200' : muted}`}>{String(item + 1).padStart(2, '0')} · {label}</span>
               </div>)}
             </nav>
-            <div className="flex-1">
+            <div className="first-run-step-content flex-1">
               <h1 id="first-run-heading" ref={headingRef} tabIndex={-1} className="whitespace-pre-line text-[28px] font-semibold leading-[1.12] tracking-[-0.035em] outline-none sm:text-[34px]">{index === 0 ? copy.languageTitle : index === 1 ? choosingAppearance?appearanceCopy.title:copy.currencyTitle : birthdayCopy.title}</h1>
               <p className={`first-run-setup-hint mt-3 whitespace-pre-line text-sm leading-relaxed ${muted}`}>{index === 0 ? copy.languageHint : index === 1 ? choosingAppearance?appearanceCopy.hint:copy.currencyHint : birthdayCopy.hint}</p>
 

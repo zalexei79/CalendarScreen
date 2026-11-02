@@ -6,6 +6,7 @@ import { translate } from '../src/shared/i18n';
 import Header from '../Header';
 import CalendarGrid from '../CalendarGrid';
 import MonthlyGoal from '../MonthlyGoal';
+import {useWorkspaceViewport} from '../src/shared/ui/useWorkspaceViewport.js';
 function Fixture() {
   const [pro,setPro]=useState(false), [trader,setTrader]=useState(false), [light,setLight]=useState(false);
   const [language,setLanguage]=useState('ru'), [action,setAction]=useState('');
@@ -20,10 +21,11 @@ function Fixture() {
   </main>;
 }
 function HeaderFixture() {
+  useWorkspaceViewport();
   const params=new URLSearchParams(location.search), preview=params.has('preview');
   const language=params.get('language') || 'ru';
   const today=params.has('current') ? new Date() : new Date(2026,8,30);
-  const [period,setPeriod]=useState({month:today.getMonth(),year:today.getFullYear()});
+  const [period,setPeriod]=useState({month:params.has('month')?Number(params.get('month')):today.getMonth(),year:params.has('year')?Number(params.get('year')):today.getFullYear()});
   const [monthMenu,setMonthMenu]=useState(false),[yearMenu,setYearMenu]=useState(false),[currency,setCurrency]=useState('USD');
   const moveMonth=delta=>setPeriod(value=>{const date=new Date(value.year,value.month+delta,1);return {month:date.getMonth(),year:date.getFullYear()};});
   const [access,setAccess]=useState(preview), [loading,setLoading]=useState(false);
@@ -33,7 +35,9 @@ function HeaderFixture() {
   const theme=params.get('theme')||(light?'light':'dark');
   useEffect(()=>{document.documentElement.dataset.dayrisTheme=theme;},[theme]);
   const action=kind=>{window.handoffs??=[];window.handoffs.push({kind,open:Boolean(document.querySelector('.pro-tools-popover:popover-open'))});};
-  const cells=Array.from({length:35},(_,i)=>{const date=new Date(2026,7,31+i);return {date,key:String(i),inMonth:date.getMonth()===8,isToday:i===30};});
+  const offset=(new Date(period.year,period.month,1).getDay()+6)%7;
+  const count=Math.ceil((offset+new Date(period.year,period.month+1,0).getDate())/7)*7;
+  const cells=Array.from({length:count},(_,i)=>{const date=new Date(period.year,period.month,1-offset+i);return {date,key:String(i),inMonth:date.getMonth()===period.month,isToday:date.toDateString()===today.toDateString()};});
   // Deterministic synthetic calendar for layout QA only; never user account data.
   const pnl=key=>Number(key)%7>4 ? 0 : [125,-82,43,-106,68][Number(key)%5];
   // Mirror CalendarScreen's real wallet access effect, not just the CTA callback.
@@ -43,7 +47,7 @@ function HeaderFixture() {
       goToPrevMonth={()=>moveMonth(-1)} goToNextMonth={()=>moveMonth(1)}
       monthMenuOpen={monthMenu} setMonthMenuOpen={setMonthMenu} yearMenuOpen={yearMenu} setYearMenuOpen={setYearMenu}
       setViewMonth={month=>setPeriod(value=>({...value,month}))} setViewYear={year=>setPeriod(value=>({...value,year}))} setSelectedKey={setSelected}
-      isPwaInstalled proAccessActive={access} proAccessLoading={loading} proView={pro} setProView={setPro}
+      isPwaInstalled={!params.has('browser')} user={params.has('user')?{id:'123e4567-e89b-42d3-a456-426614174000'}:undefined} proAccessActive={access} proAccessLoading={loading} proView={pro} setProView={setPro}
       accountMode={account} setAccountMode={value=>{action(value);setAccount(value);}} openProPresentation={()=>{action('offer');setOffer(true);}} onOpenCapital={()=>action('capital')}
       traderMode={trader} setTraderMode={setTrader} setPlatformFilter={()=>{}} openConnectModal={action}
       ctraderConnected isLight={light} theme={theme} setTheme={value=>setLight(value==='light')}
@@ -53,6 +57,7 @@ function HeaderFixture() {
       <CalendarGrid cells={cells} selectedKey={selected} onSelectDay={setSelected} isLight={light} proView={pro} traderMode={trader} language={language}
         monthMaxAbsPnl={125} tradesForDayFiltered={key=>pnl(key)?[{}]:[]} totalPnlForDay={pnl}
         formatPnlDisplay={value=>`${value>=0?'+':'−'}$${Math.abs(value)}`} onEmptyClick={()=>setSelected(null)}/>
+      {params.has('dock')&&<div className="history-fab"><div style={{height:64,padding:16,borderRadius:32,background:'#25272c'}}>History · Add</div></div>}
     </>}
     <div style={preview?{display:'none'}:{}}>
     <button id="access" onClick={()=>setAccess(!access)}>Entitlement</button>
