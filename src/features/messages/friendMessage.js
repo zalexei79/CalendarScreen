@@ -1,14 +1,15 @@
-// Versioned envelopes travel through the existing friend-only RPC and its 2,000-character limit.
+import {isAutomaticMessage} from './automaticChatCrypto.js';
+// Versioned envelopes travel through the existing friend-only RPC.
 const NOTE='DAYRIS_NOTE_V1\n';
 const LOCK='DAYRIS_LOCK_V1\n';
 export const FRIEND_BODY_LIMIT=2000;
 export function readFriendNote(body){
- if(typeof body!=='string'||!body.startsWith(NOTE)||body.length>FRIEND_BODY_LIMIT)return null;
+ if(typeof body!=='string'||!body.startsWith(NOTE)||body.length>2600)return null;
  try{const value=JSON.parse(body.slice(NOTE.length)),r=value.reply;if(typeof value.text!=='string'||!value.text.trim()||!r||typeof r.text!=='string'||r.text.length>160||typeof r.sender!=='string'||r.sender.length>80||typeof r.id!=='string'||r.id.length>80)return null;return {text:value.text,reply:{id:r.id,sender:r.sender,text:r.text}};}catch{return null;}
 }
 export function friendNote(text,reply){return reply?NOTE+JSON.stringify({text,reply:{id:reply.id,sender:reply.sender,text:reply.text.slice(0,160)}}):text;}
 export const isLockedMessage=body=>typeof body==='string'&&body.startsWith(LOCK);
-export function friendMessagePreview(body,copy){if(isLockedMessage(body))return copy.lockedMessage;if(body?.startsWith('DAYRIS_DAY_V1\n'))return copy.day;if(body?.startsWith('DAYRIS_STREAK_V1\n'))return copy.streak;return readFriendNote(body)?.text||body||'';}
+export function friendMessagePreview(body,copy){if(isLockedMessage(body)||isAutomaticMessage(body))return copy.lockedMessage;if(body?.startsWith('DAYRIS_DAY_V1\n'))return copy.day;if(body?.startsWith('DAYRIS_STREAK_V1\n'))return copy.streak;return readFriendNote(body)?.text||body||'';}
 function b64(bytes){return btoa(String.fromCharCode(...bytes)).replaceAll('+','-').replaceAll('/','_').replace(/=+$/,'');}
 function unb64(text){if(!/^[\w-]+$/.test(text))throw new Error('INVALID_KEY');return Uint8Array.from(atob(text.replaceAll('-','+').replaceAll('_','/')+'='.repeat((4-text.length%4)%4)),c=>c.charCodeAt(0));}
 function cryptoApi(){if(!globalThis.crypto?.subtle)throw new Error('CRYPTO_UNAVAILABLE');return globalThis.crypto;}

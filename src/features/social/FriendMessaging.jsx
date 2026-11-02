@@ -8,10 +8,12 @@ import {socialInviteCopy} from './socialInviteCopy.js';
 import {socialProfileChanged} from './useSocialProfile.js';
 import {readSocialPending,clearSocialPending,rememberSocialReferral,clearSocialReferral,openFriendChat} from './socialLinks.js';
 import useDialogBackdropDismiss from '../../shared/ui/useDialogBackdropDismiss.js';
+import {registerFriendDevice} from '../messages/automaticChatSession.js';
 import '../messages/CreatorMessages.css';
 import './Social.css';
 function useSocialDialog(ref,visible,blocked){useEffect(()=>{if(!visible||blocked)return;const previous=document.activeElement,node=ref.current;const show=()=>{if(node&&!node.open&&!document.querySelector('dialog[open],[aria-modal="true"]'))node.showModal();};show();const timer=setInterval(show,500);return()=>{clearInterval(timer);node?.close();if(previous?.isConnected)previous.focus?.();};},[visible,blocked]);}
 export function FriendChatDialog({userId,language,blocked=false}){
+ useEffect(()=>{if(!userId)return;const register=()=>{if(document.visibilityState!=='hidden')registerFriendDevice(supabase,userId).catch(()=>{});};register();window.addEventListener('focus',register);return()=>window.removeEventListener('focus',register);},[userId]);
  const t=socialInviteCopy(language),[request,setRequest]=useState({owner:null,peerId:''}),[state,setState]=useState({key:'',peer:null,error:false}),[revision,setRevision]=useState(0),dialog=useRef(null);
  const key=request.owner===userId&&userId?userId+':'+request.peerId:'',own=state.key===key?state:{peer:null,error:false};
  useEffect(()=>{if(!userId)return;const pending=readSocialPending('chat');if(pending)setRequest({owner:userId,peerId:pending});const open=e=>{if(e.detail?.userId===userId&&e.detail.peerId)setRequest({owner:userId,peerId:e.detail.peerId,shareDay:e.detail.shareDay==='streak'?'streak':Boolean(e.detail.shareDay)});};window.addEventListener('dayris:friend-chat-open',open);return()=>window.removeEventListener('dayris:friend-chat-open',open);},[userId]);

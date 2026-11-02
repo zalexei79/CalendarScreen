@@ -1,26 +1,44 @@
-# Friends workspace
+# Friends messenger
 
-The calendar Friends entry opens a responsive workspace: a conversation list beside the thread on desktop, and list/thread navigation on mobile. Settings and push/deep-link entry points retain the existing friend-only RPCs and authorization checks.
+The calendar Friends entry opens a responsive conversation workspace. Updated clients encrypt new friend messages, reply quotes and compact day/streak cards automatically. Creator/admin messages keep their existing behavior.
 
-The list supports unread and favorite filters, name/number/latest-message search, timestamps and ordinary drafts. Threads add reply quotes, copy, local bookmarks, loaded-message search, day/streak filtering, emoji insertion, and private day/streak sharing. Search and bookmarks cover loaded history; older pages can be loaded from the thread. Favorites, bookmark IDs and ordinary drafts are scoped to the account on this device. Financial details remain private by default.
+The list supports unread/favorite filters, search and local draft indicators. Threads support quotes, copy, bookmarks, loaded-history search and day/streak filters. Financial details stay private by default. Full server-generated day attachments remain readable in older history; new shares use encrypted client summaries.
 
-## Optional messages with a key
+## Automatic device keys
 
-`DR1-` codes contain 32 cryptographically random bytes, generated with Web Crypto. Users exchange a key through a trusted channel outside DAYRIS and keep a separate copy. AES-256-GCM encrypts the entire message, including reply text and compact day/streak cards, before `friend_chat_send`. Every envelope has a fresh 96-bit IV and a 128-bit authentication tag. Authenticated additional data binds the version, both participants, sender and message UUID. The RPC retains its 2,000-character wire limit, with UTF-8/base64 overhead checked before sending. A retry reuses the UUID and the exact ciphertext.
+On sign-in, each browser creates an ECDH P-256 device identity and stores its non-extractable private CryptoKey in IndexedDB. The public key is registered through an authenticated owner-bound RPC. Both friends must open an updated DAYRIS client once; no code, password or out-of-app key transfer is needed.
 
-Key material and decrypted text remain in the mounted thread's memory. They are cleared when locking or leaving the conversation, and when access is denied. They never enter local/session storage. Only a boolean marking this device's protected conversation preference persists, preventing accidental ordinary sending on reopen. Encrypted incoming messages are marked read only after successful decryption. Current clients hide encrypted/quote envelopes in push previews. Server-side full-detail day sharing is unavailable while the key is active; compact day and amount cards are encrypted locally instead.
+Each sending device creates an AES-256-GCM conversation key. ECDH followed by HKDF-SHA-256 derives a separate AES-KW wrapping key for each device pair. The HKDF salt and context bind the epoch, both accounts and both device IDs. Only wrapped conversation keys and public device keys are sent to the key directory. Conversation keys remain locally wrap-capable so an already authorized device can automatically provide encrypted copies to a newly registered device.
 
-Closing the conversation or using another device requires the key again. DAYRIS cannot recover a lost key. A new key can be deliberately created or accepted for future messages; earlier messages still need the earlier key. A supplied key is checked against loaded encrypted history; using a different new key requires explicit acknowledgement in the UI. The fingerprint is a short key identifier, not verified sender identity.
+Message envelopes use DAYRIS_AUTO_V1, an epoch UUID, a fresh 96-bit IV and a 128-bit GCM tag. Authenticated additional data binds the version, epoch, both participants, sender and message UUID. Sending retries reuse the exact UUID and ciphertext. The server preserves the ordinary 2,000-character limit and allows up to 12,000 wire characters for encrypted Unicode messages and bounded quotes. The UI retains a 2,000-character text limit.
 
-This is optional shared-key message encryption. It does not supply authenticated public-key exchange, device identity verification, forward secrecy, encrypted metadata, or protection against a compromised client. Earlier ordinary messages and financial records are unchanged. Participants, timing, counts and delivery metadata remain visible to the service. There is no new backend schema, key escrow, or recovery service.
+Encrypted drafts use a separate non-extractable AES key stored with the device identity. Their contents remain in IndexedDB as ciphertext. LocalStorage holds only an account-scoped draft-present flag. Earlier ordinary drafts are migrated when their conversation is opened.
 
-References: [Web Crypto AES-GCM parameters](https://developer.mozilla.org/en-US/docs/Web/API/AesGcmParams), [Web Crypto key import](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey).
+Opening or reopening a conversation loads its keys automatically. Incoming encrypted messages are marked read after successful decryption. Push previews hide protocol envelopes. If the friend has not registered a device yet, the UI waits for their first app opening; it does not downgrade new messages to plaintext.
 
-## Validation
+## History and security boundaries
 
-- `node --test tests/friend-messenger.test.mjs tests/creator-messages-push.test.mjs`
-- `node tests/friend-messenger-ui-check.mjs` (real components with synthetic RPCs; no user data or external messages)
-- `npm run build`
-- `git diff --check` for the scoped release
+New devices can read future messages automatically. For older history, an existing device with the necessary keys must open the conversation so it can create encrypted packets for the new device. If all copies of the required keys are lost, the server cannot recover those messages.
 
-The UI check writes desktop/mobile/light screenshots and a standalone synthetic preview under `artifacts/friends-workspace-2026-11-02/`. Passing local checks or pushing a commit does not confirm a live deployment.
+Older DAYRIS_LOCK_V1 messages still require the manual code originally used. Their decoder remains available as a separate legacy history action; it does not control encryption of new messages. Earlier ordinary messages are not rewritten.
+
+The authenticated directory binds public keys to accounts and immutable device IDs. It trusts the service's authentication and directory; there is no out-of-band identity verification, Double Ratchet, forward secrecy or claim of an audited messenger protocol. Participants, device/public-key metadata, timing and message counts remain visible to the service. A compromised client or malicious directory is outside this protection.
+
+The key tables have RLS enabled and no direct anonymous/authenticated table access. The RPCs check the acting account, active device ownership and an accepted, unblocked friendship. Device key replacement and packets for outsiders are rejected. Key epochs and packets are separate from financial records.
+
+## Deployment and validation
+
+Migration: supabase/migrations/202611020001_automatic_friend_encryption.sql.
+
+Deploy the database migration before the frontend. For this release, the remote migration history was fetched into an isolated directory and the CLI dry run showed only this migration. Use skip-vault and no seeds/roles when applying this scoped change.
+
+Checks:
+
+- node --test tests/automatic-friend-crypto.test.mjs tests/automatic-friend-db.test.mjs tests/friend-messenger.test.mjs tests/creator-messages-push.test.mjs
+- node tests/friend-messenger-ui-check.mjs
+- npm run build
+- git diff --check
+
+The browser fixture uses real Web Crypto and IndexedDB with synthetic accounts and RPCs. It covers automatic exchange, recipient decryption, encrypted quotes/cards/drafts, reload recovery, sending retries, access revocation, outside dismissal and responsive layouts. Production verification checks migration metadata/permissions and deployed assets without sending messages to real people.
+
+References: [Web Crypto key agreement and derivation](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/deriveKey), [key wrapping](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/wrapKey), [CryptoKey storage](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto).

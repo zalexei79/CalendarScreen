@@ -32,7 +32,7 @@ test('quotes and Unicode respect the existing wire limit and encrypt as one payl
 test('push notifications hide encrypted and quoted envelopes and retain friend navigation',async()=>{
  const handlers={};let shown,pending,opened;
  vm.runInNewContext(readFileSync('public/sw.js','utf8'),{URL,self:{location:{origin:'https://dayris.test'},addEventListener:(name,handler)=>handlers[name]=handler,registration:{showNotification:(title,options)=>{shown={title,...options};return Promise.resolve();}},clients:{matchAll:async()=>[],openWindow:async value=>{opened=value;}}}});
- for(const body of ['DAYRIS_LOCK_V1\nnot-plaintext','DAYRIS_NOTE_V1\n{"text":"private quote"}']){
+ for(const body of ['DAYRIS_LOCK_V1\nnot-plaintext','DAYRIS_NOTE_V1\n{"text":"private quote"}','DAYRIS_AUTO_V1\nencrypted-payload']){
   handlers.push({data:{json:()=>({type:'friend_message',friendId:context.peer,title:'Друг',body})},waitUntil:value=>pending=value});await pending;
   assert.equal(shown.body,'DAYRIS · Новое сообщение');assert.ok(!shown.body.includes('DAYRIS_LOCK'));assert.equal(shown.actions.length,0);
  }

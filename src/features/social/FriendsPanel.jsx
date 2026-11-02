@@ -11,7 +11,8 @@ import {socialHubCopy} from './socialHubCopy.js';
 import {friendMessengerCopy} from '../messages/friendMessengerCopy.js';
 import {friendMessagePreview,isLockedMessage} from '../messages/friendMessage.js';
 import {chatLocale} from '../messages/chatCopy.js';
-import {readFavoriteFriends,toggleFavoriteFriend,readFriendDraft} from './friendWorkspace.js';
+import {readFavoriteFriends,toggleFavoriteFriend,readFriendDraft,hasProtectedFriendDraft} from './friendWorkspace.js';
+import {automaticChatCopy} from '../messages/automaticChatCopy.js';
 import './SocialHub.css';
 export function FriendsEntry({userId,language,onOpen}){
  const t=socialCopy(language),[count,setCount]=useState(0);
@@ -22,7 +23,7 @@ export default function FriendsPanel(props){return <FriendsWorkspace key={props.
 function FriendsWorkspace({userId,profile,language,onProfile,onClose,onOpenChat,activePeerId}){
  const t=socialCopy(language),h=socialHubCopy(language),[tab,setTab]=useState('chats'),[data,setData]=useState(null),[query,setQuery]=useState(''),[found,setFound]=useState(null),[tried,setTried]=useState(false),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
  const alive=useRef(true),locked=useRef(false),sequence=useRef(0),refreshRef=useRef(null);
- const q=socialInviteCopy(language),m=friendMessengerCopy(language);
+ const q=socialInviteCopy(language),a=automaticChatCopy(language),m={...friendMessengerCopy(language),lockedMessage:a.encrypted,localNote:a.localNote};
  const [selectedProfile,setSelectedProfile]=useState(null),[shareKind,setShareKind]=useState('day');
  const [search,setSearch]=useState(''),[filter,setFilter]=useState('all'),[favorites,setFavorites]=useState(()=>readFavoriteFriends(userId)),[,setLocalRevision]=useState(0),returnTab=useRef('chats');
  const snippet=body=>friendMessagePreview(body,m);
@@ -42,10 +43,10 @@ function FriendsWorkspace({userId,profile,language,onProfile,onClose,onOpenChat,
  function chat(p,shareDay=false){if(onOpenChat)onOpenChat(p,shareDay);else openFriendChat(userId,p.user_id,onClose,{shareDay});}
  function lastTime(value){if(!value)return '';const d=new Date(value);if(!Number.isFinite(d.getTime()))return '';return d.toDateString()===new Date().toDateString()?d.toLocaleTimeString(chatLocale(language),{hour:'2-digit',minute:'2-digit'}):d.toLocaleDateString(chatLocale(language),{day:'numeric',month:'short'});}
  function row(p){
-  const draft=tab==='chats'&&!isLockedMessage(p.last_message)?readFriendDraft(userId,p.user_id):'',favorite=favorites.includes(p.user_id),unread=Number(p.unread_count)>0;
+  const draft=tab==='chats'&&!isLockedMessage(p.last_message)?readFriendDraft(userId,p.user_id):'',protectedDraft=tab==='chats'&&hasProtectedFriendDraft(userId,p.user_id),favorite=favorites.includes(p.user_id),unread=Number(p.unread_count)>0;
   return <div className={`social-hub-person${activePeerId===p.user_id?' is-selected':''}${unread?' has-unread':''}`} key={p.user_id}>
    <button type="button" className="social-hub-conversation" aria-current={activePeerId===p.user_id?'true':undefined} onClick={()=>chat(p,tab==='share'?(shareKind==='streak'?'streak':true):false)}>
-    <SocialAvatar userId={p.user_id} name={p.display_name} path={p.avatar_path||null}/><span><span className="social-hub-row-title"><strong>{p.display_name}</strong>{favorite&&<Star size={11} className="social-favorite-mark"/>}<time dateTime={p.last_at||undefined}>{tab==='chats'?lastTime(p.last_at):''}</time></span><span className="social-hub-row-preview"><small>{draft?<><em>{m.draft}: </em>{draft}</>:tab==='share'?(shareKind==='streak'?h.streak:h.day):tab==='friends'?p.handle:snippet(p.last_message)||q.write}</small>{unread&&tab==='chats'&&<b className="social-hub-count">{Number(p.unread_count)>99?'99+':p.unread_count}</b>}</span></span>
+    <SocialAvatar userId={p.user_id} name={p.display_name} path={p.avatar_path||null}/><span><span className="social-hub-row-title"><strong>{p.display_name}</strong>{favorite&&<Star size={11} className="social-favorite-mark"/>}<time dateTime={p.last_at||undefined}>{tab==='chats'?lastTime(p.last_at):''}</time></span><span className="social-hub-row-preview"><small>{protectedDraft?<em>{a.draft}</em>:draft?<><em>{m.draft}: </em>{draft}</>:tab==='share'?(shareKind==='streak'?h.streak:h.day):tab==='friends'?p.handle:snippet(p.last_message)||q.write}</small>{unread&&tab==='chats'&&<b className="social-hub-count">{Number(p.unread_count)>99?'99+':p.unread_count}</b>}</span></span>
    </button>
    {tab!=='share'&&<button type="button" className="social-hub-star" aria-label={`${favorite?m.unpin:m.pin}: ${p.display_name}`} aria-pressed={favorite} onClick={()=>setFavorites(toggleFavoriteFriend(userId,p.user_id))}><Star size={16}/></button>}
    {tab==='friends'&&<button type="button" className="social-icon-button" aria-label={`${t.profile}: ${p.display_name}`} onClick={()=>setSelectedProfile({...p,kind:'friends'})}><UsersRound size={17}/></button>}

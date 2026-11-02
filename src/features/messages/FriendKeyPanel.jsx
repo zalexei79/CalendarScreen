@@ -1,7 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {LockKeyhole,KeyRound,Copy,Check,X,ShieldCheck,LoaderCircle} from 'lucide-react';
 import {createFriendKey,importFriendKey,unlockFriendMessage} from './friendMessage.js';
-export default function FriendKeyPanel({copy:t,owner,peer,sample,samples=[],secret,onEnable,onLock,onClose}){
+export default function FriendKeyPanel({copy:t,owner,peer,sample,samples=[],secret,onEnable,onLock,onClose,legacyOnly=false}){
  const [code,setCode]=useState(''),[generated,setGenerated]=useState(false),[saved,setSaved]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[copied,setCopied]=useState(false),alive=useRef(true),lock=useRef(false);
  const [mismatch,setMismatch]=useState(false),[replace,setReplace]=useState(false);
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
@@ -14,8 +14,8 @@ export default function FriendKeyPanel({copy:t,owner,peer,sample,samples=[],secr
    <p>{t.keyHint}</p><label className="friend-key-field"><span>{t.keyInput}</span><textarea aria-label={t.keyInput} placeholder="DR1-…" value={code} rows={2} autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false} maxLength={64} disabled={busy} onChange={e=>{setCode(e.target.value);setGenerated(false);setSaved(false);setCopied(false);setError('');setMismatch(false);setReplace(false);}}/><small>{t.keyCodeHint}</small></label>
    {generated&&<><button type="button" className="friend-tool-button" onClick={copy}>{copied?<Check size={16}/>:<Copy size={16}/>} {copied?t.copied:t.keyCopy}</button><label className="friend-key-saved"><input type="checkbox" checked={saved} onChange={e=>setSaved(e.target.checked)}/>{t.keySaved}</label></>}
    {error&&<p className="friend-key-error" role="alert">{error}</p>}
-   {mismatch&&!generated&&<label className="friend-key-saved"><input type="checkbox" checked={replace} onChange={e=>setReplace(e.target.checked)}/>{t.keyReplace}</label>}{sample&&(generated||mismatch)&&<p>{t.keyReplaceHint}</p>}
-   <div className="friend-key-buttons"><button type="button" className="friend-tool-button" disabled={busy} onClick={generate}><KeyRound size={16}/>{sample?t.keyNew:t.keyCreate}</button><button type="submit" className="friend-tool-button is-primary" disabled={busy||!code.trim()||(generated&&!saved)}>{busy?<LoaderCircle size={16}/>:<LockKeyhole size={16}/>} {busy?t.loadingKey:t.keyUse}</button></div>
+   {mismatch&&!generated&&!legacyOnly&&<label className="friend-key-saved"><input type="checkbox" checked={replace} onChange={e=>setReplace(e.target.checked)}/>{t.keyReplace}</label>}{sample&&(generated||mismatch)&&!legacyOnly&&<p>{t.keyReplaceHint}</p>}
+   <div className="friend-key-buttons">{!legacyOnly&&<button type="button" className="friend-tool-button" disabled={busy} onClick={generate}><KeyRound size={16}/>{sample?t.keyNew:t.keyCreate}</button>}<button type="submit" className="friend-tool-button is-primary" disabled={busy||!code.trim()||(generated&&!saved)}>{busy?<LoaderCircle size={16}/>:<LockKeyhole size={16}/>} {busy?t.loadingKey:t.keyUse}</button></div>
   </form>}
   <p className="friend-key-meta">{t.keyMeta}</p>
  </section>;
