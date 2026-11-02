@@ -138,9 +138,43 @@ export default function Header({
               {t('titleMoney')}
             </p>
           </div>
-          <ActivityStreak ownerId={getValidUserId(user)} isLight={isLight} t={t} onOpen={onOpenActivityStreak} onChange={onActivityStreakChange} onCreateEntry={onCreateStreakEntry} />
         </div>
 
+
+      </div>
+
+      {/* Second row: Calendar month navigation */}
+      <div className="dayris-command-wrap relative">
+      <div className="dayris-command-content">
+        <div className="dayris-command-row">
+          <div className="dayris-date-navigation">
+          <div className="dayris-date-cluster">
+          <button
+            data-site-element="previous"
+            onClick={goToPrevMonth}
+            aria-label={t('previousMonth')}
+            title={t('previousMonth')}
+            className={`rounded-full border h-9 w-9 flex items-center justify-center transition-all duration-200 hover:-translate-y-px ${isLight ? 'border-zinc-300/80 bg-white/70 text-zinc-600 hover:border-amber-400 hover:text-amber-700 hover:shadow-sm' : 'border-white/[0.08] bg-white/[0.035] text-zinc-400 hover:text-zinc-100 hover:border-white/[0.18] hover:bg-white/[0.06]'}`}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <CalendarPeriodPicker {...{month,year,language,isLight,monthMenuOpen,yearMenuOpen,setMonthMenuOpen,setYearMenuOpen,monthMenuRef,yearMenuRef,setViewMonth,setViewYear,setSelectedKey}}/>
+          <button
+            data-site-element="next"
+            onClick={goToNextMonth}
+            aria-label={t('nextMonth')}
+            title={t('nextMonth')}
+            className={`rounded-full border h-9 w-9 flex items-center justify-center transition-all duration-200 hover:-translate-y-px ${isLight ? 'border-zinc-300/80 bg-white/70 text-zinc-600 hover:border-amber-400 hover:text-amber-700 hover:shadow-sm' : 'border-white/[0.08] bg-white/[0.035] text-zinc-400 hover:text-zinc-100 hover:border-white/[0.18] hover:bg-white/[0.06]'}`}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          </div>
+          {todayAction}
+          <div className="dayris-header-toolbar">
+            <div className="dayris-status-controls">
+          <CalendarCurrencyPicker currency={currency} onChange={setCurrency} usedCurrencies={usedCurrencies} language={language} isLight={isLight} onOpen={() => { setMonthMenuOpen(false); setYearMenuOpen(false); }}/>
+          <ActivityStreak ownerId={getValidUserId(user)} isLight={isLight} t={t} onOpen={onOpenActivityStreak} onChange={onActivityStreakChange} onCreateEntry={onCreateStreakEntry} />
+            </div>
         {/* Action controls: [ Download ] [ Theme ] [ Settings ] */}
         <div data-site-element="actions" className="dayris-header-actions flex items-center gap-1.5 shrink-0">
           {/* Install is useful in the browser, not inside the installed app. */}
@@ -250,35 +284,7 @@ export default function Header({
             />}
           </div>
         </div>
-      </div>
-
-      {/* Second row: Calendar month navigation */}
-      <div className="dayris-command-wrap relative">
-      <div className="dayris-command-content">
-        <div className="dayris-command-row">
-          <div className="dayris-date-navigation">
-          <button
-            data-site-element="previous"
-            onClick={goToPrevMonth}
-            aria-label={t('previousMonth')}
-            title={t('previousMonth')}
-            className={`rounded-full border h-9 w-9 flex items-center justify-center transition-all duration-200 hover:-translate-y-px ${isLight ? 'border-zinc-300/80 bg-white/70 text-zinc-600 hover:border-amber-400 hover:text-amber-700 hover:shadow-sm' : 'border-white/[0.08] bg-white/[0.035] text-zinc-400 hover:text-zinc-100 hover:border-white/[0.18] hover:bg-white/[0.06]'}`}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <CalendarPeriodPicker {...{month,year,language,isLight,monthMenuOpen,yearMenuOpen,setMonthMenuOpen,setYearMenuOpen,monthMenuRef,yearMenuRef,setViewMonth,setViewYear,setSelectedKey}}/>
-          <button
-            data-site-element="next"
-            onClick={goToNextMonth}
-            aria-label={t('nextMonth')}
-            title={t('nextMonth')}
-            className={`rounded-full border h-9 w-9 flex items-center justify-center transition-all duration-200 hover:-translate-y-px ${isLight ? 'border-zinc-300/80 bg-white/70 text-zinc-600 hover:border-amber-400 hover:text-amber-700 hover:shadow-sm' : 'border-white/[0.08] bg-white/[0.035] text-zinc-400 hover:text-zinc-100 hover:border-white/[0.18] hover:bg-white/[0.06]'}`}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-
-          <CalendarCurrencyPicker currency={currency} onChange={setCurrency} usedCurrencies={usedCurrencies} language={language} isLight={isLight} onOpen={() => { setMonthMenuOpen(false); setYearMenuOpen(false); }}/>
-          {todayAction}
+          </div>
 
           </div>
           {/* Account details are also available from Settings. */}

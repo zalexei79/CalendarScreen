@@ -49,6 +49,7 @@ function HeaderFixture() {
       setViewMonth={month=>setPeriod(value=>({...value,month}))} setViewYear={year=>setPeriod(value=>({...value,year}))} setSelectedKey={setSelected}
       isPwaInstalled={!params.has('browser')} user={params.has('user')?{id:'123e4567-e89b-42d3-a456-426614174000'}:undefined} proAccessActive={access} proAccessLoading={loading} proView={pro} setProView={setPro}
       accountMode={account} setAccountMode={value=>{action(value);setAccount(value);}} openProPresentation={()=>{action('offer');setOffer(true);}} onOpenCapital={()=>action('capital')}
+      onOpenActivityStreak={()=>action('streak')}
       traderMode={trader} setTraderMode={setTrader} setPlatformFilter={()=>{}} openConnectModal={action}
       ctraderConnected isLight={light} theme={theme} setTheme={value=>setLight(value==='light')}
       periodStats={{}} currency={currency} setCurrency={setCurrency} formatMoney={String}/>

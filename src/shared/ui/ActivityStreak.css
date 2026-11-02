@@ -12,6 +12,7 @@
 .activity-streak-paused { color:#a1a1aa; border-color:rgba(161,161,170,.24); background:rgba(161,161,170,.08); }
 .activity-streak-icon { width:14px; height:14px; fill:currentColor; stroke-width:1.8; }
 .activity-streak-value { font-variant-numeric:tabular-nums; }
+.activity-streak-count { display:none; font-variant-numeric:tabular-nums; }
 .activity-streak-pause { display:inline-flex; align-items:center; gap:3px; margin-left:2px; padding-left:5px; border-left:1px solid currentColor; font-weight:600; color:#f5c46c; }
 .activity-streak-light .activity-streak-pause { color:#905b08; }
 .activity-streak-pause svg { flex-shrink:0; }

@@ -11,6 +11,7 @@ const css=fs.readFileSync(path.join('dist/assets',fs.readdirSync('dist/assets').
 const browser=await runtime('playwright').chromium.launch({channel:'msedge',headless:true});
 try {
   const page=await browser.newPage(),errors=[];
+  await page.addInitScript(()=>{const ownerId='123e4567-e89b-42d3-a456-426614174000';localStorage.setItem('dayris_activity_streak:'+ownerId,JSON.stringify({ownerId,_accountSynced:true,currentStreak:18,lastActiveDate:'2026-11-01',paused:true}));});
   page.on('pageerror',error=>errors.push(error.message));
   page.setDefaultTimeout(8000);
   await page.route('**/*',route=>{
@@ -22,10 +23,11 @@ try {
   });
   const dimensions=()=>page.evaluate(()=>{
     const root=document.querySelector('.dayris-date-navigation'),box=document.querySelector('.dayris-header').getBoundingClientRect();
-    const items=[...root.children].map(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,centerY:r.y+r.height/2};});
+    const items=['[data-site-element="previous"]','.dayris-month-title','[data-site-element="next"]','.calendar-currency','.dayris-today-action'].map(selector=>{const r=root.querySelector(selector).getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,centerY:r.y+r.height/2};});
     const month=document.querySelector('.dayris-month-trigger'),year=document.querySelector('.dayris-year-trigger');
     const flame=document.querySelector('.activity-streak').getBoundingClientRect(),title=document.querySelector('.dayris-month-title').getBoundingClientRect();
-    return {height:box.height,top:box.top,bottom:box.bottom,items,headerHeight:box.height,flameY:flame.y+flame.height/2,titleY:title.y+title.height/2,
+    const actions=document.querySelector('.dayris-header-actions').getBoundingClientRect();
+    return {height:box.height,top:box.top,bottom:box.bottom,items,headerHeight:box.height,flameY:flame.y+flame.height/2,titleY:title.y+title.height/2,flameLeft:flame.left,flameRight:flame.right,actionsLeft:actions.left,actionsY:actions.y+actions.height/2,
       overflow:document.documentElement.scrollWidth>innerWidth,
       clippedMonth:month.scrollWidth>month.clientWidth+1,
       monthRight:month.getBoundingClientRect().right,yearLeft:year.getBoundingClientRect().left,yearRight:year.getBoundingClientRect().right};
@@ -33,17 +35,25 @@ try {
   const cases=['dark','light','purple','gold','emerald'].flatMap(theme=>[320,390,1280].map(width=>[theme,width,'ru','pro']));
   cases.push(...['en','uk','md','zh-CN'].flatMap(language=>[320,390].map(width=>['gold',width,language,'pro'])));
   cases.push(['dark',320,'en','free'],['light',390,'uk','free']);
+  cases.push(['gold',960,'md','pro'],['dark',1024,'en','pro'],['dark',360,'ru','pro']);
   const arrowsOnly=process.argv.includes('--arrows-only');
   await page.emulateMedia({reducedMotion:'reduce'});
-  for(const [theme,width,language,mode] of (arrowsOnly?cases.filter(([theme,width,language])=>['dark','gold','emerald'].includes(theme)&&(language==='ru'||width===320)):cases)){
+  for(const [theme,width,language,mode] of (arrowsOnly?cases.filter(([theme,width,language])=>['dark','gold','emerald'].includes(theme)&&(language==='ru'||width===320||width>=960)):cases)){
     await page.setViewportSize({width,height:844});
     await page.goto(`http://navigation.test/header?preview&current&user&theme=${theme}&language=${language}&mode=${mode}${theme==='light'?'&light':''}`);
     await page.locator('.dayris-month-trigger').waitFor();
-    await page.locator('.activity-streak').evaluate(node=>{node.style.minWidth='62px';});
+    await page.locator('.activity-streak-pause').waitFor();
     const originalMonth=await page.locator('.dayris-month-label > span:not(.dayris-month-outgoing)').textContent(),originalYear=await page.locator('.dayris-year-trigger').textContent();
     const original=await dimensions();
     assert.ok(original.height<=108,`compact header: ${theme}/${width}/${language}`);
-    assert.ok(Math.abs(original.titleY-original.flameY)<=5,JSON.stringify({check:'date and flame share top line',theme,width,language,original}));
+    if(width>=960)assert.ok(Math.abs(original.titleY-original.flameY)<=5,'desktop keeps the full streak beside the brand');
+    else{
+      assert.ok(Math.abs(original.flameY-original.actionsY)<3&&Math.abs(original.items[3].centerY-original.actionsY)<3,'currency, streak and action buttons share one line');
+      assert.ok(original.items[3].right<=original.flameLeft&&original.flameRight+3<=original.actionsLeft,JSON.stringify({check:'toolbar controls do not collide',theme,width,language,original}));
+      assert.equal(await page.locator('.activity-streak-value').isVisible(),false);assert.equal(await page.locator('.activity-streak-pause-label').isVisible(),false);assert.equal(await page.locator('.activity-streak-count').textContent(),'18');
+      for(const control of await page.locator('.home-friends-button,[data-site-element="settings"]').all()){const box=await control.boundingBox();assert.ok(Math.abs(box.width-box.height)<1,'round action buttons have matching dimensions');}
+    }
+    await page.locator('.activity-streak').click();assert.equal(await page.evaluate(()=>handoffs.at(-1).kind),'streak','compact status still opens its details');
     for(let step=0;step<13;step++){
       if(step)await page.locator('[data-site-element="next"]').click();
       const layout=await dimensions(),context=`${theme}/${width}/${language}/${step}`;
@@ -60,7 +70,7 @@ try {
         if(index===4)assert.ok(item.left>=layout.items[1].right-1,`Today does not overlap date: ${context}`);
         if(width<960&&index>=3)assert.equal(item.left,original.items[index].left,`currency and Today stay anchored: ${context}`);
       });
-      if(step===1&&language==='ru'&&((theme==='gold'&&width!==320)||(theme==='emerald'&&width===390))){
+      if(step===1&&language==='ru'&&((theme==='gold'&&width!==320)||(['dark','emerald'].includes(theme)&&width===390))){
         await page.locator('.dayris-header').screenshot({path:`artifacts/compact-month-${theme}-${width}.png`});
       }
     }

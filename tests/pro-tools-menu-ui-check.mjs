@@ -12,7 +12,8 @@ try{
  const menu=page.locator('.pro-tools-popover'),trigger=page.locator('.workspace-mode-toggle');
  const settle=()=>menu.evaluate(el=>Promise.all(el.getAnimations({subtree:true}).map(animation=>animation.finished.catch(()=>{}))));
  const show=async()=>{await trigger.click();await menu.waitFor({state:'visible'});await settle();};
- for(const [width,height,language,theme] of [[320,700,'ru','dark'],[390,844,'ru','emerald'],[1280,900,'en','light'],[390,844,'uk','purple'],[390,844,'md','gold'],[390,844,'zh-CN','dark'],[740,360,'ru','emerald']]){
+ const cases=[[320,700,'ru','dark'],[390,844,'ru','emerald'],[1280,900,'en','light'],[390,844,'uk','purple'],[390,844,'md','gold'],[390,844,'zh-CN','dark'],[740,360,'ru','emerald']];
+ for(const [width,height,language,theme] of (process.argv.includes('--desktop-only')?cases.filter(item=>item[0]===1280):cases)){
   await page.setViewportSize({width,height});await page.goto(`http://tools.test/header?preview&mode=pro&language=${language}&theme=${theme}${theme==='light'?'&light':''}`);await trigger.waitFor();
   assert.equal(await page.locator('.dayris-workspace-slot').count(),0,'tools occupy no permanent header row');
   const before=await page.locator('.dayris-header').boundingBox();
@@ -24,7 +25,7 @@ try{
   const touch=await trigger.boundingBox();await page.touchscreen.tap(touch.x+touch.width/2,touch.y+touch.height/2);await menu.waitFor({state:'visible'});await settle();
   await page.touchscreen.tap(touch.x+touch.width/2,touch.y+touch.height/2);await menu.waitFor({state:'hidden'});
   await show();await page.mouse.click(2,height-2);await menu.waitFor({state:'hidden'});assert.equal(await trigger.getAttribute('aria-expanded'),'false','blank page space dismisses PRO');
-  await show();await page.locator('.dayris-month-trigger').click();await page.locator('.calendar-period-menu').waitFor({state:'visible'});await menu.waitFor({state:'hidden'});assert.equal(await page.locator('.calendar-period-menu').isVisible(),true,'outside dismissal preserves the newly opened date picker');await page.keyboard.press('Escape');await page.locator('.calendar-period-menu').waitFor({state:'hidden'});
+  await show();await page.locator('.dayris-month-trigger').click();await page.locator('.calendar-period-menu').waitFor({state:'visible'});await menu.waitFor({state:'hidden'});assert.equal(await page.locator('.calendar-period-menu').isVisible(),true,`outside dismissal preserves the newly opened date picker: ${theme}/${width}/${language}`);await page.keyboard.press('Escape');await page.locator('.calendar-period-menu').waitFor({state:'hidden'});
   await show();
   await page.locator('[data-destination="capital"]').click();await menu.waitFor({state:'hidden'});await page.waitForFunction(()=>window.handoffs?.at(-1)?.kind==='capital');assert.equal(await page.evaluate(()=>handoffs.at(-1).open),false);
   await show();await page.locator('.pro-tools-trader').click();await settle();assert.equal(await page.locator('.pro-tools-trader').getAttribute('aria-checked'),'true');

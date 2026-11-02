@@ -33,7 +33,12 @@ export default function CalendarAnchoredPopover({open,onClose,anchorRef,id,label
     lastAnchor.current=anchorRef.current;
     node.style.visibility='hidden';if(!node.matches(':popover-open'))node.showPopover();position();node.style.visibility='';
     (node.querySelector('[aria-pressed="true"]')||node.querySelector('button:not(:disabled)'))?.focus({preventScroll:true});
-    const scroll=event=>{if(!(event.target instanceof Node)||!node.contains(event.target))close.current();};
+    const scroll=event=>{
+      if(event.target instanceof Node&&node.contains(event.target))return;
+      const anchor=anchorRef.current?.getBoundingClientRect(),viewport=window.visualViewport;
+      if(!anchor||anchor.bottom<=(viewport?.offsetTop||0)||anchor.top>=(viewport?.height||innerHeight)+(viewport?.offsetTop||0))close.current();
+      else position();
+    };
     // Commit dismissal before another header trigger receives its click.
     const outside=event=>{if(!node.contains(event.target)&&!anchorRef.current?.contains(event.target))close.current();};
     document.addEventListener('pointerdown',outside,true);

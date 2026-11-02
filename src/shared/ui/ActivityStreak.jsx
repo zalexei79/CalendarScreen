@@ -37,13 +37,14 @@ export default function ActivityStreak({ ownerId, isLight, t, onOpen, onChange, 
       onClick={() => { if (streak) onOpen?.(streak); else refresh(); }}
       className={`activity-streak ${isLight ? 'activity-streak-light' : ''} ${streak?.paused || status === 'offline' ? 'activity-streak-paused' : ''}`}
       aria-haspopup="dialog"
-      aria-label={title}
+      aria-label={paused ? `${title} · ${label}` : title}
       title={title}
       aria-busy={status === 'loading'}
     >
       <Flame className="activity-streak-icon" aria-hidden="true" />
       <span className="activity-streak-value">{label}</span>
-      {paused && <span className="activity-streak-pause"><Pause size={11} strokeWidth={2.7} aria-hidden="true"/>{t('streakPauseShort')}</span>}
+      <span className="activity-streak-count" aria-hidden="true">{days}</span>
+      {paused && <span className="activity-streak-pause"><Pause size={11} strokeWidth={2.7} aria-hidden="true"/><span className="activity-streak-pause-label">{t('streakPauseShort')}</span></span>}
     </button>
     {reminder.visible && createPortal(<div className={`activity-streak-reminder ${isLight ? 'is-light' : ''}`}>
       <Pause className="activity-streak-reminder-icon" size={18} aria-hidden="true"/>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v145-date-arrow-spacing';
+const CACHE_NAME = 'atj-cache-v146-calm-header-toolbar';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

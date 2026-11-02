@@ -52,7 +52,12 @@ export default function ProToolsMenu({language,t,isLight,currency,traderMode,onT
    if(node.matches(':popover-open')&&!node.contains(event.target)&&!trigger.current?.closest('.workspace-selector')?.contains(event.target))close(undefined,false);
   };
   const escape=event=>{if(event.key==='Escape'&&!event.defaultPrevented&&node.matches(':popover-open')){event.preventDefault();close();}};
-  const scroll=event=>{if((!(event.target instanceof Node)||!node.contains(event.target))&&node.matches(':popover-open'))node.hidePopover();};
+  const scroll=event=>{
+   if((event.target instanceof Node&&node.contains(event.target))||!node.matches(':popover-open'))return;
+   const anchor=trigger.current?.getBoundingClientRect(),viewport=window.visualViewport;
+   if(!anchor||anchor.bottom<=(viewport?.offsetTop||0)||anchor.top>=(viewport?.height||innerHeight)+(viewport?.offsetTop||0))node.hidePopover();
+   else position();
+  };
   document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',escape);
   node.addEventListener('toggle',sync);window.addEventListener('resize',position);window.visualViewport?.addEventListener('resize',position);window.addEventListener('scroll',scroll,true);
   return()=>{cancelPending();document.removeEventListener('pointerdown',outside,true);document.removeEventListener('keydown',escape);node.removeEventListener('toggle',sync);window.removeEventListener('resize',position);window.visualViewport?.removeEventListener('resize',position);window.removeEventListener('scroll',scroll,true);};
