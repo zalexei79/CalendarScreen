@@ -1,0 +1,9 @@
+import {build} from 'esbuild';
+import fs from 'node:fs';
+const output='artifacts/friends-workspace-2026-11-02';
+fs.mkdirSync(output,{recursive:true});
+const bundle=await build({entryPoints:['tests/friend-messenger-fixture.jsx'],bundle:true,write:false,outfile:'friend-preview.js',format:'iife',define:{'process.env.NODE_ENV':'"production"'},plugins:[{name:'synthetic-friend-rpc',setup(build){build.onResolve({filter:/supabaseClient$/},()=>({path:'rpc',namespace:'fixture'}));build.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:'export const supabase={rpc:(...args)=>{const result=window.friendFixture.rpc(...args);result.abortSignal=()=>result;return result;},storage:{from:()=>({createSignedUrl:async()=>({data:null})})}};',loader:'js'}));}}]});
+const js=bundle.outputFiles.find(file=>file.path.endsWith('.js')).text;
+const css=process.env.DAYRIS_FRIEND_PRODUCTION_CSS==='1'?fs.readFileSync('dist/assets/'+fs.readdirSync('dist/assets').find(file=>/^main-.*\.css$/.test(file)),'utf8'):bundle.outputFiles.find(file=>file.path.endsWith('.css')).text;
+fs.writeFileSync(output+'/preview.html','<!doctype html><html lang="ru" data-glass-theme="dark"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DAYRIS · Друзья · Локальный пример</title><style>body{margin:0;background:#101216;color:#eee;font-family:system-ui}*{box-sizing:border-box}.fixture-background{padding:60px;text-align:center;color:#797d89}.fixture-background>b{font-size:48px;letter-spacing:.2em;color:#d8c18e}.fixture-background>p{font-size:14px}.fixture-background>button{margin:20px;border:1px solid #ffffff20;border-radius:12px;background:#22252b;color:#dec592;padding:15px 25px;cursor:pointer}'+css+'</style></head><body><div id="root"></div><script>'+js.replaceAll('</script','<\\/script')+'</script></body></html>');
+console.log('Synthetic friend preview: '+output+'/preview.html');

@@ -1,0 +1,125 @@
+/* Friend conversations use DAYRIS surfaces; creator and admin inboxes keep their own palette. */
+.dayris-chat.dayris-chat-friend{--chat-ink:#eeedf0;--chat-muted:#93959f;--chat-line:#ffffff0b;--friend-accent:#d9c18c;--friend-panel:#1b1d23;--friend-timeline:#15171c;--friend-bubble:#24262e;--friend-own:#323331;--friend-field:#25272e;--friend-button-ink:#211e18;background:var(--friend-timeline);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.dayris-chat-friend .chat-peer-header{min-height:77px;padding:14px 20px;background:var(--friend-panel);gap:11px}
+.dayris-chat-friend .chat-peer-avatar{border-radius:14px;background:linear-gradient(135deg,#c4a76c30,#6d829531);color:var(--friend-accent);border:1px solid var(--chat-line);box-shadow:none}
+.dayris-chat-friend .chat-peer-label h2{color:var(--chat-ink);font-size:15px;font-weight:550}
+.dayris-chat-friend .chat-peer-label p{display:flex;align-items:center;gap:5px;font-size:10px;white-space:nowrap}
+.friend-header-actions{display:flex;gap:4px;flex-shrink:0}
+.dayris-chat-friend .friend-header-actions button{display:grid;place-items:center;width:36px;min-height:40px;padding:0;border:0;border-radius:11px;background:transparent;color:var(--chat-muted)}
+.dayris-chat-friend .friend-header-actions button[aria-pressed=true],.dayris-chat-friend .friend-header-actions button.is-protected{background:#c9ad7410;color:var(--friend-accent)}
+.dayris-chat-friend .chat-back{color:var(--chat-muted);flex-basis:32px;width:32px}
+.friend-chat-toolbar{display:flex;align-items:center;gap:8px;padding:11px 22px;border-bottom:1px solid var(--chat-line);background:var(--friend-panel);flex-shrink:0}
+.dayris-chat-friend .friend-chat-toolbar button{display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 10px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--chat-muted);font-size:11px;min-height:33px}
+.dayris-chat-friend .friend-chat-toolbar button[aria-pressed=true]{background:#c5ab7510;color:var(--friend-accent);border-color:#c5ab7517}
+.friend-chat-toolbar button span{font-size:9px;opacity:.7}
+.dayris-chat-friend .chat-timeline{padding:18px 24px;background:radial-gradient(ellipse at 100% 0%,#cfb37405,transparent 60%),var(--friend-timeline)}
+.dayris-chat-friend .chat-timeline-wrap[hidden]{display:none}
+.dayris-chat-friend .chat-day-divider{margin:7px 0 22px}
+.dayris-chat-friend .chat-day-divider>span{background:var(--friend-panel);border:1px solid var(--chat-line);color:var(--chat-muted);padding:5px 11px;font-size:9px}
+.dayris-chat-friend .chat-message-row{gap:5px;margin:9px 0;align-items:flex-end;scroll-margin:30px}
+.dayris-chat-friend .chat-bubble{max-width:85%;padding:11px 14px 7px;background:var(--friend-bubble);border:1px solid var(--chat-line);border-radius:17px 17px 17px 5px;box-shadow:0 2px 4px #0000000a}
+.dayris-chat-friend .is-mine .chat-bubble{background:var(--friend-own);border-radius:17px 17px 5px 17px;border-color:#c6ae7c12}
+.dayris-chat-friend .chat-bubble>p{font-size:14px;line-height:1.7;color:var(--chat-ink)}
+.dayris-chat-friend .chat-bubble>p a{color:var(--friend-accent);text-underline-offset:3px;word-break:break-word}
+.dayris-chat-friend .chat-message-meta,.dayris-chat-friend .is-mine .chat-message-meta{color:var(--chat-muted);gap:5px;margin-top:5px}
+.dayris-chat-friend .is-mine .chat-message-meta>svg:last-child{color:var(--friend-accent)}
+.dayris-chat-friend .chat-bubble.is-bookmarked{border-color:#c6ae7c42}
+.dayris-chat.dayris-chat-friend .chat-bubble:has(.social-moment-card){width:285px;max-width:calc(100% - 35px);padding:5px}
+.dayris-chat.dayris-chat-friend .chat-bubble .social-moment-card{padding:18px;border-radius:18px}
+.dayris-chat-friend .chat-bubble .social-day-date{margin-top:18px}
+.dayris-chat-friend .chat-bubble .social-day-date>strong{font-size:49px}
+.dayris-chat-friend .chat-bubble .social-day-date>span{font-size:16px}
+.dayris-chat-friend .chat-bubble .social-streak-art{height:78px;margin-top:10px}
+.dayris-chat-friend .chat-bubble .social-streak-flame{height:60px;width:54px}
+.dayris-chat-friend .chat-bubble .social-streak-number>strong{font-size:52px}
+.dayris-chat-friend .chat-bubble .social-moment-card>header{font-size:8px}
+.dayris-chat-friend .chat-bubble .social-moment-card>footer{font-size:10px;margin-top:14px;padding-top:12px}
+.dayris-chat-friend .chat-load-older{background:var(--friend-panel);color:var(--chat-muted);border-color:var(--chat-line)}
+.dayris-chat-friend .chat-new-messages{background:var(--friend-own);color:var(--friend-accent);border-color:#c6ae7c42;font-size:11px;z-index:3}
+.friend-message-actions{position:relative;align-self:flex-end;flex:0 0 28px;margin-bottom:2px;z-index:2}
+.is-mine .friend-message-actions{order:-1}
+.friend-message-actions:open{z-index:6}
+.friend-message-actions summary,.friend-share-menu summary{list-style:none;display:grid;place-items:center;width:28px;min-height:34px;padding:0;border:0;border-radius:9px;color:var(--chat-muted);cursor:pointer;opacity:.6}
+.friend-message-actions summary::-webkit-details-marker,.friend-share-menu summary::-webkit-details-marker{display:none}
+.friend-message-actions[open] summary{background:var(--friend-field);color:var(--friend-accent);opacity:1}
+.friend-message-actions>div,.friend-share-menu>div{position:absolute;bottom:39px;right:0;z-index:8;width:max-content;max-width:220px;min-width:160px;padding:5px;border:1px solid var(--chat-line);border-radius:13px;background:var(--friend-panel);box-shadow:0 8px 32px #0004}
+.chat-message-row:not(.is-mine) .friend-message-actions>div{right:0}
+.is-mine .friend-message-actions>div{left:0;right:auto}
+.friend-message-actions>div{top:38px;bottom:auto;transform:translateX(var(--message-menu-shift,0px))}
+.friend-message-actions[data-up=true]>div{top:auto;bottom:39px}
+.dayris-chat-friend .friend-message-actions button,.dayris-chat-friend .friend-share-menu button{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:9px 11px;border:0;border-radius:9px;background:transparent;color:var(--chat-ink);font-size:11px;text-align:left;line-height:1.5}
+.dayris-chat-friend .friend-message-actions button>svg,.dayris-chat-friend .friend-share-menu button>svg{color:var(--friend-accent);flex-shrink:0}
+.dayris-chat-friend .friend-quote{display:grid;gap:4px;text-align:left;width:100%;max-width:100%;border:0;border-left:2px solid var(--friend-accent);border-radius:2px 7px 7px 2px;padding:7px 10px;margin:1px 0 9px;background:#c6ae7c0a;color:var(--chat-ink)}
+.friend-quote strong{font-size:10px;color:var(--friend-accent);font-weight:550}
+.friend-quote span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:11px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.dayris-chat-friend .friend-quote:disabled{opacity:.8}
+.friend-message-search{padding:9px 20px 10px;background:var(--friend-panel);border-bottom:1px solid var(--chat-line);flex-shrink:0}
+.friend-message-search label{display:flex;align-items:center;gap:9px;border:1px solid var(--chat-line);border-radius:11px;padding:0 10px;background:var(--friend-field);color:var(--chat-muted)}
+.dayris-chat-friend .friend-message-search input{min-width:0;flex:1;padding:9px 0;font:inherit;font-size:12px;min-height:38px;border:0;outline:0;background:transparent;color:var(--chat-ink)}
+.friend-message-search small{font-size:10px;color:var(--chat-muted)}
+.dayris-chat-friend .friend-message-search button{display:grid;place-items:center;min-width:30px;min-height:34px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--chat-muted)}
+.dayris-chat-friend .friend-message-search p{font-size:9px;color:var(--chat-muted);line-height:1.6;margin:7px 2px 0}
+.friend-compose-area{flex-shrink:0;border-top:1px solid var(--chat-line);background:var(--friend-panel);position:relative;z-index:4}
+.dayris-chat-friend .chat-composer{padding:12px 17px 6px;gap:9px;border:0;background:transparent}
+.dayris-chat-friend .chat-composer textarea{padding:11px 13px;border-radius:13px;min-height:45px;max-height:130px;resize:none;border:1px solid var(--chat-line);background:var(--friend-field);color:var(--chat-ink);font-size:13px;line-height:1.6}
+.dayris-chat-friend .chat-composer textarea::placeholder{color:var(--chat-muted)}
+.dayris-chat-friend .chat-send{border-radius:13px;flex:0 0 43px;width:43px;min-height:45px;height:45px;background:var(--friend-accent);color:var(--friend-button-ink);transition:transform .18s cubic-bezier(.2,.7,.2,1),box-shadow .18s}
+.friend-share-menu{position:relative;flex-shrink:0;margin-bottom:2px}
+.friend-share-menu summary{width:31px;min-height:43px;opacity:1}
+.friend-share-menu>div{left:0;right:auto;bottom:52px;max-width:260px;min-width:215px}
+.friend-compose-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 20px max(11px,env(safe-area-inset-bottom)) 58px;min-height:35px;color:var(--chat-muted)}
+.friend-compose-bottom>div{display:flex;align-items:center;gap:1px}
+.friend-compose-bottom>div>svg{margin-right:4px;opacity:.6}
+.dayris-chat-friend .friend-compose-bottom button{display:grid;place-items:center;min-width:28px;min-height:29px;padding:2px;border:0;border-radius:7px;background:transparent;font-size:15px}
+.friend-compose-bottom>span{display:flex;align-items:center;gap:5px;font-size:8px;line-height:1.5;letter-spacing:.025em}
+.friend-compose-bottom>span.is-over-limit{color:#e1a69d}
+.friend-reply-draft{display:flex;align-items:center;gap:10px;margin:10px 20px 0;padding:9px 10px;border-left:2px solid var(--friend-accent);border-radius:2px 9px 9px 2px;background:#c5ae7910;color:var(--friend-accent)}
+.friend-reply-draft>div{min-width:0;flex:1;display:grid;gap:4px}
+.friend-reply-draft strong{font-size:10px;font-weight:550}
+.friend-reply-draft span{font-size:11px;color:var(--chat-muted);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:1.5}
+.dayris-chat-friend .friend-reply-draft button{display:grid;place-items:center;width:30px;min-height:32px;padding:0;border:0;background:transparent;color:var(--chat-muted);border-radius:8px}
+.dayris-chat-friend .friend-tool-notice{padding:8px 20px;margin:0;font-size:10px;color:var(--friend-accent);background:var(--friend-panel)}
+.dayris-chat-friend .friend-locked-message{display:flex;align-items:center;gap:12px;min-height:60px;text-align:left;padding:3px 0;border:0;background:transparent;color:var(--friend-accent)}
+.friend-locked-message>span{display:grid;gap:5px}
+.friend-locked-message strong{font-size:12px;font-weight:500}
+.friend-locked-message small{font-size:10px;color:var(--chat-muted)}
+.friend-key-panel{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:22px 25px;background:var(--friend-timeline);scrollbar-width:thin;animation:friend-panel-in .22s cubic-bezier(.2,.7,.2,1) both}
+.friend-key-panel>header{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.friend-key-panel>header>span{display:grid;place-items:center;width:42px;height:42px;flex-shrink:0;border:1px solid #c5ae7925;border-radius:14px;background:#c5ae7910;color:var(--friend-accent)}
+.friend-key-panel>header>div{flex:1;min-width:0}
+.friend-key-panel header small{font-size:8px;letter-spacing:.14em;color:var(--chat-muted)}
+.dayris-chat-friend .friend-key-panel h3{font-size:19px;letter-spacing:-.035em;font-weight:500;color:var(--chat-ink);margin:5px 0 0}
+.dayris-chat-friend .friend-key-panel header>button{display:grid;place-items:center;width:34px;min-height:38px;border:0;border-radius:10px;background:transparent;color:var(--chat-muted);padding:0}
+.dayris-chat-friend .friend-key-panel p{font-size:12px;line-height:1.85;color:var(--chat-muted);margin:0 0 20px}
+.friend-key-field{display:grid;gap:9px;margin-bottom:15px}
+.friend-key-field>span{font-size:11px;color:var(--chat-ink)}
+.dayris-chat-friend .friend-key-field textarea{width:100%;min-height:77px;resize:none;margin:0;padding:12px;border:1px solid var(--chat-line);border-radius:12px;background:var(--friend-field);color:var(--chat-ink);font:12px/1.8 ui-monospace,monospace;overflow-wrap:anywhere}
+.friend-key-field small{font-size:10px;line-height:1.7;color:var(--chat-muted)}
+.dayris-chat-friend .friend-tool-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 13px;min-height:42px;border:1px solid var(--chat-line);border-radius:11px;background:var(--friend-field);color:var(--chat-ink);font-size:11px;line-height:1.5;text-align:center}
+.dayris-chat-friend .friend-tool-button.is-primary{background:var(--friend-accent);color:var(--friend-button-ink);border-color:transparent}
+.friend-key-saved{display:flex;align-items:center;gap:9px;margin:18px 0;font-size:11px;color:var(--chat-ink);min-height:30px}
+.friend-key-saved input{width:17px;height:17px;accent-color:var(--friend-accent);flex-shrink:0}
+.friend-key-buttons{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:20px 0}
+.dayris-chat-friend .friend-key-panel .friend-key-meta{font-size:10px;padding-top:18px;border-top:1px solid var(--chat-line);margin-top:22px;line-height:1.8}
+.dayris-chat-friend .friend-key-panel .friend-key-error{font-size:11px;color:#e0a49a}
+.friend-key-enabled{display:flex;flex-direction:column;align-items:center;text-align:center;padding:15px 0 0;color:var(--friend-accent)}
+.friend-key-enabled h4{font-size:17px;font-weight:500;line-height:1.6;margin:17px 0 10px;color:var(--chat-ink)}
+.friend-key-enabled code{font-size:21px;font-weight:400;letter-spacing:.15em;color:var(--friend-accent);margin:0 0 25px}
+.friend-key-required{display:flex;align-items:center;gap:10px;padding:16px 20px max(16px,env(safe-area-inset-bottom));border-top:1px solid var(--chat-line);background:var(--friend-panel);flex-shrink:0;color:var(--friend-accent)}
+.dayris-chat-friend .friend-key-required p{flex:1;min-width:0;font-size:11px;line-height:1.6;color:var(--chat-muted);margin:0}
+.friend-key-required>svg{flex-shrink:0}
+.friend-key-required>.friend-tool-button{flex-shrink:0;font-size:10px;padding:10px}
+.dayris-chat-friend .chat-error{background:var(--friend-panel);color:#dda69c}
+.dayris-chat-friend .chat-error button{background:var(--friend-field);color:var(--chat-ink);border-color:var(--chat-line)}
+.dayris-chat-friend button:focus-visible,.dayris-chat-friend summary:focus-visible,.dayris-chat-friend textarea:focus-visible{outline:2px solid var(--friend-accent);outline-offset:2px}
+.dayris-chat-friend input:focus-visible{outline:2px solid var(--friend-accent);outline-offset:2px}
+.dayris-chat-friend .chat-welcome{color:var(--chat-muted)}
+.dayris-chat-friend .chat-welcome strong{color:var(--chat-ink)}
+.dayris-chat-friend .chat-welcome p{max-width:250px;line-height:1.8}
+.creator-inbox.creator-inbox-chat:has(.dayris-chat-friend){width:min(640px,calc(100% - 24px));background:#15171c;border-color:#d9c18c20}
+@keyframes friend-panel-in{from{opacity:.65;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@media(hover:hover){.friend-message-actions summary:hover,.dayris-chat-friend .friend-header-actions button:hover,.dayris-chat-friend .friend-message-actions button:hover,.dayris-chat-friend .friend-share-menu button:hover{background:var(--friend-field);opacity:1}.dayris-chat-friend .chat-send:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 3px 13px #c6ae7c20}}
+[data-glass-theme=light] .dayris-chat.dayris-chat-friend{--chat-ink:#292b31;--chat-muted:#777880;--chat-line:#28220f10;--friend-accent:#8d6b30;--friend-panel:#faf9f6;--friend-timeline:#f2f1ed;--friend-bubble:#ffffff;--friend-own:#e9e4d7;--friend-field:#f0efeb;--friend-button-ink:#fffaf0;color-scheme:light}
+[data-glass-theme=light] .dayris-chat-friend .chat-bubble.is-bookmarked{border-color:#a1814b66}
+@media(max-width:760px){.dayris-chat-friend .chat-peer-header{padding:13px 12px;min-height:74px;gap:8px}.dayris-chat-friend .chat-peer-avatar{width:37px;height:37px;flex-basis:37px;border-radius:12px}.dayris-chat-friend .chat-peer-label h2{font-size:14px}.friend-header-actions{gap:1px}.dayris-chat-friend .friend-header-actions button{width:33px;min-height:40px}.friend-chat-toolbar{padding:9px 15px;gap:5px}.dayris-chat-friend .chat-timeline{padding:14px 14px 12px}.dayris-chat-friend .chat-bubble{padding:10px 12px 6px;max-width:calc(100% - 38px)}.dayris-chat-friend .chat-bubble:has(.day-history-card),.dayris-chat-friend .chat-bubble:has(.streak-share-card){max-width:calc(100% - 32px)}.dayris-chat-friend .chat-composer{padding:10px 12px 4px;gap:7px}.dayris-chat-friend .chat-composer textarea{font-size:16px!important;padding:9px 11px;min-height:45px}.friend-compose-bottom{padding-left:50px;padding-right:15px}.friend-keyboard-hint{display:none!important}.friend-key-panel{padding:20px}.friend-key-panel>header{gap:9px}.dayris-chat-friend .friend-key-panel h3{font-size:18px}.friend-key-required{padding-left:15px;padding-right:15px;gap:8px}.friend-message-search{padding-left:15px;padding-right:15px}.dayris-chat-friend .friend-message-search input{font-size:16px}.friend-reply-draft{margin-left:15px;margin-right:15px}.creator-inbox.creator-inbox-chat:has(.dayris-chat-friend){width:calc(100% - 16px)}}
+@media(prefers-reduced-motion:reduce){.dayris-chat-friend *{animation:none!important;transition:none!important}.dayris-chat-friend .chat-send:hover{transform:none}}

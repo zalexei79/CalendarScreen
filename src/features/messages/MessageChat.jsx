@@ -1,5 +1,5 @@
 import React,{useEffect,useLayoutEffect,useRef,useState} from 'react';
-import {ArrowLeft,ArrowDown,Send,Check,CheckCheck,Gift,MessageCircle,CalendarDays,Flame} from 'lucide-react';
+import {ArrowLeft,ArrowDown,Send,Check,CheckCheck,Gift,MessageCircle,CalendarDays,Flame,Search,X,LockKeyhole,Reply,Copy,Bookmark,MoreHorizontal,Plus,Smile} from 'lucide-react';
 import {supabase} from '../../supabaseClient';
 import {chatCopy,chatLocale} from './chatCopy.js';
 import './MessageChat.css';
@@ -11,16 +11,40 @@ import {sharedDayMessage,readSharedDay,sharedStreakMessage,readSharedStreak} fro
 import StreakShareCard from '../social/StreakShareCard.jsx';
 import {syncAccountActivityStreak} from '../../shared/lib/accountActivityStreak.js';
 import {momentShareCopy} from '../social/momentShareCopy.js';
+import {friendMessengerCopy} from './friendMessengerCopy.js';
+import {friendNote,readFriendNote,friendMessagePreview,isLockedMessage,friendWireSize,lockFriendMessage,unlockFriendMessage} from './friendMessage.js';
+import {readFriendDraft,saveFriendDraft,readSavedMessages,toggleSavedMessage,readFriendLockMode,saveFriendLockMode} from '../social/friendWorkspace.js';
+import FriendKeyPanel from './FriendKeyPanel.jsx';
+import './FriendMessenger.css';
 const merge=(a,b)=>[...new Map([...a,...b].map(m=>[m.entry_key,m])).values()].sort((a,b)=>a.created_at.localeCompare(b.created_at)||a.entry_key.localeCompare(b.entry_key));
 export default function MessageChat({userId,peer=null,admin=false,friend=false,canEdit=true,language='ru',onBack,onCampaign,previewMessages=null,initialShareDay=false}){
- const t=chatCopy(language),locale=chatLocale(language),[rows,setRows]=useState(previewMessages||[]),[body,setBody]=useState(''),[error,setError]=useState(''),[sendFailed,setSendFailed]=useState(false),[loading,setLoading]=useState(!previewMessages),[sending,setSending]=useState(false),[more,setMore]=useState(false),[older,setOlder]=useState(false),[hasNew,setHasNew]=useState(false);
+ const t=chatCopy(language),f=friendMessengerCopy(language),locale=chatLocale(language),[rows,setRows]=useState(previewMessages||[]),[body,setBody]=useState(()=>friend&&!previewMessages?readFriendDraft(userId,peer?.user_id):''),[error,setError]=useState(''),[sendFailed,setSendFailed]=useState(false),[loading,setLoading]=useState(!previewMessages),[sending,setSending]=useState(false),[more,setMore]=useState(false),[older,setOlder]=useState(false),[hasNew,setHasNew]=useState(false);
  const alive=useRef(true),list=useRef(null),nearBottom=useRef(true),scrollPlan=useRef(null),pendingLatest=useRef(null),fetching=useRef(false),reading=useRef(false),locked=useRef(false),request=useRef(null),known=useRef(new Set()),initialized=useRef(false),refreshRef=useRef(null),rowsRef=useRef(rows);rowsRef.current=rows;
  const [unavailable,setUnavailable]=useState(false),accessDenied=useRef(false),selfDirection=friend?'self':admin?'admin':'user',peerId=friend?peer?.user_id:peer?.id,peerName=friend?peer?.display_name:peer?.name;
+ const [secret,setSecret]=useState(null),[keyPanel,setKeyPanel]=useState(false),[keyRequired,setKeyRequired]=useState(()=>friend?readFriendLockMode(userId,peerId):false),[decrypted,setDecrypted]=useState({}),[reply,setReply]=useState(null),[messageSearch,setMessageSearch]=useState(''),[showSearch,setShowSearch]=useState(false),[messageFilter,setMessageFilter]=useState('all'),[savedMessages,setSavedMessages]=useState(()=>friend?readSavedMessages(userId,peer?.user_id):[]),[toolNotice,setToolNotice]=useState(''),textarea=useRef(null),decryptionCache=useRef(new Map());
+ const encryptedRows=friend?rows.filter(m=>isLockedMessage(m.body)):[],requiresKey=friend&&(keyRequired||encryptedRows.length>0),needsKey=requiresKey&&!secret;
+ const serialized=friend?friendNote(body.trim(),reply):body.trim(),wireSize=friendWireSize(serialized,Boolean(friend&&secret));
+ useEffect(()=>{if(!friend)return;let current=true;const cache=decryptionCache.current;if(!secret){cache.clear();setDecrypted({});return;}Promise.all(rows.filter(m=>isLockedMessage(m.body)).map(async m=>{const cached=cache.get(m.entry_key);if(cached?.body===m.body)return [m.entry_key,cached.text];let text=null;try{text=await unlockFriendMessage(m.body,secret.key,{owner:userId,peer:peerId,sender:m.sender_id||(m.direction==='self'?userId:peerId),id:m.id});}catch{/* A different key or a changed envelope stays locked. */}if(current)cache.set(m.entry_key,{body:m.body,text});return [m.entry_key,text];})).then(entries=>{if(current)setDecrypted(Object.fromEntries(entries));});return()=>{current=false;};},[friend,rows,secret,userId,peerId]);
+ useEffect(()=>{if(friend&&requiresKey&&!previewMessages){saveFriendDraft(userId,peerId,'');saveFriendLockMode(userId,peerId);}},[friend,requiresKey,userId,peerId,previewMessages]);
+ useEffect(()=>{if(friend&&nearBottom.current&&Object.keys(decrypted).length)markRead(rowsRef.current);},[decrypted]);
+ useLayoutEffect(()=>{if(!friend||!textarea.current)return;textarea.current.style.height='auto';textarea.current.style.height=Math.min(textarea.current.scrollHeight,130)+'px';},[body,friend,keyPanel]);
+ function changeBody(value){setBody(value);setSendFailed(false);setToolNotice('');if(friend&&!previewMessages)saveFriendDraft(userId,peerId,secret||requiresKey?'':value);}
+ function enableKey(value){decryptionCache.current.clear();setDecrypted({});setSecret(value);setKeyRequired(true);setKeyPanel(false);setError('');setToolNotice('');if(!previewMessages)saveFriendDraft(userId,peerId,'');}
+ function lockKey(){setSecret(null);setDecrypted({});decryptionCache.current.clear();setReply(null);setBody('');setKeyPanel(false);setKeyRequired(true);setToolNotice('');setMessageSearch('');request.current=null;dayRequest.current=null;}
+ function messageBody(m){return isLockedMessage(m.body)?decrypted[m.entry_key]??null:m.body;}
+ function messageText(m){const content=messageBody(m);return content===null?f.lockedMessage:m.day_share?f.day:friendMessagePreview(content,f);}
+ function quote(m){const content=messageBody(m);if(content===null)return;setReply({id:m.entry_key,sender:m.sender_id||(m.direction===selfDirection?userId:peerId),text:messageText(m).slice(0,160)});setToolNotice('');textarea.current?.focus();}
+ async function copyMessage(m){try{await navigator.clipboard.writeText(messageText(m));if(alive.current)setToolNotice(f.copied);}catch{if(alive.current)setToolNotice(t.loadError);}}
+ function saved(m){setSavedMessages(toggleSavedMessage(userId,peerId,m.entry_key));}
+ function positionMessageMenu(event){const node=event.currentTarget;if(!node.open||!list.current)return;const menu=node.querySelector('div'),bounds=list.current.getBoundingClientRect(),anchor=node.getBoundingClientRect();node.dataset.up=String(bounds.bottom-anchor.bottom<menu.offsetHeight+18&&anchor.top-bounds.top>menu.offsetHeight+8);menu.style.setProperty('--message-menu-shift','0px');const rect=menu.getBoundingClientRect(),shift=rect.left<bounds.left+7?bounds.left+7-rect.left:rect.right>bounds.right-7?bounds.right-7-rect.right:0;menu.style.setProperty('--message-menu-shift',shift+'px');}
+ function jumpTo(id){setMessageFilter('all');setMessageSearch('');requestAnimationFrame(()=>document.getElementById('friend-message-'+id)?.scrollIntoView({block:'center',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'}));}
+ async function protect(body,holder){const signature=(secret?.fingerprint||'plain')+':'+body;if(holder.current?.signature!==signature)holder.current={signature,id:crypto.randomUUID(),body,wire:null};const pending=holder.current;if(!pending.wire)pending.wire=secret?await lockFriendMessage(body,secret.key,{owner:userId,peer:peerId,sender:userId,id:pending.id}):body;return pending;}
  const [shareDay,setShareDay]=useState(initialShareDay==='streak'?'streak':initialShareDay?'day':''),[daySent,setDaySent]=useState(false),closeShareTimer=useRef(null);
+ useLayoutEffect(()=>{if(friend&&!shareDay&&!keyPanel&&nearBottom.current&&list.current)list.current.scrollTop=list.current.scrollHeight;},[friend,decrypted,shareDay,keyPanel]);
  useEffect(()=>()=>clearTimeout(closeShareTimer.current),[]);
  const dayRequest=useRef(null);
  async function sendDay(data){
-  if(previewMessages||locked.current||!canEdit||!friend||unavailable||daySent)return;locked.current=true;setSending(true);setError('');
+  if(previewMessages||locked.current||!canEdit||!friend||unavailable||daySent||loading||!initialized.current)return;if(needsKey){setShareDay('');setKeyPanel(true);return;}locked.current=true;setSending(true);setError('');
   try{
    let body=data.kind==='streak'||data.shareDetails?null:sharedDayMessage(data,data.shareAmounts);
    if(data.kind==='streak'){
@@ -28,19 +52,21 @@ export default function MessageChat({userId,peer=null,admin=false,friend=false,c
     try{const state=await syncAccountActivityStreak({client:supabase,storage:localStorage,ownerId:userId,signal:controller.signal});if(!state.currentStreak)throw new Error('Empty streak');body=sharedStreakMessage(state);}finally{clearTimeout(timeout);}
     if(!alive.current)return;
    }
-   const key=body||data.day+':full';if(dayRequest.current?.key!==key)dayRequest.current={key,id:crypto.randomUUID()};
+   if(secret&&!body)throw new Error('Encrypted cards require a client summary');
+   const pending=body?await protect(body,dayRequest):null;
+   if(!pending){const signature=data.day+':full';if(dayRequest.current?.signature!==signature)dayRequest.current={signature,id:crypto.randomUUID()};}
    const args={p_peer:peerId,p_request_id:dayRequest.current.id,p_owner:userId};
-   const {error}=await supabase.rpc(body?'friend_chat_send':'friend_chat_share_day',body?{...args,p_body:body}:{...args,p_day:data.day});if(error)throw error;if(!alive.current)return;
+   const {error}=await supabase.rpc(body?'friend_chat_send':'friend_chat_share_day',body?{...args,p_body:pending.wire}:{...args,p_day:data.day});if(error)throw error;if(!alive.current)return;
    dayRequest.current=null;setDaySent(true);nearBottom.current=true;notify();
    closeShareTimer.current=setTimeout(()=>{if(alive.current){setShareDay('');setDaySent(false);}},window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:420);
    await refreshRef.current?.();
   }catch{if(alive.current)setError(t.sendError);}finally{locked.current=false;if(alive.current)setSending(false);}
  }
  const notify=()=>window.dispatchEvent(friend?new CustomEvent('dayris:friends-messages',{detail:{userId,peerId}}):admin?new Event('dayris:admin-replies-refresh'):new CustomEvent('dayris:creator-count',{detail:{userId}}));
- function deny(){accessDenied.current=true;setUnavailable(true);setShareDay('');setSendFailed(false);setRows([]);setMore(false);setHasNew(false);pendingLatest.current=null;known.current=new Set();initialized.current=false;setError(socialInviteCopy(language).unavailable);}
+ function deny(){accessDenied.current=true;setUnavailable(true);setShareDay('');setSendFailed(false);setRows([]);setMore(false);setHasNew(false);setSecret(null);setDecrypted({});decryptionCache.current.clear();setReply(null);setBody('');setKeyPanel(false);request.current=null;dayRequest.current=null;pendingLatest.current=null;known.current=new Set();initialized.current=false;setError(socialInviteCopy(language).unavailable);}
  async function markRead(items){
   if(previewMessages||accessDenied.current||reading.current||!canEdit||document.visibilityState==='hidden')return;
-  const ids=items.filter(m=>m.direction!==selfDirection&&!m.read_at).slice(-100).map(m=>m.id);if(!ids.length)return;reading.current=true;
+  const ids=items.filter(m=>m.direction!==selfDirection&&!m.read_at&&(!friend||!isLockedMessage(m.body)||Boolean(decrypted[m.entry_key]))).slice(-100).map(m=>m.id);if(!ids.length)return;reading.current=true;
   try{const {error}=await supabase.rpc(friend?'friend_chat_read':admin?'chat_admin_read':'chat_user_read',friend?{p_peer:peerId,p_ids:ids,p_owner:userId}:admin?{p_user_id:peer.id,p_ids:ids}:{p_ids:ids});if(!alive.current)return;if(error){if(friend&&error.code==='42501')deny();return;}const now=new Date().toISOString();setRows(previous=>previous.map(m=>ids.includes(m.id)&&m.direction!==selfDirection?{...m,read_at:m.read_at||now}:m));notify();}catch{/* Retry on next visible refresh. */}finally{reading.current=false;}
  }
  useEffect(()=>{
@@ -69,31 +95,66 @@ export default function MessageChat({userId,peer=null,admin=false,friend=false,c
   return()=>{alive.current=false;refreshRef.current=null;clearInterval(timer);window.removeEventListener('focus',poll);document.removeEventListener('visibilitychange',poll);};
  },[admin,friend,peerId,userId,canEdit,language,previewMessages]);
  useLayoutEffect(()=>{const node=list.current,plan=scrollPlan.current;if(!node||!plan)return;if(plan.mode==='bottom'){node.scrollTop=node.scrollHeight;nearBottom.current=true;setHasNew(false);}else node.scrollTop=plan.top+node.scrollHeight-plan.height;scrollPlan.current=null;},[rows]);
- async function send(e,overrideText=null){e?.preventDefault();const text=(overrideText??body).trim();if(previewMessages||locked.current||!canEdit||unavailable||!text)return;locked.current=true;setSending(true);setSendFailed(false);
-  if(request.current?.body!==text)request.current={id:crypto.randomUUID(),body:text};
-  try{const args={p_body:text,p_request_id:request.current.id};if(friend){args.p_peer=peerId;args.p_owner=userId;}else if(admin)args.p_user_id=peer.id;const {error}=await supabase.rpc(friend?'friend_chat_send':admin?'chat_admin_send':'chat_user_send',args);if(!alive.current)return;if(error)throw error;
-   request.current=null;setBody('');nearBottom.current=true;await refreshRef.current?.();notify();
+ async function send(e,overrideText=null){e?.preventDefault();const text=(overrideText??body).trim();if(previewMessages||locked.current||!canEdit||unavailable||!text||(friend&&(loading||!initialized.current)))return;if(friend&&needsKey){setKeyPanel(true);return;}const payload=friend?friendNote(text,reply):text;if(friendWireSize(payload,Boolean(friend&&secret))>2000){setError(f.limit);return;}locked.current=true;setSending(true);setSendFailed(false);setError('');
+  try{let pending;if(friend)pending=await protect(payload,request);else{if(request.current?.body!==text)request.current={id:crypto.randomUUID(),body:text,wire:text};pending=request.current;}if(!alive.current)return;const args={p_body:pending.wire,p_request_id:pending.id};if(friend){args.p_peer=peerId;args.p_owner=userId;}else if(admin)args.p_user_id=peer.id;const {error}=await supabase.rpc(friend?'friend_chat_send':admin?'chat_admin_send':'chat_user_send',args);if(!alive.current)return;if(error)throw error;
+   request.current=null;setBody('');setReply(null);setToolNotice('');if(friend)saveFriendDraft(userId,peerId,'');nearBottom.current=true;await refreshRef.current?.();notify();
   }catch(error){if(alive.current){if(friend&&error?.code==='42501')deny();else setSendFailed(true);}}finally{locked.current=false;if(alive.current)setSending(false);}
  }
  const date=value=>new Date(value).toLocaleDateString(locale,{day:'numeric',month:'long',year:'numeric'});
  const time=value=>new Date(value).toLocaleTimeString(locale,{hour:'2-digit',minute:'2-digit'});
  function bottom(){nearBottom.current=true;setHasNew(false);if(pendingLatest.current){const next=pendingLatest.current;pendingLatest.current=null;known.current=new Set(next.rows.map(m=>m.entry_key));scrollPlan.current={mode:'bottom'};setRows(next.rows);setMore(next.more);markRead(next.rows);}else{const node=list.current;if(node)node.scrollTop=node.scrollHeight;markRead(rowsRef.current);}}
- return <section className={`dayris-chat${admin?' dayris-chat-admin':''}${friend?' dayris-chat-friend':''}`} aria-label={admin||friend?peerName:t.title}>
-  <header className="chat-peer-header">{onBack&&<button type="button" className="chat-back" aria-label={t.back} onClick={onBack}><ArrowLeft size={20}/></button>}{admin||friend?<SocialAvatar userId={peerId} name={peerName} path={friend?peer.avatar_path:undefined} loadProfile={!friend} className="chat-peer-avatar"/>:<span className="chat-peer-avatar">D</span>}<div className="chat-peer-label"><h2 id={friend?'friend-chat-title':admin?'admin-chat-title':'creator-inbox-title'}>{admin||friend?peerName:t.title}</h2><p>{friend?peer.handle:admin?peer.email||peer.id:t.subtitle}</p></div>{onCampaign&&canEdit&&<button type="button" className="chat-gift-action" aria-label={t.giftAction} title={t.giftAction} onClick={onCampaign}><Gift size={20}/></button>}</header>
-  <div className="chat-timeline-wrap" hidden={Boolean(friend&&shareDay)}><div ref={list} className="chat-timeline" tabIndex={0} aria-label={t.subtitle} onScroll={()=>{const node=list.current;nearBottom.current=node.scrollHeight-node.scrollTop-node.clientHeight<80;if(nearBottom.current){if(pendingLatest.current)bottom();else{setHasNew(false);markRead(rowsRef.current);}}}}>
+ const needle=messageSearch.trim().toLocaleLowerCase(),visibleRows=friend?rows.filter(m=>{
+  const content=messageBody(m);return (messageFilter!=='saved'||savedMessages.includes(m.entry_key))&&(messageFilter!=='moments'||Boolean(m.day_share||readSharedDay(content)||readSharedStreak(content)))&&(!needle||(content!==null&&messageText(m).toLocaleLowerCase().includes(needle)));
+ }):rows;
+ return <section className={'dayris-chat'+(admin?' dayris-chat-admin':'')+(friend?' dayris-chat-friend':'')} aria-label={admin||friend?peerName:t.title}>
+  <header className="chat-peer-header">
+   {onBack&&<button type="button" className="chat-back" aria-label={t.back} onClick={onBack}><ArrowLeft size={20}/></button>}
+   {admin||friend?<SocialAvatar userId={peerId} name={peerName} path={friend?peer.avatar_path:undefined} loadProfile={!friend} className="chat-peer-avatar"/>:<span className="chat-peer-avatar">D</span>}
+   <div className="chat-peer-label"><h2 id={friend?'friend-chat-title':admin?'admin-chat-title':'creator-inbox-title'}>{admin||friend?peerName:t.title}</h2><p>{friend?secret?<><LockKeyhole size={10}/>{f.keyActive}</>:peer.handle:admin?peer.email||peer.id:t.subtitle}</p></div>
+   {friend&&<div className="friend-header-actions"><button type="button" aria-label={f.searchMessages} title={f.searchMessages} aria-pressed={showSearch} onClick={()=>{setShowSearch(v=>!v);setMessageSearch('');}}><Search size={18}/></button><button type="button" aria-label={secret?f.keyActive:f.keyTitle} title={f.keyTitle} className={secret?'is-protected':''} disabled={unavailable||sending||loading||!initialized.current} aria-pressed={keyPanel} onClick={()=>{setKeyPanel(v=>!v);setShareDay('');}}><LockKeyhole size={18}/></button></div>}
+   {onCampaign&&canEdit&&<button type="button" className="chat-gift-action" aria-label={t.giftAction} title={t.giftAction} onClick={onCampaign}><Gift size={20}/></button>}
+  </header>
+  {friend&&!keyPanel&&!shareDay&&<div className="friend-chat-toolbar" role="group" aria-label={f.conversationTitle}>{[['all',MessageCircle,f.all],['moments',CalendarDays,f.moments],['saved',Bookmark,f.saved]].map(([id,Icon,label])=><button type="button" key={id} aria-pressed={messageFilter===id} onClick={()=>setMessageFilter(id)}><Icon size={13}/>{label}{id==='saved'&&savedMessages.length>0&&<span>{savedMessages.length}</span>}</button>)}</div>}
+  {friend&&showSearch&&!keyPanel&&!shareDay&&<div className="friend-message-search"><label><Search size={16}/><input autoFocus aria-label={f.searchMessages} placeholder={f.searchMessages} maxLength={100} value={messageSearch} onChange={e=>setMessageSearch(e.target.value)}/><small>{visibleRows.length}</small><button type="button" aria-label={f.close} onClick={()=>{setShowSearch(false);setMessageSearch('');}}><X size={16}/></button></label><p>{f.searchHint}</p></div>}
+  {friend&&keyPanel&&!unavailable&&<FriendKeyPanel copy={f} owner={userId} peer={peerId} sample={encryptedRows.at(-1)} samples={encryptedRows} secret={secret} onEnable={enableKey} onLock={lockKey} onClose={()=>setKeyPanel(false)}/>}
+  <div className="chat-timeline-wrap" hidden={Boolean(friend&&(shareDay||keyPanel))}><div ref={list} className="chat-timeline" tabIndex={0} aria-label={t.subtitle} onScroll={()=>{const node=list.current;nearBottom.current=node.scrollHeight-node.scrollTop-node.clientHeight<80;if(nearBottom.current){if(pendingLatest.current)bottom();else{setHasNew(false);markRead(rowsRef.current);}}}}>
    {more&&<button type="button" className="chat-load-older" disabled={older} onClick={()=>refreshRef.current?.(rows[0])}>{older?t.loading:t.older}</button>}
-   {loading&&!rows.length?<p className="chat-empty-note" role="status">{t.loading}</p>:!rows.length&&!error?<div className="chat-welcome"><MessageCircle size={32}/><strong>{t.empty}</strong><p>{t.emptyHint}</p></div>:null}
-   {rows.map((m,index)=>{const mine=m.direction===selfDirection,newDay=index===0||date(rows[index-1].created_at)!==date(m.created_at),generic=['Сообщение','Сообщение от создателя','Сообщения от создателя'].includes(m.title);return <React.Fragment key={m.entry_key}>
-    {newDay&&<div className="chat-day-divider"><span>{date(m.created_at)}</span></div>}
-    <div className={`chat-message-row${mine?' is-mine':''}`}><div className={`chat-bubble${m.pro_until?' has-gift':''}`}>
-     {m.kind==='notice'&&m.title&&!generic&&<strong className="chat-notice-title">{m.title}</strong>}{friend&&readSharedStreak(m.body)?<StreakShareCard data={readSharedStreak(m.body)} language={language}/>:m.day_share||friend&&readSharedDay(m.body)?<DayHistoryCard data={m.day_share||readSharedDay(m.body)} language={language}/>:<p>{m.body}</p>}
-     {m.pro_until&&<div className="chat-pro-attachment"><Gift size={17}/><span><strong>{t.pro}</strong><span>{m.pro_until==='infinity'?t.forever:`${t.until} ${date(m.pro_until)}`}</span></span></div>}
-     <span className="chat-message-meta"><time dateTime={m.created_at}>{time(m.created_at)}</time>{mine&&(m.read_at?<CheckCheck size={14} aria-label={t.read}/>:<Check size={14} aria-label={t.sent}/>)}</span>
-    </div></div>
-   </React.Fragment>;})}
+   {loading&&!rows.length?<p className="chat-empty-note" role="status">{t.loading}</p>:!rows.length&&!error?<div className="chat-welcome"><MessageCircle size={32}/><strong>{t.empty}</strong><p>{friend?f.chooseChatHint:t.emptyHint}</p></div>:friend&&!visibleRows.length?<p className="chat-empty-note">{f.emptyFiltered}</p>:null}
+   {visibleRows.map((m,index)=>{
+    const mine=m.direction===selfDirection,newDay=index===0||date(visibleRows[index-1].created_at)!==date(m.created_at),generic=['Сообщение','Сообщение от создателя','Сообщения от создателя'].includes(m.title),content=friend?messageBody(m):m.body,note=friend?readFriendNote(content):null,streak=friend?readSharedStreak(content):null,day=m.day_share||(friend?readSharedDay(content):null),encrypted=friend&&isLockedMessage(m.body),bookmarked=savedMessages.includes(m.entry_key);
+    return <React.Fragment key={m.entry_key}>
+     {newDay&&<div className="chat-day-divider"><span>{date(m.created_at)}</span></div>}
+     <div id={friend?'friend-message-'+m.entry_key:undefined} className={'chat-message-row'+(mine?' is-mine':'')}>
+      <div className={'chat-bubble'+(m.pro_until?' has-gift':'')+(bookmarked?' is-bookmarked':'')}>
+       {m.kind==='notice'&&m.title&&!generic&&<strong className="chat-notice-title">{m.title}</strong>}
+       {note?.reply&&<button type="button" className="friend-quote" disabled={!rows.some(row=>row.entry_key===note.reply.id)} onClick={()=>jumpTo(note.reply.id)}><strong>{note.reply.sender===userId?f.you:peerName}</strong><span>{note.reply.text}</span></button>}
+       {encrypted&&content===null?<button type="button" className="friend-locked-message" onClick={()=>setKeyPanel(true)}><LockKeyhole size={21}/><span><strong>{f.lockedMessage}</strong><small>{f.openKey}</small></span></button>:streak?<StreakShareCard data={streak} language={language}/>:day?<DayHistoryCard data={day} language={language}/>:<p>{friend?<FriendText text={note?.text??content}/>:content}</p>}
+       {m.pro_until&&<div className="chat-pro-attachment"><Gift size={17}/><span><strong>{t.pro}</strong><span>{m.pro_until==='infinity'?t.forever:t.until+' '+date(m.pro_until)}</span></span></div>}
+       <span className="chat-message-meta">{bookmarked&&<Bookmark size={10}/>} {encrypted&&<LockKeyhole size={10} aria-label={f.lockedMessage}/>}<time dateTime={m.created_at}>{time(m.created_at)}</time>{mine&&(m.read_at?<CheckCheck size={14} aria-label={t.read}/>:<Check size={14} aria-label={t.sent}/>)}</span>
+      </div>
+      {friend&&!unavailable&&<details className="friend-message-actions" onToggle={positionMessageMenu}><summary aria-label={f.actions} title={f.actions}><MoreHorizontal size={17}/></summary><div>
+       {content!==null&&canEdit&&<button type="button" disabled={needsKey||sending} onClick={e=>{quote(m);e.currentTarget.closest('details').open=false;}}><Reply size={15}/>{f.reply}</button>}
+       {content!==null&&<button type="button" onClick={e=>{copyMessage(m);e.currentTarget.closest('details').open=false;}}><Copy size={15}/>{f.copy}</button>}
+       <button type="button" onClick={e=>{saved(m);e.currentTarget.closest('details').open=false;}}><Bookmark size={15}/>{bookmarked?f.unbookmark:f.bookmark}</button>
+      </div></details>}
+     </div>
+    </React.Fragment>;
+   })}
   </div>{hasNew&&<button type="button" className="chat-new-messages" onClick={bottom}><ArrowDown size={15}/>{t.newMessages}</button>}</div>
-  {(error||sendFailed)&&<div className="chat-error" role="alert"><span>{sendFailed?t.sendError:error}</span><button type="button" disabled={sending} onClick={()=>{accessDenied.current=false;sendFailed?send():refreshRef.current?.();}}>{t.retry}</button></div>}
-  {friend&&shareDay&&!unavailable&&<ShareCalendarDay userId={userId} language={language} initialKind={shareDay} sending={sending} sent={daySent} recipientName={peerName} onCancel={()=>setShareDay('')} onSend={sendDay} onExternalShare={()=>{onBack?.();setTimeout(()=>window.dispatchEvent(new CustomEvent('dayris:streak-open',{detail:{ownerId:userId}})),0);}}/>}
-  {friend&&shareDay?null:canEdit&&!unavailable?<form className="chat-composer" onSubmit={send}>{friend&&<div className="chat-share-actions"><button type="button" className="chat-share-day-button" disabled={sending} aria-label={dayShareCopy(language)[0]} onClick={()=>{setDaySent(false);setShareDay('day');}}><CalendarDays size={19}/></button><button type="button" className="chat-share-day-button" disabled={sending} aria-label={momentShareCopy(language).streak} onClick={()=>{setDaySent(false);setShareDay('streak');}}><Flame size={19}/></button></div>}<textarea aria-label={t.placeholder} placeholder={t.placeholder} maxLength={2000} rows={2} value={body} readOnly={Boolean(previewMessages)} disabled={sending} onChange={e=>{setBody(e.target.value);setSendFailed(false);}} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();send(e);}}}/><button type="submit" className="chat-send" aria-label={t.send} disabled={Boolean(previewMessages)||sending||!body.trim()}><Send size={20}/></button></form>:<p className="chat-read-only">{unavailable?socialInviteCopy(language).unavailable:t.readOnly}</p>}
+  {(error||sendFailed)&&<div className="chat-error" role="alert"><span>{sendFailed?t.sendError:error}</span>{(!unavailable||!friend)&&<button type="button" disabled={sending} onClick={()=>{accessDenied.current=false;sendFailed?send():refreshRef.current?.();}}>{t.retry}</button>}</div>}
+  {toolNotice&&<p className="friend-tool-notice" role="status">{toolNotice}</p>}
+  {friend&&shareDay&&!unavailable&&<ShareCalendarDay userId={userId} language={language} allowDetails={!secret} initialKind={shareDay} sending={sending||loading||!initialized.current} sent={daySent} recipientName={peerName} onCancel={()=>setShareDay('')} onSend={sendDay} onExternalShare={()=>{onBack?.();setTimeout(()=>window.dispatchEvent(new CustomEvent('dayris:streak-open',{detail:{ownerId:userId}})),0);}}/>}
+  {friend&&(shareDay||keyPanel)?null:canEdit&&!unavailable?needsKey?<div className="friend-key-required"><LockKeyhole size={19}/><p>{f.keyOff}</p><button type="button" className="friend-tool-button" onClick={()=>setKeyPanel(true)}>{f.openKey}</button></div>:<div className={friend?'friend-compose-area':undefined}>
+   {friend&&reply&&<div className="friend-reply-draft"><Reply size={16}/><div><strong>{f.replying} · {reply.sender===userId?f.you:peerName}</strong><span>{reply.text}</span></div><button type="button" disabled={sending} aria-label={f.cancel} onClick={()=>setReply(null)}><X size={17}/></button></div>}
+   <form className="chat-composer" onSubmit={send}>
+    {friend&&<details className="friend-share-menu"><summary aria-label={f.share} title={f.share}><Plus size={21}/></summary><div><button type="button" disabled={sending} onClick={e=>{e.currentTarget.closest('details').open=false;setDaySent(false);setShareDay('day');}}><CalendarDays size={18}/>{dayShareCopy(language)[0]}</button><button type="button" disabled={sending} onClick={e=>{e.currentTarget.closest('details').open=false;setDaySent(false);setShareDay('streak');}}><Flame size={18}/>{momentShareCopy(language).streak}</button></div></details>}
+    <textarea ref={textarea} aria-label={t.placeholder} placeholder={t.placeholder} maxLength={2000} rows={friend?1:2} value={body} readOnly={Boolean(previewMessages)} disabled={sending||(friend&&(loading||!initialized.current))} onChange={e=>changeBody(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing&&(!friend||!window.matchMedia('(pointer: coarse)').matches)){e.preventDefault();send(e);}}}/>
+    <button type="submit" className="chat-send" aria-label={t.send} disabled={Boolean(previewMessages)||sending||(friend&&(loading||!initialized.current))||!body.trim()||wireSize>2000}><Send size={19}/></button>
+   </form>
+   {friend&&<div className="friend-compose-bottom"><div aria-label={f.support}><Smile size={12}/>{['🤍','🔥','👏'].map(emoji=><button type="button" key={emoji} aria-label={f.support+' '+emoji} disabled={sending||body.length+emoji.length>2000} onClick={()=>{changeBody(body+emoji);textarea.current?.focus();}}>{emoji}</button>)}</div>{wireSize>1400?<span className={wireSize>2000?'is-over-limit':''} role={wireSize>2000?'status':undefined}>{wireSize}/2000</span>:secret?<span><LockKeyhole size={10}/>{secret.fingerprint}</span>:<span className="friend-keyboard-hint">{t.inputHint}</span>}</div>}
+  </div>:<p className="chat-read-only">{unavailable?socialInviteCopy(language).unavailable:t.readOnly}</p>}
  </section>;
+}
+function FriendText({text}){
+ return String(text||'').split(/(https?:\/\/[^\s<>]+)/g).map((part,index)=>/^https?:\/\//.test(part)?<a key={index} href={part} target="_blank" rel="noopener noreferrer">{part}</a>:part);
 }

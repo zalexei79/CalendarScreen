@@ -9,7 +9,7 @@ import {momentShareCopy} from './momentShareCopy.js';
 import './SocialShare.css';
 
 export const dayShareCopy=language=>[momentShareCopy(language).title];
-export default function ShareCalendarDay({userId,language,onCancel,onSend,initialKind='day',sending=false,sent=false,recipientName,onExternalShare}){
+export default function ShareCalendarDay({userId,language,onCancel,onSend,initialKind='day',sending=false,sent=false,recipientName,onExternalShare,allowDetails=true}){
  const t=momentShareCopy(language),now=new Date(),[kind,setKind]=useState(initialKind==='streak'?'streak':'day'),[mode,setMode]=useState('private');
  const [day,setDay]=useState(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`),[revision,setRevision]=useState(0);
  const [state,setState]=useState({key:'',data:null,error:false}),card=useRef(null),animation=useRef(null);
@@ -46,7 +46,7 @@ export default function ShareCalendarDay({userId,language,onCancel,onSend,initia
    <div className="social-share-preview" ref={card}>
     {data?streak?<StreakShareCard data={{days:data.currentStreak,paused:data.paused,day:data.serverDate}} language={language}/>:<DayHistoryCard data={preview} language={language}/>:<div className="social-share-placeholder" role="status">{failed?<><RotateCcw size={25}/><p>{t.loadError}</p><button type="button" onClick={()=>{setState({key:'',data:null,error:false});setRevision(n=>n+1);}}>{t.retry}</button></>:<><span className="social-share-skeleton"/><LoaderCircle size={22} className="social-share-spinner"/></>}</div>}
    </div>
-   {!streak&&<><div className="social-share-modes" role="group" aria-label={t.title}>{[['private',LockKeyhole],['amounts',CalendarDays],['details',ArrowUpRight]].map(([id,Icon])=><button type="button" key={id} aria-pressed={mode===id} disabled={disabled} onClick={()=>setMode(id)}><Icon size={14}/><span>{t[id]}</span></button>)}</div><p className="social-share-disclosure" aria-live="polite">{t[mode+'Hint']}</p></>}
+   {!streak&&<><div className="social-share-modes" role="group" aria-label={t.title}>{[['private',LockKeyhole],['amounts',CalendarDays],...(allowDetails?[['details',ArrowUpRight]]:[])].map(([id,Icon])=><button type="button" key={id} aria-pressed={mode===id} disabled={disabled} onClick={()=>setMode(id)}><Icon size={14}/><span>{t[id]}</span></button>)}</div><p className="social-share-disclosure" aria-live="polite">{t[mode+'Hint']}</p></>}
    {streak&&data?.currentStreak===0&&<p className="social-share-disclosure">{t.streakEmpty}</p>}
    {streak&&onExternalShare&&<button type="button" className="social-share-outside" disabled={disabled} onClick={onExternalShare}>{t.outside}<ArrowUpRight size={14}/></button>}
   </div>
