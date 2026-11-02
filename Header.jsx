@@ -3,7 +3,7 @@ import { transitionView } from './src/shared/ui/transitionView';
 import './src/shared/ui/GlassSystem.css';
 import {
   ChevronLeft, ChevronRight, Link2, LogOut, Download,
-  Settings, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw,
+  Settings, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw, CalendarDays,
 } from 'lucide-react';
 
 import InstallGuide from './src/shared/ui/InstallGuide.jsx';
@@ -65,14 +65,15 @@ export default function Header({
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
   const [syncIssueOpen, setSyncIssueOpen] = useState(false);
   const [retryingSync, setRetryingSync] = useState(false);
-  const todayAction = (month !== today.getMonth() || year !== today.getFullYear()) ? (
-    <button type="button" data-site-element="today" className={`dayris-today-action min-h-9 rounded-full px-3 text-xs font-medium ${isLight ? 'text-amber-700 hover:bg-amber-50' : 'text-amber-400 hover:bg-amber-400/10'}`} onClick={() => {
+  const currentMonth = month === today.getMonth() && year === today.getFullYear();
+  const todayAction = (
+    <button type="button" data-site-element="today" data-current={currentMonth} aria-label={t('today')} title={t('today')} className="dayris-today-action" onClick={() => {
       const now = new Date();
       setViewMonth(now.getMonth()); setViewYear(now.getFullYear());
       setSelectedKey(null); setMonthMenuOpen(false); setYearMenuOpen(false);
       window.setTimeout(() => window.dispatchEvent(new Event('dk:today-pulse')), 80);
-    }}>{t('today')}</button>
-  ) : null;
+    }}><CalendarDays size={18} aria-hidden="true"/><span>{t('today')}</span></button>
+  );
 
   async function retrySync() {
     setRetryingSync(true);
@@ -256,7 +257,7 @@ export default function Header({
       <div className="relative">
       <div>
         <div className="dayris-command-row">
-          <div className={`dayris-date-navigation${!proView || todayAction ? ' is-free' : ''}`}>
+          <div className="dayris-date-navigation">
           <button
             data-site-element="previous"
             onClick={goToPrevMonth}
@@ -270,7 +271,7 @@ export default function Header({
             <div className="relative" ref={monthMenuRef}>
               <button
                 onClick={() => { setMonthMenuOpen((v) => !v); setYearMenuOpen(false); }}
-                className={`font-display text-2xl sm:text-[28px] font-semibold transition-colors ${isLight ? 'text-zinc-900 hover:text-amber-600' : 'text-zinc-50 hover:text-amber-400'}`}
+                className={`dayris-month-trigger font-display text-2xl sm:text-[28px] font-semibold transition-colors ${isLight ? 'text-zinc-900 hover:text-amber-600' : 'text-zinc-50 hover:text-amber-400'}`}
               >
                 <AnimatedMonthLabel year={year} month={month} label={monthsFor(language)[month]} />
               </button>
@@ -297,7 +298,7 @@ export default function Header({
             <div className="relative" ref={yearMenuRef}>
               <button
                 onClick={() => { setYearMenuOpen((v) => !v); setMonthMenuOpen(false); }}
-                className={`font-display text-2xl sm:text-[28px] font-semibold transition-colors ${isLight ? 'text-zinc-600 hover:text-amber-600' : 'text-zinc-500 hover:text-amber-400'}`}
+                className={`dayris-year-trigger font-display text-2xl sm:text-[28px] font-semibold transition-colors ${isLight ? 'text-zinc-600 hover:text-amber-600' : 'text-zinc-500 hover:text-amber-400'}`}
               >
                 {year}
               </button>

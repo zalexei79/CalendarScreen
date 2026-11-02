@@ -22,6 +22,10 @@ function Fixture() {
 function HeaderFixture() {
   const params=new URLSearchParams(location.search), preview=params.has('preview');
   const language=params.get('language') || 'ru';
+  const today=params.has('current') ? new Date() : new Date(2026,8,30);
+  const [period,setPeriod]=useState({month:today.getMonth(),year:today.getFullYear()});
+  const [monthMenu,setMonthMenu]=useState(false),[yearMenu,setYearMenu]=useState(false),[currency,setCurrency]=useState('USD');
+  const moveMonth=delta=>setPeriod(value=>{const date=new Date(value.year,value.month+delta,1);return {month:date.getMonth(),year:date.getFullYear()};});
   const [access,setAccess]=useState(preview), [loading,setLoading]=useState(false);
   const [pro,setPro]=useState(preview && params.get('mode')!=='free'), [account,setAccount]=useState('main'), [offer,setOffer]=useState(false);
   const [trader,setTrader]=useState(preview && params.get('mode')==='trader'), [light,setLight]=useState(params.has('light'));
@@ -35,12 +39,15 @@ function HeaderFixture() {
   // Mirror CalendarScreen's real wallet access effect, not just the CTA callback.
   useEffect(()=>{if ((!loading && !access) || !pro) setAccount('main');},[access,loading,pro,account]);
   return <div className={preview ? `premium-shell min-h-screen flex flex-col ${pro?'pro-active-shell':''} ${light?'theme-light bg-zinc-100 text-zinc-900':'bg-zinc-950 text-zinc-100'}` : ''}>
-    <Header t={key=>translate(language,key)} language={language} month={8} year={2026} today={new Date(2026,8,30)}
+    <Header t={key=>translate(language,key)} language={language} month={period.month} year={period.year} today={today}
+      goToPrevMonth={()=>moveMonth(-1)} goToNextMonth={()=>moveMonth(1)}
+      monthMenuOpen={monthMenu} setMonthMenuOpen={setMonthMenu} yearMenuOpen={yearMenu} setYearMenuOpen={setYearMenu}
+      setViewMonth={month=>setPeriod(value=>({...value,month}))} setViewYear={year=>setPeriod(value=>({...value,year}))} setSelectedKey={setSelected}
       isPwaInstalled proAccessActive={access} proAccessLoading={loading} proView={pro} setProView={setPro}
       accountMode={account} setAccountMode={value=>{action(value);setAccount(value);}} openProPresentation={()=>{action('offer');setOffer(true);}} onOpenCapital={()=>action('capital')}
       traderMode={trader} setTraderMode={setTrader} setPlatformFilter={()=>{}} openConnectModal={action}
       ctraderConnected isLight={light} theme={theme} setTheme={value=>setLight(value==='light')}
-      periodStats={{}} currency="USD" formatMoney={String}/>
+      periodStats={{}} currency={currency} setCurrency={setCurrency} formatMoney={String}/>
     {preview && <>
       <div className="px-3 sm:px-5"><MonthlyGoal year={2026} month={8} currency="USD" currencySymbol="$" currentPnl={cells.reduce((sum,cell)=>sum+pnl(cell.key),0)} language={language} isLight={light}/></div>
       <CalendarGrid cells={cells} selectedKey={selected} onSelectDay={setSelected} isLight={light} proView={pro} traderMode={trader} language={language}

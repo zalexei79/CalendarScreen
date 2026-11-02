@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v136-pro-tools-orbit';
+const CACHE_NAME = 'atj-cache-v137-compact-month-navigation';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {
