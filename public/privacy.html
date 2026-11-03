@@ -20,6 +20,7 @@
     .notice { padding: 16px 18px; border-left: 3px solid var(--accent); background: #13251f; border-radius: 10px; }
     ul { padding-left: 24px; }
     footer { margin-top: 36px; padding-top: 18px; border-top: 1px solid #2b343d; color: #7f8b98; font-size: 14px; }
+    .policy-links { display: flex; flex-wrap: wrap; gap: 10px 20px; }
     @media (max-width: 560px) { main { width: calc(100% - 20px); margin: 10px auto 28px; padding: 22px 18px; border-radius: 18px; } }
   </style>
 </head>
@@ -70,7 +71,14 @@
     <h2>9. Контакты</h2>
     <p>По вопросам конфиденциальности и обработки данных: <a href="mailto:aveel2001@gmail.com">aveel2001@gmail.com</a>.</p>
 
-    <footer>DAYRIS — «Денежный календарь»</footer>
+    <footer>
+      <nav class="policy-links" aria-label="Документы DAYRIS">
+        <a href="/refund.html">Политика возврата средств</a>
+        <a href="/refund-en.html" lang="en">Refund Policy in English</a>
+        <a href="/delete-account.html">Удаление аккаунта</a>
+      </nav>
+      <p>DAYRIS — «Денежный календарь» · Aveli Zagnitco</p>
+    </footer>
   </main>
 </body>
 </html>

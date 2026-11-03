@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v146-calm-header-toolbar';
+const CACHE_NAME = 'atj-cache-v147-refund-policy';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

@@ -26,6 +26,13 @@ const COPY = {
   zh: { app:'应用', personal:'个性化', account:'账户', about:'关于应用', theme:'外观', language:'语言', currency:'新记录货币',calendar:'日历',help:'帮助与 DAYRIS',storyHint:'你的记录概览',currencyHint:'用于新记录。在月份旁切换日历货币。', voice:'语音和输入', story:'我的故事', watch:'查看', restart:'重新查看介绍', profile:'个人资料', active:'已启用', learn:'了解更多', guest:'认识 DAYRIS', guestHint:'登录以保存你的记录。', light:'浅色', system:'跟随系统', dark:'深色', purple:'紫水晶', emerald:'翡翠绿', systemHint:'跟随设备的外观设置。', close:'关闭设置', description:'在一个日历中记录收入、支出和财务节奏。', currencies:['美元','欧元','摩尔多瓦列伊','俄罗斯卢布','人民币','乌克兰格里夫纳'] },
 };
 const LANGUAGES = [{code:'uk',label:'Українська'}, {code:'ru',label:'Русский'}, {code:'en',label:'English'}, {code:'md',label:'Română'}, {code:'zh-CN',label:'中文'}];
+const REFUND_POLICY = {
+  uk: ['Політика повернення коштів (English)', '/refund-en.html'],
+  ru: ['Политика возврата средств', '/refund.html'],
+  en: ['Refund Policy', '/refund-en.html'],
+  ro: ['Politica de rambursare (English)', '/refund-en.html'],
+  zh: ['退款政策（English）', '/refund-en.html'],
+};
 const FEEDBACK = {
   uk:['Зв’язатися з автором','Є запитання чи ідея для DAYRIS? Напиши мені в Telegram.'],
   ru: ['Связаться с создателем', 'Есть вопрос или идея для DAYRIS? Напиши мне в Telegram.'],
@@ -110,7 +117,7 @@ export default function SettingsPanel({ t, language, setLanguage, currency, setC
         {choices.length > 0 && <div className="settings-choices" role="group" aria-label={title}>{choices.map(({code,label,icon:Icon,symbol,selected,choose})=><button type="button" key={code} className={`settings-choice${selected?' is-selected':''}`} aria-pressed={selected} onClick={choose}>{Icon && <Icon size={21}/>} {symbol && <span className="settings-choice-symbol">{symbol}</span>}<span>{label}</span>{selected && <Check size={19}/>}</button>)}{page==='theme' && <p className="settings-note">{copy.systemHint}</p>}</div>}
         {page==='voice' && <VoiceSettings language={language} isLight={isLight}/>}
         {page==='display' && <DisplayScaleSettings language={language}/>}
-        {page==='help' && <Group title={copy.help}><Row icon={RotateCcw} label={copy.restart} onClick={()=>action(onRestart)}/><Row icon={Info} label={locale==='ru'?'О DAYRIS':locale==='zh'?'关于 DAYRIS':locale==='ro'?'Despre DAYRIS':'About DAYRIS'} onClick={()=>navigate('about')}/><a className="settings-row" href={locale==='zh'?'/privacy-zh.html':'/privacy.html'} target="_blank" rel="noreferrer"><ShieldCheck size={18}/><span>{t('privacyPolicy')}</span><ChevronRight size={15}/></a></Group>}
+        {page==='help' && <Group title={copy.help}><Row icon={RotateCcw} label={copy.restart} onClick={()=>action(onRestart)}/><Row icon={Info} label={locale==='ru'?'О DAYRIS':locale==='zh'?'关于 DAYRIS':locale==='ro'?'Despre DAYRIS':'About DAYRIS'} onClick={()=>navigate('about')}/><a className="settings-row" href={locale==='zh'?'/privacy-zh.html':'/privacy.html'} target="_blank" rel="noreferrer"><ShieldCheck size={18}/><span>{t('privacyPolicy')}</span><ChevronRight size={15}/></a><a className="settings-row" href={REFUND_POLICY[locale][1]} target="_blank" rel="noreferrer"><RotateCcw size={18} aria-hidden="true"/><span>{REFUND_POLICY[locale][0]}</span><ChevronRight size={15} aria-hidden="true"/></a></Group>}
         {page==='currency' && <p className="settings-note">{copy.currencyHint}</p>}
         {page==='profile' && user&&<div className="settings-profile"><ProfileSettings key={user.id} userId={user.id} profile={social.data} language={language}/>{social.error&&<button className="social-button" onClick={social.refresh}>{socialText.refresh}</button>}{user.email&&<p>{user.email}</p>}<Row icon={Sparkles} label="DAYRIS PRO" value={proAccessLoading?'…':proAccessActive?copy.active:copy.learn} onClick={()=>action(onPro)}/><button className="settings-row" onClick={()=>action(handleGoogleLogout)}><LogOut size={18}/>{t('signOut')}</button><a className="settings-delete" href={locale==='zh'?'/delete-account-zh.html':'/delete-account.html'} target="_blank" rel="noreferrer">{t('deleteAccountData')}</a></div>}
         {page==='friends'&&user&&<FriendsPanel key={user.id} userId={user.id} profile={social.data} language={language} onProfile={()=>navigate('profile')} onClose={onClose}/>}
