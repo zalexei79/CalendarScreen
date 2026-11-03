@@ -25,7 +25,13 @@ try{
   const touch=await trigger.boundingBox();await page.touchscreen.tap(touch.x+touch.width/2,touch.y+touch.height/2);await menu.waitFor({state:'visible'});await settle();
   await page.touchscreen.tap(touch.x+touch.width/2,touch.y+touch.height/2);await menu.waitFor({state:'hidden'});
   await show();await page.mouse.click(2,height-2);await menu.waitFor({state:'hidden'});assert.equal(await trigger.getAttribute('aria-expanded'),'false','blank page space dismisses PRO');
-  await show();await page.locator('.dayris-month-trigger').click();await page.locator('.calendar-period-menu').waitFor({state:'visible'});await menu.waitFor({state:'hidden'});assert.equal(await page.locator('.calendar-period-menu').isVisible(),true,`outside dismissal preserves the newly opened date picker: ${theme}/${width}/${language}`);await page.keyboard.press('Escape');await page.locator('.calendar-period-menu').waitFor({state:'hidden'});
+  await show();
+  const monthTrigger=page.locator('.dayris-month-trigger');
+  // In the mobile composition the global tools menu naturally overlays the date below it.
+  if(!await monthTrigger.evaluate(node=>{const box=node.getBoundingClientRect();return node.contains(document.elementFromPoint(box.x+box.width/2,box.y+box.height/2));})){
+   await page.locator('[data-site-element="brand"]').click();await menu.waitFor({state:'hidden'});
+  }
+  await monthTrigger.click();await page.locator('.calendar-period-menu').waitFor({state:'visible'});await menu.waitFor({state:'hidden'});assert.equal(await page.locator('.calendar-period-menu').isVisible(),true,`outside dismissal preserves the newly opened date picker: ${theme}/${width}/${language}`);await page.keyboard.press('Escape');await page.locator('.calendar-period-menu').waitFor({state:'hidden'});
   await show();
   await page.locator('[data-destination="capital"]').click();await menu.waitFor({state:'hidden'});await page.waitForFunction(()=>window.handoffs?.at(-1)?.kind==='capital');assert.equal(await page.evaluate(()=>handoffs.at(-1).open),false);
   await show();await page.locator('.pro-tools-trader').click();await settle();assert.equal(await page.locator('.pro-tools-trader').getAttribute('aria-checked'),'true');

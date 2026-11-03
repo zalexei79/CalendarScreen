@@ -16,12 +16,13 @@ export default function AnimatedMonthLabel({ month, year, label }) {
     if (width.current != null && width.current !== nextWidth && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       // Commit layout once. FLIP the adjacent year instead of animating width,
       // which reflows the glass header and refits the calendar every frame.
-      const year = text.closest('.dayris-month-title')?.children[1];
+      const heading = text.closest('.dayris-month-title');
+      const year = heading?.children[1];
       yearMotion.current?.cancel();
-      yearMotion.current = year?.animate([
+      yearMotion.current = heading && getComputedStyle(heading).flexDirection !== 'column' ? year?.animate([
         { transform: `translateX(${width.current - nextWidth}px)` },
         { transform: 'translateX(0)' },
-      ], { duration: 420, easing: 'cubic-bezier(.22,1,.36,1)' });
+      ], { duration: 420, easing: 'cubic-bezier(.22,1,.36,1)' }) : null;
     }
     width.current = nextWidth;
     // Fonts and responsive sizing can change after first paint. Natural

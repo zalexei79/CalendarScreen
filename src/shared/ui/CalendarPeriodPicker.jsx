@@ -1,5 +1,5 @@
 import React,{useEffect,useId,useRef,useState} from 'react';
-import {ChevronLeft,ChevronRight} from 'lucide-react';
+import {ChevronLeft,ChevronRight,ChevronDown} from 'lucide-react';
 import AnimatedMonthLabel from './AnimatedMonthLabel.jsx';
 import CalendarAnchoredPopover from './CalendarAnchoredPopover.jsx';
 import {monthsFor} from '../i18n';
@@ -39,7 +39,7 @@ export default function CalendarPeriodPicker({month,year,language,isLight,monthM
   }
   return <div className="dayris-month-title flex items-baseline gap-1.5 sm:gap-2 min-w-0">
     <div className="relative" ref={monthMenuRef}><button type="button" ref={monthAnchor} className={`dayris-month-trigger font-display font-semibold transition-colors ${isLight?'text-zinc-900':'text-zinc-50'}`} aria-label={`${copy.month}: ${months[month]}`} aria-haspopup="dialog" aria-expanded={monthMenuOpen} aria-controls={open?id:undefined} onClick={()=>{setMonthMenuOpen(!monthMenuOpen);setYearMenuOpen(false);}}><AnimatedMonthLabel year={year} month={month} label={months[month]}/></button></div>
-    <div className="relative" ref={yearMenuRef}><button type="button" ref={yearAnchor} className={`dayris-year-trigger font-display font-semibold transition-colors ${isLight?'text-zinc-600':'text-zinc-500'}`} aria-label={`${copy.year}: ${year}`} aria-haspopup="dialog" aria-expanded={yearMenuOpen} aria-controls={open?id:undefined} onClick={()=>{setYearMenuOpen(!yearMenuOpen);setMonthMenuOpen(false);}}>{year}</button></div>
+    <div className="relative" ref={yearMenuRef}><button type="button" ref={yearAnchor} className={`dayris-year-trigger font-display font-semibold transition-colors ${isLight?'text-zinc-600':'text-zinc-500'}`} aria-label={`${copy.year}: ${year}`} aria-haspopup="dialog" aria-expanded={yearMenuOpen} aria-controls={open?id:undefined} onClick={()=>{setYearMenuOpen(!yearMenuOpen);setMonthMenuOpen(false);}}>{year}<ChevronDown className="dayris-year-chevron" size={10} aria-hidden="true"/></button></div>
     <CalendarAnchoredPopover open={open} onClose={()=>{setMonthMenuOpen(false);setYearMenuOpen(false);}} anchorRef={monthMenuOpen?monthAnchor:yearAnchor} id={id} label={copy[kind]} className="calendar-period-menu" isLight={isLight} onKeyDown={keys}>
       <div className="calendar-picker-heading"><div><span>{copy[kind]}</span><strong aria-live="polite">{kind==='month'?browseYear:`${firstYear} – ${firstYear+11}`}</strong></div>
         <button type="button" aria-label={kind==='month'?copy.previousYear:copy.previousPage} disabled={kind==='month'?browseYear<=1:firstYear<=1} onClick={()=>page(-1)}><ChevronLeft size={17}/></button>

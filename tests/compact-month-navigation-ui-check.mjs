@@ -23,14 +23,14 @@ try {
   });
   const dimensions=()=>page.evaluate(()=>{
     const root=document.querySelector('.dayris-date-navigation'),box=document.querySelector('.dayris-header').getBoundingClientRect();
-    const items=['[data-site-element="previous"]','.dayris-month-title','[data-site-element="next"]','.calendar-currency','.dayris-today-action'].map(selector=>{const r=root.querySelector(selector).getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,centerY:r.y+r.height/2};});
+    const items=['[data-site-element="previous"]','.dayris-month-title','[data-site-element="next"]','.calendar-currency','.dayris-today-action'].map(selector=>{const node=root.querySelector(selector);if(!node)return null;const r=node.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,centerY:r.y+r.height/2};});
     const month=document.querySelector('.dayris-month-trigger'),year=document.querySelector('.dayris-year-trigger');
     const flame=document.querySelector('.activity-streak').getBoundingClientRect(),title=document.querySelector('.dayris-month-title').getBoundingClientRect();
     const actions=document.querySelector('.dayris-header-actions').getBoundingClientRect();
     return {height:box.height,top:box.top,bottom:box.bottom,items,headerHeight:box.height,flameY:flame.y+flame.height/2,titleY:title.y+title.height/2,flameLeft:flame.left,flameRight:flame.right,actionsLeft:actions.left,actionsY:actions.y+actions.height/2,
       overflow:document.documentElement.scrollWidth>innerWidth,
       clippedMonth:month.scrollWidth>month.clientWidth+1,
-      monthRight:month.getBoundingClientRect().right,yearLeft:year.getBoundingClientRect().left,yearRight:year.getBoundingClientRect().right};
+      monthRight:month.getBoundingClientRect().right,monthTop:month.getBoundingClientRect().top,monthY:month.getBoundingClientRect().y+month.getBoundingClientRect().height/2,yearLeft:year.getBoundingClientRect().left,yearRight:year.getBoundingClientRect().right,yearBottom:year.getBoundingClientRect().bottom};
   });
   const cases=['dark','light','purple','gold','emerald'].flatMap(theme=>[320,390,1280].map(width=>[theme,width,'ru','pro']));
   cases.push(...['en','uk','md','zh-CN'].flatMap(language=>[320,390].map(width=>['gold',width,language,'pro'])));
@@ -46,13 +46,13 @@ try {
     await page.mouse.move(1,800);
     const originalMonth=await page.locator('.dayris-month-label > span:not(.dayris-month-outgoing)').textContent(),originalYear=await page.locator('.dayris-year-trigger').textContent();
     const original=await dimensions();
-    assert.ok(original.height<=108,`compact header: ${theme}/${width}/${language}`);
+    assert.ok(original.height<=(width<960?116:108),`compact header: ${theme}/${width}/${language}`);
     if(width>=960)assert.ok(Math.abs(original.titleY-original.flameY)<=5,'desktop keeps the full streak beside the brand');
     else{
-      assert.ok(Math.abs(original.flameY-original.titleY)<3&&Math.abs(original.items[3].centerY-original.actionsY)<3,'date and streak lead above the utility toolbar');
-      assert.ok(original.items[2].right+2<=original.flameLeft&&original.items[3].right<=original.items[4].left&&original.items[4].right+4<=original.actionsLeft,JSON.stringify({check:'date, Today and toolbar controls do not collide',theme,width,language,original}));
+      assert.ok(Math.abs(original.flameY-original.actionsY)<3&&original.titleY>original.actionsY+20,'global app tools sit above the calendar heading');
+      assert.ok(original.flameRight+2<=original.actionsLeft&&original.items[2].right+4<=original.items[3].left,JSON.stringify({check:'global controls and calendar controls do not collide',theme,width,language,original}));
       assert.equal(await page.locator('.activity-streak-value').isVisible(),false);assert.equal(await page.locator('.activity-streak-pause-label').isVisible(),false);assert.equal(await page.locator('.activity-streak-count').textContent(),'18');
-      assert.equal(await page.locator('.dayris-today-action > span').isVisible(),true,'Today always has a readable text label');
+      assert.equal(await page.locator('.dayris-today-action').count(),0,'Today is absent in the current month');
       for(const control of await page.locator('.home-friends-button,[data-site-element="settings"]').all()){const box=await control.boundingBox();assert.ok(box.width>=40&&box.height>=44,'quiet icons retain comfortable touch targets');}
       for(const control of await page.locator('.dayris-month-step').all())assert.equal(await control.evaluate(node=>getComputedStyle(node).backgroundColor),'rgba(0, 0, 0, 0)','theme does not turn navigation into oversized pills');
     }
@@ -64,13 +64,21 @@ try {
       assert.equal(layout.clippedMonth,false,`full month name fits: ${context}`);
       assert.equal(layout.height,original.height,`row height stable: ${context}`);
       assert.equal(layout.headerHeight,original.headerHeight,`calendar stays in place: ${context}`);
-      assert.ok(layout.yearLeft>=layout.monthRight-1,`month/year do not overlap: ${context}`);
-      assert.ok(Math.abs(layout.items[0].centerY-layout.items[1].centerY)<4&&Math.abs(layout.items[2].centerY-layout.items[1].centerY)<4,`month arrows share the date line: ${context}`);
+      if(width>=960)assert.ok(layout.yearLeft>=layout.monthRight-1,`month/year do not overlap: ${context}`);
+      else assert.ok(layout.yearBottom<=layout.monthTop+1,'the year is a quiet label above the month');
+      assert.ok(Math.abs(layout.items[0].centerY-layout.monthY)<=5&&Math.abs(layout.items[2].centerY-layout.monthY)<=5,`month arrows share the date line: ${context}`);
       assert.ok(layout.items[0].right<=layout.items[1].left+1&&layout.items[1].right<=layout.items[2].left+1,`arrows sit either side of date: ${context}`);
-      assert.ok(layout.items[2].left-layout.yearRight<=8,`next arrow stays close to the year: ${context}`);
+      assert.ok(layout.items[2].left-layout.items[1].right<=8,`next arrow stays close to the period heading: ${context}`);
+      assert.equal(await page.locator('.dayris-today-action').count(),step===0?0:1,`Today follows the visible month: ${context}`);
+      if(layout.items[4]){
+        if(width<960)assert.ok(layout.items[4].left>=layout.items[2].right+2&&layout.items[4].right<=layout.items[3].left-2,`Today fits between date navigation and currency: ${context}`);
+        else assert.ok(layout.items[4].left>=layout.items[3].right+4&&layout.items[4].right<=layout.actionsLeft,`Today fits in the desktop navigation: ${context}`);
+        assert.equal(await page.locator('.dayris-today-action > span').isVisible(),true);
+      }
       layout.items.forEach((item,index)=>{
+        if(!item)return;
         assert.ok(item.top>=layout.top&&item.bottom<=layout.bottom,`one row: ${context}`);
-        if(width<960&&index>=3)assert.equal(item.left,original.items[index].left,`currency and Today stay anchored: ${context}`);
+        if(width<960&&index===3)assert.equal(item.left,original.items[index].left,`currency and Today stay anchored: ${context}`);
       });
       if(step===1&&language==='ru'&&(width<=390||theme==='gold')){
         await page.locator('.dayris-header').screenshot({path:`artifacts/compact-month-${theme}-${width}.png`});
@@ -78,7 +86,8 @@ try {
     }
     await page.locator('[data-site-element="previous"]').click();
     await page.locator('[data-site-element="today"]').click();
-    assert.equal(await page.locator('.dayris-today-action').getAttribute('data-current'),'true');
+    assert.equal(await page.locator('.dayris-today-action').count(),0,'returning to this month removes Today');
+    await page.waitForFunction(()=>document.activeElement?.matches('.dayris-month-trigger'));
     assert.equal(await page.locator('.dayris-month-label > span:not(.dayris-month-outgoing)').textContent(),originalMonth);
     assert.equal(await page.locator('.dayris-year-trigger').textContent(),originalYear);
   }
@@ -117,5 +126,5 @@ try {
     if(theme==='dark'&&mode==='free'&&weeks===5)await page.screenshot({path:`artifacts/calendar-full-height-dark-${width}.png`});
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS: compact header with date beside flame, all months, year rollover, five themes/locales, phone/desktop, FREE/PRO, readable labels, date/currency menus, Today and reduced motion');
+  console.log('PASS: separate app bar and calendar heading, contextual Today, stable calendar geometry, all months/year rollover, five locales, FREE/PRO, phone/desktop, menus and reduced motion');
 } finally {await browser.close();}

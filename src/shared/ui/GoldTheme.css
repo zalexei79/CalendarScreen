@@ -154,7 +154,7 @@ html[data-dayris-theme="gold"] .calendar-glass-optics {
 html[data-dayris-theme="gold"] .calendar-motion-light { display:none; }
 html[data-dayris-theme="gold"] .calendar-weekdays > div { color:#e3dac4; font-family:inherit; letter-spacing:.08em; font-size:10px; font-weight:550; }
 html[data-dayris-theme="gold"] .dayris-header { border:0; background:linear-gradient(180deg,#0b0d113d,transparent); box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none; }
-html[data-dayris-theme="gold"] .dayris-brand-row { margin-bottom:12px; }
+html[data-dayris-theme="gold"] .dayris-brand-row { margin-bottom:0; }
 html[data-dayris-theme="gold"] .dayris-date-navigation { color:#fff0bc; }
 html[data-dayris-theme="gold"] :is(.dayris-header button.rounded-full,.workspace-mode-toggle.workspace-mode-toggle) {
   background:radial-gradient(ellipse at var(--gold-pointer-x,25%) var(--gold-pointer-y,0%),#fff7df38,transparent 75%),linear-gradient(145deg,#ffffff0e,#ffffff04),#1a1c2024;

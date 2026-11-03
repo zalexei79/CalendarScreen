@@ -65,11 +65,13 @@ export default function Header({
   const [syncIssueOpen, setSyncIssueOpen] = useState(false);
   const [retryingSync, setRetryingSync] = useState(false);
   const currentMonth = month === today.getMonth() && year === today.getFullYear();
-  const todayAction = (
-    <button type="button" data-site-element="today" data-current={currentMonth} aria-label={t('today')} title={t('today')} className="dayris-today-action" onClick={() => {
+  const todayAction = !currentMonth && (
+    <button type="button" data-site-element="today" data-current={currentMonth} aria-label={t('today')} title={t('today')} className="dayris-today-action" onClick={(event) => {
+      const heading = event.currentTarget.closest('.dayris-header')?.querySelector('.dayris-month-trigger');
       const now = new Date();
       setViewMonth(now.getMonth()); setViewYear(now.getFullYear());
       setSelectedKey(null); setMonthMenuOpen(false); setYearMenuOpen(false);
+      window.requestAnimationFrame(() => heading?.focus({ preventScroll:true }));
       window.setTimeout(() => window.dispatchEvent(new Event('dk:today-pulse')), 80);
     }}><Undo2 size={15} aria-hidden="true"/><span>{t('today')}</span></button>
   );
@@ -139,45 +141,8 @@ export default function Header({
             </p>
           </div>
         </div>
-
-
-      </div>
-
-      {/* Second row: Calendar month navigation */}
-      <div className="dayris-command-wrap relative">
-      <div className="dayris-command-content">
-        <div className="dayris-command-row">
-          <div className="dayris-date-navigation">
-          <div className="dayris-date-cluster">
-          <button
-            type="button"
-            data-site-element="previous"
-            onClick={goToPrevMonth}
-            aria-label={t('previousMonth')}
-            title={t('previousMonth')}
-            className="dayris-month-step"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <CalendarPeriodPicker {...{month,year,language,isLight,monthMenuOpen,yearMenuOpen,setMonthMenuOpen,setYearMenuOpen,monthMenuRef,yearMenuRef,setViewMonth,setViewYear,setSelectedKey}}/>
-          <button
-            type="button"
-            data-site-element="next"
-            onClick={goToNextMonth}
-            aria-label={t('nextMonth')}
-            title={t('nextMonth')}
-            className="dayris-month-step"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-          </div>
-          <ActivityStreak ownerId={getValidUserId(user)} isLight={isLight} t={t} onOpen={onOpenActivityStreak} onChange={onActivityStreakChange} onCreateEntry={onCreateStreakEntry} />
-          <div className="dayris-header-toolbar">
-            <div className="dayris-status-controls">
-          <CalendarCurrencyPicker currency={currency} onChange={setCurrency} usedCurrencies={usedCurrencies} language={language} isLight={isLight} onOpen={() => { setMonthMenuOpen(false); setYearMenuOpen(false); }}/>
-          {todayAction}
-            </div>
-        {/* Action controls: [ Download ] [ Theme ] [ Settings ] */}
+        <ActivityStreak ownerId={getValidUserId(user)} isLight={isLight} t={t} onOpen={onOpenActivityStreak} onChange={onActivityStreakChange} onCreateEntry={onCreateStreakEntry} />
+        {/* Global app tools stay together above the calendar. */}
         <div data-site-element="actions" className="dayris-header-actions flex items-center gap-1.5 shrink-0">
           {/* Install is useful in the browser, not inside the installed app. */}
           {!isPwaInstalled && <div className="relative shrink-0 block">
@@ -287,6 +252,39 @@ export default function Header({
             />}
           </div>
         </div>
+      </div>
+
+      {/* The calendar has its own heading and contextual controls. */}
+      <div className="dayris-command-wrap relative">
+      <div className="dayris-command-content">
+        <div className="dayris-command-row">
+          <div className="dayris-date-navigation">
+          <div className="dayris-date-cluster">
+          <button
+            type="button"
+            data-site-element="previous"
+            onClick={goToPrevMonth}
+            aria-label={t('previousMonth')}
+            title={t('previousMonth')}
+            className="dayris-month-step"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <CalendarPeriodPicker {...{month,year,language,isLight,monthMenuOpen,yearMenuOpen,setMonthMenuOpen,setYearMenuOpen,monthMenuRef,yearMenuRef,setViewMonth,setViewYear,setSelectedKey}}/>
+          <button
+            type="button"
+            data-site-element="next"
+            onClick={goToNextMonth}
+            aria-label={t('nextMonth')}
+            title={t('nextMonth')}
+            className="dayris-month-step"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          </div>
+          <div className="dayris-status-controls">
+            {todayAction}
+            <CalendarCurrencyPicker currency={currency} onChange={setCurrency} usedCurrencies={usedCurrencies} language={language} isLight={isLight} onOpen={() => { setMonthMenuOpen(false); setYearMenuOpen(false); }}/>
           </div>
 
           </div>
