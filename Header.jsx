@@ -3,7 +3,7 @@ import { transitionView } from './src/shared/ui/transitionView';
 import './src/shared/ui/GlassSystem.css';
 import {
   ChevronLeft, ChevronRight, Link2, LogOut, Download,
-  Settings, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw, CalendarDays,
+  Settings, ChevronDown, LockKeyhole, Gift, AlertTriangle, RefreshCw, Undo2,
 } from 'lucide-react';
 
 import InstallGuide from './src/shared/ui/InstallGuide.jsx';
@@ -71,7 +71,7 @@ export default function Header({
       setViewMonth(now.getMonth()); setViewYear(now.getFullYear());
       setSelectedKey(null); setMonthMenuOpen(false); setYearMenuOpen(false);
       window.setTimeout(() => window.dispatchEvent(new Event('dk:today-pulse')), 80);
-    }}><CalendarDays size={18} aria-hidden="true"/><span>{t('today')}</span></button>
+    }}><Undo2 size={15} aria-hidden="true"/><span>{t('today')}</span></button>
   );
 
   async function retrySync() {
@@ -119,7 +119,7 @@ export default function Header({
 
   return (
     <header className={`dayris-header px-3 sm:px-8 pt-3 sm:pt-5 pb-3 sm:pb-4 border-b transition-all duration-500 ${isLight ? 'border-slate-200/70 bg-white/80' : 'border-white/[0.06] bg-zinc-950/70'}`}>
-      {/* Top row: Brand app icon + Title on left, [Download] [Theme] [Settings] on right */}
+      {/* Responsive identity, date navigation, and secondary toolbar. */}
       <div className="dayris-brand-row flex items-center justify-between gap-3 mb-2.5">
         <div data-site-element="brand" className="flex items-center gap-2.5 min-w-0">
           <div className="relative shrink-0 flex items-center justify-center">
@@ -150,30 +150,32 @@ export default function Header({
           <div className="dayris-date-navigation">
           <div className="dayris-date-cluster">
           <button
+            type="button"
             data-site-element="previous"
             onClick={goToPrevMonth}
             aria-label={t('previousMonth')}
             title={t('previousMonth')}
-            className={`rounded-full border h-9 w-9 flex items-center justify-center transition-all duration-200 hover:-translate-y-px ${isLight ? 'border-zinc-300/80 bg-white/70 text-zinc-600 hover:border-amber-400 hover:text-amber-700 hover:shadow-sm' : 'border-white/[0.08] bg-white/[0.035] text-zinc-400 hover:text-zinc-100 hover:border-white/[0.18] hover:bg-white/[0.06]'}`}
+            className="dayris-month-step"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <CalendarPeriodPicker {...{month,year,language,isLight,monthMenuOpen,yearMenuOpen,setMonthMenuOpen,setYearMenuOpen,monthMenuRef,yearMenuRef,setViewMonth,setViewYear,setSelectedKey}}/>
           <button
+            type="button"
             data-site-element="next"
             onClick={goToNextMonth}
             aria-label={t('nextMonth')}
             title={t('nextMonth')}
-            className={`rounded-full border h-9 w-9 flex items-center justify-center transition-all duration-200 hover:-translate-y-px ${isLight ? 'border-zinc-300/80 bg-white/70 text-zinc-600 hover:border-amber-400 hover:text-amber-700 hover:shadow-sm' : 'border-white/[0.08] bg-white/[0.035] text-zinc-400 hover:text-zinc-100 hover:border-white/[0.18] hover:bg-white/[0.06]'}`}
+            className="dayris-month-step"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
           </div>
-          {todayAction}
+          <ActivityStreak ownerId={getValidUserId(user)} isLight={isLight} t={t} onOpen={onOpenActivityStreak} onChange={onActivityStreakChange} onCreateEntry={onCreateStreakEntry} />
           <div className="dayris-header-toolbar">
             <div className="dayris-status-controls">
           <CalendarCurrencyPicker currency={currency} onChange={setCurrency} usedCurrencies={usedCurrencies} language={language} isLight={isLight} onOpen={() => { setMonthMenuOpen(false); setYearMenuOpen(false); }}/>
-          <ActivityStreak ownerId={getValidUserId(user)} isLight={isLight} t={t} onOpen={onOpenActivityStreak} onChange={onActivityStreakChange} onCreateEntry={onCreateStreakEntry} />
+          {todayAction}
             </div>
         {/* Action controls: [ Download ] [ Theme ] [ Settings ] */}
         <div data-site-element="actions" className="dayris-header-actions flex items-center gap-1.5 shrink-0">
@@ -207,6 +209,7 @@ export default function Header({
             <div className="relative shrink-0">
               <button
                 type="button"
+                data-site-element="sync-issue"
                 onClick={() => setSyncIssueOpen((open) => !open)}
                 aria-expanded={syncIssueOpen}
                 aria-label={t('syncIssueTitle')}

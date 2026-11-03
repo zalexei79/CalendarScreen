@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v147-refund-policy';
+const CACHE_NAME = 'atj-cache-v148-clear-today-navigation';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

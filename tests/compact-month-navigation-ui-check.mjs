@@ -43,15 +43,18 @@ try {
     await page.goto(`http://navigation.test/header?preview&current&user&theme=${theme}&language=${language}&mode=${mode}${theme==='light'?'&light':''}`);
     await page.locator('.dayris-month-trigger').waitFor();
     await page.locator('.activity-streak-pause').waitFor();
+    await page.mouse.move(1,800);
     const originalMonth=await page.locator('.dayris-month-label > span:not(.dayris-month-outgoing)').textContent(),originalYear=await page.locator('.dayris-year-trigger').textContent();
     const original=await dimensions();
     assert.ok(original.height<=108,`compact header: ${theme}/${width}/${language}`);
     if(width>=960)assert.ok(Math.abs(original.titleY-original.flameY)<=5,'desktop keeps the full streak beside the brand');
     else{
-      assert.ok(Math.abs(original.flameY-original.actionsY)<3&&Math.abs(original.items[3].centerY-original.actionsY)<3,'currency, streak and action buttons share one line');
-      assert.ok(original.items[3].right<=original.flameLeft&&original.flameRight+3<=original.actionsLeft,JSON.stringify({check:'toolbar controls do not collide',theme,width,language,original}));
+      assert.ok(Math.abs(original.flameY-original.titleY)<3&&Math.abs(original.items[3].centerY-original.actionsY)<3,'date and streak lead above the utility toolbar');
+      assert.ok(original.items[2].right+2<=original.flameLeft&&original.items[3].right<=original.items[4].left&&original.items[4].right+4<=original.actionsLeft,JSON.stringify({check:'date, Today and toolbar controls do not collide',theme,width,language,original}));
       assert.equal(await page.locator('.activity-streak-value').isVisible(),false);assert.equal(await page.locator('.activity-streak-pause-label').isVisible(),false);assert.equal(await page.locator('.activity-streak-count').textContent(),'18');
-      for(const control of await page.locator('.home-friends-button,[data-site-element="settings"]').all()){const box=await control.boundingBox();assert.ok(Math.abs(box.width-box.height)<1,'round action buttons have matching dimensions');}
+      assert.equal(await page.locator('.dayris-today-action > span').isVisible(),true,'Today always has a readable text label');
+      for(const control of await page.locator('.home-friends-button,[data-site-element="settings"]').all()){const box=await control.boundingBox();assert.ok(box.width>=40&&box.height>=44,'quiet icons retain comfortable touch targets');}
+      for(const control of await page.locator('.dayris-month-step').all())assert.equal(await control.evaluate(node=>getComputedStyle(node).backgroundColor),'rgba(0, 0, 0, 0)','theme does not turn navigation into oversized pills');
     }
     await page.locator('.activity-streak').click();assert.equal(await page.evaluate(()=>handoffs.at(-1).kind),'streak','compact status still opens its details');
     for(let step=0;step<13;step++){
@@ -67,10 +70,9 @@ try {
       assert.ok(layout.items[2].left-layout.yearRight<=8,`next arrow stays close to the year: ${context}`);
       layout.items.forEach((item,index)=>{
         assert.ok(item.top>=layout.top&&item.bottom<=layout.bottom,`one row: ${context}`);
-        if(index===4)assert.ok(item.left>=layout.items[1].right-1,`Today does not overlap date: ${context}`);
         if(width<960&&index>=3)assert.equal(item.left,original.items[index].left,`currency and Today stay anchored: ${context}`);
       });
-      if(step===1&&language==='ru'&&((theme==='gold'&&width!==320)||(['dark','emerald'].includes(theme)&&width===390))){
+      if(step===1&&language==='ru'&&(width<=390||theme==='gold')){
         await page.locator('.dayris-header').screenshot({path:`artifacts/compact-month-${theme}-${width}.png`});
       }
     }
