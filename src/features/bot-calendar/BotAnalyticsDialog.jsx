@@ -3,6 +3,7 @@ import { ArrowUpRight, X } from 'lucide-react';
 import { dateLabel, money, shiftMonth, tradeCount } from './botCalendarModel.js';
 import { outcomeDistribution, performanceScore } from './botAnalyticsModel.js';
 import BotPerformanceChart from './BotPerformanceChart.jsx';
+import BotAdjustments from './BotAdjustments.jsx';
 
 export default function BotAnalyticsDialog({ client, slug = 'bot', overview, start, today, month, onClose }) {
   const dialog = useRef(null);
@@ -40,6 +41,7 @@ export default function BotAnalyticsDialog({ client, slug = 'bot', overview, sta
       {scope==='custom'&&<form className="bot-date-filter" onSubmit={apply}><label>С<input type="date" aria-label="Начало периода аналитики" min={start} max={today} value={from} required onChange={e=>setFrom(e.target.value)}/></label><label>По<input type="date" aria-label="Конец периода аналитики" min={start} max={today} value={to} required onChange={e=>setTo(e.target.value)}/></label><button type="submit">Применить</button>{invalid&&<p role="alert">Начало периода должно быть не позже конца, в пределах опубликованной истории.</p>}</form>}
       {state.loading?<p className="bot-state" role="status">Рассчитываем аналитику…</p>:state.error?<div className="bot-state" role="alert"><p>Не удалось загрузить аналитику.</p><button type="button" onClick={()=>setRetry(n=>n+1)}>Повторить</button></div>:data&&<>
         <p className="bot-analytics-period">{dateLabel(data.from)} — {dateLabel(data.to)} · {tradeCount(s.total)}</p>
+        <BotAdjustments summary={data.adjustments} currency={data.currency}/>
         {data.accounting && <div className="bot-budget-return"><span>Результат периода к стартовому лимиту</span><strong className={Number(data.period_return_percent)<0?'bot-loss':'bot-profit'}>{decimal(data.period_return_percent)}%</strong><small>Закрытый результат / {money(data.accounting.initial_budget,data.currency)}. Доля от торгового лимита.</small></div>}
         {Number(s.total)===0&&<p className="bot-analytics-empty" role="status">В выбранном периоде нет закрытых сделок.</p>}
         <div className="bot-analytics-dashboard">

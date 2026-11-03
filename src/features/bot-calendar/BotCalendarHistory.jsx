@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { dateLabel, money, shiftMonth, tradeCount } from './botCalendarModel.js';
+import BotAdjustments from './BotAdjustments.jsx';
 
 export default function BotCalendarHistory({ client, slug = 'bot', start, today, month, initialDay, initialMonth, onClose }) {
   const [mode, setMode] = useState(initialDay || initialMonth ? 'period' : 'all');
@@ -55,6 +56,7 @@ export default function BotCalendarHistory({ client, slug = 'bot', start, today,
         <div><span>Результат</span><strong className={Number(result?.pnl) >= 0 ? 'bot-profit' : 'bot-loss'}>{loading || error ? '—' : money(result?.pnl || 0, result?.currency, true)}</strong></div>
       </div>
       {result && <p className="bot-history-caption">{dateLabel(result.from, { day: 'numeric', month: 'short', year: 'numeric' })} — {dateLabel(result.to, { day: 'numeric', month: 'short', year: 'numeric' })}<span>Всего в истории: {tradeCount(result.all_total)}</span></p>}
+      <BotAdjustments summary={result?.adjustments} currency={result?.currency}/>
       <div className="bot-trades" aria-busy={loading}>
         {loading ? <p className="bot-state" role="status">Загружаем сделки…</p> : error ? <div className="bot-state" role="alert"><p>Не удалось загрузить сделки.</p><button type="button" onClick={() => setRetry(n => n + 1)}>Повторить</button></div> : result?.trades?.length ? result.trades.map((trade, i) => <React.Fragment key={trade.deal_id}>
           {result.trades[i - 1]?.date_key !== trade.date_key && <h3 className="bot-trades-date">{dateLabel(trade.date_key)}</h3>}

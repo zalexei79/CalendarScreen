@@ -65,6 +65,16 @@ or broker equity. No deposit return or normalized balance is fabricated. A safe
 
 ## Boundaries
 
+Owner-attributed technical corrections are stored separately in
+`bot_calendar_adjustments`. Broker snapshot rows are preserved verbatim, while
+the read-only performance projection excludes corrected deal IDs. Calendar,
+history, analytics, drawdown, and risk-budget calculations use that projection.
+Public correction details show original PnL, excluded PnL, adjusted PnL and each
+excluded record with its owner-provided reason. These persist across hourly
+snapshot replacements. Apply `202611030020_bot_calendar_adjustments.sql` for the
+feature and `bot-calendar-correction-20261103.sql` for the two owner-selected
+3 November records; the latter checks exact date, time, side and amount.
+
 Personal `trades`, balances, user IDs, comments and cTrader tokens are never
 public. Broker account IDs and environment are private configuration and do not
 appear in the public page or month/history API. New tables have RLS and no direct

@@ -356,3 +356,11 @@
   .bot-capital strong { font-size:22px; }
   .bot-capital span { font-size:10px; }
 }
+.bot-adjustments { margin-top:14px; padding:14px; border:1px solid #d8be8640; border-radius:12px; background:#d8be8608; font-size:11px; color:#d9c69e; line-height:1.65; }
+.bot-adjustments summary { cursor:pointer; font-weight:600; }
+.bot-adjustments p,.bot-adjustments small { color:#adb7ad; }
+.bot-adjustments dl { display:flex; flex-wrap:wrap; gap:12px 24px; margin:14px 0; }
+.bot-adjustments dt { color:#aeb8b0; font-size:10px; }
+.bot-adjustments dd { margin:4px 0; font-size:16px; color:#e7dcc2; }
+.bot-adjustments article { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; padding:10px 0; border-top:1px solid #ffffff12; }
+.bot-adjustments small { flex-basis:100%; }
