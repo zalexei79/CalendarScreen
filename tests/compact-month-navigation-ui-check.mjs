@@ -46,7 +46,7 @@ try {
     await page.mouse.move(1,800);
     const originalMonth=await page.locator('.dayris-month-label > span:not(.dayris-month-outgoing)').textContent(),originalYear=await page.locator('.dayris-year-trigger').textContent();
     const original=await dimensions();
-    assert.ok(original.height<=(width<960?116:108),`compact header: ${theme}/${width}/${language}`);
+    assert.ok(original.height<=(width<960?104:108),`compact header: ${theme}/${width}/${language}`);
     if(width>=960)assert.ok(Math.abs(original.titleY-original.flameY)<=5,'desktop keeps the full streak beside the brand');
     else{
       assert.ok(Math.abs(original.flameY-original.actionsY)<3&&original.titleY>original.actionsY+20,'global app tools sit above the calendar heading');
@@ -64,8 +64,7 @@ try {
       assert.equal(layout.clippedMonth,false,`full month name fits: ${context}`);
       assert.equal(layout.height,original.height,`row height stable: ${context}`);
       assert.equal(layout.headerHeight,original.headerHeight,`calendar stays in place: ${context}`);
-      if(width>=960)assert.ok(layout.yearLeft>=layout.monthRight-1,`month/year do not overlap: ${context}`);
-      else assert.ok(layout.yearBottom<=layout.monthTop+1,'the year is a quiet label above the month');
+      assert.ok(layout.yearLeft>=layout.monthRight+2,`month and year share one readable line: ${context}`);
       assert.ok(Math.abs(layout.items[0].centerY-layout.monthY)<=5&&Math.abs(layout.items[2].centerY-layout.monthY)<=5,`month arrows share the date line: ${context}`);
       assert.ok(layout.items[0].right<=layout.items[1].left+1&&layout.items[1].right<=layout.items[2].left+1,`arrows sit either side of date: ${context}`);
       assert.ok(layout.items[2].left-layout.items[1].right<=8,`next arrow stays close to the period heading: ${context}`);

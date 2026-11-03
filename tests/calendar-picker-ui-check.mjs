@@ -11,6 +11,14 @@ try{
  await page.route('**/*',route=>{const url=new URL(route.request().url());if(url.origin!=='http://pickers.test')return route.abort();const file=path.resolve('public','.'+url.pathname);if(file.startsWith(path.resolve('public')+path.sep)&&fs.existsSync(file)&&fs.statSync(file).isFile())return route.fulfill({body:fs.readFileSync(file),contentType:file.endsWith('.png')?'image/png':'image/svg+xml'});return route.fulfill({contentType:'text/html',body:`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style><div id="root"></div><script>${js}</script>`});});
  const period=page.locator('.calendar-period-menu'),currency=page.locator('.calendar-currency-menu');
  const settle=menu=>menu.evaluate(node=>Promise.all(node.getAnimations({subtree:true}).map(animation=>animation.finished.catch(()=>{}))));
+ async function headerControl(selector,activeMenu){
+  const control=page.locator(selector);
+  // With enlarged text, a clamped menu can cover the next header control.
+  if(!await control.evaluate(node=>{const box=node.getBoundingClientRect();return node.contains(document.elementFromPoint(box.x+box.width/2,box.y+box.height/2));})){
+   await page.mouse.click(2,2);await activeMenu.waitFor({state:'hidden'});
+  }
+  await control.click();
+ }
  async function inside(menu,width,height){await settle(menu);const box=await menu.boundingBox();assert.ok(box.x>=11&&box.x+box.width<=width-11&&box.y>=11&&box.y+box.height<=height-11,JSON.stringify({width,height,box}));assert.equal(await menu.evaluate(node=>node.parentElement===document.body),true,'menus escape all header clipping');}
  const cases=[[320,568,'dark','ru'],[390,844,'emerald','uk'],[390,844,'gold','md'],[1280,900,'light','en'],[740,360,'purple','ru'],[390,844,'dark','zh-CN'],[390,844,'emerald','ru',true]];
  for(const [width,height,theme,language,large] of (process.argv.includes('--quick')?[cases.at(-1)]:cases)){
@@ -43,8 +51,8 @@ try{
   assert.ok(overflow.scrollWidth<=overflow.width,JSON.stringify(overflow));
  }
  await page.locator('.dayris-year-trigger').click();await page.setViewportSize({width:320,height:568});await inside(period,320,568);
- await page.locator('.calendar-currency-trigger').click();await period.waitFor({state:'hidden'});await currency.waitFor({state:'visible'});assert.equal(await page.locator('.dayris-year-trigger').getAttribute('aria-expanded'),'false');
- await page.locator('.dayris-month-trigger').click();await currency.waitFor({state:'hidden'});await period.waitFor({state:'visible'});assert.equal(await page.locator('.calendar-currency-trigger').getAttribute('aria-expanded'),'false');await page.keyboard.press('Escape');await period.waitFor({state:'hidden'});
+ await headerControl('.calendar-currency-trigger',period);await period.waitFor({state:'hidden'});await currency.waitFor({state:'visible'});assert.equal(await page.locator('.dayris-year-trigger').getAttribute('aria-expanded'),'false');
+ await headerControl('.dayris-month-trigger',currency);await currency.waitFor({state:'hidden'});await period.waitFor({state:'visible'});assert.equal(await page.locator('.calendar-currency-trigger').getAttribute('aria-expanded'),'false');await page.keyboard.press('Escape');await period.waitFor({state:'hidden'});
  await page.emulateMedia({reducedMotion:'reduce'});await page.locator('.dayris-year-trigger').click();assert.equal(await period.evaluate(node=>node.getAnimations({subtree:true}).length),0);await page.keyboard.press('Escape');
  assert.deepEqual(errors,[]);console.log('PASS: currency bounds and all options, month grid, long-range year paging/swipe/keyboard, outside/Escape dismissal, focus return, five locales, phone/desktop/landscape, enlarged text and reduced motion');
 }finally{await browser.close();}

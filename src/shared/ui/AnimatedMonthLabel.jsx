@@ -19,7 +19,7 @@ export default function AnimatedMonthLabel({ month, year, label }) {
       const heading = text.closest('.dayris-month-title');
       const year = heading?.children[1];
       yearMotion.current?.cancel();
-      yearMotion.current = heading && getComputedStyle(heading).flexDirection !== 'column' ? year?.animate([
+      yearMotion.current = heading && window.matchMedia('(min-width:960px)').matches && getComputedStyle(heading).flexDirection !== 'column' ? year?.animate([
         { transform: `translateX(${width.current - nextWidth}px)` },
         { transform: 'translateX(0)' },
       ], { duration: 420, easing: 'cubic-bezier(.22,1,.36,1)' }) : null;

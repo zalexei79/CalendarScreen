@@ -32,6 +32,14 @@
 .dayris-header .dayris-date-navigation button:focus-visible { outline:2px solid var(--dayris-accent,var(--dayris-gold,#d5bc83)); outline-offset:1px; }
 @media(max-width:959px) {
   .dayris-header { display:block; }
+  .dayris-header .dayris-date-navigation { align-items:center; min-height:44px; }
+  .dayris-header .dayris-date-cluster { align-items:center; }
+  .dayris-header .dayris-month-title { flex-direction:row; align-items:baseline; gap:5px; }
+  .dayris-header .dayris-month-title > div:last-child { order:0; }
+  .dayris-header .dayris-month-trigger { height:44px; min-height:44px; padding-block:6px; font-size:22px; letter-spacing:-.03em; }
+  .dayris-header .dayris-year-trigger { height:44px; min-height:44px; padding:0; font-size:16px; line-height:32px; font-weight:450; letter-spacing:-.025em; }
+  .dayris-header .dayris-year-chevron { display:none; }
+  .dayris-header .dayris-month-step { height:44px; min-height:44px; }
   .dayris-header .dayris-brand-row { min-height:44px; }
   .dayris-header [data-site-element="brand"] { flex:none; }
   .dayris-header [data-site-element="brand"] > div:nth-child(2) { display:block; }
@@ -53,7 +61,9 @@
   .dayris-header [data-site-element="brand"] > div:nth-child(2) { display:none; }
   .dayris-header .dayris-date-cluster { gap:3px; }
   .dayris-header .dayris-date-cluster > button { width:24px; }
-  .dayris-header .dayris-month-trigger { font-size:23px; }
+  .dayris-header .dayris-month-trigger { font-size:19px; }
+  .dayris-header .dayris-year-trigger { font-size:13px; }
+  .dayris-header .dayris-month-title { gap:4px; }
   .dayris-header .dayris-status-controls { gap:4px; }
   .dayris-header .dayris-today-action { padding-inline:2px; font-size:11px; }
   .dayris-header .dayris-header-actions > .relative > button:not(.workspace-mode-toggle),.dayris-header .home-friends-button { width:40px; min-width:40px; }
@@ -61,6 +71,9 @@
   .dayris-header .workspace-pass-orbit { width:93px; }
   .dayris-header .workspace-selector.workspace-pass .workspace-pro-info { width:36px; }
   .dayris-header .workspace-pass .workspace-pro-info::before { inset:12px 8px; }
+}
+@media(min-width:390px) and (max-width:959px) {
+  .dayris-header .dayris-month-trigger { font-size:24px; }
 }
 @media(min-width:960px) {
   .dayris-header { display:grid; grid-template-columns:auto auto auto auto auto minmax(0,1fr); align-items:center; gap:12px; }
