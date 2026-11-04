@@ -364,3 +364,6 @@
 .bot-adjustments dd { margin:4px 0; font-size:16px; color:#e7dcc2; }
 .bot-adjustments article { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; padding:10px 0; border-top:1px solid #ffffff12; }
 .bot-adjustments small { flex-basis:100%; }
+.bot-about-dialog { width:min(480px,calc(100vw - 24px)); }
+.bot-about-note { margin:18px 0; color:#b3bcb8; font-size:13px; line-height:1.75; }
+.bot-about-privacy { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 0 2px; border-top:1px solid #ffffff15; color:#e2d0a9; font-size:14px; text-decoration:none; }

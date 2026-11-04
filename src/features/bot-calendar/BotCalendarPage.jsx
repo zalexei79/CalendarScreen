@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowRight, ArrowUpRight, ChartNoAxesCombined, Check, ChevronLeft, ChevronRight, Copy, History, Menu, PartyPopper, Share2, Wrench, X } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, ChartNoAxesCombined, Check, ChevronLeft, ChevronRight, Copy, History, Info, Menu, PartyPopper, Share2, Wrench, X } from 'lucide-react';
 import CalendarDayCell from '../../../CalendarDayCell.jsx';
 import BrandIcon from '../../shared/ui/BrandIcon.jsx';
 import { copyText } from '../../shared/lib/copyText.js';
@@ -30,6 +30,11 @@ function BotStagePage({ client, stage, periods, onPeriods, onStage }) {
   const [analyticsRetry, setAnalyticsRetry] = useState(0);
   const [notice, setNotice] = useState('');
   const [copyFailed, setCopyFailed] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const aboutDialog = useRef(null);
+  useEffect(() => {
+    if (aboutOpen) aboutDialog.current?.showModal(); else aboutDialog.current?.close();
+  }, [aboutOpen]);
   const [adminId, setAdminId] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [editDay, setEditDay] = useState(null);
@@ -132,6 +137,7 @@ function BotStagePage({ client, stage, periods, onPeriods, onStage }) {
               <button type="button" disabled={scheduled} onClick={() => { closeMenu(); setAnalyticsOpen(true); }}><ChartNoAxesCombined aria-hidden="true" />Аналитика бота</button>
               <button type="button" disabled={loading || error || !ready} onClick={() => openHistory()}><History aria-hidden="true" />История</button>
               <button type="button" onClick={shareCalendar}><Share2 aria-hidden="true" />Поделиться календарём</button>
+              <button type="button" onClick={() => { closeMenu(); setAboutOpen(true); }}><Info aria-hidden="true" />О календаре</button>
               <a href="/"><ArrowRight aria-hidden="true" />Создать свой календарь</a>
             </nav>
           </details>
@@ -139,7 +145,6 @@ function BotStagePage({ client, stage, periods, onPeriods, onStage }) {
       </header>
       {periods.length > 1 && <div className="bot-stage-switch"><label htmlFor="bot-stage-select">Этап торговли</label><select id="bot-stage-select" value={slug} onChange={event=>onStage(periods.find(item=>item.slug===event.target.value))}>{periods.map(item=><option key={item.slug} value={item.slug}>{item.title}{item.archived?' · Архив':''}</option>)}</select></div>}
       {adminId && <div className="bot-editor-bar"><span>{editMode ? 'Выбери день календаря, чтобы изменить записи и текст' : 'У тебя есть доступ к редактированию этого календаря'}</span><button type="button" aria-pressed={editMode} onClick={() => setEditMode(value => !value)}>{editMode ? 'Завершить редактирование' : 'Редактировать дни'}</button></div>}
-      {data?.editor_days?.length > 0 && <p className="bot-editor-disclosure">В календаре есть ручные правки владельца. Итоги и аналитика учитывают отредактированные записи.</p>}
       {data?.real_account && <p className="bot-live-badge"><span aria-hidden="true"/>Реальный счёт · Live</p>}
       {accounting && <section className="bot-capital" aria-label="Торговый лимит этапа">
         <div><span>Стартовый торговый лимит</span><strong>{money(accounting.initial_budget,currency)}</strong></div>
@@ -203,6 +208,14 @@ function BotStagePage({ client, stage, periods, onPeriods, onStage }) {
     {history && <BotCalendarHistory client={client} slug={slug} start={start} today={today} month={month} initialDay={history.day} initialMonth={history.month} onClose={() => setHistory(null)} />}
     {adminId && editDay && <BotDayEditor key={`${adminId}:${slug}:${editDay}`} client={client} slug={slug} day={editDay} onClose={() => setEditDay(null)} onSaved={() => { setEditDay(null); setRetry(n => n + 1); setAnalyticsRetry(n => n + 1); setNotice('Изменения сохранены для всех'); }} />}
     {analyticsOpen && <BotAnalyticsDialog client={client} slug={slug} overview={analytics.data} start={start} today={today} month={month} onClose={() => setAnalyticsOpen(false)} />}
+    <dialog ref={aboutDialog} className="bot-dialog bot-about-dialog" aria-labelledby="bot-about-title" onCancel={() => setAboutOpen(false)} onClose={() => setAboutOpen(false)}>
+      <div className="bot-dialog-inner">
+        <header><h2 id="bot-about-title">О календаре</h2><button type="button" aria-label="Закрыть" onClick={() => setAboutOpen(false)}><X aria-hidden="true" /></button></header>
+        <p className="bot-about-note">При технических сбоях системы или локальных ошибках на торговом счёте отдельные сделки и дни могут корректироваться. Итоги и аналитика рассчитываются по опубликованным данным с учётом этих изменений.</p>
+        {data?.editor_days?.length > 0 && <p className="bot-about-note">В текущем календаре есть скорректированные дни.</p>}
+        <a className="bot-about-privacy" href="/privacy.html" target="_blank" rel="noopener noreferrer">Политика конфиденциальности<ArrowUpRight size={16} aria-hidden="true" /></a>
+      </div>
+    </dialog>
     <dialog ref={linkDialog} className="bot-dialog bot-link-dialog" onCancel={() => setCopyFailed(false)} onClose={() => setCopyFailed(false)} aria-labelledby="bot-link-title">
       <div className="bot-dialog-inner"><header><h2 id="bot-link-title">Ссылка на календарь</h2><button type="button" aria-label="Закрыть ссылку" onClick={() => setCopyFailed(false)}><X aria-hidden="true" /></button></header>
         <p className="bot-settings-note">Скопируйте ссылку или нажмите и удерживайте её, чтобы отправить.</p>
