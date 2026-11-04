@@ -27,7 +27,7 @@ export default function PremiumHistoryWorkspace({model, records, language, trade
   const measureCard = () => {
     const rect=card.current.getBoundingClientRect();
     const paint=getComputedStyle(card.current);
-    return {height:rect.height,marginBottom:paint.marginBottom,borderRadius:paint.borderRadius,boxShadow:paint.boxShadow,parts:[...card.current.querySelectorAll(movingParts)].map(node=>{
+    return {width:rect.width,height:rect.height,marginLeft:paint.marginLeft,marginRight:paint.marginRight,marginBottom:paint.marginBottom,borderRadius:paint.borderRadius,boxShadow:paint.boxShadow,parts:[...card.current.querySelectorAll(movingParts)].map(node=>{
       const part=node.getBoundingClientRect();return {x:part.x-rect.x,y:part.y-rect.y,height:part.height};
     })};
   };
@@ -38,7 +38,7 @@ export default function PremiumHistoryWorkspace({model, records, language, trade
     cardMotion.current.forEach(item=>item.cancel());cardMotion.current=[];
     if(!before||matchMedia('(prefers-reduced-motion: reduce)').matches||!card.current?.animate)return;
     const after=measureCard(),timing={duration:480,easing:'cubic-bezier(.22,1,.36,1)'};
-    const frame=value=>({height:`${value.height}px`,marginBottom:value.marginBottom,borderRadius:value.borderRadius,boxShadow:value.boxShadow,overflow:'hidden'});
+    const frame=value=>({width:`${value.width}px`,height:`${value.height}px`,minHeight:'0px',marginLeft:value.marginLeft,marginRight:value.marginRight,marginBottom:value.marginBottom,borderRadius:value.borderRadius,boxShadow:value.boxShadow,overflow:'hidden'});
     cardMotion.current.push(card.current.animate([frame(before),frame(after)],timing));
     [...card.current.querySelectorAll(movingParts)].forEach((node,index)=>{
       const from=before.parts[index],to=after.parts[index];if(!from||!to?.height)return;
@@ -76,9 +76,10 @@ export default function PremiumHistoryWorkspace({model, records, language, trade
     if((value==='records')!==recordsView) pendingCardLayout.current=measureCard();
     chooseTab(value==='records'?'records':lastChapter.current[contextKey]);
   };
-  const openCardAnalytics = () => {
-    chooseView('analytics');
-    tabs.current?.querySelector('[data-view-tab="analytics"]')?.focus({preventScroll:true});
+  const toggleCardView = () => {
+    const next=recordsView?'analytics':'records';
+    chooseView(next);
+    tabs.current?.querySelector(`[data-view-tab="${next}"]`)?.focus({preventScroll:true});
   };
   const fact = (label, value) => <div className="premium-history-fact"><span>{label}</span><strong>{value ?? '—'}</strong></div>;
   const rowList = (rows, compact = false) => <>
@@ -165,7 +166,7 @@ export default function PremiumHistoryWorkspace({model, records, language, trade
       {summary.mixed && <p className="premium-history-hint">{copy.mixed}</p>}
       <div className="premium-history-totals"><div><span><ArrowDownLeft size={14} aria-hidden="true"/>{trading ? copy.winning : copy.income}</span><strong>{summary.mixed ? '—' : money(summary.income)}</strong></div><div><span><ArrowUpRight size={14} aria-hidden="true"/>{trading ? copy.losing : copy.expense}</span><strong>{summary.mixed ? '—' : money(summary.expense)}</strong></div></div>
       {model.comparison && <div className="premium-history-hero-delta"><strong>{signed(model.comparison.difference)} {unit}</strong><span>{copy.previous} · {date(model.comparison.range.from)} — {date(model.comparison.range.to)}</span></div>}
-      {recordsView && <button type="button" className="premium-history-open-analytics" aria-label={`${trading?copy.tradeResult:copy.result} — ${copy.advanced}`} aria-controls={`${chapterId}-view-analytics`} onClick={openCardAnalytics}/>}
+      <button type="button" className="premium-history-open-analytics" aria-label={`${trading?copy.tradeResult:copy.result} — ${recordsView?copy.advanced:trading?copy.trades:copy.records}`} aria-controls={`${chapterId}-view-${recordsView?'analytics':'records'}`} aria-expanded={!recordsView} onClick={toggleCardView}/>
     </section>
     <div className="premium-history-controls">
       <div className="premium-history-select premium-history-period"><select aria-label={copy.period} value={period} onChange={event => onPeriod(event.target.value)}>{periodOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select><ChevronDown size={13} aria-hidden="true"/></div>

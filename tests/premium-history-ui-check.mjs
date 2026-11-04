@@ -85,17 +85,28 @@ try{for(const [width,theme,language,trader]of scenarios){
     assert.equal(compact(await amount.innerText()),display(1410));
     await workspace.getByRole('button',{name:copy.all,exact:true}).click();
   }
+  await workspace.locator('.premium-history-card').evaluate(node=>{
+    const animate=node.animate.bind(node);
+    node.animate=(frames,options)=>{
+      if(frames[0]?.height)node.dataset.testReveal=JSON.stringify({from:parseFloat(frames[0].height),to:parseFloat(frames.at(-1).height)});
+      return animate(frames,options);
+    };
+  });
   await workspace.locator('.premium-history-open-analytics').click();
   const reveal=await workspace.locator('.premium-history-card').evaluate(node=>{
-    const motion=node.getAnimations().find(item=>item.effect.getKeyframes().some(frame=>'height' in frame));
-    if(!motion)return null;
-    const frames=motion.effect.getKeyframes();return {from:parseFloat(frames[0].height),to:parseFloat(frames.at(-1).height)};
+    return JSON.parse(node.dataset.testReveal||'null');
   });
   assert.ok(reveal&&reveal.to>reveal.from,'The existing summary card grows into its analytics layout');
   await page.waitForTimeout(520);
   assert.equal(await workspace.getAttribute('data-view'),'analytics');
   assert.equal(await workspace.locator('.premium-history-records-panel').isVisible(),false);
   assert.equal(await workspace.locator('.financial-hero').getAttribute('data-compact'),'false');
+  const bankCard=await workspace.locator('.financial-hero').boundingBox();
+  assert.ok(bankCard.width<=431,'The analytics card keeps a bank-card width on desktop');
+  await workspace.locator('.premium-history-open-analytics').click();await page.waitForTimeout(520);
+  assert.equal(await workspace.getAttribute('data-view'),'records','Tapping the analytics card returns to the journal');
+  assert.ok((await workspace.locator('.financial-hero').boundingBox()).height<115,'The card collapses back to its compact journal form');
+  await workspace.locator('.premium-history-open-analytics').click();await page.waitForTimeout(520);
   const chapters=workspace.locator('.premium-history-chapter');
   assert.equal(await chapters.count(),trader?5:4,'the record list is not duplicated inside analytics');
   if(trader){

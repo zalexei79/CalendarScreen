@@ -2,6 +2,7 @@ import {useEffect,useRef,useState} from 'react';
 import {normalizeVoiceCategory} from '../lib/voiceCategory.js';
 import {getMoneyCategoryMeta} from '../config/constants.js';
 import useCategoryPreferences from './useCategoryPreferences.js';
+import {startCategorySync,queueCategoryChange} from '../lib/categoryAccountSync.js';
 const eventName='dayris-money-categories';
 function valid(items){return Array.isArray(items)?items.filter(value=>typeof value==='string'&&value.trim()&&value.length<=60):[];}
 export default function useVoiceCategories(userId){
@@ -13,6 +14,7 @@ export default function useVoiceCategories(userId){
   catch{return cache.current.get(key)||{items:[],hidden:[]};}
  }
  const [state,setState]=useState(()=>({key,...read()}));
+ useEffect(()=>startCategorySync(userId),[userId]);
  useEffect(()=>{
   const refresh=event=>{
    if(event?.type===eventName&&event.detail.key!==key)return;
@@ -33,6 +35,7 @@ export default function useVoiceCategories(userId){
   const existing=read(),id=normalizeVoiceCategory(value),canonical=getMoneyCategoryMeta(value)?.key||existing.items.find(item=>normalizeVoiceCategory(item)===id)||value;
   preferences.remember(canonical);
   write({items:getMoneyCategoryMeta(value)||existing.items.some(item=>normalizeVoiceCategory(item)===id)?existing.items:[...existing.items,value].slice(-100),hidden:existing.hidden.filter(item=>normalizeVoiceCategory(item)!==id)});
+  if((!getMoneyCategoryMeta(value)&&!existing.items.some(item=>normalizeVoiceCategory(item)===id))||existing.hidden.some(item=>normalizeVoiceCategory(item)===id))queueCategoryChange(userId,canonical,false);
   return canonical;
  }
  function remove(name){
@@ -40,6 +43,7 @@ export default function useVoiceCategories(userId){
   const existing=read(),id=normalizeVoiceCategory(name);
   write({items:existing.items.filter(item=>normalizeVoiceCategory(item)!==id),hidden:[...existing.hidden.filter(item=>normalizeVoiceCategory(item)!==id),name]});
   preferences.forget(name);
+  queueCategoryChange(userId,name,true);
  }
  return {categories:current.items,hidden:current.hidden,icons:preferences.profile.icons,add,remove};
 }
