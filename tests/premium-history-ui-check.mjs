@@ -44,7 +44,16 @@ try{for(const [width,theme,language,trader]of scenarios){
   return url.hostname==='premium.test'?route.fulfill({contentType:'text/html',body:`<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}body{margin:0}</style><div id="root"></div><script>${script}</script>`}):route.abort();
  });
  try{
-  await page.goto('http://premium.test');await page.getByRole('button',{name:new RegExp('^'+translate(language,'history'))}).first().click();
+  await page.goto('http://premium.test',{waitUntil:'domcontentloaded',timeout:30000});
+  if(width===320&&language==='ru'&&!trader){
+    await page.getByRole('button',{name:translate(language,'addAction'),exact:true}).click();
+    const composer=page.locator('.quick-money-composer'),note=composer.locator('.quick-money-note');await note.waitFor();
+    const before=await note.evaluate(node=>getComputedStyle(node).backgroundColor);
+    for(let i=0;i<3;i++){await note.tap();assert.equal(await note.getAttribute('aria-expanded'),'true');await note.tap();assert.equal(await note.getAttribute('aria-expanded'),'false');}
+    assert.equal(await note.evaluate(node=>getComputedStyle(node).backgroundColor),before,'Touch toggles never leave a filled hover capsule');
+    await composer.getByRole('button',{name:translate(language,'close'),exact:true}).click();
+  }
+  await page.getByRole('button',{name:new RegExp('^'+translate(language,'history'))}).first().click();
   const dialog=page.locator('.premium-history-dialog'),workspace=dialog.locator('.premium-history-workspace');await dialog.waitFor();
   await page.waitForTimeout(400);
   const amount=dialog.locator('.premium-history-amount');
@@ -76,7 +85,14 @@ try{for(const [width,theme,language,trader]of scenarios){
     assert.equal(compact(await amount.innerText()),display(1410));
     await workspace.getByRole('button',{name:copy.all,exact:true}).click();
   }
-  await analysisTab.click();
+  await workspace.locator('.premium-history-open-analytics').click();
+  const reveal=await workspace.locator('.premium-history-card').evaluate(node=>{
+    const motion=node.getAnimations().find(item=>item.effect.getKeyframes().some(frame=>'height' in frame));
+    if(!motion)return null;
+    const frames=motion.effect.getKeyframes();return {from:parseFloat(frames[0].height),to:parseFloat(frames.at(-1).height)};
+  });
+  assert.ok(reveal&&reveal.to>reveal.from,'The existing summary card grows into its analytics layout');
+  await page.waitForTimeout(520);
   assert.equal(await workspace.getAttribute('data-view'),'analytics');
   assert.equal(await workspace.locator('.premium-history-records-panel').isVisible(),false);
   assert.equal(await workspace.locator('.financial-hero').getAttribute('data-compact'),'false');
@@ -135,6 +151,9 @@ try{for(const [width,theme,language,trader]of scenarios){
   await dialog.screenshot({path:`artifacts/premium-history-records-${width}-${theme}-${language}.png`,animations:'disabled'});
   await workspace.getByRole('tab',{name:copy.advanced,exact:true}).click();await dialog.screenshot({path:`artifacts/premium-history-analytics-${width}-${theme}-${language}.png`,animations:'disabled'});
   await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await workspace.locator('.premium-history-main-tabs button').first().evaluate(el=>getComputedStyle(el).transitionDuration),'0s');
+  await recordsTab.click();
+  await workspace.locator('.premium-history-open-analytics').click();
+  assert.equal(await workspace.locator('.premium-history-card').evaluate(node=>node.getAnimations().some(item=>item.effect.getKeyframes().some(frame=>'height' in frame))),false,'Reduced motion switches directly to analytics');
   assert.deepEqual(errors,[]);console.log('PASS',width,theme,language,trader?'trader + inherited PRO':'PRO');
  }catch(error){await page.screenshot({path:`artifacts/premium-history-failure-${width}-${theme}-${language}-${trader}.png`,fullPage:true});throw error;}finally{await context.close();}
 }}finally{await browser.close();}

@@ -63,6 +63,10 @@
 .quick-money-category .category-picker-trigger > span:nth-child(2) { font-size:13px; font-weight:500; }
 .quick-money-category .category-picker-icon { width:28px; height:28px; border-radius:8px; background:rgba(190,166,113,.06); }
 .quick-money-composer .quick-money-note { min-height:40px; margin:0; padding:0 48px 0 8px; font-size:11px; color:var(--qm-muted); }
+.quick-money-composer .quick-money-note:hover,.quick-money-composer .quick-money-note:active { background:transparent; box-shadow:none; }
+.quick-money-composer .quick-money-note:focus:not(:focus-visible) { outline:none; box-shadow:none; }
+.quick-money-composer .quick-money-note:focus-visible { outline:2px solid var(--dayris-accent,#c9ad72); outline-offset:2px; }
+@media(hover:hover) and (pointer:fine) { .quick-money-composer .quick-money-note:hover { background:var(--qm-control); } }
 .quick-money-composer .amount-keypad { position:relative; margin:0; }
 .quick-money-composer .amount-presets { gap:6px; margin:0 0 4px; }
 .quick-money-composer .amount-presets button { min-height:40px; border-radius:10px; font-size:12px; background:var(--qm-control); color:var(--qm-muted); box-shadow:inset 0 0 0 1px var(--qm-line); }

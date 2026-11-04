@@ -1,4 +1,4 @@
-import React, {useEffect, useId, useRef, useState} from 'react';
+import React, {useEffect, useLayoutEffect, useId, useRef, useState} from 'react';
 import {ArrowDownLeft, ArrowUpRight, ArrowLeft, ArrowRight, ChevronDown, ChevronRight, SlidersHorizontal, Wallet, ChartNoAxesCombined, X, Pencil} from 'lucide-react';
 import {intlLocale} from '../../shared/i18n/locale.js';
 import {getMoneyCategoryLabel} from '../../shared/config/constants.js';
@@ -22,6 +22,35 @@ export default function PremiumHistoryWorkspace({model, records, language, trade
   const [riskMode,setRiskMode]=useState('quality'), [breakdownMode,setBreakdownMode]=useState('radar'), [graphMode,setGraphMode]=useState('cumulative');
   const [direction, setDirection] = useState('expense'), [expanded, setExpanded] = useState(false), [selected, setSelected] = useState(null);
   const card = useRef(null), amountNode = useRef(null), panel = useRef(null), detailTitle = useRef(null), previousAmount = useRef(null), animation = useRef(null);
+  const pendingCardLayout = useRef(null), cardMotion = useRef([]);
+  const movingParts = '.premium-history-result-label, .premium-history-amount, .premium-history-balance>span, .premium-history-caption';
+  const measureCard = () => {
+    const rect=card.current.getBoundingClientRect();
+    const paint=getComputedStyle(card.current);
+    return {height:rect.height,marginBottom:paint.marginBottom,borderRadius:paint.borderRadius,boxShadow:paint.boxShadow,parts:[...card.current.querySelectorAll(movingParts)].map(node=>{
+      const part=node.getBoundingClientRect();return {x:part.x-rect.x,y:part.y-rect.y,height:part.height};
+    })};
+  };
+  useLayoutEffect(()=>{
+    // Keep one card mounted: unfold its height and carry the existing figures
+    // from their journal positions into the larger analytics composition.
+    const before=pendingCardLayout.current;pendingCardLayout.current=null;
+    cardMotion.current.forEach(item=>item.cancel());cardMotion.current=[];
+    if(!before||matchMedia('(prefers-reduced-motion: reduce)').matches||!card.current?.animate)return;
+    const after=measureCard(),timing={duration:480,easing:'cubic-bezier(.22,1,.36,1)'};
+    const frame=value=>({height:`${value.height}px`,marginBottom:value.marginBottom,borderRadius:value.borderRadius,boxShadow:value.boxShadow,overflow:'hidden'});
+    cardMotion.current.push(card.current.animate([frame(before),frame(after)],timing));
+    [...card.current.querySelectorAll(movingParts)].forEach((node,index)=>{
+      const from=before.parts[index],to=after.parts[index];if(!from||!to?.height)return;
+      cardMotion.current.push(node.animate([
+        {transformOrigin:'top left',transform:`translate(${from.x-to.x}px,${from.y-to.y}px) scale(${from.height/to.height})`},
+        {transformOrigin:'top left',transform:'translate(0,0) scale(1)'},
+      ],timing));
+    });
+    if(!recordsView) for(const node of card.current.querySelectorAll('.premium-history-totals,.premium-history-hero-delta')) {
+      cardMotion.current.push(node.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'translateY(0)'}],{duration:300,delay:140,fill:'backwards',easing:timing.easing}));
+    }
+  },[recordsView]);
   const money = value => new Intl.NumberFormat(intlLocale(language), {minimumFractionDigits:2,maximumFractionDigits:2}).format(Math.abs(value));
   const signed = value => `${value < 0 ? '−' : value > 0 ? '+' : ''}${money(value)}`;
   const date = value => new Intl.DateTimeFormat(intlLocale(language), {day:'numeric', month:'long', year:'numeric', timeZone:'UTC'}).format(new Date(value + 'T12:00:00Z'));
@@ -32,8 +61,8 @@ export default function PremiumHistoryWorkspace({model, records, language, trade
   useEffect(() => {setExpanded(false); setSelected(null);}, [trading, period, currency, platform, scope, category, dateFrom, dateTo]);
   useEffect(() => {
     const media = matchMedia('(prefers-reduced-motion: reduce)');
-    const stop = () => {if (media.matches) {animation.current?.cancel(); panel.current?.getAnimations().forEach(item => item.cancel());}};
-    media.addEventListener('change', stop); return () => {media.removeEventListener('change', stop); animation.current?.cancel();};
+    const stop = () => {if (media.matches) {animation.current?.cancel(); panel.current?.getAnimations().forEach(item => item.cancel());cardMotion.current.forEach(item=>item.cancel());}};
+    media.addEventListener('change', stop); return () => {media.removeEventListener('change', stop); animation.current?.cancel();cardMotion.current.forEach(item=>item.cancel());};
   }, []);
   useEffect(() => {
     if (previousAmount.current !== null && previousAmount.current !== amount && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -43,7 +72,14 @@ export default function PremiumHistoryWorkspace({model, records, language, trade
   }, [amount]);
   useEffect(() => {if (selectedRow) detailTitle.current?.focus({preventScroll:true});}, [selectedRow]);
   const chooseTab = value => {setSelected(null);if(value!=='records'&&value!=='trades')lastChapter.current[contextKey]=value;onTab(value);};
-  const chooseView = value => chooseTab(value==='records'?'records':lastChapter.current[contextKey]);
+  const chooseView = value => {
+    if((value==='records')!==recordsView) pendingCardLayout.current=measureCard();
+    chooseTab(value==='records'?'records':lastChapter.current[contextKey]);
+  };
+  const openCardAnalytics = () => {
+    chooseView('analytics');
+    tabs.current?.querySelector('[data-view-tab="analytics"]')?.focus({preventScroll:true});
+  };
   const fact = (label, value) => <div className="premium-history-fact"><span>{label}</span><strong>{value ?? '—'}</strong></div>;
   const rowList = (rows, compact = false) => <>
     {rows.length ? (compact ? rows.slice(0,3) : expanded ? rows : rows.slice(0,trading ? 5 : 3)).map((row, index) => {
@@ -129,6 +165,7 @@ export default function PremiumHistoryWorkspace({model, records, language, trade
       {summary.mixed && <p className="premium-history-hint">{copy.mixed}</p>}
       <div className="premium-history-totals"><div><span><ArrowDownLeft size={14} aria-hidden="true"/>{trading ? copy.winning : copy.income}</span><strong>{summary.mixed ? '—' : money(summary.income)}</strong></div><div><span><ArrowUpRight size={14} aria-hidden="true"/>{trading ? copy.losing : copy.expense}</span><strong>{summary.mixed ? '—' : money(summary.expense)}</strong></div></div>
       {model.comparison && <div className="premium-history-hero-delta"><strong>{signed(model.comparison.difference)} {unit}</strong><span>{copy.previous} · {date(model.comparison.range.from)} — {date(model.comparison.range.to)}</span></div>}
+      {recordsView && <button type="button" className="premium-history-open-analytics" aria-label={`${trading?copy.tradeResult:copy.result} — ${copy.advanced}`} aria-controls={`${chapterId}-view-analytics`} onClick={openCardAnalytics}/>}
     </section>
     <div className="premium-history-controls">
       <div className="premium-history-select premium-history-period"><select aria-label={copy.period} value={period} onChange={event => onPeriod(event.target.value)}>{periodOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select><ChevronDown size={13} aria-hidden="true"/></div>
