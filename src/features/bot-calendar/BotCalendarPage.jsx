@@ -7,7 +7,6 @@ import { BOT_DAY_NOTES, BOT_START_DATE, calendarCells, dateKey, dateLabel, money
 import BotCalendarHistory from './BotCalendarHistory.jsx';
 import BotAnalyticsDialog from './BotAnalyticsDialog.jsx';
 import BotPerformanceChart from './BotPerformanceChart.jsx';
-import BotAdjustments from './BotAdjustments.jsx';
 import BotDayEditor from './BotDayEditor.jsx';
 import './BotCalendarPage.css';
 
@@ -149,7 +148,6 @@ function BotStagePage({ client, stage, periods, onPeriods, onStage }) {
         <p>Стартовый лимит + закрытый результат этапа. Процент считается от стартового лимита.</p>
       </section>}
       {scheduled && <p className="bot-stage-start" role="status">Начинаем {dateLabel(start, {day:'numeric',month:'long'})} в {new Intl.DateTimeFormat('ru-RU',{timeZone:'Europe/Bucharest',hour:'2-digit',minute:'2-digit'}).format(new Date(data.starts_at))} · Бухарест. Здесь появятся сделки нового этапа.</p>}
-      <BotAdjustments summary={data?.adjustments} currency={currency}/>
       <section className="bot-calendar" aria-label="Календарь результатов" aria-busy={loading}>
         <div className="bot-calendar-toolbar">
           <div className="bot-month-controls">
