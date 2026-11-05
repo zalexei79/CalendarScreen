@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v158-verified-profiles';
+const CACHE_NAME = 'atj-cache-v159-notification-center';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

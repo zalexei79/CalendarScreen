@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import useProfileVerification from './src/features/social/useProfileVerification.js';
 import {VerifiedMark} from './src/features/social/VerifiedBadge.jsx';
+import {NotificationsButton} from './src/features/notifications/NotificationCenter.jsx';
 import { transitionView } from './src/shared/ui/transitionView';
 import './src/shared/ui/GlassSystem.css';
 import {
@@ -222,6 +223,7 @@ export default function Header({
               : <WorkspaceModeSelector proView={false} language={language} t={t} onOffer={openProPresentation}/>}
           </div>
 
+          <NotificationsButton userId={getValidUserId(user)} language={language} isLight={isLight}/>
           {/* Settings gear */}
           <HomeFriendsButton userId={getValidUserId(user)} language={language}/>
           <div className="relative" ref={settingsRef}>

@@ -147,6 +147,7 @@ import { readWorkspace, writeWorkspace, clearWorkspace } from './src/shared/lib/
 import ProOffer from './src/features/pro/ProOffer.jsx';
 import ProGrantNotice from './src/features/pro/ProGrantNotice.jsx';
 import CreatorMessages from './src/features/messages/CreatorMessages.jsx';
+import NotificationCenter from './src/features/notifications/NotificationCenter.jsx';
 import {FriendChatDialog,FriendInvitePrompt} from './src/features/social/FriendMessaging.jsx';
 import HomeFriends from './src/features/social/HomeFriends.jsx';
 import ConnectionStatus from './src/shared/ui/ConnectionStatus.jsx';
@@ -4419,7 +4420,8 @@ export default function CalendarScreen() {
       setViewYear(today.getFullYear());
     }} /> : <div className={`premium-shell min-h-screen w-full flex flex-col transition-colors duration-500 ${proView ? 'pro-active-shell' : ''} ${isLight ? 'theme-light bg-zinc-100 text-zinc-900' : 'bg-zinc-950 text-zinc-100'}`}>
       <ProGrantNotice userId={validUserId} active={proAccessActive} until={proAccessUntil} language={language} isLight={isLight} />
-      <CreatorMessages userId={validUserId} language={language} isLight={isLight}/>
+      <CreatorMessages userId={validUserId} language={language} isLight={isLight} autoAnnounce={false}/>
+      <NotificationCenter userId={validUserId} language={language} isLight={isLight} blocked={Boolean(setupStep||nicknameModalOpen)}/>
       <FriendChatDialog key={'friend-chat:'+validUserId} userId={validUserId} language={language} blocked={Boolean(setupStep||nicknameModalOpen)}/>
       <FriendInvitePrompt key={'friend-invite:'+validUserId} userId={validUserId} language={language} blocked={Boolean(setupStep||nicknameModalOpen)}/>
       <HomeFriends key={'friends-home:'+validUserId} userId={validUserId} language={language}/>

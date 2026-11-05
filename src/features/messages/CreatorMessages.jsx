@@ -25,7 +25,7 @@ export function CreatorGiftNote({userId,language,onOpen}){
  const c=cardLabels(message,t);
  return <section className="creator-gift-note">{c.sender&&<span><Gift size={16}/>{c.sender}</span>}<strong>{cardHeading(message,t)}</strong><p>{message.body.length>300?message.body.slice(0,300)+'…':message.body}</p><button type="button" onClick={()=>requestOpen(userId,onOpen)}>{t.inbox}</button></section>;
 }
-export default function CreatorMessages({userId,language,isLight}){
+export default function CreatorMessages({userId,language,isLight,autoAnnounce=true}){
  const [state,setState]=useState({owner:null,data:null,error:false}),[openFor,setOpenFor]=useState(null),[offset,setOffset]=useState(0),[revision,setRevision]=useState(0),[focused,setFocused]=useState(null),[saving,setSaving]=useState(false),[view,setView]=useState('message');
  const current=useRef(userId);current.current=userId;const announced=useRef(new Set()),refreshedGifts=useRef(new Set()),dialog=useRef(null),marking=useRef(null);
  const t=creatorCopy(language),own=state.owner===userId?state:{data:null,error:false};
@@ -37,7 +37,7 @@ export default function CreatorMessages({userId,language,isLight}){
    const newGifts=(data?.messages||[]).filter(m=>m.pro_until&&!m.read_at&&!refreshedGifts.current.has(m.id));
    if(newGifts.length){newGifts.forEach(m=>refreshedGifts.current.add(m.id));window.dispatchEvent(new Event('dayris:pro-refresh'));}
    const unread=(data?.messages||[]).find(m=>!m.read_at&&!announced.current.has(m.id));
-   if(unread&&!document.querySelector('dialog[open],[aria-modal="true"]')){
+   if(autoAnnounce&&unread&&!document.querySelector('dialog[open],[aria-modal="true"]')){
     (data.messages||[]).forEach(m=>announced.current.add(m.id));setFocused(unread);setView('message');setOpenFor(userId);
    }else if(dialog.current?.open)(data.messages||[]).forEach(m=>announced.current.add(m.id));
   }catch{if(alive)setState(s=>({owner:userId,data:s.owner===userId?s.data:null,error:true}));}finally{busy=false;}}
@@ -45,7 +45,7 @@ export default function CreatorMessages({userId,language,isLight}){
   async function deepLink(){const id=new URLSearchParams(location.search).get('creatorMessage');if(!id)return;const {data}=await supabase.rpc('creator_message',{p_id:id});if(alive&&data){const url=new URL(location.href);if(url.searchParams.get('creatorMessage')===id){url.searchParams.delete('creatorMessage');history.replaceState(history.state,'',url);}setFocused(data);setView(data.kind==='chat'?'chat':'message');setOpenFor(userId);announced.current.add(id);if(data.pro_until)window.dispatchEvent(new Event('dayris:pro-refresh'));}}
   refresh();deepLink().catch(()=>{});const timer=setInterval(refresh,30000);window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',refresh);window.addEventListener(OPEN,open);
   return()=>{alive=false;clearInterval(timer);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh);window.removeEventListener(OPEN,open);};
- },[userId,offset,revision]);
+ },[userId,offset,revision,autoAnnounce]);
  const visible=Boolean(userId&&openFor===userId);
  useEffect(()=>{if(!visible)return;const node=dialog.current,previous=document.activeElement;node?.showModal();return()=>{node?.close();if(previous?.isConnected)previous.focus?.();};},[visible]);
  async function mark(message){
