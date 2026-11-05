@@ -51,7 +51,7 @@
 .receipt-history[data-paper="true"] .receipt-history-items{order:1;padding:5px 0 10px;border-top:1px dashed var(--rh-paper-line);font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace}
 .receipt-history[data-paper="true"] .receipt-history-items>li{min-height:0;gap:12px;padding:8px 0;align-items:flex-start}
 .receipt-history[data-paper="true"] .receipt-history-items>li+li{border:0}
-.receipt-history[data-paper="true"] .receipt-history-product-icon{display:none}
+.receipt-history[data-paper="true"] .receipt-history-product-icon{display:grid;width:26px;min-height:24px;font-size:21px;line-height:1.2;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
 .receipt-history[data-paper="true"] .receipt-history-product{gap:5px}
 .receipt-history[data-paper="true"] .receipt-history-product>b{font-size:12px;font-weight:400;line-height:1.5}
 .receipt-history[data-paper="true"] .receipt-history-product>span{font-size:11px;line-height:1.5;color:var(--rh-paper-muted)}

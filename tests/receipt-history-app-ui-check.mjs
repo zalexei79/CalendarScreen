@@ -31,6 +31,7 @@ try{
   const card=page.locator('.receipt-history').filter({hasText:'MOLDRETAIL'});assert.equal(await card.locator('.receipt-history-items>li').count(),5);assert.match(await card.innerText(),/151,85/);assert.match(await card.innerText(),/Пиво BIERMANN/);assert.match(await card.innerText(),/20,00/);
   const beer=card.locator('.receipt-history-items>li').first();assert.match(await beer.innerText(),/2 шт\. × 23,95 = 47,90 MDL/);assert.match(await beer.innerText(),/Считано\s*39,90/);assert.match(await beer.innerText(),/Возможна неточность/);
   const partial=page.locator('.receipt-history').filter({hasText:'PARTIAL SHOP'});assert.equal(await partial.locator('.receipt-history-items>li').count(),3);assert.match(await partial.innerText(),/100,00/);assert.match(await partial.innerText(),/Покупка без названия/);assert.doesNotMatch(await partial.innerText(),/NaN|undefined/);assert.match(await partial.locator('.receipt-history-line-total').last().innerText(),/—/);assert.doesNotMatch(await partial.locator('.receipt-history-line-total').last().innerText(),/0,00/);
+  assert.equal(await card.locator('.receipt-history-product-icon').first().isVisible(),true,'scanned product emoji remains visible on the paper receipt');
   assert.equal(await card.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);await card.locator('h4').click();assert.equal(await card.isVisible(),true,'reading receipt text does not dismiss day history');
   assert.equal(await page.getByText('Важный обычный комментарий',{exact:true}).isVisible(),true);
   await card.screenshot({path:`artifacts/receipt-history/day-${width}-${light?'light':'dark'}.png`});
@@ -41,6 +42,7 @@ try{
   if(width===390&&!light)await history.screenshot({path:'artifacts/history-records-with-receipts-phone.png',animations:'disabled'});
   const globalCard=history.locator('.receipt-history').filter({hasText:'MOLDRETAIL'});await globalCard.waitFor();assert.equal(await globalCard.locator('.receipt-history-items>li').count(),3);
   await globalCard.getByRole('button',{name:/Показать все покупки/}).click();assert.equal(await globalCard.locator('.receipt-history-items>li').count(),5);
+  assert.equal(await globalCard.locator('.receipt-history-product-icon').first().isVisible(),true,'global history retains product emoji');
   assert.equal(await history.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);assert.equal(await globalCard.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
   await globalCard.screenshot({path:`artifacts/receipt-history/global-${width}-${light?'light':'dark'}.png`});
   await globalCard.getByRole('button',{name:'Изменить запись',exact:true}).click();await page.locator('textarea').first().waitFor({timeout:10000});
