@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atj-cache-v157-receipt-history-icons';
+const CACHE_NAME = 'atj-cache-v158-verified-profiles';
 
 // The existing registration/cache lifecycle remains the only service worker.
 self.addEventListener('message', (event) => {

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import useProfileVerification from './src/features/social/useProfileVerification.js';
+import {VerifiedMark} from './src/features/social/VerifiedBadge.jsx';
 import { transitionView } from './src/shared/ui/transitionView';
 import './src/shared/ui/GlassSystem.css';
 import {
@@ -62,6 +64,7 @@ export default function Header({
   onCreateStreakEntry,
 }) {
   const [proFiltersOpen, setProFiltersOpen] = useState(false);
+  const officialProfile = useProfileVerification(getValidUserId(user),getValidUserId(user));
   const [syncIssueOpen, setSyncIssueOpen] = useState(false);
   const [retryingSync, setRetryingSync] = useState(false);
   const currentMonth = month === today.getMonth() && year === today.getFullYear();
@@ -235,10 +238,10 @@ export default function Header({
                   : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-amber-400 hover:border-zinc-600',
               ].join(' ')}
             >
-              <Settings
+              {officialProfile?<VerifiedMark/>:<Settings
                 className="h-4 w-4 transition-transform duration-300 ease-out"
                 style={{ transform: settingsOpen ? 'rotate(75deg)' : 'rotate(0deg)' }}
-              />
+              />}
             </button>
 
             {settingsOpen && <SettingsPanel

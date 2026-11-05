@@ -2,6 +2,7 @@ import React,{useEffect,useId,useRef,useState} from 'react';
 import {Search,UserPlus,Copy,Check,QrCode,X,MessageCircle,LoaderCircle,ArrowUpRight} from 'lucide-react';
 import {supabase} from '../../supabaseClient';
 import SocialAvatar from './SocialAvatar.jsx';
+import VerifiedBadge from './VerifiedBadge.jsx';
 import FriendInviteQr from './FriendInviteQr.jsx';
 import {socialCopy,socialError} from './socialCopy.js';
 import {socialInviteCopy} from './socialInviteCopy.js';
@@ -19,7 +20,7 @@ export function FriendConnectionCard({person,userId,language,busy,onAction,onCha
  const incoming=state==='pending'&&person.requested_by!==userId,sent=state==='pending'&&!incoming;
  async function accept(){const data=await onAction(person,'accept');const friend=data?.friends?.find(p=>p.user_id===person.user_id);if(friend)onChat(friend);}
  return <article className="social-connect-card">
-  <div className="social-connect-identity"><SocialAvatar userId={person.user_id} name={person.display_name} path={person.avatar_path||null}/><div><strong>{person.display_name}</strong><small>№ {person.handle}</small></div>{state==='accepted'&&<Check size={17} aria-label={t.already}/>}</div>
+  <div className="social-connect-identity"><SocialAvatar userId={person.user_id} name={person.display_name} path={person.avatar_path||null}/><div><span className="social-connect-name"><strong>{person.display_name}</strong><VerifiedBadge userId={person.user_id} viewerId={userId} language={language}/></span><small>№ {person.handle}</small></div>{state==='accepted'&&<Check size={17} aria-label={t.already}/>}</div>
   {incoming&&<p>{f.incoming}</p>}
   {sent?<div className="social-connect-sent" role="status"><span><Check size={16}/>{f.sent}</span><p>{f.waiting}</p></div>:<button type="button" className="social-connect-action" disabled={busy} onClick={()=>state==='accepted'?onChat(person):incoming?accept():onAction(person,'request')}>{state==='accepted'?<MessageCircle size={17}/>:incoming?<ArrowUpRight size={17}/>:<UserPlus size={17}/>}<span>{state==='accepted'?q.write:incoming?f.acceptChat:t.invite}</span></button>}
  </article>;

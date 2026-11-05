@@ -1,6 +1,7 @@
 // Isolated preview: all RPCs below use synthetic data, with no network or credentials.
 import React,{useState} from 'react';
 import {createRoot} from 'react-dom/client';
+import AdminVerification from '../src/features/admin/AdminVerification.jsx';
 import HomeFriends from '../src/features/social/HomeFriends.jsx';
 import {FriendChatDialog} from '../src/features/social/FriendMessaging.jsx';
 import {sharedDayMessage,sharedStreakMessage} from '../src/features/social/sharedDayMessage.js';
@@ -16,7 +17,7 @@ const contacts=[...people,alex,{user_id:'88888888-8888-4888-8888-888888888880',d
 const relations=new Map([...people.map(p=>[p.user_id,{state:'accepted',requested_by:owner}]),[alex.user_id,{state:'pending',requested_by:alex.user_id}]]);
 const row=(id,sender,recipient,body,time)=>({id,entry_key:'f:'+id,sender_id:sender,recipient_id:recipient,body,created_at:'2026-11-02T'+time+':00Z',read_at:sender===owner?'2026-11-02T12:00:00Z':null,kind:'chat'});
 const messages=[row('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1',anna,owner,'Как прошёл твой день? 🤍','08:40'),row('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2',owner,anna,'Закрыл все планы. Давай отметим маленькую победу!','08:42'),row('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3',anna,owner,sharedDayMessage({day:'2026-11-02',entries:4,totals:[]}), '08:44'),row('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4',owner,anna,sharedStreakMessage({currentStreak:12,paused:false,serverDate:'2026-11-02'}),'08:45'),row('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1',max,owner,'Давай начнём неделю с хорошей привычки 🔥','07:35')];
-const fixture=window.friendFixture={owner,people,messages,requests:[],readIds:[],failNext:false,denied:false,findDelays:{},findCompleted:[],failFind:0};
+const fixture=window.friendFixture={owner,people,messages,requests:[],readIds:[],failNext:false,denied:false,verified:[],findDelays:{},findCompleted:[],failFind:0};
 const restored=JSON.parse(sessionStorage.getItem('friend-fixture-server')||'null');if(restored?.messages)messages.splice(0,messages.length,...restored.messages);
 const directory=createKeyDirectory(restored?.crypto),peerReady=Promise.all(contacts.map(async person=>{const device=await friendCryptoStore.identity(person.user_id);await directory.rpc(person.user_id,'friend_chat_register_device',{p_device:device.id,p_public_key:device.publicKey,p_owner:person.user_id});}));
 fixture.persistServer=()=>sessionStorage.setItem('friend-fixture-server',JSON.stringify({messages,crypto:directory.snapshot()}));
@@ -26,6 +27,9 @@ function social(){const rows=fixture.owner===owner?contacts.filter(p=>relations.
 fixture.rpc=async(name,args={})=>{
  fixture.requests.push({name,args:structuredClone(args)});
  if(['friend_chat_register_device','friend_chat_keyring','friend_chat_publish_keys'].includes(name)){await peerReady;if(fixture.denied)return {error:{code:'42501'}};return directory.rpc(fixture.owner,name,args);}
+ if(name==='social_verified_profiles')return {data:{owner_id:fixture.owner,users:args.p_users.filter(id=>fixture.verified.includes(id))}};
+ if(name==='admin_user_verification')return {data:{user_id:args.p_user_id,verified:fixture.verified.includes(args.p_user_id)}};
+ if(name==='admin_set_user_verification'){fixture.verified=fixture.verified.filter(id=>id!==args.p_user_id);if(args.p_verified)fixture.verified.push(args.p_user_id);return {data:{user_id:args.p_user_id,verified:args.p_verified}};}
  if(name==='social_own_profile')return {data:{user_id:fixture.owner,display_name:'Алексей',handle:'1001',discoverable:true}};
  if(name==='social_friends')return {data:social()};
  if(name==='social_friend_count')return {data:3};
@@ -59,5 +63,5 @@ fixture.rpc=async(name,args={})=>{
  return {data:null};
 };
 fixture.receiveLocked=async(code,text)=>{const secret=await importFriendKey(code),id=crypto.randomUUID();messages.push({...row(id,anna,owner,await lockFriendMessage(text,secret.key,{owner,peer:anna,sender:anna,id}),'12:05'),created_at:new Date(Date.now()+60000).toISOString()});window.dispatchEvent(new Event('focus'));return id;};
-function Fixture(){const [user,setUser]=useState(owner);fixture.changeOwner=id=>{fixture.owner=id;setUser(id);};return <><div className="fixture-background"><b>DAYRIS</b><p>Календарь важных дней</p><button onClick={()=>window.dispatchEvent(new CustomEvent('dayris:friends-home',{detail:{userId:user}}))}>Открыть друзей</button></div><HomeFriends userId={user} language="ru"/><FriendChatDialog userId={user} language="ru"/></>;}
+function Fixture(){const [user,setUser]=useState(owner);fixture.changeOwner=id=>{fixture.owner=id;setUser(id);};if(location.search.includes("verification-admin"))return <AdminVerification userId={anna} canEdit={true}/>;return <><div className="fixture-background"><b>DAYRIS</b><p>Календарь важных дней</p><button onClick={()=>window.dispatchEvent(new CustomEvent('dayris:friends-home',{detail:{userId:user}}))}>Открыть друзей</button></div><HomeFriends userId={user} language="ru"/><FriendChatDialog userId={user} language="ru"/></>;}
 createRoot(document.getElementById('root')).render(<Fixture/>);

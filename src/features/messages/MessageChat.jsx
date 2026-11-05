@@ -4,6 +4,7 @@ import {supabase} from '../../supabaseClient';
 import {chatCopy,chatLocale} from './chatCopy.js';
 import './MessageChat.css';
 import SocialAvatar from '../social/SocialAvatar.jsx';
+import VerifiedBadge from '../social/VerifiedBadge.jsx';
 import {socialInviteCopy} from '../social/socialInviteCopy.js';
 import ShareCalendarDay,{dayShareCopy} from '../social/ShareCalendarDay.jsx';
 import DayHistoryCard from '../social/DayHistoryCard.jsx';
@@ -124,7 +125,7 @@ export default function MessageChat({userId,peer=null,admin=false,friend=false,c
   <header className="chat-peer-header">
    {onBack&&<button type="button" className="chat-back" aria-label={t.back} onClick={onBack}><ArrowLeft size={20}/></button>}
    {admin||friend?<SocialAvatar userId={peerId} name={peerName} path={friend?peer.avatar_path:undefined} loadProfile={!friend} className="chat-peer-avatar"/>:<span className="chat-peer-avatar">D</span>}
-   <div className="chat-peer-label"><h2 id={friend?'friend-chat-title':admin?'admin-chat-title':'creator-inbox-title'}>{admin||friend?peerName:t.title}</h2><p>{friend?automatic.ready?<><LockKeyhole size={10}/>{a.active}</>:peer.handle:admin?peer.email||peer.id:t.subtitle}</p></div>
+   <div className="chat-peer-label"><div className="chat-peer-verified-name"><h2 id={friend?'friend-chat-title':admin?'admin-chat-title':'creator-inbox-title'}>{admin||friend?peerName:t.title}</h2>{friend&&<VerifiedBadge userId={peerId} viewerId={userId} language={language}/>}</div><p>{friend?automatic.ready?<><LockKeyhole size={10}/>{a.active}</>:peer.handle:admin?peer.email||peer.id:t.subtitle}</p></div>
    {friend&&<div className="friend-header-actions"><button type="button" aria-label={f.searchMessages} title={f.searchMessages} aria-pressed={showSearch} onClick={()=>{setShowSearch(v=>!v);setMessageSearch('');}}><Search size={18}/></button><button type="button" aria-label={a.title} title={a.title} className={automatic.ready?'is-protected':''} disabled={unavailable||sending||loading||!initialized.current} aria-pressed={keyPanel} onClick={()=>{setKeyPanel(v=>!v);setLegacyPanel(false);setShareDay('');}}><LockKeyhole size={18}/></button></div>}
    {onCampaign&&canEdit&&<button type="button" className="chat-gift-action" aria-label={t.giftAction} title={t.giftAction} onClick={onCampaign}><Gift size={20}/></button>}
   </header>
