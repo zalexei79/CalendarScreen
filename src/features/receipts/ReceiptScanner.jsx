@@ -2,11 +2,13 @@ import React,{useEffect,useRef,useState} from 'react';
 import {Camera,Images,X} from 'lucide-react';
 import {receiptFrameSignal,receiptFrameMotion} from './receiptFrameSignal.js';
 import {receiptFrameStructure,createReceiptCaptureTracker} from './receiptCaptureTracker.js';
+import {receiptFrameQuality} from './receiptFrameQuality.js';
 
 export default function ReceiptScanner({c,onClose,onFile,onGallery,onNativeCamera}){
   const video=useRef(null),frame=useRef(null),viewfinder=useRef(null),stream=useRef(null),mounted=useRef(false),captureLock=useRef(false),captureLatest=useRef(null),bestFrame=useRef(null),galleryPending=useRef(false),zoomValue=useRef(1),pinch=useRef(null),zoomSettlesAt=useRef(0);
   const [zoom,setZoom]=useState(1);
   const [auto,setAuto]=useState(true),[holding,setHolding]=useState(false),[detected,setDetected]=useState(false);
+  const [phase,setPhase]=useState('searching');
   const [state,setState]=useState('starting'),[capturing,setCapturing]=useState(false),[frozen,setFrozen]=useState(''),[galleryBusy,setGalleryBusy]=useState(false);
   useEffect(()=>{
     let active=true;mounted.current=true;
@@ -18,6 +20,9 @@ export default function ReceiptScanner({c,onClose,onFile,onGallery,onNativeCamer
       const media=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:2560}},audio:false});
       if(!active||document.hidden){media.getTracks().forEach(track=>track.stop());return;}
       stream.current=media;video.current.srcObject=media;
+      // Use hardware autofocus when exposed by the device. Unsupported or
+      // rejected optional constraints must never prevent opening the camera.
+      try{const track=media.getVideoTracks()[0];if(track?.getCapabilities?.().focusMode?.includes('continuous'))Promise.resolve(track.applyConstraints({advanced:[{focusMode:'continuous'}]})).catch(()=>{});}catch{}
       await video.current.play();if(active)setState('ready');
     }catch{stop();if(active)setState('unavailable');}})();
     return()=>{active=false;mounted.current=false;stop();document.removeEventListener('visibilitychange',hide);};
@@ -80,33 +85,37 @@ export default function ReceiptScanner({c,onClose,onFile,onGallery,onNativeCamer
   captureLatest.current=capture;
   useEffect(()=>{
     if(capturing)return;
-    setHolding(false);setDetected(false);
+    setHolding(false);setDetected(false);setPhase('searching');
     if(state!=='ready')return;
-    let previous=null;const tracker=createReceiptCaptureTracker();bestFrame.current=null;
-    const sample=document.createElement('canvas');sample.width=160;sample.height=240;
+    let previous=null,anchor=null,lastVideoTime=null;const tracker=createReceiptCaptureTracker();bestFrame.current=null;
+    const sample=document.createElement('canvas');sample.width=320;sample.height=480;
     const context=sample.getContext('2d',{willReadFrequently:true});
     const timer=setInterval(()=>{
-      if(document.hidden||pinch.current||performance.now()<zoomSettlesAt.current||galleryPending.current||!video.current?.videoWidth||captureLock.current){previous=null;tracker.reset();bestFrame.current=null;setHolding(false);setDetected(false);return;}
+      if(document.hidden||pinch.current||performance.now()<zoomSettlesAt.current||galleryPending.current||!video.current?.videoWidth||video.current.paused||video.current.readyState<2||captureLock.current){previous=null;anchor=null;lastVideoTime=null;tracker.reset();bestFrame.current=null;setHolding(false);setDetected(false);setPhase('searching');return;}
       try{
+        const videoTime=video.current.currentTime;
+        if(videoTime===lastVideoTime){previous=null;anchor=null;tracker.reset();bestFrame.current=null;setHolding(false);return;}
+        lastVideoTime=videoTime;
         const crop=sourceCrop();if(!crop)return;
-        context.drawImage(crop.source,crop.x,crop.y,crop.width,crop.height,0,0,160,240);
-        const signal=receiptFrameSignal(context.getImageData(0,0,160,240));setDetected(signal.document);
-        const structure=receiptFrameStructure(signal.pixels,160,240),motion=receiptFrameMotion(previous,structure);previous=structure;
-        const now=performance.now(),decision=tracker.observe({now,detected:signal.document,motion});
-        if(decision.reset)bestFrame.current=null;
-        setHolding(auto&&decision.holding);if(!auto)return;
-        if(signal.document){
-          let sharpness=0;for(let i=1;i<signal.pixels.length;i++)sharpness+=Math.abs(signal.pixels[i]-signal.pixels[i-1]);sharpness/=signal.pixels.length;
-          if(!bestFrame.current||now-bestFrame.current.at>800||sharpness>bestFrame.current.sharpness+1){const image=snapshot();if(image)bestFrame.current={image,at:now,sharpness};}
+        context.drawImage(crop.source,crop.x,crop.y,crop.width,crop.height,0,0,320,480);
+        const signal=receiptFrameSignal(context.getImageData(0,0,320,480));
+        const quality=receiptFrameQuality(signal.pixels,320,480);
+        const structure=receiptFrameStructure(signal.pixels,320,480),motion=receiptFrameMotion(previous,structure),drift=receiptFrameMotion(anchor||previous,structure);previous=structure;
+        const now=performance.now(),decision=tracker.observe({now,detected:signal.document,motion,drift,quality});
+        if(decision.reset){bestFrame.current=null;anchor=structure;}
+        else if(!anchor)anchor=structure;
+        setDetected(decision.detected);setHolding(auto&&decision.holding);setPhase(decision.phase);if(!auto)return;
+        if(!decision.reset){
+          if(!bestFrame.current||now-bestFrame.current.at>500||quality.sharpness>bestFrame.current.sharpness){const image=snapshot();if(image)bestFrame.current={image,at:now,sharpness:quality.sharpness};}
         }
         if(decision.capture&&bestFrame.current){clearInterval(timer);captureLatest.current?.(bestFrame.current.image);}
-      }catch{previous=null;tracker.reset();bestFrame.current=null;setHolding(false);setDetected(false);}
+      }catch{previous=null;anchor=null;lastVideoTime=null;tracker.reset();bestFrame.current=null;setHolding(false);setDetected(false);setPhase('searching');}
     },250);
     return()=>{clearInterval(timer);bestFrame.current=null;};
   },[state,auto,capturing]);
   return <div className="receipt-scanner">
     <header><div><small>DAYRIS <b>PRO</b></small><h2 id="receipt-title" tabIndex={-1}>{c.scanTitle}</h2></div><button type="button" aria-label={c.close} onClick={onClose}><X size={23}/></button></header>
-    <div ref={viewfinder} className="receipt-viewfinder"><video ref={video} muted playsInline autoPlay style={{transform:`scale(${zoom})`}} aria-label={c.scanTitle}/>{frozen&&<img className="receipt-scan-frozen" src={frozen} alt={c.sourcePhoto}/>}<div ref={frame} className="receipt-scan-frame" data-holding={holding} data-detected={detected} aria-hidden="true"><i/><i/><i/><i/></div><div className="receipt-scan-guidance" role="status"><strong>{capturing?c.scanCaptured:state==='ready'?(detected?c.scanHold:c.scanFrame):state==='starting'?c.scanStarting:c.scanCameraUnavailable}</strong><span>{capturing?c.ocrLocal:auto?c.scanAutoHint:c.scanTip}</span></div></div>
+    <div ref={viewfinder} className="receipt-viewfinder"><video ref={video} muted playsInline autoPlay style={{transform:`scale(${zoom})`}} aria-label={c.scanTitle}/>{frozen&&<img className="receipt-scan-frozen" src={frozen} alt={c.sourcePhoto}/>}<div ref={frame} className="receipt-scan-frame" data-holding={holding} data-detected={detected} aria-hidden="true"><i/><i/><i/><i/></div><div className="receipt-scan-guidance" role="status"><strong>{capturing?c.scanCaptured:state==='ready'?(detected?(auto&&phase==='focusing'?c.scanFocus:auto&&holding?c.scanSteady:c.scanHold):c.scanFrame):state==='starting'?c.scanStarting:c.scanCameraUnavailable}</strong><span>{capturing?c.ocrLocal:auto?c.scanAutoHint:c.scanTip}</span></div></div>
     <footer><button type="button" className="receipt-scan-gallery" disabled={capturing||galleryBusy} onClick={chooseGallery}><Images size={23}/><span>{c.scanGallery}</span></button><button type="button" className="receipt-shutter" disabled={state==='starting'||capturing||galleryBusy} aria-label={c.camera} onClick={state==='ready'?()=>capture():onNativeCamera}><Camera size={25}/></button><button type="button" className="receipt-scan-auto" disabled={capturing||galleryBusy} aria-pressed={auto} onClick={()=>setAuto(value=>!value)}>{c.scanAuto}<span>{auto?c.scanAutoOn:c.scanAutoOff}</span></button></footer>
   </div>;
 }
