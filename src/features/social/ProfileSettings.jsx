@@ -11,7 +11,7 @@ async function preparePhoto(file,t){
  try{const image=new Image();image.src=url;await image.decode();const canvas=document.createElement('canvas');canvas.width=canvas.height=512;const context=canvas.getContext('2d');context.fillStyle='#f4f4f5';context.fillRect(0,0,512,512);const side=Math.min(image.naturalWidth,image.naturalHeight);if(!side)throw new Error();context.drawImage(image,(image.naturalWidth-side)/2,(image.naturalHeight-side)/2,side,side,0,0,512,512);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.86));if(!blob)throw new Error();return blob;}catch(error){throw new Error(error?.message===t.tooLarge?t.tooLarge:t.formatError);}finally{URL.revokeObjectURL(url);}
 }
 export default function ProfileSettings({userId,profile,language}){
- const t=socialCopy(language),[name,setName]=useState(''),[handle,setHandle]=useState(''),[discover,setDiscover]=useState(false),[busy,setBusy]=useState(false),[photoBusy,setPhotoBusy]=useState(false),[notice,setNotice]=useState('');
+ const t=socialCopy(language),[name,setName]=useState(''),[handle,setHandle]=useState(''),[discover,setDiscover]=useState(true),[busy,setBusy]=useState(false),[photoBusy,setPhotoBusy]=useState(false),[notice,setNotice]=useState('');
  const alive=useRef(true),initialized=useRef(false),input=useRef(null),locked=useRef(false);
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
  useEffect(()=>{if(profile&&!initialized.current){initialized.current=true;setName(profile.display_name);setHandle(profile.handle);setDiscover(profile.discoverable);}},[profile]);

@@ -4,6 +4,12 @@ The calendar Friends entry opens a responsive conversation workspace. Updated cl
 
 The list supports unread/favorite filters, search and local draft indicators. Threads support quotes, copy, bookmarks, loaded-history search and day/streak filters. Financial details stay private by default. Full server-generated day attachments remain readable in older history; new shares use encrypted client summaries.
 
+## Finding friends
+
+Exact user-number search is enabled by default. Migration `202611050001_friend_discovery_default_on.sql` enables it once for existing profiles and creates missing profiles from assigned account numbers. Signup creates a discoverable profile immediately, so a friend can find a new account before its first visit to Friends. Only profile names, numbers and avatars are returned; email, calendar and financial records remain private.
+
+The profile checkbox lets the account owner turn number search off or back on. After this migration, an opt-out survives profile loading, sign-in and name/photo changes. Exact matching, authentication and blocks continue to apply to `social_find`; disabling discovery does not remove existing friendships.
+
 ## Automatic device keys
 
 On sign-in, each browser creates an ECDH P-256 device identity and stores its non-extractable private CryptoKey in IndexedDB. The public key is registered through an authenticated owner-bound RPC. Both friends must open an updated DAYRIS client once; no code, password or out-of-app key transfer is needed.
