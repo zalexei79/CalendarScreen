@@ -14,7 +14,7 @@ try{
  const heading=await page.locator('.social-home-heading').boundingBox();await page.mouse.move(heading.x+100,heading.y+30);await page.mouse.down();await page.mouse.move(10,10);await page.mouse.up();assert.equal(await dialog.isVisible(),true);
  await page.mouse.click(10,10);await dialog.waitFor({state:'detached'});await page.getByRole('button',{name:'Открыть друзей',exact:true}).click();await sidebar.getByRole('heading',{name:'Ближе к своим.',exact:true}).waitFor();
  await sidebar.getByRole('button',{name:'В избранное: Анна',exact:true}).click();await sidebar.getByRole('button',{name:'Избранное',exact:true}).click();assert.equal(await sidebar.locator('.social-hub-person').count(),1);await sidebar.getByRole('button',{name:'Все',exact:true}).click();
- await sidebar.getByRole('textbox',{name:'Найти друга или переписку'}).fill('Максим');assert.equal(await sidebar.locator('.social-hub-person').count(),1);await sidebar.getByRole('button',{name:'Очистить',exact:true}).click();
+ await sidebar.getByRole('textbox',{name:'Имя или номер друга'}).fill('Максим');assert.equal(await sidebar.locator('.social-hub-person').count(),1);await sidebar.getByRole('button',{name:'Очистить',exact:true}).click();
  await sidebar.getByRole('button',{name:/Непрочитанные/}).click();assert.equal(await sidebar.locator('.social-hub-person').count(),2);await sidebar.getByRole('button',{name:'Все',exact:true}).click();
  await page.screenshot({path:folder+'/desktop-hub.png'});
  await sidebar.locator('.social-hub-conversation').filter({hasText:'Анна'}).click();await chat.getByText('Как прошёл твой день? 🤍',{exact:true}).waitFor();

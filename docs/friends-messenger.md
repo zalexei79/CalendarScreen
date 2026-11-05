@@ -6,6 +6,10 @@ The list supports unread/favorite filters, search and local draft indicators. Th
 
 ## Finding friends
 
+The main Chats/Friends search accepts a local name/message query or an exact user number. A number is looked up automatically after a short typing pause; its result offers Add friend, the invitation status, Accept & chat, or Write depending on the relationship. There is no intermediate invitation/search page and no separate Find button. The owner's number can be copied beside the search field; QR/link invitations expand there and dismiss on an outside press or Escape.
+
+Incoming requests also offer Accept & chat. Sending a request still requires the other person to accept before a conversation becomes available. Earlier lookups cannot replace a result after the number or account changes. Request cancellation remains under Requests; removal and blocking remain in a friend's profile.
+
 Exact user-number search is enabled by default. Migration `202611050001_friend_discovery_default_on.sql` enables it once for existing profiles and creates missing profiles from assigned account numbers. Signup creates a discoverable profile immediately, so a friend can find a new account before its first visit to Friends. Only profile names, numbers and avatars are returned; email, calendar and financial records remain private.
 
 The profile checkbox lets the account owner turn number search off or back on. After this migration, an opt-out survives profile loading, sign-in and name/photo changes. Exact matching, authentication and blocks continue to apply to `social_find`; disabling discovery does not remove existing friendships.
@@ -42,6 +46,7 @@ Checks:
 
 - node --test tests/automatic-friend-crypto.test.mjs tests/automatic-friend-db.test.mjs tests/friend-messenger.test.mjs tests/creator-messages-push.test.mjs
 - node tests/friend-messenger-ui-check.mjs
+- node tests/friend-finder-ui-check.mjs
 - npm run build
 - git diff --check
 

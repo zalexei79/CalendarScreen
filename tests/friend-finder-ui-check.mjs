@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import fs from 'node:fs';
+import './build-friend-preview.mjs';
+const {chromium}=createRequire('C:/Users/aveel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/package.json')('playwright');
+const folder='artifacts/friend-finder-2026-11-05';fs.mkdirSync(folder,{recursive:true});
+const html=fs.readFileSync('artifacts/friends-workspace-2026-11-02/preview.html','utf8');
+let browser;try{browser=await chromium.launch({channel:'msedge',headless:true});}catch(error){if(!fs.existsSync(chromium.executablePath()))throw error;browser=await chromium.launch({headless:true});}
+const errors=[];let page;
+async function context(options={}){const ctx=await browser.newContext({viewport:{width:1440,height:1000},serviceWorkers:'block',...options});await ctx.route('**/*',r=>r.fulfill({contentType:'text/html',body:html}));await ctx.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.copiedFriendNumber=text;}},configurable:true}));return ctx;}
+try{
+ const ctx=await context();page=await ctx.newPage();page.setDefaultTimeout(12000);page.on('pageerror',error=>errors.push(error.message));
+ await page.goto('https://friends.test/');await page.getByRole('button',{name:'Открыть друзей',exact:true}).click();
+ const sidebar=page.locator('.social-workspace-sidebar'),input=sidebar.getByRole('textbox',{name:'Имя или номер друга'}),result=sidebar.locator('.social-finder-results'),dialog=page.getByRole('dialog'),chat=page.locator('.dayris-chat-friend');
+ await input.waitFor();await sidebar.getByRole('button',{name:'Скопировать номер',exact:true}).click();assert.equal(await page.evaluate(()=>window.copiedFriendNumber),'1001');
+ await input.fill('5120');await result.getByText('Дарья',{exact:true}).waitFor();assert.equal(await sidebar.getByRole('button',{name:'Найти',exact:true}).count(),0);
+ await page.screenshot({path:folder+'/desktop-find.png'});
+ await result.getByRole('button',{name:'Добавить в друзья',exact:true}).click();await result.getByText('Приглашение отправлено',{exact:true}).waitFor();assert.equal(await chat.count(),0);assert.equal(await result.getByRole('button').count(),0);
+ assert.equal(await page.evaluate(()=>window.friendFixture.requests.filter(r=>r.name==='social_friend_action'&&r.args.p_action==='request').length),1);
+ await sidebar.getByRole('button',{name:/^Заявки/}).click();const outgoing=sidebar.locator('.social-request-item').filter({hasText:'Дарья'});await outgoing.getByText('Приглашение отправлено',{exact:true}).waitFor();await outgoing.getByRole('button',{name:'Отменить заявку',exact:true}).click();await outgoing.waitFor({state:'detached'});
+ await sidebar.getByRole('button',{name:/^Чаты/}).click();await result.getByRole('button',{name:'Добавить в друзья',exact:true}).waitFor();
+ await input.fill('1001');await result.getByText('Это ваш номер. Поделитесь им с другом.',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.friendFixture.requests.some(r=>r.name==='social_find'&&r.args.p_handle==='1001')),false);
+ await input.fill('0');await result.getByText('Введите номер пользователя, например 1.',{exact:true}).waitFor();
+ await input.fill('999999');await result.getByText('Пользователь не найден или отключил поиск по номеру.',{exact:true}).waitFor();
+ await page.evaluate(()=>{window.friendFixture.failFind=1;});await input.fill('5121');await result.getByRole('button',{name:'Повторить поиск',exact:true}).click();await result.getByText('Роман',{exact:true}).waitFor();
+ // A slow earlier lookup must never replace the person for the current number.
+ await page.evaluate(()=>{window.friendFixture.findDelays['5120']=700;window.friendFixture.findCompleted=[];window.friendFixture.requests=[];});await input.fill('5120');await page.waitForFunction(()=>window.friendFixture.requests.some(r=>r.name==='social_find'&&r.args.p_handle==='5120'));await input.fill('5121');await result.getByText('Роман',{exact:true}).waitFor();await page.waitForFunction(()=>window.friendFixture.findCompleted.includes('5120'));assert.equal(await result.getByText('Дарья',{exact:true}).count(),0);
+ const lookups=await page.evaluate(()=>window.friendFixture.requests.filter(r=>r.name==='social_find').length);await input.fill('Максим');assert.equal(await sidebar.locator('.social-hub-person').count(),1);assert.equal(await result.count(),0);assert.equal(await page.evaluate(()=>window.friendFixture.requests.filter(r=>r.name==='social_find').length),lookups);
+ await sidebar.getByRole('button',{name:'Очистить',exact:true}).click();await sidebar.getByRole('button',{name:'QR и ссылка',exact:true}).click();await sidebar.locator('.social-finder-qr canvas').waitFor();await input.click();assert.equal(await sidebar.locator('.social-finder-qr').count(),0);
+ await sidebar.getByRole('button',{name:'QR и ссылка',exact:true}).click();await sidebar.locator('.social-finder-qr canvas').waitFor();await page.keyboard.press('Escape');assert.equal(await sidebar.locator('.social-finder-qr').count(),0);assert.equal(await dialog.isVisible(),true);
+ await input.fill('#1048');await result.getByText('Анна',{exact:true}).waitFor();await result.getByRole('button',{name:'Написать',exact:true}).click();await chat.getByRole('heading',{name:'Анна',exact:true}).waitFor();await chat.getByRole('button',{name:'Назад',exact:true}).click();
+ await input.fill('4081');await result.getByText('Александр',{exact:true}).waitFor();await result.getByRole('button',{name:'Принять и написать',exact:true}).click();await chat.getByRole('heading',{name:'Александр',exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.friendFixture.requests.filter(r=>r.name==='social_friend_action'&&r.args.p_action==='accept').length),1);await chat.getByRole('button',{name:'Назад',exact:true}).click();
+ await input.fill('5121');await result.getByText('Роман',{exact:true}).waitFor();
+ for(const theme of ['dark','light']){await page.evaluate(theme=>document.documentElement.dataset.glassTheme=theme,theme);for(const width of [320,390,1440]){await page.setViewportSize({width,height:width===1440?1000:844});await sidebar.evaluate(node=>{node.scrollTop=0;});assert.equal(await dialog.evaluate(node=>node.scrollWidth<=node.clientWidth),true);assert.equal(await result.evaluate(node=>node.scrollWidth<=node.clientWidth),true);await page.screenshot({path:`${folder}/${theme}-${width}.png`});}}
+ const touchContext=await context({viewport:{width:390,height:844},hasTouch:true,isMobile:true}),touch=await touchContext.newPage();touch.on('pageerror',error=>errors.push(error.message));await touch.goto('https://friends.test/');await touch.getByRole('button',{name:'Открыть друзей',exact:true}).tap();await touch.getByRole('textbox',{name:'Имя или номер друга'}).fill('5120');await touch.locator('.social-finder-results').getByRole('button',{name:'Добавить в друзья',exact:true}).tap();await touch.getByText('Приглашение отправлено',{exact:true}).waitFor();await touchContext.close();
+ assert.deepEqual(errors,[]);console.log('PASS: direct number lookup, one-tap invitation, pending state, cancellation, own number, copy, hidden/missing account, retry, stale lookup protection, local search, QR outside/Escape dismissal, existing chat, accept-and-chat, touch, dark/light 320/390/1440. Synthetic accounts only.');
+}catch(error){await page?.screenshot({path:folder+'/failure.png'});console.error('Browser errors:',errors);throw error;}finally{await browser.close();}
